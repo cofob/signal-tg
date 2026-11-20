@@ -1,58 +1,25 @@
-# Telegram Web A
+# TeleSignal
 
-This project won the first prize 🥇 at [Telegram Lightweight Client Contest](https://contest.com/javascript-web-3) and now is an official Telegram client available to anyone at [web.telegram.org/a](https://web.telegram.org/a).
+Web client for the [Signal](https://signal.org) messenger, built on [Telegram Web A](https://github.com/Ajaxy/telegram-tt). It runs as a Signal linked device; all protocol logic and cryptography run in the browser. Work in progress: see [docs/signal/PLAN.md](docs/signal/PLAN.md).
 
-According to the original contest rules, it has nearly zero dependencies and is fully based on its own [Teact](https://github.com/Ajaxy/teact) framework (which re-implements React paradigm). It also uses a custom version of [GramJS](https://github.com/gram-js/gramjs) as an MTProto implementation.
-
-The project incorporates lots of technologically advanced features, modern Web APIs and techniques: WebSockets, Web Workers and WebAssembly, multi-level caching and PWA, voice recording and media streaming, cryptography and raw binary data operations, optimistic and progressive interfaces, complicated CSS/Canvas/SVG animations, reactive data streams, and so much more.
-
-Feel free to explore, provide feedback and contribute.
-
-## Local setup
+## Setup
 
 ```sh
-mv .env.example .env
-
-npm i
+cp .env.example .env
+npx npm@11 ci
 ```
 
-Obtain API ID and API hash on [my.telegram.org](https://my.telegram.org) and populate the `.env` file.
+Until GramJS is removed, the build needs any values for `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` in `.env`.
 
-## Dev mode
+## Development
 
 ```sh
-npm run dev
+npm run signal:proxy  # WebSocket-to-TCP tunnel to Signal servers, Node 24
+npm run dev           # http://localhost:1234
 ```
 
-### Invoking API from console
+Regenerate after changes: `npm run signal:wasm` (libsignal WebAssembly, needs Rust) and `npm run signal:proto` (protobuf).
 
-Start your dev server and locate GramJS worker in the console context.
+## License
 
-All constructors and functions available in global `GramJs` variable.
-
-Run `npm run gramjs:tl full` to get access to all available Telegram methods.
-
-Example usage:
-``` javascript
-await invoke(new GramJs.help.GetAppConfig())
-```
-
-### Dependencies
-* [GramJS](https://github.com/gram-js/gramjs) ([MIT License](https://github.com/gram-js/gramjs/blob/master/LICENSE))
-* [fflate](https://github.com/101arrowz/fflate) ([MIT License](https://github.com/101arrowz/fflate/blob/master/LICENSE))
-* [cryptography](https://github.com/spalt08/cryptography) ([Apache License 2.0](https://github.com/spalt08/cryptography/blob/master/LICENSE))
-* [emoji-data](https://github.com/iamcal/emoji-data) ([MIT License](https://github.com/iamcal/emoji-data/blob/master/LICENSE))
-* [twemoji-parser](https://github.com/jdecked/twemoji-parser) ([MIT License](https://github.com/jdecked/twemoji-parser/blob/master/LICENSE.md))
-* [tlottie](https://github.com/dkaraush/tlottie) ([MIT License](https://github.com/dkaraush/tlottie/))
-* [opus-recorder](https://github.com/chris-rudmin/opus-recorder) ([Various Licenses](https://github.com/chris-rudmin/opus-recorder/blob/master/LICENSE.md))
-* [qr-code-styling](https://github.com/kozakdenys/qr-code-styling) ([MIT License](https://github.com/kozakdenys/qr-code-styling/blob/master/LICENSE))
-* [music-metadata](https://github.com/Borewit/music-metadata) ([MIT License](https://github.com/Borewit/music-metadata/blob/master/LICENSE.txt))
-* [Tiptap](https://github.com/ueberdosis/tiptap) ([MIT License](https://github.com/ueberdosis/tiptap/blob/main/LICENSE.md))
-* [marked](https://github.com/markedjs/marked) ([MIT License](https://github.com/markedjs/marked/blob/master/LICENSE.md))
-* [lowlight](https://github.com/wooorm/lowlight) ([MIT License](https://github.com/wooorm/lowlight/blob/main/license))
-* [idb-keyval](https://github.com/jakearchibald/idb-keyval) ([Apache License 2.0](https://github.com/jakearchibald/idb-keyval/blob/main/LICENCE))
-* [fastText](https://github.com/facebookresearch/fastText) ([MIT License](https://github.com/facebookresearch/fastText/blob/main/LICENSE)) and its [language identification model](https://fasttext.cc/docs/en/language-identification.html) ([CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/))
-* fastblur
-
-## Bug reports and Suggestions
-If you find an issue with this app, let Telegram know using the [Suggestions Platform](https://bugs.telegram.org/c/4002).
+GPL-3.0-or-later. `rust/libsignal` is [libsignal](https://github.com/signalapp/libsignal), AGPL-3.0-only.
