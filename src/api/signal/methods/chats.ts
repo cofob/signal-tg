@@ -157,8 +157,9 @@ export async function fetchFullChat(chat: ApiChat) {
 }
 
 export async function fetchPeerSettings(peer: ApiPeer) {
+  const selfAci = getCurrentAccount()?.aci;
   const conversation = await getConversationByPeerId(peer.id);
-  return conversation && { settings: buildPeerSettings(conversation) };
+  return conversation && selfAci ? { settings: buildPeerSettings(conversation, selfAci) } : undefined;
 }
 
 /**

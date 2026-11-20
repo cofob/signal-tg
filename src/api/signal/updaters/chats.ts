@@ -117,8 +117,8 @@ async function sendConversationChanges(
   }
 
   if (isPrivate) {
-    const fullInfo = buildApiUserFullInfo(conversation);
-    if (!areDeepEqual(fullInfo, buildApiUserFullInfo(previous))) {
+    const fullInfo = buildApiUserFullInfo(conversation, selfAci);
+    if (!areDeepEqual(fullInfo, buildApiUserFullInfo(previous, selfAci))) {
       sendApiUpdate({ '@type': 'updateUserFullInfo', id, fullInfo });
     }
     if (Boolean(previous.isBlocked) !== Boolean(conversation.isBlocked)) {

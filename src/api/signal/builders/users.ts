@@ -42,22 +42,23 @@ export function buildAvatarColor(conversation: ConversationRecord): ApiPeerColor
   return { type: 'regular', color: sha256Sync(identifier)[0] % AVATAR_COLORS.length };
 }
 
-export function buildApiUserFullInfo(conversation: ConversationRecord): ApiUserFullInfo {
+export function buildApiUserFullInfo(conversation: ConversationRecord, selfAci: string): ApiUserFullInfo {
   return {
     bio: [conversation.aboutEmoji, conversation.about].filter(Boolean).join(' ') || undefined,
     isBlocked: Boolean(conversation.isBlocked),
     ttlPeriod: conversation.expireTimer,
-    settings: buildPeerSettings(conversation),
+    settings: buildPeerSettings(conversation, selfAci),
   };
 }
 
 /**
  * A message request shows the chat header bar with blocking and reporting. It is a private conversation with
- * messages from someone outside our contacts that we neither accepted nor answered; writing first accepts it
- * (Signal Desktop `ts/util/isConversationAccepted.preload.ts`).
+ * messages from someone outside our contacts that we neither accepted nor answered; writing first accepts it.
+ * Note to Self is always accepted (Signal Desktop `ts/util/isConversationAccepted.preload.ts`).
  */
-export function buildPeerSettings(conversation: ConversationRecord): ApiPeerSettings {
-  const isMessageRequest = conversation.type === 'private' && !conversation.isAccepted && !conversation.systemName
+export function buildPeerSettings(conversation: ConversationRecord, selfAci: string): ApiPeerSettings {
+  const isMessageRequest = conversation.type === 'private' && conversation.id !== selfAci
+    && !conversation.isAccepted && !conversation.systemName
     && !conversation.isBlocked && conversation.lastMessageId !== undefined;
   return isMessageRequest ? { canBlockContact: true, canReportSpam: true } : {};
 }

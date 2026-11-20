@@ -16,7 +16,7 @@ export async function fetchFullUser({ id }: { id: string; accessHash?: string })
 
   const user = buildApiUser(conversation, selfAci);
   const commonGroups = getCommonGroups(await db.getConversations(), conversation.id, selfAci);
-  const fullInfo = { ...buildApiUserFullInfo(conversation), commonChatsCount: commonGroups.length };
+  const fullInfo = { ...buildApiUserFullInfo(conversation, selfAci), commonChatsCount: commonGroups.length };
   sendApiUpdate({
     '@type': 'updateUser', id, user, fullInfo,
   });
