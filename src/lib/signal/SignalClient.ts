@@ -33,6 +33,8 @@ export default class SignalClient {
 
   private connection?: ChatConnection;
 
+  private connectionGeneration = 0;
+
   private account?: AccountRecord;
 
   constructor(readonly store: SignalStore) {}
@@ -44,7 +46,9 @@ export default class SignalClient {
     this.account = account;
 
     this.connection?.close();
-    this.connection = await ChatConnection.connect(this.store, account, {
+    // A closed connection no longer sends: senders wait for the next one (see `isConnected`)
+    const generation = ++this.connectionGeneration;
+    const connection = await ChatConnection.connect(this.store, account, {
       onEnvelope: async (decrypted) => {
         if (await this.handleProtocolContent(decrypted)) return;
         await handlers.onContent(decrypted);
@@ -55,11 +59,15 @@ export default class SignalClient {
         if (error instanceof DecryptionError) await requestResend(this.getSenderContext(), error);
       },
       onQueueEmpty: () => handlers.onQueueEmpty?.(),
-      onClose: (code, reason) => handlers.onClose?.(code, reason),
+      onClose: (code, reason) => {
+        if (generation === this.connectionGeneration) this.connection = undefined;
+        handlers.onClose?.(code, reason);
+      },
       onError: handlers.onError,
     });
+    this.connection = connection;
 
-    updateDeviceCapabilities(this.connection, Boolean(account.number)).catch(handlers.onError);
+    updateDeviceCapabilities(connection, Boolean(account.number)).catch(handlers.onError);
   }
 
   close() {
@@ -73,6 +81,10 @@ export default class SignalClient {
     this.account = { ...this.account, ...update };
     await this.store.setItem('account', this.account);
     return this.account;
+  }
+
+  get isConnected() {
+    return Boolean(this.account && this.connection);
   }
 
   getSenderContext(): SenderContext {
