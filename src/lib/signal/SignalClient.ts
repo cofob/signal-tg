@@ -68,6 +68,13 @@ export default class SignalClient {
     this.unauthenticatedChat.close();
   }
 
+  async updateAccount(update: Partial<AccountRecord>) {
+    if (!this.account) throw new Error('Signal client is not connected');
+    this.account = { ...this.account, ...update };
+    await this.store.setItem('account', this.account);
+    return this.account;
+  }
+
   getSenderContext(): SenderContext {
     if (!this.account || !this.connection) throw new Error('Signal client is not connected');
     return {
@@ -93,12 +100,10 @@ export default class SignalClient {
 
     if (body.case === 'syncMessage' && body.value.content.case === 'keys' && senderServiceId === this.account!.aci) {
       const keys = body.value.content.value;
-      this.account = {
-        ...this.account!,
+      await this.updateAccount({
         accountEntropyPool: keys.accountEntropyPool || this.account!.accountEntropyPool,
         mediaRootBackupKey: keys.mediaRootBackupKey.length ? keys.mediaRootBackupKey : this.account!.mediaRootBackupKey,
-      };
-      await this.store.setItem('account', this.account);
+      });
       return true;
     }
 

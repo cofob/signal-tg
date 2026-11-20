@@ -1,36 +1,40 @@
 /* eslint-disable no-console */
-import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
+import type { ConversationRecord } from '../db/MessageDb';
+import type { MessageChanges } from '../messages/MessageProcessor';
 
-import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
-import { downloadAttachment } from '../attachments/downloadAttachment';
-import { fetchGroup } from '../groups/fetchGroup';
 import { fetchProfile } from '../profiles/fetchProfile';
-import { saveProfileKey } from '../sender/sealedSender';
-import { sendMessage } from '../sender/sendMessage';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
-import { parseContactSync } from '../sync/contactSync';
-import { initSignalWasm, wasm } from '../wasm';
+import { initSignalWasm } from '../wasm';
 
+import MessageDb from '../db/MessageDb';
+import MessageProcessor from '../messages/MessageProcessor';
 import SignalClient from '../SignalClient';
 import SignalStore from '../store/SignalStore';
 
 const QR_SIZE = 300;
 const DEFAULT_DEVICE_NAME = 'TeleSignal';
+const DEFAULT_MESSAGE_LIMIT = 20;
 
 const store = new SignalStore();
+const db = new MessageDb();
 const client = new SignalClient(store);
-// Master keys of the groups that `signalDev.groups()` listed, by group id
-const groupMasterKeys = new Map<string, Uint8Array>();
+const processor = new MessageProcessor(db, client, {
+  onChanges: printChanges,
+  onTyping: ({ conversationId, senderAci, isTyping }) => {
+    console.log(`[signal] ${senderAci} ${isTyping ? 'is typing' : 'stopped typing'} in ${conversationId}`);
+  },
+  onError: (err) => console.error('[signal]', err),
+});
 let isConnected = false;
 
 /**
  * Development console API for the Signal engine, until the app UI uses it:
  * `await signalDev.link()` shows a QR code to scan in Signal on the phone, links this browser and starts
- * printing decrypted messages; `signalDev.listen()` reconnects later; `signalDev.reset()` forgets the device.
+ * storing messages; `signalDev.listen()` reconnects later; `signalDev.reset()` forgets the device.
  */
 const signalDev = {
   async link(deviceName = DEFAULT_DEVICE_NAME) {
@@ -44,54 +48,12 @@ const signalDev = {
     console.log(`[signal] Linked as device ${account.deviceId} of ${account.aci}`);
     await signalDev.listen();
     await sendInitialSyncRequests(client.getSenderContext());
-    console.log('[signal] Sent sync requests for contacts, configuration and blocked list');
-  },
-
-  /**
-   * Sends a text message to an ACI and a sent transcript to our other devices. Run `signalDev.syncStorage()`
-   * first so the recipient's profile key allows a sealed sender send.
-   */
-  async sendText(destination: string, text: string) {
-    const context = getContext();
-    const timestamp = Date.now();
-    const [result] = await sendMessage(context, [destination], {
-      case: 'dataMessage',
-      value: { body: text, timestamp: BigInt(timestamp), profileKey: context.account.profileKey },
-    }, { timestamp });
-    if (result.error) throw result.error;
-    console.log('[signal] Sent', timestamp, result.isSealedSender ? 'with sealed sender' : 'identified');
-  },
-
-  /** Sends a text message to every member of a group that `signalDev.groups()` listed */
-  async sendGroupText(groupId: string, text: string) {
-    const context = getContext();
-    const masterKey = groupMasterKeys.get(groupId);
-    if (!masterKey) throw new Error('Unknown group: call signalDev.groups() first');
-
-    const group = await fetchGroup(context.account, context.connection, masterKey);
-    const timestamp = Date.now();
-    const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
-    const results = await sendMessage(context, group.members.map(({ aci }) => aci), {
-      case: 'dataMessage',
-      value: {
-        body: text,
-        timestamp: BigInt(timestamp),
-        profileKey: context.account.profileKey,
-        groupV2: { masterKey, revision: group.revision },
-      },
-    }, {
-      timestamp,
-      groupId: wasm.GroupPublicParams_GetGroupIdentifier(wasm.GroupSecretParams_GetPublicParams(secretParams)),
-    });
-    console.table(results.map(({ serviceId, isSealedSender, error }) => ({
-      serviceId, isSealedSender, error: error?.message,
-    })));
+    console.log('[signal] Sent sync requests for contacts, configuration, blocked list and keys');
   },
 
   async listen() {
     await client.connect({
-      onContent: printEnvelope,
-      onDeliveryReceipt: (envelope) => console.log('[signal] Delivery receipt', envelope.clientTimestamp),
+      onContent: (decrypted) => processor.processContent(decrypted),
       onDecryptionError: (envelope, err) => console.warn('[signal] Decryption failed', envelope, err),
       onQueueEmpty: () => console.log('[signal] Queue drained'),
       onClose: (code, reason) => {
@@ -101,10 +63,11 @@ const signalDev = {
       onError: (err) => console.error('[signal]', err),
     });
     isConnected = true;
+    processor.start();
     console.log('[signal] Connected to the chat socket');
   },
 
-  /** Reads the storage service and prints record counts and contacts */
+  /** Reads the storage service and merges contacts, groups, pins and settings */
   async syncStorage() {
     const { account, connection } = getContext();
     const snapshot = await fetchStorageSnapshot(account, connection);
@@ -112,97 +75,83 @@ const signalDev = {
       console.log('[signal] Storage service has no manifest yet');
       return;
     }
-    const records = [...snapshot.records.values()];
-    for (const { record } of records) {
-      if (record.case === 'contact' && record.value.aci && record.value.profileKey.length) {
-        await saveProfileKey(store, record.value.aci, record.value.profileKey);
-      }
-    }
-    const countsByType: Record<string, number> = {};
-    for (const { record } of records) {
-      const type = record.case ?? 'unknown';
-      countsByType[type] = (countsByType[type] ?? 0) + 1;
-    }
-    console.log(`[signal] Storage manifest version ${snapshot.version}:`, countsByType);
-    console.table(records.flatMap(({ record }) => (record.case === 'contact' ? [record.value] : [])).map((contact) => ({
-      aci: contact.aci,
-      e164: contact.e164,
-      name: [contact.systemGivenName || contact.givenName, contact.systemFamilyName || contact.familyName]
-        .filter(Boolean).join(' '),
-      archived: contact.archived,
+    await processor.applyStorageRecords([...snapshot.records.values()]);
+    console.log(`[signal] Merged storage manifest version ${snapshot.version} (${snapshot.records.size} records)`);
+  },
+
+  async conversations() {
+    const conversations = await db.getConversations();
+    console.table(conversations
+      .sort((a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0))
+      .map((conversation) => ({
+        id: conversation.id,
+        type: conversation.type,
+        title: getTitle(conversation),
+        unread: conversation.unreadCount,
+        archived: conversation.isArchived,
+        pin: conversation.pinIndex,
+        timer: conversation.expireTimer,
+      })));
+  },
+
+  async messages(conversationId: string, limit = DEFAULT_MESSAGE_LIMIT) {
+    const messages = await db.getMessages(conversationId, limit);
+    console.table(messages.reverse().map((message) => ({
+      id: message.id,
+      kind: message.kind,
+      from: message.isOutgoing ? 'me' : message.authorAci,
+      sentAt: new Date(message.sentAt).toLocaleString(),
+      body: message.deletedAt ? '(deleted)' : message.body,
+      edited: Boolean(message.editedAt),
+      reactions: message.reactions?.map(({ emoji }) => emoji).join(''),
+      status: message.recipientStatus && Object.values(message.recipientStatus).join(','),
+      read: Boolean(message.readAt),
     })));
   },
 
-  /** Fetches every group v2 listed in the storage service and prints titles and members */
-  async groups() {
-    const { account, connection } = getContext();
-    const snapshot = await fetchStorageSnapshot(account, connection);
-    const masterKeys = [...snapshot?.records.values() ?? []].flatMap(({ record }) => (
-      record.case === 'groupV2' && record.value.masterKey.length ? [record.value.masterKey] : []
-    ));
-    const rows = [];
-    for (const masterKey of masterKeys) {
-      try {
-        const group = await fetchGroup(account, connection, masterKey);
-        groupMasterKeys.set(group.groupId, masterKey);
-        rows.push({
-          title: group.title, revision: group.revision, members: group.members.length, groupId: group.groupId,
-        });
-      } catch (err) {
-        rows.push({ title: `Failed: ${(err as Error).message}` });
-      }
-    }
-    console.table(rows);
+  /** Sends a text message to a conversation id from `conversations()`, or to any ACI */
+  async send(conversationId: string, text: string) {
+    getContext();
+    const message = await processor.sendDataMessage(conversationId, { body: text });
+    console.log('[signal] Sent', message.sentAt, message.recipientStatus);
+  },
+
+  markRead(conversationId: string) {
+    getContext();
+    return processor.markRead(conversationId);
   },
 
   /** Prints a decrypted profile; defaults to our own */
-  async profile(aci?: string, profileKeyBase64?: string) {
+  async profile(aci?: string) {
     const { account, connection } = getContext();
-
-    const profileKey = profileKeyBase64 ? bufferFromBase64(profileKeyBase64) : account.profileKey;
+    const profileKey = aci ? (await store.getRecipient(aci))?.profileKey : account.profileKey;
     if (!profileKey) throw new Error('No profile key');
-    const profile = await fetchProfile(connection, aci ?? account.aci, profileKey);
-    console.log('[signal] Profile', profile);
+    console.log('[signal] Profile', await fetchProfile(connection, aci ?? account.aci, profileKey));
   },
 
   async reset() {
+    processor.stop();
     client.close();
     isConnected = false;
     await store.clear();
+    await db.clear();
     console.log('[signal] Local Signal data removed; unlink the device on the phone too');
   },
 };
 
-function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEnvelope) {
-  const from = `${senderServiceId}.${senderDeviceId}`;
-  const body = content.content;
+function printChanges({ conversations, messages, deletedMessages }: MessageChanges) {
+  for (const message of messages) {
+    const from = message.isOutgoing ? 'me' : message.authorAci;
+    const text = message.body ?? message.kind;
+    console.log(`[signal] ${message.conversationId} #${message.id} from ${from}:`, text, message);
+  }
+  if (deletedMessages.length) console.log('[signal] Deleted messages', deletedMessages);
+  if (conversations.length) console.log(`[signal] Updated ${conversations.length} conversations`);
+}
 
-  if (body.case === 'dataMessage') {
-    console.log(`[signal] Message from ${from}:`, body.value.body, body.value);
-    return;
-  }
-  if (body.case !== 'syncMessage') {
-    console.log(`[signal] Content from ${from}:`, content);
-    return;
-  }
-
-  const sync = body.value.content;
-  switch (sync.case) {
-    case 'contacts':
-      if (!sync.value.blob) break;
-      void downloadAttachment(sync.value.blob).then((data) => {
-        const contacts = parseContactSync(data);
-        console.log(`[signal] Contact sync: ${contacts.length} contacts`);
-        console.table(contacts.map(({ aci, number, name }) => ({ aci, number, name })));
-      }, (err) => console.warn('[signal] Contact sync download failed', err));
-      break;
-    case 'sent':
-      console.log(`[signal] Sent from another device of ours to ${sync.value.destinationServiceId}:`,
-        sync.value.message?.body, sync.value);
-      break;
-    default:
-      console.log(`[signal] Sync message from ${from}:`, sync);
-  }
+function getTitle(conversation: ConversationRecord) {
+  return conversation.title ?? conversation.nickname ?? conversation.systemName
+    ?? ([conversation.profileName, conversation.profileFamilyName].filter(Boolean).join(' ') || conversation.e164);
 }
 
 function getContext() {

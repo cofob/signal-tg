@@ -23,6 +23,8 @@ export type AccountRecord = {
   // Group auth credentials of accounts without a phone number (and so without a PNI) are bound to this salt
   authCredentialSalt?: Uint8Array;
   isReadReceiptsEnabled?: boolean;
+  isTypingIndicatorsEnabled?: boolean;
+  isLinkPreviewsEnabled?: boolean;
 };
 
 // Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it
