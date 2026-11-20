@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Permissions available to Telegram app content",
+  "description": "Permissions available to the bundled TeleSignal app",
   "local": true,
   "webviews": ["*"],
   "permissions": [
@@ -10,6 +10,10 @@
     "allow-open-new-window-cmd",
     "allow-save-current-url",
     "allow-set-menu-translations",
+    "allow-signal-connect",
+    "allow-signal-send",
+    "allow-signal-ack",
+    "allow-signal-close",
     "core:event:default",
     "core:window:allow-is-fullscreen",
     "core:window:allow-start-dragging",
