@@ -12,7 +12,7 @@ import {
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import generateUniqueId from '../../../util/generateUniqueId';
 import { setTimeFormat } from '../../../util/localization';
-import { subscribe } from '../../../util/notifications';
+import { ensureNotificationPermission } from '../../../util/notifications';
 import { applyPerformanceSettings } from '../../../util/perfomanceSettings';
 import { hasStoredSession } from '../../../util/sessions';
 import switchTheme from '../../../util/switchTheme';
@@ -97,14 +97,14 @@ addActionHandler('initMain', (global, actions): ActionReturnType => {
   if (hasWebNotifications) {
     // Most of the browsers only show the notifications permission prompt after the first user gesture.
     const events = ['click', 'keypress'];
-    const subscribeAfterUserGesture = () => {
-      void subscribe();
+    const requestPermissionAfterUserGesture = () => {
+      void ensureNotificationPermission();
       events.forEach((event) => {
-        document.removeEventListener(event, subscribeAfterUserGesture);
+        document.removeEventListener(event, requestPermissionAfterUserGesture);
       });
     };
     events.forEach((event) => {
-      document.addEventListener(event, subscribeAfterUserGesture, { once: true });
+      document.addEventListener(event, requestPermissionAfterUserGesture, { once: true });
     });
   }
 });

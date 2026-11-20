@@ -561,7 +561,6 @@
 "KeyboardKeyBackspace" = "Backspace";
 "KeyboardKeyDelete" = "Del";
 "KeyboardKeyTab" = "Tab";
-"SettingsOfflineNotificationUnsupported" = "Not supported";
 "TextSize" = "Message Font Size";
 "ChatBackground" = "Chat Wallpaper";
 "ChatBackgroundColorThemes" = "Colors, Gradients & Patterns";
@@ -1504,7 +1503,6 @@
 "AriaMoreButton" = "More Actions";
 "RecoveryEmailCode" = "Recovery Email Code";
 "NotificationsWeb" = "Web Notifications";
-"NotificationsOffline" = "Offline Notifications";
 "NotificationsSound" = "Sound volume";
 "SettingsPasswordEqual" = "Passwords should be equal";
 "SettingsSaveChanges" = "Save changes";

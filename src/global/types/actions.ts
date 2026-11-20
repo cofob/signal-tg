@@ -260,7 +260,6 @@ export interface ActionPayloads {
   updateWebNotificationSettings: {
     shouldShowPushPreviewsWhenLocked?: boolean;
     hasWebNotifications?: boolean;
-    hasPushNotifications?: boolean;
     notificationSoundVolume?: number;
   };
   loadLanguages: undefined;

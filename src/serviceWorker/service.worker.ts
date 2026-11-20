@@ -5,12 +5,7 @@ import { pause } from '../util/schedulers';
 import { clearAssetCache, respondWithCache, respondWithCacheNetworkFirst } from './assetCache';
 import { handleDownloadMessage, respondForDownload } from './download';
 import { respondForProgressive } from './progressive';
-import {
-  handleClientMessage as handleNotificationMessage,
-  handleNotificationClick,
-  handlePush,
-  handlePushSubscriptionChange,
-} from './pushNotification';
+import { handleClientMessage as handleNotificationMessage, handleNotificationClick } from './pushNotification';
 import { handleClientMessage as handleShareMessage, respondForShare } from './share';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -119,8 +114,6 @@ async function respondWithSnapshot(request: Request) {
   return cached || fetch(request);
 }
 
-self.addEventListener('push', handlePush);
-self.addEventListener('pushsubscriptionchange', handlePushSubscriptionChange);
 self.addEventListener('notificationclick', handleNotificationClick);
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'claimClient') {

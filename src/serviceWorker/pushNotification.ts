@@ -1,106 +1,44 @@
-import type { PushAccount, PushData, PushNotification, PushState } from '../util/push';
+import type { PushAccount, PushNotification } from '../util/push';
 
 import { ACCOUNT_QUERY, APP_NAME } from '../config';
 import { getAccountSlot } from '../util/accountSlot';
 import { PUSH_IDB_STORE } from '../util/browser/idb';
 import { loadPasscodeMeta } from '../util/passcode/meta';
 import {
-  getPushTarget, hashPushValue, parsePushEnvelope, PUSH_CLICK_PREFIX, PUSH_CLICK_TIMEOUT_MS, PUSH_DISPLAY_LOCK,
-  PUSH_STATE_KEY, readPushKeyId, readPushMessageId, readPushState,
+  hashPushValue, PUSH_CLICK_PREFIX, PUSH_CLICK_TIMEOUT_MS, PUSH_DISPLAY_LOCK, readPushState,
 } from '../util/push';
 
 declare const self: ServiceWorkerGlobalScope;
 
-const CLIENT_TIMEOUT_MS = 1000;
 const VIBRATION_PATTERN = [200, 100, 200];
-const PUSH_EVENT_LOCK = 'tt-push-events';
 const DEDUPLICATION_TIMEOUT_MS = 60 * 1000;
 const NOTIFICATION_ICON = 'icon-192x192.png';
-const SERVICE_PUSH_KEYS = new Set([
-  'DC_UPDATE', 'SESSION_REVOKE', 'GEO_LIVE_PENDING', 'MESSAGE_MUTED', 'LOCKED_MESSAGE',
-]);
-const CLEANUP_PUSH_KEYS = new Set([
-  'READ_HISTORY', 'MESSAGE_DELETED', 'READ_REACTION', 'READ_STORIES', 'STORY_DELETED',
-]);
 const shownNotifications = new Map<string, number>();
 
-export function handlePush(e: PushEvent) {
-  // A read/delete event follows any earlier push that is still waiting for a client acknowledgement
-  e.waitUntil(navigator.locks.request(PUSH_EVENT_LOCK, () => processPush(e)).catch(() => undefined));
-}
-
-async function processPush(e: PushEvent) {
-  const envelope = parsePushEnvelope(e.data?.json());
-  const state = await readPushState();
-  if (!envelope || !state || state.isPaused) return;
-  const keyId = 'p' in envelope ? readPushKeyId(envelope.p) : undefined;
-  const userHash = 'user_id' in envelope ? await hashPushValue(envelope.user_id) : undefined;
-  const account = Object.values(state.accounts).find((candidate) => (
-    keyId ? candidate.keyId === keyId : candidate.userHash === userHash
-  ));
-  if (!account?.isEnabled) return;
-
-  if (!('p' in envelope)) {
-    if (CLEANUP_PUSH_KEYS.has(envelope.loc_key)) {
-      await navigator.locks.request(PUSH_DISPLAY_LOCK, () => closePushNotifications(account, envelope));
-      return;
-    }
-    if (envelope.mute || SERVICE_PUSH_KEYS.has(envelope.loc_key)) return;
-  }
-
-  const target = 'p' in envelope ? undefined : getPushTarget(envelope);
-  const clients = await getAccountClients(account);
-  const claims = await Promise.all(clients.map((client) => requestPushClaim(client, {
-    slot: account.slot,
-    userHash: account.userHash,
-    kind: target?.kind,
-    p: 'p' in envelope ? envelope.p : undefined,
-  })));
-  if (claims.some(Boolean)) return;
-
-  const notification: PushNotification = 'p' in envelope ? {
-    slot: account.slot,
-    userHash: account.userHash,
-    title: APP_NAME,
-    body: state.hiddenMessage,
-    p: envelope.p,
-    isGeneric: true,
-  } : {
-    ...target!,
-    slot: account.slot,
-    userHash: account.userHash,
-    title: envelope.title || APP_NAME,
-    body: envelope.description || envelope.message || state.hiddenMessage,
-    isSilent: envelope.custom.silent === '1',
-  };
-  await showNotification(notification, state.revision);
-}
-
-async function showNotification(notification: PushNotification, revision?: string, isLocal?: boolean) {
+// Pages ask the worker to show their notifications. Signal has no web push for linked devices, so nothing
+// subscribes to a push service and the worker never receives `push` events
+async function showNotification(notification: PushNotification) {
   return navigator.locks.request(PUSH_DISPLAY_LOCK, async () => {
     const state = await readPushState();
     const account = state?.accounts[notification.slot];
     if (!state || !account || account.userHash !== notification.userHash) return;
-    if (!isLocal && (state.isPaused || !account.isEnabled || state.revision !== revision)) return;
     const meta = await loadPasscodeMeta();
-    if (isLocal && (notification.revision !== state.revision || notification.lockEpoch !== meta?.lockEpoch)) return;
+    if (notification.revision !== state.revision || notification.lockEpoch !== meta?.lockEpoch) return;
     const shouldHide = (state.hasPasscode || Boolean(meta)) && !account.shouldShowPreviewsWhenLocked
-      && (!isLocal || Boolean(meta?.isLocked));
+      && Boolean(meta?.isLocked);
     const isGeneric = notification.isGeneric || shouldHide;
     const data: PushNotification = isGeneric ? {
       slot: account.slot,
       userHash: account.userHash,
       title: APP_NAME,
       body: state.hiddenMessage,
-      p: notification.p,
       isGeneric: true,
       isSilent: notification.isSilent,
     } : notification;
-    // shortcut: Reaction content can differ across local/push delivery; use shared reaction event IDs when available
     const reactionIdentity = data.kind === 'reaction' ? `:${JSON.stringify([data.title, data.body])}` : '';
-    // A local generic notification keeps no routing, so it cannot match a push and is never deduplicated
-    const identity = isLocal && isGeneric ? crypto.randomUUID() : `${account.userHash}:${data.kind || 'message'}:${
-      data.chatId || ''}:${data.storyId || data.messageId || data.p || 'generic'}${reactionIdentity}`;
+    // A generic notification keeps no routing, so it is never deduplicated
+    const identity = isGeneric ? crypto.randomUUID() : `${account.userHash}:${data.kind || 'message'}:${
+      data.chatId || ''}:${data.storyId || data.messageId || 'generic'}${reactionIdentity}`;
     const id = await hashPushValue(identity);
     const now = Date.now();
     shownNotifications.forEach((date, key) => {
@@ -111,7 +49,7 @@ async function showNotification(notification: PushNotification, revision?: strin
     if (notifications.some((item) => item.data?.id === id)) return;
     const tag = await hashPushValue(`${account.userHash}:${data.kind || 'message'}:${data.chatId || 'generic'}`);
     // Pages play their own sound unless they ask for the system sound, which also vibrates
-    const isSilent = Boolean(data.isSilent) || (isLocal && !notification.shouldUseSystemSound);
+    const isSilent = Boolean(data.isSilent) || !notification.shouldUseSystemSound;
     const options: NotificationOptions & { renotify?: boolean; vibrate?: number[] } = {
       body: data.body,
       icon: data.icon || NOTIFICATION_ICON,
@@ -139,24 +77,6 @@ async function getAccountClients(account: PushAccount) {
   });
 }
 
-function requestPushClaim(client: Client, payload: unknown): Promise<boolean> {
-  return new Promise((resolve) => {
-    const channel = new MessageChannel();
-    const timeout = setTimeout(() => finish(false), CLIENT_TIMEOUT_MS);
-    function finish(value: boolean) {
-      clearTimeout(timeout);
-      channel.port1.close();
-      resolve(value);
-    }
-    channel.port1.onmessage = (e) => finish(e.data === true);
-    try {
-      client.postMessage({ type: 'claimPush', payload }, [channel.port2]);
-    } catch {
-      finish(false);
-    }
-  });
-}
-
 export function handleNotificationClick(e: NotificationEvent) {
   e.notification.close();
   e.waitUntil(openNotification(e.notification.data).catch(() => undefined));
@@ -175,7 +95,7 @@ async function openNotification(data: PushNotification) {
     client = clients.find((candidate) => candidate.focused) || clients[0];
     // A legacy plaintext click must not reintroduce protected routing into IndexedDB
     const target: PushNotification = {
-      slot: data.slot, userHash: data.userHash, p: data.p,
+      slot: data.slot, userHash: data.userHash,
       title: '', body: '', id: crypto.randomUUID(),
       clientId: client?.id,
       clickedAt: Date.now(),
@@ -262,7 +182,7 @@ async function processClientMessage(e: ExtendableMessageEvent) {
     }
     case 'showMessageNotification': {
       if (payload?.userHash !== account.userHash || payload?.slot !== slot) return;
-      const id = await showNotification(payload, undefined, true);
+      const id = await showNotification(payload);
       if (id && !payload.isSilent && !payload.shouldUseSystemSound && payload.kind !== 'reaction') {
         source.postMessage({ type: 'playNotificationSound', payload: { id } });
       }
@@ -272,7 +192,7 @@ async function processClientMessage(e: ExtendableMessageEvent) {
       if (payload?.userHash !== account.userHash) return;
       const maxId = payload.lastReadInboxMessageId;
       await navigator.locks.request(PUSH_DISPLAY_LOCK, () => (
-        closeNotifications(account, payload.chatId, maxId, undefined, maxId !== undefined)
+        closeNotifications(account, payload.chatId, maxId, maxId !== undefined)
       ));
       break;
     }
@@ -280,8 +200,7 @@ async function processClientMessage(e: ExtendableMessageEvent) {
 }
 
 async function closeNotifications(
-  account: PushAccount, chatId: string, maxId = Number.MAX_SAFE_INTEGER, kind?: PushNotification['kind'],
-  shouldCloseGeneric?: boolean,
+  account: PushAccount, chatId: string, maxId = Number.MAX_SAFE_INTEGER, shouldCloseGeneric?: boolean,
 ) {
   const notifications = await self.registration.getNotifications();
   notifications.forEach((notification) => {
@@ -289,48 +208,7 @@ async function closeNotifications(
     if (data?.userHash !== account.userHash) return;
     // Generic notifications hide their chat, so any read reported by the app clears them
     if ((shouldCloseGeneric && data.isGeneric) || (data.chatId === chatId
-      && data.kind !== 'story' && (!kind || data.kind === kind)
+      && data.kind !== 'story'
       && data.messageId && data.messageId <= maxId)) notification.close();
   });
-}
-
-async function closePushNotifications(account: PushAccount, push: PushData) {
-  const target = getPushTarget(push);
-  if (!target.chatId) return;
-  if (push.loc_key === 'READ_HISTORY') {
-    const maxId = readPushMessageId(push.custom.max_id);
-    if (maxId) await closeNotifications(account, target.chatId, maxId, 'message');
-    return;
-  }
-  const isStory = push.loc_key === 'READ_STORIES' || push.loc_key === 'STORY_DELETED';
-  const ids = (push.custom.messages || push.custom.story_id || '').split(',').map(readPushMessageId);
-  const maxId = readPushMessageId(push.custom.max_id);
-  const notifications = await self.registration.getNotifications();
-  notifications.forEach((notification) => {
-    const data: PushNotification = notification.data;
-    if (data?.userHash !== account.userHash || data.chatId !== target.chatId) return;
-    if (isStory ? data.kind !== 'story' : data.kind === 'story') return;
-    if (push.loc_key === 'READ_REACTION' && data.kind !== 'reaction') return;
-    const id = isStory ? data.storyId : data.messageId;
-    if (id && (ids.includes(id) || (push.loc_key === 'READ_STORIES' && maxId && id <= maxId))) notification.close();
-  });
-}
-
-export function handlePushSubscriptionChange(e: ExtendableEvent) {
-  e.waitUntil(invalidatePushRegistration());
-}
-
-async function invalidatePushRegistration() {
-  await PUSH_IDB_STORE.update<PushState | undefined>(PUSH_STATE_KEY, (state) => {
-    if (!state) return state;
-    return {
-      ...state,
-      revision: crypto.randomUUID(),
-      accounts: Object.fromEntries(Object.entries(state.accounts).map(([slot, account]) => [
-        slot, { ...account, registration: undefined },
-      ])),
-    };
-  });
-  const clients = await self.clients.matchAll({ type: 'window' });
-  clients.forEach((client) => client.postMessage({ type: 'reconcilePush' }));
 }

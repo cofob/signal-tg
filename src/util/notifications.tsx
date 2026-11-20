@@ -7,7 +7,7 @@ import type {
 import type { GlobalState } from '../global/types';
 import { ApiMediaFormat } from '../api/types';
 
-import { APP_NAME, DEBUG, IS_TEST, NOTIFICATION_MAX_VOLUME, VAPID_SERVER_KEY } from '../config';
+import { APP_NAME, DEBUG, IS_TEST, NOTIFICATION_MAX_VOLUME } from '../config';
 import {
   getChatAvatarHash,
   getChatTitle,
@@ -40,18 +40,11 @@ import jsxToHtml from './element/jsxToHtml';
 import { buildCollectionByKey } from './iteratees';
 import { getTranslationFn } from './localization';
 import * as mediaLoader from './mediaLoader';
-import { checkIfPushSubscriptionFailed, getPushIdentity, reconcilePushNotifications } from './pushNotifications';
+import { getPushIdentity } from './pushNotifications';
 import { debounce } from './schedulers';
 import { getServerTime } from './serverTime';
-import { hasStoredSession } from './sessions';
 
 import MessageSummary from '../components/common/MessageSummary';
-
-export function checkIfPushSupported() {
-  // Offline push needs a stored session to register the account, and it stops once the push service rejects us
-  return checkIfServiceWorkerNotificationsSupported() && Boolean(VAPID_SERVER_KEY) && 'PushManager' in window
-    && !checkIfPushSubscriptionFailed() && hasStoredSession();
-}
 
 function checkIfServiceWorkerNotificationsSupported() {
   if (!IS_SERVICE_WORKER_SUPPORTED || IS_TAURI || !('Notification' in window)) return false;
@@ -177,18 +170,11 @@ async function loadCustomEmoji(id: string) {
   setGlobal(global);
 }
 
-export async function subscribe() {
-  const { updateWebNotificationSettings } = getActions();
+export async function ensureNotificationPermission() {
   const hasWebNotifications = await requestPermission();
   if (!hasWebNotifications) {
-    updateWebNotificationSettings({ hasWebNotifications: false, hasPushNotifications: false });
-    return;
+    getActions().updateWebNotificationSettings({ hasWebNotifications: false });
   }
-  if (!checkIfPushSupported()) {
-    updateWebNotificationSettings({ hasWebNotifications: true, hasPushNotifications: false });
-    return;
-  }
-  await reconcilePushNotifications();
 }
 
 function checkIfShouldNotify(chat: ApiChat, message: Partial<ApiMessage>) {
@@ -365,9 +351,6 @@ export async function notifyAboutMessage({
 
   // Without push state for this account the worker drops the notification, so the page shows it instead
   const identity = canUseServiceWorker ? await getPushIdentity().catch(() => undefined) : undefined;
-
-  // A hidden touch page doesn't claim pushes, and encrypted ones can't be matched to a local notification
-  if (identity?.isPushEncrypted && IS_TOUCH_ENV && document.hidden) return;
 
   if (identity) {
     // notify service worker about new message notification

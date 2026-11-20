@@ -63,7 +63,7 @@ import {
   resetSessionStore,
 } from '../../../util/passcode/sessionStore';
 import {
-  clearPrivatePushNotifications, reconcilePushNotifications, refreshPushNotificationState, suspendPushForPasscode,
+  clearPrivatePushNotifications, refreshPushNotificationState, suspendPushForPasscode,
 } from '../../../util/pushNotifications';
 import { clearAllStoredSessions, storeSession, updateSessionUserId } from '../../../util/sessions';
 import {
@@ -142,7 +142,6 @@ addActionHandler('setPasscode', async (global, actions, payload): Promise<void> 
       isLoading: false,
     });
     forceUpdateCache();
-    void reconcilePushNotifications();
     if (hadPasskey) {
       actions.showNotification({ message: { key: 'PasscodePasskeyRemovedChange' }, tabId });
     }
@@ -158,7 +157,6 @@ addActionHandler('setPasscode', async (global, actions, payload): Promise<void> 
 
     await refreshPushNotificationState().catch(logPasscodeWarning);
     setPasscodeSettings({ isLoading: false });
-    void reconcilePushNotifications();
 
     actions.showNotification({
       message: { key: 'SomethingWentWrong' },
@@ -228,7 +226,7 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
   global = clearPasscodeSettings(global);
   setGlobal(global);
   forceUpdateCache();
-  void reconcilePushNotifications();
+  void refreshPushNotificationState();
   actions.openSettingsScreen({ screen: SettingsScreens.Privacy, tabId: getCurrentTabId() });
 });
 

@@ -465,7 +465,6 @@ export interface LangPair {
   'KeyboardKeyBackspace': undefined;
   'KeyboardKeyDelete': undefined;
   'KeyboardKeyTab': undefined;
-  'SettingsOfflineNotificationUnsupported': undefined;
   'TextSize': undefined;
   'ChatBackground': undefined;
   'ChatBackgroundColorThemes': undefined;
@@ -1206,7 +1205,6 @@ export interface LangPair {
   'AriaMoreButton': undefined;
   'RecoveryEmailCode': undefined;
   'NotificationsWeb': undefined;
-  'NotificationsOffline': undefined;
   'NotificationsSound': undefined;
   'SettingsPasswordEqual': undefined;
   'SettingsSaveChanges': undefined;

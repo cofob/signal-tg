@@ -312,7 +312,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ]),
 
   ...buildEntries(SettingsScreens.Notifications, [
-    'NotificationsWeb', 'NotificationsOffline', 'NotificationsForPrivateChats', 'MessagePreview',
+    'NotificationsWeb', 'NotificationsForPrivateChats', 'MessagePreview',
     'NotificationsForGroups', 'NotificationsForChannels', 'ContactJoined', 'PinnedMessagesNotifications',
   ]),
   ...buildEntries(SettingsScreens.Notifications, IS_IOS ? [] : ['NotificationsSound']),

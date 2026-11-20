@@ -193,7 +193,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     TG_SOCIAL_IMAGE_URL: socialImageUrl,
     TG_TELEGRAM_API_ID: telegramApiId,
     TG_TELEGRAM_API_HASH: telegramApiHash,
-    TG_VAPID_KEY: env.VAPID_KEY || '',
     TG_TEST_SESSION: env.TEST_SESSION || '',
     TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
   });
