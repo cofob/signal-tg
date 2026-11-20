@@ -215,15 +215,6 @@
       }
     }
 
-    .search-sponsored-badge {
-      cursor: pointer;
-      display: flex;
-      align-self: flex-start;
-      &:hover {
-        filter: brightness(1.1);
-      }
-    }
-
     .search-result-miniapp-button {
       height: auto !important;
       padding: 0 0.4375rem !important;

@@ -1,5 +1,5 @@
 import { memo } from '../../lib/teact/teact';
-import { getActions, withGlobal } from '../../global';
+import { withGlobal } from '../../global';
 
 import type { ApiPeer } from '../../api/types';
 
@@ -10,11 +10,9 @@ import { LOCAL_TGS_URLS } from '../common/helpers/animatedAssets';
 import renderText from '../common/helpers/renderText';
 
 import useLang from '../../hooks/useLang';
-import useLastCallback from '../../hooks/useLastCallback';
 
 import AnimatedIconWithPreview from '../common/AnimatedIconWithPreview';
 import Icon from '../common/icons/Icon';
-import Button from '../ui/Button';
 
 import styles from './RequirementToContactMessage.module.scss';
 
@@ -31,10 +29,7 @@ type StateProps = {
 function RequirementToContactMessage({
   patternColor, peer, paidMessagesStars,
 }: OwnProps & StateProps) {
-  const { openPremiumModal } = getActions();
   const lang = useLang();
-
-  const handleOpenPremiumModal = useLastCallback(() => openPremiumModal());
 
   if (!peer) return undefined;
 
@@ -68,17 +63,6 @@ function RequirementToContactMessage({
               : renderText(lang('MessageLockedPremium', { peer: getPeerTitle(lang, peer) }), ['simple_markdown'])
           }
         </span>
-        {!paidMessagesStars && (
-          <Button
-            color="translucent-black"
-            size="default"
-            pill
-            onClick={handleOpenPremiumModal}
-            className={styles.button}
-          >
-            {lang('MessagePremiumUnlock')}
-          </Button>
-        )}
       </div>
     </div>
   );

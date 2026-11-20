@@ -1,40 +1,13 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
-import type { ApiAppConfig, ApiLimitType, ApiPremiumSection } from '../../types';
+import type { ApiAppConfig } from '../../types';
 
 import { omitUndefined } from '../../../util/iteratees';
-import {
-  DEFAULT_APP_CONFIG,
-  DEFAULT_LIMITS,
-} from '../../../limits';
+import { DEFAULT_APP_CONFIG } from '../../../limits';
 import localDb from '../localDb';
 import { buildJson } from './misc';
 
-type LimitType = 'default' | 'premium';
-type Limit =
-  | 'upload_max_fileparts'
-  | 'stickers_faved_limit'
-  | 'saved_gifs_limit'
-  | 'dialog_filters_chats_limit'
-  | 'dialog_filters_limit'
-  | 'dialogs_folder_pinned_limit'
-  | 'dialogs_pinned_limit'
-  | 'message_length_limit'
-  | 'caption_length_limit'
-  | 'channels_limit'
-  | 'channels_public_limit'
-  | 'about_length_limit'
-  | 'chatlist_invites_limit'
-  | 'chatlist_joined_limit'
-  | 'recommended_channels_limit'
-  | 'saved_dialogs_pinned_limit'
-  | 'reactions_user_max'
-  | 'aicompose_tone_saved_limit'
-  | 'bots_create_limit';
-type LimitKey = `${Limit}_${LimitType}`;
-type LimitsConfig = Record<LimitKey, number>;
-
-export interface GramJsAppConfig extends LimitsConfig {
+export interface GramJsAppConfig {
   emojies_sounds: Record<string, {
     id: string;
     access_hash: string;
@@ -58,18 +31,12 @@ export interface GramJsAppConfig extends LimitsConfig {
   web_app_allowed_protocols?: string[];
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
-  premium_purchase_blocked: boolean;
-  giveaway_add_peers_max: number;
   premium_bot_username: string;
   premium_invoice_slug: string;
-  premium_promo_order: string[];
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
   authorization_autoconfirm_period: number;
-  giveaway_boosts_per_premium: number;
-  giveaway_countries_max: number;
-  boosts_per_sent_gift: number;
   stars_paid_reaction_amount_max: number;
   // Forums
   topics_pinned_limit: number;
@@ -80,13 +47,11 @@ export interface GramJsAppConfig extends LimitsConfig {
   // Boosts
   group_transcribe_level_min?: number;
   new_noncontact_peers_require_premium_without_ownpremium?: boolean;
-  channel_restrict_sponsored_level_min?: number;
   channel_revenue_withdrawal_enabled?: boolean;
   // Upload premium notifications
   upload_premium_speedup_notify_period?: number;
   upload_premium_speedup_download?: number;
   upload_premium_speedup_upload?: number;
-  stars_gifts_enabled?: boolean;
   starref_start_param_prefixes?: string[];
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
@@ -170,12 +135,6 @@ function buildDiceEmojiesSuccess(appConfig: GramJsAppConfig) {
   }, {} as ApiAppConfig['diceEmojiesSuccess']) : {};
 }
 
-function getLimit(appConfig: GramJsAppConfig, key: Limit, fallbackKey: ApiLimitType) {
-  const defaultLimit = appConfig[`${key}_default`] || DEFAULT_LIMITS[fallbackKey][0];
-  const premiumLimit = appConfig[`${key}_premium`] || DEFAULT_LIMITS[fallbackKey][1];
-  return [defaultLimit, premiumLimit] as const;
-}
-
 // The config is JSON, so nanotons arrive as doubles and only whole values are taken
 function buildNanotons(value?: number) {
   return value !== undefined && Number.isInteger(value) ? BigInt(value) : undefined;
@@ -196,37 +155,10 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     premiumBotUsername: appConfig.premium_bot_username,
-    premiumPromoOrder: appConfig.premium_promo_order as ApiPremiumSection[],
-    isPremiumPurchaseBlocked: appConfig.premium_purchase_blocked,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
-    giveawayAddPeersMax: appConfig.giveaway_add_peers_max,
-    giveawayBoostsPerPremium: appConfig.giveaway_boosts_per_premium,
-    giveawayCountriesMax: appConfig.giveaway_countries_max,
-    boostsPerSentGift: appConfig.boosts_per_sent_gift,
     canDisplayAutoarchiveSetting: appConfig.autoarchive_setting_available,
-    limits: {
-      uploadMaxFileparts: getLimit(appConfig, 'upload_max_fileparts', 'uploadMaxFileparts'),
-      stickersFaved: getLimit(appConfig, 'stickers_faved_limit', 'stickersFaved'),
-      savedGifs: getLimit(appConfig, 'saved_gifs_limit', 'savedGifs'),
-      dialogFiltersChats: getLimit(appConfig, 'dialog_filters_chats_limit', 'dialogFiltersChats'),
-      dialogFilters: getLimit(appConfig, 'dialog_filters_limit', 'dialogFilters'),
-      dialogFolderPinned: getLimit(appConfig, 'dialogs_pinned_limit', 'dialogFolderPinned'),
-      messageLength: getLimit(appConfig, 'message_length_limit', 'messageLength'),
-      captionLength: getLimit(appConfig, 'caption_length_limit', 'captionLength'),
-      channels: getLimit(appConfig, 'channels_limit', 'channels'),
-      channelsPublic: getLimit(appConfig, 'channels_public_limit', 'channelsPublic'),
-      aboutLength: getLimit(appConfig, 'about_length_limit', 'aboutLength'),
-      chatlistInvites: getLimit(appConfig, 'chatlist_invites_limit', 'chatlistInvites'),
-      chatlistJoined: getLimit(appConfig, 'chatlist_joined_limit', 'chatlistJoined'),
-      recommendedChannels: getLimit(appConfig, 'recommended_channels_limit', 'recommendedChannels'),
-      savedDialogsPinned: getLimit(appConfig, 'saved_dialogs_pinned_limit', 'savedDialogsPinned'),
-      maxReactions: getLimit(appConfig, 'reactions_user_max', 'maxReactions'),
-      moreAccounts: DEFAULT_LIMITS.moreAccounts,
-      aiComposeToneSaved: getLimit(appConfig, 'aicompose_tone_saved_limit', 'aiComposeToneSaved'),
-      botsCreate: getLimit(appConfig, 'bots_create_limit', 'botsCreate'),
-    },
     richMessageLengthLimit: appConfig.rich_message_length_limit ?? DEFAULT_APP_CONFIG.richMessageLengthLimit,
     richMessageMaxBlocks: appConfig.rich_message_max_blocks ?? DEFAULT_APP_CONFIG.richMessageMaxBlocks,
     richMessageMaxDepth: appConfig.rich_message_max_depth ?? DEFAULT_APP_CONFIG.richMessageMaxDepth,
@@ -248,11 +180,9 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     bandwidthPremiumNotifyPeriod: appConfig.upload_premium_speedup_notify_period,
     bandwidthPremiumUploadSpeedup: appConfig.upload_premium_speedup_upload,
     bandwidthPremiumDownloadSpeedup: appConfig.upload_premium_speedup_download,
-    channelRestrictAdsLevelMin: appConfig.channel_restrict_sponsored_level_min,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
     paidReactionMaxAmount: appConfig.stars_paid_reaction_amount_max,
     isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,
-    isStarsGiftEnabled: appConfig.stars_gifts_enabled,
     starRefStartPrefixes: appConfig.starref_start_param_prefixes,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
     freezeSinceDate: appConfig.freeze_since_date,

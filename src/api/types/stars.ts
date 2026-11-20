@@ -14,12 +14,6 @@ export interface ApiTonAmount {
   amount: bigint;
 }
 
-export interface ApiStarsGiveawayWinnerOption {
-  isDefault?: true;
-  users: number;
-  perUserStars: number;
-}
-
 export interface ApiStarsRating {
   level: number;
   currentLevelStars: number;

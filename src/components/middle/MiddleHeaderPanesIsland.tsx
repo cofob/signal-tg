@@ -26,7 +26,6 @@ import {
 } from './hooks/useHeaderPane';
 
 import GroupCallTopPane from '../calls/group/GroupCallTopPane';
-import BotAdPane from './panes/BotAdPane';
 import BotVerificationPane from './panes/BotVerificationPane';
 import ChatReportPane from './panes/ChatReportPane';
 import HeaderPinnedMessage from './panes/HeaderPinnedMessage';
@@ -102,7 +101,6 @@ const MiddleHeaderPanesIsland = ({
   const [getPinnedState, setPinnedState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getGroupCallState, setGroupCallState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getChatReportState, setChatReportState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getBotAdState, setBotAdState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getBotVerificationState, setBotVerificationState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getPaidMessageChargeState, setPaidMessageChargeState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
@@ -111,7 +109,7 @@ const MiddleHeaderPanesIsland = ({
   const paneStateGetters = [
     isGroupCallShown ? getGroupCallState : getFallbackPaneState,
     getChatReportState, getBotVerificationState,
-    getPinnedState, getBotAdState, getPaidMessageChargeState,
+    getPinnedState, getPaidMessageChargeState,
   ];
   const expectedReportCount = paneStateGetters.filter((getter) => getter !== getFallbackPaneState).length;
   const expectedReportCountRef = useRef(expectedReportCount);
@@ -375,7 +373,7 @@ const MiddleHeaderPanesIsland = ({
     settleRef.current = settle;
     settle();
   }, [cacheKey, getGroupCallState, getPinnedState,
-    getChatReportState, getBotAdState, getBotVerificationState, getPaidMessageChargeState]);
+    getChatReportState, getBotVerificationState, getPaidMessageChargeState]);
 
   if (!shouldRender) return undefined;
 
@@ -416,11 +414,6 @@ const MiddleHeaderPanesIsland = ({
         getLoadingPinnedId={getLoadingPinnedId}
         getCurrentPinnedIndex={getCurrentPinnedIndex}
         onPaneStateChange={setPinnedState}
-      />
-      <BotAdPane
-        chatId={chatId}
-        messageListType={messageListType}
-        onPaneStateChange={setBotAdState}
       />
       <PaidMessageChargePane
         peerId={chatId}

@@ -68,7 +68,6 @@ export interface ApiChat {
   linkedCommunityId?: string;
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
-  boostLevel?: number;
   botVerificationIconId?: string;
   hasAutoTranslation?: true;
   level?: number;
@@ -182,8 +181,6 @@ export interface ApiChatFullInfo {
   hasScheduledMessages?: boolean;
   arePaidMessagesAvailable?: true;
 
-  boostsApplied?: number;
-  boostsToUnrestrict?: number;
   botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;
   guardBotId?: string;
@@ -309,11 +306,6 @@ export interface ApiMissingInvitedUser {
   isRequiringPremiumToMessage?: boolean;
 }
 
-export interface ApiChatLink {
-  chatId: string;
-  text: ApiFormattedText;
-}
-
 export type ApiDraft = {
   text?: ApiFormattedText;
   richMessage?: ApiInputRichMessage;
@@ -322,11 +314,4 @@ export type ApiDraft = {
   date?: number;
   effectId?: string;
   isLocal?: boolean;
-};
-
-export type ApiSponsoredPeer = {
-  randomId: string;
-  peerId: string;
-  sponsorInfo?: string;
-  additionalInfo?: string;
 };

@@ -169,11 +169,6 @@ const ReactionPicker = ({
           key: 'UnlockPremiumEmojiHint',
           options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
         },
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'animated_emoji' },
-        },
-        actionText: { key: 'PremiumMore' },
       });
 
       closeReactionPicker();

@@ -1,18 +1,5 @@
 @use '../../../styles/mixins';
 
-.businessLocation {
-  flex-shrink: 0;
-
-  width: 3rem;
-  height: 3rem;
-  margin-inline-start: 0.25rem;
-  border-radius: 0.25rem;
-
-  object-fit: cover;
-
-  @include mixins.with-vt-type('chatExtra');
-}
-
 .personalChannel {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -35,7 +22,7 @@
   color: var(--color-text-secondary);
 }
 
-.phone, .description, .link, .miniapp, .notifications, .location, .note, .savedMessages, .botEmojiStatus,
+.phone, .description, .link, .miniapp, .notifications, .note, .savedMessages, .botEmojiStatus,
 .botLocation, .botCamera, .botMicrophone, .subscribers {
   @include mixins.with-vt-type('chatExtra');
 }

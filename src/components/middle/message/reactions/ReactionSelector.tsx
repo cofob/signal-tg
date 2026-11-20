@@ -1,5 +1,4 @@
 import { memo, useMemo, useRef } from '../../../../lib/teact/teact';
-import { getActions } from '../../../../global';
 
 import type {
   ApiAvailableReaction,
@@ -20,7 +19,6 @@ import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
 
 import Button from '../../../ui/Button';
-import Link from '../../../ui/Link';
 import ReactionSelectorCustomReaction from './ReactionSelectorCustomReaction';
 import ReactionSelectorReaction from './ReactionSelectorReaction';
 
@@ -38,7 +36,6 @@ type OwnProps = {
   currentReactions?: ApiReactionCount[];
   reactionsLimit?: number;
   isReady?: boolean;
-  canBuyPremium?: boolean;
   isCurrentUserPremium?: boolean;
   canPlayAnimatedEmojis?: boolean;
   className?: string;
@@ -46,7 +43,6 @@ type OwnProps = {
   isInStoryViewer?: boolean;
   isForEffects?: boolean;
   isWithPaidReaction?: boolean;
-  onClose?: NoneToVoidFunction;
   onToggleReaction: (reaction: ApiReaction) => void;
   onSendPaidReaction?: NoneToVoidFunction;
   onShowPaidReactionModal?: NoneToVoidFunction;
@@ -74,13 +70,11 @@ const ReactionSelector = ({
   isForEffects,
   effectReactions,
   isWithPaidReaction,
-  onClose,
   onToggleReaction,
   onSendPaidReaction,
   onShowPaidReactionModal,
   onShowMore,
 }: OwnProps) => {
-  const { openPremiumModal } = getActions();
   const ref = useRef<HTMLDivElement>();
   const lang = useLang();
 
@@ -147,23 +141,10 @@ const ReactionSelector = ({
     });
   });
 
-  const handleOpenPremiumModal = useLastCallback(() => {
-    onClose?.();
-    openPremiumModal({
-      initialSection: 'saved_tags',
-    });
-  });
-
   const hintText = useMemo(() => {
     if (isInSavedMessages) {
       if (!isCurrentUserPremium) {
-        return lang('SubscribeTagAbout', {
-          link: (
-            <Link isPrimary onClick={handleOpenPremiumModal}>
-              {lang('SubscribeTagLink')}
-            </Link>
-          ),
-        }, { withNodes: true });
+        return lang('SubscribeTagAbout', { link: lang('SubscribeTagLink') });
       }
 
       return lang('SavedTagReactionsHint2');

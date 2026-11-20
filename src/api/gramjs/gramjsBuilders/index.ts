@@ -1,5 +1,5 @@
 import { Api as GramJs } from '../../../lib/gramjs';
-import { generateRandomBigInt, generateRandomBytes, readBigIntFromBuffer } from '../../../lib/gramjs/Helpers';
+import { generateRandomBytes, readBigIntFromBuffer } from '../../../lib/gramjs/Helpers';
 
 import type {
   ApiAudio,
@@ -16,7 +16,6 @@ import type {
   ApiInputAiComposeTone,
   ApiInputPrivacyRules,
   ApiInputReplyInfo,
-  ApiInputStorePaymentPurpose,
   ApiInputSuggestedPostInfo,
   ApiLocation,
   ApiMessageEntity,
@@ -715,42 +714,6 @@ export function buildInputPhoneCall({ id, accessHash }: ApiPhoneCall) {
   return new GramJs.InputPhoneCall({
     id: BigInt(id),
     accessHash: BigInt(accessHash!),
-  });
-}
-
-export function buildInputStorePaymentPurpose(
-  purpose: ApiInputStorePaymentPurpose,
-): GramJs.TypeInputStorePaymentPurpose {
-  const randomId = generateRandomBigInt();
-
-  if (purpose.type === 'starsgiveaway') {
-    return new GramJs.InputStorePaymentStarsGiveaway({
-      boostPeer: buildInputPeer(purpose.chat.id, purpose.chat.accessHash),
-      additionalPeers: purpose.additionalChannels?.map((chat) => buildInputPeer(chat.id, chat.accessHash)),
-      stars: BigInt(purpose.stars!),
-      countriesIso2: purpose.countries,
-      prizeDescription: purpose.prizeDescription,
-      onlyNewSubscribers: purpose.isOnlyForNewSubscribers || undefined,
-      winnersAreVisible: purpose.areWinnersVisible || undefined,
-      untilDate: purpose.untilDate,
-      currency: purpose.currency,
-      amount: BigInt(purpose.amount),
-      users: purpose.users,
-      randomId,
-    });
-  }
-
-  return new GramJs.InputStorePaymentPremiumGiveaway({
-    boostPeer: buildInputPeer(purpose.chat.id, purpose.chat.accessHash),
-    additionalPeers: purpose.additionalChannels?.map((chat) => buildInputPeer(chat.id, chat.accessHash)),
-    countriesIso2: purpose.countries,
-    prizeDescription: purpose.prizeDescription,
-    onlyNewSubscribers: purpose.isOnlyForNewSubscribers || undefined,
-    winnersAreVisible: purpose.areWinnersVisible || undefined,
-    untilDate: purpose.untilDate,
-    currency: purpose.currency,
-    amount: BigInt(purpose.amount),
-    randomId,
   });
 }
 

@@ -506,7 +506,6 @@ addActionHandler('setEmojiStatus', async (global, actions, payload): Promise<voi
       });
     }
 
-    actions.openPremiumModal({ initialSection: 'emoji_status', tabId });
     return;
   }
 

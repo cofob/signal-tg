@@ -12,7 +12,6 @@ import type {
   ApiSticker,
   ApiVideo,
 } from './messages';
-import type { ApiPremiumSection } from './payments';
 import type { ApiBotVerification } from './peers';
 import type { ApiUser } from './users';
 
@@ -328,17 +327,10 @@ export interface ApiAppConfig {
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
   premiumBotUsername: string;
-  isPremiumPurchaseBlocked: boolean;
-  giveawayAddPeersMax: number;
-  giveawayBoostsPerPremium: number;
-  giveawayCountriesMax: number;
-  boostsPerSentGift: number;
-  premiumPromoOrder: ApiPremiumSection[];
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
   hiddenMembersMinCount: number;
-  limits: Record<ApiLimitType, readonly [number, number]>;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -358,12 +350,9 @@ export interface ApiAppConfig {
   bandwidthPremiumNotifyPeriod?: number;
   bandwidthPremiumUploadSpeedup?: number;
   bandwidthPremiumDownloadSpeedup?: number;
-  channelRestrictAdsLevelMin?: number;
   channelAutoTranslationLevelMin?: number;
-  channelLevelMax: number;
   paidReactionMaxAmount?: number;
   isChannelRevenueWithdrawalEnabled?: boolean;
-  isStarsGiftEnabled?: boolean;
   starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
   freezeSinceDate?: number;
@@ -456,12 +445,6 @@ export interface ApiPendingSuggestion {
   url: string;
 }
 
-export interface ApiTimezone {
-  id: string;
-  name: string;
-  utcOffset: number;
-}
-
 export interface GramJsEmojiInteraction {
   v: number;
   a: {
@@ -524,7 +507,6 @@ export type ApiLimitType =
   | 'aboutLength'
   | 'chatlistInvites'
   | 'chatlistJoined'
-  | 'recommendedChannels'
   | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts'
@@ -532,15 +514,10 @@ export type ApiLimitType =
   | 'botsCreate';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
-  'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs' | 'recommendedChannels'
+  'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
   | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
 )>;
-
-export type ApiLimitTypeForPromo = Exclude<ApiLimitType,
-  'uploadMaxFileparts' | 'messageLength' | 'chatlistInvites' | 'chatlistJoined' | 'savedDialogsPinned'
-  | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
->;
 
 export type ApiPeerNotifySettings = {
   mutedUntil?: number;

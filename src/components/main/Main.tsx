@@ -86,10 +86,8 @@ import FoldersSidebar from './FoldersSidebar';
 import ForwardRecipientPicker from './ForwardRecipientPicker.async';
 import GameModal from './GameModal';
 import HistoryCalendar from './HistoryCalendar.async';
+import LimitReachedModal from './LimitReachedModal.async';
 import NewContactModal from './NewContactModal.async';
-import PremiumLimitReachedModal from './premium/common/PremiumLimitReachedModal.async';
-import GiveawayModal from './premium/GiveawayModal.async';
-import PremiumMainModal from './premium/PremiumMainModal.async';
 import ConfettiContainer from './visualEffects/ConfettiContainer';
 import WaveContainer from './visualEffects/WaveContainer';
 
@@ -125,7 +123,6 @@ type StateProps = {
   openedGame?: TabState['openedGame'];
   gameTitle?: string;
   isRatePhoneCallModalOpen?: boolean;
-  isPremiumModalOpen?: boolean;
   botTrustRequest?: TabState['botTrustRequest'];
   botTrustRequestBot?: ApiUser;
   requestedAttachBotInChat?: TabState['requestedAttachBotInChat'];
@@ -134,7 +131,6 @@ type StateProps = {
   limitReached?: ApiLimitTypeWithModal;
   deleteFolderDialog?: ApiChatFolder;
   isReactionPickerOpen: boolean;
-  isGiveawayModalOpen?: boolean;
   isDeleteMessageModalOpen?: boolean;
   isCurrentUserPremium?: boolean;
   noRightColumnAnimation?: boolean;
@@ -182,8 +178,6 @@ const Main = ({
   requestedAttachBotInChat,
   requestedBotStartGroup,
   requestedDraft,
-  isPremiumModalOpen,
-  isGiveawayModalOpen,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
   isCurrentUserPremium,
@@ -239,11 +233,8 @@ const Main = ({
     loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
-    loadTimezones,
     loadAiComposeTones,
-    loadQuickReplies,
     loadStarStatus,
-    loadPremiumGifts,
     loadAvailableEffects,
     loadPaidReactionPrivacy,
     loadPasswordInfo,
@@ -338,12 +329,9 @@ const Main = ({
       loadAvailableReactions();
       loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
-      loadPremiumGifts();
       loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
-      loadQuickReplies();
-      loadTimezones();
       loadAiComposeTones();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
@@ -654,9 +642,7 @@ const Main = ({
         requestedBotStartGroup={requestedBotStartGroup}
       />
       <MessageListHistoryHandler />
-      <PremiumMainModal isOpen={isPremiumModalOpen} />
-      <GiveawayModal isOpen={isGiveawayModalOpen} />
-      <PremiumLimitReachedModal limit={limitReached} />
+      <LimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
       <DeleteMessageModal isOpen={isDeleteMessageModalOpen} />
@@ -683,8 +669,6 @@ export default memo(withGlobal<OwnProps>(
       historyCalendarSelectedAt,
       newContact,
       ratingPhoneCall,
-      premiumModal,
-      giveawayModal,
       deleteMessageModal,
       isMasterTab,
       limitReachedModal,
@@ -733,8 +717,6 @@ export default memo(withGlobal<OwnProps>(
       requestedAttachBotInChat,
       requestedBotStartGroup,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
-      isPremiumModalOpen: premiumModal?.isOpen,
-      isGiveawayModalOpen: giveawayModal?.isOpen,
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

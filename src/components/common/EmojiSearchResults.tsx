@@ -73,11 +73,6 @@ const EmojiSearchResults = ({
     if (isLocked) {
       getActions().showNotification({
         message: { key: 'PremiumUnlockEmoji' },
-        actionText: { key: 'PremiumMore' },
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'animated_emoji' },
-        },
       });
       return;
     }

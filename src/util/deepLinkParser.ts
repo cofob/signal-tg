@@ -12,7 +12,7 @@ import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'addlist' | 'boost' | 'message' | 'premium_offer' | 'premium' | 'oauth' |
+  'msg' | 'msg_url' | 'addlist' | 'oauth' |
   'newbot' | 'contact';
 
 interface PublicMessageLink {
@@ -94,26 +94,10 @@ interface PrivateChannelLink {
   channelId: string;
 }
 
-interface ChatBoostLink {
-  type: 'chatBoostLink';
-  username?: string;
-  id?: string;
-}
-
-interface BusinessChatLink {
-  type: 'businessChatLink';
-  slug: string;
-}
-
 interface ContactLink {
   type: 'contactLink';
   token: string;
   noPaidMessagesToken?: string;
-}
-
-interface PremiumReferrerLink {
-  type: 'premiumReferrerLink';
-  ref?: string;
 }
 
 interface SettingsScreenLink {
@@ -144,10 +128,7 @@ type DeepLink =
   PublicUsernameOrBotLink |
   GroupCallLink |
   PrivateChannelLink |
-  BusinessChatLink |
   ContactLink |
-  PremiumReferrerLink |
-  ChatBoostLink |
   SettingsScreenLink |
   OAuthLink |
   NewBotLink;
@@ -294,14 +275,8 @@ function parseTgLink(url: URL) {
     case 'privateChannelLink': {
       return buildPrivateChannelLink({ channelId: queryParams.channel });
     }
-    case 'businessChatLink':
-      return buildBusinessChatLink({ slug: queryParams.slug });
     case 'contactLink':
       return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
-    case 'premiumReferrerLink':
-      return buildPremiumReferrerLink({ ref: queryParams.ref });
-    case 'chatBoostLink':
-      return buildChatBoostLink({ username: queryParams.domain, id: queryParams.channel });
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
     case 'oauth':
@@ -417,20 +392,8 @@ function parseHttpLink(url: URL): DeepLink | undefined {
     case 'privateChannelLink': {
       return buildPrivateChannelLink({ channelId: pathParams[1] });
     }
-    case 'businessChatLink':
-      return buildBusinessChatLink({ slug: pathParams[1] });
     case 'contactLink':
       return buildContactLink({ token: pathParams[1], noPaidMessagesToken: queryParams.free });
-    case 'chatBoostLink': {
-      if (pathParams[0] === 'boost') {
-        return buildChatBoostLink({ username: pathParams[1], id: queryParams.c });
-      }
-      const isPrivateChannel = pathParams[0] === 'c';
-      return buildChatBoostLink({
-        username: !isPrivateChannel ? pathParams[0] : undefined,
-        id: isPrivateChannel ? pathParams[1] : undefined,
-      });
-    }
     case 'newBotLink':
       return buildNewBotLink({
         managerUsername: pathParams[1],
@@ -454,21 +417,14 @@ function getHttpDeepLinkType(
   if (len === 1) {
     if (method === 'share') return 'shareLink';
 
-    if (method === 'boost' || queryParams.boost !== undefined) return 'chatBoostLink';
-
     if (isUsernameValid(method)) {
       return hasGroupCall ? 'groupCallLink' : 'publicUsernameOrBotLink';
     }
   } else if (len === 2) {
     if (method === 'addlist') return 'chatFolderLink';
     if (method === 'login') return 'loginCodeLink';
-    if (method === 'm') return 'businessChatLink';
     if (method === 'contact') return 'contactLink';
-    if (method === 'boost') return 'chatBoostLink';
-    if (method === 'c') {
-      if (queryParams.boost !== undefined) return 'chatBoostLink';
-      return 'privateChannelLink';
-    }
+    if (method === 'c') return 'privateChannelLink';
 
     if (isUsernameValid(pathParams[0]) && isNumber(pathParams[1])) {
       return hasGroupCall ? 'groupCallLink' : 'publicMessageLink';
@@ -531,15 +487,8 @@ function getTgDeepLinkType(
       return 'loginCodeLink';
     case 'passport':
       return 'telegramPassportLink';
-    case 'message':
-      return 'businessChatLink';
     case 'contact':
       return 'contactLink';
-    case 'premium_offer':
-    case 'premium':
-      return 'premiumReferrerLink';
-    case 'boost':
-      return 'chatBoostLink';
     case 'settings': {
       return 'settings';
     }
@@ -755,23 +704,6 @@ function buildPrivateChannelLink(params: BuilderParams<PrivateChannelLink>): Bui
   };
 }
 
-function buildChatBoostLink(params: BuilderParams<ChatBoostLink>): BuilderReturnType<ChatBoostLink> {
-  const {
-    username,
-    id,
-  } = params;
-
-  if (!username && !id) {
-    return undefined;
-  }
-
-  return {
-    type: 'chatBoostLink',
-    username,
-    id: id ? toChannelId(id) : undefined,
-  };
-}
-
 function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType<ContactLink> {
   const { token, noPaidMessagesToken } = params;
 
@@ -783,21 +715,6 @@ function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType
     type: 'contactLink',
     token,
     noPaidMessagesToken: noPaidMessagesToken || undefined,
-  };
-}
-
-function buildBusinessChatLink(params: BuilderParams<BusinessChatLink>): BuilderReturnType<BusinessChatLink> {
-  const {
-    slug,
-  } = params;
-
-  if (!slug) {
-    return undefined;
-  }
-
-  return {
-    type: 'businessChatLink',
-    slug,
   };
 }
 
@@ -827,17 +744,6 @@ function buildNewBotLink(params: BuilderParams<NewBotLink>): BuilderReturnType<N
     managerUsername,
     username,
     name,
-  };
-}
-
-function buildPremiumReferrerLink(params: BuilderParams<PremiumReferrerLink>): BuilderReturnType<PremiumReferrerLink> {
-  const {
-    ref,
-  } = params;
-
-  return {
-    type: 'premiumReferrerLink',
-    ref,
   };
 }
 

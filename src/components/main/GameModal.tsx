@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../global';
 import type { TabState } from '../../global/types';
 
 import { getCanPostInChat } from '../../global/helpers';
-import { selectChat, selectChatFullInfo } from '../../global/selectors';
+import { selectChat } from '../../global/selectors';
 import { isMessageFromIframe } from '../../util/browser/iframe';
 
 import useInterval from '../../hooks/schedulers/useInterval';
@@ -97,8 +97,7 @@ export default memo(withGlobal<OwnProps>(
   (global, { openedGame }): Complete<StateProps> => {
     const { chatId } = openedGame || {};
     const chat = chatId && selectChat(global, chatId);
-    const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
-    const canPost = Boolean(chat) && getCanPostInChat(chat, undefined, undefined, chatFullInfo);
+    const canPost = Boolean(chat) && getCanPostInChat(chat);
 
     return {
       canPost,

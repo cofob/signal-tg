@@ -42,7 +42,6 @@ export type OwnProps = {
   effectReactions?: ApiReaction[];
   allAvailableReactions?: ApiAvailableReaction[];
   onToggleReaction?: (reaction: ApiReaction) => void;
-  canBuyPremium?: boolean;
   isCurrentUserPremium?: boolean;
   isInSavedMessages?: boolean;
   isInStoryViewer?: boolean;
@@ -69,7 +68,6 @@ const CustomSendMenu = ({
   effectReactions,
   allAvailableReactions,
   onToggleReaction,
-  canBuyPremium,
   isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
@@ -139,13 +137,11 @@ const CustomSendMenu = ({
           onToggleReaction={onToggleReaction!}
           isPrivate
           isReady={isReady}
-          canBuyPremium={canBuyPremium}
           isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isInSavedMessages}
           isForEffects
           canPlayAnimatedEmojis={canPlayAnimatedEmojis}
           onShowMore={handleOpenMessageEffectsPicker}
-          onClose={onClose}
           className={buildClassName(areItemsHidden && 'ReactionSelector-hidden')}
         />
       )}

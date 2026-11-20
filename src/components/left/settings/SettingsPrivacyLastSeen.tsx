@@ -3,7 +3,7 @@ import { getActions, withGlobal } from '../../../global';
 
 import type { PrivacyVisibility } from '../../../api/types';
 
-import { selectIsCurrentUserPremium, selectShouldHideReadMarks } from '../../../global/selectors';
+import { selectShouldHideReadMarks } from '../../../global/selectors';
 import renderText from '../../common/helpers/renderText';
 
 import useLang from '../../../hooks/useLang';
@@ -11,21 +11,19 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import Island, { IslandDescription } from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
-import ListItem from '../../ui/ListItem';
 
 type OwnProps = {
   visibility?: PrivacyVisibility;
 };
 
 type StateProps = {
-  isCurrentUserPremium: boolean;
   shouldHideReadMarks: boolean;
 };
 
 const SettingsPrivacyLastSeen = ({
-  isCurrentUserPremium, shouldHideReadMarks, visibility,
+  shouldHideReadMarks, visibility,
 }: OwnProps & StateProps) => {
-  const { updateGlobalPrivacySettings, openPremiumModal } = getActions();
+  const { updateGlobalPrivacySettings } = getActions();
   const lang = useLang();
   const canShowHideReadTime = visibility === 'nobody' || visibility === 'contacts';
 
@@ -33,41 +31,19 @@ const SettingsPrivacyLastSeen = ({
     (isEnabled) => updateGlobalPrivacySettings({ shouldHideReadMarks: isEnabled }),
   );
 
-  const handleOpenPremiumModal = useLastCallback(() => {
-    openPremiumModal({
-      initialSection: 'last_seen',
-    });
-  });
+  if (!canShowHideReadTime) return undefined;
 
   return (
     <>
-      {canShowHideReadTime && (
-        <>
-          <Island>
-            <Checkbox
-              label={lang('HideReadTime')}
-              checked={shouldHideReadMarks}
-              onCheck={handleChangeShouldHideReadMarks}
-            />
-          </Island>
-          <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-            {renderText(lang('HideReadTimeInfo'), ['br'])}
-          </IslandDescription>
-        </>
-      )}
       <Island>
-        <ListItem
-          icon="star"
-          iconBg="premium"
-          onClick={handleOpenPremiumModal}
-        >
-          {isCurrentUserPremium ? lang('PrivacyLastSeenPremiumForPremium') : lang('PrivacyLastSeenPremium')}
-        </ListItem>
+        <Checkbox
+          label={lang('HideReadTime')}
+          checked={shouldHideReadMarks}
+          onCheck={handleChangeShouldHideReadMarks}
+        />
       </Island>
       <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-        {isCurrentUserPremium
-          ? lang('PrivacyLastSeenPremiumInfoForPremium')
-          : lang('PrivacyLastSeenPremiumInfo')}
+        {renderText(lang('HideReadTimeInfo'), ['br'])}
       </IslandDescription>
     </>
   );
@@ -76,7 +52,6 @@ const SettingsPrivacyLastSeen = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     return {
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldHideReadMarks: Boolean(selectShouldHideReadMarks(global)),
     };
   },

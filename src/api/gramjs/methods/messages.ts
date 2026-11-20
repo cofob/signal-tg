@@ -67,7 +67,6 @@ import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
 import {
   buildApiChatFromPreview,
   buildApiSendAsPeerId,
-  buildApiSponsoredMessageReportResult,
   buildThreadReadState,
 } from '../apiBuilders/chats';
 import {
@@ -91,10 +90,8 @@ import {
   buildApiEphemeralMessage,
   buildApiFactCheck,
   buildApiMessage,
-  buildApiQuickReply,
   buildApiReportResult,
   buildApiSearchPostsFlood,
-  buildApiSponsoredMessage,
   buildApiThreadInfo,
   buildApiThreadInfoFromMessage,
   buildLocalForwardedMessage,
@@ -2699,76 +2696,6 @@ export function saveDefaultSendAs({
   }));
 }
 
-export async function fetchSponsoredMessages({ peer }: { peer: ApiPeer }) {
-  const result = await invokeRequest(new GramJs.messages.GetSponsoredMessages({
-    peer: buildInputPeer(peer.id, peer.accessHash),
-  }));
-
-  if (!result || result instanceof GramJs.messages.SponsoredMessagesEmpty || !result.messages.length) {
-    return undefined;
-  }
-
-  const messages = result.messages
-    .map((message) => buildApiSponsoredMessage(message, peer.id))
-    .filter(Boolean);
-
-  return {
-    messages,
-  };
-}
-
-export async function viewSponsoredMessage({ random }: { random: string }) {
-  await invokeRequest(new GramJs.messages.ViewSponsoredMessage({
-    randomId: deserializeBytes(random),
-  }));
-}
-
-export function clickSponsoredMessage({
-  random,
-  isMedia,
-  isFullscreen,
-}: {
-  random: string;
-  isMedia?: boolean;
-  isFullscreen?: boolean;
-}) {
-  return invokeRequest(new GramJs.messages.ClickSponsoredMessage({
-    media: isMedia || undefined,
-    fullscreen: isFullscreen || undefined,
-    randomId: deserializeBytes(random),
-  }));
-}
-
-export async function reportSponsoredMessage({
-  randomId,
-  option,
-}: {
-  randomId: string;
-  option: string;
-}) {
-  try {
-    const result = await invokeRequest(new GramJs.messages.ReportSponsoredMessage({
-      randomId: deserializeBytes(randomId),
-      option: deserializeBytes(option),
-    }), {
-      shouldThrow: true,
-    });
-
-    if (!result) {
-      return undefined;
-    }
-
-    return buildApiSponsoredMessageReportResult(result);
-  } catch (err: unknown) {
-    if (err instanceof RPCError && err.errorMessage === 'PREMIUM_ACCOUNT_REQUIRED') {
-      return {
-        type: 'premiumRequired' as const,
-      };
-    }
-    return undefined;
-  }
-}
-
 export async function readAllMentions({
   chat,
   threadId,
@@ -3224,60 +3151,6 @@ export async function fetchOutboxReadDate({ chat, messageId }: { chat: ApiChat; 
   if (!result) return undefined;
 
   return { date: result.date };
-}
-
-export async function fetchQuickReplies() {
-  const result = await invokeRequest(new GramJs.messages.GetQuickReplies({
-    hash: DEFAULT_PRIMITIVES.BIGINT,
-  }));
-  if (!result || result instanceof GramJs.messages.QuickRepliesNotModified) return undefined;
-
-  const messages = result.messages.map(buildApiMessage).filter(Boolean);
-
-  const quickReplies = result.quickReplies.map(buildApiQuickReply);
-
-  return {
-    messages,
-    quickReplies,
-  };
-}
-
-export async function sendQuickReply({
-  chat,
-  shortcutId,
-}: {
-  chat: ApiChat;
-  shortcutId: number;
-}) {
-  // Remove this request when the client fully supports quick replies and caches them
-  const messages = await invokeRequest(new GramJs.messages.GetQuickReplyMessages({
-    shortcutId,
-    hash: DEFAULT_PRIMITIVES.BIGINT,
-  }));
-  if (!messages || messages instanceof GramJs.messages.MessagesNotModified) return;
-
-  const ids = messages.messages.map((m) => m.id);
-  const randomIds = ids.map(() => generateRandomBigInt());
-
-  const result = await invokeRequest(new GramJs.messages.SendQuickReplyMessages({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    shortcutId,
-    id: ids,
-    randomId: randomIds,
-  }), {
-    shouldIgnoreUpdates: true,
-  });
-
-  if (!result) return;
-
-  // Hack to prevent client from thinking that those messages were local
-  if ('updates' in result) {
-    const filteredUpdates = result.updates
-      .filter((u): u is GramJs.UpdateMessageID => !(u instanceof GramJs.UpdateMessageID));
-    result.updates = filteredUpdates;
-  }
-
-  handleGramJsUpdate(result);
 }
 
 export async function exportMessageLink({

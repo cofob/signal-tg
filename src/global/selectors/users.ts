@@ -56,10 +56,6 @@ export function selectIsCurrentUserFrozen<T extends GlobalState>(global: T) {
   return Boolean(global.appConfig.freezeUntilDate);
 }
 
-export function selectIsPremiumPurchaseBlocked<T extends GlobalState>(global: T) {
-  return global.appConfig.isPremiumPurchaseBlocked ?? true;
-}
-
 /**
  * Slow, not to be used in `withGlobal`
  */

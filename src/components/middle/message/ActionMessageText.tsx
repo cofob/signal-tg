@@ -380,15 +380,6 @@ const ActionMessageText = ({
         return lang('ActionTopicRenamed', { from: senderLink, link: topicPlaceholderLink, title }, { withNodes: true });
       }
 
-      case 'boostApply':
-        return translateWithYou(
-          lang,
-          'ActionBoostApply',
-          isOutgoing,
-          { from: senderLink, count: action.boosts },
-          { pluralValue: action.boosts },
-        );
-
       case 'chatAddUser': {
         const { userIds } = action;
 
@@ -469,42 +460,6 @@ const ActionMessageText = ({
 
         const link = <Link onClick={() => openUrl({ url })}>{domain}</Link>;
         return lang('ActionBotAllowedFromDomain', { domain: link }, { withNodes: true });
-      }
-
-      case 'giveawayLaunch': {
-        const { stars } = action;
-
-        if (stars) {
-          return lang(
-            isChannel ? 'ActionGiveawayStarsStarted' : 'ActionGiveawayStarsStartedGroup',
-            { from: senderLink, amount: renderStrong(formatStarsAsText(lang, stars)) },
-            { withNodes: true },
-          );
-        }
-
-        return lang(
-          isChannel ? 'ActionGiveawayStarted' : 'ActionGiveawayStartedGroup',
-          { from: senderLink },
-          { withNodes: true },
-        );
-      }
-
-      case 'giveawayResults': {
-        const { winnersCount, isStars, unclaimedCount } = action;
-        if (!winnersCount) return lang('ActionGiveawayResultsNone');
-        if (unclaimedCount) {
-          return lang(isStars ? 'ActionGiveawayResultsStarsSome' : 'ActionGiveawayResultsSome');
-        }
-
-        return lang(
-          isStars ? 'ActionGiveawayResultsStars' : 'ActionGiveawayResults',
-          { count: winnersCount },
-          { pluralValue: winnersCount },
-        );
-      }
-
-      case 'prizeStars': {
-        return translateWithYou(lang, 'ActionGiftTextUnknown', isOutgoing, undefined);
       }
 
       case 'groupCall': {

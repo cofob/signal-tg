@@ -1,4 +1,4 @@
-import type { ApiMessage, ApiPeer, ApiSponsoredMessage, ApiWallpaper } from '../../api/types';
+import type { ApiMessage, ApiPeer, ApiWallpaper } from '../../api/types';
 import type { CustomPeer, IThemeSettings, PerformanceTypeKey, ThemeKey } from '../../types';
 import type { GlobalState, TabArgs } from '../types';
 import { NewChatMembersProgress, RightColumnContent } from '../../types';
@@ -32,10 +32,9 @@ export function selectIsMediaViewerOpen<T extends GlobalState>(
       isAvatarView,
       standaloneMedia,
       pageMedia,
-      isSponsoredMessage,
     },
   } = selectTabState(global, tabId);
-  return Boolean(pageMedia || standaloneMedia || (chatId && (isAvatarView || messageId || isSponsoredMessage)));
+  return Boolean(pageMedia || standaloneMedia || (chatId && (isAvatarView || messageId)));
 }
 
 export function selectRightColumnContentKey<T extends GlobalState>(
@@ -218,7 +217,7 @@ export function selectPerformanceSettingsValue<T extends GlobalState>(
   return selectPerformanceSettings(global)[key];
 }
 
-export function selectCanAutoPlayMedia<T extends GlobalState>(global: T, message: ApiMessage | ApiSponsoredMessage) {
+export function selectCanAutoPlayMedia<T extends GlobalState>(global: T, message: ApiMessage) {
   const webPage = selectWebPageFromMessage(global, message);
   const video = getMessageVideo(message) || getWebPageVideo(webPage);
   if (!video) {

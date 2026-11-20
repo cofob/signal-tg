@@ -12,7 +12,7 @@ import {
   selectChat, selectChatFullInfo,
   selectManagement, selectTabState, selectUser,
 } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
+import { LIMITS } from '../../../limits';
 
 import useFlag from '../../../hooks/useFlag';
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -54,7 +54,6 @@ type StateProps = {
   guardBot?: ApiUser;
   invitesCount?: number;
   areInvitesLoaded?: boolean;
-  maxPublicLinks: number;
   privateInviteLink?: string;
 };
 
@@ -71,7 +70,6 @@ const ManageChatPrivacyType = ({
   guardBot,
   invitesCount,
   areInvitesLoaded,
-  maxPublicLinks,
   privateInviteLink,
   onClose,
 }: OwnProps & StateProps) => {
@@ -150,7 +148,7 @@ const ManageChatPrivacyType = ({
     const myChats = Object.values(getGlobal().chats.byId)
       .filter(({ isOwner, usernames }) => isOwner && usernames?.some((c) => c.isActive));
 
-    if (myChats.length >= maxPublicLinks && value === 'public') {
+    if (myChats.length >= LIMITS.channelsPublic && value === 'public') {
       openLimitReachedModal({ limit: 'channelsPublic' });
       const radioGroup = e.currentTarget.closest('.radio-group') as HTMLDivElement;
       // Patch for Teact bug with controlled inputs
@@ -161,7 +159,7 @@ const ManageChatPrivacyType = ({
     }
     setPrivacyType(value as PrivacyType);
     setIsProfileFieldsTouched(true);
-  }, [maxPublicLinks, openLimitReachedModal]);
+  }, [openLimitReachedModal]);
 
   const handleForwardingOptionChange = useCallback((value: string) => {
     toggleIsProtected({
@@ -442,7 +440,6 @@ export default memo(withGlobal<OwnProps>(
       guardBot: guardBotId ? selectUser(global, guardBotId) : undefined,
       invitesCount: selectTabState(global).management.byChatId[chatId]?.invites?.length,
       areInvitesLoaded: selectTabState(global).management.byChatId[chatId]?.invites !== undefined,
-      maxPublicLinks: selectCurrentLimit(global, 'channelsPublic'),
       privateInviteLink: fullInfo?.inviteLink,
     };
   },

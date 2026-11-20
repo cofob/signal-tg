@@ -12,7 +12,6 @@ import { MAIN_THREAD_ID } from '../../../api/types';
 import { LoadMoreDirection } from '../../../types';
 
 import {
-  MAX_UPLOAD_FILEPART_SIZE,
   MUSIC_PICKER_GLOBAL_MIN_QUERY_LENGTH,
   MUSIC_PICKER_SEARCH_DEBOUNCE,
   SUPPORTED_AUDIO_CONTENT_TYPES,
@@ -28,7 +27,6 @@ import {
   selectTabState,
   selectUserSavedMusic,
 } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
 import { revokeAttachmentUrls } from '../../../util/attachments';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import { validateFiles } from '../../../util/files';
@@ -37,6 +35,7 @@ import { parseSearchResultKey } from '../../../util/keys/searchResultKey';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { debounce } from '../../../util/schedulers';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
+import { MAX_UPLOAD_SIZE } from '../../../limits';
 import buildAttachment from '../../middle/composer/helpers/buildAttachment';
 
 import { useTransitionActiveKey } from '../../../hooks/animations/useTransitionActiveKey';
@@ -77,7 +76,6 @@ type StateProps = {
   paidMessagesStars?: number;
   paymentMessageConfirmDialogKey?: string;
   isSilentPosting?: boolean;
-  fileSizeLimit: number;
 };
 
 type TrackRowData = {
@@ -117,7 +115,6 @@ const MusicPickerModal = ({
   paidMessagesStars,
   paymentMessageConfirmDialogKey,
   isSilentPosting,
-  fileSizeLimit,
 }: OwnProps & StateProps) => {
   const {
     closeMusicPicker, loadSavedMusic, loadMusicPickerShared, loadMusicPickerGlobal, requestRichInputMedia, sendMessage,
@@ -352,7 +349,7 @@ const MusicPickerModal = ({
         return;
       }
 
-      if (file.size > fileSizeLimit) {
+      if (file.size > MAX_UPLOAD_SIZE) {
         openLimitReachedModal({ limit: 'uploadMaxFileparts' });
         return;
       }
@@ -548,7 +545,6 @@ export default memo(withGlobal<OwnProps>(
       isAppConfigLoaded: global.isAppConfigLoaded,
       paidMessagesStars: selectPeerPaidMessagesStars(global, modal.chatId),
       paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
-      fileSizeLimit: selectCurrentLimit(global, 'uploadMaxFileparts') * MAX_UPLOAD_FILEPART_SIZE,
       isSilentPosting: chat ? getChatNotifySettings(
         chat,
         selectNotifyDefaults(global),

@@ -15,10 +15,10 @@ import { filterPeersByQuery } from '../../../global/helpers/peers';
 import {
   selectChat, selectChatMessage, selectPeerAvatarPhoto, selectTabState, selectUser, selectUserFullInfo,
 } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
 import { formatDateTime } from '../../../util/localization/dateFormat';
 import { NEXT_ARROW_REPLACEMENT } from '../../../util/localization/format';
 import { throttle } from '../../../util/schedulers';
+import { LIMITS } from '../../../limits';
 import renderText from '../../common/helpers/renderText';
 import { ChatAnimationTypes } from '../main/hooks';
 
@@ -66,7 +66,6 @@ type StateProps = {
   checkedUsername?: string;
   editUsernameError?: string;
   isUsernameAvailable?: boolean;
-  maxBioLength: number;
   personalChannelIds?: string[];
   usernames?: ApiUsername[];
 };
@@ -90,7 +89,6 @@ const SettingsEditProfile = ({
   checkedUsername,
   editUsernameError,
   isUsernameAvailable,
-  maxBioLength,
   personalChannelIds,
   usernames,
   onReset,
@@ -374,8 +372,8 @@ const SettingsEditProfile = ({
               onChange={handleBioChange}
               label={lang('UserBio')}
               disabled={isLoading}
-              maxLength={maxBioLength}
-              maxLengthIndicator={maxBioLength ? (maxBioLength - bio.length).toString() : undefined}
+              maxLength={LIMITS.aboutLength}
+              maxLengthIndicator={(LIMITS.aboutLength - bio.length).toString()}
             />
           </div>
         </Island>
@@ -510,8 +508,6 @@ export default memo(withGlobal<OwnProps>(
     } = profileEdit || {};
     const currentUser = currentUserId ? selectUser(global, currentUserId) : undefined;
 
-    const maxBioLength = selectCurrentLimit(global, 'aboutLength');
-
     const {
       firstName: currentFirstName,
       lastName: currentLastName,
@@ -538,7 +534,6 @@ export default memo(withGlobal<OwnProps>(
       isUsernameAvailable,
       checkedUsername,
       editUsernameError,
-      maxBioLength,
       personalChannelIds: global.chats.personalChannelIds,
       usernames,
     };

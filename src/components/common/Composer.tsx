@@ -20,7 +20,6 @@ import type {
   ApiMessageEntity,
   ApiNewMediaTodo,
   ApiPeer,
-  ApiQuickReply,
   ApiReaction,
   ApiStealthMode,
   ApiSticker,
@@ -47,7 +46,6 @@ import { ApiMediaFormat, ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../api
 import {
   BASE_EMOJI_KEYWORD_LANG,
   HEART_REACTION,
-  MAX_UPLOAD_FILEPART_SIZE,
   MIN_ROUND_VIDEO_RECORDING_TIME,
   ONE_TIME_MEDIA_TTL_SECONDS,
   ROUND_VIDEO_RECORDING_SIZE,
@@ -103,7 +101,6 @@ import {
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
   selectIsInSelectMode,
-  selectIsPremiumPurchaseBlocked,
   selectIsReactionPickerOpen,
   selectIsRightColumnShown,
   selectLanguageCode,
@@ -124,7 +121,6 @@ import {
   selectUserFullInfo,
   selectWebPagePreview,
 } from '../../global/selectors';
-import { selectCurrentLimit } from '../../global/selectors/limits';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
 import {
   selectDraft,
@@ -154,6 +150,7 @@ import stopEvent from '../../util/stopEvent';
 import { getUtf8Length } from '../../util/text/textFormat';
 import { EMPTY_RICH_MEDIA_CAPTION } from '../../util/tiptap/richMedia';
 import windowSize from '../../util/windowSize';
+import { LIMITS } from '../../limits';
 import applyIosAutoCapitalizationFix from '../middle/composer/helpers/applyIosAutoCapitalizationFix';
 import buildAttachment, {
   buildAttachmentWithVideoCover,
@@ -316,8 +313,6 @@ type StateProps = {
   attachBots: GlobalState['attachMenu']['bots'];
   attachMenuPeerType?: ApiAttachMenuPeerType;
   theme: ThemeKey;
-  fileSizeLimit: number;
-  captionLimit: number;
   isCurrentUserPremium?: boolean;
   canSendVoiceByPrivacy?: boolean;
   attachmentSettings: GlobalState['attachmentSettings'];
@@ -326,14 +321,10 @@ type StateProps = {
   availableReactions?: ApiAvailableReaction[];
   topReactions?: ApiReaction[];
   canPlayAnimatedEmojis?: boolean;
-  canBuyPremium?: boolean;
   shouldCollectDebugLogs?: boolean;
   sentStoryReaction?: ApiReaction;
   stealthMode?: ApiStealthMode;
   canSendOneTimeMedia?: boolean;
-  quickReplyMessages?: Record<number, ApiMessage>;
-  quickReplies?: Record<number, ApiQuickReply>;
-  canSendQuickReplies?: boolean;
   webPagePreview?: ApiWebPage;
   noWebPage?: boolean;
   isContactRequirePremium?: boolean;
@@ -343,7 +334,6 @@ type StateProps = {
   areEffectsSupported?: boolean;
   canPlayEffect?: boolean;
   shouldPlayEffect?: boolean;
-  maxMessageLength: number;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -418,7 +408,6 @@ const Composer = ({
   isChatWithBot,
   isChatWithSelf,
   isChannel,
-  fileSizeLimit,
   isRightColumnShown,
   isSelectModeActive,
   isReactionPickerOpen,
@@ -439,7 +428,6 @@ const Composer = ({
   topGuestBotIds,
   currentUserId,
   currentUser,
-  captionLimit,
   contentToBeScheduled,
   shouldSuggestStickers,
   shouldSuggestCustomEmoji,
@@ -468,15 +456,11 @@ const Composer = ({
   className,
   availableReactions,
   topReactions,
-  canBuyPremium,
   canPlayAnimatedEmojis,
   shouldCollectDebugLogs,
   sentStoryReaction,
   stealthMode,
   canSendOneTimeMedia,
-  quickReplyMessages,
-  quickReplies,
-  canSendQuickReplies,
   webPagePreview,
   noWebPage,
   isContactRequirePremium,
@@ -486,7 +470,6 @@ const Composer = ({
   areEffectsSupported,
   canPlayEffect,
   shouldPlayEffect,
-  maxMessageLength,
   richMessageLengthLimit,
   richMessageMaxBlocks,
   richMessageMaxDepth,
@@ -539,7 +522,6 @@ const Composer = ({
     applyDefaultAttachmentsCompression,
     setIsRichInputExpanded,
     setSettingOption,
-    openPremiumModal,
     openAiMessageEditorModal,
     setHiddenBotKeyboardId,
   } = getActions();
@@ -597,7 +579,6 @@ const Composer = ({
   } = useMemo(
     () => getAllowedAttachmentOptions(
       chat,
-      chatFullInfo,
       isChatWithBot,
       isChatWithSelf,
       isInStoryViewer,
@@ -606,7 +587,7 @@ const Composer = ({
       isEphemeralReply,
     ),
     [
-      chat, chatFullInfo, isChatWithBot, isChatWithSelf, isInStoryViewer, paidMessagesStars, isInScheduledList,
+      chat, isChatWithBot, isChatWithSelf, isInStoryViewer, paidMessagesStars, isInScheduledList,
       isEphemeralReply,
     ],
   );
@@ -678,7 +659,6 @@ const Composer = ({
     chat,
     chatId,
     threadId,
-    fileSizeLimit,
     canSendPhotos: canSendPhotos && !isEditingMedia,
     canSendVideos: canSendVideos && !isEditingMedia,
     canSendDocuments: canSendDocuments && !isEditingMedia,
@@ -702,7 +682,7 @@ const Composer = ({
   const hasInputContent = richEditor.isReady ? !richEditor.isEmpty() : false;
   const isOverRegularMessageLimit = Boolean(
     richMessageAsFormatted
-    && getUtf8Length(richMessageAsFormatted.text) > maxMessageLength,
+    && getUtf8Length(richMessageAsFormatted.text) > LIMITS.messageLength,
   );
   const hasRichOnlyContent = Boolean(
     hasInputContent
@@ -805,12 +785,6 @@ const Composer = ({
     closeRemoveUnsupportedDialog();
   });
 
-  const handleSubscribeToPremium = useLastCallback(() => {
-    shouldFocusAfterFormattingRemovalRef.current = false;
-    closeRemoveFormattingModal();
-    openPremiumModal();
-  });
-
   const handleRemoveFormattingModalCloseAnimationEnd = useLastCallback(() => {
     if (!shouldFocusAfterFormattingRemovalRef.current) {
       return;
@@ -830,7 +804,7 @@ const Composer = ({
     }
   }, [attachments]);
 
-  const canUseInlineBots = !chat || isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline', chatFullInfo);
+  const canUseInlineBots = !chat || isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 
   const isNeedPremium = isContactRequirePremium && isInStoryViewer;
   const isSendTextBlocked = isNeedPremium || (Boolean(chat) && !canSendPlainText);
@@ -903,7 +877,6 @@ const Composer = ({
   } = useAttachmentModal({
     attachments,
     setAttachments,
-    fileSizeLimit,
     chatId,
     canAttachFiles: !hasRichOnlyContent,
     canSendAudios,
@@ -1103,8 +1076,6 @@ const Composer = ({
   }, [isInMessageList, aiMessageEditorPendingResult, chatId,
     clearAiMessageEditorPendingResult, threadId, updateRichMessage]);
 
-  const hasQuickReplies = Boolean(quickReplies && Object.keys(quickReplies).length);
-
   useDraft({
     draft,
     chatId,
@@ -1147,7 +1118,7 @@ const Composer = ({
   });
 
   const validateTextLength = useLastCallback((text: string, isAttachmentModal?: boolean) => {
-    const maxLength = isAttachmentModal ? captionLimit : maxMessageLength;
+    const maxLength = isAttachmentModal ? LIMITS.captionLength : LIMITS.messageLength;
     const textLength = getUtf8Length(text);
     if (textLength > maxLength) {
       const extraLength = textLength - maxLength;
@@ -1263,11 +1234,6 @@ const Composer = ({
     if (!notificationNumber) {
       showNotification({
         message: lang('UnlockPremiumEmojiHint'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'animated_emoji' },
-        },
-        actionText: lang('PremiumMore'),
       });
     } else {
       showNotification({
@@ -1811,11 +1777,6 @@ const Composer = ({
     if (!isCurrentUserPremium) {
       showNotification({
         message: lang('SubscribeToTelegramPremiumForCreateToDo'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'todo' },
-        },
-        actionText: lang('PremiumMore'),
       });
       return;
     }
@@ -2137,8 +2098,6 @@ const Composer = ({
     inlineBots,
     botCommands,
     chatBotCommands,
-    quickReplies: canSendQuickReplies && isCurrentUserPremium ? quickReplies : undefined,
-    quickReplyMessages,
     isSavedMessages: isChatWithSelf,
     isInScheduledList,
     isCurrentUserPremium,
@@ -2169,7 +2128,6 @@ const Composer = ({
     && (
       (botCommands && botCommands.length)
       || chatBotCommands?.length
-      || (hasQuickReplies && canSendQuickReplies && isCurrentUserPremium)
     ),
   ));
   const getIsFormatterEnabled = useLastCallback(() => Boolean(
@@ -2863,7 +2821,6 @@ const Composer = ({
           onToggleReaction={handleToggleReaction}
           isPrivate
           isReady={isReady}
-          canBuyPremium={canBuyPremium}
           isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isChatWithSelf}
           isInStoryViewer={isInStoryViewer}
@@ -3120,7 +3077,7 @@ const Composer = ({
             isNeedPremium={isNeedPremium}
             messageListType={messageListType}
             isRichOnlyContent={hasRichOnlyContent}
-            maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : maxMessageLength}
+            maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : LIMITS.messageLength}
           />
           {isInMessageList && !isRichInputExpansionActive && (
             <>
@@ -3404,7 +3361,6 @@ const Composer = ({
           onClose={handleCloseRemoveFormattingModal}
           onCloseAnimationEnd={handleRemoveFormattingModalCloseAnimationEnd}
           onRemoveFormatting={handleRemoveFormatting}
-          onSubscribeToPremium={handleSubscribeToPremium}
         />
       )}
     </div>
@@ -3503,8 +3459,6 @@ export default memo(withGlobal<OwnProps>(
       : undefined;
     const isInScheduledList = messageListType === 'scheduled';
 
-    const canSendQuickReplies = isChatWithUser && !isChatWithBot && !isInScheduledList && !isChatWithSelf;
-
     const noWebPage = selectNoWebPage(global, chatId, threadId);
     const isSilentPosting = chat && getChatNotifySettings(
       chat,
@@ -3520,7 +3474,6 @@ export default memo(withGlobal<OwnProps>(
     const effect = effectId ? global.availableEffectById[effectId] : undefined;
     const effectReactions = global.reactions.effectReactions;
 
-    const maxMessageLength = selectCurrentLimit(global, 'messageLength');
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
     const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
@@ -3591,24 +3544,18 @@ export default memo(withGlobal<OwnProps>(
       attachBots: global.attachMenu.bots,
       attachMenuPeerType: selectChatType(global, chatId),
       theme: selectTheme(global),
-      fileSizeLimit: selectCurrentLimit(global, 'uploadMaxFileparts') * MAX_UPLOAD_FILEPART_SIZE,
-      captionLimit: selectCurrentLimit(global, 'captionLength'),
       isCurrentUserPremium,
       canSendVoiceByPrivacy,
       attachmentSettings: global.attachmentSettings,
       slowMode,
       currentMessageList,
       isReactionPickerOpen: selectIsReactionPickerOpen(global),
-      canBuyPremium: !isCurrentUserPremium && !selectIsPremiumPurchaseBlocked(global),
       canPlayAnimatedEmojis: selectCanPlayAnimatedEmojis(global),
       canSendOneTimeMedia: !isChatWithSelf && isChatWithUser && !isChatWithBot && !isInScheduledList,
       shouldCollectDebugLogs,
       sentStoryReaction,
       stealthMode: global.stories.stealthMode,
       replyToTopic,
-      quickReplyMessages: global.quickReplies.messagesById,
-      quickReplies: global.quickReplies.byId,
-      canSendQuickReplies,
       noWebPage,
       webPagePreview,
       isContactRequirePremium: userFullInfo?.isContactRequirePremium,
@@ -3617,7 +3564,6 @@ export default memo(withGlobal<OwnProps>(
       areEffectsSupported,
       canPlayEffect,
       shouldPlayEffect,
-      maxMessageLength,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
       richMessageMaxBlocks: global.appConfig.richMessageMaxBlocks,
       richMessageMaxDepth: global.appConfig.richMessageMaxDepth,

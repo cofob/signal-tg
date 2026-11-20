@@ -55,7 +55,6 @@ const SettingsLanguage = ({
     setSettingOption,
     removeCustomLanguage,
     showNotification,
-    openPremiumModal,
     openSettingsScreen,
   } = getActions();
 
@@ -125,14 +124,6 @@ const SettingsLanguage = ({
     setSettingOption({ canTranslateChats: newValue });
   });
 
-  const handleShouldTranslateChatsClick = useLastCallback(() => {
-    if (!isCurrentUserPremium) {
-      openPremiumModal({
-        initialSection: 'translations',
-      });
-    }
-  });
-
   const doNotTranslateText = useMemo(() => {
     if (!IS_TRANSLATION_SUPPORTED || !doNotTranslate.length) {
       return undefined;
@@ -170,7 +161,6 @@ const SettingsLanguage = ({
               checked={canTranslateChatsEnabled}
               disabled={!isCurrentUserPremium}
               rightIcon={!isCurrentUserPremium ? 'lock' : undefined}
-              onClickLabel={handleShouldTranslateChatsClick}
               onCheck={handleShouldTranslateChatsChange}
             />
             {(canTranslate || canTranslateChatsEnabled) && (

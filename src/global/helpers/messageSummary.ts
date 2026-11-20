@@ -154,8 +154,6 @@ function getSummaryDescription(
     location,
     game,
     storyData,
-    giveaway,
-    giveawayResults,
     paidMedia,
     todo,
     dice,
@@ -244,14 +242,6 @@ function getSummaryDescription(
 
   if (game) {
     summary = `🎮 ${game.title}`;
-  }
-
-  if (giveaway) {
-    summary = lang('AttachGiveaway');
-  }
-
-  if (giveawayResults) {
-    summary = lang('AttachGiveawayResults');
   }
 
   if (storyData) {

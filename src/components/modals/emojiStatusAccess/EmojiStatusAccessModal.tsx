@@ -47,7 +47,6 @@ const EmojiStatusAccessModal = ({
     closeEmojiStatusAccessModal,
     toggleUserEmojiStatusPermission,
     sendWebAppEvent,
-    openPremiumModal,
     loadDefaultStatusIcons,
   } = getActions();
 
@@ -112,7 +111,6 @@ const EmojiStatusAccessModal = ({
         });
         toggleUserEmojiStatusPermission({ botId: modal.bot.id, isEnabled: true, isBotAccessEmojiGranted: true });
       } else {
-        openPremiumModal();
         sendWebAppEvent({
           webAppKey: modal.webAppKey,
           event: {

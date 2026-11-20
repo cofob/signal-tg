@@ -6,9 +6,6 @@ import { SettingsScreens } from '../../../types';
 import {
   FAQ_URL, PRIVACY_URL,
 } from '../../../config';
-import {
-  selectIsPremiumPurchaseBlocked,
-} from '../../../global/selectors';
 import { IS_ANDROID, IS_IOS } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 
@@ -31,19 +28,16 @@ type OwnProps = {
 type StateProps = {
   sessionCount: number;
   currentUserId?: string;
-  canBuyPremium?: boolean;
 };
 
 const SettingsMain = ({
   isActive,
   currentUserId,
   sessionCount,
-  canBuyPremium,
   onReset,
 }: OwnProps & StateProps) => {
   const {
     loadMoreProfilePhotos,
-    openPremiumModal,
     openUrl,
     openSettingsScreen,
     openSettingsConfirmation,
@@ -216,20 +210,6 @@ const SettingsMain = ({
         </Island>
 
         <Island>
-          {canBuyPremium && (
-            <ListItem
-              icon="star"
-              iconBg="premium"
-              narrow
-              onClick={() => openPremiumModal()}
-            >
-              {lang('TelegramPremium')}
-            </ListItem>
-          )}
-
-        </Island>
-
-        <Island>
           <ListItem
             icon="support-filled"
             iconBg="red"
@@ -267,7 +247,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       sessionCount: global.activeSessions.orderedHashes.length,
       currentUserId,
-      canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
     };
   },
 )(SettingsMain));

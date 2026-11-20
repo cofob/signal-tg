@@ -18,7 +18,6 @@ import { clearWidgetStorage } from './widgetStorage';
 const WALLPAPER_FILE_TYPES = 'image/jpeg';
 
 const SETTINGS_ACTIONS: [SettingsScreens, RegularLangKey, SettingsAction][] = [
-  [SettingsScreens.Main, 'TelegramPremium', 'openPremium'],
   [SettingsScreens.Main, 'AskAQuestion', 'askQuestion'],
   [SettingsScreens.Main, 'MenuTelegramFaq', 'openFaq'],
   [SettingsScreens.Main, 'MenuPrivacyPolicy', 'openPrivacyPolicy'],
@@ -43,9 +42,6 @@ export function runSettingsAction(action: SettingsAction, tabId = getCurrentTabI
   const actions = getActions();
 
   switch (action) {
-    case 'openPremium':
-      actions.openPremiumModal({ tabId });
-      break;
     case 'openFaq':
       actions.openUrl({ url: FAQ_URL, tabId });
       break;

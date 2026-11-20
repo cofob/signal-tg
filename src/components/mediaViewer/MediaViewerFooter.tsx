@@ -10,10 +10,7 @@ import { REM } from '../common/helpers/mediaDimensions';
 
 import useAppLayout from '../../hooks/useAppLayout';
 import useDerivedState from '../../hooks/useDerivedState';
-import useLastCallback from '../../hooks/useLastCallback';
 import useControlsSignal from './hooks/useControlsSignal';
-
-import Button from '../ui/Button';
 
 import './MediaViewerFooter.scss';
 
@@ -21,16 +18,14 @@ const RESIZE_THROTTLE_MS = 500;
 
 type OwnProps = {
   text: TextPart | TextPart[];
-  buttonText?: string;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleSponsoredClick: (isFromMedia?: boolean) => void;
   isForVideo: boolean;
   isForceMobileVersion?: boolean;
   isProtected?: boolean;
 };
 
 const MediaViewerFooter: FC<OwnProps> = ({
-  text = '', buttonText, isForVideo, onClick, handleSponsoredClick, isProtected, isForceMobileVersion,
+  text = '', isForVideo, onClick, isProtected, isForceMobileVersion,
 }) => {
   const [isMultiline, setIsMultiline] = useState(false);
   const { isMobile } = useAppLayout();
@@ -64,10 +59,6 @@ const MediaViewerFooter: FC<OwnProps> = ({
     }
   }
 
-  const onButtonClick = useLastCallback(() => {
-    handleSponsoredClick();
-  });
-
   const classNames = buildClassName(
     'MediaViewerFooter',
     isForVideo && 'is-for-video',
@@ -84,17 +75,6 @@ const MediaViewerFooter: FC<OwnProps> = ({
             {text}
           </p>
         </div>
-      )}
-      {Boolean(buttonText) && (
-        <Button
-          className={buildClassName('media-viewer-footer-content', 'media-viewer-button')}
-          size="default"
-          color="primary"
-          isRectangular
-          onClick={onButtonClick}
-        >
-          {buttonText}
-        </Button>
       )}
     </div>
   );

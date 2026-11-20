@@ -11,11 +11,11 @@ import {
 } from '../../../../config';
 import { getFolderDescriptionText } from '../../../../global/helpers';
 import { selectIsCurrentUserPremium } from '../../../../global/selectors';
-import { selectCurrentLimit } from '../../../../global/selectors/limits';
 import buildClassName from '../../../../util/buildClassName';
 import { isBetween } from '../../../../util/math';
 import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { throttle } from '../../../../util/schedulers';
+import { MAX_FOLDERS } from '../../../../limits';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
 import { renderTextWithEntities } from '../../../common/helpers/renderTextWithEntities';
 
@@ -49,7 +49,6 @@ type StateProps = {
   folderIds?: number[];
   foldersById: Record<number, ApiChatFolder>;
   recommendedChatFolders?: ApiChatFolder[];
-  maxFolders: number;
   isPremium?: boolean;
   areTagsEnabled?: boolean;
   foldersPosition: FoldersPosition;
@@ -69,7 +68,6 @@ const SettingsFoldersMain = ({
   foldersById,
   isPremium,
   recommendedChatFolders,
-  maxFolders,
   areTagsEnabled,
   foldersPosition,
   isMobile,
@@ -85,7 +83,6 @@ const SettingsFoldersMain = ({
     openDeleteChatFolderModal,
     sortChatFolders,
     toggleDialogFilterTags,
-    openPremiumModal,
     setSharedSettingOption,
   } = getActions();
 
@@ -117,7 +114,7 @@ const SettingsFoldersMain = ({
   }, [loadRecommendedChatFolders]);
 
   const handleCreateFolder = useCallback(() => {
-    if (Object.keys(foldersById).length >= maxFolders - 1) {
+    if (Object.keys(foldersById).length >= MAX_FOLDERS - 1) {
       openLimitReachedModal({
         limit: 'dialogFilters',
       });
@@ -126,7 +123,7 @@ const SettingsFoldersMain = ({
     }
 
     onCreateFolder();
-  }, [foldersById, maxFolders, onCreateFolder, openLimitReachedModal]);
+  }, [foldersById, onCreateFolder, openLimitReachedModal]);
 
   const lang = useLang();
 
@@ -170,7 +167,7 @@ const SettingsFoldersMain = ({
   }, [folderIds, foldersById, lang, chatsCountByFolderId]);
 
   const handleCreateFolderFromRecommended = useCallback((folder: ApiChatFolder) => {
-    if (Object.keys(foldersById).length >= maxFolders - 1) {
+    if (Object.keys(foldersById).length >= MAX_FOLDERS - 1) {
       openLimitReachedModal({
         limit: 'dialogFilters',
       });
@@ -179,7 +176,7 @@ const SettingsFoldersMain = ({
     }
 
     addChatFolder({ folder });
-  }, [foldersById, maxFolders, addChatFolder, openLimitReachedModal]);
+  }, [foldersById, addChatFolder, openLimitReachedModal]);
 
   const handleToggleTags = useCallback(() => {
     if (!isPremium) {
@@ -223,8 +220,8 @@ const SettingsFoldersMain = ({
   });
 
   const canCreateNewFolder = useMemo(() => {
-    return !isPremium || Object.keys(foldersById).length < maxFolders - 1;
-  }, [foldersById, isPremium, maxFolders]);
+    return !isPremium || Object.keys(foldersById).length < MAX_FOLDERS - 1;
+  }, [foldersById, isPremium]);
 
   return (
     <Surface scrollable className="settings-content no-border">
@@ -258,7 +255,7 @@ const SettingsFoldersMain = ({
       <Island>
         <div className="settings-sortable-container" style={`height: ${(folderIds?.length || 0) * FOLDER_HEIGHT_PX}px`}>
           {userFolders?.length ? userFolders.map((folder, i) => {
-            const isBlocked = i > maxFolders - 1;
+            const isBlocked = i > MAX_FOLDERS - 1;
             const isDragged = state.draggedIndex === i;
             const draggedTop = (state.orderedFolderIds?.indexOf(folder.id) ?? 0) * FOLDER_HEIGHT_PX;
             const top = (state.dragOrderIds?.indexOf(folder.id) ?? 0) * FOLDER_HEIGHT_PX;
@@ -416,10 +413,7 @@ const SettingsFoldersMain = ({
             checked={isPremium && areTagsEnabled}
             onChange={handleToggleTags}
             onClickLabel={(event) => {
-              if (!isPremium) {
-                event.preventDefault();
-                openPremiumModal();
-              }
+              if (!isPremium) event.preventDefault();
             }}
           />
           {!isPremium && <Icon name="lock-filled" className="settings-folders-lock-icon" />}
@@ -462,7 +456,6 @@ export default memo(withGlobal<OwnProps>(
       foldersById,
       isPremium: selectIsCurrentUserPremium(global),
       recommendedChatFolders,
-      maxFolders: selectCurrentLimit(global, 'dialogFilters'),
       areTagsEnabled,
       foldersPosition: global.sharedState.settings.foldersPosition,
     };

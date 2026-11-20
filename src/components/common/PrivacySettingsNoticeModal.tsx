@@ -14,7 +14,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 
 import Button from '../ui/Button';
 import Modal, { ANIMATION_DURATION } from '../ui/Modal';
-import Separator from '../ui/Separator';
 import AnimatedIconWithPreview from './AnimatedIconWithPreview';
 
 import styles from './PrivacySettingsNoticeModal.module.scss';
@@ -33,7 +32,6 @@ const CLOSE_ANIMATION_DURATION = ANIMATION_DURATION + ANIMATION_END_DELAY;
 const PrivacySettingsNoticeModal = ({ isOpen, isReadDate, user }: OwnProps & StateProps) => {
   const {
     updateGlobalPrivacySettings,
-    openPremiumModal,
     closePrivacySettingsNoticeModal,
     showNotification,
     setPrivacyVisibility,
@@ -63,14 +61,6 @@ const PrivacySettingsNoticeModal = ({ isOpen, isReadDate, user }: OwnProps & Sta
 
     setTimeout(() => {
       showNotification({ message: lang('PremiumLastSeenSet') });
-    }, CLOSE_ANIMATION_DURATION);
-  });
-
-  const handleOpenPremium = useLastCallback(() => {
-    closePrivacySettingsNoticeModal();
-
-    setTimeout(() => {
-      openPremiumModal({ initialSection: 'last_seen' });
     }, CLOSE_ANIMATION_DURATION);
   });
 
@@ -111,21 +101,6 @@ const PrivacySettingsNoticeModal = ({ isOpen, isReadDate, user }: OwnProps & Sta
           className={styles.button}
         >
           {lang(isReadDate ? 'PremiumReadButton1' : 'PremiumLastSeenButton1')}
-        </Button>
-        <Separator className={styles.separator}>{lang('PremiumOr')}</Separator>
-        <h2 className={styles.header}>{lang('PremiumReadHeader2')}</h2>
-        <p className={styles.desc}>
-          {renderText(
-            lang(isReadDate ? 'PremiumReadText2' : 'PremiumLastSeenText2', { user: userName }),
-            ['simple_markdown'],
-          )}
-        </p>
-        <Button
-          withPremiumGradient
-          onClick={handleOpenPremium}
-          className={styles.button}
-        >
-          {lang('PremiumLastSeenButton2')}
         </Button>
       </div>
     </Modal>

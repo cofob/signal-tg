@@ -1,15 +1,15 @@
 import {
   memo, useEffect, useMemo, useState,
 } from '../../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../../global';
+import { getActions } from '../../../../global';
 
 import type { FolderEditDispatch, FoldersState } from '../../../../hooks/reducers/useFoldersReducer';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID } from '../../../../config';
 import { filterPeersByQuery } from '../../../../global/helpers/peers';
-import { selectCurrentLimit } from '../../../../global/selectors/limits';
 import { unique } from '../../../../util/iteratees';
 import { CUSTOM_PEER_EXCLUDED_CHAT_TYPES, CUSTOM_PEER_INCLUDED_CHAT_TYPES } from '../../../../util/objects/customPeer';
+import { LIMITS } from '../../../../limits';
 
 import { selectChatFilters } from '../../../../hooks/reducers/useFoldersReducer';
 import { useFolderManagerForOrderedIds } from '../../../../hooks/useFolderManager';
@@ -20,10 +20,6 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 import PeerPicker from '../../../common/pickers/PeerPicker';
 import FloatingActionButton from '../../../ui/FloatingActionButton';
 import Loading from '../../../ui/Loading';
-
-type StateProps = {
-  maxChats: number;
-};
 
 type OwnProps = {
   mode: 'included' | 'excluded';
@@ -41,11 +37,9 @@ const SettingsFoldersChatFilters = ({
   isActive,
   onReset,
   onSaveFilter,
-  maxChats,
-}: OwnProps & StateProps) => {
-  const lang = useLang();
-
+}: OwnProps) => {
   const { openLimitReachedModal } = getActions();
+  const lang = useLang();
 
   const { chatFilter } = state;
   const { selectedChatIds, selectedChatTypes } = useMemo(() => selectChatFilters(state, mode, true), [mode, state]);
@@ -81,7 +75,7 @@ const SettingsFoldersChatFilters = ({
 
   const handleSelectedIdsChange = useLastCallback((ids: string[]) => {
     if (mode === 'included') {
-      if (ids.length >= maxChats) {
+      if (ids.length >= LIMITS.dialogFiltersChats) {
         openLimitReachedModal({
           limit: 'dialogFiltersChats',
         });
@@ -167,10 +161,4 @@ const SettingsFoldersChatFilters = ({
   );
 };
 
-export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    return {
-      maxChats: selectCurrentLimit(global, 'dialogFiltersChats'),
-    };
-  },
-)(SettingsFoldersChatFilters));
+export default memo(SettingsFoldersChatFilters);

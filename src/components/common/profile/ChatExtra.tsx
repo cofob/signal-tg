@@ -64,12 +64,10 @@ import Chat from '../../left/main/Chat';
 import Button from '../../ui/Button';
 import Link from '../../ui/Link';
 import ListItem from '../../ui/ListItem';
-import CompactMapPreview from '../CompactMapPreview';
 import CustomEmoji from '../CustomEmoji';
 import Icon from '../icons/Icon';
 import QrIcon from '../icons/QrIcon';
 import SafeLink from '../SafeLink';
-import BusinessHours from './BusinessHours';
 import UserBirthday from './UserBirthday';
 
 import styles from './ChatExtra.module.scss';
@@ -102,12 +100,6 @@ type StateProps = {
   botVerification?: ApiBotVerification;
   botManager?: ApiUser;
   canViewSubscribers?: boolean;
-};
-
-const DEFAULT_MAP_CONFIG = {
-  width: 64,
-  height: 64,
-  zoom: 15,
 };
 
 const BOT_VERIFICATION_ICON_SIZE = 16;
@@ -144,7 +136,6 @@ const ChatExtra = ({
     updateTopicMutedState,
     loadPeerStories,
     openSavedDialog,
-    openMapModal,
     requestMainWebView,
     toggleUserEmojiStatusPermission,
     toggleUserLocationPermission,
@@ -163,8 +154,6 @@ const ChatExtra = ({
   const { id: chatId, usernames: chatUsernames } = chat || {};
   const peerId = userId || chatId;
   const {
-    businessLocation,
-    businessWorkHours,
     personalChannelMessageId,
     birthday,
     note,
@@ -196,21 +185,6 @@ const ChatExtra = ({
     }
   }, [peerId, chat, user]);
 
-  const { width, height, zoom } = DEFAULT_MAP_CONFIG;
-  const locationRightComponent = useMemo(() => {
-    if (!businessLocation?.geo) return undefined;
-    return (
-      <CompactMapPreview
-        className={styles.businessLocation}
-        geo={businessLocation.geo}
-        width={width}
-        height={height}
-        zoom={zoom}
-        shouldShowPin
-      />
-    );
-  }, [businessLocation, width, height, zoom]);
-
   const isTopicInfo = Boolean(topicId && topicId !== MAIN_THREAD_ID);
   const shouldRenderAllLinks = (chat && isChatChannel(chat)) || user?.isPremium;
 
@@ -233,17 +207,6 @@ const ChatExtra = ({
 
     return isTopicInfo ? topicLink! : getChatLink(chat) || chatInviteLink;
   }, [chat, isTopicInfo, topicLink, chatInviteLink]);
-
-  const handleClickLocation = useLastCallback(() => {
-    const { address, geo } = businessLocation!;
-    if (!geo) {
-      copyTextToClipboard(address);
-      showNotification({ message: lang('BusinessLocationCopied') });
-      return;
-    }
-
-    openMapModal({ geoPoint: geo, zoom });
-  });
 
   const handleToggleNotifications = useLastCallback(() => {
     const mutedUntil = isMuted ? UNMUTE_TIMESTAMP : MUTE_INDEFINITE_TIMESTAMP;
@@ -534,25 +497,6 @@ const ChatExtra = ({
               checked={!isMuted}
               className={styles.switch}
             />
-          </ListItem>
-        )}
-        {businessWorkHours && (
-          <BusinessHours businessHours={businessWorkHours} />
-        )}
-        {businessLocation && (
-          <ListItem
-            icon="location-filled"
-            iconBg="green"
-            ripple
-            multiline
-            narrow
-            className={styles.location}
-            style={createVtnStyle('location')}
-            rightElement={locationRightComponent}
-            onClick={handleClickLocation}
-          >
-            <div className="title">{businessLocation.address}</div>
-            <span className="subtitle">{lang('BusinessProfileLocation')}</span>
           </ListItem>
         )}
         {shouldRenderNote && (

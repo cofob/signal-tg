@@ -1,5 +1,5 @@
 import type {
-  ApiMessage, ApiMessagePoll, ApiPollResult, ApiPollResults, ApiQuickReply, ApiSponsoredMessage, ApiWebPage,
+  ApiMessage, ApiMessagePoll, ApiPollResult, ApiPollResults, ApiWebPage,
   ApiWebPageFull,
   ApiWidget,
 } from '../../api/types';
@@ -46,7 +46,6 @@ import {
   selectOutlyingLists,
   selectPinnedIds,
   selectPoll,
-  selectQuickReplyMessage,
   selectScheduledMessage,
   selectTabState,
   selectViewportIds,
@@ -429,38 +428,6 @@ export function updateScheduledMessage<T extends GlobalState>(
   });
 }
 
-export function updateQuickReplyMessage<T extends GlobalState>(
-  global: T, messageId: number, messageUpdate: Partial<ApiMessage>,
-): T {
-  const message = selectQuickReplyMessage(global, messageId);
-  const updatedMessage = {
-    ...message,
-    ...messageUpdate,
-  };
-
-  if (!updatedMessage.id) {
-    return global;
-  }
-
-  return updateQuickReplyMessages(global, {
-    [messageId]: updatedMessage,
-  });
-}
-
-export function deleteQuickReplyMessages<T extends GlobalState>(
-  global: T, messageIds: number[],
-): T {
-  const byId = global.quickReplies.messagesById;
-  const newById = omit(byId, messageIds);
-  return {
-    ...global,
-    quickReplies: {
-      ...global.quickReplies,
-      messagesById: newById,
-    },
-  };
-}
-
 export function deleteChatMessages<T extends GlobalState>(
   global: T,
   chatId: string,
@@ -781,21 +748,6 @@ export function updateScheduledMessages<T extends GlobalState>(
   };
 }
 
-export function updateQuickReplyMessages<T extends GlobalState>(
-  global: T, update: Record<number, ApiMessage>,
-): T {
-  return {
-    ...global,
-    quickReplies: {
-      ...global.quickReplies,
-      messagesById: {
-        ...global.quickReplies.messagesById,
-        ...update,
-      },
-    },
-  };
-}
-
 export function updateFocusedMessage<T extends GlobalState>(
   global: T, update: Partial<TabState['focusedMessage']> | undefined, ...[tabId = getCurrentTabId()]: TabArgs<T>
 ): T {
@@ -809,38 +761,6 @@ export function updateFocusedMessage<T extends GlobalState>(
       ...update,
     },
   }, tabId);
-}
-
-export function updateSponsoredMessage<T extends GlobalState>(
-  global: T, chatId: string, message: ApiSponsoredMessage,
-): T {
-  return {
-    ...global,
-    messages: {
-      ...global.messages,
-      sponsoredByChatId: {
-        ...global.messages.sponsoredByChatId,
-        [chatId]: message,
-      },
-    },
-  };
-}
-
-export function deleteSponsoredMessage<T extends GlobalState>(
-  global: T, chatId: string,
-): T {
-  const byChatId = global.messages.sponsoredByChatId;
-  if (!byChatId[chatId]) {
-    return global;
-  }
-
-  return {
-    ...global,
-    messages: {
-      ...global.messages,
-      sponsoredByChatId: omit(byChatId, [chatId]),
-    },
-  };
 }
 
 export function enterMessageSelectMode<T extends GlobalState>(
@@ -966,35 +886,6 @@ export function updateUploadByMessageKey<T extends GlobalState>(
           [messageKey]: { progress },
         }
         : omit(global.fileUploads.byMessageKey, [messageKey]),
-    },
-  };
-}
-
-export function updateQuickReplies<T extends GlobalState>(
-  global: T,
-  quickRepliesUpdate: Record<number, ApiQuickReply>,
-) {
-  return {
-    ...global,
-    quickReplies: {
-      ...global.quickReplies,
-      byId: {
-        ...global.quickReplies.byId,
-        ...quickRepliesUpdate,
-      },
-    },
-  };
-}
-
-export function deleteQuickReply<T extends GlobalState>(
-  global: T,
-  quickReplyId: number,
-) {
-  return {
-    ...global,
-    quickReplies: {
-      ...global.quickReplies,
-      byId: omit(global.quickReplies.byId, [quickReplyId]),
     },
   };
 }

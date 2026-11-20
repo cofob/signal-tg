@@ -23,6 +23,7 @@ import requestActionTimeout from '../../../util/requestActionTimeout';
 import { debounce } from '../../../util/schedulers';
 import { extractCurrentThemeParams } from '../../../util/themeStyle';
 import { callApi } from '../../../api/gramjs';
+import { LIMITS } from '../../../limits';
 import {
   getMainUsername,
   getUserFullName,
@@ -57,14 +58,12 @@ import { updateTabState } from '../../reducers/tabs';
 import {
   selectBot,
   selectChat,
-  selectChatFullInfo,
   selectChatLastMessageId,
   selectChatMessage,
   selectChatMessageOrEphemeral,
   selectCurrentChat,
   selectEphemeralMessage,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsTrustedBot,
   selectLanguageCode,
   selectMessageReplyInfo,
@@ -76,7 +75,6 @@ import {
   selectUserFullInfo,
   selectWebApp,
 } from '../../selectors';
-import { selectCurrentLimit, selectPremiumLimit } from '../../selectors/limits';
 import { selectDraft, selectThreadIdFromMessage } from '../../selectors/threads.ts';
 import { fetchChatByUsername } from './chats';
 import { getPeerStarsForMessage, sendEphemeralMessages } from './messages';
@@ -87,7 +85,7 @@ const runDebouncedForSearch = debounce((cb) => cb(), 500, false);
 let botFatherId: string | null;
 
 function canUseInlineBots<T extends GlobalState>(global: T, chat: ApiChat) {
-  return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline', selectChatFullInfo(global, chat.id));
+  return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 }
 
 addActionHandler('clickSuggestedMessageButton', (global, actions, payload): ActionReturnType => {
@@ -1844,19 +1842,10 @@ addActionHandler('createBot', async (global, actions, payload): Promise<void> =>
 
   if ('error' in result) {
     if (result.errorMessage === 'BOT_CREATE_LIMIT_EXCEEDED') {
-      const limit = selectCurrentLimit(global, 'botsCreate');
-      const isPremium = selectIsCurrentUserPremium(global);
+      const limit = LIMITS.botsCreate;
       actions.showNotification({
         title: { key: 'CreateBotLimitTitle' },
-        message: isPremium ? {
-          key: 'CreateBotLimitText', variables: { count: limit }, options: { pluralValue: limit },
-        } : {
-          key: 'CreateBotLimitTextPremium',
-          variables: { limit, premiumLimit: selectPremiumLimit(global, 'botsCreate') },
-          options: { withNodes: true, withMarkdown: true },
-        },
-        action: isPremium ? undefined : { action: 'openPremiumModal', payload: { tabId } },
-        actionText: isPremium ? undefined : { key: 'PremiumMore' },
+        message: { key: 'CreateBotLimitText', variables: { count: limit }, options: { pluralValue: limit } },
         tabId,
       });
       return;
