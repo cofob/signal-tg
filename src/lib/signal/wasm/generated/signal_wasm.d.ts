@@ -494,6 +494,32 @@ export function SignedPreKeyRecord_New(id: number, timestamp_millis: number, pub
 
 export function SignedPreKeyRecord_Serialize(obj: SignedPreKeyRecord): Uint8Array;
 
+export class TlsClient {
+    free(): void;
+    [Symbol.dispose](): void;
+    /**
+     * Queues `close_notify`; call `takeOutgoing` afterwards
+     */
+    close(): void;
+    isHandshaking(): boolean;
+    /**
+     * `trust_anchors` are DER certificates; only chains to them are accepted.
+     */
+    constructor(server_name: string, trust_anchors: Uint8Array[]);
+    /**
+     * Processes bytes from the peer and returns the decrypted application data
+     */
+    receive(data: Uint8Array): Uint8Array;
+    /**
+     * Queues application data; it is sent after the handshake completes
+     */
+    send(data: Uint8Array): void;
+    /**
+     * Returns TLS records to write to the tunnel
+     */
+    takeOutgoing(): Uint8Array;
+}
+
 export class UnidentifiedSenderMessageContent {
     private constructor();
     free(): void;
@@ -680,6 +706,7 @@ export interface InitOutput {
     readonly __wbg_servercertificate_free: (a: number, b: number) => void;
     readonly __wbg_sessionrecord_free: (a: number, b: number) => void;
     readonly __wbg_signalmessage_free: (a: number, b: number) => void;
+    readonly __wbg_tlsclient_free: (a: number, b: number) => void;
     readonly __wbg_unidentifiedsendermessagecontent_free: (a: number, b: number) => void;
     readonly decryptionerrormessage_cloneHandle: (a: number) => number;
     readonly fingerprint_cloneHandle: (a: number) => number;
@@ -698,6 +725,13 @@ export interface InitOutput {
     readonly servercertificate_cloneHandle: (a: number) => number;
     readonly sessionrecord_cloneHandle: (a: number) => number;
     readonly signalmessage_cloneHandle: (a: number) => number;
+    readonly tlsclient_close: (a: number) => void;
+    readonly tlsclient_isHandshaking: (a: number) => number;
+    readonly tlsclient_new: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly tlsclient_receive: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly tlsclient_send: (a: number, b: number, c: number) => [number, number];
+    readonly tlsclient_takeOutgoing: (a: number) => [number, number, number, number];
+    readonly ring_core_0_17_14__bn_mul_mont: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly __wbg_kybersecretkey_free: (a: number, b: number) => void;
     readonly __wbg_plaintextcontent_free: (a: number, b: number) => void;
     readonly __wbg_signedprekeyrecord_free: (a: number, b: number) => void;

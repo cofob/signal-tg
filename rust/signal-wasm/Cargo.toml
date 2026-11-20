@@ -24,6 +24,10 @@ hkdf = "0.13"
 sha2 = "0.11"
 uuid = "1.5"
 async-trait = "0.1"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# WebAssembly backends: `crypto.getRandomValues` for ring and `Date.now` for certificate times
+ring = { version = "0.17", features = ["wasm32_unknown_unknown_js"] }
+rustls-pki-types = { version = "1", features = ["web"] }
 
 # `getrandom` has no default WebAssembly backend; enable the `crypto.getRandomValues` one for every major version in the tree
 getrandom04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
