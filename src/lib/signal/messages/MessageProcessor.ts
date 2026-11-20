@@ -416,11 +416,14 @@ export default class MessageProcessor {
     }
   }
 
-  /** Sends a typing indicator to a conversation; it reaches only devices online now */
+  /**
+   * Sends a typing indicator to a conversation; it reaches only devices online now. Signal sends none while
+   * typing indicators are turned off.
+   */
   async sendTyping(conversationId: string, isTyping: boolean) {
     const conversation = await this.db.getConversation(conversationId);
-    if (!conversation) return;
     const context = this.client.getSenderContext();
+    if (!conversation || context.account.isTypingIndicatorsEnabled === false) return;
     await sendTyping(
       context,
       getRecipientAcis(conversation, context.account.aci),
@@ -841,7 +844,9 @@ export default class MessageProcessor {
     }
   }
 
+  /** Turning typing indicators off also hides those of others */
   private handleTyping(senderAci: string, typing: TypingMessage) {
+    if (this.client.getSenderContext().account.isTypingIndicatorsEnabled === false) return;
     this.events.onTyping({
       conversationId: typing.groupId.length ? bufferToBase64(typing.groupId) : senderAci,
       senderAci,

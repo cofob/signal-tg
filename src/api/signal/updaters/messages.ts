@@ -8,7 +8,6 @@ import { getServerTime } from '../../../util/serverTime';
 import {
   buildApiMessageWithPoll, createUserResolver, getIsMessageHidden, getIsOutgoingMessageRead,
 } from '../builders/messages';
-import { getCurrentAccount } from '../client';
 import { db } from '../engine';
 import { getPeerId, getUserPeerId } from '../peers';
 import { sendApiUpdate } from '../updates';
@@ -55,7 +54,7 @@ export async function reportLastReadOutbox(conversation: ConversationRecord) {
 /** Sends typing status updates; Signal clients repeat a started indicator while typing goes on */
 export async function handleTyping({ conversationId, senderAci, isTyping }: TypingEvent) {
   const conversation = await db.getConversation(conversationId);
-  if (!conversation || getCurrentAccount()?.isTypingIndicatorsEnabled === false) return;
+  if (!conversation) return;
   // Members who cannot write to an announcement-only group do not show typing (Signal Desktop)
   if (conversation.isAnnouncementsOnly && !conversation.adminAcis?.includes(senderAci)) return;
 

@@ -254,7 +254,7 @@ export async function markMessagesRead({ messageIds }: { chat: ApiChat; messageI
 
 /**
  * Typing indicators as Signal Desktop sends them: started at the first keystroke and every 10 s while typing
- * goes on, stopped after a pause or when the composer is cleared, and never sent when disabled
+ * goes on, stopped after a pause or when the composer is cleared
  */
 export async function sendMessageAction({
   peer, action,
@@ -262,7 +262,7 @@ export async function sendMessageAction({
   peer: ApiPeer; threadId?: ThreadId; action: ApiSendMessageAction;
 }) {
   const conversation = await getConversationByPeerId(peer.id);
-  if (!conversation || getCurrentAccount()?.isTypingIndicatorsEnabled === false) return undefined;
+  if (!conversation) return undefined;
   const { id } = conversation;
 
   if (action.type === 'typing') {
