@@ -4,8 +4,10 @@ import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
+import { downloadAttachment } from '../attachments/downloadAttachment';
 import { sendContent } from '../sender/sendContent';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
+import { parseContactSync } from '../sync/contactSync';
 import { initSignalWasm } from '../wasm';
 
 import ChatConnection from '../chat/ChatConnection';
@@ -79,7 +81,14 @@ const signalDev = {
 function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEnvelope) {
   const from = `${senderServiceId}.${senderDeviceId}`;
   const sent = content.syncMessage?.sent?.message;
-  if (content.dataMessage) {
+  const contactsBlob = content.syncMessage?.contacts?.blob;
+  if (contactsBlob) {
+    void downloadAttachment(contactsBlob).then((data) => {
+      const contacts = parseContactSync(data);
+      console.log(`[signal] Contact sync: ${contacts.length} contacts`);
+      console.table(contacts.map(({ aci, number, name }) => ({ aci, number, name })));
+    }, (err) => console.warn('[signal] Contact sync download failed', err));
+  } else if (content.dataMessage) {
     console.log(`[signal] Message from ${from}:`, content.dataMessage.body ?? '', content.dataMessage);
   } else if (sent) {
     console.log(`[signal] Sent from another device of ours to ${content.syncMessage!.sent!.destinationServiceId}:`,
