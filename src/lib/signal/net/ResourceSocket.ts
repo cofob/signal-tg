@@ -46,7 +46,19 @@ const textDecoder = new TextDecoder();
  * chat and provisioning sockets.
  */
 export default class ResourceSocket {
-  onRequest?: (request: IncomingRequest) => void;
+  // Requests that arrive before a handler is set wait for it: the provisioning socket gets its address
+  // right after connecting, before the caller can set `onRequest`
+  private requestHandler?: (request: IncomingRequest) => void;
+
+  private earlyRequests: IncomingRequest[] = [];
+
+  set onRequest(handler: ((request: IncomingRequest) => void) | undefined) {
+    this.requestHandler = handler;
+    if (!handler) return;
+    const requests = this.earlyRequests;
+    this.earlyRequests = [];
+    requests.forEach((request) => handler(request));
+  }
 
   onClose?: (code: number, reason: string) => void;
 
@@ -134,7 +146,7 @@ export default class ResourceSocket {
         id, verb, path, headers, body,
       } = message.request;
       let hasResponded = false;
-      this.onRequest?.({
+      this.dispatchRequest({
         verb,
         path,
         headers: parseHeaders(headers),
@@ -148,6 +160,14 @@ export default class ResourceSocket {
           })));
         },
       });
+    }
+  }
+
+  private dispatchRequest(request: IncomingRequest) {
+    if (this.requestHandler) {
+      this.requestHandler(request);
+    } else {
+      this.earlyRequests.push(request);
     }
   }
 

@@ -112,8 +112,10 @@ export async function sendContent(
     ? payload
     : padMessage(toBinary(ContentSchema, create(ContentSchema, payload)));
 
+  // Without sessions, start them with every device of the destination; for ourselves, our other devices
+  // (Signal Desktop `OutgoingMessage.sendToServiceId`). The server rejects an empty message list.
   let deviceIds = await getDeviceIds(state, isToSelf);
-  if (!deviceIds.length && !isToSelf) {
+  if (!deviceIds.length) {
     deviceIds = await fetchSessions(state, '*');
   }
 
@@ -267,10 +269,13 @@ async function fetchSessions(state: SendState, deviceSpecifier: string) {
   return state.context.store.runExclusive(() => startSessions(state, json));
 }
 
-async function startSessions({ stores, localAddress, destination }: SendState, json: PreKeyResponse) {
+async function startSessions(state: SendState, json: PreKeyResponse) {
+  const { stores, localAddress, destination, context: { account } } = state;
   const identityKey = wasm.PublicKey_Deserialize(bufferFromBase64(json.identityKey));
   const deviceIds: number[] = [];
   for (const device of json.devices) {
+    // Our own device needs no session with itself
+    if (destination === account.aci && device.deviceId === account.deviceId) continue;
     const preKey = device.preKey
       ? wasm.PublicKey_Deserialize(bufferFromBase64(device.preKey.publicKey))
       : undefined;

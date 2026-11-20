@@ -1,5 +1,5 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
-import { create, toBinary } from '@bufbuild/protobuf';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type {
@@ -10,20 +10,26 @@ import type {
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
+import type { OutgoingMessage, RecipientResult } from '../sender/sendMessage';
 import type SignalClient from '../SignalClient';
+import type { AccountRecord } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { saveProfileKey } from '../sender/sealedSender';
-import { sendMessage, sendReadSync, sendReceipts } from '../sender/sendMessage';
-import { uuidToString } from '../serviceId';
+import {
+  sendMessage, sendReadSync, sendReceipts, sendTyping, sendViewedSync, sendViewOnceOpenSync,
+} from '../sender/sendMessage';
+import { uuidToBytes, uuidToString } from '../serviceId';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 
 import { Member_Role } from '../proto/generated/Groups_pb';
 import {
+  AttachmentPointerSchema,
+  BodyRangeSchema,
   DataMessage_Flags,
   DataMessageSchema,
   GroupContextV2Schema,
@@ -35,7 +41,16 @@ import {
 export type MessageChanges = {
   conversations: ConversationRecord[];
   messages: MessageRecord[];
+  // Ids of `messages` stored for the first time
+  addedMessageIds: number[];
   deletedMessages: { conversationId: string; id: number }[];
+};
+
+export type MessageEdit = {
+  body: string;
+  bodyRanges: MessageInitShape<typeof BodyRangeSchema>[];
+  // The full text of a long body, uploaded as a `LONG_TEXT_CONTENT_TYPE` attachment
+  bodyAttachment?: MessageInitShape<typeof AttachmentPointerSchema>;
 };
 
 export type TypingEvent = {
@@ -43,6 +58,8 @@ export type TypingEvent = {
   senderAci: string;
   isTyping: boolean;
 };
+
+type MessageReaction = NonNullable<MessageRecord['reactions']>[number];
 
 type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
@@ -64,6 +81,12 @@ type MessageSource = {
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Signal Desktop `ts/util/canEditMessage.dom.ts` and `ts/util/getDeleteMaxAgeMs.std.ts`
+const EDIT_MAX_AGE_MS = DAY_MS;
+const MAX_EDIT_COUNT = 10;
+const DELETE_FOR_EVERYONE_MAX_AGE_MS = DAY_MS;
+export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 const STATUS_RANK: Record<SendStatus, number> = {
@@ -97,6 +120,8 @@ export default class MessageProcessor {
   // Profiles of new conversations are fetched one at a time to stay within the server's rate limit
   private profileQueue = Promise.resolve();
 
+  private lastTimestamp = 0;
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -120,31 +145,23 @@ export default class MessageProcessor {
 
   /**
    * Stores and sends a message from this device. The message is stored as pending first, then each
-   * recipient's status follows the send.
+   * recipient's status follows the send; without a connection every recipient fails. `onStored` runs
+   * before the stored message is reported through `onChanges`.
    */
-  async sendDataMessage(conversationId: string, init: MessageInitShape<typeof DataMessageSchema>) {
-    const context = this.client.getSenderContext();
-    const { account } = context;
-    const sentAt = Date.now();
+  async sendDataMessage(
+    conversationId: string,
+    init: MessageInitShape<typeof DataMessageSchema>,
+    onStored?: (message: MessageRecord) => void,
+  ) {
+    const account = await this.getAccount();
+    const sentAt = this.allocateTimestamp();
 
-    const {
-      conversation, message, recipients, dataMessage,
-    } = await this.runSerial(async () => {
+    const { conversation, message, dataMessage } = await this.runSerial(async () => {
       // An ACI that has no conversation yet starts one
       const found = await this.db.getConversation(conversationId)
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
       if (!found) throw new Error(`Unknown conversation ${conversationId}`);
-      const recipientAcis = found.type === 'group'
-        ? (found.memberAcis ?? []).filter((aci) => aci !== account.aci)
-        : [found.id];
-      const outgoing = create(DataMessageSchema, init);
-      outgoing.timestamp = BigInt(sentAt);
-      outgoing.profileKey = account.profileKey ?? outgoing.profileKey;
-      outgoing.expireTimer = found.expireTimer ?? 0;
-      outgoing.expireTimerVersion = found.expireTimerVersion ?? 0;
-      outgoing.groupV2 = found.masterKey
-        ? create(GroupContextV2Schema, { masterKey: found.masterKey, revision: found.revision })
-        : undefined;
+      const outgoing = createOutgoingDataMessage(account, found, init, sentAt);
       const { message: added } = await this.addMessage(found, {
         conversationId,
         kind: 'message',
@@ -158,28 +175,261 @@ export default class MessageProcessor {
         expireTimer: found.expireTimer || undefined,
         expiresAt: found.expireTimer ? sentAt + found.expireTimer * 1000 : undefined,
         readAt: sentAt,
-        recipientStatus: Object.fromEntries(recipientAcis.map((aci) => [aci, 'pending' as const])),
+        recipientStatus: buildPendingStatus(getRecipientAcis(found, account.aci)),
+      });
+      onStored?.(added);
+      return { conversation: found, message: added, dataMessage: outgoing };
+    });
+
+    return this.sendStoredMessage(conversation, message, { case: 'dataMessage', value: dataMessage }, {
+      timestamp: sentAt,
+      expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
+    });
+  }
+
+  /**
+   * Edits the text of an outgoing message (Signal Desktop `ts/util/sendEditedMessage.preload.ts`): the earlier
+   * version goes to `revisions` and the edit is sent with the original timestamp as its target. Messages older
+   * than a day and messages edited `MAX_EDIT_COUNT` times stay as they are, except in Note to Self.
+   */
+  async sendEditMessage(messageId: number, edit: MessageEdit) {
+    const account = await this.getAccount();
+    const editedAt = this.allocateTimestamp();
+
+    const { conversation, message, editMessage } = await this.runSerial(async () => {
+      const target = await this.db.getMessage(messageId);
+      const found = target && await this.db.getConversation(target.conversationId);
+      if (!target?.dataMessage || !found || target.authorAci !== account.aci || target.deletedAt) {
+        throw new Error('The message cannot be edited');
+      }
+      const isNoteToSelf = found.id === account.aci;
+      const isTooOld = editedAt - target.sentAt > EDIT_MAX_AGE_MS;
+      if (!isNoteToSelf && (isTooOld || (target.revisions?.length ?? 0) >= MAX_EDIT_COUNT)) {
+        throw new Error('The message can no longer be edited');
+      }
+
+      const edited = fromBinary(DataMessageSchema, target.dataMessage);
+      edited.body = edit.body;
+      edited.bodyRanges = edit.bodyRanges.map((range) => create(BodyRangeSchema, range));
+      edited.attachments = edited.attachments.filter(({ contentType }) => contentType !== LONG_TEXT_CONTENT_TYPE);
+      if (edit.bodyAttachment) edited.attachments.push(create(AttachmentPointerSchema, edit.bodyAttachment));
+      setOutgoingFields(edited, account, found, editedAt);
+      const updated = await this.putMessage({
+        ...target,
+        revisions: [...target.revisions ?? [], {
+          dataMessage: target.dataMessage, editedAt: target.editedAt ?? target.sentAt,
+        }],
+        dataMessage: toBinary(DataMessageSchema, edited),
+        body: edited.body || undefined,
+        editedAt,
+        // Like Signal Desktop, the message shows the send state of its latest edit
+        recipientStatus: buildPendingStatus(getRecipientAcis(found, account.aci)),
       });
       return {
-        conversation: found, message: added, recipients: recipientAcis, dataMessage: outgoing,
+        conversation: found,
+        message: updated,
+        editMessage: { targetSentTimestamp: BigInt(target.sentAt), dataMessage: edited },
       };
     });
 
-    const results = await sendMessage(context, recipients, { case: 'dataMessage', value: dataMessage }, {
-      timestamp: sentAt,
-      groupId: conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
-      expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
+    return this.sendStoredMessage(conversation, message, { case: 'editMessage', value: editMessage }, {
+      timestamp: editedAt,
+    });
+  }
+
+  /**
+   * Sets our reaction to a message, or removes it when `emoji` is absent; Signal keeps one reaction per person.
+   * The reaction is shown at once and taken back when no recipient gets it.
+   */
+  async sendReaction(messageId: number, emoji?: string) {
+    const account = await this.getAccount();
+    const sentAt = this.allocateTimestamp();
+
+    const prepared = await this.runSerial(async () => {
+      const target = await this.db.getMessage(messageId);
+      const found = target && await this.db.getConversation(target.conversationId);
+      if (!target || !found || target.kind !== 'message' || !target.dataMessage) {
+        throw new Error('The message cannot have reactions');
+      }
+      const previous = target.reactions?.find(({ authorAci }) => authorAci === account.aci);
+      if (!emoji && !previous) return undefined;
+      await this.putReaction(target, account.aci, emoji ? { emoji, authorAci: account.aci, sentAt } : undefined);
+      return { conversation: found, target, previous };
+    });
+    if (!prepared) return;
+
+    const { conversation, target, previous } = prepared;
+    const isSent = await this.sendToConversation(conversation, {
+      reaction: {
+        emoji: emoji ?? previous!.emoji,
+        remove: !emoji,
+        targetAuthorAci: target.authorAci,
+        targetSentTimestamp: BigInt(target.sentAt),
+      },
+    }, sentAt);
+    if (!isSent) {
+      await this.runSerial(async () => {
+        const current = await this.db.getMessage(target.id);
+        if (current) await this.putReaction(current, account.aci, previous);
+      });
+      throw new Error('The reaction was not sent');
+    }
+  }
+
+  /**
+   * Deletes messages for everyone (Signal Desktop `ts/util/canDeleteForEveryone.preload.ts`): our own messages
+   * through `delete`, other members' group messages through `adminDelete` when we are an admin, each within
+   * a day of sending. Nothing is deleted when any message does not qualify.
+   */
+  async deleteForEveryone(messageIds: number[]) {
+    const account = await this.getAccount();
+    const now = Date.now();
+
+    const targets = await this.runSerial(async () => {
+      const found: { message: MessageRecord; conversation: ConversationRecord; isAdminDelete: boolean }[] = [];
+      for (const id of messageIds) {
+        const message = await this.db.getMessage(id);
+        const conversation = message && await this.db.getConversation(message.conversationId);
+        if (!message || !conversation || message.kind !== 'message' || message.deletedAt) {
+          throw new Error('The message cannot be deleted for everyone');
+        }
+        const isOwn = message.authorAci === account.aci;
+        const isAdminDelete = !isOwn && conversation.type === 'group'
+          && Boolean(conversation.adminAcis?.includes(account.aci));
+        const age = now - (message.serverTimestamp ?? message.sentAt);
+        if ((!isOwn && !isAdminDelete) || conversation.id === account.aci || age > DELETE_FOR_EVERYONE_MAX_AGE_MS) {
+          throw new Error('The message cannot be deleted for everyone');
+        }
+        found.push({ message, conversation, isAdminDelete });
+      }
+      for (const { message } of found) await this.applyDelete(message.authorAci, message.sentAt);
+      return found;
     });
 
+    for (const { message, conversation, isAdminDelete } of targets) {
+      const targetSentTimestamp = BigInt(message.sentAt);
+      await this.sendToConversation(conversation, isAdminDelete ? {
+        adminDelete: { targetAuthorAciBinary: uuidToBytes(message.authorAci), targetSentTimestamp },
+      } : {
+        delete: { targetSentTimestamp },
+      }, this.allocateTimestamp(), false);
+    }
+  }
+
+  /** Deletes messages on this device only; other devices keep them, since `deleteForMe` sync is not sent yet */
+  deleteForMe(messageIds: number[]) {
     return this.runSerial(async () => {
-      const current = await this.db.getMessage(message.id);
-      if (!current) return message;
-      const recipientStatus = { ...current.recipientStatus };
-      for (const { serviceId, error } of results) {
-        recipientStatus[serviceId] = error ? 'failed' : maxStatus(recipientStatus[serviceId], 'sent');
+      for (const id of messageIds) {
+        const message = await this.db.getMessage(id);
+        if (!message) continue;
+        await this.db.deleteMessage(id);
+        this.changes.deletedMessages.push({ conversationId: message.conversationId, id });
       }
-      return this.putMessage({ ...current, recipientStatus });
-    }).finally(() => this.flush());
+    });
+  }
+
+  /** Votes in a poll; an empty `optionIndexes` takes the vote back */
+  async sendPollVote(messageId: number, optionIndexes: number[]) {
+    const account = await this.getAccount();
+    const sentAt = this.allocateTimestamp();
+
+    const { conversation, target, voteCount } = await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      const found = message && await this.db.getConversation(message.conversationId);
+      if (!message || !found || message.isPollEnded) throw new Error('The poll does not accept votes');
+      const count = (message.pollVotes?.find(({ authorAci }) => authorAci === account.aci)?.voteCount ?? 0) + 1;
+      await this.putMessage({
+        ...message,
+        pollVotes: [
+          ...(message.pollVotes ?? []).filter(({ authorAci }) => authorAci !== account.aci),
+          { authorAci: account.aci, optionIndexes, voteCount: count },
+        ],
+      });
+      return { conversation: found, target: message, voteCount: count };
+    });
+
+    await this.sendToConversation(conversation, {
+      pollVote: {
+        targetAuthorAciBinary: uuidToBytes(target.authorAci),
+        targetSentTimestamp: BigInt(target.sentAt),
+        optionIndexes,
+        voteCount,
+      },
+    }, sentAt);
+  }
+
+  /** Ends our own poll */
+  async endPoll(messageId: number) {
+    const account = await this.getAccount();
+    const sentAt = this.allocateTimestamp();
+
+    const { conversation, target } = await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      const found = message && await this.db.getConversation(message.conversationId);
+      if (!message || !found || message.authorAci !== account.aci) throw new Error('Only the author ends a poll');
+      await this.putMessage({ ...message, isPollEnded: true });
+      return { conversation: found, target: message };
+    });
+
+    await this.sendToConversation(conversation, {
+      pollTerminate: { targetSentTimestamp: BigInt(target.sentAt) },
+    }, sentAt);
+  }
+
+  /**
+   * Marks incoming voice, video and view-once messages viewed, erases opened view-once messages
+   * (`markViewOnceMessageViewed` in Signal Desktop `ts/services/MessageUpdater.preload.ts`), and sends
+   * viewed receipts (when enabled) and syncs
+   */
+  async markViewed(messageIds: number[]) {
+    const viewedAt = Date.now();
+    const viewed = await this.runSerial(async () => {
+      const result: { message: MessageRecord; conversation: ConversationRecord; isViewOnce: boolean }[] = [];
+      for (const id of messageIds) {
+        const message = await this.db.getMessage(id);
+        const conversation = message && await this.db.getConversation(message.conversationId);
+        if (!message?.dataMessage || !conversation || message.isOutgoing || message.viewedAt) continue;
+        const { isViewOnce } = fromBinary(DataMessageSchema, message.dataMessage);
+        await this.putMessage({
+          ...message,
+          viewedAt,
+          isViewOnceOpened: isViewOnce || undefined,
+          dataMessage: isViewOnce ? undefined : message.dataMessage,
+        });
+        result.push({ message, conversation, isViewOnce });
+      }
+      return result;
+    });
+    if (!viewed.length) return;
+
+    const context = this.client.getSenderContext();
+    if (context.account.isReadReceiptsEnabled) {
+      const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
+      for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
+        await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
+      }
+    }
+    const views = viewed.map(({ message }) => ({ senderAci: message.authorAci, timestamp: message.sentAt }));
+    await sendViewedSync(context, views);
+    for (const [index, { isViewOnce }] of viewed.entries()) {
+      if (isViewOnce) await sendViewOnceOpenSync(context, views[index]);
+    }
+  }
+
+  /**
+   * Sends a typing indicator to a conversation; it reaches only devices online now. Signal sends none while
+   * typing indicators are turned off.
+   */
+  async sendTyping(conversationId: string, isTyping: boolean) {
+    const conversation = await this.db.getConversation(conversationId);
+    const context = this.client.getSenderContext();
+    if (!conversation || context.account.isTypingIndicatorsEnabled === false) return;
+    await sendTyping(
+      context,
+      getRecipientAcis(conversation, context.account.aci),
+      isTyping,
+      conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
+    );
   }
 
   /**
@@ -318,6 +568,78 @@ export default class MessageProcessor {
       });
     });
     this.flush();
+  }
+
+  /** The account of this device; it is stored at linking, so local records work without a connection */
+  private async getAccount() {
+    const account = await this.client.store.getItem('account');
+    if (!account) throw new Error('This browser is not linked to a Signal account');
+    return account;
+  }
+
+  /** Our ACI and a timestamp identify each message we send, so every send takes a new timestamp */
+  private allocateTimestamp() {
+    this.lastTimestamp = Math.max(Date.now(), this.lastTimestamp + 1);
+    return this.lastTimestamp;
+  }
+
+  /** Sends the content of a stored outgoing message and records each recipient's status */
+  private async sendStoredMessage(
+    conversation: ConversationRecord,
+    message: MessageRecord,
+    content: OutgoingMessage,
+    options: { timestamp: number; expirationStartTimestamp?: number },
+  ) {
+    const recipients = Object.keys(message.recipientStatus ?? {});
+    const results = await this.sendContentTo(conversation, recipients, content, options);
+    return this.runSerial(async () => {
+      const current = await this.db.getMessage(message.id);
+      if (!current) return message;
+      const recipientStatus = { ...current.recipientStatus };
+      for (const serviceId of recipients) {
+        recipientStatus[serviceId] = getResultError(results, serviceId)
+          ? 'failed'
+          : maxStatus(recipientStatus[serviceId], 'sent');
+      }
+      return this.putMessage({ ...current, recipientStatus });
+    });
+  }
+
+  /**
+   * Sends a data message that has no record of its own, such as a reaction or a delete, to the members of
+   * a conversation; returns whether it reached any of them
+   */
+  private async sendToConversation(
+    conversation: ConversationRecord,
+    init: MessageInitShape<typeof DataMessageSchema>,
+    timestamp: number,
+    shouldIncludeTimer = true,
+  ) {
+    const account = await this.getAccount();
+    const recipients = getRecipientAcis(conversation, account.aci);
+    const dataMessage = createOutgoingDataMessage(account, conversation, init, timestamp, shouldIncludeTimer);
+    const results = await this.sendContentTo(conversation, recipients, { case: 'dataMessage', value: dataMessage }, {
+      timestamp,
+    });
+    return !recipients.length || recipients.some((serviceId) => !getResultError(results, serviceId));
+  }
+
+  /** Without a connection, or when the send fails as a whole, every recipient fails */
+  private async sendContentTo(
+    conversation: ConversationRecord,
+    recipients: string[],
+    content: OutgoingMessage,
+    options: { timestamp: number; expirationStartTimestamp?: number },
+  ): Promise<RecipientResult[]> {
+    try {
+      return await sendMessage(this.client.getSenderContext(), recipients, content, {
+        ...options,
+        groupId: conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
+      });
+    } catch (err) {
+      this.events.onError(err as Error);
+      return recipients.map((serviceId) => ({ serviceId, error: err as Error }));
+    }
   }
 
   private async handleContent(decrypted: DecryptedEnvelope) {
@@ -522,7 +844,9 @@ export default class MessageProcessor {
     }
   }
 
+  /** Turning typing indicators off also hides those of others */
   private handleTyping(senderAci: string, typing: TypingMessage) {
+    if (this.client.getSenderContext().account.isTypingIndicatorsEnabled === false) return;
     this.events.onTyping({
       conversationId: typing.groupId.length ? bufferToBase64(typing.groupId) : senderAci,
       senderAci,
@@ -639,13 +963,15 @@ export default class MessageProcessor {
     const target = await this.db.findMessage(targetAci, Number(reaction.targetSentTimestamp));
     if (!target || target.deletedAt) return;
 
-    const others = (target.reactions ?? []).filter(({ authorAci }) => authorAci !== source.authorAci);
-    await this.putMessage({
-      ...target,
-      reactions: reaction.remove
-        ? others
-        : [...others, { emoji: reaction.emoji, authorAci: source.authorAci, sentAt: source.sentAt }],
+    await this.putReaction(target, source.authorAci, reaction.remove ? undefined : {
+      emoji: reaction.emoji, authorAci: source.authorAci, sentAt: source.sentAt,
     });
+  }
+
+  /** Replaces the reaction of `authorAci` on a message; Signal keeps one reaction per person */
+  private putReaction(message: MessageRecord, authorAci: string, reaction?: MessageReaction) {
+    const others = (message.reactions ?? []).filter((current) => current.authorAci !== authorAci);
+    return this.putMessage({ ...message, reactions: reaction ? [...others, reaction] : others });
   }
 
   /** Remote deletes are allowed only to the author, or to group admins through `adminDelete` */
@@ -787,6 +1113,7 @@ export default class MessageProcessor {
   private async addMessage(conversation: ConversationRecord, record: NewMessageRecord) {
     const message = await this.db.addMessage(record);
     this.changes.messages.push(message);
+    this.changes.addedMessageIds.push(message.id);
     const isIncoming = !record.isOutgoing && record.kind === 'message';
     const updated = await this.putConversation({
       ...conversation,
@@ -858,13 +1185,60 @@ export default class MessageProcessor {
     this.events.onChanges({
       conversations: dedupeById(changes.conversations),
       messages: dedupeById(changes.messages),
+      addedMessageIds: changes.addedMessageIds,
       deletedMessages: changes.deletedMessages,
     });
   }
 }
 
 function createChanges(): MessageChanges {
-  return { conversations: [], messages: [], deletedMessages: [] };
+  return {
+    conversations: [], messages: [], addedMessageIds: [], deletedMessages: [],
+  };
+}
+
+/** A data message from this device; `shouldIncludeTimer` adds the conversation's disappearing timer */
+function createOutgoingDataMessage(
+  account: AccountRecord,
+  conversation: ConversationRecord,
+  init: MessageInitShape<typeof DataMessageSchema>,
+  timestamp: number,
+  shouldIncludeTimer = true,
+) {
+  const message = create(DataMessageSchema, init);
+  setOutgoingFields(message, account, conversation, timestamp);
+  if (shouldIncludeTimer) {
+    message.expireTimer = conversation.expireTimer ?? 0;
+    message.expireTimerVersion = conversation.expireTimerVersion ?? 0;
+  }
+  return message;
+}
+
+/** Sets the fields every data message from this device carries: timestamp, profile key and group */
+function setOutgoingFields(
+  message: DataMessage, account: AccountRecord, conversation: ConversationRecord, timestamp: number,
+) {
+  message.timestamp = BigInt(timestamp);
+  message.profileKey = account.profileKey ?? message.profileKey;
+  message.groupV2 = conversation.masterKey
+    ? create(GroupContextV2Schema, { masterKey: conversation.masterKey, revision: conversation.revision })
+    : undefined;
+}
+
+/** Members who receive our messages in a conversation; Note to Self has only us, which sends a sync alone */
+function getRecipientAcis(conversation: ConversationRecord, selfAci: string) {
+  return conversation.type === 'group'
+    ? (conversation.memberAcis ?? []).filter((aci) => aci !== selfAci)
+    : [conversation.id];
+}
+
+function buildPendingStatus(recipientAcis: string[]): Record<string, SendStatus> {
+  return Object.fromEntries(recipientAcis.map((aci) => [aci, 'pending' as const]));
+}
+
+/** A recipient without a result got the message through the sync transcript alone (Note to Self) */
+function getResultError(results: RecipientResult[], serviceId: string) {
+  return results.find((result) => result.serviceId === serviceId)?.error;
 }
 
 /** Keeps the last version of each record */

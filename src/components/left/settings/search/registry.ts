@@ -154,6 +154,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'SetColor',
   },
   {
+    screen: SettingsScreens.SignalProxy,
+    parent: SettingsScreens.DataStorage,
+    titleKey: 'SignalProxyTitle',
+    keywordsKey: 'SettingsKeywordsSignalProxy',
+  },
+  {
     screen: SettingsScreens.QuickReaction,
     parent: SettingsScreens.Stickers,
     titleKey: 'DoubleTapSetting',

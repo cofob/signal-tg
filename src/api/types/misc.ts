@@ -33,6 +33,8 @@ export interface ApiInitialArgs {
   isTestServerRequested?: boolean;
   accountIds?: string[];
   hasPasskeySupport?: boolean;
+  // The tunnel for Signal hosts; `undefined` uses the build default
+  signalProxyUrl?: string;
 }
 
 export type ApiAccountConnection = Pick<ApiInitialArgs,

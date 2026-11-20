@@ -33,7 +33,18 @@ const textDecoder = new TextDecoder();
  * Signal's certificate authority, so the framing runs here.
  */
 export default class WebSocketClient {
-  onMessage?: (data: Uint8Array) => void;
+  // Messages that arrive before a handler is set wait for it, so none are lost right after connecting
+  private messageHandler?: (data: Uint8Array) => void;
+
+  private earlyMessages: Uint8Array[] = [];
+
+  set onMessage(handler: ((data: Uint8Array) => void) | undefined) {
+    this.messageHandler = handler;
+    if (!handler) return;
+    const messages = this.earlyMessages;
+    this.earlyMessages = [];
+    messages.forEach((message) => handler(message));
+  }
 
   onClose?: CloseHandler;
 
@@ -122,7 +133,11 @@ export default class WebSocketClient {
             if (isFinal) {
               const message = concatBytes(fragments);
               fragments = [];
-              this.onMessage?.(message);
+              if (this.messageHandler) {
+                this.messageHandler(message);
+              } else {
+                this.earlyMessages.push(message);
+              }
             }
             break;
           case OPCODE_PING:

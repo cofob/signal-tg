@@ -11,7 +11,7 @@
 Этап 0, сделано (2026-11-20):
 
 - `rust/libsignal/`: крейты libsignal v0.108.3; `rust/signal-wasm/`: WASM-мост протокола (имена функций как у `Native`) и TLS-клиент на rustls. Сборка: `npm run signal:wasm`, результат в `src/lib/signal/wasm/generated`.
-- `proxy/tunnel.ts`: туннель WebSocket -> TCP, `npm run signal:proxy`.
+- `proxy/`: туннель WebSocket -> TCP на Rust (проверка ClientHello и SNI, лимиты на клиента, баны), `npm run signal:proxy`; политика без привязки к транспорту в `proxy/src/lib.rs` для Tauri.
 - protobuf-es: `npm run signal:proto` (`buf generate`), схемы в `src/lib/signal/proto/schema`, код в `src/lib/signal/proto/generated`.
 - `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
 - `src/lib/signal/account`, `receiver`, `chat`, `store`, `sender`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB, отправка с обработкой 409/410 и запросы синхронизации после привязки.
@@ -36,7 +36,7 @@
 Не проверено: привязка телефоном и расшифровка первого сообщения. Проверка вручную:
 
 1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
-2. `npm run signal:proxy` (Node 24) и `npm run dev`.
+2. `npm run signal:proxy` (нужен Rust) и `npm run dev`.
 3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
 4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. Другие команды: `signalDev.syncStorage()` (беседы и группы из storage service), `signalDev.conversations()`, `signalDev.messages('<id беседы>')`, `signalDev.send('<id беседы или ACI>', 'текст')` (после `syncStorage()` уходит через sealed sender), `signalDev.markRead('<id беседы>')`, `signalDev.sendFile('<id беседы>', file)` (файл из `<input type="file">`), `signalDev.findUser('name.42')` (ACI по юзернейму или ссылке), `signalDev.profile()` (свой профиль), `signalDev.listen()` (переподключиться), `signalDev.reset()` (стереть локальные данные).
 
@@ -81,8 +81,9 @@
         |
         | HTTPS + WSS на свой origin
         v
-proxy/  (Node 24, без зависимостей, без состояния)
-  WebSocket -> TCP туннель к хостам из allowlist, TLS не расшифровывает
+proxy/  (Rust, без состояния на диске)
+  WebSocket -> TCP туннель к хостам из allowlist, TLS не расшифровывает,
+  проверяет SNI в ClientHello, ограничивает клиентов
         |
         v
 Серверы Signal (chat, storage, cdn0/2/3, cdsi)
@@ -109,6 +110,8 @@ proxy/  (Node 24, без зависимостей, без состояния)
 | Риск | Злоумышленный прокси может вызывать API от имени устройства, но не прочитает и не подделает сообщения без ключей | Сложнее, медленнее на больших вложениях |
 
 Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
+
+Адрес туннеля по умолчанию задаёт сборка (`SIGNAL_TUNNEL_URL`, иначе `/tunnel` своего origin). Пользователь меняет его настройкой «Прокси-сервер» (раздел «Данные и память» или кнопка на экране привязки, `SharedSettings.signalProxyUrl`): допускаются `wss://` и `ws://` для localhost, после сохранения API переподключается через новый туннель.
 
 ## 2a. Аккаунты без номера телефона
 

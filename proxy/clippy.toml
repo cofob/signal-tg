@@ -1,0 +1,2 @@
+# Keep the default list and add names used in doc comments
+doc-valid-idents = ["TeleSignal", "ClientHello", ".."]

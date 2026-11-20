@@ -4,12 +4,15 @@ import type { ApiInitialArgs } from '../types';
 import { DEBUG } from '../../config';
 import { linkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
+import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
+import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
 import { buildApiUser } from './builders/users';
+import { clearAttachmentCache } from './media/attachments';
 import {
   client, db, logError, processor, store,
 } from './engine';
@@ -28,6 +31,9 @@ let reconnectDelay = RECONNECT_MIN_DELAY_MS;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
+let hasSyncedThisSession = false;
+// Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
+let clientGeneration = 0;
 
 /**
  * Starts the linked device: shows the link QR code until the phone scans it, or connects the stored account.
@@ -35,12 +41,13 @@ let isDestroyed = false;
  */
 export async function startClient(initialArgs: ApiInitialArgs) {
   isDestroyed = false;
+  applyProxyUrl(initialArgs.signalProxyUrl);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
   const account = await store.getItem('account');
   if (account) {
-    await startSession(account, false);
+    await startSession(account);
     return;
   }
   void runDeviceLink(initialArgs.platform).catch(logError);
@@ -50,9 +57,10 @@ export function getCurrentAccount() {
   return currentAccount;
 }
 
-/** Closes the connections; `shouldForget` also removes the account and every local message */
+/** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
+  clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
   processor.stop();
@@ -61,20 +69,34 @@ export async function stopClient(shouldForget: boolean) {
   if (shouldForget) {
     await store.clear();
     await db.clear();
+    await clearAttachmentCache();
   }
 }
 
+function applyProxyUrl(url: string | undefined) {
+  const prevTunnelUrl = getSignalTunnelUrl();
+  setSignalProxyUrl(url);
+  if (getSignalTunnelUrl() !== prevTunnelUrl) closeIdleHttpConnections();
+}
+
 async function runDeviceLink(platform?: string) {
+  const generation = clientGeneration;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
 
-  while (!isDestroyed) {
+  while (generation === clientGeneration) {
+    let session;
     try {
-      linkSession = await startDeviceLink();
+      session = await startDeviceLink();
     } catch (err) {
       logError(err);
       await pause(LINK_RETRY_DELAY_MS);
       continue;
     }
+    if (generation !== clientGeneration) {
+      session.cancel();
+      return;
+    }
+    linkSession = session;
 
     sendApiUpdate({
       '@type': 'updateAuthorizationState',
@@ -92,12 +114,12 @@ async function runDeviceLink(platform?: string) {
 
     const deviceName = platform ? `${DEVICE_NAME} (${platform})` : DEVICE_NAME;
     const account = await linkDevice(store, message, deviceName);
-    await startSession(account, true);
+    await startSession(account);
     return;
   }
 }
 
-async function startSession(account: AccountRecord, isNewLink: boolean) {
+async function startSession(account: AccountRecord) {
   currentAccount = account;
   const self = await processor.getOrCreatePrivateConversation(account.aci);
   sendApiUpdate({
@@ -112,13 +134,26 @@ async function startSession(account: AccountRecord, isNewLink: boolean) {
     return;
   }
 
+  hasSyncedThisSession = false;
   await connect();
-  if (isNewLink && currentAccount) {
-    const context = client.getSenderContext();
+}
+
+/**
+ * Runs once per session after the first connection: the sync requests to the primary device until they
+ * succeed once for the account, then our profile and the storage service records
+ */
+async function syncAfterConnect() {
+  if (hasSyncedThisSession) return;
+  hasSyncedThisSession = true;
+
+  const context = client.getSenderContext();
+  if (!context.account.isInitialSyncDone) {
     await sendInitialSyncRequests(context);
-    const snapshot = await fetchStorageSnapshot(context.account, context.connection).catch(logError);
-    if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
+    await client.updateAccount({ isInitialSyncDone: true });
   }
+  void processor.refreshProfile(context.account.aci).catch(logError);
+  const snapshot = await fetchStorageSnapshot(context.account, context.connection);
+  if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
 }
 
 async function connect() {
@@ -144,6 +179,7 @@ async function connect() {
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
+  syncAfterConnect().catch(logError);
 }
 
 function scheduleReconnect() {

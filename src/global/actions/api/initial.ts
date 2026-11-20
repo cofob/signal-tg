@@ -35,16 +35,17 @@ import {
 } from '../../../util/sessions';
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
 import {
-  callApi, callApiLocal, initApi, setShouldEnableDebugLog,
+  callApi, callApiLocal, initApi, reconnectApi, setShouldEnableDebugLog,
 } from '../../../api/gramjs';
-import { removeGlobalFromCache, removeSharedStateFromCache } from '../../cache';
+import { forceUpdateSharedStateCache, removeGlobalFromCache, removeSharedStateFromCache } from '../../cache';
 import {
   addActionHandler, getGlobal, setGlobal,
 } from '../../index';
 import {
-  updateManagementProgress,
+  updateManagementProgress, updateSharedSettings,
 } from '../../reducers';
 import { updateAuth } from '../../reducers/auth';
+import { updateSharedState } from '../../reducers/sharedState';
 import { selectTabState } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 import { destroySharedStatePort, resetSharedStatePort } from '../../shared/sharedStateConnector';
@@ -63,6 +64,7 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
     shouldDebugExportedSenders,
     shouldCollectDebugLogs,
     language,
+    signalProxyUrl,
   } = selectSharedSettings(global);
 
   const hasTestParam = window.location.search.includes('test');
@@ -87,9 +89,26 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
     isTestServerRequested: hasTestParam,
     accountIds,
     hasPasskeySupport: IS_WEBAUTHN_SUPPORTED,
+    signalProxyUrl,
   });
 
   void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
+});
+
+// Reconnecting moves the live connections, an open link code and new requests to the new tunnel
+addActionHandler('setSignalProxyUrl', (global, actions, payload): ActionReturnType => {
+  // Only the master tab runs the API; a change from another tab reaches it after a reload
+  const isMasterTab = selectTabState(global, getCurrentTabId()).isMasterTab;
+
+  global = updateSharedSettings(global, { signalProxyUrl: payload.url });
+  // Changes to initial shared state are not shared, and a reload takes the shared copy, which would drop the URL
+  global = updateSharedState(global, { isInitial: undefined });
+  // The link screen shows a spinner until a new code arrives through the new tunnel
+  if (isMasterTab) global = updateAuth(global, { qrCode: undefined });
+  setGlobal(global);
+
+  forceUpdateSharedStateCache();
+  if (isMasterTab) void reconnectApi();
 });
 
 addActionHandler('setAuthPhoneNumber', (global, actions, payload): ActionReturnType => {

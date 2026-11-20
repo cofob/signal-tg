@@ -1,0 +1,14 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.description {
+  margin: 0 0 0.75rem;
+  padding: 0.25rem 0.5rem 0;
+
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  color: var(--color-text-secondary);
+}

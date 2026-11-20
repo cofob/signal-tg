@@ -24,9 +24,10 @@ TeleSignal is a web client for the Signal messenger, built on the Telegram Web A
 - After TypeScript changes, run `npm run check:ts`; after SCSS changes, run `npm run check:css`.
 - For import-order errors, try `npx eslint --fix <filename>`. If it fails, make one manual attempt, then report the remaining error. Suggest that command for unresolved auto-fixable ESLint errors.
 - Keep additional verification proportional to the change. Once relevant checks pass, repeat or broaden them only for new changes, failures, or unresolved concerns.
+- After changing `proxy/`, run `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` in it.
 - After changing `rust/signal-wasm` or the vendored libsignal crates, run `npm run signal:wasm`; after changing a schema in `src/lib/signal/proto/schema`, run `npm run signal:proto`. Commit the regenerated output.
 - For browser verification, reuse `localhost:1234` if running; otherwise run `npm run dev`. If a sandboxed check fails, confirm through the browser or an approved check outside the sandbox before starting another server.
-- Signal hosts are reachable only through the tunnel: run `npm run signal:proxy` (Node 24) and set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` in `.env`. In development builds, `signalDev` in the browser console links a device and prints decrypted messages.
+- Signal hosts are reachable only through the tunnel: run `npm run signal:proxy` (Rust) and set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` in `.env`. That is the build default; the Proxy server setting (Data and Storage, or the link screen) overrides it at runtime. In development builds, `signalDev` in the browser console links a device and prints decrypted messages.
 - Do not modify account state (send messages, change settings, etc.) unless directly prompted.
 
 ## Code conventions
@@ -132,7 +133,7 @@ Teact and Fasterdom separate DOM measurement from mutation. The frame order is e
 
 - Code lives in `src/lib/signal/` (`net`, `account`, `chat`, `receiver`, `sender`, `store`, `storage`, `groups`, `profiles`, `attachments`, `sync`, `usernames`, `db`, `messages`), the WebAssembly bridge and TLS client in `rust/signal-wasm/`, vendored libsignal crates in `rust/libsignal/`, and the tunnel in `proxy/`.
 - `SignalClient` owns the connections and protocol-level handling (retry requests, account keys, profile keys); `MessageProcessor` turns content into `MessageDb` records and sends receipts. Run protocol store operations through `SignalStore.runExclusive` and database changes through `MessageProcessor`, which serializes them.
-- Keep protocol logic and key material in the browser. `proxy/tunnel.ts` relays bytes and must never terminate TLS or read request contents; add a host to its allowlist only when the client needs it.
+- Keep protocol logic and key material in the browser. The tunnel in `proxy/` (Rust; transport-independent policy in `proxy/src/lib.rs`, WebSocket server in `proxy/src/main.rs`) relays bytes and must never terminate TLS or read request contents beyond the ClientHello check; add a host to `ALLOWED_HOSTS` only when the client needs it.
 - Reach Signal hosts through `src/lib/signal/net/` (`TlsTunnel`, `sendHttpRequest`, `ResourceSocket`); they trust only Signal's certificate authority (`SIGNAL_CA_PEM`). Browser `fetch` and `WebSocket` cannot reach Signal hosts.
 - Port behavior from Signal Desktop (`ts/textsecure`, `ts/services`) and check behavior and limits against Signal Android. Reference the source path in a comment on ported logic.
 - `rust/libsignal/` vendors crates unchanged except as recorded in its `NOTICE.md`; follow its "Updating" steps. Name WASM exports in `rust/signal-wasm/src/` after the matching `Native` function of `@signalapp/libsignal-client` and keep its argument order (upstream `rust/bridge/shared/src` is the reference). Return errors through `rust/signal-wasm/src/error.rs` so they carry libsignal error names.

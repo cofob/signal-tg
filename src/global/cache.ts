@@ -564,6 +564,13 @@ function updateCache(force?: boolean) {
   forceUpdateCache();
 }
 
+/** Writes the shared state now: before login, when the app does not cache state yet, settings survive a reload */
+export function forceUpdateSharedStateCache() {
+  if (GLOBAL_STATE_CACHE_DISABLED) return;
+  const global = getGlobal();
+  void cacheSharedState(reduceSharedState(global.sharedState));
+}
+
 export function temporarilySuspendCacheUpdate() {
   cacheUpdateSuspensionTimestamp = Date.now() + UPDATE_THROTTLE;
 }
