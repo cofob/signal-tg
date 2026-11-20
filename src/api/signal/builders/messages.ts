@@ -29,7 +29,7 @@ import { buildApiFormattedText, getMentionAci } from './bodyRanges';
 import { buildMessageMedia } from './media';
 import { buildApiUser } from './users';
 
-export type UserResolver = ReturnType<typeof createUserResolver>;
+type UserResolver = ReturnType<typeof createUserResolver>;
 
 const MS_PER_SECOND = 1000;
 
@@ -50,7 +50,7 @@ export async function buildApiMessageWithPoll(
   const base = {
     id: message.id,
     chatId: getPeerId(conversation),
-    date: toSeconds(message.sentAt),
+    date: convertToSeconds(message.sentAt),
     isOutgoing: message.isOutgoing,
     senderId: senderAci ? await users.getUserId(senderAci) : undefined,
   } satisfies Partial<ApiMessage>;
@@ -94,7 +94,7 @@ export async function buildApiMessageWithPoll(
       content,
       replyInfo: dataMessage.quote ? await buildReplyInfo(dataMessage.quote, message, users) : undefined,
       isEdited: message.editedAt ? true : undefined,
-      editDate: message.editedAt ? toSeconds(message.editedAt) : undefined,
+      editDate: message.editedAt ? convertToSeconds(message.editedAt) : undefined,
       reactions: await buildApiReactions(message, selfAci, users),
       sendingState: getSendingState(message),
       ttlPeriod: message.expiresAt ? Math.round(message.expiresAt / MS_PER_SECOND) - base.date : undefined,
@@ -182,7 +182,7 @@ async function buildReplyInfo(
   return {
     type: 'message',
     replyFrom: authorAci ? {
-      date: toSeconds(sentAt),
+      date: convertToSeconds(sentAt),
       isChannelPost: false,
       fromId: await users.getUserId(authorAci),
     } : undefined,
@@ -213,7 +213,7 @@ async function buildApiReactions(
     recentReactions.push({
       peerId: await users.getUserId(authorAci),
       reaction,
-      addedDate: toSeconds(sentAt),
+      addedDate: convertToSeconds(sentAt),
       isOwn: isOwn || undefined,
     });
   }
@@ -271,6 +271,6 @@ function getSendingState({ isOutgoing, recipientStatus }: MessageRecord): ApiMes
   return undefined;
 }
 
-function toSeconds(timestamp: number) {
+function convertToSeconds(timestamp: number) {
   return Math.floor(timestamp / MS_PER_SECOND);
 }
