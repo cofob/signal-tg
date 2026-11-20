@@ -613,6 +613,10 @@ export function UnidentifiedSenderMessageContent_New(message: CiphertextMessage,
 
 export function UnidentifiedSenderMessageContent_Serialize(obj: UnidentifiedSenderMessageContent): Uint8Array;
 
+export function UsernameLink_DecryptUsername(entropy: Uint8Array, encrypted_username: Uint8Array): string;
+
+export function Username_Hash(username: string): Uint8Array;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -781,6 +785,8 @@ export interface InitOutput {
     readonly UnidentifiedSenderMessageContent_GetSenderCert: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_Serialize: (a: number) => [number, number, number, number];
+    readonly UsernameLink_DecryptUsername: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly Username_Hash: (a: number, b: number) => [number, number, number, number];
     readonly __wbg_ciphertextmessage_free: (a: number, b: number) => void;
     readonly __wbg_decryptionerrormessage_free: (a: number, b: number) => void;
     readonly __wbg_fingerprint_free: (a: number, b: number) => void;

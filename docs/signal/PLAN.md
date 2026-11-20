@@ -38,7 +38,7 @@
 1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
 2. `npm run signal:proxy` (Node 24) и `npm run dev`.
 3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
-4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. Другие команды: `signalDev.syncStorage()` (беседы и группы из storage service), `signalDev.conversations()`, `signalDev.messages('<id беседы>')`, `signalDev.send('<id беседы или ACI>', 'текст')` (после `syncStorage()` уходит через sealed sender), `signalDev.markRead('<id беседы>')`, `signalDev.sendFile('<id беседы>', file)` (файл из `<input type="file">`), `signalDev.profile()` (свой профиль), `signalDev.listen()` (переподключиться), `signalDev.reset()` (стереть локальные данные).
+4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. Другие команды: `signalDev.syncStorage()` (беседы и группы из storage service), `signalDev.conversations()`, `signalDev.messages('<id беседы>')`, `signalDev.send('<id беседы или ACI>', 'текст')` (после `syncStorage()` уходит через sealed sender), `signalDev.markRead('<id беседы>')`, `signalDev.sendFile('<id беседы>', file)` (файл из `<input type="file">`), `signalDev.findUser('name.42')` (ACI по юзернейму или ссылке), `signalDev.profile()` (свой профиль), `signalDev.listen()` (переподключиться), `signalDev.reset()` (стереть локальные данные).
 
 ## 1. Проверенные факты
 
@@ -120,12 +120,11 @@ Signal позволяет аккаунты без номера: у них нет
 - Привязка без PNI: требуется `authCredentialSalt`, PNI-ключи и `pniRegistrationId` не создаются, capability `optionalPhoneNumber` равна `true`; соль хранится в аккаунте.
 - Групповые auth credentials без PNI: `ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni` с солью, дальше та же zk-презентация.
 - Конверты на PNI для такого аккаунта отклоняются, всё адресуется ACI.
+- Сертификат sealed sender запрашивается без номера (`?includeE164=false`) для всех аккаунтов; при подключении capabilities устройства обновляются с `optionalPhoneNumber`.
+- Поиск собеседников по юзернейму и по ссылке `signal.me/#eu/...` без учётных данных (`Username_Hash`, `UsernameLink_DecryptUsername` в WASM). Проверено на настоящем сервере: неизвестные имя и ссылка дают «не найдено».
 
 Осталось (вместе с соответствующими функциями):
 
-- Сертификат sealed sender запрашивать с `?includeE164=false` (`GET /v1/certificate/delivery`).
-- При старте обновлять capabilities устройства с `optionalPhoneNumber`.
-- Поиск собеседников по юзернейму (`usernames` в WASM, `GET /v1/accounts/username_hash`) как основной путь вместо CDSI.
 - UI: не показывать и не требовать номер в профиле, настройках приватности и экранах привязки.
 
 Не проверено на живом аккаунте без номера: нужен такой аккаунт на телефоне.

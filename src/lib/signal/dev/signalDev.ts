@@ -9,6 +9,7 @@ import { uploadAttachment } from '../attachments/uploadAttachment';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
+import { lookupUsername, resolveUsernameLink } from '../usernames/lookupUsername';
 import { initSignalWasm } from '../wasm';
 
 import MessageDb from '../db/MessageDb';
@@ -126,6 +127,16 @@ const signalDev = {
     });
     const message = await processor.sendDataMessage(conversationId, { body: caption, attachments: [pointer] });
     console.log('[signal] Sent file', message.sentAt, message.recipientStatus);
+  },
+
+  /** Prints the ACI behind a username (`name.42`) or a `https://signal.me/#eu/...` link */
+  async findUser(usernameOrLink: string) {
+    const { unauthenticatedChat } = getContext();
+    const username = usernameOrLink.includes('signal.me')
+      ? await resolveUsernameLink(unauthenticatedChat, usernameOrLink)
+      : usernameOrLink;
+    const aci = username ? await lookupUsername(unauthenticatedChat, username) : undefined;
+    console.log('[signal]', username, aci ? `is ${aci}; send with signalDev.send('${aci}', 'text')` : 'not found');
   },
 
   markRead(conversationId: string) {
