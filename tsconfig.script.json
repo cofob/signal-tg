@@ -11,6 +11,7 @@
   "include": [
     "tests",
     "dev",
+    "proxy",
     "plugins",
     "*.config.ts",
     "*.config.js",
