@@ -234,7 +234,6 @@ const Main = ({
     loadPeerColors,
     loadSavedReactionTags,
     loadAiComposeTones,
-    loadStarStatus,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -315,7 +314,6 @@ const Main = ({
       loadNotificationExceptions();
       loadTopPeers({ category: 'botsInline' });
       loadTopReactions();
-      loadStarStatus();
       loadEmojiKeywords({ language: BASE_EMOJI_KEYWORD_LANG });
       loadFeaturedEmojiStickers();
       loadSavedReactionTags();

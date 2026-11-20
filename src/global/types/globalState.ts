@@ -35,12 +35,10 @@ import type {
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiStarsAmount,
   ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
-  ApiTonAmount,
   ApiTopPeerCategory,
   ApiTranscription,
   ApiUpdateAuthorizationStateType,
@@ -480,12 +478,6 @@ export type GlobalState = {
     hash: string;
   };
 
-  stars?: {
-    balance: ApiStarsAmount;
-  };
-  ton?: {
-    balance: ApiTonAmount;
-  };
 };
 
 export type RequiredGlobalState = GlobalState & { _: never };

@@ -2729,7 +2729,6 @@ export interface ActionPayloads {
     waveform: number[];
   };
 
-  loadStarStatus: undefined;
   loadDefaultTopicIcons: undefined;
   loadPremiumStickers: undefined;
 

@@ -64,7 +64,6 @@ import {
   buildLangStrings,
   buildPrivacyKey,
 } from '../apiBuilders/misc';
-import { buildApiCurrencyAmount } from '../apiBuilders/payments';
 import {
   buildApiEmojiStatus,
   buildApiPeerId,
@@ -1209,15 +1208,6 @@ export function updater(update: Update) {
       '@type': 'updateViewForumAsMessages',
       chatId: buildApiPeerId(update.channelId, 'channel'),
       isEnabled: update.enabled ? true : undefined,
-    });
-  } else if (update instanceof GramJs.UpdateStarsBalance) {
-    const balance = buildApiCurrencyAmount(update.balance);
-    if (!balance) {
-      return;
-    }
-    sendApiUpdate({
-      '@type': 'updateStarsBalance',
-      balance,
     });
   } else if (update instanceof GramJs.UpdateLangPackTooLong) {
     sendApiUpdate({
