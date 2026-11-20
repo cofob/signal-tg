@@ -9,8 +9,10 @@ The crate has two parts:
 
 - `src/lib.rs`, a transport-independent library: the host allowlist, upstream connections (address
   checks, optional HTTP `CONNECT` proxy), ClientHello checks and the byte relay with per-client
-  limits. A Tauri command can drive the same relay over IPC; see [Library](#library).
-- `src/main.rs` and `src/server/`, the WebSocket server that the web app uses.
+  limits. The desktop app's native transport (`tauri/src/transport.rs`) drives the same relay over
+  Tauri IPC; see [Library](#library).
+- `src/main.rs` and `src/server/`, the WebSocket server that the web app uses. The default `server`
+  feature builds it; other front ends depend on the crate with `default-features = false`.
 
 ## Running
 
@@ -211,6 +213,6 @@ let end: End = relay::relay(&tunnel, &mut client_rx, &mut client_tx, upstream, s
 
 `relay` returns once the tunnel ended; the caller then closes its transport according to `End` and
 may count `end.is_violation()` with `slot.record_violation()`. `src/server/websocket.rs` is the
-WebSocket adapter. A Tauri front end can build `client_rx` from a channel fed by an IPC command and
-`client_tx` from `futures_util::sink::unfold` over a Tauri `Channel`, and pass
-`std::future::pending()` as `shutdown` if it has none.
+WebSocket adapter. The desktop app (`tauri/src/transport.rs`) builds `client_rx` from a channel fed by
+an IPC command and `client_tx` from `futures_util::sink::unfold` over a Tauri `Channel`, and passes
+`std::future::pending()` as `shutdown`.
