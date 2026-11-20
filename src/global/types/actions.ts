@@ -202,6 +202,7 @@ export interface ActionPayloads {
   // settings
   setSettingOption: Partial<AccountSettings> | undefined;
   setSharedSettingOption: Partial<SharedState['settings']> | undefined;
+  setSignalProxyUrl: { url?: string };
   setKeyboardShortcut: {
     id: KeyboardShortcutId;
     combo: string | false;

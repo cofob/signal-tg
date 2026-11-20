@@ -37,6 +37,8 @@ export interface SharedSettings {
   shouldAllowHttpTransport?: boolean;
   shouldCollectDebugLogs?: boolean;
   shouldDebugExportedSenders?: boolean;
+  // The tunnel for Signal hosts from the proxy server setting; `undefined` uses the build default
+  signalProxyUrl?: string;
   shouldWarnAboutFiles?: boolean;
   shouldSkipBrowserCloseConfirmation: boolean;
   shouldKeepLockScreenBackground: boolean;

@@ -304,6 +304,7 @@ export enum SettingsScreens {
   FoldersShare,
   Passkeys,
   KeyboardShortcuts,
+  SignalProxy,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

@@ -13,6 +13,18 @@ export const SIGNAL_CDN_HOSTS: Record<number, string> = {
 export const SIGNAL_TUNNEL_URL = import.meta.env.TG_SIGNAL_TUNNEL_URL || undefined;
 export const SIGNAL_USER_AGENT = `TeleSignal/${APP_VERSION}`;
 
+let signalProxyUrl: string | undefined;
+
+/** The tunnel for new connections: the proxy server setting or `SIGNAL_TUNNEL_URL`; `undefined` is the app's origin */
+export function getSignalTunnelUrl() {
+  return signalProxyUrl ?? SIGNAL_TUNNEL_URL;
+}
+
+/** Sets the proxy server from settings; `undefined` restores the default tunnel */
+export function setSignalProxyUrl(url: string | undefined) {
+  signalProxyUrl = url;
+}
+
 // TLS root of every Signal service host; the tunnel transport trusts only this certificate
 export const SIGNAL_CA_PEM = `-----BEGIN CERTIFICATE-----
 MIIF2zCCA8OgAwIBAgIUAMHz4g60cIDBpPr1gyZ/JDaaPpcwDQYJKoZIhvcNAQEL

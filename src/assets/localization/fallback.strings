@@ -178,6 +178,18 @@
 "SignalLinkHelp1" = "Open Signal on your phone";
 "SignalLinkHelp2" = "Go to **Settings** > **Linked devices** > **Link new device**";
 "SignalLinkHelp3" = "Point your phone at this screen to scan the code";
+"SignalProxyTitle" = "Proxy server";
+"SignalProxySettings" = "Proxy server settings";
+"SignalProxyDefault" = "Default";
+"SignalProxyAbout" = "TeleSignal reaches Signal through a tunnel server. It relays encrypted traffic and cannot read your messages. If the default tunnel is blocked or slow, use your own.";
+"SignalProxyUrl" = "Tunnel URL";
+"SignalProxyCheck" = "Check connection";
+"SignalProxyReachable" = "Proxy server is reachable";
+"SignalProxyUnreachable" = "Proxy server is not reachable";
+"SignalProxyUseDefault" = "Use default";
+"SignalProxyErrorInvalid" = "Invalid URL";
+"SignalProxyErrorProtocol" = "Use wss://, or ws:// on localhost";
+"SignalProxyErrorCredentials" = "Remove the user name and password";
 "LoginPasskey" = "Log in with Passkey";
 "YourName" = "Your Name";
 "LoginRegisterDesc" = "Enter your name and add a profile photo.";
@@ -3625,6 +3637,7 @@
 "SettingsKeywordsPasskeys" = "passkey, webauthn, biometric, fingerprint";
 "SettingsKeywordsSessions" = "devices, sessions, log out, terminate";
 "SettingsKeywordsDataStorage" = "storage, cache, data usage, auto download, traffic";
+"SettingsKeywordsSignalProxy" = "proxy, tunnel, connection, network, server, blocked, censorship";
 "SettingsKeywordsStickers" = "stickers, emoji, gifs, masks, reactions";
 "SettingsKeywordsFolders" = "folders, filters, tabs";
 "SettingsKeywordsLanguage" = "language, locale, translation";

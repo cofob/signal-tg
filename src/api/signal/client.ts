@@ -4,6 +4,8 @@ import type { ApiInitialArgs } from '../types';
 import { DEBUG } from '../../config';
 import { linkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
+import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
+import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
@@ -30,6 +32,8 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
 let hasSyncedThisSession = false;
+// Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
+let clientGeneration = 0;
 
 /**
  * Starts the linked device: shows the link QR code until the phone scans it, or connects the stored account.
@@ -37,6 +41,7 @@ let hasSyncedThisSession = false;
  */
 export async function startClient(initialArgs: ApiInitialArgs) {
   isDestroyed = false;
+  applyProxyUrl(initialArgs.signalProxyUrl);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
@@ -55,6 +60,7 @@ export function getCurrentAccount() {
 /** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
+  clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
   processor.stop();
@@ -67,17 +73,30 @@ export async function stopClient(shouldForget: boolean) {
   }
 }
 
+function applyProxyUrl(url: string | undefined) {
+  const prevTunnelUrl = getSignalTunnelUrl();
+  setSignalProxyUrl(url);
+  if (getSignalTunnelUrl() !== prevTunnelUrl) closeIdleHttpConnections();
+}
+
 async function runDeviceLink(platform?: string) {
+  const generation = clientGeneration;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
 
-  while (!isDestroyed) {
+  while (generation === clientGeneration) {
+    let session;
     try {
-      linkSession = await startDeviceLink();
+      session = await startDeviceLink();
     } catch (err) {
       logError(err);
       await pause(LINK_RETRY_DELAY_MS);
       continue;
     }
+    if (generation !== clientGeneration) {
+      session.cancel();
+      return;
+    }
+    linkSession = session;
 
     sendApiUpdate({
       '@type': 'updateAuthorizationState',

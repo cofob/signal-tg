@@ -139,8 +139,8 @@ function releaseConnection(pool: HostPool, connection: HttpConnection | undefine
   pool.idle.push(entry);
 }
 
-/** Closes idle connections, for example after the tunnel address changed */
-export function closeIdleConnections() {
+/** Closes the idle keep-alive connections, so the next requests open new ones through the current tunnel */
+export function closeIdleHttpConnections() {
   for (const pool of pools.values()) {
     for (const { connection, timer } of pool.idle) {
       clearTimeout(timer);

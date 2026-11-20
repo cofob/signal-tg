@@ -146,6 +146,18 @@ export interface LangPair {
   'SignalLinkHelp1': undefined;
   'SignalLinkHelp2': undefined;
   'SignalLinkHelp3': undefined;
+  'SignalProxyTitle': undefined;
+  'SignalProxySettings': undefined;
+  'SignalProxyDefault': undefined;
+  'SignalProxyAbout': undefined;
+  'SignalProxyUrl': undefined;
+  'SignalProxyCheck': undefined;
+  'SignalProxyReachable': undefined;
+  'SignalProxyUnreachable': undefined;
+  'SignalProxyUseDefault': undefined;
+  'SignalProxyErrorInvalid': undefined;
+  'SignalProxyErrorProtocol': undefined;
+  'SignalProxyErrorCredentials': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2763,6 +2775,7 @@ export interface LangPair {
   'SettingsKeywordsPasskeys': undefined;
   'SettingsKeywordsSessions': undefined;
   'SettingsKeywordsDataStorage': undefined;
+  'SettingsKeywordsSignalProxy': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
