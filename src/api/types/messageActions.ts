@@ -102,16 +102,6 @@ export interface ApiMessageActionGameScore extends ActionMediaType {
   score: number;
 }
 
-export interface ApiMessageActionPaymentSent extends ActionMediaType {
-  type: 'paymentSent';
-  isRecurringInit?: true;
-  isRecurringUsed?: true;
-  currency: string;
-  totalAmount: number;
-  invoiceSlug?: string;
-  subscriptionUntilDate?: number;
-}
-
 export interface ApiMessageActionPhoneCall extends ActionMediaType {
   type: 'phoneCall';
   isVideo?: true;
@@ -242,13 +232,6 @@ export interface ApiMessageActionGiveawayResults extends ActionMediaType {
 export interface ApiMessageActionBoostApply extends ActionMediaType {
   type: 'boostApply';
   boosts: number;
-}
-
-export interface ApiMessageActionPaymentRefunded extends ActionMediaType {
-  type: 'paymentRefunded';
-  peerId: string;
-  currency: string;
-  totalAmount: number;
 }
 
 export interface ApiMessageActionGiftStars extends ActionMediaType {
@@ -441,7 +424,7 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionCha
   | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage
   | ApiMessageActionHistoryClear | ApiMessageActionSetMessagesTtl
   | ApiMessageActionSetChatTheme | ApiMessageActionSetChatWallpaper
-  | ApiMessageActionGameScore | ApiMessageActionPaymentSent | ApiMessageActionPhoneCall
+  | ApiMessageActionGameScore | ApiMessageActionPhoneCall
   | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction | ApiMessageActionBotAllowed
   | ApiMessageActionBoostApply | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
   | ApiMessageActionRequestedPeer | ApiMessageActionManagedBotCreated
@@ -451,7 +434,7 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionCha
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined | ApiMessageActionGiftCode | ApiMessageActionGiveawayLaunch
-  | ApiMessageActionGiveawayResults | ApiMessageActionPaymentRefunded | ApiMessageActionGiftStars
+  | ApiMessageActionGiveawayResults | ApiMessageActionGiftStars
   | ApiMessageActionGiftTon | ApiMessageActionPrizeStars | ApiMessageActionStarGift | ApiMessageActionStarGiftUnique
   | ApiMessageActionPaidMessagesRefunded | ApiMessageActionNoPaidMessagesTokenUsed | ApiMessageActionPaidMessagesPrice
   | ApiMessageActionSuggestedPostApproval

@@ -3349,7 +3349,6 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
 
   if (!ignoreDeepLinks && isDeepLink(urlWithProtocol)) {
     actions.closeStoryViewer({ tabId });
-    actions.closePaymentModal({ tabId });
 
     actions.openTelegramLink({ url, linkContext, tabId });
     return;

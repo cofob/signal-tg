@@ -93,7 +93,7 @@ type StateProps = {
   theme?: ThemeKey;
   themePalette: ThemePalette;
   isPaymentModalOpen?: boolean;
-  paymentStatus?: TabState['payment']['status'];
+  paymentStatus?: TabState['starsPayment']['status'];
   modalState?: BrowserModalStateType;
   botAppPermissions?: BotAppPermissions;
   isMediaAccessModalOpen?: boolean;
@@ -1505,12 +1505,9 @@ export default memo(withGlobal<OwnProps>(
     const currentUser = global.currentUserId ? selectUser(global, global.currentUserId) : undefined;
     const theme = selectTheme(global);
     const tabState = selectTabState(global);
-    const { isPaymentModalOpen, status: regularPaymentStatus } = tabState.payment;
-    const { status: starsPaymentStatus, inputInvoice: starsInputInvoice } = tabState.starsPayment;
+    const { status: paymentStatus, inputInvoice: starsInputInvoice } = tabState.starsPayment;
     const botAppPermissions = botId ? selectBotAppPermissions(global, botId) : undefined;
     const isMediaAccessModalOpen = Boolean(webApp) && tabState.mediaAccessModal?.webAppKey === getWebAppKey(webApp);
-
-    const paymentStatus = starsPaymentStatus || regularPaymentStatus;
 
     return {
       attachBot,
@@ -1518,7 +1515,7 @@ export default memo(withGlobal<OwnProps>(
       currentUser,
       theme,
       themePalette: selectChatThemePalette(global),
-      isPaymentModalOpen: isPaymentModalOpen || Boolean(starsInputInvoice),
+      isPaymentModalOpen: Boolean(starsInputInvoice),
       paymentStatus,
       modalState,
       botAppPermissions,

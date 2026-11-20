@@ -689,12 +689,6 @@ export type ApiUpdatePeerBlocked = {
   isBlockedFromStories?: boolean;
 };
 
-export type ApiUpdatePaymentStateCompleted = {
-  '@type': 'updatePaymentStateCompleted';
-  paymentState: TabState['payment'];
-  tabId: number;
-};
-
 export type ApiUpdateStarPaymentStateCompleted = {
   '@type': 'updateStarPaymentStateCompleted';
   paymentState: TabState['starsPayment'];
@@ -1062,7 +1056,7 @@ export type ApiUpdate = (
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
   ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
-  ApiUpdatePendingJoinRequests | ApiUpdatePaymentStateCompleted |
+  ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
   ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
   ApiUpdateMessageExtendedMedia | ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |

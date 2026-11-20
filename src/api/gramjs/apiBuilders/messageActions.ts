@@ -173,21 +173,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       score,
     };
   }
-  if (action instanceof GramJs.MessageActionPaymentSent) {
-    const {
-      recurringInit, recurringUsed, currency, totalAmount, invoiceSlug, subscriptionUntilDate,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'paymentSent',
-      isRecurringInit: recurringInit,
-      isRecurringUsed: recurringUsed,
-      currency,
-      totalAmount: toJSNumber(totalAmount),
-      invoiceSlug,
-      subscriptionUntilDate,
-    };
-  }
   if (action instanceof GramJs.MessageActionPhoneCall) {
     const {
       video, callId, reason, duration,
@@ -406,18 +391,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       isStars: stars,
       winnersCount,
       unclaimedCount,
-    };
-  }
-  if (action instanceof GramJs.MessageActionPaymentRefunded) {
-    const {
-      peer, currency, totalAmount,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'paymentRefunded',
-      peerId: getApiChatIdFromMtpPeer(peer),
-      currency,
-      totalAmount: toJSNumber(totalAmount),
     };
   }
   if (action instanceof GramJs.MessageActionGiftStars) {

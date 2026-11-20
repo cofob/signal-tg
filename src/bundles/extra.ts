@@ -104,8 +104,6 @@ export { default as EditTopic } from '../components/right/EditTopic';
 
 export { default as Management } from '../components/right/management/Management';
 
-export { default as PaymentModal } from '../components/payment/PaymentModal';
-export { default as ReceiptModal } from '../components/payment/ReceiptModal';
 export { default as InviteViaLinkModal } from '../components/modals/inviteViaLink/InviteViaLinkModal';
 export { default as AudioPlaylistModal } from '../components/modals/audioPlaylist/AudioPlaylistModal';
 export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/OneTimeMediaModal';

@@ -19,7 +19,6 @@ import type {
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputSuggestedPostInfo,
-  ApiLabeledPrice,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -207,13 +206,6 @@ export type IAnchorPosition = {
   width?: number;
   height?: number;
 };
-
-export interface ShippingOption {
-  id: string;
-  title: string;
-  amount: number;
-  prices: ApiLabeledPrice[];
-}
 
 export type SettingsHighlight = {
   langKey: RegularLangKey;
@@ -558,16 +550,6 @@ export enum ProfileState {
   GiftList,
   StoryList,
   SavedDialogs,
-}
-
-export enum PaymentStep {
-  Checkout,
-  SavedPayments,
-  ConfirmPassword,
-  PaymentInfo,
-  ShippingInfo,
-  Shipping,
-  ConfirmPayment,
 }
 
 export const UPLOADING_WALLPAPER_SLUG = 'UPLOADING_WALLPAPER_SLUG';

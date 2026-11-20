@@ -81,7 +81,6 @@ import type {
   PrivacyVisibility,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
-import type { ApiCredentials } from '../../components/payment/PaymentModal';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type { P2pMessage } from '../../lib/vibecalls';
@@ -108,7 +107,6 @@ import type {
   MiddleSearchParams,
   NewChatMembersProgress,
   OrderMode,
-  PaymentStep,
   PerformanceType,
   PlaybackItemRef,
   PlaybackSource,
@@ -907,34 +905,13 @@ export interface ActionPayloads {
   resetChatCreation: WithTabId | undefined;
 
   // payment
-  closePaymentModal: WithTabId | undefined;
   closeStarsPaymentModal: WithTabId | undefined;
   resetPaymentStatus: WithTabId | undefined;
-  addPaymentError: {
-    error: TabState['payment']['error'];
-  } & WithTabId;
-  validateRequestedInfo: {
-    requestInfo: any;
-    saveInfo?: boolean;
-  } & WithTabId;
-  setPaymentStep: {
-    step?: PaymentStep;
-  } & WithTabId;
-  sendPaymentForm: {
-    shippingOptionId?: string;
-    saveCredentials?: any;
-    savedCredentialId?: string;
-    tipAmount?: number;
-  } & WithTabId;
   sendStarPaymentForm: {
     directInfo?: {
       formId: string;
       inputInvoice: ApiInputInvoice;
     };
-  } & WithTabId;
-  getReceipt: {
-    chatId: string;
-    messageId: number;
   } & WithTabId;
   openStarsTransactionModal: {
     transaction: ApiStarsTransaction;
@@ -953,14 +930,6 @@ export interface ActionPayloads {
     messageId: number;
   } & WithTabId;
   closePrizeStarsTransactionFromGiveaway: WithTabId | undefined;
-  sendCredentialsInfo: {
-    credentials: ApiCredentials;
-  } & WithTabId;
-  setPaymentWebFormCredentials: {
-    credentials: AnyLiteral;
-  } & WithTabId;
-  clearPaymentError: WithTabId | undefined;
-  clearReceipt: WithTabId | undefined;
 
   // ui
   dismissDialog: WithTabId | undefined;

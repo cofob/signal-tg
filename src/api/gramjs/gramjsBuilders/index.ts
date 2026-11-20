@@ -598,16 +598,6 @@ export function buildChatAdminRights(
   return new GramJs.ChatAdminRights(adminRights);
 }
 
-export function buildShippingInfo(info: GramJs.PaymentRequestedInfo) {
-  const { shippingAddress } = info;
-  return new GramJs.PaymentRequestedInfo({
-    ...info,
-    shippingAddress: shippingAddress
-      ? new GramJs.PostAddress(shippingAddress)
-      : undefined,
-  });
-}
-
 export function buildInputPrivacyKey(privacyKey: ApiPrivacyKey) {
   switch (privacyKey) {
     case 'phoneNumber':

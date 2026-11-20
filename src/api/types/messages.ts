@@ -3,7 +3,6 @@ import type { MediaEditDocument } from '../../types/mediaEditor';
 import type {
   ApiBotInlineMediaResult,
   ApiBotInlineResult,
-  ApiWebDocument,
 } from './bots';
 import type { ApiChatAdminRights } from './chats';
 import type { ApiInstantViewPage, ApiRichText } from './instantView';
@@ -274,18 +273,6 @@ export interface ApiInvoice {
   isFlexible?: boolean;
   isPhoneSentToProvider?: boolean;
   isEmailSentToProvider?: boolean;
-}
-
-export interface ApiMediaInvoice {
-  mediaType: 'invoice';
-  title: string;
-  description: string;
-  photo?: ApiWebDocument;
-  isTest?: boolean;
-  receiptMessageId?: number;
-  currency: string;
-  amount: number;
-  extendedMedia?: ApiMediaExtendedPreview;
 }
 
 export interface ApiMediaExtendedPreview {
@@ -768,7 +755,6 @@ export type MediaContent = {
   webPage?: ApiMessageWebPage;
   audio?: ApiAudio;
   voice?: ApiVoice;
-  invoice?: ApiMediaInvoice;
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;

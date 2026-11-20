@@ -220,11 +220,6 @@ addActionHandler('clickBotInlineButton', (global, actions, payload): ActionRetur
     }
 
     case 'buy': {
-      const receiptMessageId = message.content.invoice?.receiptMessageId;
-      if (receiptMessageId) {
-        actions.getReceipt({ chatId, messageId: receiptMessageId, tabId });
-        break;
-      }
       actions.openInvoice({
         type: 'message',
         chatId: chat.id,

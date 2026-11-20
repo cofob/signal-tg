@@ -26,7 +26,6 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
-  ApiPaymentFormRegular,
   ApiPaymentFormStars,
   ApiPaymentStatus,
   ApiPhoneCall,
@@ -35,7 +34,6 @@ import type {
   ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiReactionWithPaid,
-  ApiReceiptRegular,
   ApiRequestPeerType,
   ApiRichText,
   ApiSavedGifts,
@@ -88,7 +86,6 @@ import type {
   MessageListType,
   MiddleSearchParams,
   NewChatMembersProgress,
-  PaymentStep,
   PlaybackItemRef,
   PlaybackSource,
   ProfileEditProgress,
@@ -100,7 +97,6 @@ import type {
   SettingsHighlight,
   SettingsScreens,
   SharedMediaType,
-  ShippingOption,
   ShuffleState,
   StarGiftInfo,
   StoryViewerOrigin,
@@ -516,38 +512,6 @@ export type TabState = {
   };
 
   isPaymentFormLoading?: boolean;
-  payment: {
-    inputInvoice?: ApiInputInvoice;
-    step?: PaymentStep;
-    status?: ApiPaymentStatus;
-    shippingOptions?: ShippingOption[];
-    requestId?: string;
-    form?: ApiPaymentFormRegular;
-    stripeCredentials?: {
-      type: string;
-      id: string;
-    };
-    smartGlocalCredentials?: {
-      type: string;
-      token: string;
-    };
-    webFormCredentials?: AnyLiteral;
-    receipt?: ApiReceiptRegular;
-    error?: {
-      field?: string;
-      messageKey?: RegularLangFnParameters;
-      descriptionKey?: RegularLangFnParameters;
-      description?: string;
-    };
-    isPaymentModalOpen?: boolean;
-    isExtendedMedia?: boolean;
-    confirmPaymentUrl?: string;
-    temporaryPassword?: {
-      value: string;
-      validUntil: number;
-    };
-    botId?: string;
-  };
   starsPayment: {
     form?: ApiPaymentFormStars;
     subscriptionInfo?: ApiChatInviteInfo;

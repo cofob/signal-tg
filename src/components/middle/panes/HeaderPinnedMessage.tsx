@@ -310,9 +310,7 @@ const HeaderPinnedMessage = ({
             onMouseEnter={!IS_TOUCH_ENV ? markNoHoverColor : undefined}
             onMouseLeave={!IS_TOUCH_ENV ? unmarkNoHoverColor : undefined}
           >
-            {renderKeyboardButtonText(
-              lang, inlineButton, Boolean(renderingPinnedMessage.content.invoice?.receiptMessageId),
-            )}
+            {renderKeyboardButtonText(lang, inlineButton)}
           </Button>
         )}
       </div>

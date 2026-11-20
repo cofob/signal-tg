@@ -788,7 +788,6 @@ export interface LangPair {
   'LeaveAComment': undefined;
   'PollsStopWarning': undefined;
   'PollsStopSure': undefined;
-  'PaymentTestInvoice': undefined;
   'PaymentInvoiceNotFound': undefined;
   'NoWordsRecognized': undefined;
   'ViaBot': undefined;
@@ -857,38 +856,8 @@ export interface LangPair {
   'DeleteAllReactions': undefined;
   'DeleteReactionTooltip': undefined;
   'ChatListMarkAllAsRead': undefined;
-  'PaymentCardNumber': undefined;
-  'CheckoutTotalAmount': undefined;
-  'PaymentCheckoutMethod': undefined;
-  'PaymentCheckoutProvider': undefined;
-  'PaymentShippingAddress': undefined;
   'PaymentCheckoutName': undefined;
-  'PaymentCheckoutPhoneNumber': undefined;
-  'PaymentCheckoutShippingMethod': undefined;
-  'CheckoutWebConfirmationTitle': undefined;
-  'PaymentCardExpireDate': undefined;
-  'PaymentCardTitle': undefined;
-  'CheckoutNewCardCardholderNamePlaceholder': undefined;
-  'PaymentsCardCvc': undefined;
-  'PaymentBillingAddress': undefined;
-  'PaymentShippingCountry': undefined;
-  'PaymentShippingZipPlaceholder': undefined;
-  'PaymentCardSavePaymentInformation': undefined;
-  'PaymentShippingInfo': undefined;
-  'PaymentShippingMethod': undefined;
-  'PaymentCardInfo': undefined;
-  'PaymentCheckout': undefined;
   'PaymentReceipt': undefined;
-  'PaymentShippingAddress1Placeholder': undefined;
-  'PaymentShippingAddress2Placeholder': undefined;
-  'PaymentShippingCityPlaceholder': undefined;
-  'PaymentShippingStatePlaceholder': undefined;
-  'PaymentShippingReceiver': undefined;
-  'PaymentShippingName': undefined;
-  'PaymentShippingEmailPlaceholder': undefined;
-  'PaymentShippingPhoneNumber': undefined;
-  'PaymentShippingSave': undefined;
-  'PaymentShippingSaveInfo': undefined;
   'ChannelAddUsers': undefined;
   'RemoveMember': undefined;
   'BoxRemove': undefined;
@@ -1438,7 +1407,6 @@ export interface LangPair {
   'MediaLocaltionImageAlt': undefined;
   'MediaPollSolutionAria': undefined;
   'GeneralError': undefined;
-  'PaymentsProvidesNotSupported': undefined;
   'ChatMemberListNoAccess': undefined;
   'NoMembersFound': undefined;
   'Profile': undefined;
@@ -1622,7 +1590,6 @@ export interface LangPair {
   'AreYouSureCloseBrowserTabs': undefined;
   'CloseBrowserTabs': undefined;
   'DoNotAskAgain': undefined;
-  'PaymentInfoDone': undefined;
   'DeleteMyAccount': undefined;
   'DeleteAccountIfAwayFor': undefined;
   'SelfDestructTitle': undefined;
@@ -1760,7 +1727,6 @@ export interface LangPair {
   'ActionPinnedMediaContact': undefined;
   'ActionPinnedMediaLocation': undefined;
   'ActionPinnedMediaSticker': undefined;
-  'ActionPinnedMediaInvoice': undefined;
   'ActionPinnedMediaStory': undefined;
   'ActionPinnedMediaAlbum': undefined;
   'ActionPinnedMediaPoll': undefined;
@@ -1881,7 +1847,6 @@ export interface LangPair {
   'GiftPremiumPayWithStarsAcc': undefined;
   'GetMoreStarsLinkText': undefined;
   'StarsGiftCompleted': undefined;
-  'GiftSent': undefined;
   'PrivacyDescriptionMessagesContactsAndPremium': undefined;
   'PrivacyChargeForMessages': undefined;
   'PrivacyDescriptionChargeForMessages': undefined;
@@ -2622,9 +2587,6 @@ export interface LangPair {
   'ChatListFilterCreateLinkNew': undefined;
   'ChatSetPhotoOrVideo': undefined;
   'Checking': undefined;
-  'Checkout2FAText': undefined;
-  'CheckoutNewCardSaveInfoHelp': undefined;
-  'CheckoutPasswordEntryTitle': undefined;
   'ChooseStickerMyStickerSets': undefined;
   'ClearHistoryMyNotesMessage': undefined;
   'ClearHistoryMyNotesTitle': undefined;
@@ -2738,8 +2700,6 @@ export interface LangPair {
   'October': undefined;
   'OnlyAllowThisReactions': undefined;
   'OptionPremiumRequiredMessage': undefined;
-  'PaymentCheckoutAcceptTermsLink': undefined;
-  'PaymentCheckoutMethodNewCard': undefined;
   'PeerInfoPaneStories': undefined;
   'PermissionNoLocationPosition': undefined;
   'PhoneCopied': undefined;
@@ -2909,7 +2869,6 @@ export interface LangPair {
   'StarsTransactionTo': undefined;
   'StarsTransactionUnsupportedTitle': undefined;
   'StarsTransactionVia': undefined;
-  'StarsAcquired': undefined;
   'StarsConfirmPurchaseTitle': undefined;
   'StarsFailed': undefined;
   'StarsGiftReceived': undefined;
@@ -3161,18 +3120,6 @@ export interface LangPair {
   'ErrorPaidMediaForbidden': undefined;
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;
-  'PaymentIncorrectStreet': undefined;
-  'PaymentIncorrectCity': undefined;
-  'PaymentIncorrectCountry': undefined;
-  'PaymentIncorrectPostCode': undefined;
-  'PaymentIncorrectState': undefined;
-  'PaymentIncorrectName': undefined;
-  'PaymentIncorrectPhone': undefined;
-  'PaymentIncorrectEmail': undefined;
-  'PaymentIncorrectCardNumber': undefined;
-  'PaymentIncorrectYear': undefined;
-  'PaymentIncorrectMonth': undefined;
-  'PaymentIncorrectCvv': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
   'ReportSubmitError': undefined;
@@ -3594,9 +3541,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'EmptyGroupInfoLine1': {
     'count': V;
   };
-  'CheckoutPayPrice': {
-    'amount': V;
-  };
   'PeerInfoConfirmRemovePeer': {
     'user': V;
   };
@@ -3689,9 +3633,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'NoAudioFoundInfo2': {
     'query': V;
-  };
-  'AttachInvoice': {
-    'description': V;
   };
   'LastSeenTodayAt': {
     'time': V;
@@ -4157,27 +4098,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionCreatedChatYou': {
     'title': V;
   };
-  'ActionPaymentDone': {
-    'amount': V;
-    'user': V;
-  };
-  'ActionPaymentDoneFor': {
-    'amount': V;
-    'user': V;
-    'invoice': V;
-  };
-  'ActionPaymentInitRecurringFor': {
-    'amount': V;
-    'user': V;
-    'invoice': V;
-  };
-  'ActionPaymentInitRecurring': {
-    'amount': V;
-    'user': V;
-  };
-  'ActionPaymentUsedRecurring': {
-    'amount': V;
-  };
   'ActionScreenshotTaken': {
     'from': V;
   };
@@ -4465,10 +4385,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionGiftCostCrypto': {
     'cryptoPrice': V;
     'price': V;
-  };
-  'ActionPaymentRefunded': {
-    'peer': V;
-    'amount': V;
   };
   'ActionMigratedFrom': {
     'chat': V;
@@ -5244,17 +5160,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'MediaCounter': {
     'current': V;
     'total': V;
-  };
-  'PaymentCheckoutAcceptTerms': {
-    'link': V;
-    'bot': V;
-  };
-  'PaymentConfirmationMessage': {
-    'cardName': V;
-  };
-  'PaymentInfoHint': {
-    'amount': V;
-    'title': V;
   };
   'MessageReadAt': {
     'date': V;
@@ -6668,9 +6573,23 @@ export interface LangKeyGroups {
       | 'StarsSubscriptionRenews';
     variables: 'date';
   };
+  'chat,user': {
+    keys:
+      | 'EditAdminTransferOwnershipText';
+    variables: 'chat' | 'user';
+  };
+  'current,new': {
+    keys:
+      | 'ReplaceGuardBotDescription';
+    variables: 'current' | 'new';
+  };
+  'approvalInfo,managedBy': {
+    keys:
+      | 'GuardManagedByDescription';
+    variables: 'approvalInfo' | 'managedBy';
+  };
   'amount': {
     keys:
-      | 'CheckoutPayPrice'
       | 'QrFreeRemoveFee'
       | 'GiftSend'
       | 'GiftInfoValueAmount'
@@ -6684,7 +6603,6 @@ export interface LangKeyGroups {
       | 'StarsPay'
       | 'StarsPerMonth'
       | 'StarsSubscribeBotButtonMonth'
-      | 'ActionPaymentUsedRecurring'
       | 'ActionStarGiftConvertTextYou'
       | 'ActionStarGiftConvertedTextYou'
       | 'ActionStarGiftChannelText'
@@ -6708,21 +6626,6 @@ export interface LangKeyGroups {
       | 'PricePerMonth';
     variables: 'amount';
   };
-  'chat,user': {
-    keys:
-      | 'EditAdminTransferOwnershipText';
-    variables: 'chat' | 'user';
-  };
-  'current,new': {
-    keys:
-      | 'ReplaceGuardBotDescription';
-    variables: 'current' | 'new';
-  };
-  'approvalInfo,managedBy': {
-    keys:
-      | 'GuardManagedByDescription';
-    variables: 'approvalInfo' | 'managedBy';
-  };
   'phone': {
     keys:
       | 'UsernameByPhoneNotFound'
@@ -6735,11 +6638,6 @@ export interface LangKeyGroups {
       | 'ButtonSearchPublicPosts'
       | 'NoResultFoundFor';
     variables: 'query';
-  };
-  'description': {
-    keys:
-      | 'AttachInvoice';
-    variables: 'description';
   };
   'count,total': {
     keys:
@@ -6836,7 +6734,6 @@ export interface LangKeyGroups {
       | 'GiftInfoPeerConvertDescription'
       | 'ActionStarGiftConvertText'
       | 'ActionStarGiftConvertedText'
-      | 'ActionPaymentRefunded'
       | 'MessagesPlaceholderPaidUser'
       | 'MessagesPlaceholderPaidChannel'
       | 'PaneMessagePaidMessageCharge'
@@ -7062,22 +6959,6 @@ export interface LangKeyGroups {
       | 'ActionCreatedChat';
     variables: 'from' | 'title';
   };
-  'amount,user': {
-    keys:
-      | 'ActionPaymentDone'
-      | 'ActionPaymentInitRecurring'
-      | 'ActionPaidOneMessageIncoming'
-      | 'SuggestedPostCharged'
-      | 'DialogTitlePremiumGiftSentTo'
-      | 'DialogTitlePremiumGiftReceivedFrom';
-    variables: 'amount' | 'user';
-  };
-  'amount,invoice,user': {
-    keys:
-      | 'ActionPaymentDoneFor'
-      | 'ActionPaymentInitRecurringFor';
-    variables: 'amount' | 'invoice' | 'user';
-  };
   'domain': {
     keys:
       | 'ActionBotAllowedFromDomain';
@@ -7240,6 +7121,14 @@ export interface LangKeyGroups {
     keys:
       | 'ForwardPaidChatsConfirmation';
     variables: 'chatsSelected' | 'payConfirmation';
+  };
+  'amount,user': {
+    keys:
+      | 'ActionPaidOneMessageIncoming'
+      | 'SuggestedPostCharged'
+      | 'DialogTitlePremiumGiftSentTo'
+      | 'DialogTitlePremiumGiftReceivedFrom';
+    variables: 'amount' | 'user';
   };
   'botLink,date': {
     keys:
@@ -7569,21 +7458,6 @@ export interface LangKeyGroups {
     keys:
       | 'MessageContainsEmojiPack';
     variables: 'pack';
-  };
-  'bot,link': {
-    keys:
-      | 'PaymentCheckoutAcceptTerms';
-    variables: 'bot' | 'link';
-  };
-  'cardName': {
-    keys:
-      | 'PaymentConfirmationMessage';
-    variables: 'cardName';
-  };
-  'amount,title': {
-    keys:
-      | 'PaymentInfoHint';
-    variables: 'amount' | 'title';
   };
   'emoji,summary': {
     keys:

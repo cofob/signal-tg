@@ -12,12 +12,7 @@ import Icon from '../../../common/icons/Icon';
 export default function renderKeyboardButtonText(
   lang: LangFn,
   button: ApiKeyboardButton,
-  isReceipt?: boolean,
 ): TeactNode {
-  if (button.action.type === 'buy' && isReceipt) {
-    return lang('PaymentReceipt');
-  }
-
   if (button.action.type === 'buy') {
     return replaceWithTeact(button.text, STARS_ICON_PLACEHOLDER, <Icon name="star" />);
   }

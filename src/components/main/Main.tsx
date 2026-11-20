@@ -75,8 +75,6 @@ import MiddleColumn from '../middle/MiddleColumn';
 import AudioPlayer from '../middle/panes/AudioPlayer';
 import FloatingRoundVideo from '../middle/panes/FloatingRoundVideo';
 import ModalContainer from '../modals/ModalContainer';
-import PaymentModal from '../payment/PaymentModal.async';
-import ReceiptModal from '../payment/ReceiptModal.async';
 import RightColumn from '../right/RightColumn';
 import StoryViewer from '../story/StoryViewer.async';
 import AttachBotRecipientPicker from './AttachBotRecipientPicker.async';
@@ -137,8 +135,6 @@ type StateProps = {
   requestedDraft?: TabState['requestedDraft'];
   limitReached?: ApiLimitTypeWithModal;
   deleteFolderDialog?: ApiChatFolder;
-  isPaymentModalOpen?: boolean;
-  isReceiptModalOpen?: boolean;
   isReactionPickerOpen: boolean;
   isGiveawayModalOpen?: boolean;
   isDeleteMessageModalOpen?: boolean;
@@ -194,8 +190,6 @@ const Main = ({
   isGiveawayModalOpen,
   isDeleteMessageModalOpen,
   isStarsGiftingPickerModal,
-  isPaymentModalOpen,
-  isReceiptModalOpen,
   isReactionPickerOpen,
   isCurrentUserPremium,
   deleteFolderDialog,
@@ -242,8 +236,6 @@ const Main = ({
     loadContactList,
     loadCustomEmojis,
     loadGenericEmojiEffects,
-    closePaymentModal,
-    clearReceipt,
     checkAppVersion,
     openThread,
     toggleLeftColumn,
@@ -690,8 +682,6 @@ const Main = ({
       <GiveawayModal isOpen={isGiveawayModalOpen} />
       <StarsGiftingPickerModal isOpen={isStarsGiftingPickerModal} />
       <PremiumLimitReachedModal limit={limitReached} />
-      <PaymentModal isOpen={isPaymentModalOpen} onClose={closePaymentModal} />
-      <ReceiptModal isOpen={isReceiptModalOpen} onClose={clearReceipt} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
       <DeleteMessageModal isOpen={isDeleteMessageModalOpen} />
@@ -723,7 +713,6 @@ export default memo(withGlobal<OwnProps>(
       deleteMessageModal,
       starsGiftingPickerModal,
       isMasterTab,
-      payment,
       limitReachedModal,
       deleteFolderDialogModal,
     } = selectTabState(global);
@@ -777,8 +766,6 @@ export default memo(withGlobal<OwnProps>(
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       isStarsGiftingPickerModal: starsGiftingPickerModal?.isOpen,
       limitReached: limitReachedModal?.limit,
-      isPaymentModalOpen: payment.isPaymentModalOpen,
-      isReceiptModalOpen: Boolean(payment.receipt),
       deleteFolderDialog,
       isMasterTab,
       requestedDraft,

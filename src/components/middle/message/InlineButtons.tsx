@@ -20,13 +20,12 @@ type OwnProps = {
   className?: string;
   inlineButtons: ApiKeyboardButton[][];
   isEphemeral?: boolean;
-  isReceipt?: boolean;
   onClick: (payload: ApiKeyboardButton) => void;
 };
 
 const ICON_SIZE = 16;
 
-const InlineButtons = ({ className, inlineButtons, isEphemeral, isReceipt, onClick }: OwnProps) => {
+const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnProps) => {
   const lang = useLang();
 
   const renderIcon = (button: ApiKeyboardButton) => {
@@ -82,10 +81,10 @@ const InlineButtons = ({ className, inlineButtons, isEphemeral, isReceipt, onCli
   const buttonTexts = useMemo(() => {
     const texts: TeactNode[][] = [];
     inlineButtons.forEach((row) => {
-      texts.push(row.map((button) => renderKeyboardButtonText(lang, button, isReceipt)));
+      texts.push(row.map((button) => renderKeyboardButtonText(lang, button)));
     });
     return texts;
-  }, [lang, inlineButtons, isReceipt]);
+  }, [lang, inlineButtons]);
 
   return (
     <div className={buildClassName(styles.root, className)}>

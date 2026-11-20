@@ -79,43 +79,6 @@ export interface ApiLabeledPrice {
   amount: number;
 }
 
-export interface ApiReceiptStars {
-  type: 'stars';
-  date: number;
-  botId: string;
-  title: string;
-  description: string;
-  invoice: ApiInvoice;
-  photo?: ApiWebDocument;
-  currency: string;
-  totalAmount: number;
-  transactionId: string;
-}
-
-export interface ApiReceiptRegular {
-  type: 'regular';
-  botId: string;
-  providerId: string;
-  description: string;
-  title: string;
-  invoice: ApiInvoice;
-  photo?: ApiWebDocument;
-  info?: {
-    shippingAddress?: ApiShippingAddress;
-    phone?: string;
-    name?: string;
-  };
-  tipAmount: number;
-  totalAmount: number;
-  currency: string;
-  date: number;
-  credentialsTitle: string;
-  shippingPrices?: ApiLabeledPrice[];
-  shippingMethod?: string;
-}
-
-export type ApiReceipt = ApiReceiptRegular | ApiReceiptStars;
-
 export type ApiPremiumSection = typeof PREMIUM_FEATURE_SECTIONS[number];
 
 // Video sections can include additional values like 'gifts' that are not premium features

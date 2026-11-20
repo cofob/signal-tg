@@ -11,7 +11,6 @@ import type {
   ApiGiveawayResults,
   ApiLocation,
   ApiMediaExtendedPreview,
-  ApiMediaInvoice,
   ApiMediaTodo,
   ApiMessagePoll,
   ApiMessageStoryData,
@@ -213,9 +212,6 @@ export function buildMessageMediaContent(
 
   const webPage = buildMessageWebPageFromMedia(media);
   if (webPage) return { webPage };
-
-  const invoice = buildInvoiceFromMedia(media);
-  if (invoice) return { invoice };
 
   const location = buildLocationFromMedia(media);
   if (location) return { location };
@@ -447,14 +443,6 @@ function buildTodoFromMedia(media: GramJs.TypeMessageMedia): ApiMediaTodo | unde
   }
 
   return buildTodo(media.todo, media.completions);
-}
-
-function buildInvoiceFromMedia(media: GramJs.TypeMessageMedia): ApiMediaInvoice | undefined {
-  if (!(media instanceof GramJs.MessageMediaInvoice)) {
-    return undefined;
-  }
-
-  return buildMediaInvoice(media);
 }
 
 function buildLocationFromMedia(media: GramJs.TypeMessageMedia): ApiLocation | undefined {
@@ -742,27 +730,6 @@ export function buildTodo(todo: GramJs.TodoList, completions?: GramJs.TodoComple
       othersCanComplete: todo.othersCanComplete,
     },
     completions: todoCompletions,
-  };
-}
-
-export function buildMediaInvoice(media: GramJs.MessageMediaInvoice): ApiMediaInvoice {
-  const {
-    description, title, photo, test, totalAmount, currency, receiptMsgId, extendedMedia,
-  } = media;
-
-  const preview = extendedMedia instanceof GramJs.MessageExtendedMediaPreview
-    ? buildApiMessageExtendedMediaPreview(extendedMedia) : undefined;
-
-  return {
-    mediaType: 'invoice',
-    title,
-    description,
-    photo: buildApiWebDocument(photo),
-    receiptMessageId: receiptMsgId,
-    amount: toJSNumber(totalAmount),
-    currency,
-    isTest: test,
-    extendedMedia: preview,
   };
 }
 

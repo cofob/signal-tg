@@ -722,7 +722,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
       || getServerTime() - message.date < (global.config?.editTimeLimit || Infinity)
     ) && !(
       content.sticker || content.contact || content.pollId || content.action
-      || (content.video?.isRound) || content.location || content.invoice || content.giveaway || content.giveawayResults
+      || (content.video?.isRound) || content.location || content.giveaway || content.giveawayResults
       || isDocumentSticker || content.dice || content.widget
     )
     && !isForwarded

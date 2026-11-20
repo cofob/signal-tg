@@ -13,7 +13,6 @@ import {
 import {
   getMainUsername,
   getMessageContent,
-  getMessageInvoice,
   getMessageTextWithFallback,
   isChatBasicGroup,
   isChatChannel,
@@ -587,52 +586,6 @@ const ActionMessageText = ({
         return translateWithYou(
           lang, 'ActionVideoInvitedMany', isOutgoing, { from: senderLink, users: conjuctionWithNodes(lang, userLinks) },
         );
-      }
-
-      case 'paymentSent': {
-        const {
-          currency, totalAmount, isRecurringInit, isRecurringUsed,
-        } = action;
-
-        const cost = renderStrong(formatCurrency(lang, totalAmount, currency, { asFontIcon: true }));
-        const invoice = replyMessage && getMessageInvoice(replyMessage);
-        const invoiceTitle = invoice?.title;
-
-        if (isRecurringUsed) {
-          return lang('ActionPaymentUsedRecurring', { amount: cost }, { withNodes: true });
-        }
-
-        if (!invoiceTitle) {
-          if (isRecurringInit) {
-            return lang('ActionPaymentInitRecurring', { amount: cost, user: chatLink }, { withNodes: true });
-          }
-
-          return lang('ActionPaymentDone', { amount: cost, user: chatLink }, { withNodes: true });
-        }
-
-        if (isRecurringInit) {
-          return lang(
-            'ActionPaymentInitRecurringFor',
-            { amount: cost, user: chatLink, invoice: renderMessageLink(replyMessage, invoiceTitle, asPreview) },
-            { withNodes: true },
-          );
-        }
-
-        return lang(
-          'ActionPaymentDoneFor',
-          { amount: cost, user: chatLink, invoice: renderMessageLink(replyMessage, invoiceTitle, asPreview) },
-          { withNodes: true },
-        );
-      }
-
-      case 'paymentRefunded': {
-        const { currency, totalAmount, peerId } = action;
-        const peer = selectPeer(global, peerId);
-        const peerTitle = (peer && getPeerTitle(lang, peer)) || userFallbackText;
-        const peerLink = renderPeerLink(peer?.id, peerTitle, asPreview);
-        const amount = formatCurrency(lang, totalAmount, currency, { asFontIcon: true });
-
-        return lang('ActionPaymentRefunded', { peer: peerLink, amount }, { withNodes: true });
       }
 
       case 'starGift': {

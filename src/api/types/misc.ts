@@ -264,11 +264,6 @@ export type ApiError = {
   textParams?: Record<string, string>;
 };
 
-export type ApiFieldError = {
-  field: string;
-  messageKey: RegularLangFnParameters;
-};
-
 export type ApiExportedInvite = {
   isRevoked?: boolean;
   isPermanent?: boolean;

@@ -12,61 +12,11 @@ import { selectUser } from './users';
 
 export type ProfileCollectionKey = number | 'all';
 
-export function selectPaymentInputInvoice<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).payment.inputInvoice;
-}
-
-export function selectPaymentForm<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).payment.form;
-}
-
 export function selectStarsPayment<T extends GlobalState>(
   global: T,
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
   return selectTabState(global, tabId).starsPayment;
-}
-
-export function selectPaymentRequestId<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).payment.requestId;
-}
-
-export function selectProviderPublishableKey<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).payment.form?.nativeParams.publishableKey;
-}
-
-export function selectProviderPublicToken<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).payment.form?.nativeParams.publicToken;
-}
-
-export function selectPaymentCredentialsData<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const payment = selectTabState(global, tabId).payment;
-  switch (payment.form?.nativeProvider) {
-    case 'stripe':
-      return payment.stripeCredentials;
-    case 'smartglocal':
-      return payment.smartGlocalCredentials;
-    default:
-      return payment.webFormCredentials;
-  }
 }
 
 export function selectCanUseGiftProfileAdminFilter<T extends GlobalState>(

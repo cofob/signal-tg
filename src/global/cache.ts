@@ -1106,9 +1106,6 @@ function migrateButtonActions(cached: GlobalState) {
           if ('action' in button) return;
           const legacyButton = button as { type: string; text?: string; receiptMessageId?: number };
           const { text, type, receiptMessageId, ...fields } = legacyButton;
-          if (type === 'receipt' && message.content.invoice) {
-            message.content.invoice.receiptMessageId ||= receiptMessageId;
-          }
           const { style, ...actionFields } = fields as { style?: ApiKeyboardButton['style'] };
           row[index] = {
             text: text || '',

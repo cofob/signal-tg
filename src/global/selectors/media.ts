@@ -13,7 +13,6 @@ import {
   getMessageAudio,
   getMessageContent,
   getMessageDocument,
-  getMessageInvoice,
   getMessageMediaHash,
   getMessagePhoto,
   getMessageSingleCustomEmoji,
@@ -75,8 +74,7 @@ export function selectMessageMediaThumbnail<T extends GlobalState>(global: T, me
     || getMessageDocument(message)
     || getMessageSticker(message)
     || getWebPagePhoto(webPage)
-    || getWebPageVideo(webPage)
-    || getMessageInvoice(message)?.extendedMedia;
+    || getWebPageVideo(webPage);
 
   if (!media) {
     return undefined;

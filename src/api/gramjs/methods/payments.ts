@@ -18,8 +18,6 @@ import {
   buildApiPaymentForm,
   buildApiPremiumGiftCodeOption,
   buildApiPremiumPromo,
-  buildApiReceipt,
-  buildShippingOptions,
 } from '../apiBuilders/payments';
 import { buildApiPeerId } from '../apiBuilders/peers';
 import {
@@ -27,105 +25,9 @@ import {
   buildInputPeer,
   buildInputStorePaymentPurpose,
   buildInputThemeParams,
-  buildShippingInfo,
 } from '../gramjsBuilders';
-import {
-  deserializeBytes,
-  serializeBytes,
-} from '../helpers/misc';
 import localDb from '../localDb';
 import { handleGramJsUpdate, invokeRequest } from './client';
-import { getTemporaryPaymentPassword } from './twoFaSettings';
-
-type SendPaymentFormResult = {
-  completed: true;
-} | {
-  verificationUrl: string;
-};
-
-export async function validateRequestedInfo({
-  inputInvoice,
-  requestInfo,
-  shouldSave,
-}: {
-  inputInvoice: ApiRequestInputInvoice;
-  requestInfo: GramJs.TypePaymentRequestedInfo;
-  shouldSave?: boolean;
-}): Promise<{
-  id: string;
-  shippingOptions: any;
-} | undefined> {
-  const result = await invokeRequest(new GramJs.payments.ValidateRequestedInfo({
-    invoice: buildInputInvoice(inputInvoice),
-    save: shouldSave || undefined,
-    info: buildShippingInfo(requestInfo),
-  }));
-  if (!result) {
-    return undefined;
-  }
-
-  const { id, shippingOptions } = result;
-  if (!id) {
-    return undefined;
-  }
-
-  return {
-    id,
-    shippingOptions: buildShippingOptions(shippingOptions),
-  };
-}
-
-export async function sendPaymentForm({
-  inputInvoice,
-  formId,
-  requestedInfoId,
-  shippingOptionId,
-  credentials,
-  savedCredentialId,
-  temporaryPassword,
-  tipAmount,
-}: {
-  inputInvoice: ApiRequestInputInvoice;
-  formId: string;
-  credentials: any;
-  requestedInfoId?: string;
-  shippingOptionId?: string;
-  savedCredentialId?: string;
-  temporaryPassword?: string;
-  tipAmount?: number;
-}): Promise<SendPaymentFormResult | undefined> {
-  const inputCredentials = temporaryPassword && savedCredentialId
-    ? new GramJs.InputPaymentCredentialsSaved({
-      id: savedCredentialId,
-      tmpPassword: deserializeBytes(temporaryPassword),
-    })
-    : new GramJs.InputPaymentCredentials({
-      save: credentials.save,
-      data: new GramJs.DataJSON({ data: JSON.stringify(credentials.data) }),
-    });
-  const result = await invokeRequest(new GramJs.payments.SendPaymentForm({
-    formId: BigInt(formId),
-    invoice: buildInputInvoice(inputInvoice),
-    requestedInfoId,
-    shippingOptionId,
-    credentials: inputCredentials,
-    ...(tipAmount && { tipAmount: BigInt(tipAmount) }),
-  }));
-
-  if (!result) return undefined;
-
-  if (result instanceof GramJs.payments.PaymentVerificationNeeded) {
-    return {
-      verificationUrl: result.url,
-    };
-  }
-
-  handleGramJsUpdate(result.updates);
-
-  return {
-    completed: true,
-  };
-}
 
 export async function sendStarPaymentForm({
   formId,
@@ -198,21 +100,6 @@ export async function getPaymentForm(inputInvoice: ApiRequestInputInvoice, theme
   }
 }
 
-export async function getReceipt(chat: ApiChat, msgId: number) {
-  const result = await invokeRequest(new GramJs.payments.GetPaymentReceipt({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    msgId,
-  }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  return {
-    receipt: buildApiReceipt(result),
-  };
-}
-
 export async function fetchPremiumPromo() {
   const result = await invokeRequest(new GramJs.help.GetPremiumPromo());
   if (!result) return undefined;
@@ -225,23 +112,6 @@ export async function fetchPremiumPromo() {
 
   return {
     promo: buildApiPremiumPromo(result),
-  };
-}
-
-export async function fetchTemporaryPaymentPassword(password: string) {
-  const result = await getTemporaryPaymentPassword(password);
-
-  if (!result) {
-    return undefined;
-  }
-
-  if ('error' in result) {
-    return result;
-  }
-
-  return {
-    value: serializeBytes(result.tmpPassword),
-    validUntil: result.validUntil,
   };
 }
 

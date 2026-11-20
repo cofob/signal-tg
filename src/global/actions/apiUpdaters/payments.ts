@@ -1,6 +1,5 @@
 import type { ActionReturnType } from '../../types';
 
-import { formatCurrencyAsString } from '../../../util/formatCurrency';
 import { getTranslationFn } from '../../../util/localization';
 import { getPeerTitle } from '../../helpers/peers';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
@@ -15,68 +14,6 @@ import { selectPeer, selectTabState } from '../../selectors';
 
 addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
   switch (update['@type']) {
-    case 'updatePaymentStateCompleted': {
-      const { paymentState, tabId } = update;
-      const form = paymentState.form!;
-      const { invoice } = form;
-
-      const { totalAmount, currency } = invoice;
-      const inputInvoice = paymentState.inputInvoice;
-      if (inputInvoice?.type === 'stars') {
-        actions.closeStarsBalanceModal({ tabId });
-        actions.showNotification({
-          message: {
-            key: 'StarsAcquiredInfo',
-            variables: {
-              count: inputInvoice.stars,
-            },
-            options: {
-              withNodes: true,
-              withMarkdown: true,
-              renderTextFilters: ['br', 'links'],
-              pluralValue: inputInvoice.stars,
-            },
-          },
-          title: {
-            key: 'StarsAcquired',
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-          icon: 'star',
-          tabId,
-        });
-        actions.requestConfetti({ withStars: true, tabId });
-      } else if (inputInvoice?.type === 'giftcode') {
-        const giftModalState = selectTabState(global, tabId).giftModal;
-
-        if (giftModalState && inputInvoice?.userIds[0] === giftModalState.forPeerId) {
-          actions.showNotification({
-            message: {
-              key: 'GiftSent',
-            },
-            tabId,
-          });
-          actions.requestConfetti({ withStars: true, tabId });
-          actions.closeGiftModal({ tabId });
-        }
-      } else {
-        actions.showNotification({
-          tabId,
-          message: {
-            key: 'PaymentInfoHint',
-            variables: {
-              amount: formatCurrencyAsString(totalAmount, currency, getTranslationFn().code),
-              title: form.title,
-            },
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-        });
-      }
-
-      setGlobal(global);
-
-      break;
-    }
-
     case 'updateStarPaymentStateCompleted': {
       const { paymentState, tabId } = update;
       const { inputInvoice, subscriptionInfo, form } = paymentState;
