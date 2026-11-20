@@ -73,6 +73,19 @@ export default class SignalStore {
     return this.db.set(`session:${address}`, record);
   }
 
+  removeSession(address: string) {
+    return this.db.del(`session:${address}`);
+  }
+
+  /** Device ids of `serviceId` that have a session */
+  async getSessionDeviceIds(serviceId: string) {
+    const prefix = `session:${serviceId}.`;
+    const keys = await this.db.keys();
+    return keys
+      .filter((key): key is string => typeof key === 'string' && key.startsWith(prefix))
+      .map((key) => Number(key.slice(prefix.length)));
+  }
+
   getIdentity(serviceId: string) {
     return this.db.get<IdentityRecord>(`identity:${serviceId}`);
   }

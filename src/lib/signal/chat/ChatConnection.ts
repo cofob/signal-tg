@@ -4,6 +4,7 @@ import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST } from '../config';
 import { getAccountCredentials } from '../account/linkDevice';
+import { encodeUtf8 } from '../crypto';
 import { getBasicAuthorization } from '../net/rest';
 import { decryptEnvelope } from '../receiver/decryptEnvelope';
 
@@ -23,6 +24,8 @@ const MESSAGE_PATH = '/api/v1/message';
 const QUEUE_EMPTY_PATH = '/api/v1/queue/empty';
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
+
+const textDecoder = new TextDecoder();
 
 /**
  * The authenticated chat socket of the linked device. Each envelope is stored before it is acknowledged
@@ -73,6 +76,18 @@ export default class ChatConnection {
 
   close() {
     this.socket.close();
+  }
+
+  /** Sends a JSON request on the authenticated socket; the response body is parsed as JSON when present */
+  async sendJsonRequest<T>(verb: string, path: string, json?: unknown) {
+    const response = await this.socket.sendRequest({
+      verb,
+      path,
+      headers: json !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: json !== undefined ? encodeUtf8(JSON.stringify(json)) : undefined,
+    });
+    const text = response.body ? textDecoder.decode(response.body) : '';
+    return { status: response.status, json: text ? JSON.parse(text) as T : undefined };
   }
 
   private enqueue(id: string, body: Uint8Array) {

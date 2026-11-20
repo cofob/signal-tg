@@ -14,7 +14,7 @@
 - `proxy/tunnel.ts`: туннель WebSocket -> TCP, `npm run signal:proxy`.
 - `dev/generateProto.ts`: генератор protobuf, `npm run signal:proto`; схемы в `src/lib/signal/proto/schema`.
 - `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
-- `src/lib/signal/account`, `receiver`, `chat`, `store`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB.
+- `src/lib/signal/account`, `receiver`, `chat`, `store`, `sender`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB, отправка с обработкой 409/410 и запросы синхронизации после привязки.
 
 Проверено: сессия PQXDH и расшифровка в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
 
@@ -23,7 +23,7 @@
 1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
 2. `npm run signal:proxy` (Node 24) и `npm run dev`.
 3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
-4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. `signalDev.listen()` переподключает, `signalDev.reset()` стирает локальные данные.
+4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. `await signalDev.sendText('<ACI получателя>', 'текст')` отправляет сообщение. `signalDev.listen()` переподключает, `signalDev.reset()` стирает локальные данные.
 
 ## 1. Проверенные факты
 
@@ -76,7 +76,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 Решения:
 
 - **Архитектура повторяет Telegram Web A.** GramJS живёт в Worker мастер-вкладки и отдаёт `ApiUpdate`; на его место встаёт движок Signal. Мастер-вкладка держит единственный WebSocket устройства, другие вкладки ходят через неё (`src/util/browser/multitab.ts`).
-- **WASM-мост.** Нужные крейты libsignal v0.108.3 лежат в `rust/libsignal/` без изменений, кроме перечисленных в `rust/libsignal/NOTICE.md`. Собственный крейт `rust/signal-wasm/` (wasm-bindgen) экспортирует функции с теми же именами и сигнатурами, что у `Native` в `libsignal/node/ts/Native.ts`, только нужное подмножество. Перенесённая обёртка `node/ts` работает поверх него, поэтому код Desktop, который вызывает `@signalapp/libsignal-client`, переносится почти без изменений. `libsignal-net` в сборку не входит: сеть пишем на TypeScript через туннель.
+- **WASM-мост.** Нужные крейты libsignal v0.108.3 лежат в `rust/libsignal/` без изменений, кроме перечисленных в `rust/libsignal/NOTICE.md`. Собственный крейт `rust/signal-wasm/` (wasm-bindgen) экспортирует функции с именами и сигнатурами `Native` из `libsignal/node/ts/Native.ts`, только нужное подмножество. Движок вызывает их напрямую через `src/lib/signal/wasm`; обёртку `node/ts` переносить не стали: прямые вызовы короче, а совпадение имён с `Native` упрощает перенос кода Desktop. `libsignal-net` в сборку не входит: сеть написана на TypeScript поверх туннеля.
 - **CDSI** требует патча `attest` в форке: BoringSSL заменяется чистым Rust (`x509-cert`, `p256`, `ecdsa`, `sha2`) за фичей. До патча поиск по номеру недоступен; контакты с телефона приходят с ACI через синхронизацию, поиск по юзернейму CDSI не нужен.
 - **Protobuf:** свой генератор TS-кодеков в `dev/` (как `npm run gramjs:tl`), без runtime-зависимостей. `.proto` копируются из Signal Android с указанием версии.
 - **Хранилище:** IndexedDB без новых зависимостей. Сырой конверт сначала сохраняется в `unprocessed`, потом подтверждается серверу (как в Desktop), поэтому сбой вкладки не теряет сообщения. Вызывается `navigator.storage.persist()`. При заданном код-пароле ключи и история шифруются (расширяем `src/util/passcode`).

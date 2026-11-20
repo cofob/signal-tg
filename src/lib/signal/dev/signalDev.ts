@@ -4,6 +4,8 @@ import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
+import { sendContent } from '../sender/sendContent';
+import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { initSignalWasm } from '../wasm';
 
 import ChatConnection from '../chat/ChatConnection';
@@ -31,6 +33,23 @@ const signalDev = {
     const account = await linkDevice(store, await session.provisionMessage, deviceName);
     console.log(`[signal] Linked as device ${account.deviceId} of ${account.aci}`);
     await signalDev.listen();
+    await sendInitialSyncRequests({ store, account, connection: connection! });
+    console.log('[signal] Sent sync requests for contacts, configuration and blocked list');
+  },
+
+  /** Sends a text message to an ACI and a sent transcript to our other devices */
+  async sendText(destination: string, text: string) {
+    const account = await store.getItem('account');
+    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
+
+    const context = { store, account, connection };
+    const timestamp = Date.now();
+    const message = { body: text, timestamp: BigInt(timestamp) };
+    await sendContent(context, destination, { dataMessage: message }, { timestamp });
+    await sendContent(context, account.aci, {
+      syncMessage: { sent: { destinationServiceId: destination, timestamp: BigInt(timestamp), message } },
+    }, { timestamp });
+    console.log('[signal] Sent', timestamp);
   },
 
   async listen() {
