@@ -20,6 +20,10 @@ npm run dev           # http://localhost:1234
 
 Regenerate after changes: `npm run signal:wasm` (libsignal WebAssembly, needs Rust) and `npm run signal:proto` (protobuf).
 
+## Desktop app
+
+`tauri/` builds TeleSignal for macOS, Windows and Linux; it reaches Signal servers without the tunnel. See [tauri/README.md](tauri/README.md).
+
 ## License
 
 GPL-3.0-or-later. `rust/libsignal` is [libsignal](https://github.com/signalapp/libsignal), AGPL-3.0-only.
