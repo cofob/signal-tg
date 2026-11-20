@@ -1,7 +1,7 @@
 import type { ApiOnProgress } from '../../types';
 import { ApiMediaFormat } from '../../types';
 
-import { MEDIA_CACHE_DISABLED, MEDIA_CACHE_NAME, MEDIA_CACHE_NAME_AVATARS } from '../../../config';
+import { DEBUG, MEDIA_CACHE_DISABLED, MEDIA_CACHE_NAME, MEDIA_CACHE_NAME_AVATARS } from '../../../config';
 import { AttachmentUnavailableError } from '../../../lib/signal/attachments/downloadAttachment';
 import { downloadGroupAvatar } from '../../../lib/signal/groups/fetchGroup';
 import { downloadProfileAvatar } from '../../../lib/signal/profiles/fetchProfile';
@@ -24,13 +24,32 @@ const BLURHASH_MIME_TYPE = 'image/bmp';
 // Previews from a BlurHash are not stored in app state, so they can be larger than thumbnails
 const BLURHASH_PREVIEW_PIXEL_COUNT = 64 * 64;
 
-/** Downloads message attachments and avatars, decrypted, in the format the media loader asks for */
-export async function downloadMedia(
+type DownloadMediaParams = {
+  url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number;
+};
+
+/**
+ * Downloads message attachments and avatars, decrypted, in the format the media loader asks for. Returns `undefined`
+ * when the media cannot be loaded: the media loader and the service worker's streaming requests expect that instead
+ * of an error, and retry.
+ */
+export async function downloadMedia(params: DownloadMediaParams, onProgress?: ApiOnProgress) {
+  try {
+    return await fetchMedia(params, onProgress);
+  } catch (err) {
+    // Media the CDN no longer has is expected, and the message shows it as unavailable
+    if (DEBUG && !(err instanceof AttachmentUnavailableError)) {
+      // eslint-disable-next-line no-console
+      console.warn('[signal] Media download failed', params.url, err);
+    }
+    return undefined;
+  }
+}
+
+async function fetchMedia(
   {
     url, mediaFormat, start, end,
-  }: {
-    url: string; mediaFormat: ApiMediaFormat; start?: number; end?: number;
-  },
+  }: DownloadMediaParams,
   onProgress?: ApiOnProgress,
 ) {
   const [, type, id, query] = url.replace(STREAM_URL_PREFIX_REGEX, '').match(MEDIA_HASH_REGEX) ?? [];
