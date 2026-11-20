@@ -7,6 +7,7 @@ import type { ApiContact, ApiSticker, ApiThumbnail, MediaContent } from '../../t
 import {
   SUPPORTED_AUDIO_CONTENT_TYPES, SUPPORTED_PHOTO_CONTENT_TYPES, SUPPORTED_VIDEO_CONTENT_TYPES,
 } from '../../../config';
+import { LONG_TEXT_CONTENT_TYPE } from '../../../lib/signal/messages/MessageProcessor';
 import { AttachmentPointer_Flags } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { getBlurHashDataUri } from '../media/blurHash';
 
@@ -16,7 +17,6 @@ type AttachmentSlot = number | typeof STICKER_SLOT;
 
 const MEDIA_ID_REGEX = /^(\d+)_(\d+|s)$/;
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
-const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const PHOTO_CONTENT_TYPES = new Set([...SUPPORTED_PHOTO_CONTENT_TYPES, 'image/webp']);
 // Signal Desktop `getFileExtension` in `ts/util/Attachment.std.ts`
 const FILE_EXTENSIONS: Record<string, string> = {

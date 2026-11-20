@@ -546,13 +546,16 @@ export default class MessageProcessor {
     });
   }
 
-  /** Fetches the profile behind a private conversation and stores its decrypted fields */
+  /**
+   * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
+   * is in the account, other profile keys are in their recipients.
+   */
   async refreshProfile(aci: string) {
-    const { store, connection } = this.client.getSenderContext();
-    const recipient = await store.getRecipient(aci);
-    if (!recipient?.profileKey) return;
+    const { store, connection, account } = this.client.getSenderContext();
+    const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
+    if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, recipient.profileKey);
+    const profile = await fetchProfile(connection, aci, profileKey);
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }

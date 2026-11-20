@@ -32,6 +32,7 @@ export {
   sendPollVote,
   sendReaction,
 } from './messages';
+export { fetchConfig } from './settings';
 export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers,
 } from './users';
