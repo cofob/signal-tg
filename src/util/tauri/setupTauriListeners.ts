@@ -2,6 +2,7 @@ import { getActions } from '../../global';
 
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
+import { isDeepLink } from '../deepLinkParser';
 
 type DownloadFinishedEvent = {
   success: boolean;
@@ -77,6 +78,13 @@ export default function setupTauriListeners() {
 }
 
 async function openLink(url: string | URL) {
+  // The app registers only `sgnl:` with the system, so `tg:` links would leave for another app
+  const href = url.toString();
+  if (isDeepLink(href)) {
+    getActions().openTelegramLink({ url: href });
+    return;
+  }
+
   try {
     const urlObject = url instanceof URL ? url : new URL(url, window.location.href);
     // Only the app itself gets a native window with IPC; other pages on the origin open in the browser

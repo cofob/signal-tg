@@ -342,6 +342,14 @@ export async function notifyAboutMessage({
     await loadCustomEmoji(activeReaction.reaction.documentId);
   }
 
+  if (IS_TAURI) {
+    // The system notification shows the app icon: the plugin takes icon names and paths, not the avatar's blob URL
+    const { title, body } = getNotificationContent(chat, message as ApiMessage, activeReaction);
+    const { sendNotification } = await import('@tauri-apps/plugin-notification');
+    sendNotification({ title, body });
+    return;
+  }
+
   const icon = getGlobal().passcode.isScreenLocked ? undefined : await getAvatar(chat);
 
   const {

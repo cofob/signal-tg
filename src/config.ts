@@ -22,7 +22,7 @@ export const STRICTERDOM_ENABLED = DEBUG;
 export const DEBUG_GRAMJS = false;
 
 export const PAGE_TITLE = import.meta.env.TG_APP_TITLE;
-export const PAGE_TITLE_TAURI = 'Telegram Air';
+export const PAGE_TITLE_TAURI = 'TeleSignal';
 export const TELEGRAM_API_ID = Number(import.meta.env.TG_TELEGRAM_API_ID);
 export const TELEGRAM_API_HASH = import.meta.env.TG_TELEGRAM_API_HASH;
 export const TEST_SESSION = import.meta.env.TG_TEST_SESSION;
@@ -119,7 +119,6 @@ export const TOPICS_SLICE = 20;
 export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
-
 
 export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
 export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
