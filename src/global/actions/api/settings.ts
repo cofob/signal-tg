@@ -36,6 +36,7 @@ import { updateTabState } from '../../reducers/tabs';
 import {
   selectChat, selectCurrentMessageList, selectIsCurrentUserFrozen,
   selectLanguageCode,
+  selectPeer,
   selectTabState, selectUser,
 } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
@@ -363,7 +364,8 @@ addActionHandler('loadBlockedUsers', async (global): Promise<void> => {
 addActionHandler('blockUser', async (global, actions, payload): Promise<void> => {
   const { userId, isOnlyStories } = payload;
 
-  const user = selectUser(global, userId);
+  // Signal blocks groups too
+  const user = selectPeer(global, userId);
   if (!user) return;
 
   const result = await callApi('blockUser', {
@@ -380,7 +382,8 @@ addActionHandler('blockUser', async (global, actions, payload): Promise<void> =>
 addActionHandler('unblockUser', async (global, actions, payload): Promise<void> => {
   const { userId, isOnlyStories } = payload;
 
-  const user = selectUser(global, userId);
+  // Signal blocks groups too
+  const user = selectPeer(global, userId);
   if (!user) return;
 
   const result = await callApi('unblockUser', {

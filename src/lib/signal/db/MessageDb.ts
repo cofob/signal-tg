@@ -33,8 +33,12 @@ export type ConversationRecord = {
   isArchived?: boolean;
   isMarkedUnread?: boolean;
   isBlocked?: boolean;
-  // Whether we accepted the message request, or wrote first
+  // Whether we accepted the message request, wrote first, or share our profile (`whitelisted` in storage)
   isAccepted?: boolean;
+  // We reported the conversation as spam
+  isReported?: boolean;
+  // The last `reportSpamToken` of an envelope from the contact, sent with spam reports
+  reportingToken?: Uint8Array;
   mutedUntil?: number;
   // Position in the pinned conversations list
   pinIndex?: number;
@@ -80,6 +84,8 @@ export type MessageRecord = {
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   isSealedSender?: boolean;
+  // The server's id of the envelope, which spam reports name
+  serverGuid?: string;
 };
 
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;
@@ -205,9 +211,9 @@ export default class MessageDb {
     return this.request(MESSAGES, 'readwrite', (store) => store.delete(id));
   }
 
-  /** Deletes every message of a conversation and returns their ids */
-  async deleteConversationMessages(conversationId: string) {
-    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
+  /** Deletes the messages of a conversation up to `maxId` (every message by default) and returns their ids */
+  async deleteConversationMessages(conversationId: string, maxId = Number.MAX_SAFE_INTEGER) {
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, maxId]);
     const ids: number[] = [];
     await this.iterate(MESSAGES, 'readwrite', (store) => store.index(BY_CONVERSATION).openCursor(range), (cursor) => {
       ids.push((cursor.value as MessageRecord).id);
@@ -231,6 +237,19 @@ export default class MessageDb {
     const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
     await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
       messages.push(cursor.value as MessageRecord);
+      return messages.length < limit;
+    });
+    return messages;
+  }
+
+  /** The newest messages of a conversation that pass `filter`, newest first */
+  async findLatestMessages(conversationId: string, limit: number, filter: (message: MessageRecord) => boolean) {
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
+    const messages: MessageRecord[] = [];
+    const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
+    await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
+      const message = cursor.value as MessageRecord;
+      if (filter(message)) messages.push(message);
       return messages.length < limit;
     });
     return messages;

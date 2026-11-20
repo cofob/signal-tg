@@ -2,6 +2,7 @@ import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
 import type { ApiPeerColor, ApiPeerSettings, ApiUser, ApiUserFullInfo } from '../../types';
 
 import { sha256Sync } from '../../../lib/signal/crypto';
+import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
 import { uuidToBytes } from '../../../lib/signal/serviceId';
 import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { getPeerId } from '../peers';
@@ -52,15 +53,12 @@ export function buildApiUserFullInfo(conversation: ConversationRecord, selfAci: 
 }
 
 /**
- * A message request shows the chat header bar with blocking and reporting. It is a private conversation with
- * messages from someone outside our contacts that we neither accepted nor answered; writing first accepts it.
- * Note to Self is always accepted (Signal Desktop `ts/util/isConversationAccepted.preload.ts`).
+ * A message request shows the chat header bar with accepting, deleting, blocking and reporting; a blocked
+ * conversation shows the unblock bar instead. Note to Self is always accepted.
  */
 export function buildPeerSettings(conversation: ConversationRecord, selfAci: string): ApiPeerSettings {
-  const isMessageRequest = conversation.type === 'private' && conversation.id !== selfAci
-    && !conversation.isAccepted && !conversation.systemName
-    && !conversation.isBlocked && conversation.lastMessageId !== undefined;
-  return isMessageRequest ? { canBlockContact: true, canReportSpam: true } : {};
+  const isMessageRequest = !conversation.isBlocked && !getIsConversationAccepted(conversation, selfAci);
+  return isMessageRequest ? { isMessageRequest: true, canBlockContact: true, canReportSpam: true } : {};
 }
 
 /** People in the phone's contacts or whose message request we accepted, whom Signal Desktop offers to write to */

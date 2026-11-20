@@ -138,6 +138,17 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'MessageRequestAccept': undefined;
+  'MessageRequestDelete': undefined;
+  'MessageRequestBlock': undefined;
+  'MessageRequestReport': undefined;
+  'MessageRequestBlockText': undefined;
+  'MessageRequestBlockGroupText': undefined;
+  'MessageRequestDeleteTitle': undefined;
+  'MessageRequestDeleteText': undefined;
+  'MessageRequestReportTitle': undefined;
+  'MessageRequestReportText': undefined;
+  'MessageRequestReportAndBlock': undefined;
   'SignalHistorySyncTitle': undefined;
   'SignalHistorySyncWaiting': undefined;
   'SignalHistorySyncNote': undefined;
@@ -2634,6 +2645,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'MessageRequestBlockTitle': {
+    'title': V;
+  };
   'SignalHistorySyncDownloading': {
     'percent': V;
   };
@@ -4572,6 +4586,18 @@ export interface LangKeyGroups {
       | 'LimitReachedSharedFoldersPremium';
     variables: 'limit';
   };
+  'title': {
+    keys:
+      | 'MessageRequestBlockTitle'
+      | 'FolderLinkNotificationDeletedTitle'
+      | 'FolderLinkNotificationAddedTitle'
+      | 'FolderLinkNotificationUpdatedTitle'
+      | 'ActionChangedTitleYou'
+      | 'ActionChangedTitleChannel'
+      | 'ActionCreatedChatYou'
+      | 'AiToneCreated';
+    variables: 'title';
+  };
   'percent': {
     keys:
       | 'SignalHistorySyncDownloading'
@@ -5001,17 +5027,6 @@ export interface LangKeyGroups {
     keys:
       | 'FolderLinkSubtitleAdd';
     variables: 'chats' | 'title';
-  };
-  'title': {
-    keys:
-      | 'FolderLinkNotificationDeletedTitle'
-      | 'FolderLinkNotificationAddedTitle'
-      | 'FolderLinkNotificationUpdatedTitle'
-      | 'ActionChangedTitleYou'
-      | 'ActionChangedTitleChannel'
-      | 'ActionCreatedChatYou'
-      | 'AiToneCreated';
-    variables: 'title';
   };
   'from,text': {
     keys:

@@ -230,7 +230,8 @@ class BackupImporter {
         .map(({ userId }) => uuidToString(userId)),
       isAnnouncementsOnly: snapshot?.announcementsOnly,
       isBlocked: group.blocked,
-      isAccepted: group.whitelisted || memberAcis.includes(this.context.account.aci),
+      // Membership alone leaves a group a message request (`messageRequests.ts`)
+      isAccepted: group.whitelisted,
     });
   }
 

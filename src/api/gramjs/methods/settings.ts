@@ -302,7 +302,7 @@ export function blockUser({
   user,
   isOnlyStories,
 }: {
-  user: ApiUser;
+  user: ApiPeer;
   isOnlyStories?: true;
 }) {
   return invokeRequest(new GramJs.contacts.Block({
@@ -315,7 +315,7 @@ export function unblockUser({
   user,
   isOnlyStories,
 }: {
-  user: ApiUser;
+  user: ApiPeer;
   isOnlyStories?: true;
 }) {
   return invokeRequest(new GramJs.contacts.Unblock({

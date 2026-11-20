@@ -1,11 +1,12 @@
 import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
-import type { ApiUser } from '../../types';
+import type { ApiPeer, ApiUser } from '../../types';
 
+import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { buildApiChat } from '../builders/chats';
 import { buildApiUser, buildApiUserFullInfo, getIsContact } from '../builders/users';
 import { getCurrentAccount } from '../client';
-import { db } from '../engine';
+import { db, logError, processor } from '../engine';
 import { getConversationByPeerId, getPeerId } from '../peers';
 import { sendApiUpdate } from '../updates';
 
@@ -62,6 +63,23 @@ export async function fetchCommonChats({ user }: { user: ApiUser; maxId?: string
   const chats = groups.map((group) => buildApiChat(group, selfAci));
   sendApiUpdate({ '@type': 'updateEntities', chats: buildCollectionByKey(chats, 'id') });
   return { chatIds: groups.map(getPeerId), count: groups.length };
+}
+
+/**
+ * Reports the chat as spam to our other devices and, for a contact, its latest messages to the server
+ * (Signal Desktop `reportSpam` in `ts/state/ducks/conversations.preload.ts`)
+ */
+export async function reportSpam(peer: ApiPeer) {
+  const conversation = await getConversationByPeerId(peer.id);
+  if (!conversation) return undefined;
+
+  try {
+    await processor.respondToMessageRequest(conversation.id, SyncMessage_MessageRequestResponse_Type.SPAM);
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
 }
 
 function getCommonGroups(conversations: ConversationRecord[], aci: string, selfAci: string) {
