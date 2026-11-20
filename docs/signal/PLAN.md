@@ -13,7 +13,7 @@
 - `rust/libsignal/`: крейты libsignal v0.108.3; `rust/signal-wasm/`: WASM-мост протокола (имена функций как у `Native`) и TLS-клиент на rustls. Сборка: `npm run signal:wasm`, результат в `src/lib/signal/wasm/generated`.
 - `proxy/tunnel.ts`: туннель WebSocket -> TCP, `npm run signal:proxy`.
 - protobuf-es: `npm run signal:proto` (`buf generate`), схемы в `src/lib/signal/proto/schema`, код в `src/lib/signal/proto/generated`.
-- `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
+- `src/lib/signal/net`: TLS через туннель, HTTP/2 с откатом на HTTP/1.1, WebSocket, протокол `WebSocketResources`.
 - `src/lib/signal/account`, `receiver`, `chat`, `store`, `sender`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB, отправка с обработкой 409/410 и запросы синхронизации после привязки.
 
 Этап 2, начат: движок умеет скачивать и расшифровывать вложения, разбирать синхронизацию контактов, читать storage service, получать профили и состояние групп v2 (zkgroup в WASM). `SignalClient` держит соединения и делает протокольную работу без UI:
@@ -104,11 +104,11 @@ proxy/  (Node 24, без зависимостей, без состояния)
 | --- | --- | --- |
 | Что делает прокси | Завершает TLS к Signal, проверяет закреплённый CA, добавляет CORS, переносит заголовки авторизации для WebSocket | Пересылает байты WebSocket в TCP-соединение с хостом из allowlist |
 | Что видит прокси | Учётные данные устройства (`aci.deviceId:password`), пути запросов (чьи prekeys, какие вложения), зашифрованные E2E конверты | Только имена хостов и объём трафика |
-| Работа в браузере | `fetch` и `WebSocket` | TLS (rustls) в WASM, свои клиенты HTTP/1.1 и WebSocket поверх него |
+| Работа в браузере | `fetch` и `WebSocket` | TLS (rustls) в WASM, свои клиенты HTTP/2, HTTP/1.1 и WebSocket поверх него |
 | Размер прокси | 200–300 строк | ~100 строк |
 | Риск | Злоумышленный прокси может вызывать API от имени устройства, но не прочитает и не подделает сообщения без ключей | Сложнее, медленнее на больших вложениях |
 
-Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
+Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/2 (ALPN `h2`, одно соединение на хост), HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
 
 ## 2a. Аккаунты без номера телефона
 
