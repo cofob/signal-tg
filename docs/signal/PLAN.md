@@ -16,14 +16,16 @@
 - `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
 - `src/lib/signal/account`, `receiver`, `chat`, `store`, `sender`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB, отправка с обработкой 409/410 и запросы синхронизации после привязки.
 
-Проверено: сессия PQXDH и расшифровка в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
+Этап 2, начат: движок умеет скачивать и расшифровывать вложения, разбирать синхронизацию контактов, читать storage service, получать профили и состояние групп v2 (zkgroup в WASM). Интеграции с UI (`src/api/signal`) пока нет.
+
+Проверено: сессия PQXDH, zkgroup (на боевых параметрах сервера), protobuf (против `protoc`), вложения и расшифровка групп в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
 
 Не проверено: привязка телефоном и расшифровка первого сообщения. Проверка вручную:
 
 1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
 2. `npm run signal:proxy` (Node 24) и `npm run dev`.
 3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
-4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. `await signalDev.sendText('<ACI получателя>', 'текст')` отправляет сообщение. `signalDev.listen()` переподключает, `signalDev.reset()` стирает локальные данные.
+4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. Другие команды: `signalDev.sendText('<ACI>', 'текст')`, `signalDev.syncStorage()` (записи storage service), `signalDev.groups()` (группы), `signalDev.profile()` (свой профиль), `signalDev.listen()` (переподключиться), `signalDev.reset()` (стереть локальные данные).
 
 ## 1. Проверенные факты
 
