@@ -45,6 +45,8 @@ export default class TlsTunnel {
         tunnel.flush();
       };
       socket.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+        // Data can still arrive after `close` or a failure freed the TLS state
+        if (!tunnel.isOpen) return;
         const wasHandshaking = tunnel.tls.isHandshaking();
         try {
           tunnel.receive(new Uint8Array(e.data));
@@ -97,7 +99,8 @@ export default class TlsTunnel {
     if (this.isClosed) return;
     try {
       this.tls.close();
-      this.flush();
+      const outgoing = this.tls.takeOutgoing() as Uint8Array<ArrayBuffer>;
+      if (outgoing.length && this.socket.readyState === WebSocket.OPEN) this.socket.send(outgoing);
     } catch {
       // The connection may already be unusable
     }
@@ -120,7 +123,7 @@ export default class TlsTunnel {
   }
 
   private flush() {
-    if (this.socket.readyState !== WebSocket.OPEN) return;
+    if (this.isClosed || this.socket.readyState !== WebSocket.OPEN) return;
     // wasm-bindgen copies results into a fresh `ArrayBuffer`, but types them as `ArrayBufferLike`
     const outgoing = this.tls.takeOutgoing() as Uint8Array<ArrayBuffer>;
     if (outgoing.length) this.socket.send(outgoing);
