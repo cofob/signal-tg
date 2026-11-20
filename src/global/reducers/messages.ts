@@ -1,5 +1,5 @@
 import type {
-  ApiMessage, ApiMessagePoll, ApiPollResult, ApiPollResults, ApiSponsoredMessage, ApiWebPage,
+  ApiMessage, ApiMessagePoll, ApiPollResult, ApiPollResults, ApiWebPage,
   ApiWebPageFull,
   ApiWidget,
 } from '../../api/types';
@@ -761,38 +761,6 @@ export function updateFocusedMessage<T extends GlobalState>(
       ...update,
     },
   }, tabId);
-}
-
-export function updateSponsoredMessage<T extends GlobalState>(
-  global: T, chatId: string, message: ApiSponsoredMessage,
-): T {
-  return {
-    ...global,
-    messages: {
-      ...global.messages,
-      sponsoredByChatId: {
-        ...global.messages.sponsoredByChatId,
-        [chatId]: message,
-      },
-    },
-  };
-}
-
-export function deleteSponsoredMessage<T extends GlobalState>(
-  global: T, chatId: string,
-): T {
-  const byChatId = global.messages.sponsoredByChatId;
-  if (!byChatId[chatId]) {
-    return global;
-  }
-
-  return {
-    ...global,
-    messages: {
-      ...global.messages,
-      sponsoredByChatId: omit(byChatId, [chatId]),
-    },
-  };
 }
 
 export function enterMessageSelectMode<T extends GlobalState>(

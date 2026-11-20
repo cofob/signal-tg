@@ -78,18 +78,6 @@ export async function changeSessionTtl({
   return result;
 }
 
-export function toggleSponsoredMessages({
-  enabled,
-}: {
-  enabled: boolean;
-}) {
-  return invokeRequest(new GramJs.account.ToggleSponsoredMessages({
-    enabled,
-  }), {
-    shouldReturnTrue: true,
-  });
-}
-
 export function buildApiAccountDays(ttl: GramJs.AccountDaysTTL): { days: number } {
   return {
     days: ttl.days,

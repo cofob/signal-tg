@@ -67,7 +67,6 @@ import { API_GENERAL_ID_LIMIT, PINNED_MESSAGES_LIMIT } from '../../../limits';
 import {
   buildApiChatFromPreview,
   buildApiSendAsPeerId,
-  buildApiSponsoredMessageReportResult,
   buildThreadReadState,
 } from '../apiBuilders/chats';
 import {
@@ -93,7 +92,6 @@ import {
   buildApiMessage,
   buildApiReportResult,
   buildApiSearchPostsFlood,
-  buildApiSponsoredMessage,
   buildApiThreadInfo,
   buildApiThreadInfoFromMessage,
   buildLocalForwardedMessage,
@@ -2696,76 +2694,6 @@ export function saveDefaultSendAs({
     peer: buildInputPeer(chat.id, chat.accessHash),
     sendAs: buildInputPeer(sendAs.id, sendAs.accessHash),
   }));
-}
-
-export async function fetchSponsoredMessages({ peer }: { peer: ApiPeer }) {
-  const result = await invokeRequest(new GramJs.messages.GetSponsoredMessages({
-    peer: buildInputPeer(peer.id, peer.accessHash),
-  }));
-
-  if (!result || result instanceof GramJs.messages.SponsoredMessagesEmpty || !result.messages.length) {
-    return undefined;
-  }
-
-  const messages = result.messages
-    .map((message) => buildApiSponsoredMessage(message, peer.id))
-    .filter(Boolean);
-
-  return {
-    messages,
-  };
-}
-
-export async function viewSponsoredMessage({ random }: { random: string }) {
-  await invokeRequest(new GramJs.messages.ViewSponsoredMessage({
-    randomId: deserializeBytes(random),
-  }));
-}
-
-export function clickSponsoredMessage({
-  random,
-  isMedia,
-  isFullscreen,
-}: {
-  random: string;
-  isMedia?: boolean;
-  isFullscreen?: boolean;
-}) {
-  return invokeRequest(new GramJs.messages.ClickSponsoredMessage({
-    media: isMedia || undefined,
-    fullscreen: isFullscreen || undefined,
-    randomId: deserializeBytes(random),
-  }));
-}
-
-export async function reportSponsoredMessage({
-  randomId,
-  option,
-}: {
-  randomId: string;
-  option: string;
-}) {
-  try {
-    const result = await invokeRequest(new GramJs.messages.ReportSponsoredMessage({
-      randomId: deserializeBytes(randomId),
-      option: deserializeBytes(option),
-    }), {
-      shouldThrow: true,
-    });
-
-    if (!result) {
-      return undefined;
-    }
-
-    return buildApiSponsoredMessageReportResult(result);
-  } catch (err: unknown) {
-    if (err instanceof RPCError && err.errorMessage === 'PREMIUM_ACCOUNT_REQUIRED') {
-      return {
-        type: 'premiumRequired' as const,
-      };
-    }
-    return undefined;
-  }
 }
 
 export async function readAllMentions({

@@ -649,29 +649,6 @@ export interface ActionPayloads {
   deleteSavedHistory: {
     chatId: string;
   } & WithTabId;
-  loadSponsoredMessages: {
-    peerId: string;
-  };
-  viewSponsored: {
-    randomId: string;
-  };
-  clickSponsored: {
-    randomId: string;
-    isMedia?: boolean;
-    isFullscreen?: boolean;
-  };
-  reportSponsored: {
-    peerId?: string;
-    randomId: string;
-    option?: string;
-  } & WithTabId;
-  openAboutAdsModal: {
-    randomId: string;
-    canReport?: boolean;
-    sponsorInfo?: string;
-    additionalInfo?: string;
-  } & WithTabId;
-  closeAboutAdsModal: WithTabId | undefined;
   openPreparedInlineMessageModal: {
     botId: string;
     messageId: string;
@@ -689,11 +666,8 @@ export interface ActionPayloads {
       threadId?: ThreadId;
     };
   } & WithTabId;
-  openPreviousReportAdModal: WithTabId | undefined;
   openPreviousReportModal: WithTabId | undefined;
-  closeReportAdModal: WithTabId | undefined;
   closeReportModal: WithTabId | undefined;
-  hideSponsored: WithTabId | undefined;
   loadSendAs: {
     chatId: string;
   };
@@ -1752,7 +1726,6 @@ export interface ActionPayloads {
     pageMedia?: MediaViewerPageMedia;
     mediaIndex?: number;
     isAvatarView?: boolean;
-    isSponsoredMessage?: boolean;
     origin: MediaViewerOrigin;
     withDynamicLoading?: boolean;
     timestamp?: number;

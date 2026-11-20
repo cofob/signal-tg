@@ -87,7 +87,7 @@ import {
   splitMessagesForForwarding,
 } from '../../helpers';
 import { isChatAdmin } from '../../helpers/chats';
-import { isApiPeerChat, isApiPeerUser } from '../../helpers/peers';
+import { isApiPeerChat } from '../../helpers/peers';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
 } from '../../index';
@@ -95,7 +95,6 @@ import { scheduleEphemeralExpiration } from '../../intervals';
 import {
   addChatMessagesById,
   clearMessageSummary,
-  deleteSponsoredMessage,
   removeOutlyingList,
   removeRequestedMessageTranslation,
   removeUnreadMentions,
@@ -108,7 +107,6 @@ import {
   updateChatFullInfo,
   updateChatMessage,
   updateEphemeralMessage,
-  updateGlobalSearch,
   updateListedIds,
   updateMessageSummary,
   updateMessageTranslation,
@@ -117,11 +115,9 @@ import {
   updateRequestedMessageTranslation,
   updateScheduledMessage,
   updateScheduledMessages,
-  updateSponsoredMessage,
   updateTopicWithState,
   updateUnreadCounters,
   updateUploadByMessageKey,
-  updateUserFullInfo,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import {
@@ -151,7 +147,6 @@ import {
   selectFocusedMessageId,
   selectForwardsCanBeSentToChat,
   selectForwardsContainVoiceMessages,
-  selectIsChatBotNotStarted,
   selectIsChatRestricted,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
@@ -2963,120 +2958,6 @@ addActionHandler('loadSendPaidReactionsAs', async (global, actions, payload): Pr
   global = getGlobal();
   global = updateChat(global, chatId, { sendPaidReactionsAsPeerIds: result });
   setGlobal(global);
-});
-
-addActionHandler('loadSponsoredMessages', async (global, actions, payload): Promise<void> => {
-  if (selectIsCurrentUserFrozen(global)) return;
-
-  const { peerId } = payload;
-  const peer = selectPeer(global, peerId);
-  if (!peer) {
-    return;
-  }
-
-  if (isApiPeerUser(peer) && selectIsChatBotNotStarted(global, peer.id)) {
-    return;
-  }
-
-  const result = await callApi('fetchSponsoredMessages', { peer });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = updateSponsoredMessage(global, peerId, result.messages[0]);
-  setGlobal(global);
-});
-
-addActionHandler('viewSponsored', (global, actions, payload): ActionReturnType => {
-  const { randomId } = payload;
-
-  void callApi('viewSponsoredMessage', { random: randomId });
-});
-
-addActionHandler('clickSponsored', (global, actions, payload): ActionReturnType => {
-  const { randomId, isMedia, isFullscreen } = payload;
-
-  void callApi('clickSponsoredMessage', {
-    random: randomId, isMedia, isFullscreen,
-  });
-});
-
-addActionHandler('reportSponsored', async (global, actions, payload): Promise<void> => {
-  const {
-    peerId, randomId, option = '', tabId = getCurrentTabId(),
-  } = payload;
-
-  const result = await callApi('reportSponsoredMessage', { randomId, option });
-
-  if (!result) return;
-
-  if (result.type === 'premiumRequired') {
-    actions.closeReportAdModal({ tabId });
-    return;
-  }
-
-  if (result.type === 'reported' || result.type === 'hidden') {
-    actions.showNotification({
-      message: {
-        key: result.type === 'reported' ? 'AdReported' : 'AdHidden',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      tabId,
-    });
-    actions.closeReportAdModal({ tabId });
-
-    global = getGlobal();
-    if (peerId) {
-      global = deleteSponsoredMessage(global, peerId);
-    } else {
-      global = updateGlobalSearch(global, {
-        sponsoredPeer: undefined,
-      }, tabId);
-    }
-    setGlobal(global);
-    return;
-  }
-
-  if (result.type === 'selectOption') {
-    global = getGlobal();
-    const oldSections = selectTabState(global, tabId).reportAdModal?.sections;
-    const selectedOption = oldSections?.[oldSections.length - 1]?.options.find((o) => o.option === option);
-    const newSection = {
-      title: result.title,
-      options: result.options,
-      subtitle: selectedOption?.text,
-    };
-    global = updateTabState(global, {
-      reportAdModal: {
-        chatId: peerId,
-        randomId,
-        sections: oldSections ? [...oldSections, newSection] : [newSection],
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-});
-
-addActionHandler('hideSponsored', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (!isCurrentUserPremium) return;
-
-  const result = await callApi('toggleSponsoredMessages', { enabled: false });
-  if (!result) return;
-  global = getGlobal();
-  global = updateUserFullInfo(global, global.currentUserId!, {
-    areAdsEnabled: false,
-  });
-  setGlobal(global);
-  actions.showNotification({
-    message: {
-      key: 'AdHidden',
-      options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-    },
-    tabId,
-  });
 });
 
 addActionHandler('loadUnreadMentions', async (global, actions, payload): Promise<void> => {

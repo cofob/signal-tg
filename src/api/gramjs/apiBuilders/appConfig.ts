@@ -47,7 +47,6 @@ export interface GramJsAppConfig {
   // Boosts
   group_transcribe_level_min?: number;
   new_noncontact_peers_require_premium_without_ownpremium?: boolean;
-  channel_restrict_sponsored_level_min?: number;
   channel_revenue_withdrawal_enabled?: boolean;
   // Upload premium notifications
   upload_premium_speedup_notify_period?: number;
@@ -181,7 +180,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     bandwidthPremiumNotifyPeriod: appConfig.upload_premium_speedup_notify_period,
     bandwidthPremiumUploadSpeedup: appConfig.upload_premium_speedup_upload,
     bandwidthPremiumDownloadSpeedup: appConfig.upload_premium_speedup_download,
-    channelRestrictAdsLevelMin: appConfig.channel_restrict_sponsored_level_min,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
     paidReactionMaxAmount: appConfig.stars_paid_reaction_amount_max,
     isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,

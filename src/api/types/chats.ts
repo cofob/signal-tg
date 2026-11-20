@@ -315,10 +315,3 @@ export type ApiDraft = {
   effectId?: string;
   isLocal?: boolean;
 };
-
-export type ApiSponsoredPeer = {
-  randomId: string;
-  peerId: string;
-  sponsorInfo?: string;
-  additionalInfo?: string;
-};

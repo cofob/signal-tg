@@ -203,11 +203,8 @@ export interface LangPair {
   'CreateBotUsernameSubscribe': undefined;
   'CreateBotUsernameHelp': undefined;
   'CreateBotLimitTitle': undefined;
-  'SponsoredMessageInfo': undefined;
   'SponsoredMessageInfoDescription1': undefined;
-  'SponsoredMessageInfoDescription2': undefined;
   'SponsoredMessageInfoDescription3': undefined;
-  'SponsoredMessageInfoDescription4': undefined;
   'Close': undefined;
   'Phone': undefined;
   'Username': undefined;
@@ -773,7 +770,6 @@ export interface LangPair {
   'MediaDownload': undefined;
   'CommonSelect': undefined;
   'ConversationContextMenuNoViews': undefined;
-  'HideAd': undefined;
   'CallAgain': undefined;
   'CallBack': undefined;
   'PollSubmitVotes': undefined;
@@ -783,10 +779,6 @@ export interface LangPair {
   'PollBackToAnswer': undefined;
   'ChatQuizTotalVotesEmpty': undefined;
   'ChatPollTotalVotesResultEmpty': undefined;
-  'MessageRecommendedLabel': undefined;
-  'SponsoredMessageAd': undefined;
-  'SponsoredMessageAdWhatIsThis': undefined;
-  'SponsoredPeerBadge': undefined;
   'PremiumStickerTooltip': undefined;
   'ViewAction': undefined;
   'RichMessageMore': undefined;
@@ -2084,13 +2076,10 @@ export interface LangPair {
   'RichButtonCenter': undefined;
   'RichButtonRight': undefined;
   'RichEditorButtonCopyText': undefined;
-  'AboutRevenueSharingAds': undefined;
   'AccDescrCollapsePanel': undefined;
   'AccDescrExpandPanel': undefined;
   'AccDescrLike': undefined;
   'AccDescrTopic': undefined;
-  'AdHidden': undefined;
-  'AdReported': undefined;
   'AddEffectMessageHint': undefined;
   'AllReactions': undefined;
   'AllViewers': undefined;
@@ -2237,7 +2226,6 @@ export interface LangPair {
   'July': undefined;
   'June': undefined;
   'KickFromSupergroup': undefined;
-  'LearnMoreArrow': undefined;
   'LocalizationInterfaceLanguage': undefined;
   'Map': undefined;
   'March': undefined;
@@ -2294,7 +2282,6 @@ export interface LangPair {
   'PrivacyVoiceMessagesTitle': undefined;
   'ProfileChannel': undefined;
   'ProfilePhotoSetMainPhoto': undefined;
-  'PromoteUrl': undefined;
   'QuotePrivate': undefined;
   'ReactionsAll': undefined;
   'ReactionsOff': undefined;
@@ -2308,20 +2295,11 @@ export interface LangPair {
   'ReplyToGroupStory': undefined;
   'Report2Comment': undefined;
   'Report2CommentOptional': undefined;
-  'ReportAd': undefined;
-  'ReportAdHelpURL': undefined;
   'ReportSend': undefined;
   'ReportSpamTitle': undefined;
   'ReportStory': undefined;
   'CallMicrophoneAccessNeeded': undefined;
   'Reset': undefined;
-  'RevenueSharingAdsAlertSubtitle': undefined;
-  'RevenueSharingAdsInfo1Subtitle': undefined;
-  'RevenueSharingAdsInfo1Title': undefined;
-  'RevenueSharingAdsInfo2Subtitle': undefined;
-  'RevenueSharingAdsInfo2Title': undefined;
-  'RevenueSharingAdsInfo3Title': undefined;
-  'RevenueSharingAdsInfo4Title': undefined;
   'SaveToPosts': undefined;
   'Saved': undefined;
   'SavedTagFilterByTag': undefined;
@@ -2350,8 +2328,6 @@ export interface LangPair {
   'SortByReactions': undefined;
   'SortByTime': undefined;
   'Spoiler': undefined;
-  'SponsoredMessage': undefined;
-  'SponsoredMessageSponsor': undefined;
   'StarsReactionAnonymous': undefined;
   'StarsReactionShowMeInTopSenders': undefined;
   'StarsReactionTitle': undefined;
@@ -2395,7 +2371,6 @@ export interface LangPair {
   'SupportStatus': undefined;
   'TelegramStars': undefined;
   'TopicClosedByAdmin': undefined;
-  'Understood': undefined;
   'Unlock': undefined;
   'UnlockPremiumEmojiHint': undefined;
   'UnlockPremiumEmojiHint2': undefined;
@@ -2459,7 +2434,6 @@ export interface LangPair {
   'MiniAppsDisclaimerText': undefined;
   'MiniAppsDisclaimerTitle': undefined;
   'ReportPleaseSelectMessages': undefined;
-  'ReportSponsoredReportedLink': undefined;
   'SettingsTitleChatName': undefined;
   'SettingsWindowSystem': undefined;
   'SubscribeTagLink': undefined;
@@ -3923,12 +3897,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ReplyToQuote': {
     'senderTitle': V;
   };
-  'RevenueSharingAdsInfo3Subtitle': {
-    'level': V;
-  };
-  'RevenueSharingAdsInfo4Subtitle2': {
-    'details': V;
-  };
   'StarsReactionText': {
     'chat': V;
   };
@@ -3993,9 +3961,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'bot': V;
   };
   'MiniAppsDisclaimerButton': {
-    'link': V;
-  };
-  'ReportSponsoredReportedLearn': {
     'link': V;
   };
   'SubscribeTagAbout': {
@@ -4961,8 +4926,7 @@ export interface LangKeyGroups {
   'level': {
     keys:
       | 'RichEditorHeadingLevel'
-      | 'RatingLevel'
-      | 'RevenueSharingAdsInfo3Subtitle';
+      | 'RatingLevel';
     variables: 'level';
   };
   'channel,group': {
@@ -4994,7 +4958,6 @@ export interface LangKeyGroups {
       | 'CocoonFooterText'
       | 'AiMessageEditorDailyLimitReached'
       | 'MiniAppsDisclaimerButton'
-      | 'ReportSponsoredReportedLearn'
       | 'SubscribeTagAbout'
       | 'UsernamePurchaseAvailable';
     variables: 'link';
@@ -5472,11 +5435,6 @@ export interface LangKeyGroups {
     keys:
       | 'ReplyToQuote';
     variables: 'senderTitle';
-  };
-  'details': {
-    keys:
-      | 'RevenueSharingAdsInfo4Subtitle2';
-    variables: 'details';
   };
   'recoveryEmail': {
     keys:

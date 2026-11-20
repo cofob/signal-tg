@@ -12,7 +12,6 @@ import useShowTransition from '../../hooks/useShowTransition';
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
-import AboutAdsModal from './aboutAds/AboutAdsModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AiTonePreviewModal from './aiTonePreview/AiTonePreviewModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
@@ -48,7 +47,6 @@ import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
-import ReportAdModal from './reportAd/ReportAdModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
@@ -70,7 +68,6 @@ type ModalKey = keyof Pick<TabState,
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
   'requestedAttachBotInstall' |
-  'reportAdModal' |
   'reportModal' |
   'paidReactionModal' |
   'pollModal' |
@@ -83,7 +80,6 @@ type ModalKey = keyof Pick<TabState,
   'suggestedStatusModal' |
   'emojiStatusAccessModal' |
   'locationAccessModal' |
-  'aboutAdsModal' |
   'preparedMessageModal' |
   'sharePreparedMessageModal' |
   'requestPeerModal' |
@@ -177,7 +173,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
   requestedAttachBotInstall: AttachBotInstallModal,
-  reportAdModal: ReportAdModal,
   reportModal: ReportModal,
   browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
@@ -188,7 +183,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   suggestedStatusModal: SuggestedStatusModal,
   emojiStatusAccessModal: EmojiStatusAccessModal,
   locationAccessModal: LocationAccessModal,
-  aboutAdsModal: AboutAdsModal,
   preparedMessageModal: PreparedMessageModal,
   sharePreparedMessageModal: SharePreparedMessageModal,
   requestPeerModal: RequestPeerModal,

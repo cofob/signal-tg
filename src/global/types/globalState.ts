@@ -36,7 +36,6 @@ import type {
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiSponsoredMessage,
   ApiStarsAmount,
   ApiStealthMode,
   ApiSticker,
@@ -285,7 +284,6 @@ export type GlobalState = {
     playbackByChatId: Record<string, {
       byId: Record<number, number>;
     }>;
-    sponsoredByChatId: Record<string, ApiSponsoredMessage>;
     pollById: Record<string, ApiMessagePoll>;
     webPageById: Record<string, ApiWebPage>;
   };

@@ -8,7 +8,6 @@ import type { ApiChatAdminRights } from './chats';
 import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
-import type { ApiTypePeerColor } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiTypeCurrencyAmount } from './stars';
 import type {
@@ -952,22 +951,6 @@ export type ApiMessageReportResult = {
 
 export type ApiMessageOutgoingStatus = 'read' | 'succeeded' | 'pending' | 'failed';
 
-export type ApiSponsoredMessage = {
-  chatId: string;
-  randomId: string;
-  isRecommended?: true;
-  expiresAt: number;
-  sponsorInfo?: string;
-  additionalInfo?: string;
-  buttonText?: string;
-  canReport?: true;
-  title: string;
-  url: string;
-  photo?: ApiPhoto;
-  content: MediaContent;
-  peerColor?: ApiTypePeerColor;
-};
-
 // KeyboardButtons
 
 export interface ApiKeyboardButtonStyle {
@@ -1096,17 +1079,6 @@ export type ApiFactCheck = {
   hash: string;
   countryCode?: string;
   text?: ApiFormattedText;
-};
-
-export type ApiSponsoredMessageReportResult = {
-  type: 'reported' | 'hidden' | 'premiumRequired';
-} | {
-  type: 'selectOption';
-  title: string;
-  options: {
-    text: string;
-    option: string;
-  }[];
 };
 
 export type ApiPreparedInlineMessage = {

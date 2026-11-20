@@ -240,7 +240,7 @@ const MediaViewerActions = ({
       return undefined;
     }
 
-    return item?.type !== 'sponsoredMessage' && (isVideo ? (
+    return isVideo ? (
       <Button
         round
         size="smaller"
@@ -264,7 +264,7 @@ const MediaViewerActions = ({
         ariaLabel={lang('AccActionDownload')}
         iconName="download"
       />
-    ));
+    );
   }
 
   const openDeleteModalHandler = useLastCallback(() => {

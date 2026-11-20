@@ -371,7 +371,6 @@ export enum MediaViewerOrigin {
   ChannelAvatar,
   SuggestedAvatar,
   PreviewMedia,
-  SponsoredMessage,
   PollPreview,
   RichPageBlock,
   IVPageBlock,

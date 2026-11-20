@@ -69,7 +69,6 @@ export interface ApiUserFullInfo {
   personalPhoto?: ApiPhoto;
   noVoiceMessages?: boolean;
   isTranslationDisabled?: true;
-  areAdsEnabled?: boolean;
   hasPinnedStories?: boolean;
   isContactRequirePremium?: boolean;
   birthday?: ApiBirthday;

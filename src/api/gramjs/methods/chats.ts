@@ -48,7 +48,6 @@ import {
   buildApiChatlistInvite,
   buildApiChatReactions,
   buildApiMissingInvitedUser,
-  buildApiSponsoredPeer,
   buildApiThreadInfoFromDialog,
   buildChatMember,
   buildChatMembers,
@@ -2206,12 +2205,6 @@ export function updatePaidMessagesPrice({
   }), {
     shouldReturnTrue: true,
   });
-}
-
-export async function fetchSponsoredPeer({ query }: { query: string }) {
-  const result = await invokeRequest(new GramJs.contacts.GetSponsoredPeers({ q: query }));
-  if (!result || result instanceof GramJs.contacts.SponsoredPeersEmpty) return undefined;
-  return buildApiSponsoredPeer(result.peers[0]);
 }
 
 export function toggleAutoTranslation({

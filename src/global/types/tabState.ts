@@ -26,7 +26,6 @@ import type {
   ApiRequestPeerType,
   ApiRichText,
   ApiSearchPostsFlood,
-  ApiSponsoredPeer,
   ApiSticker,
   ApiTypeStoryView,
   ApiUrlAuthResultRequest,
@@ -254,13 +253,6 @@ export type TabState = {
     messageId: number;
   };
 
-  aboutAdsModal?: {
-    randomId: string;
-    canReport?: boolean;
-    sponsorInfo?: string;
-    additionalInfo?: string;
-  };
-
   reactionPicker?: {
     chatId?: string;
     messageId?: number;
@@ -293,7 +285,6 @@ export type TabState = {
     currentContent?: GlobalSearchContent;
     chatId?: string;
     foundTopicIds?: number[];
-    sponsoredPeer?: ApiSponsoredPeer;
     searchFlood?: ApiSearchPostsFlood;
     fetchingStatus?: {
       chats?: boolean;
@@ -391,7 +382,6 @@ export type TabState = {
     withDynamicLoading?: boolean;
     mediaIndex?: number;
     isAvatarView?: boolean;
-    isSponsoredMessage?: boolean;
     standaloneMedia?: MediaViewerMedia[];
     pageMedia?: MediaViewerPageMedia;
     origin?: MediaViewerOrigin;
@@ -482,19 +472,6 @@ export type TabState = {
   historyCalendarSelectedAt?: number;
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];
-
-  reportAdModal?: {
-    chatId?: string;
-    randomId: string;
-    sections: {
-      title: string;
-      subtitle?: string;
-      options: {
-        text: string;
-        option: string;
-      }[];
-    }[];
-  };
 
   reportModal?: {
     chatId?: string;

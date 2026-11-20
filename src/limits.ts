@@ -61,7 +61,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
     'promote.telegram.org',
     'ads.telegram.org',
   ],
-  channelRestrictAdsLevelMin: 50,
   seenByExpiresAt: 604800,
   seenByMaxChatMembers: 100,
   defaultEmojiStatusesStickerSetId: '773947703670341676',

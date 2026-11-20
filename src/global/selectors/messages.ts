@@ -6,7 +6,7 @@ import type {
   ApiMessageForwardInfo,
   ApiMessageOutgoingStatus,
   ApiMessageReplyInfo,
-  ApiPeer, ApiSponsoredMessage,
+  ApiPeer,
   MediaContainer,
 } from '../../api/types';
 import type { ChatType } from '../../lib/widget-sandbox';
@@ -1215,14 +1215,14 @@ function isMessageNewer(message: ApiMessage, previousMessage?: ApiMessage) {
 }
 
 export function selectCanAutoLoadMedia<T extends GlobalState>(
-  global: T, message: ApiMessage | ApiSponsoredMessage,
+  global: T, message: ApiMessage,
 ) {
   const chat = selectChat(global, message.chatId);
   if (!chat) {
     return undefined;
   }
 
-  const sender = 'id' in message ? selectSender(global, message) : undefined;
+  const sender = selectSender(global, message);
 
   const webPage = selectWebPageFromMessage(global, message);
   const isPhoto = Boolean(getMessagePhoto(message) || getWebPagePhoto(webPage));
@@ -1382,12 +1382,6 @@ export function selectHasIpRevealingMedia<T extends GlobalState>(global: T, chat
 
       return isIpRevealingMedia({ mimeType: document.mimeType, extension });
     });
-}
-
-export function selectSponsoredMessage<T extends GlobalState>(global: T, chatId: string) {
-  const message = global.messages.sponsoredByChatId[chatId];
-
-  return message && message.expiresAt >= Math.round(Date.now() / 1000) ? message : undefined;
 }
 
 export function selectDefaultReaction<T extends GlobalState>(global: T, chatId: string) {

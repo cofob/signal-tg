@@ -10,7 +10,6 @@ import type {
   ApiPeer,
   ApiPeerPhotos,
   ApiPhoto,
-  ApiSponsoredMessage,
 } from '../../api/types';
 import {
   type MediaViewerMedia,
@@ -45,7 +44,7 @@ import {
   selectPeer,
   selectPeerPhotos,
   selectPerformanceSettingsValue,
-  selectScheduledMessage, selectSponsoredMessage,
+  selectScheduledMessage,
   selectTabState,
 } from '../../global/selectors';
 import { stopCurrentAudio } from '../../util/audioPlayback/playbackController';
@@ -96,7 +95,6 @@ type StateProps = {
   avatarOwner?: ApiPeer;
   profilePhotos?: ApiPeerPhotos;
   chatMessages?: Record<number, ApiMessage>;
-  sponsoredMessage?: ApiSponsoredMessage;
   standaloneMedia?: MediaViewerMedia[];
   pageMedia?: MediaViewerPageMedia;
   mediaIndex?: number;
@@ -127,7 +125,6 @@ const MediaViewer = ({
   avatarOwner,
   profilePhotos,
   chatMessages,
-  sponsoredMessage,
   standaloneMedia,
   pageMedia,
   mediaIndex,
@@ -149,14 +146,12 @@ const MediaViewer = ({
     toggleChatInfo,
     searchChatMediaMessages,
     loadMoreProfilePhotos,
-    clickSponsored,
-    openUrl,
   } = getActions();
 
   const lang = useLang();
   const closeLabel = useKeyboardShortcutHint(lang('Close'), 'closeMediaViewer');
   const dialogRef = useRef<HTMLDialogElement>();
-  const isOpen = Boolean(avatarOwner || message || standaloneMedia || pageMedia || sponsoredMessage);
+  const isOpen = Boolean(avatarOwner || message || standaloneMedia || pageMedia);
   const prevIsOpen = usePreviousDeprecated(isOpen);
   const prevIsHidden = usePreviousDeprecated(isHidden);
   const { isMobile } = useAppLayout();
@@ -400,14 +395,6 @@ const MediaViewer = ({
     }
   });
 
-  const handleSponsoredClick = useLastCallback((isFromMedia?: boolean) => {
-    if (!sponsoredMessage || !chatId) return;
-
-    clickSponsored({ isMedia: isFromMedia, isFullscreen: true, randomId: sponsoredMessage.randomId });
-    openUrl({ url: sponsoredMessage.url });
-    closeMediaViewer();
-  });
-
   const handleForward = useLastCallback(() => {
     openForwardMenu({
       fromChatId: chatId!,
@@ -473,16 +460,6 @@ const MediaViewer = ({
       const nextIndex = fromMediaIndex + direction;
       if (nextIndex >= 0 && nextIndex < fromPageMedia.blocks.length) {
         return { type: 'pageBlock', pageMedia: fromPageMedia, mediaIndex: nextIndex };
-      }
-
-      return undefined;
-    }
-
-    if (from.type === 'sponsoredMessage') {
-      const { message: fromSponsoredMessage, mediaIndex: fromSponsoredMessageIndex } = from;
-      const nextIndex = fromSponsoredMessageIndex! + direction;
-      if (nextIndex >= 0 && fromSponsoredMessage) {
-        return { type: 'sponsoredMessage', message: fromSponsoredMessage, mediaIndex: nextIndex };
       }
 
       return undefined;
@@ -633,7 +610,6 @@ const MediaViewer = ({
         selectItem={openMediaViewerItem}
         isHidden={isHidden}
         onFooterClick={handleFooterClick}
-        handleSponsoredClick={handleSponsoredClick}
       />
     </>
   );
@@ -674,7 +650,6 @@ export default memo(withGlobal(
       pageMedia,
       mediaIndex,
       isAvatarView,
-      isSponsoredMessage,
       shouldLandInMediaEditor,
     } = mediaViewer;
     const withAnimation = selectPerformanceSettingsValue(global, 'mediaViewerAnimations');
@@ -721,7 +696,6 @@ export default memo(withGlobal(
         message: undefined,
         collectedMessageIds: undefined,
         chatMessages: undefined,
-        sponsoredMessage: undefined,
         withDynamicLoading,
       };
     }
@@ -737,15 +711,8 @@ export default memo(withGlobal(
       }
     }
 
-    let sponsoredMessage: ApiSponsoredMessage | undefined;
-    if (isSponsoredMessage && chatId) {
-      if (origin === MediaViewerOrigin.SponsoredMessage) {
-        sponsoredMessage = selectSponsoredMessage(global, chatId);
-      }
-    }
-
     const currentItem = getMediaViewerItem({
-      message, standaloneMedia, pageMedia, mediaIndex, sponsoredMessage,
+      message, standaloneMedia, pageMedia, mediaIndex,
     });
     const viewableMedia = selectViewableMedia(global, currentItem);
 
@@ -791,7 +758,6 @@ export default memo(withGlobal(
       origin,
       message,
       chatMessages,
-      sponsoredMessage,
       collectedMessageIds,
       withAnimation,
       isHidden,

@@ -56,7 +56,6 @@ type OwnProps = {
   selectItem: (item: MediaViewerItem) => void;
   loadMoreItemsIfNeeded: (item: MediaViewerItem) => void;
   onFooterClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleSponsoredClick: (isFromMedia?: boolean) => void;
   onClose: () => void;
 };
 
@@ -100,7 +99,6 @@ const MediaViewerSlides = ({
   selectItem,
   onClose,
   onFooterClick,
-  handleSponsoredClick,
 }: OwnProps) => {
   const lang = useLang();
   const containerRef = useRef<HTMLDivElement>();
@@ -718,7 +716,6 @@ const MediaViewerSlides = ({
             item={prevItem}
             onClose={onClose}
             onFooterClick={onFooterClick}
-            handleSponsoredClick={handleSponsoredClick}
           />
         )}
       </div>
@@ -738,7 +735,6 @@ const MediaViewerSlides = ({
           isMoving={isMoving}
           onClose={onClose}
           onFooterClick={onFooterClick}
-          handleSponsoredClick={handleSponsoredClick}
         />
       </div>
       <div className="MediaViewerSlide" ref={rightSlideRef}>
@@ -749,7 +745,6 @@ const MediaViewerSlides = ({
             item={nextItem}
             onClose={onClose}
             onFooterClick={onFooterClick}
-            handleSponsoredClick={handleSponsoredClick}
           />
         )}
       </div>
