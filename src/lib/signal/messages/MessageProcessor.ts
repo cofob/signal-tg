@@ -286,6 +286,16 @@ export default class MessageProcessor {
     });
   }
 
+  /** Changes how this device lists a conversation; other devices learn it only through the storage service */
+  updateConversationState(
+    id: string, update: Partial<Pick<ConversationRecord, 'isArchived' | 'isMarkedUnread' | 'mutedUntil' | 'pinIndex'>>,
+  ) {
+    return this.runSerial(async () => {
+      const conversation = await this.db.getConversation(id);
+      return conversation && this.putConversation({ ...conversation, ...update });
+    });
+  }
+
   /** Fetches the profile behind a private conversation and stores its decrypted fields */
   async refreshProfile(aci: string) {
     const { store, connection } = this.client.getSenderContext();
