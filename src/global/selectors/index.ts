@@ -8,7 +8,6 @@ export * from './management';
 export * from './symbols';
 export * from './payments';
 export * from './settings';
-export * from './statistics';
 export * from './stories';
 export * from './tabs';
 export * from './peers';

@@ -358,15 +358,10 @@ export enum GlobalSearchContent {
 export enum RightColumnContent {
   ChatInfo,
   Management,
-  Statistics,
-  BoostStatistics,
-  MessageStatistics,
-  StoryStatistics,
   PollResults,
   AddingMembers,
   CreateTopic,
   EditTopic,
-  MonetizationStatistics,
   NewGroup,
 }
 

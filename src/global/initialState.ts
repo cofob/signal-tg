@@ -462,10 +462,6 @@ export const INITIAL_TAB_STATE: TabState = {
 
   activeDownloads: {},
 
-  statistics: {
-    byChatId: {},
-  },
-
   requestedTranslations: {
     byChatId: {},
   },

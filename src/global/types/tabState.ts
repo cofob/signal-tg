@@ -4,10 +4,7 @@ import type {
   ApiAttachBot,
   ApiAudio,
   ApiBirthday,
-  ApiBoost,
   ApiBoostsStatus,
-  ApiChannelMonetizationStatistics,
-  ApiChannelStatistics,
   ApiChatInviteInfo,
   ApiChatlistInvite,
   ApiChatType,
@@ -18,7 +15,6 @@ import type {
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
-  ApiGroupStatistics,
   ApiInputAiComposeTone,
   ApiInputInvoice,
   ApiInputRichMessage,
@@ -34,7 +30,6 @@ import type {
   ApiPaymentFormStars,
   ApiPaymentStatus,
   ApiPhoneCall,
-  ApiPostStatistics,
   ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
   ApiPremiumSection,
@@ -212,7 +207,6 @@ export type TabState = {
   richMediaUploadBlockingCount?: number;
   inviteHash?: string;
   canInstall?: boolean;
-  isStatisticsShown?: boolean;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;
@@ -619,15 +613,6 @@ export type TabState = {
 
   activeDownloads: ActiveDownloads;
 
-  statistics: {
-    byChatId: Record<string, ApiChannelStatistics | ApiGroupStatistics>;
-    currentMessage?: ApiPostStatistics;
-    currentMessageId?: number;
-    currentStory?: ApiPostStatistics;
-    currentStoryId?: number;
-    monetization?: ApiChannelMonetizationStatistics;
-  };
-
   newContact?: {
     userId?: string;
     isByPhoneNumber?: boolean;
@@ -958,25 +943,6 @@ export type TabState = {
     myBoosts?: ApiMyBoost[];
   };
 
-  boostStatistics?: {
-    chatId: string;
-    boostStatus?: ApiBoostsStatus;
-    isLoadingBoosters?: boolean;
-    nextOffset?: string;
-    boosts?: {
-      count: number;
-      list: ApiBoost[];
-    };
-    giftedBoosts?: {
-      count: number;
-      list: ApiBoost[];
-    };
-  };
-
-  monetizationStatistics?: {
-    chatId: string;
-  };
-
   giftCodeModal?: {
     slug: string;
     message?: {
@@ -1214,12 +1180,6 @@ export type TabState = {
   profileRatingModal?: {
     userId: string;
     level: number;
-  };
-
-  monetizationVerificationModal?: {
-    chatId: string;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
   };
 
   quickPreview?: {

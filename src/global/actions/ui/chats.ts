@@ -85,9 +85,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
     global = exitMessageSelectMode(global, tabId);
 
     global = updateTabState(global, {
-      isStatisticsShown: false,
-      monetizationStatistics: undefined,
-      boostStatistics: undefined,
       contentToBeScheduled: undefined,
       ...(chatId !== selectTabState(global, tabId).forwardMessages.toChatId && {
         forwardMessages: {},

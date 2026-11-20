@@ -754,113 +754,6 @@ addActionHandler('openBoostModal', async (global, actions, payload): Promise<voi
   setGlobal(global);
 });
 
-addActionHandler('openBoostStatistics', async (global, actions, payload): Promise<void> => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
-
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  global = updateTabState(global, {
-    boostStatistics: {
-      chatId,
-    },
-  }, tabId);
-  setGlobal(global);
-
-  const [boostListResult, boostListGiftResult,
-    boostStatusResult] = await Promise.all([
-    callApi('fetchBoostList', { chat }),
-    callApi('fetchBoostList', { chat, isGifts: true }),
-    callApi('fetchBoostStatus', { chat }),
-  ]);
-
-  global = getGlobal();
-  if (!boostListResult || !boostListGiftResult || !boostStatusResult) {
-    global = updateTabState(global, {
-      boostStatistics: undefined,
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  global = updateTabState(global, {
-    boostStatistics: {
-      chatId,
-      boostStatus: boostStatusResult,
-      nextOffset: boostListResult.nextOffset,
-      boosts: {
-        count: boostListResult.count,
-        list: boostListResult.boostList,
-      },
-      giftedBoosts: {
-        count: boostListGiftResult?.count,
-        list: boostListGiftResult?.boostList,
-      },
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('openMonetizationStatistics', (global, actions, payload): ActionReturnType => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
-
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  global = updateTabState(global, {
-    monetizationStatistics: {
-      chatId,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('loadMoreBoosters', async (global, actions, payload): Promise<void> => {
-  const { isGifts, tabId = getCurrentTabId() } = payload || {};
-  let tabState = selectTabState(global, tabId);
-  if (!tabState.boostStatistics) return;
-
-  const chat = selectChat(global, tabState.boostStatistics.chatId);
-  if (!chat) return;
-
-  global = updateTabState(global, {
-    boostStatistics: {
-      ...tabState.boostStatistics,
-      isLoadingBoosters: true,
-    },
-  }, tabId);
-  setGlobal(global);
-
-  const result = await callApi('fetchBoostList', {
-    chat,
-    offset: tabState.boostStatistics.nextOffset,
-    isGifts,
-  });
-  if (!result) return;
-
-  global = getGlobal();
-
-  tabState = selectTabState(global, tabId);
-  if (!tabState.boostStatistics) return;
-
-  const updatedBoostList = (isGifts
-    ? tabState.boostStatistics.giftedBoosts?.list || []
-    : tabState.boostStatistics.boosts?.list || []).concat(result.boostList);
-
-  global = updateTabState(global, {
-    boostStatistics: {
-      ...tabState.boostStatistics,
-      nextOffset: result.nextOffset,
-      isLoadingBoosters: false,
-      [isGifts ? 'giftedBoosts' : 'boosts']: {
-        count: result.count,
-        list: updatedBoostList,
-      },
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
 addActionHandler('applyBoost', async (global, actions, payload): Promise<void> => {
   const { chatId, slots, tabId = getCurrentTabId() } = payload;
 
@@ -1011,7 +904,7 @@ addActionHandler('applyGiftCode', async (global, actions, payload): Promise<void
 
 addActionHandler('launchPrepaidGiveaway', async (global, actions, payload): Promise<void> => {
   const {
-    chatId, giveawayId, paymentPurpose, tabId = getCurrentTabId(),
+    chatId, giveawayId, paymentPurpose,
   } = payload;
 
   const chat = selectChat(global, chatId);
@@ -1019,7 +912,7 @@ addActionHandler('launchPrepaidGiveaway', async (global, actions, payload): Prom
 
   const additionalChannels = paymentPurpose?.additionalChannelIds?.map((id) => selectChat(global, id)).filter(Boolean);
 
-  const result = await callApi('launchPrepaidGiveaway', {
+  await callApi('launchPrepaidGiveaway', {
     chat,
     giveawayId,
     paymentPurpose: {
@@ -1034,17 +927,11 @@ addActionHandler('launchPrepaidGiveaway', async (global, actions, payload): Prom
       amount: paymentPurpose.amount,
     },
   });
-
-  if (!result) {
-    return;
-  }
-
-  actions.openBoostStatistics({ chatId, tabId });
 });
 
 addActionHandler('launchPrepaidStarsGiveaway', async (global, actions, payload): Promise<void> => {
   const {
-    chatId, giveawayId, paymentPurpose, tabId = getCurrentTabId(),
+    chatId, giveawayId, paymentPurpose,
   } = payload;
 
   const chat = selectChat(global, chatId);
@@ -1052,7 +939,7 @@ addActionHandler('launchPrepaidStarsGiveaway', async (global, actions, payload):
 
   const additionalChannels = paymentPurpose?.additionalChannelIds?.map((id) => selectChat(global, id)).filter(Boolean);
 
-  const result = await callApi('launchPrepaidGiveaway', {
+  await callApi('launchPrepaidGiveaway', {
     chat,
     giveawayId,
     paymentPurpose: {
@@ -1069,12 +956,6 @@ addActionHandler('launchPrepaidStarsGiveaway', async (global, actions, payload):
       users: paymentPurpose.users,
     },
   });
-
-  if (!result) {
-    return;
-  }
-
-  actions.openBoostStatistics({ chatId, tabId });
 });
 
 addActionHandler('upgradeGift', async (global, actions, payload): Promise<void> => {

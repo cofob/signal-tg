@@ -11,7 +11,6 @@ import type {
 import type {
   ApiInputSavedStarGift, ApiRequestInputSavedStarGift, ApiStarsGiveawayWinnerOption,
 } from './stars';
-import type { StatisticsOverviewPercentage } from './statistics';
 import type { ApiUser } from './users';
 
 export interface ApiShippingAddress {
@@ -229,7 +228,6 @@ export type ApiBoostsStatus = {
   hasMyBoost?: boolean;
   boostUrl: string;
   giftBoosts?: number;
-  premiumSubscribers?: StatisticsOverviewPercentage;
   prepaidGiveaways?: ApiTypePrepaidGiveaway[];
 };
 
@@ -239,15 +237,6 @@ export type ApiMyBoost = {
   date: number;
   expires: number;
   cooldownUntil?: number;
-};
-
-export type ApiBoost = {
-  userId?: string;
-  multiplier?: number;
-  expires: number;
-  isFromGiveaway?: boolean;
-  isGift?: boolean;
-  stars?: number;
 };
 
 export type ApiGiveawayInfoActive = {

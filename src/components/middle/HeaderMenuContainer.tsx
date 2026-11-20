@@ -90,9 +90,6 @@ export type OwnProps = {
   canSearch?: boolean;
   canCall?: boolean;
   canMute?: boolean;
-  canViewStatistics?: boolean;
-  canViewBoosts?: boolean;
-  canViewMonetization?: boolean;
   canShowBoostModal?: boolean;
   withForumActions?: boolean;
   canLeave?: boolean;
@@ -162,9 +159,6 @@ const HeaderMenuContainer = ({
   canSearch,
   canCall,
   canMute,
-  canViewStatistics,
-  canViewMonetization,
-  canViewBoosts,
   pendingJoinRequests,
   canLeave,
   canEnterVoiceChat,
@@ -211,9 +205,6 @@ const HeaderMenuContainer = ({
     openAddContactDialog,
     openFrozenAccountModal,
     requestMasterAndRequestCall,
-    toggleStatistics,
-    openMonetizationStatistics,
-    openBoostStatistics,
     openGiftModal,
     openThreadWithInfo,
     openCreateTopicPanel,
@@ -429,24 +420,9 @@ const HeaderMenuContainer = ({
     closeMenu();
   });
 
-  const handleStatisticsClick = useLastCallback(() => {
-    toggleStatistics();
-    setShouldCloseFast(!isRightColumnShown);
-    closeMenu();
-  });
-
-  const handleMonetizationClick = useLastCallback(() => {
-    openMonetizationStatistics({ chatId });
-    setShouldCloseFast(!isRightColumnShown);
-    closeMenu();
-  });
-
   const handleBoostClick = useLastCallback(() => {
     if (isAccountFrozen) {
       openFrozenAccountModal();
-    } else if (canViewBoosts) {
-      openBoostStatistics({ chatId });
-      setShouldCloseFast(!isRightColumnShown);
     } else {
       openBoostModal({ chatId });
     }
@@ -720,7 +696,7 @@ const HeaderMenuContainer = ({
               {lang('ForumViewAsMessages')}
             </MenuItem>
           )}
-          {canShowBoostModal && !canViewBoosts && (
+          {canShowBoostModal && (
             <MenuItem
               icon="boost-outline"
               onClick={handleBoostClick}
@@ -822,30 +798,6 @@ const HeaderMenuContainer = ({
               onClick={handleSelectMessages}
             >
               {lang('ReportSelectMessages')}
-            </MenuItem>
-          )}
-          {canViewBoosts && (
-            <MenuItem
-              icon="boost-outline"
-              onClick={handleBoostClick}
-            >
-              {lang('Boosts')}
-            </MenuItem>
-          )}
-          {canViewStatistics && (
-            <MenuItem
-              icon="stats"
-              onClick={handleStatisticsClick}
-            >
-              {lang('Statistics')}
-            </MenuItem>
-          )}
-          {isChannel && canViewMonetization && (
-            <MenuItem
-              icon="cash-circle"
-              onClick={handleMonetizationClick}
-            >
-              {lang('ChannelEarnTitle')}
             </MenuItem>
           )}
           {canTranslate && (

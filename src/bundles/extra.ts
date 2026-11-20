@@ -30,8 +30,6 @@ export { default as PasskeyModal } from '../components/modals/passkey/PasskeyMod
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 
 export { default as AboutAdsModal } from '../components/modals/aboutAds/AboutAdsModal';
-export { default as AboutMonetizationModal } from '../components/common/AboutMonetizationModal';
-export { default as VerificationMonetizationModal } from '../components/common/VerificationMonetizationModal';
 export { default as EmojiStatusAccessModal } from '../components/modals/emojiStatusAccess/EmojiStatusAccessModal';
 export { default as LocationAccessModal } from '../components/modals/locationAccess/LocationAccessModal';
 export { default as MediaAccessModal } from '../components/modals/mediaAccess/MediaAccessModal';
@@ -100,9 +98,6 @@ export { default as EmojiTooltip } from '../components/common/tooltips/EmojiTool
 export { default as InlineBotTooltip } from '../components/common/tooltips/InlineBotTooltip';
 export { default as SendAsMenu } from '../components/middle/composer/SendAsMenu';
 
-export { default as Statistics } from '../components/right/statistics/Statistics';
-export { default as MessageStatistics } from '../components/right/statistics/MessageStatistics';
-export { default as StoryStatistics } from '../components/right/statistics/StoryStatistics';
 export { default as PollResults } from '../components/right/PollResults';
 export { default as CreateTopic } from '../components/right/CreateTopic';
 export { default as EditTopic } from '../components/right/EditTopic';

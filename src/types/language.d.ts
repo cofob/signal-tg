@@ -128,32 +128,7 @@ export interface LangPair {
   'UserRestrictionsPinMessages': undefined;
   'UserRestrictionsEditRank': undefined;
   'ChatPermissionNotAvailable': undefined;
-  'StatsMessageInteractionsTitle': undefined;
-  'StatsGroupGrowthTitle': undefined;
-  'StatsGroupMembersTitle': undefined;
-  'StatsGroupLanguagesTitle': undefined;
-  'StatsGroupMessagesTitle': undefined;
-  'StatsGroupActionsTitle': undefined;
-  'StatsGroupTopHoursTitle': undefined;
-  'ChannelStatsGraphGrowth': undefined;
-  'ChannelStatsGraphFollowers': undefined;
-  'ChannelStatsGraphNotifications': undefined;
-  'ChannelStatsGraphViewsByHours': undefined;
-  'ChannelStatsGraphViewsBySource': undefined;
-  'ChannelStatsGraphNewFollowersBySource': undefined;
-  'ChannelStatsGraphLanguage': undefined;
-  'ChannelStatsGraphInteractions': undefined;
-  'StatsMessageViews': undefined;
-  'StatsMessagePrivateShares': undefined;
   'StatsMessagePublicShares': undefined;
-  'StatsGroupMembers': undefined;
-  'StatsGroupMessages': undefined;
-  'StatsGroupViewers': undefined;
-  'StatsGroupPosters': undefined;
-  'ChannelStatsOverviewFollowers': undefined;
-  'ChannelStatsOverviewEnabledNotifications': undefined;
-  'ChannelStatsOverviewViewsPerPost': undefined;
-  'ChannelStatsOverviewSharesPerPost': undefined;
   'WrongNumber': undefined;
   'SentAppCode': undefined;
   'LoginJustSentSms': undefined;
@@ -805,7 +780,6 @@ export interface LangPair {
   'ViewDiscussion': undefined;
   'ProfileViewChannel': undefined;
   'ReportSelectMessages': undefined;
-  'Statistics': undefined;
   'EventLogFilterPinnedMessages': undefined;
   'UnpinMessageAlertTitle': undefined;
   'PinnedMessageTitleSingle': undefined;
@@ -1127,15 +1101,9 @@ export interface LangPair {
   'TrendingPremiumStickers': undefined;
   'AccDescrCloseTrendingStickers': undefined;
   'SearchGifsTitle': undefined;
-  'ChannelStatsTitle': undefined;
-  'GroupStatsTitle': undefined;
-  'StatsMessageTitle': undefined;
   'SharedMedia': undefined;
   'CommonBack': undefined;
   'CommonClose': undefined;
-  'GraphZoomOut': undefined;
-  'ChannelStatsRecentHeader': undefined;
-  'StatisticOverview': undefined;
   'Stickers': undefined;
   'ReportPeerAlertSuccess': undefined;
   'WebAppAddToAttachmentUnavailableError': undefined;
@@ -1487,7 +1455,6 @@ export interface LangPair {
   'JoinRequestAcceptAllDescription': undefined;
   'JoinRequestRejectAllTitle': undefined;
   'JoinRequestRejectAllDescription': undefined;
-  'StatsNoShares': undefined;
   'PleaseWait': undefined;
   'GeneralConfirm': undefined;
   'NewChatReturnBackAria': undefined;
@@ -1772,7 +1739,6 @@ export interface LangPair {
   'GiftSearchEmpty': undefined;
   'GiftSearchReset': undefined;
   'SetUp2FA': undefined;
-  'CheckPasswordTitle': undefined;
   'CheckPasswordPlaceholder': undefined;
   'CheckPasswordDescription': undefined;
   'PasswordFormPlaceholder': undefined;
@@ -2549,9 +2515,7 @@ export interface LangPair {
   'BoostingEligibleUsers': undefined;
   'BoostingFrom': undefined;
   'BoostingFromAllCountries': undefined;
-  'BoostingGetBoostsViaGifts': undefined;
   'BoostingGetMoreBoost': undefined;
-  'BoostingGetMoreBoosts': undefined;
   'BoostingGetMoreBoostsGroup': undefined;
   'BoostingGift': undefined;
   'BoostingGiftLink': undefined;
@@ -2578,12 +2542,9 @@ export interface LangPair {
   'BoostingNewMembers': undefined;
   'BoostingNewSubscribers': undefined;
   'BoostingNoRecipient': undefined;
-  'BoostingPreparedGiveaways': undefined;
   'BoostingQuantityPrizes': undefined;
   'BoostingReason': undefined;
-  'BoostingRecipientWillBeSelected': undefined;
   'BoostingSelectCountry': undefined;
-  'BoostingSelectPaidGiveaway': undefined;
   'BoostingSendLinkToAnyone': undefined;
   'BoostingStarsOptions': undefined;
   'BoostingStarsQuantityPrizes': undefined;
@@ -2592,7 +2553,6 @@ export interface LangPair {
   'BoostingStartGiveawayConfirmText': undefined;
   'BoostingStartGiveawayConfirmTitle': undefined;
   'BoostingTo': undefined;
-  'BoostingToBeDistributed': undefined;
   'BoostingUseLink': undefined;
   'BoostingWinnersDate': undefined;
   'BoostingWinnersRandomly': undefined;
@@ -2622,7 +2582,6 @@ export interface LangPair {
   'BusinessProfileLocation': undefined;
   'CallCameraAccessNeeded': undefined;
   'Calls': undefined;
-  'ChannelStatsOverviewViews': undefined;
   'ChannelTitleInfo': undefined;
   'ChannelBoostBoostChannel': undefined;
   'ChannelBoostErrorBoostTooOftenTitle': undefined;
@@ -2631,13 +2590,6 @@ export interface LangPair {
   'ChannelReactionsMaxCountInfo': undefined;
   'ChannelSignMessagesWithProfile': undefined;
   'ChannelSignProfilesInfo': undefined;
-  'ChannelStatsGraphReactions': undefined;
-  'ChannelStatsGraphStories': undefined;
-  'ChannelStatsGraphStoriesReactions': undefined;
-  'ChannelStatsOverviewReactionsPerPost': undefined;
-  'ChannelStatsOverviewReactionsPerStory': undefined;
-  'ChannelStatsOverviewSharesPerStory': undefined;
-  'ChannelStatsOverviewViewsPerStory': undefined;
   'ChannelTopics': undefined;
   'ChatContextViewAsTopics': undefined;
   'ChatEmptyTopicPlaceholderText': undefined;
@@ -2766,9 +2718,7 @@ export interface LangPair {
   'July': undefined;
   'June': undefined;
   'KickFromSupergroup': undefined;
-  'LearnMore': undefined;
   'LearnMoreArrow': undefined;
-  'LinkForBoosting': undefined;
   'LocalizationInterfaceLanguage': undefined;
   'Map': undefined;
   'March': undefined;
@@ -2776,23 +2726,13 @@ export interface LangPair {
   'May': undefined;
   'MessageNotFound': undefined;
   'MessagePremiumUnlock': undefined;
-  'MonetizationIntroSplitText': undefined;
-  'MonetizationWithdrawErrorText': undefined;
-  'MonetizationInfoTONLink': undefined;
-  'MonetizationOverview': undefined;
-  'MonetizationProceedsTONInfoLink': undefined;
-  'MonetizationProceedsTONInfo': undefined;
-  'MonetizationWithdraw': undefined;
   'MoreSimilar': undefined;
   'MuteForForever': undefined;
   'MyNotes': undefined;
   'NewTopic': undefined;
-  'NoBoostersGroupHint': undefined;
-  'NoBoostersHint': undefined;
   'NoComments': undefined;
   'NoReactions': undefined;
   'NoReplies': undefined;
-  'NoViews': undefined;
   'NobodyViewed': undefined;
   'November': undefined;
   'October': undefined;
@@ -3007,12 +2947,6 @@ export interface LangPair {
   'StarsTransactionHidden': undefined;
   'StarsTransactionIDCopied': undefined;
   'Start': undefined;
-  'StatsBoostsBoostsToLevelUp': undefined;
-  'StatsBoostsExistingBoosts': undefined;
-  'StatsBoostsLevel': undefined;
-  'StatsBoostsPremiumSubscribers': undefined;
-  'StatsStoryInteractionsTitle': undefined;
-  'StatsStoryTitle': undefined;
   'StatusHiddenShow': undefined;
   'StickerEffects': undefined;
   'StickersBotInfo': undefined;
@@ -3047,7 +2981,6 @@ export interface LangPair {
   'StoryReactionsHint': undefined;
   'StoryRepliesLockedButton': undefined;
   'StorySave': undefined;
-  'StoryStatistics': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
   'TelegramPremiumUserGiftedPremiumDialogSubtitle': undefined;
@@ -3092,18 +3025,6 @@ export interface LangPair {
   'BotCloseWarning': undefined;
   'BotCloseWarningSure': undefined;
   'BotCloseWarningTitle': undefined;
-  'ChannelEarnAvailable': undefined;
-  'ChannelEarnBalanceTitle': undefined;
-  'ChannelEarnChartRevenue': undefined;
-  'ChannelEarnLearnInAbout': undefined;
-  'ChannelEarnLearnInSubtitle': undefined;
-  'ChannelEarnLearnOutAbout': undefined;
-  'ChannelEarnLearnOutSubtitle': undefined;
-  'ChannelEarnLearnSplitSubtitle': undefined;
-  'ChannelEarnLearnTitle': undefined;
-  'ChannelEarnReward': undefined;
-  'ChannelEarnTitle': undefined;
-  'ChannelEarnTotal': undefined;
   'ContextArchiveToList': undefined;
   'ContextQuoteAndReply': undefined;
   'CreditsSummaryOptionsAboutLink': undefined;
@@ -3849,15 +3770,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ProfileBirthdayTodayValue': {
     'date': V;
-  };
-  'ChannelEarnLearnCoinAbout': {
-    'link': V;
-  };
-  'MonetizationBalanceZeroInfo': {
-    'link': V;
-  };
-  'ChannelEarnAbout': {
-    'link': V;
   };
   'StarsTransactionTOS': {
     'link': V;
@@ -5146,9 +5058,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'AddedToDoNotTranslate': {
     'language': V;
   };
-  'BoostExpireOn': {
-    'date': V;
-  };
   'BoostGiftStarsPerUser': {
     'count': V;
   };
@@ -6026,13 +5935,7 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'AmongWinners': {
     'count': V;
   };
-  'BoostingBoostsCount': {
-    'count': V;
-  };
   'BoostingChannelWillReceiveBoost': {
-    'count': V;
-  };
-  'BoostingGiftsCount': {
     'count': V;
   };
   'BoostingGiveawayAdditionPrizeCountHint': {
@@ -6193,9 +6096,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'SetTimeoutForHours': {
-    'count': V;
-  };
-  'ShowVotes': {
     'count': V;
   };
   'StarsTransferPhotos': {
@@ -6755,7 +6655,6 @@ export interface LangKeyGroups {
       | 'NotificationGiftCanResellAt'
       | 'NotificationGiftCanTransferAt'
       | 'SettingsPasskeyUsedAt'
-      | 'BoostExpireOn'
       | 'BoostingGiveawayNotEligible'
       | 'BoostingUsedLinkDate'
       | 'ChatPrivateMessageEditTimestampDate'
@@ -6885,9 +6784,6 @@ export interface LangKeyGroups {
   };
   'link': {
     keys:
-      | 'ChannelEarnLearnCoinAbout'
-      | 'MonetizationBalanceZeroInfo'
-      | 'ChannelEarnAbout'
       | 'StarsTransactionTOS'
       | 'GiftInfoSaved'
       | 'GiftInfoHidden'
@@ -7858,9 +7754,7 @@ export interface LangPluralKeyGroups {
       | 'PollModalAddMoreText'
       | 'RichMediaSkippedFiles'
       | 'AmongWinners'
-      | 'BoostingBoostsCount'
       | 'BoostingChannelWillReceiveBoost'
-      | 'BoostingGiftsCount'
       | 'BoostingGiveawayHowItWorksSubTextSeveral2'
       | 'BoostingGiveawayResultsMsgWinnersTitle'
       | 'BoostingGiveawayUsedLinksPlural'
@@ -7895,7 +7789,6 @@ export interface LangPluralKeyGroups {
       | 'PrepaidGiveawayMonths'
       | 'SetTimeoutForDays'
       | 'SetTimeoutForHours'
-      | 'ShowVotes'
       | 'StarsTransferPhotos'
       | 'StarsTransferVideos'
       | 'StarsAcquiredInfo'

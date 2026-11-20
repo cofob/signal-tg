@@ -15,7 +15,6 @@ import { selectPeerFullInfo } from './chats';
 import { selectCurrentManagement } from './management';
 import { selectWebPageFromMessage } from './messages';
 import { selectSharedSettings } from './sharedState';
-import { selectIsStatisticsShown } from './statistics';
 import { selectTabState } from './tabs';
 
 const getActionMessageBgMemo = memoized(getActionMessageBg);
@@ -54,16 +53,6 @@ export function selectRightColumnContentKey<T extends GlobalState>(
     RightColumnContent.PollResults
   ) : selectCurrentManagement(global, tabId) ? (
     RightColumnContent.Management
-  ) : tabState.isStatisticsShown && tabState.statistics.currentMessageId ? (
-    RightColumnContent.MessageStatistics
-  ) : tabState.isStatisticsShown && tabState.statistics.currentStoryId ? (
-    RightColumnContent.StoryStatistics
-  ) : selectIsStatisticsShown(global, tabId) ? (
-    RightColumnContent.Statistics
-  ) : tabState.boostStatistics ? (
-    RightColumnContent.BoostStatistics
-  ) : tabState.monetizationStatistics ? (
-    RightColumnContent.MonetizationStatistics
   ) : tabState.newChatMembersProgress !== NewChatMembersProgress.Closed ? (
     RightColumnContent.AddingMembers
   ) : tabState.chatInfo.isOpen && tabState.messageLists.length ? (

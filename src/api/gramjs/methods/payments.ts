@@ -11,7 +11,6 @@ import type {
 
 import { DEBUG } from '../../../config';
 import {
-  buildApiBoost,
   buildApiBoostsStatus,
   buildApiCheckedGiftCode,
   buildApiGiveawayInfo,
@@ -29,7 +28,6 @@ import {
   buildInputStorePaymentPurpose,
   buildInputThemeParams,
   buildShippingInfo,
-  DEFAULT_PRIMITIVES,
 } from '../gramjsBuilders';
 import {
   deserializeBytes,
@@ -294,37 +292,6 @@ export async function fetchBoostStatus({
   }
 
   return buildApiBoostsStatus(result);
-}
-
-export async function fetchBoostList({
-  chat,
-  isGifts,
-  offset = DEFAULT_PRIMITIVES.STRING,
-  limit = DEFAULT_PRIMITIVES.INT,
-}: {
-  chat: ApiChat;
-  isGifts?: boolean;
-  offset?: string;
-  limit?: number;
-}) {
-  const result = await invokeRequest(new GramJs.premium.GetBoostsList({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    gifts: isGifts || undefined,
-    offset,
-    limit,
-  }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  const boostList = result.boosts.map(buildApiBoost);
-
-  return {
-    count: result.count,
-    boostList,
-    nextOffset: result.nextOffset,
-  };
 }
 
 export async function fetchGiveawayInfo({

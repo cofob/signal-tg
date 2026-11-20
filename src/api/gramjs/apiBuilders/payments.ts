@@ -1,7 +1,6 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiBoost,
   ApiBoostsStatus,
   ApiCheckedGiftCode,
   ApiGiveawayInfo,
@@ -38,7 +37,6 @@ import { buildApiStarGift } from './gifts';
 import { omitVirtualClassFields } from './helpers';
 import { buildApiDocument, buildApiWebDocument, buildMessageMediaContent } from './messageContent';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
-import { buildStatisticsPercentage } from './statistics';
 
 export function buildShippingOptions(shippingOptions: GramJs.ShippingOption[] | undefined) {
   if (!shippingOptions) {
@@ -330,7 +328,7 @@ export function buildApiBoostsStatus(boostStatus: GramJs.premium.BoostsStatus): 
   const {
     level, boostUrl, boosts,
     giftBoosts, myBoost, currentLevelBoosts, nextLevelBoosts,
-    premiumAudience, prepaidGiveaways,
+    prepaidGiveaways,
   } = boostStatus;
 
   return {
@@ -341,28 +339,7 @@ export function buildApiBoostsStatus(boostStatus: GramJs.premium.BoostsStatus): 
     boostUrl,
     giftBoosts,
     nextLevelBoosts,
-    premiumSubscribers: premiumAudience && buildStatisticsPercentage(premiumAudience),
     prepaidGiveaways: prepaidGiveaways?.map((m) => buildPrepaidGiveaway(m)),
-  };
-}
-
-export function buildApiBoost(boost: GramJs.Boost): ApiBoost {
-  const {
-    userId,
-    multiplier,
-    expires,
-    giveaway,
-    gift,
-    stars,
-  } = boost;
-
-  return {
-    userId: userId !== undefined ? buildApiPeerId(userId, 'user') : undefined,
-    multiplier,
-    expires,
-    isFromGiveaway: giveaway,
-    isGift: gift,
-    stars: toJSNumber(stars),
   };
 }
 

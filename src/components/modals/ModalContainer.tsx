@@ -9,7 +9,6 @@ import { pick } from '../../util/iteratees';
 import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useShowTransition from '../../hooks/useShowTransition';
 
-import VerificationMonetizationModal from '../common/VerificationMonetizationModal.async';
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
@@ -147,7 +146,6 @@ type ModalKey = keyof Pick<TabState,
   'activeGiftAuctionsModal' |
   'starGiftPriceDecreaseInfoModal' |
   'aboutStarGiftModal' |
-  'monetizationVerificationModal' |
   'giftWithdrawModal' |
   'preparedMessageModal' |
   'sharePreparedMessageModal' |
@@ -288,7 +286,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   activeGiftAuctionsModal: ActiveGiftAuctionsModal,
   starGiftPriceDecreaseInfoModal: StarGiftPriceDecreaseInfoModal,
   aboutStarGiftModal: AboutStarGiftModal,
-  monetizationVerificationModal: VerificationMonetizationModal,
   giftWithdrawModal: GiftWithdrawModal,
   giftStatusInfoModal: GiftStatusInfoModal,
   preparedMessageModal: PreparedMessageModal,

@@ -17,7 +17,6 @@ import {
   selectCanUseGiftProfileAdminFilter,
   selectCanUseGiftProfileFilter,
   selectChat,
-  selectChatFullInfo,
   selectIsChatWithSelf,
   selectTabState,
   selectTopic,
@@ -50,11 +49,6 @@ type OwnProps = {
   isColumnOpen?: boolean;
   isProfile?: boolean;
   isManagement?: boolean;
-  isStatistics?: boolean;
-  isBoostStatistics?: boolean;
-  isMessageStatistics?: boolean;
-  isMonetizationStatistics?: boolean;
-  isStoryStatistics?: boolean;
   isPollResults?: boolean;
   isCreatingTopic?: boolean;
   isEditingTopic?: boolean;
@@ -69,7 +63,6 @@ type OwnProps = {
 type StateProps = {
   canAddContact?: boolean;
   canManage?: boolean;
-  canViewStatistics?: boolean;
   isChannel?: boolean;
   userId?: string;
   isSelf?: boolean;
@@ -96,11 +89,6 @@ enum HeaderContent {
   SharedMedia,
   StoryList,
   Search,
-  Statistics,
-  MessageStatistics,
-  StoryStatistics,
-  BoostStatistics,
-  MonetizationStatistics,
   Management,
   ManageInitial,
   ManageChannelSubscribers,
@@ -136,11 +124,6 @@ const RightHeader = ({
   isColumnOpen,
   isProfile,
   isManagement,
-  isStatistics,
-  isMessageStatistics,
-  isStoryStatistics,
-  isMonetizationStatistics,
-  isBoostStatistics,
   isPollResults,
   isCreatingTopic,
   isEditingTopic,
@@ -154,7 +137,6 @@ const RightHeader = ({
   canManage,
   isChannel,
   isEditingInvite,
-  canViewStatistics,
   currentInviteInfo,
   shouldSkipHistoryAnimations,
   isBot,
@@ -172,7 +154,6 @@ const RightHeader = ({
   const {
     toggleManagement,
     openAddContactDialog,
-    toggleStatistics,
     setEditingExportedInvite,
     deleteExportedChatInvite,
     openEditTopicPanel,
@@ -218,10 +199,6 @@ const RightHeader = ({
 
   const handleToggleManagement = useLastCallback(() => {
     toggleManagement();
-  });
-
-  const handleToggleStatistics = useLastCallback(() => {
-    toggleStatistics();
   });
 
   const handleEditProfile = useLastCallback(() => {
@@ -305,20 +282,10 @@ const RightHeader = ({
     ) : managementScreen === ManagementScreens.NewDiscussionGroup ? (
       HeaderContent.NewDiscussionGroup
     ) : undefined // Never reached
-  ) : isStatistics ? (
-    HeaderContent.Statistics
-  ) : isMessageStatistics ? (
-    HeaderContent.MessageStatistics
-  ) : isStoryStatistics ? (
-    HeaderContent.StoryStatistics
-  ) : isBoostStatistics ? (
-    HeaderContent.BoostStatistics
   ) : isCreatingTopic ? (
     HeaderContent.CreateTopic
   ) : isEditingTopic ? (
     HeaderContent.EditTopic
-  ) : isMonetizationStatistics ? (
-    HeaderContent.MonetizationStatistics
   ) : undefined; // When column is closed
 
   const renderingContentKey = useCurrentOrPrev(contentKey, true) ?? -1;
@@ -463,16 +430,6 @@ const RightHeader = ({
         return <h3 className="title">{isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}</h3>;
       case HeaderContent.ManageGroupAddAdmins:
         return <h3 className="title">{lang('ChannelManagementAddModerator')}</h3>;
-      case HeaderContent.Statistics:
-        return <h3 className="title">{lang(isChannel ? 'ChannelStatsTitle' : 'GroupStatsTitle')}</h3>;
-      case HeaderContent.MessageStatistics:
-        return <h3 className="title">{lang('StatsMessageTitle')}</h3>;
-      case HeaderContent.StoryStatistics:
-        return <h3 className="title">{lang('StatsStoryTitle')}</h3>;
-      case HeaderContent.BoostStatistics:
-        return <h3 className="title">{lang('Boosts')}</h3>;
-      case HeaderContent.MonetizationStatistics:
-        return <h3 className="title">{lang('ChannelEarnTitle')}</h3>;
       case HeaderContent.SharedMedia:
         return <h3 className="title">{lang('SharedMedia')}</h3>;
       case HeaderContent.ManageChannelSubscribers:
@@ -615,16 +572,6 @@ const RightHeader = ({
                 />
               )}
               {primaryEditButton}
-              {canViewStatistics && (
-                <Button
-                  round
-                  color="translucent"
-                  size="smaller"
-                  ariaLabel={lang('Statistics')}
-                  onClick={handleToggleStatistics}
-                  iconName="stats"
-                />
-              )}
               {isOwnProfile && (
                 <Button
                   round
@@ -648,8 +595,6 @@ const RightHeader = ({
       || contentKey === HeaderContent.MemberList
       || contentKey === HeaderContent.StoryList
       || contentKey === HeaderContent.AddingMembers
-      || contentKey === HeaderContent.MessageStatistics
-      || contentKey === HeaderContent.StoryStatistics
       || isManagement
     )
   );
@@ -705,9 +650,6 @@ export default withGlobal<OwnProps>(
     const canManage = Boolean(!isManagement && isProfile && chatId && selectCanManage(global, chatId));
 
     const isEditingInvite = Boolean(chatId && tabState.management.byChatId[chatId]?.editingInvite);
-    const canViewStatistics = !isInsideTopic && chatId
-      ? selectChatFullInfo(global, chatId)?.canViewStatistics
-      : undefined;
     const currentInviteInfo = chatId
       ? tabState.management.byChatId[chatId]?.inviteInfo?.invite : undefined;
 
@@ -718,7 +660,6 @@ export default withGlobal<OwnProps>(
     return {
       canManage,
       canAddContact,
-      canViewStatistics,
       isChannel,
       isBot,
       isInsideTopic,

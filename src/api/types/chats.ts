@@ -172,11 +172,8 @@ export interface ApiChatFullInfo {
   enabledReactions?: ApiChatReactions;
   reactionsLimit?: number;
   sendAsId?: string;
-  canViewStatistics?: boolean;
-  canViewMonetization?: boolean;
   recentRequesterIds?: string[];
   requestsPending?: number;
-  statisticsDcId?: number;
   stickerSet?: ApiStickerSet;
   emojiSet?: ApiStickerSet;
   profilePhoto?: ApiPhoto;

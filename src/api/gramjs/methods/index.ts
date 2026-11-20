@@ -39,8 +39,6 @@ export * from './calls';
 
 export * from './reactions';
 
-export * from './statistics';
-
 export * from './phoneCallState';
 
 export * from './stories';

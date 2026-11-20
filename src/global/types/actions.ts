@@ -235,11 +235,6 @@ export interface ActionPayloads {
   updatePerformanceSettings: Partial<PerformanceType>;
   loadPasswordInfo: undefined;
   clearTwoFaError: undefined;
-  openMonetizationVerificationModal: {
-    chatId: string;
-  } & WithTabId;
-  clearMonetizationVerificationError: WithTabId | undefined;
-  closeMonetizationVerificationModal: WithTabId | undefined;
   updatePassword: {
     currentPassword: string;
     password: string;
@@ -966,49 +961,6 @@ export interface ActionPayloads {
   } & WithTabId;
   clearPaymentError: WithTabId | undefined;
   clearReceipt: WithTabId | undefined;
-
-  // stats
-  toggleStatistics: WithTabId | undefined;
-  toggleMessageStatistics: ({
-    messageId?: number;
-  } & WithTabId) | undefined;
-  toggleStoryStatistics: ({
-    storyId?: number;
-  } & WithTabId) | undefined;
-  loadStatistics: {
-    chatId: string;
-    isGroup: boolean;
-  } & WithTabId;
-  loadMessageStatistics: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  loadMessagePublicForwards: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  loadStoryStatistics: {
-    chatId: string;
-    storyId: number;
-  } & WithTabId;
-  loadStoryPublicForwards: {
-    chatId: string;
-    storyId: number;
-  } & WithTabId;
-  loadStatisticsAsyncGraph: {
-    chatId: string;
-    token: string;
-    name: string;
-    isPercentage?: boolean;
-  } & WithTabId;
-  loadChannelMonetizationStatistics: {
-    peerId: string;
-  } & WithTabId;
-
-  processMonetizationRevenueWithdrawalUrl: {
-    peerId: string;
-    currentPassword: string;
-  } & WithTabId;
 
   // ui
   dismissDialog: WithTabId | undefined;
@@ -1968,20 +1920,10 @@ export interface ActionPayloads {
     chatId: string;
   } & WithTabId;
   closeBoostModal: WithTabId | undefined;
-  openBoostStatistics: {
-    chatId: string;
-  } & WithTabId;
-  closeBoostStatistics: WithTabId | undefined;
-  loadMoreBoosters: { isGifts?: boolean } & WithTabId | undefined;
   applyBoost: {
     slots: number[];
     chatId: string;
   } & WithTabId;
-
-  openMonetizationStatistics: {
-    chatId: string;
-  } & WithTabId;
-  closeMonetizationStatistics: WithTabId | undefined;
 
   // Media Viewer & Audio Player
   openMediaViewer: {

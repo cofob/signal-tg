@@ -68,9 +68,6 @@ interface StateProps {
   canSearch?: boolean;
   canCall?: boolean;
   canMute?: boolean;
-  canViewStatistics?: boolean;
-  canViewMonetization?: boolean;
-  canViewBoosts?: boolean;
   canShowBoostModal?: boolean;
   canLeave?: boolean;
   canEnterVoiceChat?: boolean;
@@ -98,9 +95,6 @@ const HeaderActions = ({
   canSearch,
   canCall,
   canMute,
-  canViewStatistics,
-  canViewMonetization,
-  canViewBoosts,
   canShowBoostModal,
   canLeave,
   canEnterVoiceChat,
@@ -399,9 +393,6 @@ const HeaderActions = ({
           canSearch={canSearch}
           canCall={canCall}
           canMute={canMute}
-          canViewStatistics={canViewStatistics}
-          canViewBoosts={canViewBoosts}
-          canViewMonetization={canViewMonetization}
           canShowBoostModal={canShowBoostModal}
           canLeave={canLeave}
           canEnterVoiceChat={canEnterVoiceChat}
@@ -465,11 +456,7 @@ export default memo(withGlobal<OwnProps>(
     const canEnterVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && chat.isCallActive;
     const canCreateVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && !chat.isCallActive
       && getHasAdminRight(chat, 'manageCall') && !chat.isMonoforum;
-    const canViewStatistics = isMainThread && chatFullInfo?.canViewStatistics;
-    const canViewMonetization = isMainThread && chatFullInfo?.canViewMonetization;
-    const canViewBoosts = isMainThread && !chat.isMonoforum
-      && (isSuperGroup || isChannel) && (canViewStatistics || getHasAdminRight(chat, 'postStories'));
-    const canShowBoostModal = !canViewBoosts && (isSuperGroup || isChannel) && !chat.isMonoforum;
+    const canShowBoostModal = (isSuperGroup || isChannel) && !chat.isMonoforum;
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
 
@@ -488,9 +475,6 @@ export default memo(withGlobal<OwnProps>(
       canSearch,
       canCall,
       canMute,
-      canViewStatistics,
-      canViewMonetization,
-      canViewBoosts,
       canShowBoostModal,
       canLeave,
       canEnterVoiceChat,
