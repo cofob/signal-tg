@@ -7,7 +7,7 @@ import {
 } from '../../../config';
 import { updateAppBadge } from '../../../util/appBadge';
 import { purgePasscodeCaches } from '../../../util/cacheApi';
-import { getCurrentTabId, reestablishMasterToSelf } from '../../../util/establishMultitabRole';
+import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { updateFolderManager } from '../../../util/folderManager';
 import { cloneDeep } from '../../../util/iteratees';
 import { clearMemoryCache } from '../../../util/mediaLoader';
@@ -65,7 +65,6 @@ import {
 import {
   clearPrivatePushNotifications, reconcilePushNotifications, refreshPushNotificationState, suspendPushForPasscode,
 } from '../../../util/pushNotifications';
-import { getPendingWebLogin } from '../../../util/routing';
 import { clearAllStoredSessions, storeSession, updateSessionUserId } from '../../../util/sessions';
 import {
   clearLockScreenWallpaperBlobs,
@@ -74,8 +73,6 @@ import {
   restoreWallpaperBlobsFromPasscode,
   syncLockScreenWallpaperBlobs,
 } from '../../../util/wallpaper/storage';
-import { interruptWebLogin } from '../../../util/webLogin';
-import { handoffWebLogin } from '../../../util/webLoginHandoff';
 import { flushWidgetStorage } from '../../../util/widgetStorage';
 import { closeApi } from '../../../api/gramjs';
 import {
@@ -324,9 +321,7 @@ addActionHandler('unlockScreen', async (global, actions, payload): Promise<void>
 
     if (await hasLegacyEncryptedSession()) {
       if (ACCOUNT_SLOT) {
-        if (!await handoffWebLogin(getAccountSlotUrl(1))) {
-          window.location.replace(getAccountSlotUrl(1));
-        }
+        window.location.replace(getAccountSlotUrl(1));
         return;
       }
       await unlockLegacySession(passcode);
@@ -956,14 +951,11 @@ async function applyUnlockedState(
   beforeTabStates.forEach(({ id: tabId }) => actions.setIsUiReady({ uiReadyState: 2, tabId }));
   if (selectTabState(global, getCurrentTabId())?.isMasterTab) {
     actions.initApi();
-  } else if (getPendingWebLogin()) {
-    reestablishMasterToSelf();
   }
   forceUpdateCache();
 }
 
 async function lockCurrentTab() {
-  interruptWebLogin();
   setPasscodeSettings({
     isScreenLocked: true,
     invalidAttemptsCount: 0,

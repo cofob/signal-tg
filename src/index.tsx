@@ -1,6 +1,4 @@
-/* eslint-disable simple-import-sort/imports -- Sanitize and claim URL login before other startup modules */
-import { getPendingWebLogin } from './util/routing';
-import { webLoginHandoffPromise } from './util/webLoginHandoff';
+import './util/routing';
 import './util/handleError';
 import './util/setupServiceWorker';
 import './global/init';
@@ -29,7 +27,6 @@ import { getDek, getDekGeneration } from './util/passcode';
 import { initAutolock } from './util/passcode/autolock';
 import { subscribeToPasscodeChannel } from './util/passcode/channel';
 import { initPasscodeNavigation } from './util/passcode/navigation';
-import { checkAndAssignPermanentWebVersion } from './util/permanentWebVersion';
 import { onBeforeUnload } from './util/schedulers';
 import initTauriApi from './util/tauri/initTauriApi';
 import setupTauriListeners from './util/tauri/setupTauriListeners';
@@ -52,7 +49,6 @@ if (IS_TAURI) {
 const initializationPromise = init();
 
 async function init() {
-  await webLoginHandoffPromise;
   if (DEBUG) {
     // eslint-disable-next-line no-console
     console.log('>>> INIT');
@@ -61,7 +57,6 @@ async function init() {
 
   if (!(window as any).isCompatTestPassed) return;
 
-  checkAndAssignPermanentWebVersion();
   listenOtherClients();
 
   subscribeToMultitabBroadcastChannel();
@@ -92,8 +87,7 @@ async function init() {
     getActions()
       .switchMultitabRole({ isMasterTab }, { forceSyncOnIOs: true });
   });
-  const shouldReestablishMasterToSelf = Boolean(getPendingWebLogin())
-    || getGlobal().auth.state !== 'authorizationStateReady';
+  const shouldReestablishMasterToSelf = getGlobal().auth.state !== 'authorizationStateReady';
   establishMultitabRole(shouldReestablishMasterToSelf);
 
   if (DEBUG) {

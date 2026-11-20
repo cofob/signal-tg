@@ -18,7 +18,6 @@ import { hasStoredSession } from '../../../util/sessions';
 import switchTheme from '../../../util/switchTheme';
 import { getSystemTheme, setSystemThemeChangeCallback } from '../../../util/systemTheme';
 import { buildThemeColorOverrides } from '../../../util/theme';
-import { startWebsync, stopWebsync } from '../../../util/websync';
 import { callApi } from '../../../api/gramjs';
 import { clearCaching, setupCaching } from '../../cache';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
@@ -61,7 +60,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
 
   if (!isMasterTab) {
     actions.destroyConnection();
-    stopWebsync();
     destroySharedStatePort();
     clearCaching();
     actions.onSomeTabSwitchedMultitabRole();
@@ -82,7 +80,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
       actions.initApi();
     }
 
-    startWebsync();
     if (IS_MULTIACCOUNT_SUPPORTED) {
       initSharedState(global.sharedState);
     }
@@ -91,10 +88,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
 
 addActionHandler('onSomeTabSwitchedMultitabRole', (): ActionReturnType => {
   callApi('broadcastLocalDbUpdateFull');
-});
-
-addActionHandler('initShared', (): ActionReturnType => {
-  startWebsync();
 });
 
 addActionHandler('initMain', (global, actions): ActionReturnType => {
@@ -178,8 +171,6 @@ addCallback((global: GlobalState) => {
 
   // Make sure global has the latest theme. Will cause `switchTheme` on change
   global = updateSharedSettings(global, { theme });
-
-  startWebsync();
 
   setGlobal(global);
 });

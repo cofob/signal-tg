@@ -198,8 +198,6 @@ export type GlobalState = {
     };
     passkeyOption?: ApiPasskeyOption;
 
-    hasWebAuthTokenFailed?: true;
-    hasWebAuthTokenPasswordRequired?: true;
   };
   countryList: {
     phoneCodes: ApiCountryCode[];

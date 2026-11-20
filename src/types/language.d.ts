@@ -1427,10 +1427,6 @@ export interface LangPair {
   'ConversationForwardOptionsHideCaption': undefined;
   'HideCaption': undefined;
   'DragToSortAria': undefined;
-  'MenuReportBug': undefined;
-  'MenuBetaChangelog': undefined;
-  'MenuSwitchToK': undefined;
-  'PasscodeSwitchToKInfo': undefined;
   'MenuInstallApp': undefined;
   'MenuMyProfile': undefined;
   'MenuSavedMessages': undefined;
@@ -1443,8 +1439,6 @@ export interface LangPair {
   'AriaMenuDisableNightMode': undefined;
   'AriaSettingsEditProfilePhoto': undefined;
   'MenuUIFeaturesSwitch': undefined;
-  'MenuTelegramFeatures': undefined;
-  'TelegramFeaturesUsername': undefined;
   'RemoveEffect': undefined;
   'ReplyInPrivateMessage': undefined;
   'ProfileOpenAppTerms': undefined;
@@ -2124,7 +2118,6 @@ export interface LangPair {
   'RichMediaSlideshow': undefined;
   'RichMediaRetry': undefined;
   'RichMediaUploadFailed': undefined;
-  'WebLoginInvalid': undefined;
   'RichButtonInline': undefined;
   'RichButtonRow': undefined;
   'RichButtonEdit': undefined;

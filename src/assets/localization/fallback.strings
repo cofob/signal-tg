@@ -1742,10 +1742,6 @@
 "ConversationForwardOptionsHideCaption" = "Hide Captions";
 "HideCaption" = "Hide Caption";
 "DragToSortAria" = "Drag to sort";
-"MenuReportBug" = "Report a Bug";
-"MenuBetaChangelog" = "Beta Changelog";
-"MenuSwitchToK" = "Switch to K Version";
-"PasscodeSwitchToKInfo" = "To switch to the K version, disable your local passcode first.";
 "MenuInstallApp" = "Install App";
 "MenuMyProfile" = "My Profile";
 "MenuSavedMessages" = "Saved Messages";
@@ -1758,8 +1754,6 @@
 "AriaMenuDisableNightMode" = "Disable night mode";
 "AriaSettingsEditProfilePhoto" = "Edit profile photo";
 "MenuUIFeaturesSwitch" = "UI Features";
-"MenuTelegramFeatures" = "Telegram Features";
-"TelegramFeaturesUsername" = "TelegramTips";
 "RemoveEffect" = "Remove effect";
 "ReplyInPrivateMessage" = "Reply In Private Message";
 "ProfileOpenAppAbout" = "By launching this mini app, you agree to the {terms}.";
@@ -2779,7 +2773,6 @@
 "RichMediaUploadFailed" = "Upload failed";
 "RichMediaSkippedFiles_one" = "Skipped {count} file.";
 "RichMediaSkippedFiles_other" = "Skipped {count} files.";
-"WebLoginInvalid" = "This login link is invalid or has expired. Open a fresh link or log in normally.";
 "RichButtonInline" = "Inline Button";
 "RichButtonRow" = "Button Row";
 "RichButtonEdit" = "Edit Button";
