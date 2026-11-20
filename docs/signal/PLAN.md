@@ -2,142 +2,227 @@
 
 Статус: черновик для согласования, 2026-11-20.
 
-Цель: веб-клиент на кодовой базе Telegram Web A (Teact, `src/global`, компоненты), который работает как связанное устройство Signal (как Signal Desktop) и поддерживает функции Signal, доступные связанному устройству. Функции Telegram без аналога в Signal удаляются. Эталон поведения: Signal Android; Signal Desktop: эталон того, что умеет связанное устройство, и единственный TypeScript-клиент Signal.
+Цель: веб-клиент на кодовой базе Telegram Web A (Teact, `src/global`, компоненты), который работает как связанное устройство Signal (как Signal Desktop) и поддерживает функции Signal, доступные связанному устройству. Вся клиентская логика и криптография выполняются в браузере: libsignal собирается в WebAssembly. Прокси нужен только для сетевого доступа к серверам Signal. Функции Telegram без аналога в Signal удаляются.
 
-## 1. Факты, которые определяют архитектуру
+Эталоны: Signal Android задаёт поведение и лимиты; Signal Desktop показывает, что умеет связанное устройство, и служит главным источником кода для переноса, потому что написан на TypeScript.
 
-Проверено по исходникам (клоны Signal-Android, Signal-Desktop, signal-cli от 2026-11-20):
+## 1. Проверенные факты
 
-1. Браузер не может работать с протоколом Signal напрямую. libsignal даёт привязки для Java, Swift и Node (нативный аддон `@signalapp/libsignal-client@0.108.3`), сборки для браузера нет. Сетевая часть libsignal (CDSI, SVR, chat websocket) использует свой TLS и Noise. Сервер Signal не отдаёт CORS-заголовки для чужих origin. Нужен серверный компонент, который держит ключи.
-2. Протокольный слой Signal Desktop (`ts/textsecure/`) занимает 22 209 строк, плюс `ts/groups.preload.ts`, storage service и импорт бэкапов. Порт на Node займёт месяцы.
-3. signal-cli 0.14.10 (2026-11-07, GPLv3) построен на `signal-service-java` (форк `lib/libsignal-service` из Signal Android) и уже умеет: привязку как связанное устройство по QR (`startLink`/`finishLink`), отправку и приём, группы v2 (админы, права, бан, ссылки-приглашения, метки участников, `terminateGroup`), реакции, редактирование, удаление для всех, админское удаление, опросы (`sendPollCreate/Vote/Terminate`), закрепление сообщений (`sendPinMessage`/`sendUnpinMessage`), истории (`sendStory`, приём текстовых и медиа-историй), стикерпаки, квитанции, индикатор набора, профиль, юзернейм, контакты, safety numbers (`listIdentities`, `trust`), список устройств, настройки приватности (`updateConfiguration`, `updateAccount`), экспериментальные голосовые звонки. Режим демона: `POST /api/v1/rpc` (JSON-RPC), `GET /api/v1/events` (SSE, буфер 1000 событий, `Last-Event-ID`).
-4. signal-cli не хранит историю сообщений: он отдаёт события. Telegram Web A ждёт серверную историю с пагинацией. Историю хранит наш шлюз.
-5. Связанное устройство не получает сообщения, отправленные до привязки. Signal Android передаёт историю через эфемерный бэкап (`ProvisionMessage.ephemeralBackupKey`, формат `lib/archive/.../Backup.proto`), Desktop это поддерживает (`ts/services/backups`), signal-cli нет.
-6. Пробелы signal-cli, проверенные в коде:
-   - JSON-события синхронизации содержат только `sentMessage`, `sentStoryMessage`, `blockedNumbers`, `blockedGroupIds`, `readMessages`, `type` (`JsonSyncMessage.java`). Внутренняя модель (`MessageEnvelope.Sync`) уже имеет `viewed`, `viewOnceOpen`, `messageRequestResponse`, но не отдаёт их. `deleteForMe`, `callEvent`, `callLinkUpdate` нет и во внутренней модели.
-   - Нет команд для архива, закрепления, mute и «непрочитанного» у чатов (записи storage service); `pinnedConversations` только читается в `AccountRecordProcessor.java`. Нет папок чатов.
-   - Звонки: только голос, процесс `signal-call-tunnel` на каждый звонок, звук идёт через виртуальные аудиоустройства на хосте (`docs/CALL_TUNNEL.md`). Видео и групповых звонков нет.
-7. Порядок и идентификаторы в Signal Android: сообщения в чате сортируются по `DATE_RECEIVED` (`MessageTable.getConversation`), получатели и группы адресуются локальным числовым `RecipientId` (`core/util/.../RecipientId.kt`), правки хранятся отдельными ревизиями (`LATEST_REVISION_ID`).
-8. Telegram Web A завязан на числовые id: `isUserId` проверяет префикс `-`, `isChannelId` и `getRawPeerId` разбирают id через `BigInt` (`src/util/entities/ids.ts`), `parseMessageKey` ждёт `-?\d+` (`src/util/keys/messageKey.ts`), локальные сообщения имеют дробный id (`isLocalMessageId`).
-9. Signal Desktop записывает голосовые в MP3 (`ts/workers/mp3Encoder.std.ts`), Telegram Web A в OGG/Opus (`opus-recorder`). Совместимость OGG/Opus с Signal iOS не проверена.
+Источники: клоны Signal-Android, Signal-Desktop, libsignal, RingRTC (2026-11-20), проверки сборки и сети из этого окружения.
+
+1. **libsignal собирается под `wasm32-unknown-unknown`** (`cargo check`, Rust 1.98.1 из `rust-toolchain` libsignal). Нужны только фича `wasm_js` у `getrandom` 0.2/0.3/0.4 и `protoc` для сборки `spqr`. Собираются крейты: `libsignal-core`, `signal-crypto`, `libsignal-protocol` (PQXDH, Double Ratchet, SPQR, sealed sender, sender keys), `zkgroup` (группы v2, учётные данные профиля), `usernames`, `libsignal-account-keys`, `libsignal-message-backup` (перенос истории).
+2. **`attest` не собирается под wasm32**: он зависит от `boring-signal` (BoringSSL). BoringSSL используется для X.509, ECDSA P-256, BigNum и ASN.1 при проверке SGX DCAP (около 70 вызовов в 4205 строках `src/dcap*`, `src/cert_chain.rs`). `attest` нужен для CDSI (поиск пользователей по номеру телефона).
+3. **В libsignal нет WASM-моста.** Мосты генерируются макросами `rust/bridge/shared/macros` (433 функции `bridge_fn`) для FFI, JNI и Node. Node-мост занимает 5788 строк (`rust/bridge/shared/types/src/node`). Обёртка `@signalapp/libsignal-client` на TypeScript (`node/ts`, 19 608 строк с тестами и `net`) обращается к нативному модулю только через объект `Native`.
+4. **Все хосты Signal отдают сертификат частного CA «Signal Messenger, LLC»**: chat, storage, cdn, cdn2, cdn3, cdsi, sfu.voip (проверено `openssl s_client`). Браузер отвергнет такой TLS независимо от CORS. Desktop закрепляет этот CA (`config/default.json`, `certificateAuthority`). Значит, прокси обязателен.
+5. **Звонки Signal несовместимы с WebRTC браузера.** RingRTC начиная с V3 отключает DTLS и задаёт ключи SRTP через собственный обмен Диффи-Хеллмана (`ringrtc/src/rust/src/core/connection.rs:773`, `signaling.rs:26`). WebRTC браузера требует DTLS-SRTP и не даёт задать ключи SRTP.
+6. **Протокольный слой Signal Desktop** (`ts/textsecure/`) занимает 22 209 строк, импорт бэкапа (`ts/services/backups/import.preload.ts`) 4842 строки. Это основной код для переноса.
+7. **Связанное устройство** получает при привязке `ProvisionMessage`: ключи ACI и PNI, profile key, `ephemeralBackupKey`, `accountEntropyPool`, `mediaRootBackupKey`. После привязки Desktop отправляет `PUT /v1/devices/link`, запрашивает синхронизацию CONTACTS, CONFIGURATION и BLOCKED, при наличии ключа скачивает архив истории (`v1/devices/transfer_archive`), затем синхронизирует storage service (`ts/background.preload.ts:1940-2000`). На запросы синхронизации отвечает только основное устройство.
+8. **Только основное устройство** может: менять discoverability и атрибуты аккаунта, PIN и registration lock, ротировать profile key, менять номер, удалять аккаунт, управлять бэкапами и связанными устройствами (`util/assembleAccountAttributes.preload.ts:17` в Desktop).
+9. **Порядок и идентификаторы в Signal Android:** сообщения сортируются по `DATE_RECEIVED` (`MessageTable.getConversation`), получатели адресуются локальным числовым `RecipientId` (`core/util/.../RecipientId.kt`), правки хранятся отдельными ревизиями (`LATEST_REVISION_ID`).
+10. **Telegram Web A завязан на числовые id:**
+    - `isUserId` проверяет префикс `-` (96 мест в 66 файлах); `isChannelId` и `getRawPeerId` разбирают id через `BigInt`.
+    - Цвет аватара считается как `getPeerIdDividend(id) % 7`.
+    - Ключ сообщения разбирается регуляркой `/^msg(-?\d+)-(\d+)/`.
+    - `viewportIds`, `listedIds` и `lastReadInboxMessageId` являются `number[]` или `number`, сравниваются численно, история пагинируется по offsetId.
+    - Локальные сообщения имеют дробный id.
+11. **Объём GramJS и API Telegram:** `src/lib/gramjs` занимает 48,5 тыс. строк, `src/api/gramjs` 33,9 тыс. Наружу торчат около 574 методов, из `src/global` вызываются около 518. Объединение `ApiUpdate` содержит 150 типов. Транспортно-нейтральные типы `src/api/types` (6,4 тыс. строк) сохраняются.
+12. Signal Desktop записывает голосовые в MP3 (`ts/workers/mp3Encoder.std.ts`), Telegram Web A в OGG/Opus (`opus-recorder`). Не проверено, воспроизводит ли Signal iOS OGG/Opus.
 
 ## 2. Архитектура
 
 ```
-Браузер (PWA)
+Браузер
   UI: src/components, src/global          сохраняем, вычищаем Telegram-функции
-  src/api/signal/                          новый транспорт вместо src/api/gramjs
-      callApi(name, ...args) -> POST /api/call
-      ApiUpdate             <- GET  /api/events (SSE, resume по Last-Event-ID)
-      медиа                 <- GET  /media/:id (Range), PUT /api/upload/:id
+  src/api/signal/   (Worker мастер-вкладки, вместо src/api/gramjs)
+      methods/      реализации Methods поверх локальной БД и движка
+      updates/      входящие события -> ApiUpdate
+  src/lib/signal/   (вместо src/lib/gramjs)
+      wasm/         libsignal в WASM + TS-обёртка из libsignal/node/ts
+      proto/        TS-кодеки, сгенерированные из .proto Signal Android
+      net/          REST и WebSocket Signal (порт WebAPI, SocketManager, WebsocketResources)
+      protocol/     приём и отправка (порт MessageReceiver, SendMessage, OutgoingMessage)
+      provisioning/ groups/ storage/ cds/ attachments/ backups/ profiles/ stickers/
+      store/        IndexedDB: ключи, сессии, prekeys, sender keys, получатели,
+                    чаты, сообщения, необработанные конверты, вложения
         |
-        | HTTPS, один origin, cookie-сессия
+        | HTTPS + WSS на свой origin
         v
-gateway/ (Node 24, TypeScript, тот же package.json)
-  auth           пароль из env -> HttpOnly SameSite=Strict cookie
-  store          node:sqlite: recipients, conversations, messages, revisions,
-                 reactions, receipts, polls, pins, attachments, update_log, FTS5
-  sync           события signal-cli -> записи БД -> ApiUpdate в update_log
-  methods        реализации Methods, возвращают типы из src/api/types
-  services       таймеры исчезающих сообщений, превью ссылок, web push
-        |
-        | JSON-RPC + SSE по localhost
-        v
-signal-cli daemon (форк с патчами, JVM 21 или GraalVM native)
-  ключи, сессии, sender keys, группы v2, storage service, CDSI, вложения
+proxy/  (Node 24, без зависимостей, без состояния)
+  allowlist хостов Signal, закреплённый CA Signal, CORS, перенос заголовков для WS
         |
         v
-Серверы Signal (chat, CDN, storage, CDSI, SVR)
+Серверы Signal (chat, storage, cdn0/2/3, cdsi)
 ```
 
 Решения:
 
-- Протокол держит signal-cli. Наш код живёт в TypeScript. Недостающие возможности добавляем патчами в форк signal-cli, каждый патч отдельным коммитом, пригодным для PR в AsamK/signal-cli.
-- Шлюз возвращает объекты типов `src/api/types` (`ApiChat`, `ApiUser`, `ApiMessage`, `ApiUpdate`). Шлюз и клиент компилируются одним `tsc`, поэтому смена типа сразу ломает обе стороны. `src/api/signal/` остаётся тонким транспортом, логика маппинга живёт в одном месте.
-- Новых npm-зависимостей нет: `node:http`, `node:sqlite` (FTS5 работает, проверено на Node 22), встроенный `fetch`, `parse5`/`linkedom` из текущих зависимостей для превью ссылок, `node:crypto` для VAPID. SSE вместо WebSocket, потому что в Node нет встроенного WebSocket-сервера.
-- Идентификаторы как в Signal Android: шлюз выдаёт локальные числовые id. Пользователь: положительное целое, группа: отрицательное целое. ACI, PNI, номер и groupId хранятся полями. `isUserId`, `BigInt`-разбор и ключи сообщений продолжают работать.
-- Сообщения нумеруются целыми числами внутри чата в порядке получения, как `DATE_RECEIVED` в Android. Identity сообщения в Signal: `(чат, ACI автора, sentTimestamp)`, уникальный индекс. Цитаты, реакции, правки, удаления, квитанции, голоса в опросах и закрепления находят сообщение по этому ключу.
-- Надёжность доставки: signal-cli запускается с `--receive-mode=manual`, шлюз подписывается через `subscribeReceive`. Пока шлюз не подписан, сообщения остаются на сервере Signal. Каждое изменение пишется в `update_log` с монотонным `seq`, SSE отдаёт `seq` как event id, клиент догоняет пропущенное после обрыва.
-- Развёртывание: `docker-compose` с двумя сервисами (`signal-cli`, `gateway`) и общим томом для вложений. Шлюз раздаёт собранный фронтенд, поэтому CORS не нужен. Внешний HTTPS делает обратный прокси пользователя.
-- Безопасность: шлюз хранит ключи и расшифрованную историю, поэтому его ставят на доверенный хост. Вход по паролю обязателен, signal-cli слушает только внутреннюю сеть compose.
+- **Архитектура повторяет Telegram Web A.** GramJS живёт в Worker мастер-вкладки и отдаёт `ApiUpdate`; на его место встаёт движок Signal. Мастер-вкладка держит единственный WebSocket устройства, другие вкладки ходят через неё (`src/util/browser/multitab.ts`).
+- **WASM-мост в форке libsignal.** Добавляем цель `wasm` в макросы `rust/bridge/shared` (wasm-bindgen, хранилища через async-колбэки в JS) рядом с `node`. Тогда `libsignal/node/ts` работает поверх WASM с заменой одного `Native`-модуля, а код Desktop, который вызывает `@signalapp/libsignal-client`, переносится почти без изменений. В мост не входит `libsignal-net`: сеть пишем на TypeScript через прокси.
+- **CDSI** требует патча `attest` в форке: BoringSSL заменяется чистым Rust (`x509-cert`, `p256`, `ecdsa`, `sha2`) за фичей. До патча поиск по номеру недоступен; контакты с телефона приходят с ACI через синхронизацию, поиск по юзернейму CDSI не нужен.
+- **Protobuf:** свой генератор TS-кодеков в `dev/` (как `npm run gramjs:tl`), без runtime-зависимостей. `.proto` копируются из Signal Android с указанием версии.
+- **Хранилище:** IndexedDB без новых зависимостей. Сырой конверт сначала сохраняется в `unprocessed`, потом подтверждается серверу (как в Desktop), поэтому сбой вкладки не теряет сообщения. Вызывается `navigator.storage.persist()`. При заданном код-пароле ключи и история шифруются (расширяем `src/util/passcode`).
+- **Идентификаторы как в Signal Android:** движок выдаёт локальные числовые id. Пользователь: положительное целое, группа: отрицательное целое. ACI, PNI, номер и groupId хранятся полями. Сообщения нумеруются целыми числами внутри чата в порядке получения. Identity сообщения в Signal: `(чат, ACI автора, sentTimestamp)`, уникальный индекс. Цитаты, реакции, правки, удаления, квитанции, голоса и закрепления находят сообщение по нему. Правка сохраняет id и пишет ревизию. Так `isUserId`, ключи сообщений, viewport и пагинация работают без переписывания.
+- **Лицензии:** libsignal и Signal Desktop распространяются под AGPLv3, Telegram Web A и Signal Android под GPLv3. GPLv3 §13 разрешает такое объединение; перенесённые и встроенные AGPL-части сохраняют свою лицензию. Исходники публичны, требование AGPL о раскрытии кода выполняется. Добавляем NOTICE с перечнем.
 
-Отклонённые варианты:
+### Режим прокси
 
-| Вариант | Почему нет |
-| --- | --- |
-| libsignal в браузере (WASM) | Официальной сборки нет, сетевой стек libsignal не работает в браузере |
-| Свой движок на `@signalapp/libsignal-client` | Порт ~22k строк `ts/textsecure` плюс группы, storage, бэкапы; месяцы до первого сообщения |
-| Шлюз на Java/Kotlin поверх `lib` signal-cli | Убирает JSON-RPC-прослойку, но выносит маппинг и хранилище из TypeScript. Запасной вариант, если патчей к signal-cli станет слишком много |
+| | P1: HTTP/WS reverse proxy | P2: TCP-туннель, TLS в WASM |
+| --- | --- | --- |
+| Что делает прокси | Завершает TLS к Signal, проверяет закреплённый CA, добавляет CORS, переносит заголовки авторизации для WebSocket | Пересылает байты WebSocket в TCP-соединение с хостом из allowlist |
+| Что видит прокси | Учётные данные устройства (`aci.deviceId:password`), пути запросов (чьи prekeys, какие вложения), зашифрованные E2E конверты | Только имена хостов и объём трафика |
+| Работа в браузере | `fetch` и `WebSocket` | TLS (rustls) в WASM, свои клиенты HTTP/1.1 и WebSocket поверх него |
+| Размер прокси | 200–300 строк | ~100 строк |
+| Риск | Злоумышленный прокси может вызывать API от имени устройства, но не прочитает и не подделает сообщения без ключей | Сложнее, медленнее на больших вложениях |
 
-## 3. Модель данных шлюза
+Рекомендация: начать с P1 на своём хосте, а сетевой слой сделать за интерфейсом транспорта, чтобы P2 подключался без изменений выше. Выбор режима остаётся за тобой, см. раздел 9.
 
-| Таблица | Содержимое |
-| --- | --- |
-| `recipients` | `id` (±целое), тип, ACI, PNI, номер, юзернейм, имена из профиля/контакта/ника, about, аватар, profile key есть/нет, blocked, hidden, message request state |
-| `conversations` | `recipient_id`, last message id, unread, read inbox/outbox max id, expire timer и его версия, archived, pinned order, muted until, marked unread, draft |
-| `messages` | `(conversation_id, id)`, author recipient, `sent_at`, `received_at`, `server_received_at`, тип (обычное, служебное, история), текст, body ranges (стили, упоминания), quote ref, sticker, view-once, expires in/start, remote deleted, latest revision, delivery state на получателя |
-| `revisions` | старые версии отредактированных сообщений |
-| `reactions` | `(message, author)` -> emoji, timestamp; одна реакция на пользователя |
-| `receipts` | `(message, recipient)` -> delivered/read/viewed at |
-| `polls`, `poll_votes` | вопрос, варианты, multiple choice, terminated; голоса по пользователям |
-| `pins` | закреплённые сообщения чата и срок |
-| `attachments` | cdn key, digest, mime, size, размеры, blurhash, флаги (voice, gif, borderless), путь к файлу, статус загрузки |
-| `stories`, `story_views` | истории, получатели, ответы, просмотры |
-| `update_log` | `seq`, сериализованный `ApiUpdate` |
-| `messages_fts` | FTS5 по тексту для поиска |
+## 3. Соответствие функций
 
-## 4. API шлюза
+Колонка «Этап» ссылается на раздел 5.
 
-- `POST /api/auth/login`, `POST /api/auth/logout`.
-- `GET /api/state` -> `noAccount` | `linking` | `ready` (и данные текущего аккаунта).
-- `POST /api/link/start` -> `sgnl://linkdevice?...` для QR; `POST /api/link/finish` с именем устройства.
-- `POST /api/call` `{ method, args }` -> результат метода. Имена и сигнатуры совпадают с `Methods` клиента: `fetchChats`, `fetchMessages`, `sendMessage`, `editMessage`, `deleteMessages`, `sendReaction`, `markMessageListRead` и т. д.
-- `GET /api/events` -> SSE с `ApiUpdate`, id события = `seq`.
-- `GET /media/:attachmentId` с `Range`; `GET /media/avatar/:recipientId`.
-- `PUT /api/upload/:uploadId` сырым телом, без multipart.
+| Функция Signal | Что используем в Telegram Web A | Этап |
+| --- | --- | --- |
+| Привязка по QR (provisioning, `PUT /v1/devices/link`, sync requests) | QR-экран входа `src/components/auth` | 2 |
+| Чаты 1:1, группы v2, Note to Self | список чатов, «Избранное» -> Note to Self | 2 |
+| Текст: bold, italic, strikethrough, monospace, spoiler; упоминания (UTF-16 offsets) | `ApiMessageEntity`, редактор (лишние стили убираем) | 2 |
+| Длинный текст: inline ≤ 2 KiB, остальное во вложении `text/x-signal-plain` ≤ 64 KiB | — | 2 |
+| Вложения: фото, видео, файлы, GIF, borderless, голосовые с waveform; blurhash; incremental MAC; ≤ 100 MiB | медиа-компоненты, `mediaViewer`, `VoiceRecordBar` | 2 |
+| Ответы (quote), пересылка (флаг FORWARD, без автора) | `replyInfo`, пересылка | 2 |
+| Реакции: одна на пользователя, любой emoji | `middle/message/reactions` с лимитом 1 | 2 |
+| Правка: ≤ 1 дня, ≤ 10 правок, история правок | редактирование, новый просмотр истории | 2 |
+| Удаление для всех (≤ 1 дня), для себя (sync `deleteForMe`), админское удаление | модалка удаления | 2 |
+| Квитанции доставки, прочтения, просмотра; sealed sender | галочки, «Кто прочитал» -> детали сообщения | 2 |
+| Индикатор набора (отправка каждые 10 с, стоп через 3 с, таймаут 15 с) | статус набора | 2 |
+| Исчезающие сообщения с версией таймера | `modals/autoDeleteTimer`, ttl сообщения | 2 |
+| View-once | `modals/oneTimeMedia` | 2 |
+| Профили и аватары собеседников, служебные сообщения групп | профиль, `ApiMessageAction` | 2 |
+| Медиагалерея чата | вкладки медиа в профиле | 2 |
+| Перенос истории при привязке (link-and-sync, `libsignal-message-backup`) | — | 4 |
+| Стикерпаки (webp/apng, packId+packKey), установка, синхронизация | `StickerPicker`; TGS и custom emoji удаляются | 4 |
+| Превью ссылок, создаёт отправитель | превью веб-страниц | 4 |
+| Shared contacts | `middle/message/Contact.tsx` | 4 |
+| Опросы: 2–10 вариантов, multiple choice, завершение | `modals/poll`, `middle/message/poll` | 4 |
+| Закреплённые сообщения: ≤ 3, на 24 ч, 7 д, 30 д или навсегда | панель закрепов | 4 |
+| Группы v2: создание, название ≤ 32, описание ≤ 480, аватар, админы, права (attributes, members, addFromInviteLink, memberLabel), только админы пишут, бан, ссылка-приглашение с одобрением, приглашения, заявки, метки участников ≤ 24, завершение группы | `right/management` (общие части), `gili` | 4 |
+| Профиль: имя 26+26, about 140 + emoji, аватар, бейджи (показ), ник и заметка о контакте | настройки профиля | 4 |
+| Юзернейм (3–32 + дискриминатор), ссылка и QR, поиск по юзернейму | настройки юзернейма, `modals/qrCode` | 4 |
+| Поиск по номеру (CDSI) | новый чат | 4, после патча `attest` |
+| Safety numbers, смена ключа, key transparency | новый экран | 4 |
+| Блокировка, запросы на переписку (accept, delete, block, spam) | блокировка, плашка запроса | 4 |
+| Архив, закреп чатов (≤ 4), mute, «непрочитанное» через storage service | список чатов | 4 |
+| Папки чатов (storage `ChatFolder`) | `left/settings/folders` без ссылок-приглашений | 4 |
+| Настройки: квитанции, индикатор набора, превью ссылок, индикаторы sealed sender, таймер по умолчанию, видимость номера | настройки приватности | 4 |
+| Поиск по сообщениям локально | поиск | 4 |
+| Attachment backfill (запрос вложения у основного устройства) | — | 4 |
+| Истории: медиа и текст, My Story, списки рассылки, групповые, ответы, просмотры | `components/story` | 5 |
+| Профили уведомлений | — | 6 |
+| История звонков (sync `callEvent`), уведомления о платежах и gift badges (только показ) | — | 6 |
+| Цвета чатов | локальные темы и фоны Telegram Web A | 6 |
+| GIF-поиск (Giphy, как в Desktop `util/giphy.std.ts`) | `GifPicker` | 6 |
+| Несколько аккаунтов | `util/multiaccount.ts` | 6 |
+| Звонки 1:1, групповые, call links | `components/calls` | R |
+
+Не переносим, потому что это функции основного устройства: регистрация, PIN и registration lock, смена номера, удаление аккаунта, бэкапы, управление связанными устройствами, кошелёк MobileCoin, донаты.
+
+## 4. Что вырезаем из Telegram Web A
+
+| Область | Где | Объём |
+| --- | --- | --- |
+| Каналы, супергруппы, форумы, топики, монофорумы, сообщества | `left/main/forum`, `left/main/community`, `right/{Create,Edit}Topic`, Telegram-части `right/management`, `reducers` и `selectors/topics.ts`, методы `forum`, `communities`, `openedChannelShortpoll.ts` | «forum» встречается в 93 файлах |
+| Боты, inline, клавиатуры, Mini Apps, attach-боты, создание ботов, виджеты | `actions/api/bots.ts`, composer `BotKeyboard`, `BotCommandMenu`, `AttachMenu`, `inlineResults`, `modals/browser`, `botCreation`, `attachBotInstall`, `urlAuth`, `requestPeer`, `preparedMessage`, `lib/widget-sandbox` | sandbox: 136 файлов, 20,8 тыс. строк |
+| Premium, Stars, подарки, коллекционки, Fragment, розыгрыши, бусты | `main/premium`, `modals/stars`, `modals/gift`, `common/gift`, `right/gifts`, `collectible`, `giftcode`, `boost`, `src/limits.ts` | подарки: 98 файлов, 10,8 тыс. |
+| Платежи, счета, кошелёк, TON, TonConnect | `components/payment`, `modals/wallet`, `lib/ton`, методы `wallet`, `tonConnect`, `payments` | кошелёк: 151 файл, 17,1 тыс. |
+| Статистика | `right/statistics`, `lovely-chart` | 21 файл |
+| Business, платные сообщения, медиа и реакции, реклама, эффекты сообщений | `BusinessHours`, `ContactGreeting`, quick replies, `common/paidMessage`, `modals/paidReaction`, `Sponsored*`, `MessageEffect.tsx` | |
+| Перевод и AI | `reducers/translations.ts`, `actions/api/ai.ts`, `AiMessageEditorModal`, `modals/aiTonePreview` | Определение языка (`lib/fasttext`) нужно только переводу, решаем вместе с ним |
+| Викторины, to-do списки | `middle/message/poll` (части), `TodoList` | Опросы остаются |
+| Отложенные сообщения Telegram | `scheduledIds`, методы отложенных | В Android отложенные локальные, решение в разделе 9 |
+| Сохранённые диалоги и теги «Избранного» | `fetchSavedChats`, `toggleSavedDialogPinned`, теги реакций | Note to Self остаётся |
+| Shareable chatlists, custom emoji, emoji status, TGS-стикеры | `modals/chatlist`, `StatusPickerMenu`, `emojiStatusAccess`, `lib/tlottie` | |
+| Instant View | `components/iv`, `InstantViewTab` | Используется в `MessageRichText`, отделяем при удалении |
+| Музыкальный пикер, карты и геолокация | `modals/musicPicker`, `Location.tsx`, `modals/map`, `locationAccess` | Плеер аудио остаётся |
+| Облачный пароль, passkeys, активные сессии и сайты | `left/settings/twoFa`, `modals/twoFaCheck`, `SettingsPasskeys`, `SettingsActiveSessions` | |
+| Прочие модалки Telegram | `frozenAccount`, `ageVerification`, `cocoon`, `suggestMessage`, `suggestedPostApproval`, `rank`, `profileRating`, `birthday`, `aboutAds`, `reportAd` | |
+| Серверные обои и темы чатов, langpack с сервера, ссылки `t.me` и `tg://` | `fetchWallpapers`, `fetchChatThemes`, `util/localization`, `deepLinkParser.ts`, `config.ts` | Заменяем на `signal.me`, `signal.group`, `sgnl://` |
+| GramJS | `src/lib/gramjs`, `src/api/gramjs` | 82 тыс. строк, на этапе 3 |
+
+Остаются: инфраструктура UI (`ui`, `gili`, `common`), медиаплеер и просмотрщик, код-пароль, мульти-вкладки, Service Worker (без push от Telegram), локализация (строки внутри сборки), локальные темы, Tauri (переименование отдельно).
 
 ## 5. Этапы
 
-Этапы 1 и 2 идут параллельно: этап 1 меняет `src/components` и `src/global`, этап 2 добавляет `gateway/` и `src/api/signal/`.
+Этапы 0 и 1 идут параллельно: этап 0 пишет `src/lib/signal`, `proxy/` и форк libsignal, этап 1 удаляет код из `src/components`, `src/global` и `src/api/gramjs`.
 
-### Этап 0. Каркас и проверка гипотез
+### Этап 0. Спайки, снимающие риски
 
-- Форк signal-cli подключается подмодулем `engine/signal-cli`, собирается в Docker.
-- `docker-compose.yml`: signal-cli в режиме `daemon --http --receive-mode=manual` + шлюз.
-- Шлюз: HTTP-сервер, вход по паролю, схема SQLite с миграциями, JSON-RPC-клиент и SSE-потребитель signal-cli с переподключением, `update_log`.
-- Проверка на тестовом аккаунте: привязка по QR, приём и отправка текста через `curl`.
-
-Готово, когда: тестовый аккаунт привязан, входящее сообщение лежит в SQLite.
+1. **libsignal в WASM.** Форк libsignal, цель `wasm` в макросах моста, сборка через wasm-bindgen, `node/ts` поверх WASM. Готово, когда в браузере две пары хранилищ проводят сессию PQXDH, шифруют и расшифровывают сообщение, sealed sender и sender key работают, размер `.wasm` измерен.
+2. **Прокси P1** с allowlist (chat, storage, cdn0/2/3, cdsi), закреплённым CA из Desktop и переносом заголовков для WebSocket. Готово, когда браузер открывает `wss://.../v1/websocket/provisioning/`.
+3. **Генератор protobuf** (`npm run signal:proto`): `SignalService`, `Provisioning`, `WebSocketResources`, `Groups`, `DecryptedGroups`, `StorageService`, `Backup`. Готово, когда кодеки проходят раунд-трип на образцах из Desktop.
+4. **Привязка и первое сообщение.** QR в браузере, скан с Android, расшифровка `ProvisionMessage`, `PUT /v1/devices/link`, загрузка prekeys, WebSocket, расшифровка входящего конверта. Готово, когда текст с телефона виден в консоли.
 
 ### Этап 1. Вырезать функции Telegram, пока бэкенд Telegram ещё работает
 
-Удаляем по одной области за коммит, приложение остаётся рабочим на Telegram, поэтому регрессии видны в браузере. Внутри области удаляем компоненты, действия, редьюсеры, селекторы, методы `src/api/gramjs/methods`, типы `src/api/types`, ключи локализации, пункты реестра поиска настроек и горячих клавиш. Список областей: раздел 7.
+Удаляем по одной области за коммит из раздела 4: компоненты, действия, редьюсеры, селекторы, методы `src/api/gramjs/methods`, типы `src/api/types`, члены `ApiUpdate`, ключи локализации, записи реестров настроек и горячих клавиш, миграции кэша. Приложение остаётся рабочим на Telegram, поэтому регрессии видны в браузере.
 
-Готово, когда: в UI нет функций из раздела 7, `npm run check:ts` и `npm run check:css` проходят.
+Готово, когда: в UI нет функций из раздела 4, `npm run check:ts` и `npm run check:css` проходят.
 
-### Этап 2. Транспорт Signal и MVP переписки
+### Этап 2. Движок Signal и MVP переписки
 
-- `src/api/signal/`: `initApi`, `callApi`, `callApiLocal`, разбор SSE в `ApiUpdate`. Мастер-вкладка держит соединение, как сейчас.
-- Экран входа: пароль шлюза, затем QR привязки (переиспользуем QR-экран входа Telegram), имя устройства.
-- Список чатов: контакты и группы из signal-cli, порядок по последнему сообщению, счётчики непрочитанного, Note to Self вместо «Избранного».
-- История с пагинацией из SQLite.
-- Текст со стилями Signal (bold, italic, strikethrough, monospace, spoiler) и упоминаниями, ответы, пересылка, вложения (фото, видео, файлы, голосовые, GIF), стикеры, реакции, правка, удаление для всех и для себя, индикатор набора, квитанции доставки и прочтения, синхронизация прочтения с другими устройствами, исчезающие сообщения, view-once.
-- Профили и аватары, служебные сообщения групп.
+- `src/lib/signal`: хранилище, сеть, приём с `unprocessed`, отправка (sealed sender, sender keys для групп, retry receipts через `DecryptionErrorMessage`), синхронизация с основным устройством, группы v2 (состояние, изменения, учётные данные zkgroup), профили, вложения (шифрование, загрузка на CDN v3 по TUS, потоковая расшифровка), storage service (чтение).
+- `src/api/signal`: `initApi`, `callApi`, `callApiLocal`, методы, которые нужны UI после этапа 1, и маппинг в `ApiChat`, `ApiUser`, `ApiMessage`.
+- Экран привязки вместо экранов Telegram. Функции этапа 2 из раздела 3.
 
-Готово, когда: переписка 1:1 и в группе работает в обе стороны с телефоном на Android, включая вложения, реакции, правки и удаление.
+Готово, когда: переписка 1:1 и в группе работает в обе стороны с Android, включая вложения, реакции, правки, удаление и исчезающие сообщения, а перезагрузка вкладки не теряет сообщения.
 
 ### Этап 3. Удалить GramJS
 
-Удаляем `src/lib/gramjs`, `src/api/gramjs`, конфиг Telegram в `src/config.ts`, загрузку langpack с сервера Telegram, Telegram-ссылки (`t.me`, `tg://`) в пользу `signal.me`, `signal.group`, `sgnl://`. Локализация: файлы строк в сборке, языки по решению из раздела 9.
+Удаляем `src/lib/gramjs`, `src/api/gramjs`, конфиг Telegram в `src/config.ts` и `vite.config.ts` (`TELEGRAM_API_ID`, CSP для `*.web.telegram.org`), загрузку langpack, магические id Telegram (`777000` и другие). Строки локализации кладём в сборку.
 
-### Этап 4. Полный функционал Signal для связанного устройства
+### Этап 4. Полный функционал связанного устройства
 
-Каждый пункт: метод шлюза, при необходимости патч signal-cli, адаптация существующего UI Telegram Web A. Таблица соответствий: раздел 6.
+Функции этапа 4 из раздела 3, включая патч `attest` для CDSI и запись в storage service (архив, закреп, mute, папки, настройки).
 
-### Этап 5. Звонки
+### Этап 5. Истории
 
-Начинаем со спайка: signal-call-tunnel на шлюзе и мост звука в браузер через WebRTC или WebSocket. Видео и групповые звонки требуют RingRTC и SFU Signal; решение после спайка.
+Приём, просмотр, отправка медиа и текстовых историй, списки рассылки, групповые истории, ответы и реакции, квитанции просмотра.
 
 ### Этап 6. Доводка
 
-Брендинг, PWA и web push, документация развёртывания, миграция `dist/` и CI, проверка совместимости с актуальными версиями Signal Android, iOS, Desktop.
+Функции этапа 6 из раздела 3, шифрование хранилища код-паролем, PWA, брендинг, документация развёртывания прокси, совместимость с актуальными Signal Android, iOS и Desktop.
+
+### Этап R. Звонки (исследование)
+
+WebRTC браузера не может говорить с RingRTC (факт 5). Остаётся свой медиастек: ICE и SRTP в WASM, кодеки через WebCodecs, UDP через прокси как через TURN (прокси видит только SRTP-шифротекст). Для групповых звонков к этому добавляются протокол SFU Signal и шифрование кадров. Это месяцы работы с неясным исходом, поэтому этап вне основного плана, пока не будет отдельного решения.
+
+## 6. Ограничения
+
+- Пока все вкладки закрыты, сообщения копятся на сервере Signal. Android регистрирует для push токен FCM (`lib/libsignal-service/.../RegistrationApi.kt`); Web Push в API Signal я не нашёл (вывод, код сервера не проверял). Значит, уведомлений при закрытом браузере не будет.
+- Очистка данных сайта удаляет ключи и историю, после неё нужна повторная привязка. `navigator.storage.persist()` снижает риск вытеснения, но не защищает от ручной очистки.
+- История до привязки доступна только через link-and-sync (этап 4) и только если основное устройство её отправило.
+- Создавать превью ссылок без утечки адреса нельзя: страницу загружает прокси (P1) или туннель (P2). Desktop ходит через `contentproxy.signal.org`, это поведение повторяем на этапе 4.
+
+## 7. Риски
+
+| Риск | Что делаем |
+| --- | --- |
+| Размер WASM и время старта | Измеряем на этапе 0; ленивая загрузка `zkgroup` и `message-backup` |
+| Поддержка форка libsignal при обновлениях Signal | Мост держим отдельным каталогом с минимальными правками общих файлов; обновляемся по тегам libsignal |
+| Изменения протокола (новые версии `requiredProtocolVersion`, capability при привязке) | Следим за изменениями в Desktop, обрабатываем неизвестные поля как Desktop |
+| Signal может ограничивать сторонние клиенты | Ведём себя как Desktop: те же capability, лимиты запросов, обработка challenge (captcha) |
+| Голосовые в OGG/Opus не играют на iOS | Проверяем на этапе 2; при проблеме кодируем AAC через `mediabunny` и WebCodecs или MP3, как Desktop |
+
+## 8. Новые зависимости и инструменты
+
+- Форк libsignal (AGPLv3) как исходник WASM-модуля. Ты это разрешил.
+- Инструменты сборки: Rust по `rust-toolchain` libsignal, цель `wasm32-unknown-unknown`, `wasm-bindgen-cli`, `protoc`. Собранный `.wasm` коммитим, чтобы фронтенд собирался без Rust, или собираем в CI.
+- Новых npm-пакетов план не требует: protobuf через свой генератор, хранилище в IndexedDB через `idb-keyval` и прямой API, прокси на `node:http` и `node:https`.
+
+## 9. Решения, нужные от тебя
+
+1. Режим прокси: P1 (рекомендую для старта) или сразу P2.
+2. Protobuf: свой генератор (рекомендую) или `@bufbuild/protobuf`/`protobufjs` как новая зависимость.
+3. Хранилище: IndexedDB (рекомендую) или SQLite в WASM с FTS5 (новая зависимость, быстрее поиск и сложные запросы).
+4. Звонки: оставить этап R вне плана или начинать исследование параллельно.
+5. Отложенные сообщения: удалить вместе с серверными Telegram или переделать в локальные, которые отправляются только при открытой вкладке.
+6. Название и иконка: имя и логотип Signal использовать нельзя (товарный знак).
+7. Языки в сборке: какие, кроме английского и русского.
+8. Где публиковать форк libsignal и нужны ли PR в upstream.
