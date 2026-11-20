@@ -38,6 +38,9 @@ const KEEPALIVE_INTERVAL_MS = 30000;
 const KEEPALIVE_TIMEOUT_MS = 15000;
 const DEFAULT_KEEPALIVE_PATH = '/v1/keepalive';
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
 /**
  * Signal's request/response protocol over a WebSocket (`WebSocketResources.proto`), used by the
  * chat and provisioning sockets.
@@ -92,6 +95,17 @@ export default class ResourceSocket {
         }, timeout),
       });
     });
+  }
+
+  /** Sends a request with an optional JSON body; a JSON response body is parsed */
+  async sendJsonRequest<T>(verb: string, path: string, json?: unknown, headers?: Record<string, string>) {
+    const response = await this.sendRequest({
+      verb,
+      path,
+      headers: json !== undefined ? { ...headers, 'Content-Type': 'application/json' } : headers,
+      body: json !== undefined ? textEncoder.encode(JSON.stringify(json)) : undefined,
+    });
+    return { status: response.status, json: parseJson<T>(response.body) };
   }
 
   close(code?: number, reason?: string) {
@@ -155,6 +169,16 @@ export default class ResourceSocket {
     }
     this.pending.clear();
     this.onClose?.(code, reason);
+  }
+}
+
+// Error responses may carry plain text
+function parseJson<T>(body?: Uint8Array) {
+  if (!body) return undefined;
+  try {
+    return JSON.parse(textDecoder.decode(body)) as T;
+  } catch {
+    return undefined;
   }
 }
 

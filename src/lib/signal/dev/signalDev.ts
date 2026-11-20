@@ -8,19 +8,22 @@ import { startDeviceLink } from '../account/provisioning';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
 import { fetchProfile } from '../profiles/fetchProfile';
-import { sendContent } from '../sender/sendContent';
+import { saveProfileKey } from '../sender/sealedSender';
+import { ContentHint, sendContent } from '../sender/sendContent';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
 import { parseContactSync } from '../sync/contactSync';
 import { initSignalWasm } from '../wasm';
 
 import ChatConnection from '../chat/ChatConnection';
+import UnauthenticatedChat from '../chat/UnauthenticatedChat';
 import SignalStore from '../store/SignalStore';
 
 const QR_SIZE = 300;
 const DEFAULT_DEVICE_NAME = 'TeleSignal';
 
 const store = new SignalStore();
+const unauthenticatedChat = new UnauthenticatedChat();
 let connection: ChatConnection | undefined;
 
 /**
@@ -39,24 +42,38 @@ const signalDev = {
     const account = await linkDevice(store, await session.provisionMessage, deviceName);
     console.log(`[signal] Linked as device ${account.deviceId} of ${account.aci}`);
     await signalDev.listen();
-    await sendInitialSyncRequests({ store, account, connection: connection! });
+    await sendInitialSyncRequests({
+      store, account, connection: connection!, unauthenticatedChat,
+    });
     console.log('[signal] Sent sync requests for contacts, configuration and blocked list');
   },
 
-  /** Sends a text message to an ACI and a sent transcript to our other devices */
+  /**
+   * Sends a text message to an ACI and a sent transcript to our other devices. Run `signalDev.syncStorage()`
+   * first so the recipient's profile key allows a sealed sender send.
+   */
   async sendText(destination: string, text: string) {
     const account = await store.getItem('account');
     if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
 
-    const context = { store, account, connection };
+    const context = {
+      store, account, connection, unauthenticatedChat,
+    };
     const timestamp = Date.now();
-    const message = { body: text, timestamp: BigInt(timestamp) };
-    await sendContent(context, destination, { content: { case: 'dataMessage', value: message } }, { timestamp });
-    const sent = { destinationServiceId: destination, timestamp: BigInt(timestamp), message };
+    const message = { body: text, timestamp: BigInt(timestamp), profileKey: account.profileKey };
+    const { isSealedSender } = await sendContent(context, destination, {
+      content: { case: 'dataMessage', value: message },
+    }, { timestamp, contentHint: ContentHint.Resendable });
+    const sent = {
+      destinationServiceId: destination,
+      timestamp: BigInt(timestamp),
+      message,
+      unidentifiedStatus: [{ destinationServiceId: destination, unidentified: isSealedSender }],
+    };
     await sendContent(context, account.aci, {
       content: { case: 'syncMessage', value: { content: { case: 'sent', value: sent } } },
     }, { timestamp });
-    console.log('[signal] Sent', timestamp);
+    console.log('[signal] Sent', timestamp, isSealedSender ? 'with sealed sender' : 'identified');
   },
 
   async listen() {
@@ -86,6 +103,11 @@ const signalDev = {
       return;
     }
     const records = [...snapshot.records.values()];
+    for (const { record } of records) {
+      if (record.case === 'contact' && record.value.aci && record.value.profileKey.length) {
+        await saveProfileKey(store, record.value.aci, record.value.profileKey);
+      }
+    }
     const countsByType: Record<string, number> = {};
     for (const { record } of records) {
       const type = record.case ?? 'unknown';
@@ -138,6 +160,7 @@ const signalDev = {
   async reset() {
     connection?.close();
     connection = undefined;
+    unauthenticatedChat.close();
     await store.clear();
     console.log('[signal] Local Signal data removed; unlink the device on the phone too');
   },
@@ -148,6 +171,7 @@ function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEn
   const body = content.content;
 
   if (body.case === 'dataMessage') {
+    if (body.value.profileKey.length) void saveProfileKey(store, senderServiceId, body.value.profileKey);
     console.log(`[signal] Message from ${from}:`, body.value.body, body.value);
     return;
   }

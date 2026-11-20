@@ -25,8 +25,27 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
 };
 
+// Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it
+export type SealedSenderAccess = 'enabled' | 'disabled' | 'unrestricted';
+
+/** What the engine knows about another Signal user */
+export type RecipientRecord = {
+  aci: string;
+  pni?: string;
+  number?: string;
+  profileKey?: Uint8Array;
+  sealedSender?: SealedSenderAccess;
+};
+
+export type SenderCertificateRecord = {
+  serialized: Uint8Array;
+  // Milliseconds since the epoch
+  expiresAt: number;
+};
+
 type Items = {
   account: AccountRecord;
+  senderCertificate: SenderCertificateRecord;
   aciIdentityKeyPair: KeyPairBytes;
   pniIdentityKeyPair: KeyPairBytes;
   // Next ids for generated keys, per local service id
@@ -65,6 +84,18 @@ export default class SignalStore {
 
   setItem<K extends keyof Items>(key: K, value: Items[K]) {
     return this.db.set(`item:${key}`, value);
+  }
+
+  getRecipient(aci: string) {
+    return this.db.get<RecipientRecord>(`recipient:${aci}`);
+  }
+
+  /** Merges `update` into the record of `aci`, creating it when absent */
+  async updateRecipient(aci: string, update: Partial<Omit<RecipientRecord, 'aci'>>) {
+    const recipient = await this.getRecipient(aci);
+    const updated = { ...recipient, ...update, aci };
+    await this.db.set(`recipient:${aci}`, updated);
+    return updated;
   }
 
   getSession(address: string) {

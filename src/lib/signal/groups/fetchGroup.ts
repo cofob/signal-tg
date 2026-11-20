@@ -6,6 +6,7 @@ import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
 import { bufferFromBase64, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import { getServerTime } from '../../../util/serverTime';
 import { encodeUtf8, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
 import { toPniServiceId } from '../serviceId';
@@ -142,7 +143,7 @@ async function getGroupAuthorization(
   account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, publicParams: Uint8Array,
 ) {
   serverPublicParams ??= wasm.ServerPublicParams_Deserialize(bufferFromBase64(SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS));
-  const today = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
+  const today = Math.floor(getServerTime() / DAY_SECONDS) * DAY_SECONDS;
   const { credentials } = await getGroupCredentials(connection, today);
   const todayCredential = credentials.find(({ redemptionTime }) => redemptionTime === today);
   if (!todayCredential) throw new Error('No group auth credential for today');
