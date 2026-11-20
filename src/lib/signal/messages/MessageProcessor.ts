@@ -53,6 +53,16 @@ export type MessageEdit = {
   bodyAttachment?: MessageInitShape<typeof AttachmentPointerSchema>;
 };
 
+export type ConversationPatch = Partial<ConversationRecord> & Pick<ConversationRecord, 'id' | 'type'>;
+
+export type PinnedMessage = Omit<NonNullable<ConversationRecord['pinnedMessages']>[number], 'messageId'>;
+
+/** Transferred message history to store, see `importHistory` */
+export type HistoryBatch = {
+  conversations: ConversationPatch[];
+  messages: { record: NewMessageRecord; pin?: PinnedMessage }[];
+};
+
 export type TypingEvent = {
   conversationId: string;
   senderAci: string;
@@ -568,6 +578,51 @@ export default class MessageProcessor {
       });
     });
     this.flush();
+  }
+
+  /**
+   * Stores transferred message history (`backups/importBackup.ts`): the conversation fields first, creating absent
+   * conversations, then the messages in order. A message whose author and timestamp are stored already is skipped,
+   * so an interrupted import can run again. Nothing goes to `onChanges`: the import ends before the app lists chats,
+   * and the app loads them from the database. Returns the number of stored messages.
+   */
+  importHistory({ conversations, messages }: HistoryBatch) {
+    return this.runSerial(async () => {
+      const updated = new Map<string, ConversationRecord>();
+      let nextLocalId: number | undefined;
+      const getConversation = async (id: string) => updated.get(id) ?? this.db.getConversation(id);
+
+      for (const patch of conversations) {
+        const existing = await getConversation(patch.id);
+        if (!existing) nextLocalId ??= await this.db.allocateLocalId();
+        updated.set(patch.id, {
+          ...existing ?? { localId: nextLocalId!++, unreadCount: 0 },
+          ...patch,
+        });
+      }
+
+      const added = await this.db.addMessagesIfAbsent(messages.map(({ record }) => record));
+      for (const [index, message] of added.entries()) {
+        if (!message) continue;
+        const conversation = await getConversation(message.conversationId);
+        if (!conversation) throw new Error(`Imported message of unknown conversation ${message.conversationId}`);
+        const { pin } = messages[index];
+        const isUnread = !message.isOutgoing && !message.readAt && message.kind === 'message';
+        updated.set(conversation.id, {
+          ...conversation,
+          lastMessageId: message.id,
+          lastMessageAt: message.sentAt,
+          unreadCount: conversation.unreadCount + (isUnread ? 1 : 0),
+          pinnedMessages: pin
+            ? [...conversation.pinnedMessages ?? [], { ...pin, messageId: message.id }]
+            : conversation.pinnedMessages,
+        });
+      }
+
+      await this.db.putConversations([...updated.values()]);
+      if (added.some((message) => message?.expiresAt)) this.scheduleExpiration();
+      return added.filter(Boolean).length;
+    });
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1268,7 +1323,7 @@ function groupTimestampsByAuthor(messages: MessageRecord[]) {
 }
 
 /** The conversation id of a group: its base64 group identifier */
-function getGroupId(masterKey: Uint8Array) {
+export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
   return bufferToBase64(wasm.GroupPublicParams_GetGroupIdentifier(publicParams));

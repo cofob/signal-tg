@@ -130,7 +130,7 @@ Teact and Fasterdom separate DOM measurement from mutation. The frame order is e
 
 ## Signal engine
 
-- Code lives in `src/lib/signal/` (`net`, `account`, `chat`, `receiver`, `sender`, `store`, `storage`, `groups`, `profiles`, `attachments`, `sync`, `usernames`, `db`, `messages`), the WebAssembly bridge and TLS client in `rust/signal-wasm/`, vendored libsignal crates in `rust/libsignal/`, and the tunnel in `proxy/`.
+- Code lives in `src/lib/signal/` (`net`, `account`, `chat`, `receiver`, `sender`, `store`, `storage`, `groups`, `profiles`, `attachments`, `sync`, `usernames`, `db`, `messages`, `backups`), the WebAssembly bridge and TLS client in `rust/signal-wasm/`, vendored libsignal crates in `rust/libsignal/`, and the tunnel in `proxy/`.
 - `SignalClient` owns the connections and protocol-level handling (retry requests, account keys, profile keys); `MessageProcessor` turns content into `MessageDb` records and sends receipts. Run protocol store operations through `SignalStore.runExclusive` and database changes through `MessageProcessor`, which serializes them.
 - Keep protocol logic and key material in the browser. `proxy/tunnel.ts` relays bytes and must never terminate TLS or read request contents; add a host to its allowlist only when the client needs it.
 - Reach Signal hosts through `src/lib/signal/net/` (`TlsTunnel`, `sendHttpRequest`, `ResourceSocket`); they trust only Signal's certificate authority (`SIGNAL_CA_PEM`). Browser `fetch` and `WebSocket` cannot reach Signal hosts.
