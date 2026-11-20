@@ -9,6 +9,7 @@ import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { buildApiUser } from './builders/users';
+import { clearAttachmentCache } from './media/attachments';
 import {
   client, db, logError, processor, store,
 } from './engine';
@@ -48,7 +49,7 @@ export function getCurrentAccount() {
   return currentAccount;
 }
 
-/** Closes the connections; `shouldForget` also removes the account and every local message */
+/** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
   clearTimeout(reconnectTimer);
@@ -59,6 +60,7 @@ export async function stopClient(shouldForget: boolean) {
   if (shouldForget) {
     await store.clear();
     await db.clear();
+    await clearAttachmentCache();
   }
 }
 
