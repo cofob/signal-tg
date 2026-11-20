@@ -735,6 +735,8 @@ export interface ApiMessage {
   replyInfo?: ApiReplyInfo;
   suggestedPostInfo?: ApiInputSuggestedPostInfo;
   sendingState?: 'messageSendingStatePending' | 'messageSendingStateFailed';
+  // Signal: a recipient's device received the message
+  isDelivered?: true;
   forwardInfo?: ApiMessageForwardInfo;
   isDeleting?: boolean;
   previousLocalId?: number;
@@ -949,7 +951,7 @@ export type ApiMessageReportResult = {
   }[];
 };
 
-export type ApiMessageOutgoingStatus = 'read' | 'succeeded' | 'pending' | 'failed';
+export type ApiMessageOutgoingStatus = 'read' | 'delivered' | 'succeeded' | 'pending' | 'failed';
 
 // KeyboardButtons
 

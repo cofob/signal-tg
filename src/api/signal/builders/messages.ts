@@ -1,6 +1,6 @@
 import { fromBinary } from '@bufbuild/protobuf';
 
-import type { ConversationRecord, MessageRecord } from '../../../lib/signal/db/MessageDb';
+import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
 import type {
   BodyRange, DataMessage_PollCreate, DataMessage_Quote,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
@@ -31,6 +31,7 @@ import { buildApiUser } from './users';
 type UserResolver = ReturnType<typeof createUserResolver>;
 
 const MS_PER_SECOND = 1000;
+const DELIVERED_STATUSES = new Set<SendStatus>(['delivered', 'read', 'viewed']);
 
 /** Builds the app message of a stored Signal message; `conversation` is the one it belongs to */
 export async function buildApiMessage(message: MessageRecord, conversation: ConversationRecord): Promise<ApiMessage> {
@@ -107,6 +108,7 @@ export async function buildApiMessageWithPoll(
       editDate: message.editedAt ? convertToSeconds(message.editedAt) : undefined,
       reactions: await buildApiReactions(message, selfAci, users),
       sendingState: getSendingState(message),
+      isDelivered: getIsDelivered(message) || undefined,
       ttlPeriod: message.expiresAt ? Math.round(message.expiresAt / MS_PER_SECOND) - base.date : undefined,
       isMentioned: isMentioned || undefined,
       hasUnreadMention: isMentioned && !message.readAt ? true : undefined,
@@ -273,6 +275,14 @@ function getSendingState({ isOutgoing, recipientStatus }: MessageRecord): ApiMes
   if (statuses.includes('pending')) return 'messageSendingStatePending';
   if (statuses.includes('failed')) return 'messageSendingStateFailed';
   return undefined;
+}
+
+/**
+ * Like read checks (`getIsReadByRecipient`), delivered checks show the highest status any recipient reached,
+ * as Signal Desktop `getMessagePropStatus` in `ts/state/selectors/message.preload.ts` does
+ */
+function getIsDelivered({ isOutgoing, recipientStatus }: MessageRecord) {
+  return isOutgoing && Object.values(recipientStatus ?? {}).some((status) => DELIVERED_STATUSES.has(status));
 }
 
 function convertToSeconds(timestamp: number) {
