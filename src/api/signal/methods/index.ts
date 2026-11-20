@@ -12,6 +12,32 @@ export {
   updateChatNotifySettings,
 } from './chats';
 export { destroy, disconnect } from './client';
+export {
+  addChatMembers,
+  checkChatInvite,
+  createGroupChat,
+  deleteChat,
+  deleteChatMember,
+  deleteChatUser,
+  deleteExportedChatInvite,
+  deleteRevokedExportedChatInvites,
+  editChatPhoto,
+  editExportedChatInvite,
+  exportChatInvite,
+  fetchChatInviteImporters,
+  fetchExportedChatInvites,
+  hideAllChatJoinRequests,
+  hideChatJoinRequest,
+  importChatInvite,
+  joinChannel,
+  setHistoryTtl,
+  toggleJoinRequest,
+  updateChatAbout,
+  updateChatAdmin,
+  updateChatDefaultBannedRights,
+  updateChatMemberBannedRights,
+  updateChatTitle,
+} from './groups';
 export { downloadMedia } from './media';
 export {
   closePoll,

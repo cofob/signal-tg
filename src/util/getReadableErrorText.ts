@@ -72,6 +72,7 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
   PAID_MEDIA_FORBIDDEN: 'ErrorPaidMediaForbidden',
   USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
+  SIGNAL_GROUP_CHANGE_FAILED: 'ErrorGroupChangeFailed',
 };
 
 if (DEBUG) {

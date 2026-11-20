@@ -22,7 +22,9 @@ import { getPeerId } from '../peers';
 import { sendApiUpdate } from '../updates';
 
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
-const GROUP_FULL_INFO_FIELDS: (keyof ConversationRecord)[] = ['description', 'memberAcis', 'adminAcis', 'expireTimer'];
+const GROUP_FULL_INFO_FIELDS: (keyof ConversationRecord)[] = [
+  'description', 'memberAcis', 'adminAcis', 'expireTimer', 'groupState',
+];
 
 // Conversations as the app last received them, so that only changes are sent
 const reportedConversations = new Map<string, ConversationRecord>();
@@ -128,6 +130,15 @@ async function sendConversationChanges(
     const { fullInfo, users } = await buildGroupFullInfo(conversation, selfAci);
     sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(users, 'id') });
     sendApiUpdate({ '@type': 'updateChatFullInfo', id, fullInfo });
+    // Join requests reach admins through their own update, which reloads the list of requests
+    if (getRequesterAcis(previous) !== getRequesterAcis(conversation)) {
+      sendApiUpdate({
+        '@type': 'updatePendingJoinRequests',
+        chatId: id,
+        requestsPending: fullInfo.requestsPending ?? 0,
+        recentRequesterIds: fullInfo.recentRequesterIds ?? [],
+      });
+    }
   }
 }
 
@@ -167,6 +178,10 @@ async function sendReadOutboxChanges(messages: MessageRecord[]) {
       readState: { lastReadOutboxMessageId: messageId },
     });
   }
+}
+
+function getRequesterAcis({ groupState }: ConversationRecord) {
+  return groupState?.requestingMembers.map(({ aci }) => aci).join() ?? '';
 }
 
 /** Tells the app when a mute ends, so the chat list stops showing it as muted */

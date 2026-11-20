@@ -252,6 +252,27 @@ export function buildUnbanChange(serviceId: string): GroupChangeBuilder {
     : undefined);
 }
 
+/** Builds one change from several, such as access levels with announcements-only; lists of actions add up */
+export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupChangeBuilder {
+  return async (state, context) => {
+    const parts: GroupActions[] = [];
+    for (const build of builders) {
+      const actions = await build(state, context);
+      if (actions) parts.push(actions);
+    }
+    if (!parts.length) return undefined;
+
+    const combined: Record<string, unknown> = {};
+    for (const part of parts) {
+      for (const [key, value] of Object.entries(part)) {
+        const previous = combined[key];
+        combined[key] = Array.isArray(previous) && Array.isArray(value) ? [...previous, ...value] : value ?? previous;
+      }
+    }
+    return combined;
+  };
+}
+
 function getAccessRequired(isAdminOnly?: boolean) {
   return isAdminOnly ? AccessControl_AccessRequired.ADMINISTRATOR : AccessControl_AccessRequired.MEMBER;
 }
