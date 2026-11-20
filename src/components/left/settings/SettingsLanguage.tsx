@@ -10,7 +10,6 @@ import { SettingsScreens } from '../../../types';
 import { selectIsCurrentUserPremium } from '../../../global/selectors';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { IS_TRANSLATION_SUPPORTED } from '../../../util/browser/windowEnvironment';
-import { copyTextToClipboard } from '../../../util/clipboard';
 import { getTranslationFn } from '../../../util/localization';
 
 import useFlag from '../../../hooks/useFlag';
@@ -54,7 +53,6 @@ const SettingsLanguage = ({
     loadLanguages,
     setSettingOption,
     removeCustomLanguage,
-    showNotification,
     openPremiumModal,
     openSettingsScreen,
   } = getActions();
@@ -95,12 +93,6 @@ const SettingsLanguage = ({
   const savedLanguages = useMemo(() => customLanguages?.filter(({ langCode }) => (
     !languages?.some((item) => item.langCode === langCode)
   )), [customLanguages, languages]);
-
-  const handleCopyLink = useLastCallback((langCode: string) => {
-    if (copyTextToClipboard(`https://t.me/setlanguage/${encodeURIComponent(langCode)}`)) {
-      showNotification({ message: { key: 'LinkCopied' } });
-    }
-  });
 
   const options = useMemo(() => {
     if (!languages) return undefined;
@@ -208,9 +200,6 @@ const SettingsLanguage = ({
                 onClick={() => handleChange(savedLanguage.langCode)}
               />
               <DropdownMenu positionX="right" withPortal>
-                <MenuItem icon="link" onClick={() => handleCopyLink(savedLanguage.langCode)}>
-                  {lang('CopyLink')}
-                </MenuItem>
                 <MenuItem
                   icon="delete"
                   destructive

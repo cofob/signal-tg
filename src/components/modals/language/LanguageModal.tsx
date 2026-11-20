@@ -62,11 +62,11 @@ const LanguageModal = ({ modal, currentLanguage }: OwnProps & StateProps) => {
         Math.floor(language.translatedCount / language.stringsCount * PERCENTAGE_SCALE))) : 0;
     const key = isEmpty ? 'LanguageUnknownCustomAlert'
       : language.isOfficial ? 'LanguageAlert' : 'LanguageCustomAlert';
-    const link = (
+    const link = language.translationsUrl ? (
       <a className={styles.link} href={language.translationsUrl} target="_blank" rel="noopener noreferrer">
         {lang('LanguageTranslateLink')}
       </a>
-    );
+    ) : lang('LanguageTranslateLink');
     return lang(key, { language: language.nativeName, percent: percentage, link, settings }, { withNodes: true });
   }
 

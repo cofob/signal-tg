@@ -2452,9 +2452,6 @@ export interface ActionPayloads {
     size: Size;
   };
   // Misc
-  refreshLangPackFromCache: {
-    langCode: string;
-  };
   openRequestPeerModal: {
     botId: string;
     chatId: string;
