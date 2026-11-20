@@ -1,3 +1,6 @@
+import { fromBinary } from '@bufbuild/protobuf';
+
+import type { Envelope } from '../proto/generated/SignalService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord } from '../store/SignalStore';
@@ -9,7 +12,7 @@ import { getBasicAuthorization } from '../net/rest';
 import { decryptEnvelope } from '../receiver/decryptEnvelope';
 
 import ResourceSocket from '../net/ResourceSocket';
-import { Envelope, Envelope_Type } from '../proto/generated/SignalService';
+import { Envelope_Type, EnvelopeSchema } from '../proto/generated/SignalService_pb';
 
 type ChatConnectionHandlers = {
   onEnvelope(decrypted: DecryptedEnvelope): void;
@@ -97,7 +100,7 @@ export default class ChatConnection {
   }
 
   private async processEnvelope(body: Uint8Array) {
-    const envelope = Envelope.decode(body);
+    const envelope = fromBinary(EnvelopeSchema, body);
     if (envelope.type === Envelope_Type.SERVER_DELIVERY_RECEIPT) {
       this.handlers.onDeliveryReceipt(envelope);
       return;

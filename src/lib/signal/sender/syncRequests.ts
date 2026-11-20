@@ -3,7 +3,7 @@ import type { SenderContext } from './sendContent';
 import { getRandomBytes } from '../crypto';
 import { sendContent } from './sendContent';
 
-import { SyncMessage_Request_Type } from '../proto/generated/SignalService';
+import { SyncMessage_Request_Type } from '../proto/generated/SignalService_pb';
 
 const MAX_PADDING_LENGTH = 512;
 
@@ -22,7 +22,10 @@ export async function sendInitialSyncRequests(context: SenderContext) {
 
   for (const type of types) {
     await sendContent(context, context.account.aci, {
-      syncMessage: { request: { type }, padding: getRandomPadding() },
+      content: {
+        case: 'syncMessage',
+        value: { content: { case: 'request', value: { type } }, padding: getRandomPadding() },
+      },
     }, { timestamp: Date.now(), isUrgent: false });
   }
 }

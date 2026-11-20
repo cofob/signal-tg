@@ -1,4 +1,4 @@
-import type { AttachmentPointer } from '../proto/generated/SignalService';
+import type { AttachmentPointer } from '../proto/generated/SignalService_pb';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
 import { compareBuffersConstantTime } from '../../../util/encoding/buffer';
@@ -13,11 +13,11 @@ const HTTP_OK = 200;
 
 /** Downloads an attachment from the CDN in `cdnNumber` and returns its decrypted, unpadded bytes */
 export async function downloadAttachment(pointer: AttachmentPointer) {
-  const cdnNumber = pointer.cdnNumber ?? 0;
+  const { cdnNumber, attachmentIdentifier } = pointer;
   const host = SIGNAL_CDN_HOSTS[cdnNumber];
-  const id = pointer.cdnKey ?? pointer.cdnId?.toString();
+  const id = attachmentIdentifier.case ? String(attachmentIdentifier.value) : undefined;
   if (!host || !id) throw new Error(`Attachment has no location on CDN ${cdnNumber}`);
-  if (!pointer.key) throw new Error('Attachment has no key');
+  if (!pointer.key.length) throw new Error('Attachment has no key');
 
   const response = await sendHttpRequest(host, { method: 'GET', path: `/attachments/${encodeURIComponent(id)}` });
   if (response.status !== HTTP_OK) throw new Error(`Attachment download failed with HTTP ${response.status}`);
@@ -28,7 +28,7 @@ export async function downloadAttachment(pointer: AttachmentPointer) {
 /**
  * Attachments are `IV || AES-256-CBC(PKCS#7) || HMAC-SHA256(IV || ciphertext)` with a 64-byte key: the AES key,
  * then the MAC key. `digest` is the SHA-256 of the whole encrypted blob; plaintext is zero-padded to hide
- * its size, so `size` truncates it.
+ * its size, so a nonzero `size` truncates it.
  */
 export async function decryptAttachment(
   encrypted: Uint8Array, key: Uint8Array, digest?: Uint8Array, size?: number,
@@ -49,5 +49,5 @@ export async function decryptAttachment(
   const plaintext = await decryptAesCbc(
     key.slice(0, AES_KEY_LENGTH), blob.slice(IV_LENGTH, blob.length - MAC_LENGTH), blob.slice(0, IV_LENGTH),
   );
-  return size !== undefined && size < plaintext.length ? plaintext.subarray(0, size) : plaintext;
+  return size && size < plaintext.length ? plaintext.subarray(0, size) : plaintext;
 }

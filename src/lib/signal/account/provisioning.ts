@@ -1,11 +1,16 @@
+import { fromBinary } from '@bufbuild/protobuf';
+
+import type { ProvisionEnvelope } from '../proto/generated/ProvisionEnvelope_pb';
+import type { ProvisionMessage } from '../proto/generated/Provisioning_pb';
+
 import { SIGNAL_CHAT_HOST } from '../config';
 import { bufferToBase64, concat } from '../../../util/encoding/buffer';
 import { decryptAesCbc, deriveSecrets, encodeUtf8, verifyHmacSha256 } from '../crypto';
 import { wasm } from '../wasm';
 
 import ResourceSocket from '../net/ResourceSocket';
-import { ProvisionEnvelope } from '../proto/generated/ProvisionEnvelope';
-import { ProvisioningAddress, ProvisionMessage } from '../proto/generated/Provisioning';
+import { ProvisionEnvelopeSchema } from '../proto/generated/ProvisionEnvelope_pb';
+import { ProvisioningAddressSchema, ProvisionMessageSchema } from '../proto/generated/Provisioning_pb';
 
 export type DeviceLinkSession = {
   url: string;
@@ -47,7 +52,7 @@ export async function startDeviceLink(): Promise<DeviceLinkSession> {
   const provisionMessage = new Promise<ProvisionMessage>((resolve, reject) => {
     socket.onRequest = (request) => {
       if (request.verb === 'PUT' && request.path === ADDRESS_PATH && request.body) {
-        const { address } = ProvisioningAddress.decode(request.body);
+        const { address } = fromBinary(ProvisioningAddressSchema, request.body);
         request.respond(HTTP_OK, 'OK');
         if (!address) {
           rejectUrl(new Error('Provisioning address is missing'));
@@ -59,7 +64,7 @@ export async function startDeviceLink(): Promise<DeviceLinkSession> {
 
       if (request.verb === 'PUT' && request.path === MESSAGE_PATH && request.body) {
         request.respond(HTTP_OK, 'OK');
-        decryptProvisionEnvelope(ProvisionEnvelope.decode(request.body), ephemeralKey)
+        decryptProvisionEnvelope(fromBinary(ProvisionEnvelopeSchema, request.body), ephemeralKey)
           .then(resolve, reject)
           .finally(() => socket.close());
       }
@@ -92,7 +97,7 @@ function buildLinkUrl(address: string, publicKey: Uint8Array) {
 
 async function decryptProvisionEnvelope(envelope: ProvisionEnvelope, ephemeralKey: wasm.PrivateKey) {
   const { publicKey, body } = envelope;
-  if (!publicKey || !body) throw new Error('Invalid provisioning envelope');
+  if (!publicKey.length || !body.length) throw new Error('Invalid provisioning envelope');
   if (body[0] !== PROVISIONING_VERSION) throw new Error('Unknown provisioning message version');
 
   const iv = body.slice(1, 1 + IV_LENGTH);
@@ -106,5 +111,5 @@ async function decryptProvisionEnvelope(envelope: ProvisionEnvelope, ephemeralKe
   const macKey = secrets.slice(KEY_LENGTH);
 
   await verifyHmacSha256(concat(ivAndCiphertext), macKey, mac, MAC_LENGTH);
-  return ProvisionMessage.decode(await decryptAesCbc(cipherKey, ciphertext, iv));
+  return fromBinary(ProvisionMessageSchema, await decryptAesCbc(cipherKey, ciphertext, iv));
 }

@@ -1,4 +1,6 @@
-import type { ProvisionMessage } from '../proto/generated/Provisioning';
+import { create, toBinary } from '@bufbuild/protobuf';
+
+import type { ProvisionMessage } from '../proto/generated/Provisioning_pb';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, KeyPairBytes } from '../store/SignalStore';
 
@@ -12,7 +14,7 @@ import { toPniServiceId, uuidToString } from '../serviceId';
 import { wasm } from '../wasm';
 import { generateKyberPreKeys, generateSignedPreKey, uploadOneTimePreKeys } from './preKeys';
 
-import { DeviceName } from '../proto/generated/DeviceName';
+import { DeviceNameSchema } from '../proto/generated/DeviceName_pb';
 
 type LinkDeviceResponse = {
   uuid: string;
@@ -29,18 +31,24 @@ const AES_COUNTER_LENGTH = 16;
  * (Signal Desktop `AccountManager.createAccount` and `WebAPI.linkDevice`).
  */
 export async function linkDevice(store: SignalStore, message: ProvisionMessage, deviceName: string) {
-  const aci = message.aciBinary?.length ? uuidToString(message.aciBinary) : message.aci;
-  const pni = message.pniBinary?.length ? uuidToString(message.pniBinary) : message.pni;
-  if (!aci || !message.aciIdentityKeyPrivate || !message.provisioningCode) {
+  const aci = message.aciBinary.length ? uuidToString(message.aciBinary) : message.aci;
+  const pni = message.pniBinary.length ? uuidToString(message.pniBinary) : message.pni;
+  if (!aci || !message.aciIdentityKeyPrivate.length || !message.provisioningCode) {
     throw new Error('Provisioning message is incomplete');
   }
 
+  // Accounts without a phone number have no PNI; their group credentials need the auth credential salt instead
+  const hasPni = Boolean(pni);
+  if (hasPni && (!message.number || !message.pniIdentityKeyPrivate.length)) {
+    throw new Error('Provisioning message has a PNI without a phone number or PNI identity key');
+  }
+  if (!hasPni && !message.authCredentialSalt.length) {
+    throw new Error('Provisioning message of an account without a phone number has no auth credential salt');
+  }
+
   const aciIdentityKeyPair = getKeyPair(message.aciIdentityKeyPrivate);
-  const pniIdentityKeyPair = message.pniIdentityKeyPrivate?.length
-    ? getKeyPair(message.pniIdentityKeyPrivate)
-    : undefined;
-  const hasPni = Boolean(message.number && pni && pniIdentityKeyPair);
-  const pniServiceId = pni ? toPniServiceId(pni) : undefined;
+  const pniIdentityKeyPair = hasPni ? getKeyPair(message.pniIdentityKeyPrivate) : undefined;
+  const pniServiceId = hasPni ? toPniServiceId(pni) : undefined;
 
   // The base64 of 16 random bytes without its `==` padding
   const password = bufferToBase64(getRandomBytes(PASSWORD_BYTES)).slice(0, -2);
@@ -72,7 +80,7 @@ export async function linkDevice(store: SignalStore, message: ProvisionMessage, 
           attachmentBackfill: false,
           spqr: true,
           usernameChangeSyncMessage: true,
-          optionalPhoneNumber: !message.number,
+          optionalPhoneNumber: !hasPni,
           storage: false,
         },
       },
@@ -87,16 +95,17 @@ export async function linkDevice(store: SignalStore, message: ProvisionMessage, 
   const account: AccountRecord = {
     aci,
     pni: hasPni ? pni : undefined,
-    number: message.number,
+    number: hasPni ? message.number : undefined,
     deviceId: response.deviceId,
     deviceName,
     password,
     registrationId,
     pniRegistrationId,
-    profileKey: message.profileKey,
-    accountEntropyPool: message.accountEntropyPool,
-    mediaRootBackupKey: message.mediaRootBackupKey,
-    ephemeralBackupKey: message.ephemeralBackupKey,
+    profileKey: getOptionalBytes(message.profileKey),
+    accountEntropyPool: message.accountEntropyPool || undefined,
+    mediaRootBackupKey: getOptionalBytes(message.mediaRootBackupKey),
+    ephemeralBackupKey: getOptionalBytes(message.ephemeralBackupKey),
+    authCredentialSalt: getOptionalBytes(message.authCredentialSalt),
     isReadReceiptsEnabled: message.readReceipts,
   };
   await store.setItem('aciIdentityKeyPair', aciIdentityKeyPair);
@@ -136,9 +145,13 @@ async function encryptDeviceName(deviceName: string, identityPublicKey: Uint8Arr
   const cipherKey = await hmacSha256(cipherSeed, syntheticIv);
   const ciphertext = await encryptAesCtr(cipherKey, plaintext, new Uint8Array(AES_COUNTER_LENGTH));
 
-  return bufferToBase64(DeviceName.encode({
+  return bufferToBase64(toBinary(DeviceNameSchema, create(DeviceNameSchema, {
     ephemeralPublic: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(ephemeralKey)),
     syntheticIv,
     ciphertext,
-  }));
+  })));
+}
+
+function getOptionalBytes(bytes: Uint8Array) {
+  return bytes.length ? bytes : undefined;
 }

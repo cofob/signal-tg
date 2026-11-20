@@ -2425,6 +2425,33 @@ export function ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(param
 }
 
 /**
+ * For accounts without a phone number: the credential is bound to the provisioning message's
+ * auth credential salt instead of a PNI
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} aci_bytes
+ * @param {Uint8Array} salt
+ * @param {number} redemption_time
+ * @param {Uint8Array} response
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params, aci_bytes, salt, redemption_time, response) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(salt, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params.__wbg_ptr, ptr0, len0, ptr1, len1, redemption_time, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
  * `current_time` is in seconds
  * @param {ServerPublicParams} params
  * @param {Uint8Array} request_context

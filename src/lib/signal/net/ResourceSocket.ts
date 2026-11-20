@@ -1,6 +1,6 @@
-import type { WebSocketRequestMessage } from '../proto/generated/WebSocketResources';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
-import { WebSocketMessage, WebSocketMessage_Type } from '../proto/generated/WebSocketResources';
+import { WebSocketMessage_Type, WebSocketMessageSchema } from '../proto/generated/WebSocketResources_pb';
 import WebSocketClient from './WebSocketClient';
 
 export type ResourceRequest = {
@@ -71,14 +71,16 @@ export default class ResourceSocket {
     if (this.isClosed) return Promise.reject(new Error('Socket is closed'));
 
     const id = this.nextId++;
-    const request: WebSocketRequestMessage = {
-      id,
-      verb,
-      path,
-      body,
-      headers: Object.entries(headers).map(([name, value]) => `${name}:${value}`),
-    };
-    this.socket.send(WebSocketMessage.encode({ type: WebSocketMessage_Type.REQUEST, request }));
+    this.socket.send(toBinary(WebSocketMessageSchema, create(WebSocketMessageSchema, {
+      type: WebSocketMessage_Type.REQUEST,
+      request: {
+        id,
+        verb,
+        path,
+        body,
+        headers: Object.entries(headers).map(([name, value]) => `${name}:${value}`),
+      },
+    })));
 
     return new Promise((resolve, reject) => {
       this.pending.set(id, {
@@ -97,37 +99,39 @@ export default class ResourceSocket {
   }
 
   private handleMessage(data: Uint8Array) {
-    const message = WebSocketMessage.decode(data);
+    const message = fromBinary(WebSocketMessageSchema, data);
 
     if (message.type === WebSocketMessage_Type.RESPONSE && message.response) {
-      const { id, status = 0, message: statusMessage, headers, body } = message.response;
-      const pending = id !== undefined ? this.pending.get(id) : undefined;
+      const {
+        id, status, message: statusMessage, headers, body,
+      } = message.response;
+      const pending = this.pending.get(id);
       if (!pending) return;
-      this.pending.delete(id!);
+      this.pending.delete(id);
       clearTimeout(pending.timeout);
       pending.resolve({
-        status, message: statusMessage, headers: parseHeaders(headers), body,
+        status, message: statusMessage, headers: parseHeaders(headers), body: body.length ? body : undefined,
       });
       return;
     }
 
     if (message.type === WebSocketMessage_Type.REQUEST && message.request) {
       const {
-        id, verb = '', path = '', headers, body,
+        id, verb, path, headers, body,
       } = message.request;
       let hasResponded = false;
       this.onRequest?.({
         verb,
         path,
         headers: parseHeaders(headers),
-        body,
+        body: body.length ? body : undefined,
         respond: (status, statusMessage) => {
           if (hasResponded || this.isClosed) return;
           hasResponded = true;
-          this.socket.send(WebSocketMessage.encode({
+          this.socket.send(toBinary(WebSocketMessageSchema, create(WebSocketMessageSchema, {
             type: WebSocketMessage_Type.RESPONSE,
             response: { id, status, message: statusMessage },
-          }));
+          })));
         },
       });
     }
@@ -154,7 +158,7 @@ export default class ResourceSocket {
   }
 }
 
-function parseHeaders(headers: string[] = []) {
+function parseHeaders(headers: string[]) {
   const result = new Map<string, string>();
   for (const header of headers) {
     const separator = header.indexOf(':');

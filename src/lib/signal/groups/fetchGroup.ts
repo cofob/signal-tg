@@ -1,5 +1,7 @@
+import { fromBinary } from '@bufbuild/protobuf';
+
 import type ChatConnection from '../chat/ChatConnection';
-import type { AccessControl, Group, Member_Role } from '../proto/generated/Groups';
+import type { AccessControl, Group, Member_Role } from '../proto/generated/Groups_pb';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
@@ -9,7 +11,7 @@ import { sendHttpRequest } from '../net/http';
 import { toPniServiceId } from '../serviceId';
 import { wasm } from '../wasm';
 
-import { GroupAttributeBlob, GroupResponse } from '../proto/generated/Groups';
+import { GroupAttributeBlobSchema, GroupResponseSchema } from '../proto/generated/Groups_pb';
 
 export type GroupMember = {
   aci: string;
@@ -67,7 +69,7 @@ export async function fetchGroup(
   });
   if (response.status !== HTTP_OK) throw new Error(`Group request failed with HTTP ${response.status}`);
 
-  const { group } = GroupResponse.decode(response.body);
+  const { group } = fromBinary(GroupResponseSchema, response.body);
   if (!group) throw new Error('Group response has no group');
   return decryptGroupState(secretParams, group);
 }
@@ -77,27 +79,33 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
 
   const decryptBytes = (blob: Uint8Array) => wasm.GroupSecretParams_DecryptBlobWithPadding(secretParams, blob);
-  const decryptBlob = (blob?: Uint8Array) => (blob?.length ? GroupAttributeBlob.decode(decryptBytes(blob)) : undefined);
-  const decryptText = (blob?: Uint8Array) => (blob?.length ? textDecoder.decode(decryptBytes(blob)) : undefined);
+  const decryptAttribute = (blob: Uint8Array) => (
+    blob.length ? fromBinary(GroupAttributeBlobSchema, decryptBytes(blob)).content : undefined
+  );
+  const decryptText = (blob: Uint8Array) => (blob.length ? textDecoder.decode(decryptBytes(blob)) : undefined);
   const decryptServiceId = (ciphertext: Uint8Array) => (
     wasm.ServiceId_ServiceIdString(wasm.GroupSecretParams_DecryptServiceId(secretParams, ciphertext))
   );
-  const decryptProfileKey = (ciphertext: Uint8Array | undefined, aci: string) => (
-    ciphertext?.length
+  const decryptProfileKey = (ciphertext: Uint8Array, aci: string) => (
+    ciphertext.length
       ? wasm.GroupSecretParams_DecryptProfileKey(secretParams, ciphertext, wasm.ServiceId_ParseFromServiceIdString(aci))
       : undefined
   );
 
+  const title = decryptAttribute(group.title);
+  const description = decryptAttribute(group.description);
+  const timer = decryptAttribute(group.disappearingMessagesTimer);
+
   return {
     groupId: bufferToBase64(wasm.GroupPublicParams_GetGroupIdentifier(publicParams)),
-    revision: group.version ?? 0,
-    title: decryptBlob(group.title)?.title,
-    description: decryptBlob(group.description)?.descriptionText,
+    revision: group.version,
+    title: title?.case === 'title' ? title.value : undefined,
+    description: description?.case === 'descriptionText' ? description.value : undefined,
     avatarUrl: group.avatarUrl || undefined,
-    expireTimer: decryptBlob(group.disappearingMessagesTimer)?.disappearingMessagesDuration,
+    expireTimer: timer?.case === 'disappearingMessagesDuration' ? timer.value : undefined,
     accessControl: group.accessControl,
-    members: (group.members ?? []).map((member) => {
-      const aci = decryptServiceId(member.userId!);
+    members: group.members.map((member) => {
+      const aci = decryptServiceId(member.userId);
       return {
         aci,
         role: member.role,
@@ -107,25 +115,21 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
         label: decryptText(member.labelString),
       };
     }),
-    pendingMembers: (group.membersPendingProfileKey ?? []).map(({ member, addedByUserId, timestamp }) => ({
-      serviceId: decryptServiceId(member!.userId!),
-      addedBy: addedByUserId?.length ? decryptServiceId(addedByUserId) : undefined,
-      timestamp: timestamp !== undefined ? Number(timestamp) : undefined,
+    pendingMembers: group.membersPendingProfileKey.map(({ member, addedByUserId, timestamp }) => ({
+      serviceId: decryptServiceId(member!.userId),
+      addedBy: addedByUserId.length ? decryptServiceId(addedByUserId) : undefined,
+      timestamp: Number(timestamp),
     })),
-    requestingMembers: (group.membersPendingAdminApproval ?? []).map(({ userId, profileKey, timestamp }) => {
-      const aci = decryptServiceId(userId!);
-      return {
-        aci,
-        profileKey: decryptProfileKey(profileKey, aci),
-        timestamp: timestamp !== undefined ? Number(timestamp) : undefined,
-      };
+    requestingMembers: group.membersPendingAdminApproval.map(({ userId, profileKey, timestamp }) => {
+      const aci = decryptServiceId(userId);
+      return { aci, profileKey: decryptProfileKey(profileKey, aci), timestamp: Number(timestamp) };
     }),
-    bannedMembers: (group.members_banned ?? []).map(({ userId, timestamp }) => ({
-      serviceId: decryptServiceId(userId!),
-      timestamp: timestamp !== undefined ? Number(timestamp) : undefined,
+    bannedMembers: group.membersBanned.map(({ userId, timestamp }) => ({
+      serviceId: decryptServiceId(userId),
+      timestamp: Number(timestamp),
     })),
-    inviteLinkPassword: group.inviteLinkPassword?.length ? group.inviteLinkPassword : undefined,
-    isAnnouncementsOnly: group.announcements_only,
+    inviteLinkPassword: group.inviteLinkPassword.length ? group.inviteLinkPassword : undefined,
+    isAnnouncementsOnly: group.announcementsOnly,
     isTerminated: group.terminated,
   };
 }
@@ -137,21 +141,27 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
 async function getGroupAuthorization(
   account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, publicParams: Uint8Array,
 ) {
-  if (!account.pni) throw new Error('Group access for accounts without a phone number is not supported yet');
-
   serverPublicParams ??= wasm.ServerPublicParams_Deserialize(bufferFromBase64(SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS));
   const today = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
   const { credentials } = await getGroupCredentials(connection, today);
   const todayCredential = credentials.find(({ redemptionTime }) => redemptionTime === today);
   if (!todayCredential) throw new Error('No group auth credential for today');
 
-  const credential = wasm.ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(
-    serverPublicParams,
-    wasm.ServiceId_ParseFromServiceIdString(account.aci),
-    wasm.ServiceId_ParseFromServiceIdString(toPniServiceId(account.pni)),
-    todayCredential.redemptionTime,
-    bufferFromBase64(todayCredential.credential),
-  );
+  const aci = wasm.ServiceId_ParseFromServiceIdString(account.aci);
+  const response = bufferFromBase64(todayCredential.credential);
+  let credential: Uint8Array;
+  if (account.pni) {
+    const pni = wasm.ServiceId_ParseFromServiceIdString(toPniServiceId(account.pni));
+    credential = wasm.ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(
+      serverPublicParams, aci, pni, todayCredential.redemptionTime, response,
+    );
+  } else {
+    // Accounts without a phone number
+    if (!account.authCredentialSalt) throw new Error('Auth credential salt is missing');
+    credential = wasm.ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(
+      serverPublicParams, aci, account.authCredentialSalt, todayCredential.redemptionTime, response,
+    );
+  }
   const presentation = wasm.ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(
     serverPublicParams, getRandomBytes(RANDOMNESS_LENGTH), secretParams, credential,
   );

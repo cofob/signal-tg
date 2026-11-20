@@ -12,13 +12,13 @@
 
 - `rust/libsignal/`: крейты libsignal v0.108.3; `rust/signal-wasm/`: WASM-мост протокола (имена функций как у `Native`) и TLS-клиент на rustls. Сборка: `npm run signal:wasm`, результат в `src/lib/signal/wasm/generated`.
 - `proxy/tunnel.ts`: туннель WebSocket -> TCP, `npm run signal:proxy`.
-- `dev/generateProto.ts`: генератор protobuf, `npm run signal:proto`; схемы в `src/lib/signal/proto/schema`.
+- protobuf-es: `npm run signal:proto` (`buf generate`), схемы в `src/lib/signal/proto/schema`, код в `src/lib/signal/proto/generated`.
 - `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
 - `src/lib/signal/account`, `receiver`, `chat`, `store`, `sender`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB, отправка с обработкой 409/410 и запросы синхронизации после привязки.
 
 Этап 2, начат: движок умеет скачивать и расшифровывать вложения, разбирать синхронизацию контактов, читать storage service, получать профили и состояние групп v2 (zkgroup в WASM). Интеграции с UI (`src/api/signal`) пока нет.
 
-Проверено: сессия PQXDH, zkgroup (на боевых параметрах сервера), protobuf (против `protoc`), вложения и расшифровка групп в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
+Проверено: сессия PQXDH, zkgroup (на боевых параметрах сервера), вложения и расшифровка групп в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
 
 Не проверено: привязка телефоном и расшифровка первого сообщения. Проверка вручную:
 
@@ -80,7 +80,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 - **Архитектура повторяет Telegram Web A.** GramJS живёт в Worker мастер-вкладки и отдаёт `ApiUpdate`; на его место встаёт движок Signal. Мастер-вкладка держит единственный WebSocket устройства, другие вкладки ходят через неё (`src/util/browser/multitab.ts`).
 - **WASM-мост.** Нужные крейты libsignal v0.108.3 лежат в `rust/libsignal/` без изменений, кроме перечисленных в `rust/libsignal/NOTICE.md`. Собственный крейт `rust/signal-wasm/` (wasm-bindgen) экспортирует функции с именами и сигнатурами `Native` из `libsignal/node/ts/Native.ts`, только нужное подмножество. Движок вызывает их напрямую через `src/lib/signal/wasm`; обёртку `node/ts` переносить не стали: прямые вызовы короче, а совпадение имён с `Native` упрощает перенос кода Desktop. `libsignal-net` в сборку не входит: сеть написана на TypeScript поверх туннеля.
 - **CDSI** требует патча `attest` в форке: BoringSSL заменяется чистым Rust (`x509-cert`, `p256`, `ecdsa`, `sha2`) за фичей. До патча поиск по номеру недоступен; контакты с телефона приходят с ACI через синхронизацию, поиск по юзернейму CDSI не нужен.
-- **Protobuf:** свой генератор TS-кодеков в `dev/` (как `npm run gramjs:tl`), без runtime-зависимостей. `.proto` копируются из Signal Android с указанием версии.
+- **Protobuf:** [protobuf-es](https://github.com/bufbuild/protobuf-es) (`@bufbuild/protobuf`), код генерирует `buf generate` по `buf.gen.yaml` (`npm run signal:proto`). `.proto` копируются из Signal Android с указанием версии. 64-битные числа приходят как `bigint`, неизвестные поля сохраняются (нужно storage service).
 - **Хранилище:** IndexedDB без новых зависимостей. Сырой конверт сначала сохраняется в `unprocessed`, потом подтверждается серверу (как в Desktop), поэтому сбой вкладки не теряет сообщения. Вызывается `navigator.storage.persist()`. При заданном код-пароле ключи и история шифруются (расширяем `src/util/passcode`).
 - **Идентификаторы как в Signal Android:** движок выдаёт локальные числовые id. Пользователь: положительное целое, группа: отрицательное целое. ACI, PNI, номер и groupId хранятся полями. Сообщения нумеруются целыми числами внутри чата в порядке получения. Identity сообщения в Signal: `(чат, ACI автора, sentTimestamp)`, уникальный индекс. Цитаты, реакции, правки, удаления, квитанции, голоса и закрепления находят сообщение по нему. Правка сохраняет id и пишет ревизию. Так `isUserId`, ключи сообщений, viewport и пагинация работают без переписывания.
 - **Лицензии:** libsignal и Signal Desktop распространяются под AGPLv3, Telegram Web A и Signal Android под GPLv3. GPLv3 §13 разрешает такое объединение; перенесённые и встроенные AGPL-части сохраняют свою лицензию. Исходники публичны, требование AGPL о раскрытии кода выполняется. Добавляем NOTICE с перечнем.
@@ -96,6 +96,26 @@ proxy/  (Node 24, без зависимостей, без состояния)
 | Риск | Злоумышленный прокси может вызывать API от имени устройства, но не прочитает и не подделает сообщения без ключей | Сложнее, медленнее на больших вложениях |
 
 Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
+
+## 2a. Аккаунты без номера телефона
+
+Signal позволяет аккаунты без номера: у них нет PNI и номера, собеседники находят их по юзернейму. Поддержка есть в выпущенной libsignal v0.108.3 (`AuthCredentialWithPniResponse::receive_without_pni`, поле `ProvisionMessage.authCredentialSalt`) и в Signal Desktop (capability `nopni2`, «e164-less linking», `ts/textsecure/Provisioner.preload.ts`, `ts/services/groupCredentialFetcher.preload.ts`). В main libsignal после v0.108.3 два коммита, к этому не относящихся.
+
+Сделано:
+
+- QR-ссылка объявляет `nopni` и `nopni2`.
+- Привязка без PNI: требуется `authCredentialSalt`, PNI-ключи и `pniRegistrationId` не создаются, capability `optionalPhoneNumber` равна `true`; соль хранится в аккаунте.
+- Групповые auth credentials без PNI: `ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni` с солью, дальше та же zk-презентация.
+- Конверты на PNI для такого аккаунта отклоняются, всё адресуется ACI.
+
+Осталось (вместе с соответствующими функциями):
+
+- Сертификат sealed sender запрашивать с `?includeE164=false` (`GET /v1/certificate/delivery`).
+- При старте обновлять capabilities устройства с `optionalPhoneNumber`.
+- Поиск собеседников по юзернейму (`usernames` в WASM, `GET /v1/accounts/username_hash`) как основной путь вместо CDSI.
+- UI: не показывать и не требовать номер в профиле, настройках приватности и экранах привязки.
+
+Не проверено на живом аккаунте без номера: нужен такой аккаунт на телефоне.
 
 ## 3. Соответствие функций
 
@@ -177,7 +197,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 
 1. **libsignal в WASM.** Форк libsignal, цель `wasm` в макросах моста, сборка через wasm-bindgen, `node/ts` поверх WASM. Готово, когда в браузере две пары хранилищ проводят сессию PQXDH, шифруют и расшифровывают сообщение, sealed sender и sender key работают, размер `.wasm` измерен.
 2. **Прокси-туннель и TLS в WASM.** Туннель WebSocket -> TCP с allowlist (chat, storage, cdn0/2/3, cdsi, contentproxy), rustls в WASM с закреплённым CA Signal, клиенты HTTP/1.1 и WebSocket на TypeScript. Готово, когда браузер открывает `wss://chat.signal.org/v1/websocket/provisioning/` через туннель.
-3. **Генератор protobuf** (`npm run signal:proto`): `SignalService`, `Provisioning`, `WebSocketResources`, `Groups`, `DecryptedGroups`, `StorageService`, `Backup`. Готово, когда кодеки проходят раунд-трип на образцах из Desktop.
+3. **Protobuf** (`npm run signal:proto`): `SignalService`, `Provisioning`, `WebSocketResources`, `Groups`, `DecryptedGroups`, `StorageService`, `Backup`.
 4. **Привязка и первое сообщение.** QR в браузере, скан с Android, расшифровка `ProvisionMessage`, `PUT /v1/devices/link`, загрузка prekeys, WebSocket, расшифровка входящего конверта. Готово, когда текст с телефона виден в консоли.
 
 ### Этап 1. Вырезать функции Telegram, пока бэкенд Telegram ещё работает
@@ -235,12 +255,12 @@ WebRTC браузера не может говорить с RingRTC (факт 5)
 
 - Крейты libsignal (AGPLv3) в `rust/libsignal/`, rustls для TLS в WASM, wasm-bindgen.
 - Инструменты сборки: Rust по `rust-toolchain` libsignal, цель `wasm32-unknown-unknown`, `wasm-bindgen-cli`, `protoc`. Собранный `.wasm` коммитим, чтобы фронтенд собирался без Rust, или собираем в CI.
-- Новых npm-пакетов план не требует: protobuf через свой генератор, хранилище в IndexedDB через `idb-keyval` и прямой API, прокси на `node:http` и `node:https`.
+- npm: `@bufbuild/protobuf` (рантайм), `@bufbuild/protoc-gen-es` и `@bufbuild/buf` (генерация). Хранилище в IndexedDB через `idb-keyval` и прямой API, прокси на `node:http` и `node:net` без зависимостей.
 
 ## 9. Принятые решения (2026-11-20)
 
 1. Прокси: P2, туннель без расшифровки TLS.
-2. Protobuf: свой генератор.
+2. Protobuf: готовая библиотека protobuf-es (свой генератор заменён по решению от того же дня).
 3. Хранилище: IndexedDB.
 4. Звонки: исследование этапа R идёт параллельно с основными этапами, результаты в `docs/signal/CALLS_RESEARCH.md`.
 5. Отложенные сообщения: локальные, отправляются только при открытой вкладке; интерфейс предупреждает об этом при планировании.

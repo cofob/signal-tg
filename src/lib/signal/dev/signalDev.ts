@@ -51,9 +51,10 @@ const signalDev = {
     const context = { store, account, connection };
     const timestamp = Date.now();
     const message = { body: text, timestamp: BigInt(timestamp) };
-    await sendContent(context, destination, { dataMessage: message }, { timestamp });
+    await sendContent(context, destination, { content: { case: 'dataMessage', value: message } }, { timestamp });
+    const sent = { destinationServiceId: destination, timestamp: BigInt(timestamp), message };
     await sendContent(context, account.aci, {
-      syncMessage: { sent: { destinationServiceId: destination, timestamp: BigInt(timestamp), message } },
+      content: { case: 'syncMessage', value: { content: { case: 'sent', value: sent } } },
     }, { timestamp });
     console.log('[signal] Sent', timestamp);
   },
@@ -86,18 +87,18 @@ const signalDev = {
     }
     const records = [...snapshot.records.values()];
     const countsByType: Record<string, number> = {};
-    for (const record of records) {
-      const type = Object.keys(record).find((key) => key !== '$unknownFields') ?? 'unknown';
+    for (const { record } of records) {
+      const type = record.case ?? 'unknown';
       countsByType[type] = (countsByType[type] ?? 0) + 1;
     }
     console.log(`[signal] Storage manifest version ${snapshot.version}:`, countsByType);
-    console.table(records.flatMap(({ contact }) => (contact ? [{
+    console.table(records.flatMap(({ record }) => (record.case === 'contact' ? [record.value] : [])).map((contact) => ({
       aci: contact.aci,
       e164: contact.e164,
       name: [contact.systemGivenName || contact.givenName, contact.systemFamilyName || contact.familyName]
         .filter(Boolean).join(' '),
       archived: contact.archived,
-    }] : [])));
+    })));
   },
 
   /** Fetches every group v2 listed in the storage service and prints titles and members */
@@ -106,8 +107,8 @@ const signalDev = {
     if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
 
     const snapshot = await fetchStorageSnapshot(account, connection);
-    const masterKeys = [...snapshot?.records.values() ?? []].flatMap(({ groupV2 }) => (
-      groupV2?.masterKey ? [groupV2.masterKey] : []
+    const masterKeys = [...snapshot?.records.values() ?? []].flatMap(({ record }) => (
+      record.case === 'groupV2' && record.value.masterKey.length ? [record.value.masterKey] : []
     ));
     const rows = [];
     for (const masterKey of masterKeys) {
@@ -144,29 +145,43 @@ const signalDev = {
 
 function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEnvelope) {
   const from = `${senderServiceId}.${senderDeviceId}`;
-  const sent = content.syncMessage?.sent?.message;
-  const contactsBlob = content.syncMessage?.contacts?.blob;
-  const keys = content.syncMessage?.keys;
-  if (keys) {
-    void store.getItem('account').then((account) => account && store.setItem('account', {
-      ...account,
-      accountEntropyPool: keys.accountEntropyPool ?? account.accountEntropyPool,
-      mediaRootBackupKey: keys.mediaRootBackupKey ?? account.mediaRootBackupKey,
-    }));
-    console.log('[signal] Received account keys from the primary device');
-  } else if (contactsBlob) {
-    void downloadAttachment(contactsBlob).then((data) => {
-      const contacts = parseContactSync(data);
-      console.log(`[signal] Contact sync: ${contacts.length} contacts`);
-      console.table(contacts.map(({ aci, number, name }) => ({ aci, number, name })));
-    }, (err) => console.warn('[signal] Contact sync download failed', err));
-  } else if (content.dataMessage) {
-    console.log(`[signal] Message from ${from}:`, content.dataMessage.body ?? '', content.dataMessage);
-  } else if (sent) {
-    console.log(`[signal] Sent from another device of ours to ${content.syncMessage!.sent!.destinationServiceId}:`,
-      sent.body ?? '', sent);
-  } else {
+  const body = content.content;
+
+  if (body.case === 'dataMessage') {
+    console.log(`[signal] Message from ${from}:`, body.value.body, body.value);
+    return;
+  }
+  if (body.case !== 'syncMessage') {
     console.log(`[signal] Content from ${from}:`, content);
+    return;
+  }
+
+  const sync = body.value.content;
+  switch (sync.case) {
+    case 'keys': {
+      const keys = sync.value;
+      void store.getItem('account').then((account) => account && store.setItem('account', {
+        ...account,
+        accountEntropyPool: keys.accountEntropyPool || account.accountEntropyPool,
+        mediaRootBackupKey: keys.mediaRootBackupKey.length ? keys.mediaRootBackupKey : account.mediaRootBackupKey,
+      }));
+      console.log('[signal] Received account keys from the primary device');
+      break;
+    }
+    case 'contacts':
+      if (!sync.value.blob) break;
+      void downloadAttachment(sync.value.blob).then((data) => {
+        const contacts = parseContactSync(data);
+        console.log(`[signal] Contact sync: ${contacts.length} contacts`);
+        console.table(contacts.map(({ aci, number, name }) => ({ aci, number, name })));
+      }, (err) => console.warn('[signal] Contact sync download failed', err));
+      break;
+    case 'sent':
+      console.log(`[signal] Sent from another device of ours to ${sync.value.destinationServiceId}:`,
+        sync.value.message?.body, sync.value);
+      break;
+    default:
+      console.log(`[signal] Sync message from ${from}:`, sync);
   }
 }
 

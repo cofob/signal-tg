@@ -195,6 +195,30 @@ pub fn ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(
     Ok(encode(&credential))
 }
 
+/// For accounts without a phone number: the credential is bound to the provisioning message's
+/// auth credential salt instead of a PNI
+#[wasm_bindgen]
+pub fn ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(
+    params: &ServerPublicParams,
+    aci_bytes: &[u8],
+    salt: &[u8],
+    redemption_time: f64,
+    response: &[u8],
+) -> JsResult<Vec<u8>> {
+    let operation = "ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni";
+    let response = AuthCredentialWithPniResponse::new(response)
+        .map_err(|_| generic_error("invalid auth credential response", operation))?;
+    let credential = response
+        .receive_without_pni(
+            &params.0,
+            aci(aci_bytes, operation)?,
+            salt,
+            Timestamp::from_epoch_seconds(redemption_time as u64),
+        )
+        .map_err(verification_failure(operation))?;
+    Ok(encode(&credential))
+}
+
 #[wasm_bindgen]
 pub fn ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(
     params: &ServerPublicParams,

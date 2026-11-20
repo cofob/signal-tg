@@ -20,6 +20,8 @@ export type AccountRecord = {
   masterKey?: Uint8Array;
   mediaRootBackupKey?: Uint8Array;
   ephemeralBackupKey?: Uint8Array;
+  // Group auth credentials of accounts without a phone number (and so without a PNI) are bound to this salt
+  authCredentialSalt?: Uint8Array;
   isReadReceiptsEnabled?: boolean;
 };
 

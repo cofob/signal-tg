@@ -1,0 +1,11 @@
+# Generates `src/lib/signal/proto/generated` from the Signal schemas: `npm run signal:proto`
+version: v2
+inputs:
+  - directory: src/lib/signal/proto/schema
+plugins:
+  - local: protoc-gen-es
+    out: src/lib/signal/proto/generated
+    opt:
+      - target=ts
+      - import_extension=none
+clean: true

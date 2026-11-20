@@ -467,6 +467,12 @@ export function ServerPublicParams_Deserialize(data: Uint8Array): ServerPublicPa
 export function ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(params: ServerPublicParams, aci_bytes: Uint8Array, pni_bytes: Uint8Array, redemption_time: number, response: Uint8Array): Uint8Array;
 
 /**
+ * For accounts without a phone number: the credential is bound to the provisioning message's
+ * auth credential salt instead of a PNI
+ */
+export function ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params: ServerPublicParams, aci_bytes: Uint8Array, salt: Uint8Array, redemption_time: number, response: Uint8Array): Uint8Array;
+
+/**
  * `current_time` is in seconds
  */
 export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params: ServerPublicParams, request_context: Uint8Array, response: Uint8Array, current_time: number): Uint8Array;
@@ -736,6 +742,7 @@ export interface InitOutput {
     readonly ServerPublicParams_CreateProfileKeyCredentialRequestContextDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly ServerPublicParams_Deserialize: (a: number, b: number) => [number, number, number];
     readonly ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+    readonly ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];

@@ -1,5 +1,7 @@
+import type { MessageInitShape } from '@bufbuild/protobuf';
+import { create, toBinary } from '@bufbuild/protobuf';
+
 import type ChatConnection from '../chat/ChatConnection';
-import type { Content } from '../proto/generated/SignalService';
 import type { ProtocolStores } from '../store/protocolStores';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord } from '../store/SignalStore';
@@ -9,7 +11,7 @@ import { padMessage } from '../crypto';
 import { createProtocolStores } from '../store/protocolStores';
 import { wasm } from '../wasm';
 
-import { Content as ContentCodec, Envelope_Type } from '../proto/generated/SignalService';
+import { ContentSchema, Envelope_Type } from '../proto/generated/SignalService_pb';
 
 export type SenderContext = {
   store: SignalStore;
@@ -57,7 +59,7 @@ export class UnregisteredUserError extends Error {
  * When `destination` is our ACI, the content goes to our other devices only.
  */
 export async function sendContent(
-  context: SenderContext, destination: string, content: Content, options: SendOptions,
+  context: SenderContext, destination: string, content: MessageInitShape<typeof ContentSchema>, options: SendOptions,
 ) {
   const { store, account, connection } = context;
   const keyPair = await store.getItem('aciIdentityKeyPair');
@@ -67,7 +69,7 @@ export async function sendContent(
     serviceId: account.aci, keyPair, registrationId: account.registrationId,
   });
   const localAddress = wasm.ProtocolAddress_New(account.aci, account.deviceId);
-  const plaintext = padMessage(ContentCodec.encode(content));
+  const plaintext = padMessage(toBinary(ContentSchema, create(ContentSchema, content)));
   const isToSelf = destination === account.aci;
 
   let deviceIds = await getDeviceIds(store, destination, account, isToSelf);

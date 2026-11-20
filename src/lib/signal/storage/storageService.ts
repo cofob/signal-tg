@@ -1,5 +1,8 @@
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
+
 import type ChatConnection from '../chat/ChatConnection';
 import type { Credentials } from '../net/rest';
+import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_STORAGE_HOST } from '../config';
@@ -11,8 +14,8 @@ import { sendHttpRequest } from '../net/http';
 import { getBasicAuthorization } from '../net/rest';
 
 import {
-  ManifestRecord, ReadOperation, StorageItems, StorageManifest, StorageRecord,
-} from '../proto/generated/StorageService';
+  ManifestRecordSchema, ReadOperationSchema, StorageItemsSchema, StorageManifestSchema, StorageRecordSchema,
+} from '../proto/generated/StorageService_pb';
 
 export type StorageSnapshot = {
   version: bigint;
@@ -45,24 +48,23 @@ export async function fetchStorageSnapshot(
     throw new Error(`Storage manifest request failed with HTTP ${manifestResponse.status}`);
   }
 
-  const manifest = StorageManifest.decode(manifestResponse.body);
-  const version = manifest.version ?? 0n;
+  const { version, value } = fromBinary(StorageManifestSchema, manifestResponse.body);
   const manifestKey = await hmacSha256(storageKey, encodeUtf8(`Manifest_${version}`));
-  const manifestRecord = ManifestRecord.decode(await decryptAesGcmWithNonce(manifestKey, manifest.value!));
-  const identifiers = manifestRecord.identifiers ?? [];
+  const manifestRecord = fromBinary(ManifestRecordSchema, await decryptAesGcmWithNonce(manifestKey, value));
+  const { identifiers } = manifestRecord;
 
   const records = new Map<string, StorageRecord>();
   for (let i = 0; i < identifiers.length; i += READ_BATCH_SIZE) {
-    const readKey = identifiers.slice(i, i + READ_BATCH_SIZE).map(({ raw }) => raw!);
-    const response = await sendStorageRequest(
-      credentials, 'PUT', '/v1/storage/read', ReadOperation.encode({ readKey }),
-    );
+    const readKey = identifiers.slice(i, i + READ_BATCH_SIZE).map(({ raw }) => raw);
+    const body = toBinary(ReadOperationSchema, create(ReadOperationSchema, { readKey }));
+    const response = await sendStorageRequest(credentials, 'PUT', '/v1/storage/read', body);
     if (response.status !== HTTP_OK) throw new Error(`Storage read failed with HTTP ${response.status}`);
 
-    for (const { key, value } of StorageItems.decode(response.body).items ?? []) {
-      if (!key || !value) continue;
-      const itemKey = await getItemKey(storageKey, key, manifestRecord.recordIkm);
-      records.set(bufferToBase64(key), StorageRecord.decode(await decryptAesGcmWithNonce(itemKey, value)));
+    for (const item of fromBinary(StorageItemsSchema, response.body).items) {
+      if (!item.key.length || !item.value.length) continue;
+      const itemKey = await getItemKey(storageKey, item.key, manifestRecord.recordIkm);
+      const plaintext = await decryptAesGcmWithNonce(itemKey, item.value);
+      records.set(bufferToBase64(item.key), fromBinary(StorageRecordSchema, plaintext));
     }
   }
 
@@ -79,8 +81,8 @@ async function getStorageKey(account: AccountRecord) {
   return hmacSha256(concat(masterKey), encodeUtf8(STORAGE_KEY_INFO));
 }
 
-function getItemKey(storageKey: Uint8Array<ArrayBuffer>, key: Uint8Array, recordIkm?: Uint8Array) {
-  if (!recordIkm?.length) {
+function getItemKey(storageKey: Uint8Array<ArrayBuffer>, key: Uint8Array, recordIkm: Uint8Array) {
+  if (!recordIkm.length) {
     return hmacSha256(storageKey, encodeUtf8(`Item_${bufferToBase64(key)}`));
   }
   return Promise.resolve(deriveSecrets(KEY_LENGTH, recordIkm, concat(encodeUtf8(ITEM_KEY_INFO_PREFIX), key)));

@@ -12,4 +12,5 @@ Copied without changes from [signalapp/Signal-Android](https://github.com/signal
 `ProvisionEnvelope.proto` is `rust/provisioning/src/proto/provisioning.proto` from
 [signalapp/libsignal](https://github.com/signalapp/libsignal) `v0.108.3`, licensed under AGPL-3.0.
 
-After updating a schema, run `npm run signal:proto` to regenerate `../generated`.
+After updating a schema, run `npm run signal:proto` to regenerate `../generated` with
+[protobuf-es](https://github.com/bufbuild/protobuf-es) (`buf.gen.yaml` at the repository root).

@@ -1,6 +1,8 @@
+import { fromBinary } from '@bufbuild/protobuf';
+
 import { uuidToString } from '../serviceId';
 
-import { ContactDetails } from '../proto/generated/SignalService';
+import { ContactDetailsSchema } from '../proto/generated/SignalService_pb';
 
 export type SyncedContact = {
   aci?: string;
@@ -37,24 +39,25 @@ export function parseContactSync(data: Uint8Array): SyncedContact[] {
     }
     if (offset + length > data.length) throw new Error('Truncated contacts blob');
 
-    const details = ContactDetails.decode(data.subarray(offset, offset + length));
+    const details = fromBinary(ContactDetailsSchema, data.subarray(offset, offset + length));
     offset += length;
 
     let avatar: SyncedContact['avatar'];
     const avatarLength = details.avatar?.length ?? 0;
     if (avatarLength) {
-      avatar = { contentType: details.avatar?.contentType, data: data.slice(offset, offset + avatarLength) };
+      const contentType = details.avatar?.contentType || undefined;
+      avatar = { contentType, data: data.slice(offset, offset + avatarLength) };
       offset += avatarLength;
     }
 
     contacts.push({
-      aci: details.aciBinary?.length ? uuidToString(details.aciBinary) : details.aci,
-      number: details.number,
-      name: details.name,
+      aci: details.aciBinary.length ? uuidToString(details.aciBinary) : details.aci || undefined,
+      number: details.number || undefined,
+      name: details.name || undefined,
       avatar,
-      expireTimer: details.expireTimer,
-      expireTimerVersion: details.expireTimerVersion,
-      inboxPosition: details.inboxPosition,
+      expireTimer: details.expireTimer || undefined,
+      expireTimerVersion: details.expireTimerVersion || undefined,
+      inboxPosition: details.inboxPosition || undefined,
     });
   }
 

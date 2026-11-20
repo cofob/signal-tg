@@ -30,6 +30,7 @@ export default defineConfig(
     'src/lib/widget-sandbox/**',
     'src/lib/gramjs/tl/',
     'src/lib/signal/wasm/generated/',
+    'src/lib/signal/proto/generated/',
     'src/lib/lovely-chart/**',
     'src/lib/music-metadata-browser',
     'src/lib/fastBlur.js',

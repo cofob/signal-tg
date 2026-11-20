@@ -1,4 +1,6 @@
-import type { Envelope } from '../proto/generated/SignalService';
+import { fromBinary } from '@bufbuild/protobuf';
+
+import type { Content, Envelope } from '../proto/generated/SignalService_pb';
 import type { LocalIdentity, ProtocolStores } from '../store/protocolStores';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord } from '../store/SignalStore';
@@ -10,7 +12,7 @@ import { isPniServiceId, toPniServiceId } from '../serviceId';
 import { createProtocolStores } from '../store/protocolStores';
 import { wasm } from '../wasm';
 
-import { Content, Envelope_Type } from '../proto/generated/SignalService';
+import { ContentSchema, Envelope_Type } from '../proto/generated/SignalService_pb';
 
 export type DecryptedEnvelope = {
   envelope: Envelope;
@@ -41,7 +43,7 @@ export async function decryptEnvelope(
   const stores = createProtocolStores(store, local);
   const localAddress = wasm.ProtocolAddress_New(local.serviceId, account.deviceId);
   const ciphertext = envelope.content;
-  if (!ciphertext) throw new Error('Envelope has no content');
+  if (!ciphertext.length) throw new Error('Envelope has no content');
 
   if (envelope.type === Envelope_Type.UNIDENTIFIED_SENDER) {
     const usmc = await wasm.SealedSender_DecryptToUsmc(ciphertext, stores.identity);
@@ -52,7 +54,7 @@ export async function decryptEnvelope(
     if (senderServiceId === account.aci && senderDeviceId === account.deviceId) {
       throw new Error('Received a sealed sender message sent by this device');
     }
-    const serverTimestamp = Number(envelope.serverTimestamp ?? 0n);
+    const serverTimestamp = Number(envelope.serverTimestamp);
     const roots = getTrustRoots().map((root) => root.cloneHandle());
     if (!wasm.SenderCertificate_Validate(certificate, roots, serverTimestamp)) {
       throw new Error('Sealed sender certificate validation failed');
@@ -70,12 +72,14 @@ export async function decryptEnvelope(
       senderServiceId,
       senderDeviceId,
       destinationServiceId: local.serviceId,
-      content: Content.decode(plaintext),
+      content: fromBinary(ContentSchema, plaintext),
       isSealedSender: true,
     };
   }
 
-  const senderServiceId = envelope.sourceServiceId;
+  const senderServiceId = envelope.sourceServiceIdBinary.length
+    ? getServiceIdString(envelope.sourceServiceIdBinary)
+    : envelope.sourceServiceId;
   const senderDeviceId = envelope.sourceDeviceId;
   if (!senderServiceId || !senderDeviceId) throw new Error('Envelope has no source');
   const senderAddress = wasm.ProtocolAddress_New(senderServiceId, senderDeviceId);
@@ -100,7 +104,7 @@ export async function decryptEnvelope(
     senderServiceId,
     senderDeviceId,
     destinationServiceId: local.serviceId,
-    content: Content.decode(unpadMessage(plaintext)),
+    content: fromBinary(ContentSchema, unpadMessage(plaintext)),
     isSealedSender: false,
   };
 }
@@ -153,11 +157,15 @@ async function getLocalIdentity(
 }
 
 function getDestinationServiceId(envelope: Envelope) {
-  if (envelope.destinationServiceIdBinary?.length) {
-    const fixedWidth = wasm.ServiceId_ParseFromServiceIdBinary(envelope.destinationServiceIdBinary);
-    return wasm.ServiceId_ServiceIdString(fixedWidth);
+  if (envelope.destinationServiceIdBinary.length) {
+    return getServiceIdString(envelope.destinationServiceIdBinary);
   }
-  return envelope.destinationServiceId;
+  return envelope.destinationServiceId || undefined;
+}
+
+/** Converts a service id binary (16 bytes for an ACI, with a type prefix for a PNI) to its string form */
+function getServiceIdString(binary: Uint8Array) {
+  return wasm.ServiceId_ServiceIdString(wasm.ServiceId_ParseFromServiceIdBinary(binary));
 }
 
 function getTrustRoots() {
