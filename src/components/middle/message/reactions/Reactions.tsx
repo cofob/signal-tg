@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from '../../../../lib/teact/teact';
+import { memo, useMemo } from '../../../../lib/teact/teact';
 import { getActions, getGlobal } from '../../../../global';
 
 import type {
@@ -16,7 +16,6 @@ import { selectPeer } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { getMessageKey } from '../../../../util/keys/messageKey';
 
-import useEffectOnce from '../../../../hooks/useEffectOnce';
 import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
 
@@ -38,7 +37,6 @@ type OwnProps = {
 };
 
 const MAX_RECENT_AVATARS = 3;
-const PAID_SEND_DELAY = 5000;
 
 const Reactions = ({
   message,
@@ -53,11 +51,8 @@ const Reactions = ({
 }: OwnProps) => {
   const {
     toggleReaction,
-    addLocalPaidReaction,
     updateMiddleSearch,
     performMiddleSearch,
-    resetLocalPaidReactions,
-    showNotification,
     openFrozenAccountModal,
   } = getActions();
   const lang = useLang();
@@ -125,54 +120,6 @@ const Reactions = ({
     });
   });
 
-  const paidLocalCount = useMemo(() => results.find((r) => r.reaction.type === 'paid')?.localAmount || 0, [results]);
-
-  const handlePaidClick = useLastCallback((count: number) => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-      return;
-    }
-
-    addLocalPaidReaction({
-      chatId: message.chatId,
-      messageId: message.id,
-      count,
-    });
-  });
-
-  useEffect(() => {
-    if (!paidLocalCount) return;
-
-    showNotification({
-      localId: getMessageKey(message),
-      title: {
-        key: 'StarsSentTitle',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      message: {
-        key: 'StarsSentText',
-        variables: { count: paidLocalCount },
-        options: {
-          pluralValue: paidLocalCount, withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'],
-        },
-      },
-      actionText: { key: 'ButtonUndo' },
-      cacheBreaker: paidLocalCount.toString(),
-      action: {
-        action: 'resetLocalPaidReactions',
-        payload: { chatId: message.chatId, messageId: message.id },
-      },
-      dismissAction: {
-        action: 'sendPaidReaction',
-        payload: { chatId: message.chatId, messageId: message.id },
-      },
-      duration: PAID_SEND_DELAY,
-      shouldShowTimer: true,
-      disableClickDismiss: true,
-      icon: 'star',
-    });
-  }, [message, paidLocalCount]);
-
   const handleRemoveReaction = useLastCallback((reaction: ApiReaction) => {
     if (isAccountFrozen) {
       openFrozenAccountModal();
@@ -183,14 +130,6 @@ const Reactions = ({
       chatId: message.chatId,
       messageId: message.id,
       reaction,
-    });
-  });
-
-  // Reset paid reactions on unmount
-  useEffectOnce(() => () => {
-    resetLocalPaidReactions({
-      chatId: message.chatId,
-      messageId: message.id,
     });
   });
 
@@ -214,7 +153,7 @@ const Reactions = ({
             containerId={messageKey}
             isOwnMessage={message.isOutgoing}
             isChosen={isChosen}
-            reaction={reaction.reaction as ApiReaction}
+            reaction={reaction.reaction}
             tag={tag}
             withContextMenu={isCurrentUserPremium}
             onClick={handleClick}
@@ -224,8 +163,6 @@ const Reactions = ({
         ) : (
           <ReactionButton
             key={reactionKey}
-            chatId={message.chatId}
-            messageId={message.id}
             className="message-reaction"
             chosenClassName="chosen"
             containerId={messageKey}
@@ -234,7 +171,6 @@ const Reactions = ({
             isOutside={isOutside}
             reaction={reaction}
             onClick={handleClick}
-            onPaidClick={handlePaidClick}
             observeIntersection={observeIntersection}
           />
         )

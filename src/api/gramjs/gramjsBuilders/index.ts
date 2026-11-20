@@ -1,5 +1,4 @@
 import { Api as GramJs } from '../../../lib/gramjs';
-import { generateRandomBytes, readBigIntFromBuffer } from '../../../lib/gramjs/Helpers';
 
 import type {
   ApiAudio,
@@ -25,7 +24,7 @@ import type {
   ApiPhoneCall,
   ApiPrivacyKey,
   ApiProfileTab,
-  ApiReactionWithPaid,
+  ApiReaction,
   ApiReportReason,
   ApiRequestInputShareTheme,
   ApiSendMessageAction,
@@ -42,7 +41,6 @@ import {
 } from '../../types';
 
 import { CHANNEL_ID_BASE, DEFAULT_STATUS_ICON_ID, STARS_CURRENCY_CODE } from '../../../config';
-import { writeUint32LE } from '../../../util/encoding/buffer';
 import { getMtpEphemeralMessageId } from '../../../util/keys/messageKey';
 import { deserializeBytes } from '../helpers/misc';
 import localDb from '../localDb';
@@ -133,19 +131,6 @@ export function buildInputChannel(channelId: string, accessHash?: string): GramJ
 
 export function buildInputChat(chatId: string) {
   return BigInt(chatId.slice(1));
-}
-
-export function buildInputPaidReactionPrivacy(isPrivate?: boolean, peerId?: string): GramJs.TypePaidReactionPrivacy {
-  if (isPrivate) return new GramJs.PaidReactionPrivacyAnonymous();
-  if (peerId) {
-    const peer = buildInputPeerFromLocalDb(peerId);
-    if (peer) {
-      return new GramJs.PaidReactionPrivacyPeer({
-        peer,
-      });
-    }
-  }
-  return new GramJs.PaidReactionPrivacyDefault();
 }
 
 export function buildInputPeerFromLocalDb(chatOrUserId: string): GramJs.TypeInputPeer | undefined {
@@ -457,15 +442,6 @@ export function buildInputStory(story: ApiStory | ApiStorySkipped) {
   });
 }
 
-export function generateRandomTimestampedBigInt() {
-  // 32 bits for timestamp, 32 bits are random
-  const buffer = generateRandomBytes(8);
-  const timestampBuffer = new Uint8Array(4);
-  writeUint32LE(timestampBuffer, Math.floor(Date.now() / 1000));
-  buffer.set(timestampBuffer, 4);
-  return readBigIntFromBuffer(buffer, true, true);
-}
-
 export function buildMessageFromUpdate(
   id: number,
   chatId: string,
@@ -714,7 +690,7 @@ export function buildInputPhoneCall({ id, accessHash }: ApiPhoneCall) {
   });
 }
 
-export function buildInputReaction(reaction?: ApiReactionWithPaid) {
+export function buildInputReaction(reaction?: ApiReaction) {
   switch (reaction?.type) {
     case 'emoji':
       return new GramJs.ReactionEmoji({
@@ -724,8 +700,6 @@ export function buildInputReaction(reaction?: ApiReactionWithPaid) {
       return new GramJs.ReactionCustomEmoji({
         documentId: BigInt(reaction.documentId),
       });
-    case 'paid':
-      return new GramJs.ReactionPaid();
     default:
       return new GramJs.ReactionEmpty();
   }

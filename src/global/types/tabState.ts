@@ -22,7 +22,7 @@ import type {
   ApiNotification,
   ApiPhoneCall,
   ApiPreparedInlineMessage,
-  ApiReactionWithPaid,
+  ApiReaction,
   ApiRequestPeerType,
   ApiRichText,
   ApiSearchPostsFlood,
@@ -310,7 +310,7 @@ export type TabState = {
   };
 
   activeEmojiInteractions?: ActiveEmojiInteraction[];
-  activeReactions: Record<string, ApiReactionWithPaid[]>;
+  activeReactions: Record<string, ApiReaction[]>;
 
   middleSearch: {
     byChatThreadKey: Record<string, MiddleSearchParams | undefined>;
@@ -754,11 +754,6 @@ export type TabState = {
     currentBirthday?: ApiBirthday;
     suggestForUserId?: string;
     isFromSuggestion?: boolean;
-  };
-
-  paidReactionModal?: {
-    chatId: string;
-    messageId: number;
   };
 
   suggestMessageModal?: {

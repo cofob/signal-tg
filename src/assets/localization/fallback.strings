@@ -1701,9 +1701,6 @@
 "StarsAmountIconLast" = "{amount}⭐️";
 "StarsAmountText_one" = "{amount} Star";
 "StarsAmountText_other" = "{amount} Stars";
-"SendPaidReaction" = "Send ⭐️{amount}";
-"StarsReactionTerms" = "By sending Stars you agree to the {link}";
-"StarsReactionLinkText" = "Terms of Service";
 "AriaMiniApp" = "{bot} Mini App";
 "BrowserMoreTabs_one" = "{title} & {count} Other";
 "BrowserMoreTabs_other" = "{title} & {count} Others";
@@ -2005,10 +2002,8 @@
 "CommunityWithChats_other" = "Community with {count} chats";
 "ActionHistoryCleared" = "History was cleared";
 "CollectibleStatusesCategory" = "Collectibles";
-"PeerPersonalAccount" = "personal account";
 "PeerChannel" = "channel";
 "WebAppCollapse" = "Collapse";
-"ButtonUndo" = "Undo";
 "ContactLinkInvalid" = "This contact link is invalid or has expired.";
 "TitleFrozenAccount" = "Your account is frozen!";
 "SubtitleFrozenAccount" = "Click to view details and submit an appeal.";
@@ -2927,14 +2922,6 @@
 "SortByReactions" = "Reactions First";
 "SortByTime" = "Newest First";
 "Spoiler" = "Spoiler";
-"StarsReactionAnonymous" = "Anonymous";
-"StarsReactionShowMeInTopSenders" = "Show me in Top Senders";
-"StarsReactionText" = "Choose how many stars you want to send to **{chat}** to support this post.";
-"StarsReactionTitle" = "Star Reaction";
-"StarsReactionTopSenders" = "Top Senders";
-"StarsSentText_one" = "You reacted with **{count}** star.";
-"StarsSentText_other" = "You reacted with **{count}** stars.";
-"StarsSentTitle" = "Stars sent!";
 "Start" = "Start";
 "StatusHiddenShow" = "when?";
 "StickersBotInfo" = "Artists are welcome to add their own sticker sets using our @stickers bot.";

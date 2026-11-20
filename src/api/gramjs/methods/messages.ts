@@ -1925,10 +1925,6 @@ export async function fetchFactChecks({
   return results.flatMap((result) => result!).map(buildApiFactCheck);
 }
 
-export function fetchPaidReactionPrivacy() {
-  return invokeRequest(new GramJs.messages.GetPaidReactionPrivacy(), { shouldReturnTrue: true });
-}
-
 export function reportMessagesDelivery({
   chat, messageIds,
 }: {
@@ -2652,13 +2648,10 @@ export async function fetchSeenBy({ chat, messageId }: { chat: ApiChat; messageI
 
 export async function fetchSendAs({
   chat,
-  isForPaidReactions,
 }: {
-  isForPaidReactions?: true;
   chat: ApiChat;
 }) {
   const result = await invokeRequest(new GramJs.channels.GetSendAs({
-    forPaidReactions: isForPaidReactions,
     peer: buildInputPeer(chat.id, chat.accessHash),
   }), {
     shouldIgnoreErrors: true,

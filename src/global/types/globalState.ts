@@ -19,7 +19,6 @@ import type {
   ApiMessage,
   ApiMessagePoll,
   ApiNotifyPeerType,
-  ApiPaidReactionPrivacyType,
   ApiPasskey,
   ApiPasskeyOption,
   ApiPeerColors,
@@ -452,7 +451,6 @@ export type GlobalState = {
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
     lastPremiumBandwithNotificationDate?: number;
-    paidReactionPrivacy?: ApiPaidReactionPrivacyType;
     botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
     passkeys?: ApiPasskey[];

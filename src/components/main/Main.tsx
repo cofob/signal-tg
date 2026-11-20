@@ -235,7 +235,6 @@ const Main = ({
     loadSavedReactionTags,
     loadAiComposeTones,
     loadStarStatus,
-    loadPaidReactionPrivacy,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -322,7 +321,6 @@ const Main = ({
       loadSavedReactionTags();
       loadTopPeers({ category: 'botsApp' });
       loadTopPeers({ category: 'botsGuestChat' });
-      loadPaidReactionPrivacy();
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();

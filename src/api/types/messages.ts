@@ -823,11 +823,7 @@ export interface ApiMessageReactor {
 export interface ApiReactionCount {
   chosenOrder?: number;
   count: number;
-  reaction: ApiReactionWithPaid;
-  localAmount?: number;
-  localIsPrivate?: boolean;
-  localPeerId?: string;
-  localPreviousChosenOrder?: number;
+  reaction: ApiReaction;
 }
 
 export interface ApiAvailableReaction {
@@ -867,35 +863,14 @@ export type ApiReactionCustomEmoji = {
   documentId: string;
 };
 
-export type ApiReactionPaid = {
-  type: 'paid';
-};
-
 export type ApiReaction = ApiReactionEmoji | ApiReactionCustomEmoji;
-export type ApiReactionWithPaid = ApiReaction | ApiReactionPaid;
 
-export type ApiReactionKey = `${string}-${string}` | 'paid' | 'unsupported';
+export type ApiReactionKey = `${string}-${string}` | 'unsupported';
 
 export type ApiSavedReactionTag = {
   reaction: ApiReaction;
   title?: string;
   count: number;
-};
-
-export type ApiPaidReactionPrivacyType = ApiPaidReactionPrivacyDefault |
-  ApiPaidReactionPrivacyAnonymous | PaidReactionPrivacyPeer;
-
-export type ApiPaidReactionPrivacyDefault = {
-  type: 'default';
-};
-
-export type ApiPaidReactionPrivacyAnonymous = {
-  type: 'anonymous';
-};
-
-export type PaidReactionPrivacyPeer = {
-  type: 'peer';
-  peerId: string;
 };
 
 export interface ApiBaseThreadInfo {

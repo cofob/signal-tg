@@ -96,8 +96,6 @@ export interface ApiChat {
   isJoinToSend?: boolean;
   isJoinRequest?: boolean;
   sendAsPeerIds?: ApiSendAsPeerId[];
-  sendPaidReactionsAsPeerIds?: ApiSendAsPeerId[];
-  sendPaidReactionsPeer?: ApiSendAsPeerId;
 
   // Stories
   areStoriesHidden?: boolean;
@@ -176,7 +174,6 @@ export interface ApiChatFullInfo {
   areParticipantsHidden?: boolean;
   isTranslationDisabled?: true;
   hasPinnedStories?: boolean;
-  isPaidReactionAvailable?: boolean;
   hasScheduledMessages?: boolean;
 
   botVerification?: ApiBotVerification;

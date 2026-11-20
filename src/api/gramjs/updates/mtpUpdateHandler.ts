@@ -72,7 +72,6 @@ import {
   getApiChatIdFromMtpPeer,
 } from '../apiBuilders/peers';
 import {
-  buildApiPaidReactionPrivacy,
   buildApiReaction,
   buildMessageReactions,
 } from '../apiBuilders/reactions';
@@ -1219,11 +1218,6 @@ export function updater(update: Update) {
     sendApiUpdate({
       '@type': 'updateStarsBalance',
       balance,
-    });
-  } else if (update instanceof GramJs.UpdatePaidReactionPrivacy) {
-    sendApiUpdate({
-      '@type': 'updatePaidReactionPrivacy',
-      private: buildApiPaidReactionPrivacy(update.private),
     });
   } else if (update instanceof GramJs.UpdateLangPackTooLong) {
     sendApiUpdate({

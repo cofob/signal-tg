@@ -1394,7 +1394,6 @@ export interface LangPair {
   'GiftInfoDate': undefined;
   'GiftInfoSavedHide': undefined;
   'GiftInfoSavedShow': undefined;
-  'StarsReactionLinkText': undefined;
   'OpenMapWith': undefined;
   'OpenApp': undefined;
   'PopularApps': undefined;
@@ -1576,10 +1575,8 @@ export interface LangPair {
   'CommunityChatNotAccessible': undefined;
   'ActionHistoryCleared': undefined;
   'CollectibleStatusesCategory': undefined;
-  'PeerPersonalAccount': undefined;
   'PeerChannel': undefined;
   'WebAppCollapse': undefined;
-  'ButtonUndo': undefined;
   'ContactLinkInvalid': undefined;
   'TitleFrozenAccount': undefined;
   'SubtitleFrozenAccount': undefined;
@@ -2281,11 +2278,6 @@ export interface LangPair {
   'SortByReactions': undefined;
   'SortByTime': undefined;
   'Spoiler': undefined;
-  'StarsReactionAnonymous': undefined;
-  'StarsReactionShowMeInTopSenders': undefined;
-  'StarsReactionTitle': undefined;
-  'StarsReactionTopSenders': undefined;
-  'StarsSentTitle': undefined;
   'Start': undefined;
   'StatusHiddenShow': undefined;
   'StickersBotInfo': undefined;
@@ -3005,12 +2997,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'StarsAmountIconLast': {
     'amount': V;
-  };
-  'SendPaidReaction': {
-    'amount': V;
-  };
-  'StarsReactionTerms': {
-    'link': V;
   };
   'AriaMiniApp': {
     'bot': V;
@@ -3766,9 +3752,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ReplyToQuote': {
     'senderTitle': V;
   };
-  'StarsReactionText': {
-    'chat': V;
-  };
   'StoryCloseFriendsHint': {
     'user': V;
   };
@@ -4257,9 +4240,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'SetTimeoutForHours': {
     'count': V;
   };
-  'StarsSentText': {
-    'count': V;
-  };
   'StoryKeepInfo': {
     'count': V;
   };
@@ -4528,7 +4508,6 @@ export interface LangKeyGroups {
       | 'ActionMigratedFrom'
       | 'ActionMigratedTo'
       | 'ClearHistoryMessageSingle'
-      | 'StarsReactionText'
       | 'VoiceChatJoinConfirm'
       | 'VoiceChatJoinConfirmChannel';
     variables: 'chat';
@@ -4767,7 +4746,6 @@ export interface LangKeyGroups {
       | 'GiftInfoHidden'
       | 'GiftInfoChannelSaved'
       | 'GiftInfoChannelHidden'
-      | 'StarsReactionTerms'
       | 'SettingsPasskeysFooter'
       | 'BirthdayPrivacySuggestion'
       | 'TranslateMenuCocoon'
@@ -4783,7 +4761,6 @@ export interface LangKeyGroups {
     keys:
       | 'StarsAmount'
       | 'StarsAmountIconLast'
-      | 'SendPaidReaction'
       | 'ActionStarGiftConvertTextYou'
       | 'ActionStarGiftConvertedTextYou'
       | 'GramAmount'
@@ -5377,7 +5354,6 @@ export interface LangPluralKeyGroups {
       | 'PeerInfoAllowedReactionsMaxCountValue'
       | 'SetTimeoutForDays'
       | 'SetTimeoutForHours'
-      | 'StarsSentText'
       | 'StoryKeepInfo'
       | 'StoryPrivacyOptionExcludePeople'
       | 'StoryPrivacyOptionPeople'

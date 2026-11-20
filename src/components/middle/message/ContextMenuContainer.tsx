@@ -166,7 +166,6 @@ type StateProps = {
   quoteLengthMax: number;
   isChannel?: boolean;
   canReplyInChat?: boolean;
-  isWithPaidReaction?: boolean;
   user?: ApiUser;
   savedDialogId?: string;
   noForwardsMyEnabled?: boolean;
@@ -239,7 +238,6 @@ const ContextMenuContainer = ({
   isInSavedMessages,
   quoteLengthMax,
   canReplyInChat,
-  isWithPaidReaction,
   user,
   className,
   savedDialogId,
@@ -284,8 +282,6 @@ const ContextMenuContainer = ({
     copyMessageLink,
     openDeleteMessageModal,
     deleteEphemeralMessage,
-    addLocalPaidReaction,
-    openPaidReactionModal,
     reportMessages,
     openTodoListModal,
     showNotification,
@@ -719,22 +715,6 @@ const ContextMenuContainer = ({
     closeMenu();
   });
 
-  const handleSendPaidReaction = useLastCallback(() => {
-    addLocalPaidReaction({
-      chatId: message.chatId, messageId: message.id, count: 1,
-    });
-    closeMenu();
-  });
-
-  const handlePaidReactionModalOpen = useLastCallback(() => {
-    openPaidReactionModal({
-      chatId: message.chatId,
-      messageId: message.id,
-    });
-
-    closeMenu();
-  });
-
   const handleReactionPickerOpen = useLastCallback((position: IAnchorPosition) => {
     openMessageReactionPicker({ chatId: message.chatId, messageId: message.id, position });
   });
@@ -801,7 +781,6 @@ const ContextMenuContainer = ({
         availableReactions={availableReactions}
         topReactions={topReactions}
         defaultTagReactions={defaultTagReactions}
-        isWithPaidReaction={isWithPaidReaction}
         message={message}
         threadId={threadId}
         messageListType={messageListType}
@@ -882,8 +861,6 @@ const ContextMenuContainer = ({
         onClosePoll={openClosePollDialog}
         onShowSeenBy={handleOpenSeenByModal}
         onToggleReaction={handleToggleReaction}
-        onSendPaidReaction={handleSendPaidReaction}
-        onShowPaidReactionModal={handlePaidReactionModalOpen}
         onShowReactors={handleOpenReactorListModal}
         onReactionPickerOpen={handleReactionPickerOpen}
         onTranslate={handleTranslate}
@@ -1088,7 +1065,6 @@ export default memo(withGlobal<OwnProps>(
       quoteLengthMax: global.appConfig.quoteLengthMax,
       isChannel,
       canReplyInChat,
-      isWithPaidReaction: !message.isEphemeral && chatFullInfo?.isPaidReactionAvailable,
       poll,
       story,
       user,

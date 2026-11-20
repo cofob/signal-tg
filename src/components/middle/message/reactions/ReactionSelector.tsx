@@ -6,7 +6,6 @@ import type {
   ApiReaction,
   ApiReactionCount,
   ApiReactionCustomEmoji,
-  ApiReactionPaid,
 } from '../../../../api/types';
 import type { IAnchorPosition } from '../../../../types';
 
@@ -24,7 +23,7 @@ import ReactionSelectorReaction from './ReactionSelectorReaction';
 
 import './ReactionSelector.scss';
 
-type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji | ApiReactionPaid)[];
+type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji)[];
 
 type OwnProps = {
   enabledReactions?: ApiChatReactions;
@@ -40,10 +39,7 @@ type OwnProps = {
   className?: string;
   isInSavedMessages?: boolean;
   isInStoryViewer?: boolean;
-  isWithPaidReaction?: boolean;
   onToggleReaction: (reaction: ApiReaction) => void;
-  onSendPaidReaction?: NoneToVoidFunction;
-  onShowPaidReactionModal?: NoneToVoidFunction;
   onShowMore: (position: IAnchorPosition) => void;
 };
 
@@ -65,10 +61,7 @@ const ReactionSelector = ({
   isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
-  isWithPaidReaction,
   onToggleReaction,
-  onSendPaidReaction,
-  onShowPaidReactionModal,
   onShowMore,
 }: OwnProps) => {
   const ref = useRef<HTMLDivElement>();
@@ -101,14 +94,10 @@ const ReactionSelector = ({
       return isCustomReaction ? reaction : availableReaction;
     }).filter(Boolean) || [];
 
-    const sortedReactions = sortReactions(filteredReactions, topReactions);
-    if (isWithPaidReaction) {
-      sortedReactions.unshift({ type: 'paid' });
-    }
-    return sortedReactions;
+    return sortReactions(filteredReactions, topReactions);
   }, [
     allAvailableReactions, currentReactions, defaultTagReactions, enabledReactions, isInSavedMessages, isPrivate,
-    topReactions, shouldUseCurrentReactions, isWithPaidReaction,
+    topReactions, shouldUseCurrentReactions,
   ]);
 
   const reactionsToRender = useMemo(() => {
@@ -176,8 +165,6 @@ const ReactionSelector = ({
                   key={getReactionKey(reaction)}
                   isReady={isReady}
                   onToggleReaction={onToggleReaction}
-                  onSendPaidReaction={onSendPaidReaction}
-                  onShowPaidReactionModal={onShowPaidReactionModal}
                   reaction={reaction}
                   noAppearAnimation={!canPlayAnimatedEmojis}
                   chosen={userReactionIndexes.has(i)}

@@ -2736,29 +2736,6 @@ addActionHandler('loadSendAs', async (global, actions, payload): Promise<void> =
   setGlobal(global);
 });
 
-addActionHandler('loadSendPaidReactionsAs', async (global, actions, payload): Promise<void> => {
-  const { chatId } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return;
-  }
-
-  const result = await callApi('fetchSendAs', { chat, isForPaidReactions: true });
-  if (!result) {
-    global = getGlobal();
-    global = updateChat(global, chatId, {
-      sendPaidReactionsAsPeerIds: [],
-    });
-    setGlobal(global);
-
-    return;
-  }
-
-  global = getGlobal();
-  global = updateChat(global, chatId, { sendPaidReactionsAsPeerIds: result });
-  setGlobal(global);
-});
-
 addActionHandler('loadUnreadMentions', async (global, actions, payload): Promise<void> => {
   const { chatId, threadId = MAIN_THREAD_ID, offsetId } = payload;
 
@@ -3674,11 +3651,6 @@ addActionHandler('loadFactChecks', async (global, actions, payload): Promise<voi
   });
 
   setGlobal(global);
-});
-
-addActionHandler('loadPaidReactionPrivacy', (): ActionReturnType => {
-  callApi('fetchPaidReactionPrivacy');
-  return undefined;
 });
 
 addActionHandler('loadOutboxReadDate', async (global, actions, payload): Promise<void> => {

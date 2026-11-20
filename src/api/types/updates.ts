@@ -24,7 +24,6 @@ import type {
   ApiMediaExtendedPreview,
   ApiMessage,
   ApiMessagePoll,
-  ApiPaidReactionPrivacyType,
   ApiPhoto,
   ApiReaction,
   ApiReactions,
@@ -946,11 +945,6 @@ export type ApiUpdateEntities = {
   webPages?: ApiWebPage[];
 };
 
-export type ApiUpdatePaidReactionPrivacy = {
-  '@type': 'updatePaidReactionPrivacy';
-  private: ApiPaidReactionPrivacyType;
-};
-
 export type ApiUpdateLangPackTooLong = {
   '@type': 'updateLangPackTooLong';
   langCode: string;
@@ -1019,7 +1013,7 @@ export type ApiUpdate = (
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateBotCommands
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
-  | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack
+  | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
   | ApiUpdateAiComposeTones
 );

@@ -4,7 +4,7 @@ import {
 import { getActions } from '../../global';
 
 import type {
-  ApiAvailableReaction, ApiReactionWithPaid, ApiSticker,
+  ApiAvailableReaction, ApiReaction, ApiSticker,
 } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
@@ -69,8 +69,7 @@ type OwnProps = {
   observeIntersectionForShowingItems: ObserveFn;
   availableReactions?: ApiAvailableReaction[];
   onStickerSelect?: (sticker: ApiSticker, isSilent?: boolean, shouldSchedule?: boolean) => void;
-  onReactionSelect?: (reaction: ApiReactionWithPaid) => void;
-  onReactionContext?: (reaction: ApiReactionWithPaid) => void;
+  onReactionSelect?: (reaction: ApiReaction) => void;
   onStickerUnfave?: (sticker: ApiSticker) => void;
   onStickerFave?: (sticker: ApiSticker) => void;
   onStickerRemoveRecent?: (sticker: ApiSticker) => void;
@@ -111,7 +110,6 @@ const StickerSet = ({
   observeIntersectionForPlayingItems,
   observeIntersectionForShowingItems,
   onReactionSelect,
-  onReactionContext,
   onStickerSelect,
   onStickerUnfave,
   onStickerFave,
@@ -342,7 +340,6 @@ const StickerSet = ({
                 availableReactions={availableReactions}
                 observeIntersection={observeIntersectionForPlayingItems}
                 onClick={onReactionSelect!}
-                onContextMenu={onReactionContext}
                 forcePlayback={forcePlayback}
               />
             );

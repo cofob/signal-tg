@@ -5,7 +5,6 @@ import type {
   ApiMessage,
   ApiMessageEntity,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
@@ -70,8 +69,7 @@ const ReactionPicker = ({
   sendAsMessage,
 }: OwnProps & StateProps) => {
   const {
-    toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction, addLocalPaidReaction,
-    openPaidReactionModal,
+    toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction,
   } = getActions();
 
   const renderedMessageId = useCurrentOrPrev(message?.id, true);
@@ -119,36 +117,18 @@ const ReactionPicker = ({
     closeReactionPicker();
   });
 
-  const handleToggleReaction = useLastCallback((reaction: ApiReactionWithPaid) => {
+  const handleToggleReaction = useLastCallback((reaction: ApiReaction) => {
     if (!renderedChatId || !renderedMessageId) {
       return;
     }
 
-    if (reaction.type === 'paid') {
-      addLocalPaidReaction({
-        chatId: renderedChatId, messageId: renderedMessageId, count: 1,
-      });
-    } else {
-      toggleReaction({
-        chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
-      });
-    }
-    closeReactionPicker();
-  });
-
-  const handleReactionContextMenu = useLastCallback((reaction: ApiReactionWithPaid) => {
-    if (reaction.type !== 'paid') return;
-
-    openPaidReactionModal({
-      chatId: renderedChatId!,
-      messageId: renderedMessageId!,
+    toggleReaction({
+      chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
     });
     closeReactionPicker();
   });
 
-  const handleStoryReactionSelect = useLastCallback((item: ApiReactionWithPaid | ApiSticker) => {
-    if ('type' in item && item.type === 'paid') return; // Not supported for stories
-
+  const handleStoryReactionSelect = useLastCallback((item: ApiReaction | ApiSticker) => {
     const reaction = 'id' in item ? { type: 'custom', documentId: item.id } as const : item;
 
     const sticker = 'type' in item && item.type === 'custom' ? getGlobal().customEmojis.byId[item.documentId]
@@ -243,14 +223,12 @@ const ReactionPicker = ({
         isTranslucent={isTranslucent}
         onCustomEmojiSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleCustomReaction}
         onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-        onReactionContext={handleReactionContextMenu}
       />
       {!shouldUseFullPicker && Boolean(renderedChatId) && (
         <ReactionPickerLimited
           chatId={renderedChatId}
           loadAndPlay={isOpen}
           onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-          onReactionContext={handleReactionContextMenu}
           selectedReactionIds={selectedReactionIds}
           message={message}
         />

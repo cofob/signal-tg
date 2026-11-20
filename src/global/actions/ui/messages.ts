@@ -1127,20 +1127,6 @@ addActionHandler('openPreviousReportModal', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openPaidReactionModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    paidReactionModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closePaidReactionModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    paidReactionModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('openSuggestMessageModal', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId, tabId = getCurrentTabId() } = payload;
   return updateTabState(global, {

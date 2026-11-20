@@ -40,7 +40,6 @@ import type {
   ApiPrivacySettings,
   ApiProfileTab,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiReportReason,
   ApiRequestPeerType,
   ApiRichText,
@@ -656,9 +655,6 @@ export interface ActionPayloads {
   openPreviousReportModal: WithTabId | undefined;
   closeReportModal: WithTabId | undefined;
   loadSendAs: {
-    chatId: string;
-  };
-  loadSendPaidReactionsAs: {
     chatId: string;
   };
   saveDefaultSendAs: {
@@ -1406,8 +1402,6 @@ export interface ActionPayloads {
     shouldIncludeGrouped?: boolean;
   } & WithTabId;
 
-  loadPaidReactionPrivacy: undefined;
-
   sendPollVote: {
     chatId: string;
     messageId: number;
@@ -1499,25 +1493,6 @@ export interface ActionPayloads {
     shouldAddToRecent?: boolean;
   } & WithTabId;
 
-  sendPaidReaction: {
-    chatId: string;
-    messageId: number;
-    forcedAmount?: number;
-    isPrivate?: boolean;
-  } & WithTabId;
-  addLocalPaidReaction: {
-    chatId: string;
-    messageId: number;
-    count: number;
-    peerId?: string;
-    isPrivate?: boolean;
-    shouldIgnoreDefaultPrivacy?: boolean;
-  } & WithTabId;
-  resetLocalPaidReactions: {
-    chatId: string;
-    messageId: number;
-  };
-
   setDefaultReaction: {
     reaction: ApiReaction;
   };
@@ -1534,11 +1509,11 @@ export interface ActionPayloads {
 
   startActiveReaction: {
     containerId: string;
-    reaction: ApiReactionWithPaid;
+    reaction: ApiReaction;
   } & WithTabId;
   stopActiveReaction: {
     containerId: string;
-    reaction?: ApiReactionWithPaid;
+    reaction?: ApiReaction;
   } & WithTabId;
 
   openMessageReactionPicker: {
@@ -2693,12 +2668,6 @@ export interface ActionPayloads {
   closeBrowserCloseConfirmationModal: ({
     shouldSkipInFuture?: boolean;
   } & WithTabId);
-
-  openPaidReactionModal: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  closePaidReactionModal: WithTabId | undefined;
 
   openSuggestMessageModal: {
     chatId: string;

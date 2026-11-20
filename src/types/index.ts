@@ -28,7 +28,6 @@ import type {
   ApiPeer,
   ApiPhoto,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiRichMessage,
   ApiSessionData,
   ApiSticker,
@@ -303,7 +302,7 @@ export enum SettingsScreens {
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
   'id' | 'accessHash' | 'title' | 'count' | 'stickers' | 'isEmoji' | 'installedDate' | 'isArchived' |
   'hasThumbnail' | 'hasStaticThumb' | 'hasAnimatedThumb' | 'hasVideoThumb' | 'thumbCustomEmojiId'
-)> & { reactions?: ApiReactionWithPaid[] };
+)> & { reactions?: ApiReaction[] };
 
 export enum LeftColumnContent {
   ChatList,

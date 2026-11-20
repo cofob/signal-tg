@@ -1,12 +1,9 @@
 import type { ActionReturnType } from '../../types';
 
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { getMessageKey } from '../../../util/keys/messageKey';
-import { runForAllTabs } from '../../helpers';
 import { addActionHandler } from '../../index';
-import { updateChatMessage } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
-import { selectChatMessage, selectTabState } from '../../selectors';
+import { selectTabState } from '../../selectors';
 
 addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionReturnType => {
   const {
@@ -78,46 +75,4 @@ addActionHandler('closeReactionPicker', (global, actions, payload): ActionReturn
       storyPeerId: undefined,
     },
   }, tabId);
-});
-
-addActionHandler('resetLocalPaidReactions', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message) {
-    return undefined;
-  }
-
-  const { reactions } = message;
-
-  if (!reactions) {
-    return undefined;
-  }
-
-  const updatedResults = reactions.results.map((reaction) => {
-    if (reaction.localAmount) {
-      if (!reaction.count) return undefined;
-      return {
-        ...reaction,
-        localAmount: undefined,
-        localPreviousChosenOrder: undefined,
-        chosenOrder: reaction.localPreviousChosenOrder,
-      };
-    }
-    return reaction;
-  }).filter(Boolean);
-
-  const messageKey = getMessageKey(message);
-  runForAllTabs(global, (tabId) => {
-    actions.dismissNotification({
-      localId: messageKey,
-      tabId,
-    });
-  });
-
-  return updateChatMessage(global, chatId, messageId, {
-    reactions: {
-      ...reactions,
-      results: updatedResults,
-    },
-  });
 });
