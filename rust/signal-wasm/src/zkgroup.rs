@@ -39,7 +39,7 @@ fn service_id(bytes: &[u8], operation: &str) -> JsResult<ServiceId> {
         .ok_or_else(|| generic_error("invalid service ID", operation))
 }
 
-fn aci(bytes: &[u8], operation: &str) -> JsResult<Aci> {
+pub(crate) fn aci(bytes: &[u8], operation: &str) -> JsResult<Aci> {
     Aci::try_from(service_id(bytes, operation)?).map_err(|_| generic_error("expected an ACI", operation))
 }
 

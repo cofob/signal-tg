@@ -1,5 +1,24 @@
 /* @ts-self-types="./signal_wasm.d.ts" */
 
+/**
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} aci_bytes
+ * @returns {Uint8Array}
+ */
+export function BackupKey_DeriveBackupId(backup_key_bytes, aci_bytes) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupKey_DeriveBackupId(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
 export class CiphertextMessage {
     static __wrap(ptr) {
         const obj = Object.create(CiphertextMessage.prototype);
@@ -904,6 +923,70 @@ export function KyberSecretKey_Deserialize(data) {
 export function KyberSecretKey_Serialize(obj) {
     _assertClass(obj, KyberSecretKey);
     const ret = wasm.KyberSecretKey_Serialize(obj.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+export class MessageBackupKey {
+    static __wrap(ptr) {
+        const obj = Object.create(MessageBackupKey.prototype);
+        obj.__wbg_ptr = ptr;
+        MessageBackupKeyFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        MessageBackupKeyFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_messagebackupkey_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) MessageBackupKey.prototype[Symbol.dispose] = MessageBackupKey.prototype.free;
+
+/**
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} backup_id
+ * @param {Uint8Array | null} [forward_secrecy_token]
+ * @returns {MessageBackupKey}
+ */
+export function MessageBackupKey_FromBackupKeyAndBackupId(backup_key_bytes, backup_id, forward_secrecy_token) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(backup_id, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    var ptr2 = isLikeNone(forward_secrecy_token) ? 0 : passArray8ToWasm0(forward_secrecy_token, wasm.__wbindgen_malloc);
+    var len2 = WASM_VECTOR_LEN;
+    const ret = wasm.MessageBackupKey_FromBackupKeyAndBackupId(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return MessageBackupKey.__wrap(ret[0]);
+}
+
+/**
+ * @param {MessageBackupKey} key
+ * @returns {Uint8Array}
+ */
+export function MessageBackupKey_GetAesKey(key) {
+    _assertClass(key, MessageBackupKey);
+    const ret = wasm.MessageBackupKey_GetAesKey(key.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * @param {MessageBackupKey} key
+ * @returns {Uint8Array}
+ */
+export function MessageBackupKey_GetHmacKey(key) {
+    _assertClass(key, MessageBackupKey);
+    const ret = wasm.MessageBackupKey_GetHmacKey(key.__wbg_ptr);
     var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v1;
@@ -3398,7 +3481,7 @@ function __wbg_get_imports() {
                     const a = state0.a;
                     state0.a = 0;
                     try {
-                        return wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(a, state0.b, arg0, arg1);
+                        return wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(a, state0.b, arg0, arg1);
                     } finally {
                         state0.a = a;
                     }
@@ -3565,8 +3648,8 @@ function wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bin
     }
 }
 
-function wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
-    wasm.wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
+function wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
+    wasm.wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
 }
 
 const CiphertextMessageFinalization = (typeof FinalizationRegistry === 'undefined')
@@ -3590,6 +3673,9 @@ const KyberPublicKeyFinalization = (typeof FinalizationRegistry === 'undefined')
 const KyberSecretKeyFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_kybersecretkey_free(ptr, 1));
+const MessageBackupKeyFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_messagebackupkey_free(ptr, 1));
 const PlaintextContentFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_plaintextcontent_free(ptr, 1));
