@@ -72,6 +72,18 @@ const NBSP = '\u00A0';
 const DEFAULT_TOPIC_ICON_ID = '0';
 
 const UNSUPPORTED_LANG_KEY = 'ActionUnsupported';
+// Signal group updates whose text names only who made them
+const GROUP_UPDATE_LANG_KEYS = {
+  description: 'ActionGroupDescription',
+  descriptionRemoved: 'ActionGroupDescriptionRemoved',
+  joinRequested: 'ActionGroupJoinRequested',
+  linkOn: 'ActionGroupLinkOn',
+  linkOnWithApproval: 'ActionGroupLinkOnWithApproval',
+  linkOff: 'ActionGroupLinkOff',
+  linkReset: 'ActionGroupLinkReset',
+  announcementsOn: 'ActionGroupAnnouncementsOn',
+  announcementsOff: 'ActionGroupAnnouncementsOff',
+} as const;
 
 const ActionMessageText = ({
   message,
@@ -182,6 +194,30 @@ const ActionMessageText = ({
 
       case 'chatJoinedByRequest':
         return translateWithYou(lang, 'ActionJoinedByRequest', isOutgoing, { from: senderLink });
+
+      case 'groupUpdate': {
+        const user = action.userId ? selectPeer(global, action.userId) : undefined;
+        const userLink = renderPeerLink(user?.id, (user && getPeerTitle(lang, user)) || userFallbackText, asPreview);
+        const access = lang(action.isAdminOnly ? 'ActionGroupAccessAdmins' : 'ActionGroupAccessMembers');
+        switch (action.update) {
+          case 'adminAdded':
+            return translateWithYou(lang, 'ActionGroupAdminAdded', isSenderSelf, { from: senderLink, user: userLink });
+          case 'adminRemoved':
+            return translateWithYou(
+              lang, 'ActionGroupAdminRemoved', isSenderSelf, { from: senderLink, user: userLink },
+            );
+          case 'invited':
+            return translateWithYou(lang, 'ActionGroupInvited', isSenderSelf, {
+              from: senderLink, count: action.count ?? 0,
+            }, { pluralValue: action.count ?? 0 });
+          case 'infoAccess':
+            return translateWithYou(lang, 'ActionGroupInfoAccess', isSenderSelf, { from: senderLink, access });
+          case 'membersAccess':
+            return translateWithYou(lang, 'ActionGroupMembersAccess', isSenderSelf, { from: senderLink, access });
+          default:
+            return translateWithYou(lang, GROUP_UPDATE_LANG_KEYS[action.update], isSenderSelf, { from: senderLink });
+        }
+      }
 
       case 'channelJoined': {
         const { isViaRequest, inviterId } = action;

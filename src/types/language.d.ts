@@ -1533,6 +1533,17 @@ export interface LangPair {
   'ActionUserLeftYou': undefined;
   'ActionUserJoinedYou': undefined;
   'ActionJoinedByRequestYou': undefined;
+  'ActionGroupDescriptionYou': undefined;
+  'ActionGroupDescriptionRemovedYou': undefined;
+  'ActionGroupJoinRequestedYou': undefined;
+  'ActionGroupLinkOnYou': undefined;
+  'ActionGroupLinkOnWithApprovalYou': undefined;
+  'ActionGroupLinkOffYou': undefined;
+  'ActionGroupLinkResetYou': undefined;
+  'ActionGroupAccessAdmins': undefined;
+  'ActionGroupAccessMembers': undefined;
+  'ActionGroupAnnouncementsOnYou': undefined;
+  'ActionGroupAnnouncementsOffYou': undefined;
   'ActionRemovedPhotoYou': undefined;
   'ActionRemovedPhotoChannel': undefined;
   'ActionChangedPhotoYou': undefined;
@@ -2521,6 +2532,7 @@ export interface LangPair {
   'ErrorPaidMediaForbidden': undefined;
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;
+  'ErrorGroupChangeFailed': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
   'ReportSubmitError': undefined;
@@ -3188,6 +3200,61 @@ export interface LangPairWithVariables<V = LangVariable> {
     'from': V;
   };
   'ActionJoinedByRequest': {
+    'from': V;
+  };
+  'ActionGroupDescription': {
+    'from': V;
+  };
+  'ActionGroupDescriptionRemoved': {
+    'from': V;
+  };
+  'ActionGroupAdminAdded': {
+    'from': V;
+    'user': V;
+  };
+  'ActionGroupAdminAddedYou': {
+    'user': V;
+  };
+  'ActionGroupAdminRemoved': {
+    'from': V;
+    'user': V;
+  };
+  'ActionGroupAdminRemovedYou': {
+    'user': V;
+  };
+  'ActionGroupJoinRequested': {
+    'from': V;
+  };
+  'ActionGroupLinkOn': {
+    'from': V;
+  };
+  'ActionGroupLinkOnWithApproval': {
+    'from': V;
+  };
+  'ActionGroupLinkOff': {
+    'from': V;
+  };
+  'ActionGroupLinkReset': {
+    'from': V;
+  };
+  'ActionGroupInfoAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupInfoAccessYou': {
+    'access': V;
+  };
+  'ActionGroupMembersAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupMembersAccessYou': {
+    'access': V;
+  };
+  'ActionGroupAnnouncementsOn': {
+    'from': V;
+  };
+  'ActionGroupAnnouncementsOff': {
     'from': V;
   };
   'ActionVideoInvited': {
@@ -4224,6 +4291,13 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'FolderLinkNotificationUpdatedSubtitle': {
     'count': V;
   };
+  'ActionGroupInvited': {
+    'from': V;
+    'count': V;
+  };
+  'ActionGroupInvitedYou': {
+    'count': V;
+  };
   'ActionGameScore': {
     'from': V;
     'count': V;
@@ -4462,6 +4536,8 @@ export interface LangKeyGroups {
       | 'VoipPeerIncompatible'
       | 'ActionAddUserYou'
       | 'ActionKickUserYou'
+      | 'ActionGroupAdminAddedYou'
+      | 'ActionGroupAdminRemovedYou'
       | 'ActionVideoInvitedYou'
       | 'NoForwardsRequestTitle'
       | 'ActionSuggestedPhotoYou'
@@ -4745,6 +4821,15 @@ export interface LangKeyGroups {
       | 'ActionUserJoined'
       | 'ActionUserJoinedByLink'
       | 'ActionJoinedByRequest'
+      | 'ActionGroupDescription'
+      | 'ActionGroupDescriptionRemoved'
+      | 'ActionGroupJoinRequested'
+      | 'ActionGroupLinkOn'
+      | 'ActionGroupLinkOnWithApproval'
+      | 'ActionGroupLinkOff'
+      | 'ActionGroupLinkReset'
+      | 'ActionGroupAnnouncementsOn'
+      | 'ActionGroupAnnouncementsOff'
       | 'ActionUserRegistered'
       | 'ActionRemovedPhoto'
       | 'ActionChangedPhoto'
@@ -5039,6 +5124,8 @@ export interface LangKeyGroups {
     keys:
       | 'ActionAddUser'
       | 'ActionKickUser'
+      | 'ActionGroupAdminAdded'
+      | 'ActionGroupAdminRemoved'
       | 'ActionVideoInvited'
       | 'ActionNewCreatorPending'
       | 'ActionChangeCreator';
@@ -5049,6 +5136,18 @@ export interface LangKeyGroups {
       | 'ActionAddUsersMany'
       | 'ActionVideoInvitedMany';
     variables: 'from' | 'users';
+  };
+  'access,from': {
+    keys:
+      | 'ActionGroupInfoAccess'
+      | 'ActionGroupMembersAccess';
+    variables: 'access' | 'from';
+  };
+  'access': {
+    keys:
+      | 'ActionGroupInfoAccessYou'
+      | 'ActionGroupMembersAccessYou';
+    variables: 'access';
   };
   'from,theme': {
     keys:
@@ -5527,6 +5626,7 @@ export interface LangPluralKeyGroups {
       | 'FolderLinkNotificationDeletedSubtitle'
       | 'FolderLinkNotificationAddedSubtitle'
       | 'FolderLinkNotificationUpdatedSubtitle'
+      | 'ActionGroupInvitedYou'
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
@@ -5601,6 +5701,12 @@ export interface LangPluralKeyGroups {
       | 'BrowserMoreTabs';
     variables: 'count' | 'title';
   };
+  'count,from': {
+    keys:
+      | 'ActionGroupInvited'
+      | 'ActionGameScoreNoGame';
+    variables: 'count' | 'from';
+  };
   'count,from,game': {
     keys:
       | 'ActionGameScore';
@@ -5610,11 +5716,6 @@ export interface LangPluralKeyGroups {
     keys:
       | 'ActionGameScoreYou';
     variables: 'count' | 'game';
-  };
-  'count,from': {
-    keys:
-      | 'ActionGameScoreNoGame';
-    variables: 'count' | 'from';
   };
   'amount,count,totalAmount,user': {
     keys:
