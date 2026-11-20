@@ -37,6 +37,11 @@ export function DecryptionErrorMessage_GetTimestamp(obj: DecryptionErrorMessage)
 
 export function DecryptionErrorMessage_Serialize(obj: DecryptionErrorMessage): Uint8Array;
 
+/**
+ * Returns seconds since the epoch
+ */
+export function ExpiringProfileKeyCredential_GetExpirationTime(credential: Uint8Array): number;
+
 export class Fingerprint {
     private constructor();
     free(): void;
@@ -56,6 +61,31 @@ export function Fingerprint_ScannableEncoding(obj: Fingerprint): Uint8Array;
 export function GroupCipher_DecryptMessage(sender: ProtocolAddress, message: Uint8Array, store: any): Promise<any>;
 
 export function GroupCipher_EncryptMessage(sender: ProtocolAddress, distribution_id: Uint8Array, message: Uint8Array, store: any): Promise<any>;
+
+export function GroupPublicParams_GetGroupIdentifier(params: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_DecryptBlobWithPadding(params: Uint8Array, ciphertext: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_DecryptProfileKey(params: Uint8Array, ciphertext: Uint8Array, user_id: Uint8Array): Uint8Array;
+
+/**
+ * Returns the fixed-width service ID binary
+ */
+export function GroupSecretParams_DecryptServiceId(params: Uint8Array, ciphertext: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_DeriveFromMasterKey(master_key: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_EncryptBlobWithPaddingDeterministic(params: Uint8Array, randomness_bytes: Uint8Array, plaintext: Uint8Array, padding_len: number): Uint8Array;
+
+export function GroupSecretParams_EncryptProfileKey(params: Uint8Array, profile_key: Uint8Array, user_id: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_EncryptServiceId(params: Uint8Array, service_id_bytes: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_GenerateDeterministic(randomness_bytes: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_GetMasterKey(params: Uint8Array): Uint8Array;
+
+export function GroupSecretParams_GetPublicParams(params: Uint8Array): Uint8Array;
 
 export function HKDF_DeriveSecrets(output_length: number, ikm: Uint8Array, label?: Uint8Array | null, salt?: Uint8Array | null): Uint8Array;
 
@@ -241,6 +271,17 @@ export function PrivateKey_Serialize(obj: PrivateKey): Uint8Array;
 
 export function PrivateKey_Sign(key: PrivateKey, message: Uint8Array): Uint8Array;
 
+export function ProfileKeyCredentialRequestContext_GetRequest(context: Uint8Array): Uint8Array;
+
+export function ProfileKey_DeriveAccessKey(profile_key: Uint8Array): Uint8Array;
+
+export function ProfileKey_GetCommitment(profile_key: Uint8Array, user_id: Uint8Array): Uint8Array;
+
+/**
+ * Returns the version as ASCII hex, the form used in `GET /v1/profile/{aci}/{version}`
+ */
+export function ProfileKey_GetProfileKeyVersion(profile_key: Uint8Array, user_id: Uint8Array): Uint8Array;
+
 export class ProtocolAddress {
     private constructor();
     free(): void;
@@ -406,6 +447,30 @@ export function ServerCertificate_GetKeyId(obj: ServerCertificate): number;
 
 export function ServerCertificate_GetSerialized(obj: ServerCertificate): Uint8Array;
 
+export class ServerPublicParams {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(params: ServerPublicParams, randomness_bytes: Uint8Array, group_secret_params: Uint8Array, auth_credential: Uint8Array): Uint8Array;
+
+export function ServerPublicParams_CreateExpiringProfileKeyCredentialPresentationDeterministic(params: ServerPublicParams, randomness_bytes: Uint8Array, group_secret_params: Uint8Array, credential: Uint8Array): Uint8Array;
+
+export function ServerPublicParams_CreateProfileKeyCredentialRequestContextDeterministic(params: ServerPublicParams, randomness_bytes: Uint8Array, user_id: Uint8Array, profile_key: Uint8Array): Uint8Array;
+
+export function ServerPublicParams_Deserialize(data: Uint8Array): ServerPublicParams;
+
+/**
+ * `redemption_time` is in seconds, as in `GET /v1/certificate/auth/group`
+ */
+export function ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(params: ServerPublicParams, aci_bytes: Uint8Array, pni_bytes: Uint8Array, redemption_time: number, response: Uint8Array): Uint8Array;
+
+/**
+ * `current_time` is in seconds
+ */
+export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params: ServerPublicParams, request_context: Uint8Array, response: Uint8Array, current_time: number): Uint8Array;
+
 export function ServiceId_ParseFromServiceIdBinary(input: Uint8Array): Uint8Array;
 
 export function ServiceId_ParseFromServiceIdString(input: string): Uint8Array;
@@ -556,11 +621,23 @@ export interface InitOutput {
     readonly DecryptionErrorMessage_GetRatchetKey: (a: number) => number;
     readonly DecryptionErrorMessage_GetTimestamp: (a: number) => number;
     readonly DecryptionErrorMessage_Serialize: (a: number) => [number, number];
+    readonly ExpiringProfileKeyCredential_GetExpirationTime: (a: number, b: number) => [number, number, number];
     readonly Fingerprint_DisplayString: (a: number) => [number, number, number, number];
     readonly Fingerprint_New: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
     readonly Fingerprint_ScannableEncoding: (a: number) => [number, number, number, number];
     readonly GroupCipher_DecryptMessage: (a: number, b: number, c: number, d: any) => any;
     readonly GroupCipher_EncryptMessage: (a: number, b: number, c: number, d: number, e: number, f: any) => [number, number, number];
+    readonly GroupPublicParams_GetGroupIdentifier: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSecretParams_DecryptBlobWithPadding: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly GroupSecretParams_DecryptProfileKey: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly GroupSecretParams_DecryptServiceId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly GroupSecretParams_DeriveFromMasterKey: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSecretParams_EncryptBlobWithPaddingDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly GroupSecretParams_EncryptProfileKey: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly GroupSecretParams_EncryptServiceId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly GroupSecretParams_GenerateDeterministic: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSecretParams_GetMasterKey: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSecretParams_GetPublicParams: (a: number, b: number) => [number, number, number, number];
     readonly HKDF_DeriveSecrets: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly IdentityKeyPair_Deserialize: (a: number, b: number) => [number, number, number];
     readonly IdentityKeyPair_Serialize: (a: number, b: number) => [number, number];
@@ -607,6 +684,10 @@ export interface InitOutput {
     readonly PrivateKey_GetPublicKey: (a: number) => [number, number, number];
     readonly PrivateKey_Serialize: (a: number) => [number, number];
     readonly PrivateKey_Sign: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly ProfileKeyCredentialRequestContext_GetRequest: (a: number, b: number) => [number, number, number, number];
+    readonly ProfileKey_DeriveAccessKey: (a: number, b: number) => [number, number, number, number];
+    readonly ProfileKey_GetCommitment: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly ProfileKey_GetProfileKeyVersion: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly ProtocolAddress_DeviceId: (a: number) => number;
     readonly ProtocolAddress_Name: (a: number) => [number, number];
     readonly ProtocolAddress_New: (a: number, b: number, c: number) => [number, number, number];
@@ -650,6 +731,12 @@ export interface InitOutput {
     readonly ServerCertificate_GetKey: (a: number) => [number, number, number];
     readonly ServerCertificate_GetKeyId: (a: number) => [number, number, number];
     readonly ServerCertificate_GetSerialized: (a: number) => [number, number, number, number];
+    readonly ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly ServerPublicParams_CreateExpiringProfileKeyCredentialPresentationDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly ServerPublicParams_CreateProfileKeyCredentialRequestContextDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly ServerPublicParams_Deserialize: (a: number, b: number) => [number, number, number];
+    readonly ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
+    readonly ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];
@@ -704,6 +791,7 @@ export interface InitOutput {
     readonly __wbg_senderkeymessage_free: (a: number, b: number) => void;
     readonly __wbg_senderkeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_servercertificate_free: (a: number, b: number) => void;
+    readonly __wbg_serverpublicparams_free: (a: number, b: number) => void;
     readonly __wbg_sessionrecord_free: (a: number, b: number) => void;
     readonly __wbg_signalmessage_free: (a: number, b: number) => void;
     readonly __wbg_tlsclient_free: (a: number, b: number) => void;

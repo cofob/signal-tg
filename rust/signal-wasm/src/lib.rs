@@ -11,3 +11,4 @@ mod messages;
 mod records;
 mod stores;
 mod tls;
+mod zkgroup;

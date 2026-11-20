@@ -167,6 +167,21 @@ export function DecryptionErrorMessage_Serialize(obj) {
     return v1;
 }
 
+/**
+ * Returns seconds since the epoch
+ * @param {Uint8Array} credential
+ * @returns {number}
+ */
+export function ExpiringProfileKeyCredential_GetExpirationTime(credential) {
+    const ptr0 = passArray8ToWasm0(credential, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ExpiringProfileKeyCredential_GetExpirationTime(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0];
+}
+
 export class Fingerprint {
     static __wrap(ptr) {
         const obj = Object.create(Fingerprint.prototype);
@@ -289,6 +304,211 @@ export function GroupCipher_EncryptMessage(sender, distribution_id, message, sto
         throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} params
+ * @returns {Uint8Array}
+ */
+export function GroupPublicParams_GetGroupIdentifier(params) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupPublicParams_GetGroupIdentifier(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @param {Uint8Array} ciphertext
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_DecryptBlobWithPadding(params, ciphertext) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(ciphertext, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_DecryptBlobWithPadding(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @param {Uint8Array} ciphertext
+ * @param {Uint8Array} user_id
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_DecryptProfileKey(params, ciphertext, user_id) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(ciphertext, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(user_id, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_DecryptProfileKey(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * Returns the fixed-width service ID binary
+ * @param {Uint8Array} params
+ * @param {Uint8Array} ciphertext
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_DecryptServiceId(params, ciphertext) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(ciphertext, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_DecryptServiceId(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * @param {Uint8Array} master_key
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_DeriveFromMasterKey(master_key) {
+    const ptr0 = passArray8ToWasm0(master_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_DeriveFromMasterKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @param {Uint8Array} randomness_bytes
+ * @param {Uint8Array} plaintext
+ * @param {number} padding_len
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_EncryptBlobWithPaddingDeterministic(params, randomness_bytes, plaintext, padding_len) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_EncryptBlobWithPaddingDeterministic(ptr0, len0, ptr1, len1, ptr2, len2, padding_len);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @param {Uint8Array} profile_key
+ * @param {Uint8Array} user_id
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_EncryptProfileKey(params, profile_key, user_id) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(profile_key, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(user_id, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_EncryptProfileKey(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @param {Uint8Array} service_id_bytes
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_EncryptServiceId(params, service_id_bytes) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(service_id_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_EncryptServiceId(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * @param {Uint8Array} randomness_bytes
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_GenerateDeterministic(randomness_bytes) {
+    const ptr0 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_GenerateDeterministic(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_GetMasterKey(params) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_GetMasterKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} params
+ * @returns {Uint8Array}
+ */
+export function GroupSecretParams_GetPublicParams(params) {
+    const ptr0 = passArray8ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSecretParams_GetPublicParams(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
 }
 
 /**
@@ -1179,6 +1399,77 @@ export function PrivateKey_Sign(key, message) {
     return v2;
 }
 
+/**
+ * @param {Uint8Array} context
+ * @returns {Uint8Array}
+ */
+export function ProfileKeyCredentialRequestContext_GetRequest(context) {
+    const ptr0 = passArray8ToWasm0(context, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ProfileKeyCredentialRequestContext_GetRequest(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} profile_key
+ * @returns {Uint8Array}
+ */
+export function ProfileKey_DeriveAccessKey(profile_key) {
+    const ptr0 = passArray8ToWasm0(profile_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ProfileKey_DeriveAccessKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} profile_key
+ * @param {Uint8Array} user_id
+ * @returns {Uint8Array}
+ */
+export function ProfileKey_GetCommitment(profile_key, user_id) {
+    const ptr0 = passArray8ToWasm0(profile_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(user_id, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ProfileKey_GetCommitment(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * Returns the version as ASCII hex, the form used in `GET /v1/profile/{aci}/{version}`
+ * @param {Uint8Array} profile_key
+ * @param {Uint8Array} user_id
+ * @returns {Uint8Array}
+ */
+export function ProfileKey_GetProfileKeyVersion(profile_key, user_id) {
+    const ptr0 = passArray8ToWasm0(profile_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(user_id, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ProfileKey_GetProfileKeyVersion(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
 export class ProtocolAddress {
     static __wrap(ptr) {
         const obj = Object.create(ProtocolAddress.prototype);
@@ -1999,6 +2290,161 @@ export function ServerCertificate_GetSerialized(obj) {
     var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v1;
+}
+
+export class ServerPublicParams {
+    static __wrap(ptr) {
+        const obj = Object.create(ServerPublicParams.prototype);
+        obj.__wbg_ptr = ptr;
+        ServerPublicParamsFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        ServerPublicParamsFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_serverpublicparams_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) ServerPublicParams.prototype[Symbol.dispose] = ServerPublicParams.prototype.free;
+
+/**
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} randomness_bytes
+ * @param {Uint8Array} group_secret_params
+ * @param {Uint8Array} auth_credential
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(params, randomness_bytes, group_secret_params, auth_credential) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(group_secret_params, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(auth_credential, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(params.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} randomness_bytes
+ * @param {Uint8Array} group_secret_params
+ * @param {Uint8Array} credential
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_CreateExpiringProfileKeyCredentialPresentationDeterministic(params, randomness_bytes, group_secret_params, credential) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(group_secret_params, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(credential, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_CreateExpiringProfileKeyCredentialPresentationDeterministic(params.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} randomness_bytes
+ * @param {Uint8Array} user_id
+ * @param {Uint8Array} profile_key
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_CreateProfileKeyCredentialRequestContextDeterministic(params, randomness_bytes, user_id, profile_key) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(user_id, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(profile_key, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_CreateProfileKeyCredentialRequestContextDeterministic(params.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {Uint8Array} data
+ * @returns {ServerPublicParams}
+ */
+export function ServerPublicParams_Deserialize(data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_Deserialize(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ServerPublicParams.__wrap(ret[0]);
+}
+
+/**
+ * `redemption_time` is in seconds, as in `GET /v1/certificate/auth/group`
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} aci_bytes
+ * @param {Uint8Array} pni_bytes
+ * @param {number} redemption_time
+ * @param {Uint8Array} response
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(params, aci_bytes, pni_bytes, redemption_time, response) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(pni_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(params.__wbg_ptr, ptr0, len0, ptr1, len1, redemption_time, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * `current_time` is in seconds
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} request_context
+ * @param {Uint8Array} response
+ * @param {number} current_time
+ * @returns {Uint8Array}
+ */
+export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params, request_context, response, current_time) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(request_context, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_ReceiveExpiringProfileKeyCredential(params.__wbg_ptr, ptr0, len0, ptr1, len1, current_time);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
 }
 
 /**
@@ -3006,7 +3452,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 81, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 83, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },
@@ -3109,6 +3555,9 @@ const SenderKeyRecordFinalization = (typeof FinalizationRegistry === 'undefined'
 const ServerCertificateFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_servercertificate_free(ptr, 1));
+const ServerPublicParamsFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_serverpublicparams_free(ptr, 1));
 const SessionRecordFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_sessionrecord_free(ptr, 1));
