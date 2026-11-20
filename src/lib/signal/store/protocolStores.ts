@@ -76,7 +76,8 @@ export function createProtocolStores(store: SignalStore, local: LocalIdentity) {
 
 export type ProtocolStores = ReturnType<typeof createProtocolStores>;
 
-function getSenderKeyId(name: string, deviceId: number, distributionId: Uint8Array) {
+/** Key of a sender key record in `SignalStore` */
+export function getSenderKeyId(name: string, deviceId: number, distributionId: Uint8Array) {
   const distribution = Array.from(distributionId, (byte) => byte.toString(16).padStart(2, '0')).join('');
   return `${name}.${deviceId}:${distribution}`;
 }

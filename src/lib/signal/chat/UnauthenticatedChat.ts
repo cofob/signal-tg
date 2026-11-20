@@ -1,3 +1,5 @@
+import type { ResourceRequest } from '../net/ResourceSocket';
+
 import { SIGNAL_CHAT_HOST } from '../config';
 
 import ResourceSocket from '../net/ResourceSocket';
@@ -15,6 +17,11 @@ export default class UnauthenticatedChat {
   async sendJsonRequest<T>(verb: string, path: string, json?: unknown, headers?: Record<string, string>) {
     const socket = await this.getSocket();
     return socket.sendJsonRequest<T>(verb, path, json, headers);
+  }
+
+  async sendRequest(request: ResourceRequest) {
+    const socket = await this.getSocket();
+    return socket.sendRequest(request);
   }
 
   close() {

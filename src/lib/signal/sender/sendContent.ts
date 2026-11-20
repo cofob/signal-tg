@@ -5,7 +5,7 @@ import type ChatConnection from '../chat/ChatConnection';
 import type UnauthenticatedChat from '../chat/UnauthenticatedChat';
 import type { ProtocolStores } from '../store/protocolStores';
 import type SignalStore from '../store/SignalStore';
-import type { AccountRecord } from '../store/SignalStore';
+import type { AccountRecord, SenderKeyDevice } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { padMessage } from '../crypto';
@@ -32,7 +32,7 @@ export enum ContentHint {
 /** A `Content` to encrypt, or a `PlaintextContent` that goes unencrypted inside the envelope */
 export type SendPayload = MessageInitShape<typeof ContentSchema> | wasm.PlaintextContent;
 
-type SendOptions = {
+export type SendOptions = {
   timestamp: number;
   isOnline?: boolean;
   isUrgent?: boolean;
@@ -45,6 +45,15 @@ export type SendResult = {
   isSealedSender: boolean;
 };
 
+export type RecipientResult = {
+  serviceId: string;
+  isSealedSender?: boolean;
+  error?: Error;
+};
+
+/** Device list corrections of 409 and 410 responses */
+export type DeviceMismatch = { missingDevices?: number[]; extraDevices?: number[]; staleDevices?: number[] };
+
 type PreKeyResponse = {
   identityKey: string;
   devices: {
@@ -56,9 +65,6 @@ type PreKeyResponse = {
   }[];
 };
 
-type MismatchedDevices = { missingDevices?: number[]; extraDevices?: number[] };
-type StaleDevices = { staleDevices?: number[] };
-
 type SendState = {
   context: SenderContext;
   stores: ProtocolStores;
@@ -69,6 +75,8 @@ type SendState = {
 };
 
 const MAX_DEVICE_LIST_ATTEMPTS = 3;
+// Sends to group members run in parallel; encryption itself is serialized by the protocol lock
+const SEND_CONCURRENCY = 8;
 const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
@@ -96,28 +104,13 @@ export class UnregisteredUserError extends Error {
 export async function sendContent(
   context: SenderContext, destination: string, payload: SendPayload, options: SendOptions,
 ): Promise<SendResult> {
-  const { store, account } = context;
-  const keyPair = await store.getItem('aciIdentityKeyPair');
-  if (!keyPair) throw new Error('ACI identity key is missing');
-
-  const isToSelf = destination === account.aci;
-  const state: SendState = {
-    context,
-    stores: createProtocolStores(store, { serviceId: account.aci, keyPair, registrationId: account.registrationId }),
-    localAddress: wasm.ProtocolAddress_New(account.aci, account.deviceId),
-    destination,
-    accessKey: isToSelf ? undefined : await getAccessKey(store, destination),
-  };
+  const isToSelf = destination === context.account.aci;
+  const state = await createSendState(context, destination);
   const plaintext = payload instanceof wasm.PlaintextContent
     ? payload
     : padMessage(toBinary(ContentSchema, create(ContentSchema, payload)));
 
-  // Without sessions, start them with every device of the destination; for ourselves, our other devices
-  // (Signal Desktop `OutgoingMessage.sendToServiceId`). The server rejects an empty message list.
-  let deviceIds = await getDeviceIds(state, isToSelf);
-  if (!deviceIds.length) {
-    deviceIds = await fetchSessions(state, '*');
-  }
+  let deviceIds = await getOpenDeviceIds(state, isToSelf);
 
   let deviceListAttempts = 0;
   while (deviceListAttempts < MAX_DEVICE_LIST_ATTEMPTS) {
@@ -131,10 +124,10 @@ export async function sendContent(
       urgent: options.isUrgent ?? true,
     };
     const { status, json } = state.accessKey
-      ? await context.unauthenticatedChat.sendJsonRequest<MismatchedDevices & StaleDevices>(
+      ? await context.unauthenticatedChat.sendJsonRequest<DeviceMismatch>(
         'PUT', path, body, { 'Unidentified-Access-Key': state.accessKey },
       )
-      : await context.connection.sendJsonRequest<MismatchedDevices & StaleDevices>('PUT', path, body);
+      : await context.connection.sendJsonRequest<DeviceMismatch>('PUT', path, body);
 
     if (status === HTTP_OK) return { isSealedSender };
     if (status === HTTP_NOT_FOUND) throw new UnregisteredUserError(destination);
@@ -144,27 +137,97 @@ export async function sendContent(
       continue;
     }
 
-    if (status === HTTP_CONFLICT) {
-      for (const deviceId of json?.extraDevices ?? []) {
-        await store.removeSession(`${destination}.${deviceId}`);
-      }
-      for (const deviceId of json?.missingDevices ?? []) {
-        await fetchSessions(state, String(deviceId));
-      }
-    } else if (status === HTTP_GONE) {
-      for (const deviceId of json?.staleDevices ?? []) {
-        await store.removeSession(`${destination}.${deviceId}`);
-        await fetchSessions(state, String(deviceId));
-      }
-    } else {
+    if (status !== HTTP_CONFLICT && status !== HTTP_GONE) {
       throw new Error(`Sending to ${destination} failed with HTTP ${status}`);
     }
-
+    await fixDevices(state, json ?? {});
     deviceIds = await getDeviceIds(state, isToSelf);
     deviceListAttempts++;
   }
 
   throw new Error(`Sending to ${destination} failed: the device list kept changing`);
+}
+
+/** Sends `payload` to each recipient with `sendContent`, several at a time */
+export async function sendToEach(
+  context: SenderContext, recipients: string[], payload: SendPayload, options: SendOptions,
+): Promise<RecipientResult[]> {
+  const results: RecipientResult[] = [];
+  let nextIndex = 0;
+  async function sendNext() {
+    while (nextIndex < recipients.length) {
+      const index = nextIndex++;
+      const serviceId = recipients[index];
+      try {
+        const { isSealedSender } = await sendContent(context, serviceId, payload, options);
+        results[index] = { serviceId, isSealedSender };
+      } catch (err) {
+        results[index] = { serviceId, error: err as Error };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(SEND_CONCURRENCY, recipients.length) }, sendNext));
+  return results;
+}
+
+/**
+ * Devices of another user to encrypt for, with the registration ids of their sessions. Without sessions,
+ * they are started with every device first.
+ */
+export async function getSendDevices(context: SenderContext, serviceId: string): Promise<SenderKeyDevice[]> {
+  const deviceIds = await getOpenDeviceIds(await createSendState(context, serviceId), false);
+  const devices = [];
+  for (const deviceId of deviceIds) {
+    devices.push({ serviceId, deviceId, registrationId: await getRegistrationId(context.store, serviceId, deviceId) });
+  }
+  return devices;
+}
+
+/** Applies a 409 or 410 response: drops sessions with removed or stale devices and starts new ones */
+export async function updateDevices(context: SenderContext, serviceId: string, mismatch: DeviceMismatch) {
+  await fixDevices(await createSendState(context, serviceId), mismatch);
+}
+
+/** Protocol stores of our ACI */
+export async function createAciStores({ store, account }: SenderContext) {
+  const keyPair = await store.getItem('aciIdentityKeyPair');
+  if (!keyPair) throw new Error('ACI identity key is missing');
+  return createProtocolStores(store, { serviceId: account.aci, keyPair, registrationId: account.registrationId });
+}
+
+async function createSendState(context: SenderContext, destination: string): Promise<SendState> {
+  const { store, account } = context;
+  return {
+    context,
+    stores: await createAciStores(context),
+    localAddress: wasm.ProtocolAddress_New(account.aci, account.deviceId),
+    destination,
+    accessKey: destination === account.aci ? undefined : await getAccessKey(store, destination),
+  };
+}
+
+/**
+ * Without sessions, starts them with every device of the destination; for ourselves, our other devices
+ * (Signal Desktop `OutgoingMessage.sendToServiceId`). The server rejects an empty message list.
+ */
+async function getOpenDeviceIds(state: SendState, isToSelf: boolean) {
+  const deviceIds = await getDeviceIds(state, isToSelf);
+  return deviceIds.length ? deviceIds : fetchSessions(state, '*');
+}
+
+async function fixDevices(state: SendState, { missingDevices, extraDevices, staleDevices }: DeviceMismatch) {
+  const { context: { store }, destination } = state;
+  for (const deviceId of extraDevices ?? []) {
+    await store.removeSession(`${destination}.${deviceId}`);
+  }
+  for (const deviceId of missingDevices ?? []) {
+    await fetchSessions(state, String(deviceId));
+  }
+  for (const deviceId of staleDevices ?? []) {
+    await store.removeSession(`${destination}.${deviceId}`);
+    await fetchSessions(state, String(deviceId));
+  }
 }
 
 async function encryptForDevices(
@@ -196,8 +259,7 @@ async function encryptForDevice(
     : await wasm.SessionCipher_EncryptMessage(
       plaintext, address, localAddress, stores.session, stores.identity, Date.now(),
     ) as wasm.CiphertextMessage;
-  const session = wasm.SessionRecord_Deserialize((await store.getSession(`${destination}.${deviceId}`))!);
-  const destinationRegistrationId = wasm.SessionRecord_GetRemoteRegistrationId(session);
+  const destinationRegistrationId = await getRegistrationId(store, destination, deviceId);
 
   if (certificate) {
     const usmc = wasm.UnidentifiedSenderMessageContent_New(
@@ -218,6 +280,11 @@ async function encryptForDevice(
     destinationRegistrationId,
     content: bufferToBase64(wasm.CiphertextMessage_Serialize(ciphertext)),
   };
+}
+
+async function getRegistrationId(store: SignalStore, serviceId: string, deviceId: number) {
+  const session = wasm.SessionRecord_Deserialize((await store.getSession(`${serviceId}.${deviceId}`))!);
+  return wasm.SessionRecord_GetRemoteRegistrationId(session);
 }
 
 /** The recipient does not accept our access key: send identified from now on */

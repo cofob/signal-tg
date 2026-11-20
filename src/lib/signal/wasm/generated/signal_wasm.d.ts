@@ -87,6 +87,29 @@ export function GroupSecretParams_GetMasterKey(params: Uint8Array): Uint8Array;
 
 export function GroupSecretParams_GetPublicParams(params: Uint8Array): Uint8Array;
 
+export function GroupSendEndorsement_Combine(endorsements: Uint8Array[]): Uint8Array;
+
+export function GroupSendEndorsement_Remove(endorsement: Uint8Array, to_remove: Uint8Array): Uint8Array;
+
+export function GroupSendEndorsement_ToToken(endorsement: Uint8Array, group_params: Uint8Array): Uint8Array;
+
+/**
+ * Returns seconds since the epoch
+ */
+export function GroupSendEndorsementsResponse_GetExpiration(response: Uint8Array): number;
+
+/**
+ * Verifies the endorsements of `group_members` (concatenated service IDs that include `local_user`) at
+ * `now` in seconds. Returns each member's endorsement in the order of `group_members`, then the combined
+ * endorsement of everyone but `local_user`.
+ */
+export function GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds(response: Uint8Array, group_members: Uint8Array, local_user: Uint8Array, now: number, group_params: Uint8Array, server_params: ServerPublicParams): Uint8Array[];
+
+/**
+ * `expiration` is in seconds
+ */
+export function GroupSendToken_ToFullToken(token: Uint8Array, expiration: number): Uint8Array;
+
 export function HKDF_DeriveSecrets(output_length: number, ikm: Uint8Array, label?: Uint8Array | null, salt?: Uint8Array | null): Uint8Array;
 
 export function IdentityKeyPair_Deserialize(input: Uint8Array): Array<any>;
@@ -653,6 +676,12 @@ export interface InitOutput {
     readonly GroupSecretParams_GenerateDeterministic: (a: number, b: number) => [number, number, number, number];
     readonly GroupSecretParams_GetMasterKey: (a: number, b: number) => [number, number, number, number];
     readonly GroupSecretParams_GetPublicParams: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSendEndorsement_Combine: (a: number, b: number) => [number, number, number, number];
+    readonly GroupSendEndorsement_Remove: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly GroupSendEndorsement_ToToken: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly GroupSendEndorsementsResponse_GetExpiration: (a: number, b: number) => [number, number, number];
+    readonly GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number, number];
+    readonly GroupSendToken_ToFullToken: (a: number, b: number, c: number) => [number, number, number, number];
     readonly HKDF_DeriveSecrets: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
     readonly IdentityKeyPair_Deserialize: (a: number, b: number) => [number, number, number];
     readonly IdentityKeyPair_Serialize: (a: number, b: number) => [number, number];
@@ -857,6 +886,7 @@ export interface InitOutput {
     readonly __wbindgen_destroy_closure: (a: number, b: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __externref_table_dealloc: (a: number) => void;
+    readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_start: () => void;
 }
 

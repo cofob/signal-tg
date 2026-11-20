@@ -193,7 +193,7 @@ export default class ResourceSocket {
 }
 
 // Error responses may carry plain text
-function parseJson<T>(body?: Uint8Array) {
+export function parseJson<T>(body?: Uint8Array) {
   if (!body) return undefined;
   try {
     return JSON.parse(textDecoder.decode(body)) as T;

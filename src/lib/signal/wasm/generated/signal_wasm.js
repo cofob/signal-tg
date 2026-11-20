@@ -512,6 +512,124 @@ export function GroupSecretParams_GetPublicParams(params) {
 }
 
 /**
+ * @param {Uint8Array[]} endorsements
+ * @returns {Uint8Array}
+ */
+export function GroupSendEndorsement_Combine(endorsements) {
+    const ptr0 = passArrayJsValueToWasm0(endorsements, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSendEndorsement_Combine(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {Uint8Array} endorsement
+ * @param {Uint8Array} to_remove
+ * @returns {Uint8Array}
+ */
+export function GroupSendEndorsement_Remove(endorsement, to_remove) {
+    const ptr0 = passArray8ToWasm0(endorsement, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(to_remove, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSendEndorsement_Remove(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * @param {Uint8Array} endorsement
+ * @param {Uint8Array} group_params
+ * @returns {Uint8Array}
+ */
+export function GroupSendEndorsement_ToToken(endorsement, group_params) {
+    const ptr0 = passArray8ToWasm0(endorsement, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(group_params, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSendEndorsement_ToToken(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * Returns seconds since the epoch
+ * @param {Uint8Array} response
+ * @returns {number}
+ */
+export function GroupSendEndorsementsResponse_GetExpiration(response) {
+    const ptr0 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSendEndorsementsResponse_GetExpiration(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0];
+}
+
+/**
+ * Verifies the endorsements of `group_members` (concatenated service IDs that include `local_user`) at
+ * `now` in seconds. Returns each member's endorsement in the order of `group_members`, then the combined
+ * endorsement of everyone but `local_user`.
+ * @param {Uint8Array} response
+ * @param {Uint8Array} group_members
+ * @param {Uint8Array} local_user
+ * @param {number} now
+ * @param {Uint8Array} group_params
+ * @param {ServerPublicParams} server_params
+ * @returns {Uint8Array[]}
+ */
+export function GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds(response, group_members, local_user, now, group_params, server_params) {
+    const ptr0 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(group_members, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(local_user, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ptr3 = passArray8ToWasm0(group_params, wasm.__wbindgen_malloc);
+    const len3 = WASM_VECTOR_LEN;
+    _assertClass(server_params, ServerPublicParams);
+    const ret = wasm.GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds(ptr0, len0, ptr1, len1, ptr2, len2, now, ptr3, len3, server_params.__wbg_ptr);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v5 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v5;
+}
+
+/**
+ * `expiration` is in seconds
+ * @param {Uint8Array} token
+ * @param {number} expiration
+ * @returns {Uint8Array}
+ */
+export function GroupSendToken_ToFullToken(token, expiration) {
+    const ptr0 = passArray8ToWasm0(token, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.GroupSendToken_ToFullToken(ptr0, len0, expiration);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
  * @param {number} output_length
  * @param {Uint8Array} ikm
  * @param {Uint8Array | null} [label]
@@ -3537,7 +3655,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 83, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 88, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },
@@ -3674,6 +3792,17 @@ function _assertClass(instance, klass) {
 const CLOSURE_DTORS = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(state => wasm.__wbindgen_destroy_closure(state.a, state.b));
+
+function getArrayJsValueFromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    const mem = getDataViewMemory0();
+    const result = [];
+    for (let i = ptr; i < ptr + 4 * len; i += 4) {
+        result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+    }
+    wasm.__externref_drop_slice(ptr, len);
+    return result;
+}
 
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;

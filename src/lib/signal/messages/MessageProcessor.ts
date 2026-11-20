@@ -10,13 +10,16 @@ import type {
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
-import type { OutgoingMessage, RecipientResult } from '../sender/sendMessage';
+import type { RecipientResult } from '../sender/sendContent';
+import type { OutgoingMessage } from '../sender/sendMessage';
+import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
+import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
@@ -424,12 +427,8 @@ export default class MessageProcessor {
     const conversation = await this.db.getConversation(conversationId);
     const context = this.client.getSenderContext();
     if (!conversation || context.account.isTypingIndicatorsEnabled === false) return;
-    await sendTyping(
-      context,
-      getRecipientAcis(conversation, context.account.aci),
-      isTyping,
-      conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
-    );
+    const recipients = getRecipientAcis(conversation, context.account.aci);
+    await sendTyping(context, recipients, isTyping, this.getGroupTarget(conversation));
   }
 
   /**
@@ -634,12 +633,23 @@ export default class MessageProcessor {
     try {
       return await sendMessage(this.client.getSenderContext(), recipients, content, {
         ...options,
-        groupId: conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
+        group: this.getGroupTarget(conversation),
       });
     } catch (err) {
       this.events.onError(err as Error);
       return recipients.map((serviceId) => ({ serviceId, error: err as Error }));
     }
+  }
+
+  /** Group sends renew the send endorsements of the group through its state */
+  private getGroupTarget(conversation: ConversationRecord): GroupTarget | undefined {
+    if (conversation.type !== 'group' || !conversation.masterKey) return undefined;
+    const { id, masterKey } = conversation;
+    return {
+      id: bufferFromBase64(id),
+      secretParams: wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+      refresh: () => this.refreshGroup(id, masterKey),
+    };
   }
 
   private async handleContent(decrypted: DecryptedEnvelope) {
@@ -889,13 +899,17 @@ export default class MessageProcessor {
     const conversation = existing ?? await this.putConversation({
       id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
     });
-    if (!existing || (existing.revision ?? -1) < revision) this.refreshGroup(id, masterKey);
+    if (!existing || (existing.revision ?? -1) < revision) void this.refreshGroup(id, masterKey);
     return conversation;
   }
 
-  /** Fetches the group state outside the envelope queue; group changes are not applied one by one yet */
+  /**
+   * Fetches the group state outside the envelope queue, with its send endorsements; group changes are not
+   * applied one by one yet. Concurrent refreshes of a group share one fetch.
+   */
   private refreshGroup(id: string, masterKey: Uint8Array) {
-    if (this.groupRefreshes.has(id)) return;
+    const running = this.groupRefreshes.get(id);
+    if (running) return running;
 
     const refresh = (async () => {
       const { account, connection, store } = this.client.getSenderContext();
@@ -920,10 +934,19 @@ export default class MessageProcessor {
         });
       });
       this.flush();
+      await saveGroupSendEndorsements(
+        store,
+        account.aci,
+        id,
+        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+        group.members.map(({ aci }) => aci),
+        group.sendEndorsementsResponse,
+      );
     })();
 
     this.groupRefreshes.set(id, refresh);
     refresh.catch(this.events.onError).finally(() => this.groupRefreshes.delete(id));
+    return refresh;
   }
 
   /**

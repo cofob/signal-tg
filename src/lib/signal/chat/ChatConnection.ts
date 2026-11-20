@@ -124,7 +124,7 @@ export default class ChatConnection {
     }
 
     const {
-      senderServiceId, senderDeviceId, destinationServiceId, content, isSealedSender,
+      senderServiceId, senderDeviceId, destinationServiceId, content, isSealedSender, groupId,
     } = decrypted;
     await this.store.addUnprocessed({
       ...entry,
@@ -134,6 +134,7 @@ export default class ChatConnection {
         destinationServiceId,
         content: toBinary(ContentSchema, content),
         isSealedSender,
+        groupId,
       },
     });
     await this.handlers.onEnvelope(decrypted);

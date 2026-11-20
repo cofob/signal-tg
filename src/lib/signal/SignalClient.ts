@@ -87,10 +87,12 @@ export default class SignalClient {
 
   /** Returns `true` when the content needs nothing from the app */
   private async handleProtocolContent(decrypted: DecryptedEnvelope) {
-    const { senderServiceId, senderDeviceId, content: { content: body } } = decrypted;
+    const {
+      senderServiceId, senderDeviceId, groupId, content: { content: body },
+    } = decrypted;
 
     if (body.case === 'decryptionErrorMessage') {
-      await handleRetryRequest(this.getSenderContext(), senderServiceId, senderDeviceId, body.value);
+      await handleRetryRequest(this.getSenderContext(), senderServiceId, senderDeviceId, body.value, groupId);
       return true;
     }
 
