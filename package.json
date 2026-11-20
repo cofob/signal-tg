@@ -27,7 +27,7 @@
     "tl:rehash": "node ./dev/tlHash.js",
     "gramjs:tl": "tsx ./src/lib/gramjs/tl/generateModules.ts",
     "signal:wasm": "bash ./rust/signal-wasm/build.sh",
-    "signal:proxy": "node --experimental-strip-types ./proxy/tunnel.ts",
+    "signal:proxy": "cargo run --release --locked --manifest-path proxy/Cargo.toml",
     "signal:proto": "buf generate",
     "lang:ts": "tsx ./dev/generateLangTypes.js",
     "lang:initial": "tsx ./dev/generateInitialLangFallback.js",

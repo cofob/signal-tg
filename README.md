@@ -14,7 +14,7 @@ Until GramJS is removed, the build needs any values for `TELEGRAM_API_ID` and `T
 ## Development
 
 ```sh
-npm run signal:proxy  # WebSocket-to-TCP tunnel to Signal servers, Node 24
+npm run signal:proxy  # WebSocket-to-TCP tunnel to Signal servers, needs Rust; see proxy/README.md
 npm run dev           # http://localhost:1234
 ```
 
