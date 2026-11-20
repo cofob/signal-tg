@@ -84,10 +84,12 @@ export const INITIAL_SHARED_STATE: SharedState = {
     themes: {
       light: {
         isBlurred: true,
+        isSignalTheme: true,
         patternColor: getDefaultPatternColor('light'),
       },
       dark: {
         isBlurred: true,
+        isSignalTheme: true,
         patternColor: getDefaultPatternColor('dark'),
       },
     },

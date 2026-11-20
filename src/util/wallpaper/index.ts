@@ -30,7 +30,7 @@ const ACTION_MESSAGE_BG_ALPHA = 0.85;
 
 export type DefaultWallpaper = {
   colors: string[];
-  patternColor: string;
+  patternColor?: string;
   intensity: number;
 };
 
@@ -77,6 +77,10 @@ export const DEFAULT_LIGHT_WALLPAPER: DefaultWallpaper = {
   intensity: DEFAULT_PATTERN_INTENSITY,
 };
 
+// Signal has no default wallpaper, only a plain background (Signal Desktop `$color-white`, `$color-gray-95`)
+const SIGNAL_LIGHT_WALLPAPER: DefaultWallpaper = { colors: ['#ffffff'], intensity: 0 };
+const SIGNAL_DARK_WALLPAPER: DefaultWallpaper = { colors: ['#121212'], intensity: 0 };
+
 export function buildWallpaperRenderModel(theme: ThemeKey, settings: IThemeSettings): WallpaperRenderModel {
   const {
     background: customBackground,
@@ -96,7 +100,7 @@ export function buildWallpaperRenderModel(theme: ThemeKey, settings: IThemeSetti
   ].filter(Boolean);
   const isImage = Boolean(customBackground) && !isPattern;
   const isDefault = getIsDefaultWallpaper(settings);
-  const defaultWallpaper = getDefaultWallpaper(theme);
+  const defaultWallpaper = getDefaultWallpaper(theme, settings.isSignalTheme);
   const effectivePatternColor = isDefault ? defaultWallpaper.patternColor : patternColor;
   const effectivePatternIntensity = isDefault
     ? defaultWallpaper.intensity : (patternIntensity ?? DEFAULT_PATTERN_INTENSITY);
@@ -168,7 +172,7 @@ export async function decodeWallpaperPatternBlob(blob: Blob): Promise<Blob> {
 
 // Returns the tint used by wallpaper-aware surfaces with the built-in wallpaper
 export function getDefaultPatternColor(theme: ThemeKey): string {
-  return theme === 'dark' ? DEFAULT_DARK_WALLPAPER.patternColor : DEFAULT_LIGHT_WALLPAPER.patternColor;
+  return theme === 'dark' ? DEFAULT_DARK_PATTERN_COLOR : DEFAULT_LIGHT_PATTERN_COLOR;
 }
 
 export function buildDefaultWallpaperSettings(theme: ThemeKey): Partial<IThemeSettings> {
@@ -275,7 +279,8 @@ export function buildThemeSettingsFromWallpaper(wallpaper: ApiWallpaper): Partia
   };
 }
 
-function getDefaultWallpaper(theme: ThemeKey) {
+function getDefaultWallpaper(theme: ThemeKey, isSignalTheme?: boolean) {
+  if (isSignalTheme) return theme === 'dark' ? SIGNAL_DARK_WALLPAPER : SIGNAL_LIGHT_WALLPAPER;
   return theme === 'dark' ? DEFAULT_DARK_WALLPAPER : DEFAULT_LIGHT_WALLPAPER;
 }
 

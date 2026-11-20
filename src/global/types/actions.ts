@@ -326,7 +326,7 @@ export interface ActionPayloads {
   loadWallpapers: undefined;
   uploadWallpaper: File;
   loadChatThemes: undefined;
-  applyChatTheme: { emoticon?: string } & WithTabId;
+  applyChatTheme: { emoticon?: string; isSignalTheme?: boolean } & WithTabId;
   createServiceNotification: {
     message: ApiMessage;
   };

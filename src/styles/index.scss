@@ -94,6 +94,12 @@ body.is-ios {
   --border-radius-messages-small: 0.5rem;
 }
 
+// Signal Desktop `.module-message__container`: 18px bubbles with 4px corners between grouped messages
+html.theme-signal body {
+  --border-radius-messages: 1.125rem;
+  --border-radius-messages-small: 0.25rem;
+}
+
 body.is-tauri {
   --custom-cursor: default;
   --window-controls-width: 5rem;

@@ -262,7 +262,8 @@ addActionHandler('loadChatThemes', async (global): Promise<void> => {
 
 const CHAT_THEME_KEYS: ThemeKey[] = ['light', 'dark'];
 
-addActionHandler('applyChatTheme', (global, actions, { emoticon, tabId = getCurrentTabId() }): ActionReturnType => {
+addActionHandler('applyChatTheme', (global, actions, payload): ActionReturnType => {
+  const { emoticon, isSignalTheme, tabId = getCurrentTabId() } = payload;
   const chatTheme = global.settings.chatThemes?.find((theme) => theme.emoticon === emoticon);
   if (emoticon && !chatTheme) return global;
 
@@ -271,6 +272,7 @@ addActionHandler('applyChatTheme', (global, actions, { emoticon, tabId = getCurr
       ...RESET_WALLPAPER_SETTINGS,
       chatThemeEmoticon: emoticon,
       serverThemeSettings: chatTheme && getChatThemeEntry(chatTheme.settings, theme === 'dark'),
+      isSignalTheme,
     });
   });
   return updateTabState(global, {

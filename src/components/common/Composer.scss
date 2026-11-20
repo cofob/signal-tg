@@ -384,6 +384,12 @@
   margin-bottom: 0;
   box-shadow: var(--shadow-footer);
 
+  // Signal Desktop `.CompositionInput__input`: a flat field filled like incoming messages
+  html.theme-signal & {
+    background: var(--message-incoming-background);
+    box-shadow: none;
+  }
+
   .select-mode-active + .middle-column-footer & {
     position: relative;
     padding-right: var(--composer-pill-padding);

@@ -166,7 +166,10 @@ addCallback((global: GlobalState) => {
 
   const canAnimate = selectCanAnimateInterface(global);
 
-  switchTheme(theme, canAnimate, buildThemeColorOverrides(themes[theme], theme));
+  const themeSettings = themes[theme];
+  switchTheme(
+    theme, canAnimate, buildThemeColorOverrides(themeSettings, theme), undefined, themeSettings?.isSignalTheme,
+  );
   setScrollbarWidthProperty();
 
   // Make sure global has the latest theme. Will cause `switchTheme` on change

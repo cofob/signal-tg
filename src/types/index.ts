@@ -141,6 +141,8 @@ export interface IThemeSettings {
   isBlurred?: boolean;
   serverThemeSettings?: ApiThemeSettings;
   chatThemeEmoticon?: string;
+  // Signal's palette and plain default wallpaper replace the built-in Telegram ones
+  isSignalTheme?: boolean;
 }
 
 export type LangCode = (
