@@ -1,6 +1,6 @@
 # Project instructions
 
-Telegram web app using TypeScript and Teact, a custom React-like UI library. Follow nearby code and the repository's ESLint and Stylelint configurations; the rules below capture project-specific constraints and review feedback.
+TeleSignal is a web client for the Signal messenger, built on the Telegram Web A codebase in TypeScript and Teact, a custom React-like UI library. It runs as a Signal linked device: all protocol logic and cryptography run in the browser. Telegram-only features and GramJS are being removed; the migration plan and its status are in [docs/signal/PLAN.md](docs/signal/PLAN.md). Follow nearby code and the repository's ESLint and Stylelint configurations; the rules below capture project-specific constraints and review feedback.
 
 ## Scope and workflow
 
@@ -24,7 +24,9 @@ Telegram web app using TypeScript and Teact, a custom React-like UI library. Fol
 - After TypeScript changes, run `npm run check:ts`; after SCSS changes, run `npm run check:css`.
 - For import-order errors, try `npx eslint --fix <filename>`. If it fails, make one manual attempt, then report the remaining error. Suggest that command for unresolved auto-fixable ESLint errors.
 - Keep additional verification proportional to the change. Once relevant checks pass, repeat or broaden them only for new changes, failures, or unresolved concerns.
+- After changing `rust/signal-wasm` or the vendored libsignal crates, run `npm run signal:wasm`; after changing a schema in `src/lib/signal/proto/schema`, run `npm run signal:proto`. Commit the regenerated output.
 - For browser verification, reuse `localhost:1234` if running; otherwise run `npm run dev`. If a sandboxed check fails, confirm through the browser or an approved check outside the sandbox before starting another server.
+- Signal hosts are reachable only through the tunnel: run `npm run signal:proxy` (Node 24) and set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` in `.env`. In development builds, `signalDev` in the browser console links a device and prints decrypted messages.
 - Do not modify account state (send messages, change settings, etc.) unless directly prompted.
 
 ## Code conventions
@@ -126,8 +128,22 @@ Teact and Fasterdom separate DOM measurement from mutation. The frame order is e
 - Add current combos to button hints with `useKeyboardShortcutHint(label, id)`.
 - `SharedSettings.keyboardShortcuts` stores only overrides, so changed defaults need no migration; renaming or removing an id needs a `migrateCache` step.
 
+## Signal engine
+
+- Code lives in `src/lib/signal/` (`net`, `account`, `chat`, `receiver`, `sender`, `store`, `storage`, `groups`, `profiles`, `attachments`, `sync`), the WebAssembly bridge and TLS client in `rust/signal-wasm/`, vendored libsignal crates in `rust/libsignal/`, and the tunnel in `proxy/`.
+- Keep protocol logic and key material in the browser. `proxy/tunnel.ts` relays bytes and must never terminate TLS or read request contents; add a host to its allowlist only when the client needs it.
+- Reach Signal hosts through `src/lib/signal/net/` (`TlsTunnel`, `sendHttpRequest`, `ResourceSocket`); they trust only Signal's certificate authority (`SIGNAL_CA_PEM`). Browser `fetch` and `WebSocket` cannot reach Signal hosts.
+- Port behavior from Signal Desktop (`ts/textsecure`, `ts/services`) and check behavior and limits against Signal Android. Reference the source path in a comment on ported logic.
+- `rust/libsignal/` vendors crates unchanged except as recorded in its `NOTICE.md`; follow its "Updating" steps. Name WASM exports in `rust/signal-wasm/src/` after the matching `Native` function of `@signalapp/libsignal-client` and keep its argument order (upstream `rust/bridge/shared/src` is the reference). Return errors through `rust/signal-wasm/src/error.rs` so they carry libsignal error names.
+- Handles passed to WASM in arrays or as optional values move into WASM: pass `cloneHandle()` copies. Stores cross the boundary as serialized records (`rust/signal-wasm/src/stores.rs`, `src/lib/signal/store/protocolStores.ts`).
+- Never edit `src/lib/signal/wasm/generated` or `src/lib/signal/proto/generated` by hand.
+- Schemas in `src/lib/signal/proto/schema` are copied unchanged from Signal Android; record the source commit in its `README.md`. Use `create`, `toBinary` and `fromBinary` from `@bufbuild/protobuf`. Proto2 scalar fields hold default values (`''`, `0`, `0n`, empty bytes) instead of `undefined`, so test `length` or truthiness; oneofs are `{ case, value }`. Keep unknown fields when re-encoding storage service records.
+- Persist an incoming envelope before acknowledging it, and process envelopes in arrival order (`ChatConnection`).
+- Support accounts without a phone number: the PNI, its keys and the number may be absent, and group credentials then use `authCredentialSalt` (plan section 2a).
+
 ## Telegram API
 
+- GramJS and the Telegram API are being removed (plan stages 1–3): do not add Telegram API methods. Until then, existing code follows the rules below.
 - GramJS runs in a web worker; UI and global state use plain `Api*` objects from `src/api/types`.
 - Read the TL schema in `src/lib/gramjs/tl/static/api.tl`; do not edit it without receiving updated schema beforehand. Add needed method names to `src/lib/gramjs/tl/static/api.json` and run `npm run gramjs:tl` to regenerate `src/lib/gramjs/tl/api.d.ts` and schema modules.
 - Implement methods under `src/api/gramjs/methods/` using destructured parameter objects and `invokeRequest(new GramJs.namespace.MethodName(...))`. Name TL `get*` fetchers `fetch*`.
