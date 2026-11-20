@@ -66,7 +66,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   starRefStartPrefixes: [
     '_tgr_',
   ],
-  paidReactionMaxAmount: 2500,
   starsUsdWithdrawRateX1000: 1300,
   storyChangelogUserId: '777000',
   maxPinnedStoriesCount: 3,

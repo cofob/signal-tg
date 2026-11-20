@@ -78,14 +78,6 @@ export function addMediaToLocalDb(media: GramJs.TypeMessageMedia, context?: Medi
     }
   }
 
-  if (media instanceof GramJs.MessageMediaPaidMedia) {
-    media.extendedMedia.forEach((extendedMedia) => {
-      if (extendedMedia instanceof GramJs.MessageExtendedMedia) {
-        addMediaToLocalDb(extendedMedia.media, context);
-      }
-    });
-  }
-
   if (media instanceof GramJs.MessageMediaPoll) {
     if (media.attachedMedia) {
       addMediaToLocalDb(media.attachedMedia, context);

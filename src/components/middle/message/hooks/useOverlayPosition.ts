@@ -12,14 +12,12 @@ export default function useOverlayPosition({
   anchorRef,
   overlayRef,
   isMirrored,
-  isForMessageEffect,
   isDisabled,
   id,
 }: {
   anchorRef: ElementRef<HTMLDivElement>;
   overlayRef: ElementRef<HTMLDivElement>;
   isMirrored?: boolean;
-  isForMessageEffect?: boolean;
   isDisabled?: boolean;
   id?: string;
 }) {
@@ -36,9 +34,7 @@ export default function useOverlayPosition({
 
     requestMutation(() => {
       const anchorCenterY = anchorRect.top + anchorRect.height / 2;
-      const anchorBottomY = anchorRect.bottom;
-      const y = isForMessageEffect ? anchorBottomY : anchorCenterY;
-      element.style.top = `${y - elementRect.height / 2}px`;
+      element.style.top = `${anchorCenterY - elementRect.height / 2}px`;
 
       if (isMirrored) {
         element.style.left = `${anchorRect.left - OFFSET_X}px`;

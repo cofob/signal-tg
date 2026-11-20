@@ -1,9 +1,8 @@
 import type { ApiPeer } from '../../api/types';
 import type { GlobalState } from '../types';
 
-import { isUserId } from '../../util/entities/ids';
-import { getHasAdminRight, isChatAdmin, isChatChannel } from '../helpers';
-import { selectChat, selectChatFullInfo, selectIsMonoforumAdmin } from './chats';
+import { getHasAdminRight, isChatChannel } from '../helpers';
+import { selectChat, selectChatFullInfo } from './chats';
 import { selectPeerProfileColor } from './ui';
 import { selectUser, selectUserFullInfo } from './users';
 
@@ -27,22 +26,6 @@ export function selectPeerAvatarPhoto<T extends GlobalState>(global: T, peerId: 
 
   const galleryPhoto = selectPeerPhotos(global, peerId)?.photos[0];
   return galleryPhoto?.id === avatarPhotoId ? galleryPhoto : undefined;
-}
-
-export function selectPeerPaidMessagesStars<T extends GlobalState>(
-  global: T,
-  peerId: string,
-) {
-  const isChatWithUser = isUserId(peerId);
-  if (isChatWithUser) {
-    const userFullInfo = isChatWithUser ? selectUserFullInfo(global, peerId) : undefined;
-    return userFullInfo?.paidMessagesStars;
-  }
-
-  const chat = selectChat(global, peerId);
-  if (!chat) return undefined;
-  if (isChatAdmin(chat) || selectIsMonoforumAdmin(global, chat.id)) return undefined;
-  return chat.paidMessagesStars;
 }
 
 export function selectPeerHasProfileBackground<T extends GlobalState>(global: T, peerId: string) {

@@ -10,7 +10,6 @@ export * from './management';
 export * from './settings';
 export * from './twoFaSettings';
 export * from './passcode';
-export * from './payments';
 export * from './stories';
 export * from './translations';
 export * from './peers';

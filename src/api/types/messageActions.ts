@@ -206,22 +206,6 @@ export interface ApiMessageActionExpiredContent extends ActionMediaType {
   isRoundVideo?: true;
 }
 
-export interface ApiMessageActionPaidMessagesRefunded extends ActionMediaType {
-  type: 'paidMessagesRefunded';
-  count: number;
-  stars: number;
-}
-
-export interface ApiMessageActionNoPaidMessagesTokenUsed extends ActionMediaType {
-  type: 'noPaidMessagesTokenUsed';
-}
-
-export interface ApiMessageActionPaidMessagesPrice extends ActionMediaType {
-  type: 'paidMessagesPrice';
-  stars: number;
-  isAllowedInChannel?: boolean;
-}
-
 export interface ApiMessageActionSuggestedPostApproval extends ActionMediaType {
   type: 'suggestedPostApproval';
   isRejected?: boolean;
@@ -321,7 +305,6 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined
-  | ApiMessageActionPaidMessagesRefunded | ApiMessageActionNoPaidMessagesTokenUsed | ApiMessageActionPaidMessagesPrice
   | ApiMessageActionSuggestedPostApproval
   | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund | ApiMessageActionTodoCompletions
   | ApiMessageActionTodoAppendTasks | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer

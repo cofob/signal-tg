@@ -7,7 +7,6 @@ import type {
   ApiReactionCount,
   ApiReactionCustomEmoji,
   ApiReactionEmoji,
-  ApiReactionPaid,
 } from '../../../../api/types';
 import type { IAnchorPosition } from '../../../../types';
 
@@ -25,14 +24,13 @@ import ReactionSelectorReaction from './ReactionSelectorReaction';
 
 import './ReactionSelector.scss';
 
-type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji | ApiReactionEmoji | ApiReactionPaid)[];
+type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji | ApiReactionEmoji)[];
 
 type OwnProps = {
   enabledReactions?: ApiChatReactions;
   isPrivate?: boolean;
   topReactions?: ApiReaction[];
   defaultTagReactions?: ApiReaction[];
-  effectReactions?: ApiReaction[];
   allAvailableReactions?: ApiAvailableReaction[];
   currentReactions?: ApiReactionCount[];
   reactionsLimit?: number;
@@ -42,11 +40,7 @@ type OwnProps = {
   className?: string;
   isInSavedMessages?: boolean;
   isInStoryViewer?: boolean;
-  isForEffects?: boolean;
-  isWithPaidReaction?: boolean;
   onToggleReaction: (reaction: ApiReaction) => void;
-  onSendPaidReaction?: NoneToVoidFunction;
-  onShowPaidReactionModal?: NoneToVoidFunction;
   onShowMore: (position: IAnchorPosition) => void;
 };
 
@@ -73,12 +67,7 @@ const ReactionSelector = ({
   isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
-  isForEffects,
-  effectReactions,
-  isWithPaidReaction,
   onToggleReaction,
-  onSendPaidReaction,
-  onShowPaidReactionModal,
   onShowMore,
 }: OwnProps) => {
   const ref = useRef<HTMLDivElement>();
@@ -93,7 +82,6 @@ const ReactionSelector = ({
   const availableReactions = useMemo(() => {
     const reactions = (() => {
       if (shouldUseCurrentReactions) return currentReactions?.map((reaction) => reaction.reaction);
-      if (isForEffects) return effectReactions;
       if (isInSavedMessages) return defaultTagReactions;
       if (enabledReactions?.type === 'some') return enabledReactions.allowed;
       if (!hasReactionCatalog) return DEFAULT_EMOJI_REACTIONS;
@@ -103,8 +91,6 @@ const ReactionSelector = ({
     const filteredReactions: RenderableReactions = reactions?.map((reaction) => {
       const isCustomReaction = reaction.type === 'custom';
       const availableReaction = allAvailableReactions?.find((r) => isSameReaction(r.reaction, reaction));
-
-      if (isForEffects) return availableReaction;
 
       const isPlainEmoji = !hasReactionCatalog && reaction.type === 'emoji';
       if ((!isCustomReaction && !availableReaction && !isPlainEmoji) || availableReaction?.isInactive) return undefined;
@@ -117,14 +103,10 @@ const ReactionSelector = ({
       return availableReaction || reaction;
     }).filter(Boolean) || [];
 
-    const sortedReactions = sortReactions(filteredReactions, topReactions);
-    if (isWithPaidReaction) {
-      sortedReactions.unshift({ type: 'paid' });
-    }
-    return sortedReactions;
+    return sortReactions(filteredReactions, topReactions);
   }, [
     allAvailableReactions, currentReactions, defaultTagReactions, enabledReactions, isInSavedMessages, isPrivate,
-    topReactions, isForEffects, effectReactions, shouldUseCurrentReactions, isWithPaidReaction, hasReactionCatalog,
+    topReactions, shouldUseCurrentReactions, hasReactionCatalog,
   ]);
 
   const reactionsToRender = useMemo(() => {
@@ -135,7 +117,7 @@ const ReactionSelector = ({
   }, [availableReactions]);
   // Without a catalog, more opens the full emoji set
   const withMoreButton = reactionsToRender.length < availableReactions.length
-    || (!hasReactionCatalog && !shouldUseCurrentReactions && !isForEffects && !isInSavedMessages);
+    || (!hasReactionCatalog && !shouldUseCurrentReactions && !isInSavedMessages);
 
   const userReactionIndexes = useMemo(() => {
     const chosenReactions = currentReactions?.filter(({ chosenOrder }) => chosenOrder !== undefined) || [];
@@ -165,12 +147,8 @@ const ReactionSelector = ({
       return lang('StoryReactionsHint');
     }
 
-    if (isForEffects) {
-      return lang('AddEffectMessageHint');
-    }
-
     return undefined;
-  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang, isForEffects]);
+  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang]);
 
   if (!reactionsToRender.length) return undefined;
 
@@ -198,8 +176,6 @@ const ReactionSelector = ({
                   key={getReactionKey(reaction)}
                   isReady={isReady}
                   onToggleReaction={onToggleReaction}
-                  onSendPaidReaction={onSendPaidReaction}
-                  onShowPaidReactionModal={onShowPaidReactionModal}
                   reaction={reaction}
                   noAppearAnimation={!canPlayAnimatedEmojis}
                   chosen={userReactionIndexes.has(i)}

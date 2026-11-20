@@ -28,7 +28,6 @@ import type {
   ApiPeer,
   ApiPhoto,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiRichMessage,
   ApiSessionData,
   ApiSticker,
@@ -93,7 +92,6 @@ export type ScrollTargetPosition = ScrollLogicalPosition | 'centerOrTop';
 export interface IAlbum {
   albumId: string;
   messages: ApiMessage[];
-  isPaidMedia?: boolean;
   mainMessage: ApiMessage;
   captionMessage?: ApiMessage;
   hasMultipleCaptions: boolean;
@@ -179,17 +177,11 @@ export interface AccountSettings {
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;
-  shouldNewNonContactPeersRequirePremium?: boolean;
   defaultHistoryTtl?: number;
-  nonContactPeersPaidStars?: number;
-  permanentFreeMessagesLink?: string;
   shouldHideReadMarks?: boolean;
   canTranslate: boolean;
-  canTranslateChats: boolean;
   translationLanguage?: string;
-  doNotTranslate: string[];
   translationTone?: TranslationTone;
-  shouldPaidMessageAutoApprove: boolean;
 }
 
 export type IAnchorPosition = {
@@ -233,7 +225,6 @@ export enum SettingsScreens {
   PrivacyPhoneP2P,
   PrivacyForwarding,
   PrivacyVoiceMessages,
-  PrivacyMessages,
   PrivacyGroupChats,
   PrivacyPhoneNumberAllowedContacts,
   PrivacyPhoneNumberDeniedContacts,
@@ -258,7 +249,6 @@ export enum SettingsScreens {
   PrivacyGroupChatsAllowedContacts,
   PrivacyGroupChatsDeniedContacts,
   PrivacyBlockedUsers,
-  PrivacyNoPaidMessages,
   Performance,
   Folders,
   FoldersCreateFolder,
@@ -301,7 +291,6 @@ export enum SettingsScreens {
   Stickers,
   QuickReaction,
   CustomEmoji,
-  DoNotTranslate,
   FoldersShare,
   Passkeys,
   KeyboardShortcuts,
@@ -311,7 +300,7 @@ export enum SettingsScreens {
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
   'id' | 'accessHash' | 'title' | 'count' | 'stickers' | 'isEmoji' | 'installedDate' | 'isArchived' |
   'hasThumbnail' | 'hasStaticThumb' | 'hasAnimatedThumb' | 'hasVideoThumb' | 'thumbCustomEmojiId'
-)> & { reactions?: ApiReactionWithPaid[] };
+)> & { reactions?: ApiReaction[] };
 
 export enum LeftColumnContent {
   ChatList,
@@ -831,14 +820,12 @@ export type SendMessageParams = {
   shouldUpdateStickerSetOrder?: boolean;
   wasDrafted?: boolean;
   isInvertedMedia?: true;
-  effectId?: string;
   webPageMediaSize?: WebPageMediaSize;
   webPageUrl?: string;
   starsAmount?: number;
   isPending?: true;
   messageList?: MessageList;
   isReaction?: true; // Reaction to the story are sent in the form of a message
-  messagePriceInStars?: number;
   localMessage?: ApiMessage;
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;
   forwardParams?: ForwardMessagesParams;
@@ -868,6 +855,4 @@ export type ForwardMessagesParams = {
   wasDrafted?: boolean;
   lastMessageId?: number;
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;
-  messagePriceInStars?: number;
-  effectId?: string;
 };

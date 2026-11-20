@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiMediaExtendedPreview, ApiVideo } from '../../../api/types';
+import type { ApiVideo } from '../../../api/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 
 import {
@@ -39,7 +39,7 @@ import styles from './Video.module.scss';
 
 export type OwnProps<T> = {
   id?: string;
-  video: ApiVideo | ApiMediaExtendedPreview;
+  video: ApiVideo;
   lastPlaybackTimestamp?: number;
   canAutoLoad?: boolean;
   canAutoPlay?: boolean;
@@ -89,14 +89,13 @@ const Video = <T,>({
   const [isNsfwModalOpen, openNsfwModal, closeNsfwModal] = useFlag();
   const [shouldAlwaysShowNsfw, setShouldAlwaysShowNsfw] = useState(false);
 
-  const isPaidPreview = video.mediaType === 'extendedMediaPreview';
-  const isUnavailable = !isPaidPreview && video.isUnavailable;
+  const isUnavailable = video.isUnavailable;
   const { width, height } = getMediaDimensions(video);
 
-  const localBlobUrl = !isPaidPreview ? video.blobUrl : undefined;
+  const localBlobUrl = video.blobUrl;
   const editPreview = useCurrentOrPrev(video.mediaType === 'video' ? video.editPreview : undefined, true);
 
-  const shouldShowSpoiler = isPaidPreview || video.isSpoiler || isMediaNsfw;
+  const shouldShowSpoiler = video.isSpoiler || isMediaNsfw;
   const [isSpoilerShown, showSpoiler, hideSpoiler] = useFlag(shouldShowSpoiler);
 
   useEffect(() => {
@@ -127,7 +126,7 @@ const Video = <T,>({
   }
 
   const [isLoadAllowed, setIsLoadAllowed] = useState(canAutoLoad);
-  const shouldLoad = Boolean(isLoadAllowed && isIntersectingForLoading && !isPaidPreview && !isUnavailable);
+  const shouldLoad = Boolean(isLoadAllowed && isIntersectingForLoading && !isUnavailable);
   const cover = video.mediaType === 'video' ? video.cover : undefined;
   const hasCover = Boolean(cover);
   const [isPlayAllowed, setIsPlayAllowed] = useState(Boolean(canAutoPlay && !isSpoilerShown));
@@ -136,12 +135,12 @@ const Video = <T,>({
     ? Boolean(canAutoPlay ? isHovered && !isSpoilerShown : isPlayAllowed)
     : isPlayAllowed;
 
-  const fullMediaHash = !isPaidPreview ? getVideoMediaHash(video, 'inline') : undefined;
+  const fullMediaHash = getVideoMediaHash(video, 'inline');
   const [isFullMediaPreloaded] = useState(Boolean(fullMediaHash && mediaLoader.getFromMemory(fullMediaHash)));
   const { mediaData, loadProgress } = useMediaWithLoadProgress(
     fullMediaHash,
     !shouldLoad,
-    !isPaidPreview ? getMediaFormat(video, 'inline') : undefined,
+    getMediaFormat(video, 'inline'),
   );
   const fullMediaData = localBlobUrl || mediaData;
   const [isPlayerReady, markPlayerReady] = useFlag();
@@ -156,8 +155,7 @@ const Video = <T,>({
 
   const isUnsupported = useUnsupportedMedia(videoRef, true, !isInline);
 
-  const previewMediaHash = isPaidPreview ? undefined
-    : cover ? getPhotoMediaHash(cover, 'preview') : getVideoMediaHash(video, 'preview');
+  const previewMediaHash = cover ? getPhotoMediaHash(cover, 'preview') : getVideoMediaHash(video, 'preview');
   const [isPreviewPreloaded] = useState(Boolean(previewMediaHash && mediaLoader.getFromMemory(previewMediaHash)));
   const canLoadPreview = isIntersectingForLoading;
   const previewBlobUrl = useMedia(previewMediaHash, !canLoadPreview)
@@ -173,9 +171,9 @@ const Video = <T,>({
   const blurredBackgroundRef = useBlurredMediaThumbRef(video, !withBlurredBackground);
 
   const { loadProgress: downloadProgress } = useMediaWithLoadProgress(
-    !isPaidPreview ? getVideoMediaHash(video, 'download') : undefined,
+    getVideoMediaHash(video, 'download'),
     !isDownloading,
-    !isPaidPreview ? getMediaFormat(video, 'download') : undefined,
+    getMediaFormat(video, 'download'),
   );
 
   const { isUploading, isTransferring, transferProgress } = getMediaTransferState(
@@ -246,7 +244,7 @@ const Video = <T,>({
       return;
     }
 
-    if (!isPaidPreview && isDownloading) {
+    if (isDownloading) {
       cancelMediaDownload({ media: video });
       return;
     }
@@ -370,7 +368,7 @@ const Video = <T,>({
         </MediaBadge>
       ) : (
         <MediaBadge key="duration" className="message-media-duration">
-          {!isPaidPreview && video.isGif ? 'GIF' : formatMediaDuration(Math.max(duration - playProgress, 0))}
+          {video.isGif ? 'GIF' : formatMediaDuration(Math.max(duration - playProgress, 0))}
           {isUnsupported && <Icon name="message-failed" className={styles.playbackFailed} />}
         </MediaBadge>
       )}

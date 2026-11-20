@@ -42,8 +42,6 @@ export * from './phoneCallState';
 
 export * from './stories';
 
-export * from './stars';
-
 export * from './forum';
 
 export * from './communities';

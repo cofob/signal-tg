@@ -22,7 +22,7 @@ import type {
   ApiNotification,
   ApiPhoneCall,
   ApiPreparedInlineMessage,
-  ApiReactionWithPaid,
+  ApiReaction,
   ApiRequestPeerType,
   ApiRichText,
   ApiSearchPostsFlood,
@@ -260,10 +260,7 @@ export type TabState = {
     storyId?: number;
     position?: IAnchorPosition;
     sendAsMessage?: boolean;
-    isForEffects?: boolean;
   };
-
-  shouldPlayEffectInComposer?: true;
 
   recoveryEmail?: string;
 
@@ -313,7 +310,7 @@ export type TabState = {
   };
 
   activeEmojiInteractions?: ActiveEmojiInteraction[];
-  activeReactions: Record<string, ApiReactionWithPaid[]>;
+  activeReactions: Record<string, ApiReaction[]>;
 
   middleSearch: {
     byChatThreadKey: Record<string, MiddleSearchParams | undefined>;
@@ -338,8 +335,6 @@ export type TabState = {
     progress?: ManagementProgress;
     byChatId: Record<string, ManagementState>;
   };
-
-  paymentMessageConfirmDialogKey?: string;
 
   storyViewer: {
     isRibbonShown?: boolean;
@@ -435,7 +430,6 @@ export type TabState = {
     messageIds?: number[];
     storyId?: number;
     audioItem?: PlaybackItemRef;
-    audioPendingSend?: { toChatId: string; toThreadId?: ThreadId; stars: number };
     toChatId?: string;
     toThreadId?: ThreadId;
     withMyScore?: boolean;
@@ -561,11 +555,6 @@ export type TabState = {
     webAppKey: string;
     message: ApiPreparedInlineMessage;
     filter: ApiChatType[];
-    pendingSendArgs?: {
-      peerId: string;
-      threadId?: ThreadId;
-      starsForSendMessage?: number;
-    };
   };
 
   browser: BrowserState;
@@ -767,11 +756,6 @@ export type TabState = {
     currentBirthday?: ApiBirthday;
     suggestForUserId?: string;
     isFromSuggestion?: boolean;
-  };
-
-  paidReactionModal?: {
-    chatId: string;
-    messageId: number;
   };
 
   suggestMessageModal?: {

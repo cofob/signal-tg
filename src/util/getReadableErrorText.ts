@@ -71,7 +71,6 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   STARGIFT_CONVERT_TOO_OLD: 'ErrorStargiftConvertTooOld',
   SUBSCRIPTION_ALREADY_ACTIVE: 'ErrorSubscriptionAlreadyActive',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
-  PAID_MEDIA_FORBIDDEN: 'ErrorPaidMediaForbidden',
   USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
 };
 

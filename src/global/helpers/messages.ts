@@ -97,7 +97,7 @@ export function getMessageTranscription(message: ApiMessage) {
 export function hasMessageText(message: MediaContainer) {
   const {
     action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
-    webPage, contact, location, game, storyData, paidMedia, widget,
+    webPage, contact, location, game, storyData, widget,
   } = message.content;
 
   if (pollId) return false;
@@ -105,7 +105,7 @@ export function hasMessageText(message: MediaContainer) {
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
     || location || game || storyData || dice
-    || paidMedia || widget || action?.type === 'phoneCall'
+    || widget || action?.type === 'phoneCall'
   );
 }
 

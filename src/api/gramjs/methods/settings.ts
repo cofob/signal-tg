@@ -26,7 +26,6 @@ import {
   UNMUTE_TIMESTAMP,
 } from '../../../config';
 import { buildCollectionByKey } from '../../../util/iteratees';
-import { toJSNumber } from '../../../util/numbers';
 import { BLOCKED_LIST_LIMIT } from '../../../limits';
 import { buildApiPhoto, buildPrivacyRules } from '../apiBuilders/common';
 import {
@@ -723,28 +722,20 @@ export async function fetchGlobalPrivacySettings() {
   return {
     shouldArchiveAndMuteNewNonContact: Boolean(result.archiveAndMuteNewNoncontactPeers),
     shouldHideReadMarks: Boolean(result.hideReadMarks),
-    shouldNewNonContactPeersRequirePremium: Boolean(result.newNoncontactPeersRequirePremium),
-    nonContactPeersPaidStars: toJSNumber(result.noncontactPeersPaidStars),
   };
 }
 
 export async function updateGlobalPrivacySettings({
   shouldArchiveAndMuteNewNonContact,
   shouldHideReadMarks,
-  shouldNewNonContactPeersRequirePremium,
-  nonContactPeersPaidStars,
 }: {
   shouldArchiveAndMuteNewNonContact?: boolean;
   shouldHideReadMarks?: boolean;
-  shouldNewNonContactPeersRequirePremium?: boolean;
-  nonContactPeersPaidStars?: number | null;
 }) {
   const result = await invokeRequest(new GramJs.account.SetGlobalPrivacySettings({
     settings: new GramJs.GlobalPrivacySettings({
       ...(shouldArchiveAndMuteNewNonContact && { archiveAndMuteNewNoncontactPeers: true }),
       ...(shouldHideReadMarks && { hideReadMarks: true }),
-      ...(shouldNewNonContactPeersRequirePremium && { newNoncontactPeersRequirePremium: true }),
-      noncontactPeersPaidStars: BigInt(nonContactPeersPaidStars || 0),
     }),
   }));
 
@@ -755,8 +746,6 @@ export async function updateGlobalPrivacySettings({
   return {
     shouldArchiveAndMuteNewNonContact: Boolean(result.archiveAndMuteNewNoncontactPeers),
     shouldHideReadMarks: Boolean(result.hideReadMarks),
-    shouldNewNonContactPeersRequirePremium: Boolean(result.newNoncontactPeersRequirePremium),
-    nonContactPeersPaidStars: toJSNumber(result.noncontactPeersPaidStars),
   };
 }
 

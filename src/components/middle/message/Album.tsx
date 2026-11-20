@@ -2,7 +2,7 @@ import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type {
-  ApiMediaExtendedPreview, ApiMessage, ApiPhoto, ApiVideo,
+  ApiMessage, ApiPhoto, ApiVideo,
 } from '../../../api/types';
 import type { GlobalState, TabState } from '../../../global/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
@@ -60,13 +60,7 @@ const Album = ({
 }: OwnProps & StateProps) => {
   const { cancelUploadMedia } = getActions();
 
-  const { content: { paidMedia } } = album.mainMessage;
-
-  const mediaCount = album.isPaidMedia ? paidMedia!.extendedMedia.length : album.messages.length;
-
-  const handlePaidMediaClick = useLastCallback((index: number) => {
-    onMediaClick(album.mainMessage.id, index);
-  });
+  const mediaCount = album.messages.length;
 
   const handleAlbumMessageClick = useLastCallback((messageId: number) => {
     onMediaClick(messageId);
@@ -75,14 +69,6 @@ const Album = ({
   const handleCancelUpload = useLastCallback((messageId: number) => {
     cancelUploadMedia({ chatId: album.mainMessage.chatId, messageId });
   });
-
-  const messages = useMemo(() => {
-    if (album.isPaidMedia) {
-      return album.mainMessage.content.paidMedia!.extendedMedia.map(() => album.mainMessage);
-    }
-
-    return album.messages;
-  }, [album]);
 
   const albumLayout = useMemo(() => {
     const ratios = getAlbumMedia(album).map((media) => {
@@ -94,13 +80,8 @@ const Album = ({
   }, [album]);
 
   function renderAlbumMessage(message: ApiMessage, index: number) {
-    const renderingPaidMedia = album.isPaidMedia ? message.content.paidMedia?.extendedMedia[index] : undefined;
-    const paidPhotoOrPreview = renderingPaidMedia && 'mediaType' in renderingPaidMedia
-      ? renderingPaidMedia : renderingPaidMedia?.photo;
-    const paidVideoOrPreview = renderingPaidMedia && 'mediaType' in renderingPaidMedia
-      ? renderingPaidMedia : renderingPaidMedia?.video;
-    const photo = paidPhotoOrPreview || getMessagePhoto(message);
-    const video = paidVideoOrPreview || getMessageContent(message).video;
+    const photo = getMessagePhoto(message);
+    const video = getMessageContent(message).video;
 
     const fileUpload = uploadsByKey[getMessageKey(message)];
     const uploadProgress = fileUpload?.progress;
@@ -120,7 +101,7 @@ const Album = ({
 
       mediaElement = (
         <PhotoWithSelect
-          id={`album-media-${getMessageHtmlId(message.id, album.isPaidMedia ? index : undefined)}`}
+          id={`album-media-${getMessageHtmlId(message.id)}`}
           photo={photo}
           isOwn={isOwn}
           observeIntersection={observeIntersection}
@@ -129,18 +110,17 @@ const Album = ({
           uploadProgress={uploadProgress}
           layout="fill"
           isProtected={isProtected}
-          clickArg={album.isPaidMedia ? index : message.id}
-          onClick={album.isPaidMedia ? handlePaidMediaClick : handleAlbumMessageClick}
+          clickArg={message.id}
+          onClick={handleAlbumMessageClick}
           onCancelUpload={handleCancelUpload}
-          isDownloading={photo.mediaType !== 'extendedMediaPreview' && getIsDownloading(activeDownloads, photo)}
+          isDownloading={getIsDownloading(activeDownloads, photo)}
           theme={theme}
-          noSelectControls={album.isPaidMedia}
         />
       );
     } else if (video) {
       mediaElement = (
         <VideoWithSelect
-          id={`album-media-${getMessageHtmlId(message.id, album.isPaidMedia ? index : undefined)}`}
+          id={`album-media-${getMessageHtmlId(message.id)}`}
           video={video}
           observeIntersectionForLoading={observeIntersection}
           canAutoLoad={canAutoLoad}
@@ -148,11 +128,10 @@ const Album = ({
           uploadProgress={uploadProgress}
           layout="fill"
           isProtected={isProtected}
-          clickArg={album.isPaidMedia ? index : message.id}
-          onClick={album.isPaidMedia ? handlePaidMediaClick : handleAlbumMessageClick}
+          clickArg={message.id}
+          onClick={handleAlbumMessageClick}
           onCancelUpload={handleCancelUpload}
-          isDownloading={video.mediaType !== 'extendedMediaPreview' && getIsDownloading(activeDownloads, video)}
-          noSelectControls={album.isPaidMedia}
+          isDownloading={getIsDownloading(activeDownloads, video)}
         />
       );
     }
@@ -161,7 +140,7 @@ const Album = ({
 
     return (
       <AlbumItem
-        key={album.isPaidMedia ? index : message.id}
+        key={message.id}
         item={layoutItem}
         className="album-item"
       >
@@ -175,19 +154,15 @@ const Album = ({
       className="Album"
       style={`--album-aspect-ratio: ${albumLayout.aspectRatio}`}
     >
-      {messages.map(renderAlbumMessage)}
+      {album.messages.map(renderAlbumMessage)}
     </div>
   );
 };
 
-type AlbumMedia = ApiPhoto | ApiVideo | ApiMediaExtendedPreview;
+type AlbumMedia = ApiPhoto | ApiVideo;
 
 function getAlbumMedia(album: IAlbum) {
-  const media = album.isPaidMedia
-    ? album.mainMessage.content.paidMedia!.extendedMedia.map((item) => (
-      'mediaType' in item ? item : (item.photo || item.video)
-    ))
-    : album.messages.map((message) => getMessagePhoto(message) || getMessageContent(message).video);
+  const media = album.messages.map((message) => getMessagePhoto(message) || getMessageContent(message).video);
 
   return media.filter((item): item is AlbumMedia => Boolean(item));
 }

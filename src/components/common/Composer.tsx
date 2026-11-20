@@ -5,7 +5,6 @@ import { getActions, getGlobal, withGlobal } from '../../global';
 import type {
   ApiAttachment,
   ApiAttachMenuPeerType,
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiBotCommand,
   ApiBotInlineMediaResult,
@@ -51,11 +50,10 @@ import {
   ROUND_VIDEO_RECORDING_SIZE,
   SCHEDULED_WHEN_ONLINE,
   SEND_MESSAGE_ACTION_INTERVAL,
-  SERVICE_NOTIFICATIONS_USER_ID,
   STARS_CURRENCY_CODE,
   VIDEO_RECORDING_FILENAME,
 } from '../../config';
-import { requestMeasure, requestMutation, requestNextMutation } from '../../lib/fasterdom/fasterdom';
+import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
 import {
   canEditMedia,
   getAllowedAttachmentOptions,
@@ -108,9 +106,7 @@ import {
   selectNotifyDefaults,
   selectNotifyException,
   selectPeer,
-  selectPeerPaidMessagesStars,
   selectPeerStory,
-  selectPerformanceSettingsValue,
   selectRequestedDraft,
   selectRequestedDraftFiles,
   selectStoppableTypingDraftId,
@@ -142,7 +138,6 @@ import calcTextLineHeightAndCount from '../../util/element/calcTextLineHeightAnd
 import { isUserId } from '../../util/entities/ids';
 import { fetchBlob } from '../../util/files';
 import focusEditableElement from '../../util/focusEditableElement';
-import { formatStarsAsIcon } from '../../util/localization/format';
 import { fetch } from '../../util/mediaLoader';
 import { MEMO_EMPTY_ARRAY } from '../../util/memo';
 import { getServerTime } from '../../util/serverTime';
@@ -167,7 +162,6 @@ import {
   isValidInputRichMessage,
   removeUnsupportedRichBlocks,
 } from '../ui/textInput/richText';
-import renderText from './helpers/renderText';
 import { hasActiveRichEditorTooltip } from './tooltips/helpers';
 
 import useInterval from '../../hooks/schedulers/useInterval';
@@ -195,7 +189,6 @@ import useClipboardPaste from '../middle/composer/hooks/useClipboardPaste';
 import useDraft from '../middle/composer/hooks/useDraft';
 import useEditing from '../middle/composer/hooks/useEditing';
 import useLoadLinkPreview from '../middle/composer/hooks/useLoadLinkPreview';
-import usePaidMessageConfirmation from '../middle/composer/hooks/usePaidMessageConfirmation';
 import useRichEditor from '../middle/composer/hooks/useRichEditor';
 import useRichMedia from '../middle/composer/hooks/useRichMedia';
 import useVideoRecording from '../middle/composer/hooks/useVideoRecording';
@@ -217,7 +210,6 @@ import SymbolMenuButton from '../middle/composer/SymbolMenuButton';
 import ToDoListModal from '../middle/composer/ToDoListModal.async';
 import VoiceRecordBar from '../middle/composer/VoiceRecordBar';
 import WebPagePreview from '../middle/composer/WebPagePreview';
-import MessageEffect from '../middle/message/MessageEffect';
 import ReactionSelector from '../middle/message/reactions/ReactionSelector';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -226,11 +218,9 @@ import ResponsiveHoverButton from '../ui/ResponsiveHoverButton';
 import Spinner from '../ui/Spinner';
 import TextTimer from '../ui/TextTimer';
 import Transition from '../ui/Transition';
-import AnimatedCounter from './AnimatedCounter';
 import Avatar from './Avatar';
 import AutoDeleteOutlinedIcon from './icons/AutoDeleteOutlinedIcon';
 import Icon from './icons/Icon';
-import PaymentMessageConfirmDialog from './PaymentMessageConfirmDialog';
 import ReactionAnimatedEmoji from './reactions/ReactionAnimatedEmoji';
 import RemoveFormattingModal from './RemoveFormattingModal';
 
@@ -328,20 +318,12 @@ type StateProps = {
   webPagePreview?: ApiWebPage;
   noWebPage?: boolean;
   isContactRequirePremium?: boolean;
-  paidMessagesStars?: number;
-  effect?: ApiAvailableEffect;
-  effectReactions?: ApiReaction[];
-  areEffectsSupported?: boolean;
-  canPlayEffect?: boolean;
-  shouldPlayEffect?: boolean;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
   richMessageMaxMedia: number;
   richMessageMaxTableColumns: number;
-  shouldPaidMessageAutoApprove?: boolean;
   isSilentPosting?: boolean;
-  paymentMessageConfirmDialogKey?: string;
   isAccountFrozen?: boolean;
   isAppConfigLoaded?: boolean;
   insertingPeerIdMention?: string;
@@ -377,7 +359,6 @@ const MOBILE_KEYBOARD_HIDE_DELAY_MS = 100;
 const SELECT_MODE_TRANSITION_MS = 200;
 const SENDING_ANIMATION_DURATION = 350;
 const MOUNT_ANIMATION_DURATION = 430;
-const PAID_STARS_CLOSE_DURATION = 300;
 const APPROXIMATE_RICH_INPUT_FORMAT_OPTIONS = { isApproximate: true };
 const MIN_COMPOSER_LINES = 3;
 
@@ -464,19 +445,12 @@ const Composer = ({
   webPagePreview,
   noWebPage,
   isContactRequirePremium,
-  paidMessagesStars,
-  effect,
-  effectReactions,
-  areEffectsSupported,
-  canPlayEffect,
-  shouldPlayEffect,
   richMessageLengthLimit,
   richMessageMaxBlocks,
   richMessageMaxDepth,
   richMessageMaxMedia,
   richMessageMaxTableColumns,
   isSilentPosting,
-  paymentMessageConfirmDialogKey,
   isAccountFrozen,
   isAppConfigLoaded,
   insertingPeerIdMention,
@@ -512,9 +486,6 @@ const Composer = ({
     sendStoryReaction,
     editMessage,
     updateAttachmentSettings,
-    saveEffectInDraft,
-    setReactionEffect,
-    hideEffectInComposer,
     updateChatSilentPosting,
     updateInsertingPeerIdMention,
     updateDraftSuggestedPostInfo,
@@ -532,7 +503,6 @@ const Composer = ({
   const inputRef = useRef<HTMLDivElement>();
   const composerRef = useRef<HTMLDivElement>();
   const symbolMenuSlotRef = useRef<HTMLDivElement>();
-  const counterRef = useRef<HTMLSpanElement>();
 
   const storyReactionRef = useRef<HTMLButtonElement>();
 
@@ -571,7 +541,7 @@ const Composer = ({
   const chatEmojiSetId = emojiSet?.id;
 
   const isEphemeralReply = draft?.replyInfo?.type === 'ephemeral';
-  const canSchedule = !paidMessagesStars && !isMonoforum && !isEphemeralReply;
+  const canSchedule = !isMonoforum && !isEphemeralReply;
 
   const {
     canSendStickers, canSendGifs, canAttachMedia, canAttachPolls, canAttachEmbedLinks, canAttachToDoLists,
@@ -582,14 +552,9 @@ const Composer = ({
       isChatWithBot,
       isChatWithSelf,
       isInStoryViewer,
-      paidMessagesStars,
-      isInScheduledList,
       isEphemeralReply,
     ),
-    [
-      chat, isChatWithBot, isChatWithSelf, isInStoryViewer, paidMessagesStars, isInScheduledList,
-      isEphemeralReply,
-    ],
+    [chat, isChatWithBot, isChatWithSelf, isInStoryViewer, isEphemeralReply],
   );
 
   const richEditor = useRichEditor(
@@ -808,25 +773,6 @@ const Composer = ({
 
   const isNeedPremium = isContactRequirePremium && isInStoryViewer;
   const isSendTextBlocked = isNeedPremium || (Boolean(chat) && !canSendPlainText);
-
-  const messagesCount = useDerivedState(() => {
-    if (hasAttachments) return attachments.length;
-    const messagesInInput = hasInputContent ? 1 : 0;
-    if (!isForwarding || !forwardedMessagesCount) return messagesInInput || 1;
-    return forwardedMessagesCount + messagesInInput;
-  }, [hasInputContent, hasAttachments, attachments, isForwarding, forwardedMessagesCount]);
-  const paymentDialogKey = `composer-${type}-${messageListType}-${chatId}-${threadId}-${storyId}`;
-  const starsForAllMessages = paidMessagesStars ? messagesCount * paidMessagesStars : 0;
-
-  const {
-    closeConfirmDialog: closeConfirmModalPayForMessage,
-    dialogHandler: paymentMessageConfirmDialogHandler,
-    shouldAutoApprove: shouldPaidMessageAutoApprove,
-    setAutoApprove: setShouldPaidMessageAutoApprove,
-    handleWithConfirmation: handleActionWithPaymentConfirmation,
-  } = usePaidMessageConfirmation(paymentDialogKey, starsForAllMessages);
-
-  const isPaidSendDeferred = starsForAllMessages > 0 && !shouldPaidMessageAutoApprove;
 
   const hasWebPagePreview = !hasAttachments && canAttachEmbedLinks && !noWebPage
     && webPagePreview?.webpageType === 'full';
@@ -1529,7 +1475,7 @@ const Composer = ({
         return;
       }
 
-      handleActionWithPaymentConfirmation(sendAttachments, {
+      sendAttachments({
         attachments,
         sendCompressed,
         sendGrouped,
@@ -1597,9 +1543,6 @@ const Composer = ({
         }
         if (!checkSlowMode()) return;
 
-        const effectId = effect?.id;
-        if (areEffectsSupported) saveEffectInDraft({ chatId, threadId, effectId: undefined });
-
         if (editingMessage) {
           editMessage({
             messageList: currentMessageList,
@@ -1614,7 +1557,6 @@ const Composer = ({
             scheduleRepeatPeriod,
             isSilent,
             shouldUpdateStickerSetOrder,
-            effectId,
           });
         }
 
@@ -1639,15 +1581,11 @@ const Composer = ({
 
       const messageInput = document.querySelector<HTMLDivElement>(editableInputCssSelector);
 
-      const effectId = effect?.id;
-
       if (text || isForwarding) {
         if (!checkSlowMode()) return;
 
         const shouldUseWebPagePreview = hasWebPagePreview && !shouldSkipWebPagePreview;
         const isInvertedMedia = shouldUseWebPagePreview ? attachmentSettings.isInvertedMedia : undefined;
-
-        if (areEffectsSupported) saveEffectInDraft({ chatId, threadId, effectId: undefined });
 
         sendMessage({
           messageList: currentMessageList,
@@ -1658,7 +1596,6 @@ const Composer = ({
           isSilent,
           shouldUpdateStickerSetOrder,
           isInvertedMedia,
-          effectId,
           webPageMediaSize: shouldSkipWebPagePreview ? undefined : attachmentSettings.webPageMediaSize,
           webPageUrl: shouldUseWebPagePreview ? webPagePreview.url : undefined,
         });
@@ -1739,8 +1676,8 @@ const Composer = ({
       return;
     }
 
-    handleActionWithPaymentConfirmation(
-      handleSend, isSilent, scheduledAt, scheduleRepeatPeriod, shouldSkipWebPagePreview,
+    handleSend(
+      isSilent, scheduledAt, scheduleRepeatPeriod, shouldSkipWebPagePreview,
     );
   });
 
@@ -1826,7 +1763,6 @@ const Composer = ({
     scheduledAt: number,
     scheduleRepeatPeriod: number | undefined,
     messageList: MessageList,
-    effectId?: string,
   ) => {
     if (!validateEphemeralReply() || isEphemeralReply) return;
 
@@ -1857,7 +1793,6 @@ const Composer = ({
         messageList,
         scheduledAt,
         scheduleRepeatPeriod,
-        effectId,
       });
     }
   });
@@ -1865,7 +1800,7 @@ const Composer = ({
   useEffectWithPrevDeps(([prevContentToBeScheduled]) => {
     if (currentMessageList && contentToBeScheduled && contentToBeScheduled !== prevContentToBeScheduled) {
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        handleMessageSchedule(contentToBeScheduled, scheduledAt, scheduleRepeatPeriod, currentMessageList, undefined);
+        handleMessageSchedule(contentToBeScheduled, scheduledAt, scheduleRepeatPeriod, currentMessageList);
       });
     }
   }, [contentToBeScheduled, currentMessageList, handleMessageSchedule, requestMessageSchedule]);
@@ -1952,8 +1887,7 @@ const Composer = ({
       forceShowSymbolMenu();
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
         cancelForceShowSymbolMenu();
-        handleActionWithPaymentConfirmation(
-          handleMessageSchedule,
+        handleMessageSchedule(
           { gif, isSilent },
           scheduledAt,
           scheduleRepeatPeriod,
@@ -1964,7 +1898,7 @@ const Composer = ({
         });
       });
     } else {
-      handleActionWithPaymentConfirmation(sendMessage, { messageList: currentMessageList, gif, isSilent });
+      sendMessage({ messageList: currentMessageList, gif, isSilent });
       requestMeasure(() => {
         resetComposer(true);
       });
@@ -1997,20 +1931,18 @@ const Composer = ({
       forceShowSymbolMenu();
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
         cancelForceShowSymbolMenu();
-        handleActionWithPaymentConfirmation(
-          handleMessageSchedule,
+        handleMessageSchedule(
           { sticker, isSilent },
           scheduledAt,
           scheduleRepeatPeriod,
           currentMessageList!,
         );
         requestMeasure(() => {
-          resetComposer(shouldPreserveInput, !isInScheduledList || isPaidSendDeferred);
+          resetComposer(shouldPreserveInput, !isInScheduledList);
         });
       });
     } else {
-      handleActionWithPaymentConfirmation(
-        sendMessage,
+      sendMessage(
         {
           messageList: currentMessageList,
           sticker,
@@ -2021,7 +1953,7 @@ const Composer = ({
       clearDraft({ chatId, threadId, isLocalOnly: true });
 
       requestMeasure(() => {
-        resetComposer(shouldPreserveInput, isPaidSendDeferred);
+        resetComposer(shouldPreserveInput);
       });
     }
   });
@@ -2040,8 +1972,7 @@ const Composer = ({
 
     if (isInScheduledList || isScheduleRequested) {
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        handleActionWithPaymentConfirmation(
-          handleMessageSchedule,
+        handleMessageSchedule(
           {
             id: inlineResult.id,
             queryId: inlineResult.queryId,
@@ -2053,8 +1984,7 @@ const Composer = ({
         );
       });
     } else {
-      handleActionWithPaymentConfirmation(
-        sendInlineBotResult,
+      sendInlineBotResult(
         {
           id: inlineResult.id,
           queryId: inlineResult.queryId,
@@ -2072,7 +2002,7 @@ const Composer = ({
 
     clearDraft({ chatId, threadId, isLocalOnly: true });
     requestMeasure(() => {
-      resetComposer(false, Boolean(isScheduleRequested && !isInScheduledList) || isPaidSendDeferred);
+      resetComposer(false, Boolean(isScheduleRequested && !isInScheduledList));
     });
   });
 
@@ -2181,8 +2111,7 @@ const Composer = ({
 
     if (isInScheduledList) {
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        handleActionWithPaymentConfirmation(
-          scheduleTodoList,
+        scheduleTodoList(
           { todo },
           scheduledAt,
           scheduleRepeatPeriod,
@@ -2191,8 +2120,7 @@ const Composer = ({
         );
       });
     } else {
-      handleActionWithPaymentConfirmation(
-        sendTodoList,
+      sendTodoList(
         { messageList: currentMessageList, todo, isSilent: isSilentPosting },
         convertedSource,
       );
@@ -2226,7 +2154,7 @@ const Composer = ({
     }
 
     requestMeasure(() => {
-      resetComposer(false, isPaidSendDeferred);
+      resetComposer(false);
     });
   });
 
@@ -2429,13 +2357,6 @@ const Composer = ({
       if (slowModePlaceholder) return slowModePlaceholder;
       if (isBotKeyboardOpen && botKeyboardPlaceholder) return botKeyboardPlaceholder;
       if (inputPlaceholder) return inputPlaceholder;
-      if (paidMessagesStars) {
-        return lang('ComposerPlaceholderPaidMessage', {
-          amount: formatStarsAsIcon(lang, paidMessagesStars, { asFont: true, className: 'placeholder-star-icon' }),
-        }, {
-          withNodes: true,
-        });
-      }
 
       if (isReplying && hasSuggestedPost) {
         return lang('ComposerPlaceholderCaption');
@@ -2471,7 +2392,7 @@ const Composer = ({
     return lang('ComposerPlaceholderNoText');
   }, [
     activeRecording, botKeyboardPlaceholder, chat, inputPlaceholder, isBotKeyboardOpen, isChannel, isComposerBlocked,
-    isInStoryViewer, isSilentPosting, lang, replyToTopic, isReplying, threadId, windowWidth, paidMessagesStars,
+    isInStoryViewer, isSilentPosting, lang, replyToTopic, isReplying, threadId, windowWidth,
     hasSuggestedPost, slowModePlaceholder, stealthMode?.activeUntil, user?.canManageBotForumTopics,
   ]);
 
@@ -2520,7 +2441,7 @@ const Composer = ({
                 : lang('NoVoiceMessagesAllowed', { user: chat?.title }),
             });
           } else if (isRecordingVideoMode ? !canSendRoundVideos : !canSendVoices) {
-            showAllowedMessageTypesNotification({ chatId, messageListType });
+            showAllowedMessageTypesNotification({ chatId });
           }
         } else {
           setIsViewOnceEnabled(false);
@@ -2553,7 +2474,7 @@ const Composer = ({
           return;
         }
         requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-          handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList, effect?.id);
+          handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList);
         });
         break;
       default:
@@ -2633,13 +2554,7 @@ const Composer = ({
       }] : undefined;
     }
 
-    handleActionWithPaymentConfirmation(sendMessage, { text, entities, isReaction: true });
-    closeReactionPicker();
-  });
-
-  const handleToggleEffectReaction = useLastCallback((reaction: ApiReaction) => {
-    setReactionEffect({ chatId, threadId, reaction });
-
+    sendMessage({ text, entities, isReaction: true });
     closeReactionPicker();
   });
 
@@ -2672,7 +2587,7 @@ const Composer = ({
     }
 
     requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-      handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList!, undefined);
+      handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList!);
     });
   });
 
@@ -2681,12 +2596,12 @@ const Composer = ({
       return;
     }
 
-    handleActionWithPaymentConfirmation(sendSilent);
+    sendSilent();
   });
 
   const sendWhenOnline = useLastCallback(() => {
-    handleActionWithPaymentConfirmation(
-      handleMessageSchedule, {}, SCHEDULED_WHEN_ONLINE, undefined, currentMessageList!, effect?.id,
+    handleMessageSchedule(
+      {}, SCHEDULED_WHEN_ONLINE, undefined, currentMessageList!,
     );
   });
 
@@ -2704,23 +2619,19 @@ const Composer = ({
       scheduledAt?: number, scheduleRepeatPeriod?: number,
     ) => {
       if (scheduledAt) {
-        handleActionWithPaymentConfirmation(
-          handleMessageSchedule,
+        handleMessageSchedule(
           { sendCompressed, sendGrouped, isInvertedMedia },
           scheduledAt,
           scheduleRepeatPeriod,
           currentMessageList!,
-          undefined,
         );
       } else {
         requestMessageSchedule((calendarScheduledAt, calendarRepeatPeriod) => {
-          handleActionWithPaymentConfirmation(
-            handleMessageSchedule,
+          handleMessageSchedule(
             { sendCompressed, sendGrouped, isInvertedMedia },
             calendarScheduledAt,
             calendarRepeatPeriod,
             currentMessageList!,
-            undefined,
           );
         });
       }
@@ -2729,17 +2640,9 @@ const Composer = ({
 
   const handleSendSilentAttachments = useLastCallback(
     (sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true) => {
-      handleActionWithPaymentConfirmation(sendSilent, { sendCompressed, sendGrouped, isInvertedMedia });
+      sendSilent({ sendCompressed, sendGrouped, isInvertedMedia });
     },
   );
-
-  const handleRemoveEffect = useLastCallback(() => {
-    saveEffectInDraft({ chatId, threadId, effectId: undefined });
-  });
-
-  const handleStopEffect = useLastCallback(() => {
-    hideEffectInComposer({});
-  });
 
   const onSend = useMemo(() => {
     switch (mainButtonState) {
@@ -2754,8 +2657,6 @@ const Composer = ({
 
   const withBotCommands = isChatWithBot && botMenuButton?.type === 'commands' && !editingMessage
     && botCommands !== false && !activeRecording;
-
-  const effectEmoji = areEffectsSupported && effect?.emoticon;
 
   const canExpandRichInput = isInMessageList && !isRichInputExpansionActive && !isEditingMedia;
   const canOpenRichInput = shouldShowRichInputButton && isInMessageList && !hasAttachments && !isRichInputExpanded
@@ -2781,27 +2682,6 @@ const Composer = ({
   });
   const renderedVideoRecording = useCurrentOrPrev(activeVideoRecording);
   const renderedPreviewStream = useCurrentOrPrev(previewStream);
-
-  const isPaidSend = Boolean(paidMessagesStars && mainButtonState === MainButtonState.Send);
-  const { ref: paidStarsRef, shouldRender: shouldRenderPaidStars } = useShowTransition({
-    isOpen: isPaidSend,
-    withShouldRender: true,
-    className: 'slow',
-    closeDuration: PAID_STARS_CLOSE_DURATION,
-  });
-
-  useEffect(() => {
-    const starsEl = paidStarsRef.current;
-    const buttonEl = mainButtonRef.current;
-    if (!starsEl || !buttonEl) return;
-
-    requestMeasure(() => {
-      const width = starsEl.scrollWidth + 1;
-      requestMutation(() => {
-        buttonEl.style.setProperty('--paid-stars-width', `${width}px`);
-      });
-    });
-  }, [shouldRenderPaidStars, starsForAllMessages, paidStarsRef, mainButtonRef]);
 
   const composer = (
     <div ref={composerRef} className={fullClassName}>
@@ -2853,7 +2733,6 @@ const Composer = ({
         editingMessage={editingMessage}
         onSendWhenOnline={sendWhenOnline}
         canScheduleUntilOnline={canSchedule && canScheduleUntilOnline && !isViewOnceEnabled}
-        paidMessagesStars={paidMessagesStars}
       />
       <MediaEditor
         isOpen={Boolean(editingRichMediaAttachment)}
@@ -2985,7 +2864,6 @@ const Composer = ({
               onMenuOpen={onAttachMenuOpen}
               onMenuClose={onAttachMenuClose}
               messageListType={messageListType}
-              paidMessagesStars={paidMessagesStars}
               canExpandRichInput={canExpandRichInput}
               menuPositionX={isInMessageList ? 'left' : 'right'}
               onRichInputExpand={handleOpenRichInput}
@@ -3261,8 +3139,6 @@ const Composer = ({
           !isReady && 'not-ready',
           activeRecording && 'recording',
           isRecordingVideoMode && 'record-video',
-          Boolean(paidMessagesStars) && 'has-paid-stars',
-          isPaidSend && 'paid',
         )}
         disabled={areRecordingsNotAllowed || hasRichMediaBlocking}
         allowDisabledClick
@@ -3281,28 +3157,7 @@ const Composer = ({
         {onForward && <Icon name="forward" className="main-button-state-icon" />}
         {isInMessageList && <Icon name="schedule" className="main-button-state-icon" />}
         {isInMessageList && <Icon name="check" className="main-button-state-icon" />}
-        {shouldRenderPaidStars && (
-          <div ref={paidStarsRef} className="paidStars">
-            <Icon name="star" />
-            <AnimatedCounter
-              ref={counterRef}
-              text={lang.number(starsForAllMessages)}
-            />
-          </div>
-        )}
       </Button>
-      {effectEmoji && (
-        <span className="effect-icon" onClick={handleRemoveEffect}>
-          {renderText(effectEmoji)}
-        </span>
-      )}
-      {effect && canPlayEffect && (
-        <MessageEffect
-          shouldPlay={shouldPlayEffect}
-          effect={effect}
-          onStop={handleStopEffect}
-        />
-      )}
       {canShowCustomSendMenu && (
         <CustomSendMenu
           isOpen={isCustomSendMenuOpen}
@@ -3311,20 +3166,9 @@ const Composer = ({
           onSendSilent={!isChatWithSelf ? handleSendSilent : undefined}
           onSendSchedule={!isInScheduledList ? handleSendScheduled : undefined}
           onSendWhenOnline={handleSendWhenOnline}
-          onRemoveEffect={handleRemoveEffect}
           onClose={handleContextMenuClose}
           onCloseAnimationEnd={handleContextMenuHide}
           isSavedMessages={isChatWithSelf}
-          chatId={chatId}
-          withEffects={areEffectsSupported}
-          hasCurrentEffect={Boolean(effect)}
-          effectReactions={effectReactions}
-          allAvailableReactions={availableReactions}
-          onToggleReaction={handleToggleEffectReaction}
-          isCurrentUserPremium={isCurrentUserPremium}
-          isInSavedMessages={isChatWithSelf}
-          isInStoryViewer={isInStoryViewer}
-          canPlayAnimatedEmojis={canPlayAnimatedEmojis}
         />
       )}
       {canSwitchRecordMode && (
@@ -3336,16 +3180,6 @@ const Composer = ({
         />
       )}
       {calendar}
-      <PaymentMessageConfirmDialog
-        isOpen={paymentMessageConfirmDialogKey === paymentDialogKey && Boolean(paidMessagesStars)}
-        onClose={closeConfirmModalPayForMessage}
-        userName={chat ? getPeerTitle(lang, chat) : undefined}
-        messagePriceInStars={paidMessagesStars || 0}
-        messagesCount={messagesCount}
-        shouldAutoApprove={shouldPaidMessageAutoApprove}
-        setAutoApprove={setShouldPaidMessageAutoApprove}
-        confirmHandler={paymentMessageConfirmDialogHandler}
-      />
       <ConfirmDialog
         isOpen={isRemoveUnsupportedDialogOpen}
         title={lang('RemoveUnsupportedBlocksTitle')}
@@ -3399,14 +3233,12 @@ export default memo(withGlobal<OwnProps>(
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const isChatWithUser = isUserId(chatId);
     const userFullInfo = isChatWithUser ? selectUserFullInfo(global, chatId) : undefined;
-    const paidMessagesStars = selectPeerPaidMessagesStars(global, chatId);
 
     const chatFullInfo = !isChatWithUser ? selectChatFullInfo(global, chatId) : undefined;
     const messageWithActualBotKeyboard = (isChatWithBot || !isChatWithUser)
       && selectNewestMessageWithBotKeyboardButtons(global, chatId, threadId);
     const {
-      shouldSuggestStickers, shouldSuggestCustomEmoji, shouldUpdateStickerSetOrder, shouldPaidMessageAutoApprove,
-      lastRecordMessageMode,
+      shouldSuggestStickers, shouldSuggestCustomEmoji, shouldUpdateStickerSetOrder, lastRecordMessageMode,
     } = global.settings.byKey;
     const { shouldCollectDebugLogs } = selectSharedSettings(global);
     const language = selectLanguageCode(global);
@@ -3465,14 +3297,6 @@ export default memo(withGlobal<OwnProps>(
       selectNotifyDefaults(global),
       selectNotifyException(global, chatId),
     )?.isSilentPosting;
-
-    const areEffectsSupported = isChatWithUser && !isChatWithBot
-      && !isInScheduledList && !isChatWithSelf && type !== 'story' && chatId !== SERVICE_NOTIFICATIONS_USER_ID;
-    const canPlayEffect = selectPerformanceSettingsValue(global, 'stickerEffects');
-    const shouldPlayEffect = tabState.shouldPlayEffectInComposer;
-    const effectId = areEffectsSupported && draft?.effectId;
-    const effect = effectId ? global.availableEffectById[effectId] : undefined;
-    const effectReactions = global.reactions.effectReactions;
 
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
@@ -3559,20 +3383,12 @@ export default memo(withGlobal<OwnProps>(
       noWebPage,
       webPagePreview,
       isContactRequirePremium: userFullInfo?.isContactRequirePremium,
-      effect,
-      effectReactions,
-      areEffectsSupported,
-      canPlayEffect,
-      shouldPlayEffect,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
       richMessageMaxBlocks: global.appConfig.richMessageMaxBlocks,
       richMessageMaxDepth: global.appConfig.richMessageMaxDepth,
       richMessageMaxMedia: global.appConfig.richMessageMaxMedia,
       richMessageMaxTableColumns: global.appConfig.richMessageMaxTableColumns,
-      paidMessagesStars,
-      shouldPaidMessageAutoApprove,
       isSilentPosting,
-      paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
       isAccountFrozen,
       isAppConfigLoaded,
       insertingPeerIdMention,

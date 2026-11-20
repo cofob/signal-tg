@@ -8,7 +8,6 @@ import { addActionHandler, execAfterActions, getGlobal, setGlobal } from '../../
 import {
   closeMiddleSearch,
   exitMessageSelectMode,
-  updateChatTranslationTone,
   updateCurrentMessageList,
   updateMessageTranslationTone,
   updateRequestedChatTranslation,
@@ -50,8 +49,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
 
   const tabState = selectTabState(global, tabId);
   if (!selectCanOpenMessageList(global, chatId, threadId, type, tabId)) return;
-  actions.hideEffectInComposer({ tabId });
-
   actions.closeStoryViewer({ tabId });
 
   if (!currentMessageList || (
@@ -258,11 +255,6 @@ addActionHandler('requestChatTranslation', (global, actions, payload): ActionRet
   const existingTone = tabState.requestedTranslations.byChatId[chatId]?.tone;
   const tone = existingTone || global.settings.byKey.translationTone;
   return updateRequestedChatTranslation(global, chatId, toLanguageCode, tone, tabId);
-});
-
-addActionHandler('setChatTranslationTone', (global, actions, payload): ActionReturnType => {
-  const { chatId, tone, tabId = getCurrentTabId() } = payload;
-  return updateChatTranslationTone(global, chatId, tone, tabId);
 });
 
 addActionHandler('setMessageTranslationTone', (global, actions, payload): ActionReturnType => {

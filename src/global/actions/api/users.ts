@@ -243,26 +243,6 @@ function settlePlayerStepForSavedMusic(userId: string, tabId: number, shouldCont
   getActions().settlePendingPlaylistStep({ shouldContinue, tabId });
 }
 
-addActionHandler('toggleNoPaidMessagesException', async (global, actions, payload): Promise<void> => {
-  const { userId, shouldRefundCharged } = payload;
-  const user = selectUser(global, userId);
-  if (!user) {
-    return;
-  }
-
-  const result = await callApi('toggleNoPaidMessagesException',
-    { user, shouldRefundCharged });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = updateUserFullInfo(global, userId, {
-    settings: undefined,
-  });
-  setGlobal(global);
-});
-
 addActionHandler('updateContact', async (global, actions, payload): Promise<void> => {
   const {
     userId, firstName, lastName, shouldSharePhoneNumber, note,

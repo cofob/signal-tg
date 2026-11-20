@@ -37,8 +37,6 @@ import HandStop from '../../../assets/tgs/settings/HandStop.tgs';
 import Lock from '../../../assets/tgs/settings/Lock.tgs';
 import Passkeys from '../../../assets/tgs/settings/Passkeys.tgs';
 import UtyanDisappear from '../../../assets/tgs/settings/UtyanDisappear.tgs';
-import StarReaction from '../../../assets/tgs/stars/StarReaction.tgs';
-import StarReactionEffect from '../../../assets/tgs/stars/StarReactionEffect.tgs';
 import Unlock from '../../../assets/tgs/Unlock.tgs';
 import BlueDiamond from '../../../assets/tgs/wallet/BlueDiamond.tgs';
 import DuckNothingFoundPreview from '../../../assets/tgs-previews/DuckNothingFound.svg';
@@ -94,8 +92,6 @@ export const LOCAL_TGS_URLS = {
   Unlock,
   LastSeen,
   Mention,
-  StarReactionEffect,
-  StarReaction,
   Report,
   BannedDuck,
   Search,

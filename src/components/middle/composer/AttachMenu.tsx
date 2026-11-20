@@ -60,7 +60,6 @@ export type OwnProps = {
   isRichInputExpanded?: boolean;
   editingMessage?: ApiMessage;
   messageListType: MessageListType;
-  paidMessagesStars?: number;
   canInsertDate?: boolean;
   canExpandRichInput?: boolean;
   menuPositionX: 'left' | 'right';
@@ -93,7 +92,6 @@ const AttachMenu = ({
   isRichInputExpanded,
   editingMessage,
   messageListType,
-  paidMessagesStars,
   canInsertDate,
   canExpandRichInput,
   menuPositionX,
@@ -270,9 +268,7 @@ const AttachMenu = ({
            */}
             {!canAttachMedia && (
               <MenuItem className="media-disabled" disabled>
-                {lang(messageListType === 'scheduled' && paidMessagesStars
-                  ? 'DescriptionScheduledPaidMediaNotAllowed'
-                  : 'DescriptionRestrictedMedia')}
+                {lang('DescriptionRestrictedMedia')}
               </MenuItem>
             )}
             {canAttachMedia && canAttachFiles && (

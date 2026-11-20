@@ -4,7 +4,7 @@ import {
 import { getActions } from '../../global';
 
 import type {
-  ApiAvailableReaction, ApiReactionWithPaid, ApiSticker,
+  ApiAvailableReaction, ApiReaction, ApiSticker,
 } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
@@ -13,8 +13,6 @@ import {
   COLLECTIBLE_STATUS_SET_ID,
   DEFAULT_STATUS_ICON_ID,
   DEFAULT_TOPIC_ICON_STICKER_ID,
-  EFFECT_EMOJIS_SET_ID,
-  EFFECT_STICKERS_SET_ID,
   EMOJI_SIZE_PICKER,
   FAVORITE_SYMBOL_SET_ID,
   POPULAR_SYMBOL_SET_ID,
@@ -71,8 +69,7 @@ type OwnProps = {
   observeIntersectionForShowingItems: ObserveFn;
   availableReactions?: ApiAvailableReaction[];
   onStickerSelect?: (sticker: ApiSticker, isSilent?: boolean, shouldSchedule?: boolean) => void;
-  onReactionSelect?: (reaction: ApiReactionWithPaid) => void;
-  onReactionContext?: (reaction: ApiReactionWithPaid) => void;
+  onReactionSelect?: (reaction: ApiReaction) => void;
   onStickerUnfave?: (sticker: ApiSticker) => void;
   onStickerFave?: (sticker: ApiSticker) => void;
   onStickerRemoveRecent?: (sticker: ApiSticker) => void;
@@ -113,7 +110,6 @@ const StickerSet = ({
   observeIntersectionForPlayingItems,
   observeIntersectionForShowingItems,
   onReactionSelect,
-  onReactionContext,
   onStickerSelect,
   onStickerUnfave,
   onStickerFave,
@@ -235,8 +231,7 @@ const StickerSet = ({
   const isInstalled = getIsStickerSetInstalled(stickerSet) && !stickerSet.isArchived;
 
   const canCut = !isInstalled && stickerSet.id !== RECENT_SYMBOL_SET_ID
-    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && stickerSet.id !== EFFECT_EMOJIS_SET_ID
-    && stickerSet.id !== EFFECT_STICKERS_SET_ID && !isChatEmojiSet && !isChatStickerSet;
+    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && !isChatEmojiSet && !isChatStickerSet;
 
   const [isCut, , expand] = useFlag(canCut);
   const itemsBeforeCutout = itemsPerRow * 3 - 1;
@@ -308,7 +303,6 @@ const StickerSet = ({
         className={buildClassName(
           'symbol-set-container shared-canvas-container',
           transitionClassNames,
-          stickerSet.id === EFFECT_EMOJIS_SET_ID && 'effect-emojis',
         )}
         style={`${withInstantThumbs ? 'min-height' : 'height'}: ${height}px;`}
       >
@@ -346,7 +340,6 @@ const StickerSet = ({
                 availableReactions={availableReactions}
                 observeIntersection={observeIntersectionForPlayingItems}
                 onClick={onReactionSelect!}
-                onContextMenu={onReactionContext}
                 forcePlayback={forcePlayback}
               />
             );
@@ -384,9 +377,6 @@ const StickerSet = ({
                   onRemoveRecentClick={isRecent ? onStickerRemoveRecent : undefined}
                   onDismiss={onDismiss}
                   forcePlayback={forcePlayback}
-                  isEffectEmoji={stickerSet.id === EFFECT_EMOJIS_SET_ID}
-                  noShowPremium={isCurrentUserPremium
-                    && (stickerSet.id === EFFECT_STICKERS_SET_ID || stickerSet.id === EFFECT_EMOJIS_SET_ID)}
                 />
               );
 
