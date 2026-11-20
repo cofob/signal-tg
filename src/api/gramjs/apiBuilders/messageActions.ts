@@ -219,14 +219,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       botId: buildApiPeerId(action.botId, 'user'),
     };
   }
-  if (action instanceof GramJs.MessageActionBoostApply) {
-    const { boosts } = action;
-    return {
-      mediaType: 'action',
-      type: 'boostApply',
-      boosts,
-    };
-  }
   if (action instanceof GramJs.MessageActionContactSignUp) {
     return {
       mediaType: 'action',
@@ -331,39 +323,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       mediaType: 'action',
       type: 'suggestBirthday',
       birthday: buildApiBirthday(action.birthday),
-    };
-  }
-  if (action instanceof GramJs.MessageActionGiveawayLaunch) {
-    const { stars } = action;
-    return {
-      mediaType: 'action',
-      type: 'giveawayLaunch',
-      stars: toJSNumber(stars),
-    };
-  }
-  if (action instanceof GramJs.MessageActionGiveawayResults) {
-    const { stars, winnersCount, unclaimedCount } = action;
-    return {
-      mediaType: 'action',
-      type: 'giveawayResults',
-      isStars: stars,
-      winnersCount,
-      unclaimedCount,
-    };
-  }
-
-  if (action instanceof GramJs.MessageActionPrizeStars) {
-    const {
-      unclaimed, stars, transactionId, boostPeer, giveawayMsgId,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'prizeStars',
-      isUnclaimed: unclaimed,
-      stars: toJSNumber(stars),
-      transactionId,
-      boostPeerId: getApiChatIdFromMtpPeer(boostPeer),
-      giveawayMsgId,
     };
   }
   if (action instanceof GramJs.MessageActionPaidMessagesPrice) {

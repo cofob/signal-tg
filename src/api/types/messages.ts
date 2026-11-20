@@ -307,34 +307,6 @@ export type ApiDice = {
   emoticon: string;
 };
 
-export type ApiGiveaway = {
-  mediaType: 'giveaway';
-  quantity: number;
-  months?: number;
-  stars?: number;
-  untilDate: number;
-  isOnlyForNewSubscribers?: true;
-  countries?: string[];
-  channelIds: string[];
-  prizeDescription?: string;
-};
-
-export type ApiGiveawayResults = {
-  mediaType: 'giveawayResults';
-  months?: number;
-  stars?: number;
-  untilDate: number;
-  isRefunded?: true;
-  isOnlyForNewSubscribers?: true;
-  channelId: string;
-  prizeDescription?: string;
-  winnersCount?: number;
-  winnerIds: string[];
-  additionalPeersCount?: number;
-  launchMessageId: number;
-  unclaimedCount: number;
-};
-
 export type ApiNewPoll = {
   summary: ApiPoll;
   correctAnswers?: number[];
@@ -722,8 +694,6 @@ export type MediaContent = {
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;
-  giveaway?: ApiGiveaway;
-  giveawayResults?: ApiGiveawayResults;
   paidMedia?: ApiPaidMedia;
   dice?: ApiDice;
   ttlSeconds?: number;
@@ -809,7 +779,6 @@ export interface ApiMessage {
   hasComments?: boolean;
   readDate?: number;
   savedPeerId?: string;
-  senderBoosts?: number;
   factCheck?: ApiFactCheck;
   effectId?: string;
   isInvertedMedia?: true;

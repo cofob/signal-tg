@@ -45,7 +45,7 @@ import { selectThreadLocalStateParam, selectThreadReadState } from '../../select
 
 const TYPING_STATUS_CLEAR_DELAY = 6000; // 6 seconds
 const INVALIDATE_FULL_CHAT_FIELDS = new Set<keyof ApiChat>([
-  'boostLevel', 'isForum', 'isLinkedInDiscussion', 'fakeType', 'restrictionReasons', 'isJoinToSend', 'isJoinRequest',
+  'level', 'isForum', 'isLinkedInDiscussion', 'fakeType', 'restrictionReasons', 'isJoinToSend', 'isJoinRequest',
   'type',
 ]);
 

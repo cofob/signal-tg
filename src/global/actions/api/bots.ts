@@ -57,7 +57,6 @@ import { updateTabState } from '../../reducers/tabs';
 import {
   selectBot,
   selectChat,
-  selectChatFullInfo,
   selectChatLastMessageId,
   selectChatMessage,
   selectChatMessageOrEphemeral,
@@ -87,7 +86,7 @@ const runDebouncedForSearch = debounce((cb) => cb(), 500, false);
 let botFatherId: string | null;
 
 function canUseInlineBots<T extends GlobalState>(global: T, chat: ApiChat) {
-  return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline', selectChatFullInfo(global, chat.id));
+  return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 }
 
 addActionHandler('clickSuggestedMessageButton', (global, actions, payload): ActionReturnType => {

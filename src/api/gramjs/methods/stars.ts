@@ -1,20 +1,7 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
-import {
-  buildApiCurrencyAmount,
-  buildApiStarsGiveawayOptions,
-} from '../apiBuilders/payments';
+import { buildApiCurrencyAmount } from '../apiBuilders/payments';
 import { invokeRequest } from './client';
-
-export async function fetchStarsGiveawayOptions() {
-  const result = await invokeRequest(new GramJs.payments.GetStarsGiveawayOptions());
-
-  if (!result) {
-    return undefined;
-  }
-
-  return result.map(buildApiStarsGiveawayOptions);
-}
 
 export async function fetchStarsStatus({
   isTon,

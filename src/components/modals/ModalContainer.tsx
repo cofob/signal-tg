@@ -19,7 +19,6 @@ import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.asyn
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
 import BirthdaySetupModal from './birthday/BirthdaySetupModal.async';
-import BoostModal from './boost/BoostModal.async';
 import BotCreationModal from './botCreation/BotCreationModal.async';
 import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
@@ -64,7 +63,6 @@ import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
   'aiMessageEditorModal' |
-  'boostModal' |
   'chatlistModal' |
   'urlAuth' |
   'safeLinkModalUrl' |
@@ -174,7 +172,6 @@ const WrappedModalBoundary = <T,>({
 
 const LEGACY_MODALS: LegacyModalRegistry = {
   aiMessageEditorModal: AiMessageEditorModal,
-  boostModal: BoostModal,
   chatlistModal: ChatlistModal,
   urlAuth: UrlAuthModal,
   oneTimeMediaModal: OneTimeMediaModal,

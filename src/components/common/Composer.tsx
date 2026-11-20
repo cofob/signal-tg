@@ -597,7 +597,6 @@ const Composer = ({
   } = useMemo(
     () => getAllowedAttachmentOptions(
       chat,
-      chatFullInfo,
       isChatWithBot,
       isChatWithSelf,
       isInStoryViewer,
@@ -606,7 +605,7 @@ const Composer = ({
       isEphemeralReply,
     ),
     [
-      chat, chatFullInfo, isChatWithBot, isChatWithSelf, isInStoryViewer, paidMessagesStars, isInScheduledList,
+      chat, isChatWithBot, isChatWithSelf, isInStoryViewer, paidMessagesStars, isInScheduledList,
       isEphemeralReply,
     ],
   );
@@ -830,7 +829,7 @@ const Composer = ({
     }
   }, [attachments]);
 
-  const canUseInlineBots = !chat || isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline', chatFullInfo);
+  const canUseInlineBots = !chat || isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 
   const isNeedPremium = isContactRequirePremium && isInStoryViewer;
   const isSendTextBlocked = isNeedPremium || (Boolean(chat) && !canSendPlainText);

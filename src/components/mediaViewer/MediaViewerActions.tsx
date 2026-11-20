@@ -126,7 +126,7 @@ const MediaViewerActions = ({
   const isMessage = item?.type === 'message';
   const message = item?.type === 'message' ? item.message : undefined;
 
-  const { canSendPhotos, canSendVideos } = getAllowedAttachmentOptions(chat, chatFullInfo);
+  const { canSendPhotos, canSendVideos } = getAllowedAttachmentOptions(chat);
   const canEditViewedMedia = Boolean(
     message && !message.isEphemeral && !message.isScheduled && !isMobile && !isProtected && !isChatProtected
     && message.chatId === chat?.id && canPost

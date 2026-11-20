@@ -579,9 +579,8 @@ export function selectCanReplyToMessage<T extends GlobalState>(global: T, messag
 
   const threadInfo = selectThreadInfo(global, message.chatId, threadId);
   const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-  const chatFullInfo = selectChatFullInfo(global, chat.id);
   const topic = selectTopic(global, chat.id, threadId);
-  const canPostInChat = getCanPostInChat(chat, topic, isMessageThread, chatFullInfo);
+  const canPostInChat = getCanPostInChat(chat, topic, isMessageThread);
   if (!canPostInChat) return false;
 
   const messageTopic = selectTopicFromMessage(global, message);
@@ -606,7 +605,7 @@ export function selectCanPostInMessageList<T extends GlobalState>(
   const threadInfo = selectThreadInfo(global, chatId, threadId);
   const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
   const topic = selectTopic(global, chatId, threadId);
-  if (!getCanPostInChat(chat, topic, isMessageThread, selectChatFullInfo(global, chatId))) return false;
+  if (!getCanPostInChat(chat, topic, isMessageThread)) return false;
   if (chat.isNotJoined && (chat.isJoinToSend || chat.isJoinRequest || (chat.isForum && !chat.isMonoforum))) {
     return false;
   }
@@ -663,7 +662,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     return {};
   }
 
-  const chatFullInfo = selectChatFullInfo(global, message.chatId);
   const isPrivate = isUserId(chat.id);
   const isChatWithSelf = selectIsChatWithSelf(global, message.chatId);
   const isBasicGroup = isChatBasicGroup(chat);
@@ -679,7 +677,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const hasTtl = hasMessageTtl(message);
   const { content } = message;
   const isDocumentSticker = isMessageDocumentSticker(message);
-  const isBoostMessage = message.content.action?.type === 'boostApply';
   const isMonoforum = chat.isMonoforum;
 
   // https://github.com/telegramdesktop/tdesktop/blob/6627de646022af1394134974477109cd1439e1bb/Telegram/SourceFiles/data/data_peer_values.cpp#L367C2-L372C3
@@ -691,7 +688,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     }
 
     const hasPinMessageRight = getHasAdminRight(chat, 'pinMessages');
-    const isPinMessageRightBanned = isUserRightBanned(chat, 'pinMessages', chatFullInfo);
+    const isPinMessageRightBanned = isUserRightBanned(chat, 'pinMessages');
 
     if (isSuperGroup) {
       const hasUsernameOrGeo = chat.hasUsername || chat.hasGeo;
@@ -722,8 +719,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
       || getServerTime() - message.date < (global.config?.editTimeLimit || Infinity)
     ) && !(
       content.sticker || content.contact || content.pollId || content.action
-      || (content.video?.isRound) || content.location || content.giveaway || content.giveawayResults
-      || isDocumentSticker || content.dice || content.widget
+      || (content.video?.isRound) || content.location || isDocumentSticker || content.dice || content.widget
     )
     && !isForwarded
     && !message.viaBotId
@@ -746,10 +742,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canPin = !canUnpin;
   }
 
-  const canNotDeleteBoostMessage = isBoostMessage && isOwn
-    && !getHasAdminRight(chat, 'deleteMessages');
-
-  const canDelete = (!isLocal || isFailed) && !isServiceNotification && !canNotDeleteBoostMessage && (
+  const canDelete = (!isLocal || isFailed) && !isServiceNotification && (
     isPrivate
     || isOwn
     || isBasicGroup
@@ -1417,7 +1410,7 @@ export function selectDefaultReaction<T extends GlobalState>(global: T, chatId: 
 
   const chat = selectChat(global, chatId);
   const chatFullInfo = selectChatFullInfo(global, chatId);
-  if (chat && isUserRightBanned(chat, 'sendReactions', chatFullInfo)) {
+  if (chat && isUserRightBanned(chat, 'sendReactions')) {
     return undefined;
   }
 
@@ -1582,10 +1575,9 @@ export function selectForwardsCanBeSentToChat<T extends GlobalState>(
     return true;
   }
 
-  const chatFullInfo = selectChatFullInfo(global, toChatId);
   const isSavedMessages = toChatId ? selectIsChatWithSelf(global, toChatId) : undefined;
   const isChatWithBot = toChatId ? selectIsChatWithBot(global, toChatId) : undefined;
-  const options = getAllowedAttachmentOptions(chat, chatFullInfo, isChatWithBot, isSavedMessages);
+  const options = getAllowedAttachmentOptions(chat, isChatWithBot, isSavedMessages);
   return !messageIds!.some((messageId) => {
     const message = selectChatMessageOrEphemeral(global, fromChatId!, messageId);
     return !message || сheckMessageSendingDenied(message, options);

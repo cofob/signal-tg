@@ -327,10 +327,6 @@ export interface ApiAppConfig {
   areWidgetsDisabled?: boolean;
   premiumBotUsername: string;
   isPremiumPurchaseBlocked: boolean;
-  giveawayAddPeersMax: number;
-  giveawayBoostsPerPremium: number;
-  giveawayCountriesMax: number;
-  boostsPerSentGift: number;
   premiumPromoOrder: ApiPremiumSection[];
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
@@ -358,10 +354,8 @@ export interface ApiAppConfig {
   bandwidthPremiumDownloadSpeedup?: number;
   channelRestrictAdsLevelMin?: number;
   channelAutoTranslationLevelMin?: number;
-  channelLevelMax: number;
   paidReactionMaxAmount?: number;
   isChannelRevenueWithdrawalEnabled?: boolean;
-  isStarsGiftEnabled?: boolean;
   starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
   freezeSinceDate?: number;

@@ -38,9 +38,6 @@ export function getWebpageButtonLangKey(type: string | undefined, {
       return 'ViewChatList';
     case 'telegram_story':
       return 'ViewButtonStory';
-    case 'telegram_channel_boost':
-    case 'telegram_group_boost':
-      return 'ViewButtonBoost';
     case 'telegram_stickerset':
       return 'ViewButtonStickerset';
     case 'telegram_emojiset':

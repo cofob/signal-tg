@@ -272,7 +272,6 @@ export function buildApiMessageWithChatId(
   if (content.text && emojiOnlyCount) content.text.emojiOnlyCount = emojiOnlyCount;
 
   const hasComments = mtpMessage.replies?.comments;
-  const senderBoosts = mtpMessage.fromBoostsApplied;
   const factCheck = mtpMessage.factcheck && buildApiFactCheck(mtpMessage.factcheck);
   const isVideoProcessingPending = mtpMessage.videoProcessingPending;
   const areReactionsPossible = mtpMessage.reactionsArePossible;
@@ -323,7 +322,6 @@ export function buildApiMessageWithChatId(
     isForwardingAllowed,
     hasComments,
     savedPeerId,
-    senderBoosts,
     viaBusinessBotId: mtpMessage.viaBusinessBotId?.toString(),
     factCheck,
     effectId: mtpMessage.effect?.toString(),

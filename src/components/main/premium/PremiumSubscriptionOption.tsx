@@ -1,7 +1,7 @@
 import type { ChangeEvent } from 'react';
 import { memo, useCallback, useMemo } from '../../../lib/teact/teact';
 
-import type { ApiPremiumGiftCodeOption, ApiPremiumSubscriptionOption } from '../../../api/types';
+import type { ApiPremiumSubscriptionOption } from '../../../api/types';
 
 import buildClassName from '../../../util/buildClassName';
 import { formatCurrencyAsString } from '../../../util/formatCurrency';
@@ -11,8 +11,7 @@ import useLang from '../../../hooks/useLang';
 import styles from './PremiumSubscriptionOption.module.scss';
 
 type OwnProps = {
-  option: ApiPremiumSubscriptionOption | ApiPremiumGiftCodeOption;
-  isGiveaway?: boolean;
+  option: ApiPremiumSubscriptionOption;
   checked?: boolean;
   fullMonthlyAmount?: number;
   className?: string;
@@ -21,16 +20,14 @@ type OwnProps = {
 
 const PremiumSubscriptionOption = ({
   option, checked, fullMonthlyAmount,
-  onChange, className, isGiveaway,
+  onChange, className,
 }: OwnProps) => {
   const lang = useLang();
 
   const {
     months, amount, currency,
   } = option;
-  const users = 'users' in option ? option.users : undefined;
   const perMonth = Math.floor(amount / months);
-  const isUserCountPlural = users ? users > 1 : undefined;
 
   const discount = useMemo(() => {
     return fullMonthlyAmount && fullMonthlyAmount > perMonth
@@ -47,8 +44,8 @@ const PremiumSubscriptionOption = ({
   return (
     <label
       className={buildClassName(
-        isGiveaway ? styles.giveawayWrapper : styles.wrapper,
-        (checked && !isGiveaway) && styles.active,
+        styles.wrapper,
+        checked && styles.active,
         className,
       )}
       dir={lang.isRtl ? 'rtl' : undefined}
@@ -65,7 +62,7 @@ const PremiumSubscriptionOption = ({
         <div className={styles.month}>
           {Boolean(discount) && (
             <span
-              className={buildClassName(styles.giveawayDiscount, styles.discount)}
+              className={styles.discount}
               title={lang('GiftDiscount', { percent: discount })}
             >
               {lang('GiftDiscount', { percent: discount })}
@@ -74,8 +71,7 @@ const PremiumSubscriptionOption = ({
           {lang('Months', { count: months }, { pluralValue: months })}
         </div>
         <div className={styles.perMonth}>
-          {(isGiveaway || isUserCountPlural) ? `${formatCurrencyAsString(amount, currency, lang.code)} x ${users!}`
-            : lang('PricePerMonth', { amount: formatCurrencyAsString(perMonth, currency, lang.code) })}
+          {lang('PricePerMonth', { amount: formatCurrencyAsString(perMonth, currency, lang.code) })}
         </div>
         <div className={styles.amount}>
           {formatCurrencyAsString(amount, currency, lang.code)}

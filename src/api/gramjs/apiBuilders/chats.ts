@@ -133,7 +133,6 @@ function buildApiChatFieldsFromPeerEntity(
     maxStoryId,
     hasStories: Boolean(maxStoryId) && !storiesUnavailable,
     emojiStatus,
-    boostLevel: channel?.level,
     botVerificationIconId,
     hasGeo: channel?.hasGeo,
     paidMessagesStars: toJSNumber(paidMessagesStars),

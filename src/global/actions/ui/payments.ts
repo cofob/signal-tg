@@ -4,14 +4,6 @@ import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler } from '../../index';
 import { updateTabState } from '../../reducers/tabs';
 
-addActionHandler('closeGiveawayModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    giveawayModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('openPaymentMessageConfirmDialogOpen', (global, actions, payload): ActionReturnType => {
   const { dialogKey, tabId = getCurrentTabId() } = payload;
 

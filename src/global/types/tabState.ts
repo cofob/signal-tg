@@ -4,7 +4,6 @@ import type {
   ApiAttachBot,
   ApiAudio,
   ApiBirthday,
-  ApiBoostsStatus,
   ApiChatInviteInfo,
   ApiChatlistInvite,
   ApiChatType,
@@ -18,12 +17,10 @@ import type {
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMissingInvitedUser,
-  ApiMyBoost,
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
-  ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
   ApiPremiumSection,
   ApiPreparedInlineMessage,
@@ -32,9 +29,7 @@ import type {
   ApiRichText,
   ApiSearchPostsFlood,
   ApiSponsoredPeer,
-  ApiStarGiveawayOption,
   ApiSticker,
-  ApiTypePrepaidGiveaway,
   ApiTypeStoryView,
   ApiUrlAuthResultRequest,
   ApiUser,
@@ -732,16 +727,6 @@ export type TabState = {
     scheduleRepeatPeriod?: number;
   };
 
-  giveawayModal?: {
-    chatId: string;
-    isOpen?: boolean;
-    gifts?: ApiPremiumGiftCodeOption[];
-    selectedMemberIds?: string[];
-    selectedChannelIds?: string[];
-    prepaidGiveaway?: ApiTypePrepaidGiveaway;
-    starOptions?: ApiStarGiveawayOption[];
-  };
-
   deleteMessageModal?: {
     chatId: string;
     messageIds: number[];
@@ -804,12 +789,6 @@ export type TabState = {
       folderId: number;
       suggestedPeerIds?: string[];
     };
-  };
-
-  boostModal?: {
-    chatId: string;
-    boostStatus?: ApiBoostsStatus;
-    myBoosts?: ApiMyBoost[];
   };
 
   deleteAccountModal?: {

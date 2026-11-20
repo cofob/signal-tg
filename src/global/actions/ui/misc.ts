@@ -28,7 +28,6 @@ import { updateTabState } from '../../reducers/tabs';
 import {
   selectCanAnimateInterface,
   selectChat,
-  selectChatFullInfo,
   selectChatMessage,
   selectCurrentChat,
   selectCurrentMessageList,
@@ -309,14 +308,13 @@ addActionHandler('showAllowedMessageTypesNotification', (global, actions, payloa
 
   const chat = selectChat(global, chatId);
   if (!chat) return;
-  const chatFullInfo = selectChatFullInfo(global, chatId);
   const isSavedMessages = chatId ? selectIsChatWithSelf(global, chatId) : undefined;
   const isChatWithBot = chatId ? selectIsChatWithBot(global, chatId) : undefined;
 
   const {
     canSendPlainText, canSendPhotos, canSendVideos, canSendDocuments, canSendAudios,
     canSendStickers, canSendRoundVideos, canSendVoices,
-  } = getAllowedAttachmentOptions(chat, chatFullInfo, isChatWithBot, isSavedMessages);
+  } = getAllowedAttachmentOptions(chat, isChatWithBot, isSavedMessages);
   const lang = getTranslationFn();
   const allowedContent = compact([
     canSendPlainText ? lang('ChatAllowedText') : undefined,

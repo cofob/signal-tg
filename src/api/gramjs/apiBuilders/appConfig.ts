@@ -59,7 +59,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
   premium_purchase_blocked: boolean;
-  giveaway_add_peers_max: number;
   premium_bot_username: string;
   premium_invoice_slug: string;
   premium_promo_order: string[];
@@ -67,9 +66,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
   authorization_autoconfirm_period: number;
-  giveaway_boosts_per_premium: number;
-  giveaway_countries_max: number;
-  boosts_per_sent_gift: number;
   stars_paid_reaction_amount_max: number;
   // Forums
   topics_pinned_limit: number;
@@ -86,7 +82,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   upload_premium_speedup_notify_period?: number;
   upload_premium_speedup_download?: number;
   upload_premium_speedup_upload?: number;
-  stars_gifts_enabled?: boolean;
   starref_start_param_prefixes?: string[];
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
@@ -201,10 +196,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
-    giveawayAddPeersMax: appConfig.giveaway_add_peers_max,
-    giveawayBoostsPerPremium: appConfig.giveaway_boosts_per_premium,
-    giveawayCountriesMax: appConfig.giveaway_countries_max,
-    boostsPerSentGift: appConfig.boosts_per_sent_gift,
     canDisplayAutoarchiveSetting: appConfig.autoarchive_setting_available,
     limits: {
       uploadMaxFileparts: getLimit(appConfig, 'upload_max_fileparts', 'uploadMaxFileparts'),
@@ -252,7 +243,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
     paidReactionMaxAmount: appConfig.stars_paid_reaction_amount_max,
     isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,
-    isStarsGiftEnabled: appConfig.stars_gifts_enabled,
     starRefStartPrefixes: appConfig.starref_start_param_prefixes,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
     freezeSinceDate: appConfig.freeze_since_date,

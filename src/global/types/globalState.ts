@@ -424,7 +424,6 @@ export type GlobalState = {
   restrictedEmoji?: ApiStickerSet;
   defaultTopicIconsId?: string;
   defaultStatusIconsId?: string;
-  premiumGifts?: ApiStickerSet;
   emojiKeywords: Record<string, EmojiKeywords | undefined>;
 
   emojiGroups: {

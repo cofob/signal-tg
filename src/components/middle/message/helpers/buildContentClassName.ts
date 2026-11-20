@@ -51,7 +51,7 @@ export function buildContentClassName(
   const {
     photo = paidMediaPhoto, video = paidMediaVideo,
     audio, voice, document, contact, location, storyData,
-    giveaway, giveawayResults, richMessage, widget,
+    richMessage, widget,
   } = content;
   const hasRichMessageAudio = Boolean(richMessage && getRichMessageAudios(richMessage).ids.length);
   const text = album?.hasMultipleCaptions ? undefined : getMessageContent(album?.captionMessage || message).text;
@@ -133,8 +133,6 @@ export function buildContentClassName(
     classNames.push('document');
   } else if (contact) {
     classNames.push('contact');
-  } else if (giveaway || giveawayResults) {
-    classNames.push('giveaway');
   } else if (webPage?.webpageType === 'full') {
     classNames.push('web-page');
 

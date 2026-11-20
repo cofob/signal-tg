@@ -15,18 +15,6 @@
   box-shadow: 0 0 0 0.0625rem var(--color-borders-input);
 }
 
-.giveawayWrapper {
-  cursor: var(--custom-cursor, pointer);
-
-  position: relative;
-
-  display: block;
-
-  padding-inline: 3.5rem 1rem;
-
-  line-height: 1.5rem;
-}
-
 .active {
   box-shadow: 0 0 0 0.125rem var(--color-primary);
 }
@@ -131,17 +119,12 @@
   align-self: baseline;
 
   margin-inline-end: 0.5rem;
-  padding: 0 0.5rem;
-  border-radius: var(--border-radius-default-small);
+  padding: 0.1875rem;
+  border-radius: 0.375rem;
 
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
   color: var(--color-white);
 
   background: var(--color-primary);
-}
-
-.giveawayDiscount {
-  padding: 0.1875rem;
-  border-radius: 0.375rem;
-  font-size: 0.8125rem;
-  font-weight: var(--font-weight-medium);
 }

@@ -1882,36 +1882,6 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
   }
 });
 
-addActionHandler('processBoostParameters', async (global, actions, payload): Promise<void> => {
-  const { usernameOrId, isPrivate, tabId = getCurrentTabId() } = payload;
-
-  let chat: ApiChat | undefined;
-
-  if (isPrivate) {
-    chat = selectChat(global, usernameOrId);
-    if (!chat) {
-      actions.showNotification({ message: { key: 'PrivateChannelInaccessible' }, tabId });
-      return;
-    }
-  } else {
-    chat = await fetchChatByUsername(global, usernameOrId);
-    if (!chat) {
-      actions.showNotification({ message: { key: 'NoUsernameFound' }, tabId });
-      return;
-    }
-  }
-
-  if (!isChatChannel(chat) && !isChatSuperGroup(chat)) {
-    actions.openChat({ id: chat.id, tabId });
-    return;
-  }
-
-  actions.openBoostModal({
-    chatId: chat.id,
-    tabId,
-  });
-});
-
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
     hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),

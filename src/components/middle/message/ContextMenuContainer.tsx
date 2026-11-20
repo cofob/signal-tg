@@ -989,9 +989,9 @@ export default memo(withGlobal<OwnProps>(
     const isMessageThread = Boolean(threadInfo && !threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
     const topic = threadId ? selectTopic(global, message.chatId, threadId) : undefined;
 
-    const canSendText = chat && !isUserRightBanned(chat, 'sendPlain', chatFullInfo);
+    const canSendText = chat && !isUserRightBanned(chat, 'sendPlain');
 
-    const canReplyInChat = chat && threadId ? getCanPostInChat(chat, topic, isMessageThread, chatFullInfo)
+    const canReplyInChat = chat && threadId ? getCanPostInChat(chat, topic, isMessageThread)
       && canSendText : false;
 
     const isLocal = isMessageLocal(message);
@@ -1088,7 +1088,7 @@ export default memo(withGlobal<OwnProps>(
       hasFullInfo: Boolean(chatFullInfo),
       canShowReactionsCount: !message.isEphemeral && canShowReactionsCount,
       canShowReactionList: !message.isEphemeral && !isLocal && !isAction && !isScheduled && !hasTtl
-        && !(chat && !isPrivate && !isChatAdmin(chat) && isUserRightBanned(chat, 'sendReactions', chatFullInfo)),
+        && !(chat && !isPrivate && !isChatAdmin(chat) && isUserRightBanned(chat, 'sendReactions')),
       canBuyPremium: !message.isEphemeral && !isCurrentUserPremium && !selectIsPremiumPurchaseBlocked(global),
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, message.chatId),
       canTranslate: !message.isEphemeral && canTranslate,

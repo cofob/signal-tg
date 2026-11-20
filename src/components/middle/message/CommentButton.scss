@@ -160,8 +160,7 @@
   .audio &,
   .voice &,
   .poll &,
-  .text &,
-  .giveaway & {
+  .text & {
     border-top: 1px solid var(--color-borders);
   }
 
@@ -173,7 +172,6 @@
   .message-content.audio &,
   .message-content.voice &,
   .message-content.poll &,
-  .message-content.giveaway &,
   .message-content.has-solid-background.text &,
   .message-content.has-solid-background.is-forwarded & {
     width: calc(100% + 1rem);

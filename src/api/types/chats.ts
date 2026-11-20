@@ -68,7 +68,6 @@ export interface ApiChat {
   linkedCommunityId?: string;
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
-  boostLevel?: number;
   botVerificationIconId?: string;
   hasAutoTranslation?: true;
   level?: number;
@@ -182,8 +181,6 @@ export interface ApiChatFullInfo {
   hasScheduledMessages?: boolean;
   arePaidMessagesAvailable?: true;
 
-  boostsApplied?: number;
-  boostsToUnrestrict?: number;
   botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;
   guardBotId?: string;

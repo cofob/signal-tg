@@ -416,10 +416,6 @@ export const PRIVACY_URL = 'https://telegram.org/privacy';
 export const MINI_APP_TOS_URL = 'https://telegram.org/tos/mini-apps';
 export const GENERAL_TOPIC_ID = 1;
 export const FRESH_AUTH_PERIOD = 86400; // 1 day
-export const GIVEAWAY_BOOST_PER_PREMIUM = 4;
-export const GIVEAWAY_MAX_ADDITIONAL_CHANNELS = 10;
-export const GIVEAWAY_MAX_ADDITIONAL_USERS = 10;
-export const GIVEAWAY_MAX_ADDITIONAL_COUNTRIES = 10;
 export const BOT_VERIFICATION_PEERS_LIMIT = 20;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];

@@ -54,7 +54,6 @@ import type {
   ApiThemeParameters,
   ApiTodoItem,
   ApiTopPeerCategory,
-  ApiTypePrepaidGiveaway,
   ApiUpdate,
   ApiUser,
   ApiVideo,
@@ -808,10 +807,6 @@ export interface ActionPayloads {
     isDirect?: boolean;
     noPaidMessagesToken?: string;
   } & WithTabId;
-  processBoostParameters: {
-    usernameOrId: string;
-    isPrivate?: boolean;
-  } & WithTabId;
   setScrollOffset: {
     chatId: string;
     threadId: ThreadId;
@@ -1325,36 +1320,6 @@ export interface ActionPayloads {
     isEnabled: boolean;
   };
 
-  launchPrepaidGiveaway: {
-    chatId: string;
-    giveawayId: string;
-    paymentPurpose: {
-      additionalChannelIds?: string[];
-      areWinnersVisible?: boolean;
-      countries?: string[];
-      prizeDescription?: string;
-      untilDate: number;
-      currency: string;
-      amount: number;
-    };
-  } & WithTabId;
-
-  launchPrepaidStarsGiveaway: {
-    chatId: string;
-    giveawayId: string;
-    paymentPurpose: {
-      additionalChannelIds?: string[];
-      areWinnersVisible?: boolean;
-      countries?: string[];
-      prizeDescription?: string;
-      untilDate: number;
-      currency: string;
-      stars: number;
-      users: number;
-      amount: number;
-    };
-  } & WithTabId;
-
   checkChatlistInvite: {
     slug: string;
   } & WithTabId;
@@ -1786,15 +1751,6 @@ export interface ActionPayloads {
     offsetId?: number;
   };
   resetSelectedStoryAlbum: WithTabId | undefined;
-
-  openBoostModal: {
-    chatId: string;
-  } & WithTabId;
-  closeBoostModal: WithTabId | undefined;
-  applyBoost: {
-    slots: number[];
-    chatId: string;
-  } & WithTabId;
 
   // Media Viewer & Audio Player
   openMediaViewer: {
@@ -2803,13 +2759,6 @@ export interface ActionPayloads {
     num: number;
   } & WithTabId;
 
-  openGiveawayModal: ({
-    chatId: string;
-    gifts?: number[] | undefined;
-    prepaidGiveaway?: ApiTypePrepaidGiveaway | undefined;
-  } & WithTabId);
-  closeGiveawayModal: WithTabId | undefined;
-
   openLeaveGroupModal: {
     chatId: string;
     nextOwnerId?: string;
@@ -2913,7 +2862,6 @@ export interface ActionPayloads {
     waveform: number[];
   };
 
-  loadPremiumGifts: undefined;
   loadStarStatus: undefined;
   loadDefaultTopicIcons: undefined;
   loadPremiumStickers: undefined;

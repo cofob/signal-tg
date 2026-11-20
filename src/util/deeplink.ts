@@ -88,12 +88,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       case 'premiumReferrerLink':
         actions.openPremiumModal();
         return true;
-      case 'chatBoostLink':
-        actions.processBoostParameters({
-          usernameOrId: (parsedLink.username || parsedLink.id)!,
-          isPrivate: Boolean(parsedLink.id),
-        });
-        return true;
       case 'settings': {
         switch (parsedLink.path?.split('/')[0]) {
           case 'premium':

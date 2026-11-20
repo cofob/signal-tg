@@ -43,7 +43,6 @@ import { updateTabState } from '../../reducers/tabs';
 import { updateThreadReadState } from '../../reducers/threads';
 import {
   selectChat,
-  selectChatFullInfo,
   selectChatMessage,
   selectChatMessages,
   selectDefaultReaction,
@@ -213,7 +212,7 @@ addActionHandler('toggleReaction', async (global, actions, payload): Promise<voi
   }
 
   const canSendReactions = isChatAdmin(chat)
-    || !isUserRightBanned(chat, 'sendReactions', selectChatFullInfo(global, chatId));
+    || !isUserRightBanned(chat, 'sendReactions');
 
   if (!canSendReactions) {
     return;

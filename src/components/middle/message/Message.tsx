@@ -200,7 +200,6 @@ import ContextMenuContainer from './ContextMenuContainer.async';
 import DiceWrapper from './dice/DiceWrapper';
 import FactCheck from './FactCheck';
 import Game from './Game';
-import Giveaway from './Giveaway';
 import InlineButtons from './InlineButtons';
 import Location from './Location';
 import MessageAppendix from './MessageAppendix';
@@ -337,7 +336,6 @@ type StateProps = {
   isConnected: boolean;
   isLoadingComments?: boolean;
   shouldWarnAboutFiles?: boolean;
-  senderBoosts?: number;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   canTranscribeVoice?: boolean;
   viaBusinessBot?: ApiUser;
@@ -473,7 +471,6 @@ const Message = ({
   getIsMessageListReady,
   containerRef,
   shouldWarnAboutFiles,
-  senderBoosts,
   tags,
   canTranscribeVoice,
   viaBusinessBot,
@@ -617,8 +614,7 @@ const Message = ({
     photo = paidMediaPhoto, video = paidMediaVideo, audio,
     voice, document, sticker, contact,
     location,
-    action, game, storyData, giveaway,
-    giveawayResults, todo, dice, widget,
+    action, game, storyData, todo, dice, widget,
   } = getMessageContent(message);
 
   const withVoiceTranscription = Boolean(!isTranscriptionHidden && (isTranscriptionError || transcribedText));
@@ -639,7 +635,6 @@ const Message = ({
     && !isAnonymousForwards
     && !hasViaSender
   ) || Boolean(storyData && !storyData.isMention);
-  const canShowSenderBoosts = Boolean(senderBoosts) && !asForwarded && isFirstInGroup;
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
   const isAlbum = Boolean(album)
@@ -1502,9 +1497,6 @@ const Message = ({
         {todo && (
           <TodoList message={message} todoList={todo} />
         )}
-        {(giveaway || giveawayResults) && (
-          <Giveaway message={message} />
-        )}
         {game && (
           <Game
             message={message}
@@ -1899,15 +1891,9 @@ const Message = ({
           </span>
         )}
         <div className="title-spacer" />
-        {(adminTitle || canShowSenderBoosts) && (
+        {adminTitle && (
           <span className="message-title-meta">
             {adminTitle}
-            {canShowSenderBoosts && (
-              <span className="sender-boosts" aria-hidden>
-                <Icon name={senderBoosts > 1 ? 'boosts' : 'boost'} />
-                {senderBoosts > 1 ? senderBoosts : undefined}
-              </span>
-            )}
           </span>
         )}
       </div>
@@ -2007,8 +1993,7 @@ const Message = ({
       )}
       <div
         className={buildClassName('message-content-wrapper',
-          contentClassName.includes('text') && 'can-select-text',
-          contentClassName.includes('giveaway') && 'giveaway-result-content')}
+          contentClassName.includes('text') && 'can-select-text')}
       >
         <div
           className={contentClassName}
@@ -2183,7 +2168,7 @@ export default memo(withGlobal<OwnProps>(
     const isChannel = chat && isChatChannel(chat);
     const isGroup = chat && isChatGroup(chat);
     const chatFullInfo = !isChatWithUser ? selectChatFullInfo(global, chatId) : undefined;
-    const { adminMembersById, members, boostsApplied } = chatFullInfo || {};
+    const { adminMembersById, members } = chatFullInfo || {};
     const webPageStoryData = webPage?.story;
     const webPageStory = webPageStoryData
       ? selectPeerStory(global, webPageStoryData.peerId, webPageStoryData.id)
@@ -2295,10 +2280,8 @@ export default memo(withGlobal<OwnProps>(
     const hasActiveReactions = Boolean(reactionMessage && activeReactions[getMessageKey(reactionMessage)]?.length);
 
     const isPremium = selectIsCurrentUserPremium(global);
-    const senderBoosts = sender && selectIsChatWithSelf(global, sender.id)
-      ? (boostsApplied ?? message.senderBoosts) : message.senderBoosts;
 
-    const chatLevel = chat?.boostLevel || 0;
+    const chatLevel = chat?.level || 0;
     const transcribeMinLevel = global.appConfig.groupTranscribeLevelMin;
     const canTranscribeVoice = !message.isEphemeral
       && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
@@ -2322,7 +2305,7 @@ export default memo(withGlobal<OwnProps>(
     const summary = !message.isEphemeral
       ? selectMessageSummary(global, chatId, message.id, requestedTranslationLanguage) : undefined;
 
-    const allowedAttachmentOptions = getAllowedAttachmentOptions(chat, chatFullInfo, isChatWithBot);
+    const allowedAttachmentOptions = getAllowedAttachmentOptions(chat, isChatWithBot);
 
     return {
       theme: selectTheme(global),
@@ -2417,7 +2400,6 @@ export default memo(withGlobal<OwnProps>(
       focusedTodoItemId: isFocused ? focusedTodoItemId : undefined,
       focusedPollOption: isFocused ? focusedPollOption : undefined,
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
-      senderBoosts,
       tags: global.savedReactionTags?.byKey,
       canTranscribeVoice,
       viaBusinessBot,

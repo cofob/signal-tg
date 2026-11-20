@@ -379,7 +379,7 @@ function getIsRecipientAllowed(
 
   const chatFullInfo = selectChatFullInfo(global, id);
   // TODO: Handle bulk check with API call
-  return !chatFullInfo || getCanPostInChat(chat, undefined, undefined, chatFullInfo);
+  return !chatFullInfo || getCanPostInChat(chat);
 }
 
 export default memo(withGlobal<OwnProps>(
