@@ -1,13 +1,19 @@
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use serde_json::json;
-use tauri::{Emitter, LogicalPosition, Manager, webview::DownloadEvent};
+use tauri::{
+  Emitter, LogicalPosition, Manager,
+  webview::{DownloadEvent, PageLoadEvent},
+};
 use url::Url;
 use uuid::Uuid;
 
 mod deeplink;
 use deeplink::Deeplink;
+
+pub mod transport;
+use transport::Transport;
 
 mod tray;
 mod window;
@@ -16,69 +22,63 @@ use crate::window::{WINDOW_STATES, WindowState};
 #[cfg(target_os = "macos")]
 mod mac;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AppStateStruct {
   pub notification_count: i32,
   pub is_muted: bool,
 }
 
-impl Default for AppStateStruct {
-  fn default() -> Self {
-    Self {
-      notification_count: 0,
-      is_muted: false,
-    }
-  }
-}
-
 pub type AppState = Mutex<AppStateStruct>;
 
-pub const TRAFFIC_LIGHT_POSITION_OVERLAY_LEGACY: LogicalPosition<f64> = LogicalPosition::new(26.0, 46.0);
-pub const TRAFFIC_LIGHT_POSITION_OVERLAY_26: LogicalPosition<f64> = LogicalPosition::new(26.0, 50.0);
-pub const TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_LEGACY: LogicalPosition<f64> = LogicalPosition::new(16.0, 30.0);
-pub const TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_26: LogicalPosition<f64> = LogicalPosition::new(16.0, 34.0);
+pub const TRAFFIC_LIGHT_POSITION_OVERLAY_LEGACY: LogicalPosition<f64> =
+  LogicalPosition::new(26.0, 46.0);
+pub const TRAFFIC_LIGHT_POSITION_OVERLAY_26: LogicalPosition<f64> =
+  LogicalPosition::new(26.0, 50.0);
+pub const TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_LEGACY: LogicalPosition<f64> =
+  LogicalPosition::new(16.0, 30.0);
+pub const TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_26: LogicalPosition<f64> =
+  LogicalPosition::new(16.0, 34.0);
 pub const TRAFFIC_LIGHT_POSITION_DEFAULT: LogicalPosition<f64> = LogicalPosition::new(14.0, 19.0);
 
 pub static TRAFFIC_LIGHT_POSITION_OVERLAY: LazyLock<LogicalPosition<f64>> = LazyLock::new(|| {
-  if let tauri_plugin_os::Version::Semantic(major, _, _) = tauri_plugin_os::version() {
-      if major >= 26 {
-          return TRAFFIC_LIGHT_POSITION_OVERLAY_26;
-      }
+  if let tauri_plugin_os::Version::Semantic(major, _, _) = tauri_plugin_os::version()
+    && major >= 26
+  {
+    return TRAFFIC_LIGHT_POSITION_OVERLAY_26;
   }
   TRAFFIC_LIGHT_POSITION_OVERLAY_LEGACY
 });
 
-pub static TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE: LazyLock<LogicalPosition<f64>> = LazyLock::new(|| {
-  if let tauri_plugin_os::Version::Semantic(major, _, _) = tauri_plugin_os::version() {
-      if major >= 26 {
-          return TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_26;
-      }
-  }
-  TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_LEGACY
-});
+pub static TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE: LazyLock<LogicalPosition<f64>> =
+  LazyLock::new(|| {
+    if let tauri_plugin_os::Version::Semantic(major, _, _) = tauri_plugin_os::version()
+      && major >= 26
+    {
+      return TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_26;
+    }
+    TRAFFIC_LIGHT_POSITION_OVERLAY_MOBILE_LEGACY
+  });
 
 pub const WINDOW_WIDTH: f64 = 1088.0;
 pub const WINDOW_HEIGHT: f64 = 700.0;
 pub const WINDOW_MIN_WIDTH: f64 = 360.0;
 pub const WINDOW_MIN_HEIGHT: f64 = 200.0;
 
-pub static LAST_URL: LazyLock<std::sync::Mutex<String>> =
-  LazyLock::new(|| std::sync::Mutex::new(BASE_URL.to_string()));
+/// The URL of the last window closed, which the tray opens again
+pub static LAST_URL: Mutex<String> = Mutex::new(String::new());
+
+/// The app's own page: the dev server in `tauri dev`, the bundled frontend otherwise. Only it gets
+/// IPC.
+static APP_URL: OnceLock<Url> = OnceLock::new();
 
 pub const DEFAULT_WINDOW_TITLE: &str = match std::option_env!("APP_TITLE") {
   Some(title) => title,
-  None => "Telegram Air",
+  None => "TeleSignal",
 };
 
-pub const BASE_URL: &str = match std::option_env!("BASE_URL") {
-  Some(url) => url,
-  None => "http://localhost:1234",
-};
-
-pub const WITH_UPDATER: &str = match std::option_env!("WITH_UPDATER") {
-  Some(str) => str,
-  None => "false",
-};
+pub(crate) fn get_app_url() -> &'static Url {
+  APP_URL.get().expect("The app URL is set up first")
+}
 
 pub(crate) fn strip_hash_from_url(url: &str) -> String {
   if let Ok(mut parsed_url) = Url::parse(url) {
@@ -90,26 +90,21 @@ pub(crate) fn strip_hash_from_url(url: &str) -> String {
 }
 
 pub(crate) fn save_window_url(app: &tauri::AppHandle, window_label: &str) {
-  if let Some(webview_window) = app.get_webview_window(window_label) {
-    if let Ok(current_url) = webview_window.url() {
-      let url_without_hash = strip_hash_from_url(current_url.as_str());
-      if let Ok(mut last_url) = LAST_URL.lock() {
-        *last_url = url_without_hash;
-      }
+  if let Some(webview_window) = app.get_webview_window(window_label)
+    && let Ok(current_url) = webview_window.url()
+  {
+    let url_without_hash = strip_hash_from_url(current_url.as_str());
+    if let Ok(mut last_url) = LAST_URL.lock() {
+      *last_url = url_without_hash;
     }
   }
 }
 
 pub fn run() {
   let app = tauri::Builder::default()
+    // Deep links that start a second instance reach this one through the deep link plugin
     .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-      let active_windows = app.windows();
-      if active_windows.len() >= 1 {
-        let window = active_windows.values().next().unwrap();
-        window.set_focus().unwrap_or_default();
-      } else {
-        open_new_window(app.clone(), BASE_URL.to_string()).unwrap();
-      }
+      show_main_window(app);
     }))
     .plugin(tauri_plugin_os::init())
     .plugin(tauri_plugin_fs::init())
@@ -126,7 +121,7 @@ pub fn run() {
 
       if active_windows.len() == 1 {
         // Save current URL before hiding the last window
-        save_window_url(&window.app_handle(), window.label());
+        save_window_url(window.app_handle(), window.label());
 
         #[cfg(target_os = "macos")]
         window.app_handle().hide().unwrap_or_default();
@@ -163,15 +158,34 @@ pub fn run() {
       if let Ok(mut states) = WINDOW_STATES.lock() {
         states.remove(window.label());
       }
+      window
+        .state::<Arc<Transport>>()
+        .close_owned_by(window.label());
     }
     _ => {}
+  });
+
+  // A reloaded page starts its engine again, so the connections of the previous page end
+  let app = app.on_page_load(|webview, payload| {
+    if payload.event() == PageLoadEvent::Started {
+      webview
+        .state::<Arc<Transport>>()
+        .close_owned_by(webview.label());
+    }
   });
 
   let app = app.setup(|app| {
     // Manage app state
     app.manage(AppState::new(AppStateStruct::default()));
+    app.manage(Arc::new(Transport::from_env()));
 
-    let _main_window = open_new_window(app.handle().clone(), BASE_URL.to_string())
+    let app_url = resolve_base_app_url(app.handle());
+    if let Ok(mut last_url) = LAST_URL.lock() {
+      *last_url = app_url.to_string();
+    }
+    APP_URL.set(app_url).expect("The app URL is set up once");
+
+    let _main_window = open_new_window(app.handle().clone(), get_app_url().to_string())
       .expect("Failed to open main window");
 
     let deeplink = Deeplink::init();
@@ -179,7 +193,8 @@ pub fn run() {
       log::error!("Failed to setup deeplink: {:?}", err);
     }
 
-    if WITH_UPDATER == "true" {
+    // Off unless the build configures an endpoint and public key (`deploy/prepareTauriConfig.js`)
+    if has_updater(app.handle()) {
       app
         .handle()
         .plugin(tauri_plugin_updater::Builder::new().build())?;
@@ -196,7 +211,11 @@ pub fn run() {
     set_window_title,
     open_new_window_cmd,
     save_current_url,
-    set_menu_translations
+    set_menu_translations,
+    transport::signal_connect,
+    transport::signal_send,
+    transport::signal_ack,
+    transport::signal_close
   ]);
 
   app
@@ -211,15 +230,15 @@ fn mark_title_bar_overlay(window: tauri::WebviewWindow, is_overlay: bool, is_mob
 
   let mut is_mobile_val = false;
 
-  if let Ok(mut states) = WINDOW_STATES.lock() {
-    if let Some(state) = states.get_mut(window.label()) {
-      state.is_overlay = is_overlay;
-      // Only `Some` updates the stored flag; `None` keeps the previous value
-      if let Some(mobile) = is_mobile {
-        state.is_mobile = mobile;
-      }
-      is_mobile_val = state.is_mobile;
+  if let Ok(mut states) = WINDOW_STATES.lock()
+    && let Some(state) = states.get_mut(window.label())
+  {
+    state.is_overlay = is_overlay;
+    // Only `Some` updates the stored flag; `None` keeps the previous value
+    if let Some(mobile) = is_mobile {
+      state.is_mobile = mobile;
     }
+    is_mobile_val = state.is_mobile;
   }
 
   if is_overlay {
@@ -234,11 +253,7 @@ fn mark_title_bar_overlay(window: tauri::WebviewWindow, is_overlay: bool, is_mob
       .unwrap_or_default();
 
     if let Some(base_window) = window.app_handle().get_window(window.label()) {
-      mac::update_window_title(
-        base_window.clone(),
-        "".to_string(),
-        position,
-      );
+      mac::update_window_title(base_window.clone(), "".to_string(), position);
     }
   } else {
     window
@@ -247,10 +262,10 @@ fn mark_title_bar_overlay(window: tauri::WebviewWindow, is_overlay: bool, is_mob
 
     // Determine the title we should restore.
     let mut title_to_set = DEFAULT_WINDOW_TITLE.to_string();
-    if let Ok(states) = WINDOW_STATES.lock() {
-      if let Some(state) = states.get(window.label()) {
-        title_to_set = state.title.clone();
-      }
+    if let Ok(states) = WINDOW_STATES.lock()
+      && let Some(state) = states.get(window.label())
+    {
+      title_to_set = state.title.clone();
     }
 
     if let Some(base_window) = window.app_handle().get_window(window.label()) {
@@ -293,12 +308,12 @@ fn set_menu_translations(translations: HashMap<String, String>) {
 
 #[tauri::command]
 fn set_window_title(window: tauri::WebviewWindow, title: String) {
-  if let Ok(mut states) = WINDOW_STATES.lock() {
-    if let Some(state) = states.get_mut(window.label()) {
-      state.title = title.clone();
-      if !state.is_overlay {
-        window.set_title(&title).unwrap_or_default();
-      }
+  if let Ok(mut states) = WINDOW_STATES.lock()
+    && let Some(state) = states.get_mut(window.label())
+  {
+    state.title = title.clone();
+    if !state.is_overlay {
+      window.set_title(&title).unwrap_or_default();
     }
   }
 }
@@ -322,7 +337,7 @@ pub(crate) fn open_new_window(
   app: tauri::AppHandle,
   url: String,
 ) -> Result<tauri::WebviewWindow, String> {
-  let base_url = Url::parse(BASE_URL).map_err(|err| format!("Invalid base URL: {err}"))?;
+  let base_url = get_app_url().clone();
   let url = resolve_app_url(&url, &base_url).ok_or_else(|| format!("Disallowed app URL: {url}"))?;
   let window_label = Uuid::new_v4().to_string();
   let new_window_builder = tauri::WebviewWindowBuilder::new(
@@ -337,9 +352,10 @@ pub(crate) fn open_new_window(
   .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
   .min_inner_size(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
   .disable_drag_drop_handler() // Required for Drag & Drop on Windows
-  .initialization_script(&format!(
-    "window.tauri = {{ version: '{}' }};",
-    env!("CARGO_PKG_VERSION")
+  .initialization_script(format!(
+    "window.tauri = {{ version: '{}', hasUpdater: {} }};",
+    app.package_info().version,
+    has_updater(&app),
   ))
   .on_navigation(move |url| is_allowed_app_url(url, &base_url))
   .on_download(|window, event| {
@@ -394,17 +410,50 @@ pub(crate) fn open_new_window(
   }
 
   // Apply stored notification count to the new window
-  if let Some(state) = app.try_state::<AppState>() {
-    if let Ok(app_state) = state.lock() {
-      crate::tray::set_notifications_count(
-        &window,
-        app_state.notification_count,
-        app_state.is_muted,
-      );
-    }
+  if let Some(state) = app.try_state::<AppState>()
+    && let Ok(app_state) = state.lock()
+  {
+    crate::tray::set_notifications_count(&window, app_state.notification_count, app_state.is_muted);
   }
 
   Ok(window)
+}
+
+/// Shows and focuses the first window, or opens one at the last URL
+pub(crate) fn show_main_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
+  if let Some(window) = app.webview_windows().into_values().next() {
+    window.unminimize().unwrap_or_default();
+    window.show().unwrap_or_default();
+    window.set_focus().unwrap_or_default();
+    return Some(window);
+  }
+
+  let url = LAST_URL
+    .lock()
+    .map(|last_url| last_url.clone())
+    .unwrap_or_else(|_| get_app_url().to_string());
+  open_new_window(app.clone(), url)
+    .inspect_err(|err| log::error!("Failed to open window: {err}"))
+    .ok()
+}
+
+fn has_updater(app: &tauri::AppHandle) -> bool {
+  app.config().plugins.0.contains_key("updater")
+}
+
+fn resolve_base_app_url(app: &tauri::AppHandle) -> Url {
+  if tauri::is_dev()
+    && let Some(url) = &app.config().build.dev_url
+  {
+    return url.clone();
+  }
+  // Tauri serves the bundled frontend on its own scheme, and on Windows on an HTTP host
+  let url = if cfg!(windows) {
+    "http://tauri.localhost/"
+  } else {
+    "tauri://localhost/"
+  };
+  Url::parse(url).expect("The bundled frontend URL is valid")
 }
 
 fn resolve_app_url(url: &str, base_url: &Url) -> Option<Url> {
@@ -415,7 +464,9 @@ fn resolve_app_url(url: &str, base_url: &Url) -> Option<Url> {
 
 fn is_allowed_app_url(url: &Url, base_url: &Url) -> bool {
   // Exact path, not prefix: other pages under the base path (e.g. `get/`) must not get IPC
-  matches!(url.scheme(), "http" | "https")
-    && url.origin() == base_url.origin()
+  // `Url::origin` is opaque for the `tauri` scheme, so the parts are compared instead
+  url.scheme() == base_url.scheme()
+    && url.host() == base_url.host()
+    && url.port_or_known_default() == base_url.port_or_known_default()
     && url.path().trim_end_matches('/') == base_url.path().trim_end_matches('/')
 }

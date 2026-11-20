@@ -1,6 +1,10 @@
 use log::info;
-use tauri::{Emitter, Manager, UserAttentionType};
+use tauri::{Emitter, UserAttentionType};
 use tauri_plugin_deep_link::DeepLinkExt;
+use url::Url;
+
+/// `sgnl://` link hosts that the app forwards to the page, as Signal Desktop handles them
+const LINK_HOSTS: [&str; 2] = ["signal.me", "signal.group"];
 
 pub struct Deeplink;
 
@@ -10,41 +14,45 @@ impl Deeplink {
   }
 
   pub fn setup(&self, app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    // Clone the app handle for use in the closure
+    // Outside bundles, such as in `tauri dev`, the scheme is registered at runtime
+    #[cfg(any(windows, target_os = "linux"))]
+    if let Err(err) = app.deep_link().register_all() {
+      info!("Error registering deep link schemes: {:?}", err);
+    }
+
     let app_handle = app.clone();
-
-    // Set up the deep link event handler
     app.deep_link().on_open_url(move |event| {
-      // Store URLs to avoid calling event.urls() multiple times (it consumes the event)
-      let urls = event.urls();
-      info!("Deep link received: {:?}", urls);
+      let urls: Vec<String> = event
+        .urls()
+        .into_iter()
+        .filter(is_supported_link)
+        .map(String::from)
+        .collect();
+      info!("Deep links received: {:?}", urls);
+      if urls.is_empty() {
+        return;
+      }
 
-      // Get the main window
-      if let Some(window) = app_handle.get_webview_window("main") {
-        // Emit the deep link event to the frontend
-        if let Err(err) = window.emit("deeplink", &urls) {
+      let Some(window) = crate::show_main_window(&app_handle) else {
+        return;
+      };
+      if let Err(err) = window.request_user_attention(Some(UserAttentionType::Informational)) {
+        info!("Error requesting user attention: {:?}", err);
+      }
+      for url in urls {
+        if let Err(err) = window.emit_to(window.label(), "deeplink", url) {
           info!("Error emitting deeplink event: {:?}", err);
-        }
-
-        // Request user attention and focus the window
-        if let Err(err) = window.request_user_attention(Some(UserAttentionType::Informational)) {
-          info!("Error requesting user attention: {:?}", err);
-        }
-
-        if let Err(err) = window.show() {
-          info!("Error showing window: {:?}", err);
-        }
-
-        if let Err(err) = window.unminimize() {
-          info!("Error unminimizing window: {:?}", err);
-        }
-
-        if let Err(err) = window.set_focus() {
-          info!("Error setting focus: {:?}", err);
         }
       }
     });
 
     Ok(())
   }
+}
+
+fn is_supported_link(url: &Url) -> bool {
+  url.scheme() == "sgnl"
+    && url
+      .host_str()
+      .is_some_and(|host| LINK_HOSTS.contains(&host))
 }

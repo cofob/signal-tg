@@ -13,35 +13,46 @@ const BADGE_BACKGROUND_COLOR_MUTED: Rgba<u8> = Rgba([0x88, 0x88, 0x88, 0xFF]);
 const BADGE_TEXT_COLOR: Rgba<u8> = Rgba([0xFF, 0xFF, 0xFF, 0xFF]);
 
 pub fn set_badge_count_icon(window: &tauri::WebviewWindow, amount: i32, is_muted: bool) {
+  // Linux shows the count on the launcher icon where the desktop supports it
+  #[cfg(target_os = "linux")]
+  window
+    .set_badge_count((amount > 0).then_some(amount.into()))
+    .unwrap_or_default();
+
   if amount == 0 {
+    #[cfg(windows)]
     window.set_overlay_icon(None).unwrap_or_default();
 
-    if let Ok(tray_opt) = super::TRAY_HANDLE.lock() {
-      if let Some(tray) = tray_opt.as_ref() {
-        let _ = tray.set_icon(Some(super::TRAY_BASE_ICON.clone()));
-      }
+    if let Ok(tray_opt) = super::TRAY_HANDLE.lock()
+      && let Some(tray) = tray_opt.as_ref()
+    {
+      let _ = tray.set_icon(Some(super::TRAY_BASE_ICON.clone()));
     }
   } else {
-    let png = generate_counter_png(48, amount, is_muted);
-    let converted = Image::from_bytes(&png);
+    // The taskbar button shows the counter as an overlay icon
+    #[cfg(windows)]
+    {
+      let png = generate_counter_png(48, amount, is_muted);
+      let converted = Image::from_bytes(&png);
 
-    if let Ok(converted) = converted {
-      window.set_overlay_icon(Some(converted)).unwrap_or_default();
-    } else {
-      log::error!("Failed to convert notification icon: {:?}", converted.err());
-      window.set_overlay_icon(None).unwrap_or_default();
+      if let Ok(converted) = converted {
+        window.set_overlay_icon(Some(converted)).unwrap_or_default();
+      } else {
+        log::error!("Failed to convert notification icon: {:?}", converted.err());
+        window.set_overlay_icon(None).unwrap_or_default();
+      }
     }
 
     // Update tray icon with counter overlay
-    if let Ok(tray_opt) = super::TRAY_HANDLE.lock() {
-      if let Some(tray) = tray_opt.as_ref() {
-        let base_icon = &super::TRAY_BASE_ICON;
-        let counter_size = (base_icon.width() as f32 * 0.6).floor() as u32;
-        let counter_icon = generate_counter_png(counter_size, amount, is_muted);
-        let counter_icon = Image::from_bytes(&counter_icon).unwrap();
-        let overlay_icon = overlay_tray_icon(base_icon, &counter_icon);
-        let _ = tray.set_icon(Some(overlay_icon));
-      }
+    if let Ok(tray_opt) = super::TRAY_HANDLE.lock()
+      && let Some(tray) = tray_opt.as_ref()
+    {
+      let base_icon = &super::TRAY_BASE_ICON;
+      let counter_size = (base_icon.width() as f32 * 0.6).floor() as u32;
+      let counter_icon = generate_counter_png(counter_size, amount, is_muted);
+      let counter_icon = Image::from_bytes(&counter_icon).unwrap();
+      let overlay_icon = overlay_tray_icon(base_icon, &counter_icon);
+      let _ = tray.set_icon(Some(overlay_icon));
     }
   }
 }

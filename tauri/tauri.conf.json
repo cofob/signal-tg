@@ -1,5 +1,8 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "TeleSignal",
+  "version": "../package.json",
+  "identifier": "org.telesignal.desktop",
   "app": {
     "security": {
       "csp": null
@@ -8,13 +11,14 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1234",
-    "frontendDist": "http://localhost:1234",
+    "beforeBuildCommand": "npm run build:tauri",
+    "frontendDist": "dist",
     "removeUnusedCommands": true
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["tg"]
+        "schemes": ["sgnl"]
       }
     }
   },
@@ -22,7 +26,7 @@
     "active": true,
     "createUpdaterArtifacts": false,
     "category": "SocialNetworking",
-    "copyright": "Telegram Air",
+    "copyright": "TeleSignal contributors",
     "externalBin": [],
     "icon": [
       "icons/32x32.png",
@@ -31,28 +35,43 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "longDescription": "",
+    "shortDescription": "Signal client",
+    "longDescription": "TeleSignal is a Signal client that runs as a linked device. Encryption and the Signal protocol run on your computer.",
+    "linux": {
+      "deb": {
+        "section": "net",
+        "desktopTemplate": "linux/telesignal.desktop"
+      }
+    },
     "macOS": {
       "entitlements": "entitlements.mac.plist",
       "exceptionDomain": "",
       "frameworks": [],
       "providerShortName": null,
-      "signingIdentity": null
+      "signingIdentity": null,
+      "dmg": {
+        "background": "images/background-dmg.png",
+        "windowSize": {
+          "width": 540,
+          "height": 380
+        },
+        "appPosition": {
+          "x": 138,
+          "y": 225
+        },
+        "applicationFolderPosition": {
+          "x": 402,
+          "y": 225
+        }
+      }
     },
     "resources": [],
-    "shortDescription": "",
-    "targets": [
-      "app",
-      "nsis",
-      "appimage"
-    ],
+    "targets": ["app", "dmg", "nsis", "deb", "appimage"],
     "windows": {
       "digestAlgorithm": "sha256",
       "nsis": {
         "installerIcon": "icons/icon.ico"
       }
     }
-  },
-  "identifier": "org.telegram.TelegramAirBeta",
-  "productName": "Telegram Air"
+  }
 }
