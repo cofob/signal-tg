@@ -160,7 +160,6 @@ type StateProps = {
   isChannelMuteBar?: boolean;
   isMuted?: boolean;
   linkedMonoforumId?: string;
-  areGiftsAvailable?: boolean;
   isSavedDialog?: boolean;
   canShowOpenChatButton?: boolean;
   isContactRequirePremium?: boolean;
@@ -238,7 +237,6 @@ function MiddleColumn({
   isChannelMuteBar,
   isMuted,
   linkedMonoforumId,
-  areGiftsAvailable,
   isSavedDialog,
   canShowOpenChatButton,
   isContactRequirePremium,
@@ -295,7 +293,6 @@ function MiddleColumn({
   const renderingIsChannelMuteBar = usePrevDuringAnimation(isChannelMuteBar, closeAnimationDuration);
   const renderingIsMuted = usePrevDuringAnimation(isMuted, closeAnimationDuration);
   const renderingLinkedMonoforumId = usePrevDuringAnimation(linkedMonoforumId, closeAnimationDuration);
-  const renderingAreGiftsAvailable = usePrevDuringAnimation(areGiftsAvailable, closeAnimationDuration);
   const renderingHandleIntersectPinnedMessage = usePrevDuringAnimation(
     chatId ? handleIntersectPinnedMessage : undefined,
     closeAnimationDuration,
@@ -693,7 +690,6 @@ function MiddleColumn({
                     isChannelMuteBar={renderingIsChannelMuteBar}
                     isMuted={renderingIsMuted}
                     linkedMonoforumId={renderingLinkedMonoforumId}
-                    areGiftsAvailable={renderingAreGiftsAvailable}
                     canUnpinAll={Boolean(isPinnedMessageList && canUnpin)}
                     pinnedMessagesCount={pinnedMessagesCount}
                     canOpenSavedChat={canShowOpenChatButton}
@@ -842,7 +838,6 @@ export default memo(withGlobal<OwnProps>(
       ? getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chatId))
       : undefined;
     const linkedMonoforumId = chat?.linkedMonoforumId;
-    const areGiftsAvailable = chatFullInfo?.areStarGiftsAvailable;
     const isChannelMuteBar = Boolean(isChannel && !chat?.isNotJoined && isMainThread && !canPost);
 
     return {
@@ -875,7 +870,6 @@ export default memo(withGlobal<OwnProps>(
       isChannelMuteBar,
       isMuted,
       linkedMonoforumId,
-      areGiftsAvailable,
       isSavedDialog,
       canShowOpenChatButton,
       isContactRequirePremium,

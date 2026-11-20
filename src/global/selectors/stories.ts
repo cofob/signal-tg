@@ -1,10 +1,11 @@
 import type { ApiPeerStories, ApiTypeStory } from '../../api/types';
 import type { GlobalState, TabArgs } from '../types';
-import type { ProfileCollectionKey } from './payments';
 
 import { getCurrentTabId } from '../../util/establishMultitabRole';
 import { selectPeer } from './peers';
 import { selectTabState } from './tabs';
+
+export type ProfileCollectionKey = number | 'all';
 
 export function selectCurrentViewedStory<T extends GlobalState>(
   global: T,

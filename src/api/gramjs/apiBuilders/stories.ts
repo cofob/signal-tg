@@ -252,16 +252,6 @@ export function buildApiMediaArea(area: GramJs.TypeMediaArea): ApiMediaArea | un
     };
   }
 
-  if (area instanceof GramJs.MediaAreaStarGift) {
-    const { slug } = area;
-
-    return {
-      type: 'uniqueGift',
-      coordinates,
-      slug,
-    };
-  }
-
   return undefined;
 }
 

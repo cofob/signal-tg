@@ -34,7 +34,6 @@ import {
   TOPICS_SLICE,
   TOPICS_SLICE_SECOND_LOAD,
 } from '../../../config';
-import { copyTextToClipboard } from '../../../util/clipboard';
 import { formatShareText, processDeepLink } from '../../../util/deeplink';
 import { isDeepLink } from '../../../util/deepLinkParser';
 import { isUserId } from '../../../util/entities/ids';
@@ -60,7 +59,6 @@ import {
   isChatSuperGroup,
   isUserBot,
 } from '../../helpers';
-import { getRequestInputSavedStarGift } from '../../helpers/payments';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
 } from '../../index';
@@ -1763,7 +1761,6 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
     checkChatlistInvite,
     openChatByUsername: openChatByUsernameAction,
     openStoryViewerByUsername,
-    checkGiftCode,
   } = actions;
 
   if (isDeepLink(url)) {
@@ -1852,12 +1849,6 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
   if (part1 === 'addlist') {
     const slug = part2;
     checkChatlistInvite({ slug, tabId });
-    return;
-  }
-
-  if (part1 === 'giftcode') {
-    const slug = part2;
-    checkGiftCode({ slug, tabId });
     return;
   }
 
@@ -3656,18 +3647,15 @@ addActionHandler('setPeerShareTheme', async (global, actions, payload): Promise<
   const peer = selectPeer(global, peerId);
   if (!peer) return;
 
-  const inputGift = theme?.type === 'gift' ? getRequestInputSavedStarGift(global, theme.inputGift) : undefined;
-  if (theme?.type === 'gift' && !inputGift) return;
-
   const oldShareTheme = selectPeerFullInfo(global, peerId)?.shareTheme;
-  const shareTheme = theme?.type === 'gift' ? { type: 'gift' as const, gift: theme.gift } : theme;
+  const shareTheme = theme;
 
   global = updatePeerFullInfo(global, peerId, { shareTheme });
   setGlobal(global);
 
   const result = await callApi('setShareTheme', {
     peer,
-    theme: inputGift ? { type: 'gift', inputGift } : shareTheme?.type === 'emojiBackdrop' ? shareTheme : undefined,
+    theme: shareTheme,
   });
 
   global = getGlobal();
@@ -3699,38 +3687,6 @@ addActionHandler('resolveBusinessChatLink', async (global, actions, payload): Pr
     text: chatLink.text,
     tabId,
   });
-});
-
-addActionHandler('requestCollectibleInfo', async (global, actions, payload): Promise<void> => {
-  const {
-    type, collectible, peerId, tabId = getCurrentTabId(),
-  } = payload;
-
-  let inputCollectible;
-  if (type === 'phone') {
-    inputCollectible = { phone: collectible };
-  }
-  if (type === 'username') {
-    inputCollectible = { username: collectible };
-  }
-  if (!inputCollectible) return;
-
-  const result = await callApi('fetchCollectionInfo', inputCollectible);
-  if (!result) {
-    copyTextToClipboard(collectible);
-    return;
-  }
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    collectibleInfoModal: {
-      ...result,
-      type,
-      collectible,
-      peerId,
-    },
-  }, tabId);
-  setGlobal(global);
 });
 
 addActionHandler('loadDiscussion', async (global, actions, payload): Promise<void> => {

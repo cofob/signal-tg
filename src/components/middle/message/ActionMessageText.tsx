@@ -5,7 +5,6 @@ import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 
 import {
   GENERAL_TOPIC_ID,
-  SERVICE_NOTIFICATIONS_USER_ID,
   STARS_CURRENCY_CODE,
   TME_LINK_PREFIX,
   TON_CURRENCY_CODE,
@@ -31,10 +30,8 @@ import {
 import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
 import { ensureProtocol } from '../../../util/browser/url';
 import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
-import { formatCurrency } from '../../../util/formatCurrency';
 import { formatCalendarDate, formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
-import {
-  formatCurrencyAmountAsText, formatStarsAsText, formatTonAsIcon, formatTonAsText,
+import { formatStarsAsText, formatTonAsText,
 } from '../../../util/localization/format';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
 import { getServerTime } from '../../../util/serverTime';
@@ -101,9 +98,6 @@ const ActionMessageText = ({
 
   const renderActionText = useLastCallback(() => {
     const global = getGlobal();
-
-    const isServiceNotificationsChat = chatId === SERVICE_NOTIFICATIONS_USER_ID;
-    const isSavedMessages = chatId === currentUserId;
 
     const isChannel = chat && isChatChannel(chat);
     const isSenderSelf = sender ? sender.id === currentUserId : isOutgoing;
@@ -215,9 +209,7 @@ const ActionMessageText = ({
           : translateWithYou(lang, 'ActionChangedPhoto', isOutgoing, { from: senderLink });
 
       case 'setChatTheme': {
-        const themeName = action.gift
-          ? lang('GiftUnique', { title: action.gift.title, number: lang.number(action.gift.number) })
-          : action.emoticon;
+        const themeName = action.emoticon;
         if (!themeName) {
           return isChannel ? lang('ActionDisabledThemeChannel')
             : translateWithYou(lang, 'ActionDisabledTheme', isSenderSelf, { from: senderLink });
@@ -511,29 +503,7 @@ const ActionMessageText = ({
         );
       }
 
-      case 'giftStars':
-      case 'giftPremium':
-      case 'giftTon': {
-        const {
-          amount, currency, cryptoAmount, cryptoCurrency, type,
-        } = action;
-
-        const price = formatCurrency(lang, amount, currency, { asFontIcon: true });
-        const cryptoPrice = cryptoAmount && cryptoCurrency === TON_CURRENCY_CODE && type !== 'giftTon'
-          ? formatTonAsIcon(lang, cryptoAmount) : undefined;
-
-        const cost = cryptoPrice ? lang('ActionGiftCostCrypto', { price, cryptoPrice }, { withNodes: true }) : price;
-
-        if (isServiceNotificationsChat) {
-          return lang('ActionGiftTextCostAnonymous', { cost }, { withNodes: true });
-        }
-        return translateWithYou(
-          lang, 'ActionGiftTextCost', isOutgoing, { from: senderLink, cost: renderStrong(cost) },
-        );
-      }
-
-      case 'prizeStars':
-      case 'giftCode': {
+      case 'prizeStars': {
         return translateWithYou(lang, 'ActionGiftTextUnknown', isOutgoing, undefined);
       }
 
@@ -586,203 +556,6 @@ const ActionMessageText = ({
         return translateWithYou(
           lang, 'ActionVideoInvitedMany', isOutgoing, { from: senderLink, users: conjuctionWithNodes(lang, userLinks) },
         );
-      }
-
-      case 'starGift': {
-        const {
-          gift, alreadyPaidUpgradeStars, peerId, savedId, fromId, isPrepaidUpgrade, isAuctionAcquired,
-        } = action;
-        const isToChannel = Boolean(peerId && savedId);
-
-        const fromPeer = fromId ? selectPeer(global, fromId) : sender;
-        const fromTitle = (fromPeer && getPeerTitle(lang, fromPeer)) || userFallbackText;
-        const fromLink = renderPeerLink(fromPeer?.id, fromTitle, asPreview);
-
-        const toPeer = peerId ? selectPeer(global, peerId) : undefined;
-        const toTitle = (toPeer && getPeerTitle(lang, toPeer))
-          || (isToChannel ? channelFallbackText : userFallbackText);
-        const toLink = renderPeerLink(toPeer?.id, toTitle, asPreview);
-
-        const starsAmount = gift.stars + (alreadyPaidUpgradeStars || 0);
-        const cost = renderStrong(formatStarsAsText(lang, starsAmount));
-
-        if (isAuctionAcquired) {
-          return lang('ActionStarGiftAuctionWon', { cost }, { withNodes: true });
-        }
-
-        if (isPrepaidUpgrade && gift.upgradeStars) {
-          const upgradeCost = renderStrong(formatStarsAsText(lang, gift.upgradeStars));
-
-          return translateWithYou(
-            lang, 'ActionStarGiftPrepaidUpgrade', isOutgoing, {
-              peer: isOutgoing ? toLink : senderLink,
-              cost: upgradeCost,
-            },
-          );
-        }
-
-        if (isToChannel) {
-          const channelPeer = selectPeer(global, peerId!);
-          const isYou = fromPeer?.id === currentUserId;
-
-          const channelTitle = (channelPeer && getPeerTitle(lang, channelPeer)) || channelFallbackText;
-          const channelLink = renderPeerLink(peerId, channelTitle, asPreview);
-          return translateWithYou(
-            lang, 'ActionStarGiftSentChannel', isYou, { user: fromLink, channel: channelLink, cost },
-          );
-        }
-
-        if (isServiceNotificationsChat) {
-          return lang('ActionStarGiftReceivedAnonymous', { cost }, { withNodes: true });
-        }
-
-        if (isSavedMessages) {
-          return lang('ActionStarGiftSelfBought', { cost }, { withNodes: true });
-        }
-
-        if (isOutgoing) {
-          return lang('ActionStarGiftSent', { cost }, { withNodes: true });
-        }
-
-        return lang('ActionStarGiftReceived', { user: senderLink, cost }, { withNodes: true });
-      }
-
-      case 'starGiftUnique': {
-        const {
-          isTransferred, isUpgrade, savedId, peerId, fromId, resaleAmount, gift, transferStars, isPrepaidUpgrade,
-          isFromOffer,
-        } = action;
-
-        const isToChannel = Boolean(peerId && savedId);
-
-        const fromPeer = fromId ? selectPeer(global, fromId) : sender;
-        const fromTitle = (fromPeer && getPeerTitle(lang, fromPeer)) || userFallbackText;
-        const fromLink = renderPeerLink(fromPeer?.id, fromTitle, asPreview);
-
-        const toPeer = peerId ? selectPeer(global, peerId) : undefined;
-        const toTitle = (toPeer && getPeerTitle(lang, toPeer))
-          || (isToChannel ? channelFallbackText : userFallbackText);
-        const toLink = renderPeerLink(toPeer?.id, toTitle, asPreview);
-
-        if (isFromOffer && resaleAmount) {
-          const giftName = lang('GiftUnique', { title: gift.title, number: gift.number });
-          const amountText = formatCurrencyAmountAsText(lang, resaleAmount);
-
-          const formattedAmountText = asPreview ? amountText : renderStrong(amountText);
-          const formattedGiftName = asPreview ? giftName : renderStrong(giftName);
-
-          if (isOutgoing) {
-            return lang(
-              'ActionStarGiftSoldFromOffer',
-              { user: chatLink, gift: formattedGiftName, cost: formattedAmountText },
-              { withNodes: true },
-            );
-          }
-
-          return lang(
-            'ActionStarGiftBoughtFromOffer',
-            { user: senderLink, gift: formattedGiftName, cost: formattedAmountText },
-            { withNodes: true },
-          );
-        }
-
-        if (isPrepaidUpgrade) {
-          if (isOutgoing) {
-            return lang('ActionStarGiftPrepaidUpgradedYou');
-          }
-          return lang('ActionStarGiftPrepaidUpgraded', { user: toLink }, { withNodes: true });
-        }
-
-        if (resaleAmount && !transferStars) {
-          const amountText = formatCurrencyAmountAsText(lang, resaleAmount);
-
-          return lang(
-            isOutgoing
-              ? 'ApiMessageMessageActionResaleStarGiftUniqueOutgoing'
-              : 'ApiMessageMessageActionResaleStarGiftUniqueIncoming',
-            {
-              gift: lang('GiftUnique', { title: gift.title, number: gift.number }),
-              stars: renderStrong(amountText),
-            },
-            { withNodes: true },
-          );
-        }
-
-        if (isToChannel) {
-          const channelPeer = selectPeer(global, peerId!);
-          const isYou = fromPeer?.id === currentUserId;
-          const isAnonymous = fromPeer?.id === SERVICE_NOTIFICATIONS_USER_ID;
-
-          const channelTitle = (channelPeer && getPeerTitle(lang, channelPeer)) || channelFallbackText;
-          const channelLink = renderPeerLink(peerId, channelTitle, asPreview);
-
-          if (isUpgrade) {
-            return translateWithYou(
-              lang, 'ActionStarGiftUpgradedChannel', isYou, { user: fromLink, channel: channelLink },
-            );
-          }
-
-          if (isTransferred) {
-            if (isAnonymous) {
-              return lang('ActionStarGiftTransferredUnknownChannel', { channel: channelLink }, { withNodes: true });
-            }
-
-            return translateWithYou(
-              lang, 'ActionStarGiftTransferredChannel', isYou, { user: fromLink, channel: channelLink },
-            );
-          }
-        }
-
-        if (isSavedMessages) {
-          if (isUpgrade) return lang('ActionStarGiftUpgradedSelf');
-          if (isTransferred) return lang('ActionStarGiftTransferredSelf');
-          if (resaleAmount) {
-            const amountText = formatCurrencyAmountAsText(lang, resaleAmount);
-            return lang(
-              'ApiMessageMessageActionResaleStarGiftUniqueOutgoing',
-              {
-                gift: lang('GiftUnique', { title: gift.title, number: gift.number }),
-                stars: asPreview ? amountText : renderStrong(amountText),
-              },
-              { withNodes: true },
-            );
-          }
-          if (gift.isCrafted) return lang('ActionStarGiftCraftedSelf');
-        }
-
-        if (isUpgrade) {
-          if (isOutgoing) {
-            return lang('ActionStarGiftUpgradedMine', { user: chatLink }, { withNodes: true });
-          }
-
-          if (isSavedMessages) {
-            return lang('ActionStarGiftUpgradedSelf');
-          }
-
-          return lang('ActionStarGiftUpgradedUser', { user: senderLink }, { withNodes: true });
-        }
-
-        if ((isTransferred || transferStars) && !resaleAmount) {
-          if (sender?.id === SERVICE_NOTIFICATIONS_USER_ID) {
-            return lang('ActionStarGiftTransferredUnknown');
-          }
-
-          if (isSavedMessages) {
-            return lang('ActionStarGiftTransferredSelf');
-          }
-
-          if (isOutgoing) {
-            return lang('ActionStarGiftTransferredMine', { user: chatLink }, { withNodes: true });
-          }
-
-          return lang('ActionStarGiftTransferred', { user: senderLink }, { withNodes: true });
-        }
-
-        if (isOutgoing) {
-          return lang('ActionGiftUniqueSent');
-        }
-
-        return lang('ActionGiftUniqueReceived', { user: senderLink }, { withNodes: true });
       }
 
       case 'suggestProfilePhoto': {
@@ -1201,54 +974,6 @@ const ActionMessageText = ({
         const newCreatorTitle = (newCreator && getPeerTitle(lang, newCreator)) || userFallbackText;
         const newCreatorLink = renderPeerLink(newCreator?.id, newCreatorTitle, asPreview);
         return lang('ActionChangeCreator', { user: newCreatorLink, from: senderLink }, { withNodes: true });
-      }
-
-      case 'starGiftPurchaseOffer': {
-        const { gift, price } = action;
-
-        const peer = isOutgoing ? chat : sender;
-        const peerTitle = (peer && getPeerTitle(lang, peer)) || userFallbackText;
-        const peerLink = renderPeerLink(peer?.id, peerTitle, asPreview);
-
-        const giftName = lang('GiftUnique', { title: gift.title, number: gift.number });
-        const priceText = formatCurrencyAmountAsText(lang, price);
-
-        const formattedGiftName = asPreview ? giftName : renderStrong(giftName);
-        const formattedPriceText = asPreview ? priceText : renderStrong(priceText);
-
-        return lang(
-          isOutgoing ? 'ActionStarGiftOfferOutgoing' : 'ActionStarGiftOfferIncoming',
-          {
-            peer: peerLink,
-            cost: formattedPriceText,
-            gift: formattedGiftName,
-          },
-          { withNodes: true },
-        );
-      }
-
-      case 'starGiftPurchaseOfferDeclined': {
-        const { gift, price } = action;
-
-        const peer = isOutgoing ? chat : sender;
-        const peerTitle = (peer && getPeerTitle(lang, peer)) || userFallbackText;
-        const peerLink = renderPeerLink(peer?.id, peerTitle, asPreview);
-
-        const giftName = lang('GiftUnique', { title: gift.title, number: gift.number });
-        const priceText = formatCurrencyAmountAsText(lang, price);
-
-        const formattedGiftName = asPreview ? giftName : renderStrong(giftName);
-        const formattedPriceText = asPreview ? priceText : renderStrong(priceText);
-
-        return lang(
-          isOutgoing ? 'ActionStarGiftOfferDeclinedOutgoing' : 'ActionStarGiftOfferDeclinedIncoming',
-          {
-            peer: peerLink,
-            gift: formattedGiftName,
-            cost: formattedPriceText,
-          },
-          { withNodes: true },
-        );
       }
 
       default:

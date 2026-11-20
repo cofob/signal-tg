@@ -21,14 +21,12 @@ import type {
   ApiPollAnswer,
   ApiPollResults,
   ApiRichMessage,
-  ApiStarGiftUnique,
   ApiSticker,
   ApiTodoItem,
   ApiVideo,
   ApiVoice,
   ApiWebDocument,
   ApiWebPage,
-  ApiWebPageAuctionData,
   ApiWebPageStickerData,
   ApiWebPageStoryData,
   ApiWidget,
@@ -51,7 +49,6 @@ import {
   buildApiPhoto,
   buildApiThumbnailFromStripped,
 } from './common';
-import { buildApiStarGift } from './gifts';
 import {
   buildApiInstantViewPage,
   buildApiPageBlock,
@@ -820,17 +817,9 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
     const audio = document instanceof GramJs.Document ? buildAudioFromDocument(document) : undefined;
 
     let story: ApiWebPageStoryData | undefined;
-    let gift: ApiStarGiftUnique | undefined;
-    let auction: ApiWebPageAuctionData | undefined;
     let stickers: ApiWebPageStickerData | undefined;
     const attributeStory = attributes
       ?.find((a): a is GramJs.WebPageAttributeStory => a instanceof GramJs.WebPageAttributeStory);
-    const attributeGift = attributes
-      ?.find((a): a is GramJs.WebPageAttributeUniqueStarGift => a instanceof GramJs.WebPageAttributeUniqueStarGift);
-    const attributeAuction = attributes
-      ?.find((a): a is GramJs.WebPageAttributeStarGiftAuction => (
-        a instanceof GramJs.WebPageAttributeStarGiftAuction
-      ));
     if (attributeStory) {
       const peerId = getApiChatIdFromMtpPeer(attributeStory.peer);
       story = {
@@ -840,19 +829,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
 
       if (attributeStory.story instanceof GramJs.StoryItem) {
         addStoryToLocalDb(attributeStory.story, peerId);
-      }
-    }
-    if (attributeGift) {
-      const starGift = buildApiStarGift(attributeGift.gift);
-      gift = starGift.type === 'starGiftUnique' ? starGift : undefined;
-    }
-    if (attributeAuction) {
-      const starGift = buildApiStarGift(attributeAuction.gift);
-      if (starGift.type === 'starGift') {
-        auction = {
-          gift: starGift,
-          endDate: attributeAuction.endDate,
-        };
       }
     }
     const attributeStickers = attributes?.find((a): a is GramJs.WebPageAttributeStickerSet => (
@@ -893,8 +869,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       video,
       audio,
       story,
-      gift,
-      auction,
       stickers,
       cachedPage: builtCachedPage,
       cachedPageAudioById: builtCachedPage ? buildPageAudioById(builtCachedPage) : undefined,

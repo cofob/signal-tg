@@ -1,15 +1,12 @@
-import type { ApiTypeCurrencyAmount } from '../../api/types';
 import type { LangFn } from './types';
 
-import { STARS_ICON_PLACEHOLDER, TON_CURRENCY_CODE } from '../../config';
-import { convertTonFromNanos, formatTonFromNanos, formatTonShortFromNanos } from '../../util/formatCurrency';
+import { STARS_ICON_PLACEHOLDER } from '../../config';
+import { convertTonFromNanos } from '../../util/formatCurrency';
 import buildClassName from '../buildClassName';
 
 import GramIcon from '../../components/common/icons/GramIcon';
 import Icon from '../../components/common/icons/Icon';
 import StarIcon from '../../components/common/icons/StarIcon';
-
-const DECIMAL_SAMPLE = 0.5;
 
 export const NEXT_ARROW_REPLACEMENT = {
   '>': <Icon name="next-link" className="link-arrow-icon" />,
@@ -25,30 +22,6 @@ export function formatStarsAsText(lang: LangFn, amount: number) {
 export function formatTonAsText(lang: LangFn, nanos: bigint) {
   const amount = convertTonFromNanos(nanos);
   return lang('GramAmountText', { amount: lang.preciseNumber(amount) }, { pluralValue: amount });
-}
-
-export function formatTonTextFromNanos(lang: LangFn, nanos: bigint, isShort?: boolean) {
-  return lang('GramAmountText', { amount: formatTonNumber(lang, nanos, isShort) }, {
-    pluralValue: convertTonFromNanos(nanos),
-  });
-}
-
-function formatTonNumber(lang: LangFn, nanos: bigint, isShort?: boolean) {
-  return formatTonParts(lang, nanos, isShort).join('');
-}
-
-// The whole part is grouped as a `bigint`, so the full amount keeps every nanoton a float would round off
-function formatTonParts(lang: LangFn, nanos: bigint, isShort?: boolean): [whole: string, fraction?: string] {
-  const formatter = lang.internalFormatters.preciseNumber;
-  const [whole, fraction] = (isShort ? formatTonShortFromNanos(nanos) : formatTonFromNanos(nanos)).split('.');
-  const formattedWhole = formatter.format(BigInt(whole));
-  if (!fraction) return [formattedWhole];
-
-  const decimal = formatter.formatToParts(DECIMAL_SAMPLE).find(({ type }) => type === 'decimal')!.value;
-  // Digit by digit, so the leading zeros stay and the digits follow the locale, such as Persian
-  const formattedFraction = fraction.replace(/\d/g, (digit) => formatter.format(Number(digit)));
-
-  return [formattedWhole, `${decimal}${formattedFraction}`];
 }
 
 export function formatTonAsIcon(
@@ -128,13 +101,4 @@ export function formatStarsAsIcon(lang: LangFn, amount: number | string, options
       [STARS_ICON_PLACEHOLDER]: icon,
     },
   });
-}
-
-export function formatCurrencyAmountAsText(lang: LangFn, currencyAmount: ApiTypeCurrencyAmount) {
-  if (currencyAmount.currency === TON_CURRENCY_CODE) {
-    return formatTonAsText(lang, currencyAmount.amount);
-  }
-
-  const amount = currencyAmount.amount + currencyAmount.nanos / 1e9;
-  return formatStarsAsText(lang, amount);
 }

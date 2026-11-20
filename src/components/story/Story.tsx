@@ -988,7 +988,6 @@ export default memo(withGlobal<OwnProps>((global, {
     safeLinkModalUrl,
     mapModal,
     reportModal,
-    giftInfoModal,
     paymentMessageConfirmDialogKey,
     storyStealthModal,
   } = tabState;
@@ -999,7 +998,7 @@ export default memo(withGlobal<OwnProps>((global, {
   const shouldForcePause = Boolean(
     paymentMessageConfirmDialogKey
     || viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
-    || isPremiumModalOpen || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal || giftInfoModal,
+    || isPremiumModalOpen || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;

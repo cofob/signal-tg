@@ -29,15 +29,11 @@ import Button from '../../ui/Button';
 import BaseStory from './BaseStory';
 import Photo from './Photo';
 import Video from './Video';
-import WebPageStarGiftAuction from './WebPageStarGiftAuction';
-import WebPageUniqueGift from './WebPageUniqueGift';
 
 import './WebPage.scss';
 
 const MAX_TEXT_LENGTH = 170; // symbols
 const WEBPAGE_STORY_TYPE = 'telegram_story';
-const WEBPAGE_GIFT_TYPE = 'telegram_nft';
-const WEBPAGE_AUCTION_TYPE = 'telegram_auction';
 const WEBPAGE_AI_TONE_TYPE = 'telegram_aicomposetone';
 const STICKER_SIZE = 80;
 const EMOJI_SIZE = 38;
@@ -164,15 +160,12 @@ const WebPage = ({
   } = webPage;
   const { mediaSize } = messageWebPage;
   const isStory = type === WEBPAGE_STORY_TYPE;
-  const isGift = type === WEBPAGE_GIFT_TYPE;
-  const isAuction = type === WEBPAGE_AUCTION_TYPE;
   const isAiTone = type === WEBPAGE_AI_TONE_TYPE;
   const isExpiredStory = story && 'isDeleted' in story;
 
   const resultType = stickers?.isEmoji ? 'telegram_emojiset' : type;
-  const auctionEndDate = isAuction && webPage.auction ? webPage.auction.endDate : undefined;
   const quickButtonLangKey = !isExpiredStory
-    ? getWebpageButtonLangKey(resultType, { auctionEndDate, cachedPage: fullWebPage?.cachedPage })
+    ? getWebpageButtonLangKey(resultType, { cachedPage: fullWebPage?.cachedPage })
     : undefined;
   const quickButtonTitle = quickButtonLangKey && lang(quickButtonLangKey);
   const quickButtonIcon = getWebpageButtonIcon(resultType, { cachedPage: fullWebPage?.cachedPage });
@@ -195,7 +188,6 @@ const WebPage = ({
     !isArticle && 'no-article',
     document && 'with-document',
     quickButtonTitle && 'with-quick-button',
-    (isGift || isAuction) && 'with-gift',
     isAiTone && 'WebPage--ai-tone',
   );
 
@@ -207,7 +199,7 @@ const WebPage = ({
         color="translucent"
         isRectangular
         inline
-        noForcedUpperCase={!isAuction}
+        noForcedUpperCase
         onClick={handleQuickButtonClick}
       >
         {quickButtonIcon && <Icon name={quickButtonIcon} className="in-text-icon" />}
@@ -228,7 +220,6 @@ const WebPage = ({
         hasWideMedia && 'has-adaptive-width',
         hasWideMedia && 'with-wide-media',
         isStory && 'is-story',
-        (isGift || isAuction) && 'is-gift',
       )}
       >
         {backgroundEmojiId && (
@@ -239,22 +230,6 @@ const WebPage = ({
         )}
         {isStory && (
           <BaseStory story={story} isProtected={isProtected} isConnected={isConnected} isPreview />
-        )}
-        {isGift && (
-          <WebPageUniqueGift
-            gift={webPage.gift!}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleOpenTelegramLink}
-          />
-        )}
-        {isAuction && webPage.auction && (
-          <WebPageStarGiftAuction
-            auction={webPage.auction}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleOpenTelegramLink}
-          />
         )}
         {isArticle && (
           <div
@@ -272,12 +247,12 @@ const WebPage = ({
             {title && (
               <p className="site-title">{renderText(title)}</p>
             )}
-            {truncatedDescription && !isGift && !isAuction && (
+            {truncatedDescription && (
               <p className="site-description">{renderText(truncatedDescription, ['emoji', 'br'])}</p>
             )}
           </div>
         )}
-        {photo && !isGift && !isAuction && !video && (
+        {photo && !video && (
           <Photo
             photo={photo}
             observeIntersection={observeIntersectionForLoading}

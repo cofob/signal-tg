@@ -14,7 +14,6 @@ const LEADING_NUMBER_REGEX = /^\+?(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?/i;
 // A pasted `1e999999` must not build a huge number, and 1e30 TON is already past `MAX_COINS`
 const MAX_EXPONENT = 30;
 const SUBSCRIPT_DIGITS = '\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089';
-const SHORT_FRACTION_DIGITS = 2;
 const PRECISE_SIGNIFICANT_DIGITS = 3;
 const MAX_FRACTION_DIGITS = 20;
 
@@ -49,16 +48,6 @@ export function formatTonFromNanos(nanos: bigint, shouldCollapseZeros?: boolean)
   return shouldCollapseZeros ? collapseFractionZeros(plain) : plain;
 }
 
-// Two decimals for whole grams and two significant digits below one, e.g. `12.34` and `0.0012`
-export function formatTonShortFromNanos(nanos: bigint): string {
-  const exp = getCurrencyExp(TON_CURRENCY_CODE);
-  const abs = getBigIntAbs(nanos);
-  const leadingZeros = abs < 10 ** exp ? exp - String(abs).length : 0;
-  const unit = 10n ** BigInt(Math.max(exp - leadingZeros - SHORT_FRACTION_DIGITS, 0));
-
-  return formatTonFromNanos((abs / unit) * unit, true);
-}
-
 // Collapses leading fractional zeros into a subscript count, e.g. `0.00000056` becomes `0.0\u20866`
 function collapseFractionZeros(value: string): string {
   return value.replace(COLLAPSIBLE_ZEROS_REGEX, (_, zeros: string) => `0.0${toSubscriptDigits(zeros.length)}`);
@@ -85,10 +74,6 @@ export function formatCurrency(
   }
 
   return formatCurrencyAsString(totalPrice, currency, lang.code, options);
-}
-
-export function convertTonToUsd(nanos: bigint, usdRate: number): number {
-  return convertTonFromNanos(nanos) * usdRate * 100;
 }
 
 export function formatCurrencyAsString(

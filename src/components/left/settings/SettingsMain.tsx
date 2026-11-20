@@ -7,7 +7,6 @@ import {
   FAQ_URL, PRIVACY_URL,
 } from '../../../config';
 import {
-  selectIsGiveawayGiftsPurchaseAvailable,
   selectIsPremiumPurchaseBlocked,
 } from '../../../global/selectors';
 import { IS_ANDROID, IS_IOS } from '../../../util/browser/windowEnvironment';
@@ -33,7 +32,6 @@ type StateProps = {
   sessionCount: number;
   currentUserId?: string;
   canBuyPremium?: boolean;
-  isGiveawayAvailable?: boolean;
 };
 
 const SettingsMain = ({
@@ -41,14 +39,12 @@ const SettingsMain = ({
   currentUserId,
   sessionCount,
   canBuyPremium,
-  isGiveawayAvailable,
   onReset,
 }: OwnProps & StateProps) => {
   const {
     loadMoreProfilePhotos,
     openPremiumModal,
     openUrl,
-    openGiftRecipientPicker,
     openSettingsScreen,
     openSettingsConfirmation,
   } = getActions();
@@ -231,16 +227,6 @@ const SettingsMain = ({
             </ListItem>
           )}
 
-          {isGiveawayAvailable && (
-            <ListItem
-              icon="gift-filled"
-              iconBg="orange"
-              narrow
-              onClick={() => openGiftRecipientPicker()}
-            >
-              {lang('MenuSendGift')}
-            </ListItem>
-          )}
         </Island>
 
         <Island>
@@ -277,13 +263,11 @@ const SettingsMain = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const { currentUserId } = global;
-    const isGiveawayAvailable = selectIsGiveawayGiftsPurchaseAvailable(global);
 
     return {
       sessionCount: global.activeSessions.orderedHashes.length,
       currentUserId,
       canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
-      isGiveawayAvailable,
     };
   },
 )(SettingsMain));

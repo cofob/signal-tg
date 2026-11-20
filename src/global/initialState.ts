@@ -5,10 +5,8 @@ import { LeftColumnContent, NewChatMembersProgress, SettingsScreens } from '../t
 import {
   ANIMATION_LEVEL_DEFAULT,
   ANIMATION_LEVEL_MIN,
-  DEFAULT_GIFT_PROFILE_FILTER_OPTIONS,
   DEFAULT_MESSAGE_TEXT_SIZE_PX,
   DEFAULT_PLAYBACK_RATE,
-  DEFAULT_RESALE_GIFTS_FILTER_OPTIONS,
   DEFAULT_VOLUME,
   FOLDERS_POSITION_DEFAULT,
   INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT,
@@ -332,7 +330,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       shouldUpdateStickerSetOrder: true,
       shouldArchiveAndMuteNewNonContact: false,
       shouldNewNonContactPeersRequirePremium: false,
-      disallowedGifts: undefined,
       nonContactPeersPaidStars: 0,
       shouldHideReadMarks: false,
       canTranslate: false,
@@ -406,23 +403,6 @@ export const INITIAL_TAB_STATE: TabState = {
 
   chatInfo: {
     isOpen: false,
-  },
-
-  savedGifts: {
-    filter: {
-      ...DEFAULT_GIFT_PROFILE_FILTER_OPTIONS,
-    },
-    collectionsByPeerId: {},
-    activeCollectionByPeerId: {},
-  },
-
-  resaleGifts: {
-    gifts: [],
-    count: 0,
-    updateIteration: 0,
-    filter: {
-      ...DEFAULT_RESALE_GIFTS_FILTER_OPTIONS,
-    },
   },
 
   storyViewer: {

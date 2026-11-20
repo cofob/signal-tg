@@ -45,7 +45,6 @@ const PRIVACY_VISIBILITY_SCREENS: [SettingsScreens, RegularLangKey][] = [
   [SettingsScreens.PrivacyProfilePhoto, 'PrivacyProfilePhotoTitle'],
   [SettingsScreens.PrivacyBio, 'PrivacyBioTitle'],
   [SettingsScreens.PrivacyBirthday, 'PrivacyBirthdayTitle'],
-  [SettingsScreens.PrivacyGifts, 'PrivacyGiftsTitle'],
   [SettingsScreens.PrivacySavedMusic, 'PrivacyMusicTitle'],
   [SettingsScreens.PrivacyForwarding, 'PrivacyForwardsTitle'],
   [SettingsScreens.PrivacyPhoneCall, 'WhoCanCallMe'],
@@ -244,11 +243,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'PrivacyBirthday',
   },
   {
-    screen: SettingsScreens.PrivacyGifts,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'PrivacyGifts',
-  },
-  {
     screen: SettingsScreens.PrivacySavedMusic,
     parent: SettingsScreens.Privacy,
     titleKey: 'PrivacyMusic',
@@ -283,9 +277,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
 export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Main, ['TelegramPremium'], {
     requires: 'canBuyPremium', icon: 'star', iconBg: 'premium',
-  }),
-  ...buildEntries(SettingsScreens.Main, ['MenuSendGift'], {
-    requires: 'isGiveawayAvailable', icon: 'gift-filled', iconBg: 'orange',
   }),
   ...buildEntries(SettingsScreens.Main, ['AskAQuestion'], { icon: 'support-filled', iconBg: 'red' }),
   ...buildEntries(SettingsScreens.Main, ['MenuTelegramFaq'], { icon: 'help-filled', iconBg: 'blue' }),
@@ -387,10 +378,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     ...buildEntries(screen, ['P2PEverybody', 'P2PContacts', 'P2PNobody']),
   ]),
   ...buildEntries(SettingsScreens.PrivacyLastSeen, ['HideReadTime'], { requires: 'canHideReadTime' }),
-  ...buildEntries(SettingsScreens.PrivacyGifts, [
-    'PrivacyDisplayGiftsButton', 'PrivacyAcceptedGiftTitle', 'PrivacyGiftLimitedEdition', 'PrivacyGiftUnlimited',
-    'PrivacyGiftUnique', 'PrivacyGiftPremiumSubscription',
-  ]),
   ...buildEntries(SettingsScreens.PrivacyPhoneCall, ['PrivacyP2P']),
   ...buildEntries(SettingsScreens.PrivacyMessages, ['PrivacyMessagesTitle'], { isSectionHeader: true }),
   ...buildEntries(SettingsScreens.PrivacyMessages, [

@@ -1,87 +1,24 @@
 import { Api as GramJs } from '../../../lib/gramjs';
-import { RPCError } from '../../../lib/gramjs/errors';
 
 import type {
   ApiChat,
   ApiInputStorePaymentPurpose,
   ApiPeer,
-  ApiRequestInputInvoice,
-  ApiThemeParameters,
 } from '../../types';
 
-import { DEBUG } from '../../../config';
 import {
   buildApiBoostsStatus,
-  buildApiCheckedGiftCode,
   buildApiGiveawayInfo,
   buildApiMyBoost,
-  buildApiPaymentForm,
   buildApiPremiumGiftCodeOption,
   buildApiPremiumPromo,
 } from '../apiBuilders/payments';
 import {
-  buildInputInvoice,
   buildInputPeer,
   buildInputStorePaymentPurpose,
-  buildInputThemeParams,
 } from '../gramjsBuilders';
 import localDb from '../localDb';
-import { handleGramJsUpdate, invokeRequest } from './client';
-
-export async function sendStarPaymentForm({
-  formId,
-  inputInvoice,
-}: {
-  formId: string;
-  inputInvoice: ApiRequestInputInvoice;
-}) {
-  const result = await invokeRequest(new GramJs.payments.SendStarsForm({
-    formId: BigInt(formId),
-    invoice: buildInputInvoice(inputInvoice),
-  }));
-
-  if (!result) return undefined;
-
-  if (result instanceof GramJs.payments.PaymentVerificationNeeded) {
-    if (DEBUG) {
-      // eslint-disable-next-line no-console
-      console.warn('Unexpected PaymentVerificationNeeded in sendStarsForm');
-    }
-
-    return undefined;
-  }
-
-  handleGramJsUpdate(result.updates);
-
-  return {
-    completed: true,
-  };
-}
-
-export async function getPaymentForm(inputInvoice: ApiRequestInputInvoice, theme?: ApiThemeParameters) {
-  try {
-    const result = await invokeRequest(new GramJs.payments.GetPaymentForm({
-      invoice: buildInputInvoice(inputInvoice),
-      themeParams: theme ? buildInputThemeParams(theme) : undefined,
-    }), {
-      shouldThrow: true,
-    });
-
-    if (!result) {
-      return undefined;
-    }
-
-    return buildApiPaymentForm(result);
-  } catch (err: any) {
-    if (err instanceof RPCError) {
-      return {
-        error: err.errorMessage,
-      };
-    } else {
-      throw err;
-    }
-  }
-}
+import { invokeRequest } from './client';
 
 export async function fetchPremiumPromo() {
   const result = await invokeRequest(new GramJs.help.GetPremiumPromo());
@@ -164,36 +101,6 @@ export async function fetchGiveawayInfo({
   }
 
   return buildApiGiveawayInfo(result);
-}
-
-export async function checkGiftCode({
-  slug,
-}: {
-  slug: string;
-}) {
-  const result = await invokeRequest(new GramJs.payments.CheckGiftCode({
-    slug,
-  }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  return {
-    code: buildApiCheckedGiftCode(result),
-  };
-}
-
-export function applyGiftCode({
-  slug,
-}: {
-  slug: string;
-}) {
-  return invokeRequest(new GramJs.payments.ApplyGiftCode({
-    slug,
-  }), {
-    shouldReturnTrue: true,
-  });
 }
 
 export async function getPremiumGiftCodeOptions({

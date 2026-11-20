@@ -36,7 +36,6 @@ import './ui/calls';
 import './ui/mediaViewer';
 import './ui/audioPlayer';
 import './ui/musicPicker';
-import './ui/stars';
 import './ui/reactions';
 import './ui/stories';
 import './apiUpdaters/initial';

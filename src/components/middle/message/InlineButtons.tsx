@@ -65,14 +65,6 @@ const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnPr
           return <Icon className={styles.leftIcon} name="close" />;
         }
         break;
-      case 'giftOffer':
-        if (button.action.buttonType === 'accept') {
-          return <Icon className={styles.leftIcon} name="check" />;
-        }
-        if (button.action.buttonType === 'reject') {
-          return <Icon className={styles.leftIcon} name="close" />;
-        }
-        break;
     }
 
     return;

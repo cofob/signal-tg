@@ -96,8 +96,8 @@ export function selectChatThemeSettings<T extends GlobalState>(
   const theme = selectTheme(global);
   if (chatId && chatId !== global.currentUserId && chatId !== selectTabState(global, tabId).globalThemePreviewChatId) {
     const peerTheme = selectPeerFullInfo(global, chatId)?.peerTheme;
-    const settings = peerTheme?.type === 'gift' ? peerTheme.settings
-      : peerTheme && global.settings.chatThemes?.find((entry) => entry.emoticon === peerTheme.emoticon)?.settings;
+    const settings = peerTheme
+      && global.settings.chatThemes?.find((entry) => entry.emoticon === peerTheme.emoticon)?.settings;
     const peerSettings = settings && getChatThemeEntry(settings, theme === 'dark');
     if (peerSettings) return peerSettings;
   }
@@ -133,8 +133,8 @@ export function selectChatWallpaper<T extends GlobalState>(
     const peerWallpaper = selectPeerWallpaper(global, chatId, tabId);
     if (peerWallpaper) return peerWallpaper;
     const peerTheme = fullInfo?.peerTheme;
-    const settings = peerTheme?.type === 'gift' ? peerTheme.settings
-      : peerTheme && global.settings.chatThemes?.find((entry) => entry.emoticon === peerTheme.emoticon)?.settings;
+    const settings = peerTheme
+      && global.settings.chatThemes?.find((entry) => entry.emoticon === peerTheme.emoticon)?.settings;
     const wallpaper = settings && getChatThemeEntry(settings, selectTheme(global) === 'dark')?.wallpaper;
     if (wallpaper) return wallpaper;
   }
@@ -289,42 +289,8 @@ export function selectPeerProfileColor<T extends GlobalState>(global: T, peer: A
   const isCustomPeer = 'isCustomPeer' in peer;
   const peerColorId = isCustomPeer ? peer.peerColorId : undefined;
   const profileColor = !isCustomPeer ? peer.profileColor : undefined;
-  if (profileColor?.type === 'collectible') return undefined;
 
   const key = profileColor?.color ?? peerColorId;
   if (key === undefined) return undefined;
   return global.peerColors?.profile?.[key];
-}
-
-export function selectTabSelectedAuctionGiftId<T extends GlobalState>(
-  global: T, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const tabState = selectTabState(global, tabId);
-
-  const selectedGift = tabState.giftModal?.selectedGift;
-
-  const giftModalAuctionGiftId = selectedGift && 'id' in selectedGift &&
-    selectedGift.type === 'starGift' && selectedGift.isAuction ? selectedGift.id : undefined;
-
-  return tabState.giftAuctionModal?.auctionGiftId
-    || tabState.giftAuctionBidModal?.auctionGiftId
-    || tabState.giftAuctionInfoModal?.auctionGiftId
-    || giftModalAuctionGiftId;
-}
-
-export function selectTabSelectedGiftAuction<T extends GlobalState>(
-  global: T, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const giftId = selectTabSelectedAuctionGiftId(global, tabId);
-  return giftId ? global.giftAuctionByGiftId?.[giftId] : undefined;
-}
-
-export function selectHasAnySelectedAuction<T extends GlobalState>(global: T, giftId: string) {
-  return Object.keys(global.byTabId).some((tabId) => {
-    return selectTabSelectedAuctionGiftId(global, Number(tabId)) === giftId;
-  });
-}
-
-export function selectShouldRemoveGiftAuction<T extends GlobalState>(global: T, giftId: string) {
-  return !selectHasAnySelectedAuction(global, giftId);
 }

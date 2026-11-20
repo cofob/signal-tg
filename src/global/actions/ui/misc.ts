@@ -834,13 +834,6 @@ addActionHandler('closeInviteViaLinkModal', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('closeCollectibleInfoModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload ?? {};
-  return updateTabState(global, {
-    collectibleInfoModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('openQrCodeModal', (global, actions, payload): ActionReturnType => {
   const { peerId, tabId = getCurrentTabId() } = payload;
   return updateTabState(global, {

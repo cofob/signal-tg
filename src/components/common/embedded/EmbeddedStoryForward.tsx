@@ -63,7 +63,6 @@ const EmbeddedStoryForward = ({
     peer: sender,
     noUserColors: true,
     shouldReset: true,
-    theme,
   });
 
   const senderTitle = sender ? getPeerTitle(lang, sender) : forwardInfo.fromName;

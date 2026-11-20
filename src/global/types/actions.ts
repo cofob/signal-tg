@@ -12,9 +12,7 @@ import type {
   ApiChatlistInvite,
   ApiChatReactions,
   ApiChatType,
-  ApiDisallowedGiftsSettings,
   ApiDraft,
-  ApiEmojiStatusCollectible,
   ApiEmojiStatusType,
   ApiExportedInvite,
   ApiFormattedText,
@@ -22,10 +20,8 @@ import type {
   ApiGlobalMessageSearchType,
   ApiInputAiComposeTone,
   ApiInputEphemeralReplyInfo,
-  ApiInputInvoice,
   ApiInputMessageReplyInfo,
   ApiInputRichMessage,
-  ApiInputSavedStarGift,
   ApiInputSuggestedPostInfo,
   ApiKeyboardButton,
   ApiLanguage,
@@ -39,7 +35,6 @@ import type {
   ApiNotifyPeerType,
   ApiPeer,
   ApiPhoto,
-  ApiPremiumGiftCodeOption,
   ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiPrivacyKey,
@@ -50,23 +45,15 @@ import type {
   ApiReportReason,
   ApiRequestPeerType,
   ApiRichText,
-  ApiSavedStarGift,
   ApiSendMessageAction,
   ApiSessionData,
   ApiShareThemeEmojiBackdrop,
-  ApiShareThemeGift,
-  ApiStarGift,
-  ApiStarGiftAttributeOriginalDetails,
-  ApiStarGiftRegular,
-  ApiStarGiftUnique,
-  ApiStarGiftUpgradePrice,
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
   ApiThemeParameters,
   ApiTodoItem,
   ApiTopPeerCategory,
-  ApiTypeCurrencyAmount,
   ApiTypePrepaidGiveaway,
   ApiUpdate,
   ApiUser,
@@ -88,7 +75,6 @@ import type {
   ConfettiParams,
   EditingDraft,
   ForwardTarget,
-  GiftProfileFilterOptions,
   GlobalSearchContent,
   IAnchorPosition,
   IThemeSettings,
@@ -109,7 +95,6 @@ import type {
   Point,
   ProfileTabType,
   RepeatMode,
-  ResaleGiftsFilterOptions,
   RoundVideoMode,
   ScrollTargetPosition,
   SendMessageParams,
@@ -118,7 +103,6 @@ import type {
   SettingsScreens,
   SharedMediaType,
   Size,
-  StarGiftInfo,
   StoryViewerOrigin,
   ThemeKey,
   ThreadId,
@@ -899,13 +883,6 @@ export interface ActionPayloads {
   } & WithTabId;
   resetChatCreation: WithTabId | undefined;
 
-  sendStarPaymentForm: {
-    directInfo: {
-      formId: string;
-      inputInvoice: ApiInputInvoice;
-    };
-  } & WithTabId;
-
   // ui
   dismissDialog: WithTabId | undefined;
   setNewChatMembersDialogState: {
@@ -1217,7 +1194,7 @@ export interface ActionPayloads {
   };
   setPeerShareTheme: {
     peerId: string;
-    theme?: ApiShareThemeEmojiBackdrop | ApiShareThemeGift & { inputGift: ApiInputSavedStarGift };
+    theme?: ApiShareThemeEmojiBackdrop;
   };
 
   updateChat: {
@@ -1347,18 +1324,6 @@ export interface ActionPayloads {
     chatId: string;
     isEnabled: boolean;
   };
-
-  checkGiftCode: {
-    slug: string;
-    message?: {
-      chatId: string;
-      messageId: number;
-    };
-  } & WithTabId;
-  applyGiftCode: {
-    slug: string;
-  } & WithTabId;
-  closeGiftCodeModal: WithTabId | undefined;
 
   launchPrepaidGiveaway: {
     chatId: string;
@@ -1737,12 +1702,6 @@ export interface ActionPayloads {
     username: string;
     storyId: number;
     origin?: StoryViewerOrigin;
-  } & WithTabId;
-  openUniqueGiftBySlug: {
-    slug: string;
-  } & WithTabId;
-  openGiftAuctionBySlug: {
-    slug: string;
   } & WithTabId;
   openPreviousStory: WithTabId | undefined;
   openNextStory: WithTabId | undefined;
@@ -2617,18 +2576,10 @@ export interface ActionPayloads {
   openOneTimeMediaModal: TabState['oneTimeMediaModal'] & WithTabId;
   closeOneTimeMediaModal: WithTabId | undefined;
 
-  requestCollectibleInfo: {
-    peerId: string;
-    type: 'phone' | 'username';
-    collectible: string;
-  } & WithTabId;
-  closeCollectibleInfoModal: WithTabId | undefined;
-
   openQrCodeModal: {
     peerId: string;
   } & WithTabId;
   closeQrCodeModal: WithTabId | undefined;
-  loadQrCodeUniqueGifts: WithTabId | undefined;
 
   // Calls
   joinGroupCall: {
@@ -2769,8 +2720,6 @@ export interface ActionPayloads {
     shouldHideReadMarks?: boolean;
     shouldNewNonContactPeersRequirePremium?: boolean;
     nonContactPeersPaidStars?: number | null;
-    shouldDisplayGiftsButton?: boolean;
-    disallowedGifts?: ApiDisallowedGiftsSettings;
   };
 
   // Premium
@@ -2781,7 +2730,6 @@ export interface ActionPayloads {
     isSuccess?: boolean;
     isGift?: boolean;
     daysAmount?: number;
-    gift?: ApiStarGift;
   } & WithTabId) | undefined;
   closePremiumModal: WithTabId | undefined;
 
@@ -2861,9 +2809,6 @@ export interface ActionPayloads {
     prepaidGiveaway?: ApiTypePrepaidGiveaway | undefined;
   } & WithTabId);
   closeGiveawayModal: WithTabId | undefined;
-
-  openGiftRecipientPicker: WithTabId | undefined;
-  closeGiftRecipientPicker: WithTabId | undefined;
 
   openLeaveGroupModal: {
     chatId: string;
@@ -2969,282 +2914,9 @@ export interface ActionPayloads {
   };
 
   loadPremiumGifts: undefined;
-  loadTonGifts: undefined;
   loadStarStatus: undefined;
-  loadStarGifts: undefined;
-  loadMyUniqueGifts: {
-    shouldRefresh?: true;
-  } | undefined;
-  updateResaleGiftsFilter: {
-    filter: ResaleGiftsFilterOptions;
-  } & WithTabId;
-  updateCraftGiftsFilter: {
-    filter: ResaleGiftsFilterOptions;
-  } & WithTabId;
-  loadResaleGifts: {
-    giftId: string;
-    shouldRefresh?: boolean;
-  } & WithTabId;
-  resetResaleGifts: WithTabId | undefined;
   loadDefaultTopicIcons: undefined;
   loadPremiumStickers: undefined;
-
-  openGiftModal: {
-    forUserId: string;
-    selectedGift?: ApiStarGift;
-    selectedResaleGift?: ApiStarGift;
-  } & WithTabId;
-  closeGiftModal: WithTabId | undefined;
-  setGiftModalSelectedGift: {
-    gift: ApiPremiumGiftCodeOption | ApiStarGift | undefined;
-  } & WithTabId;
-  sendStarGift: StarGiftInfo & WithTabId;
-  buyStarGift: {
-    peerId: string;
-    slug: string;
-    price: ApiTypeCurrencyAmount;
-    shouldShowName?: true;
-    message?: ApiFormattedText;
-  } & WithTabId;
-  sendPremiumGiftByStars: {
-    userId: string;
-    months: number;
-    amount: number;
-    message?: ApiFormattedText;
-  } & WithTabId;
-
-  openGiftInfoModalFromMessage: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  openGiftInfoModal: ({
-    peerId: string;
-    recipientId?: string;
-    gift: ApiSavedStarGift;
-    craftSlotIndex?: number;
-    isFromMessage?: boolean;
-  } | {
-    gift: ApiStarGift;
-    craftSlotIndex?: number;
-  }) & WithTabId;
-  openLockedGiftModalInfo: {
-    untilDate?: number;
-    reason?: ApiFormattedText;
-  } & WithTabId;
-  checkCanSendGift: {
-    gift: ApiStarGift;
-    onSuccess: () => void;
-  } & WithTabId;
-  openGiftResalePriceComposerModal: ({
-    peerId: string;
-    gift: ApiSavedStarGift;
-  }) & WithTabId;
-  closeGiftInfoModal: WithTabId | undefined;
-  closeLockedGiftModal: WithTabId | undefined;
-  closeGiftResalePriceComposerModal: WithTabId | undefined;
-  openGiftInMarket: {
-    gift: ApiStarGift;
-  } & WithTabId;
-  closeResaleGiftsMarket: WithTabId | undefined;
-
-  openGiftUpgradeModal: {
-    giftId: string;
-    peerId?: string;
-    gift?: ApiSavedStarGift;
-  } & WithTabId;
-  closeGiftUpgradeModal: WithTabId | undefined;
-  shiftGiftUpgradeNextPrice: WithTabId | undefined;
-
-  openGiftCraftModal: {
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-  closeGiftCraftModal: WithTabId | undefined;
-  resetGiftCraftResult: WithTabId | undefined;
-  openGiftCraftSelectModal: {
-    slotIndex: number;
-  } & WithTabId;
-  closeGiftCraftSelectModal: WithTabId | undefined;
-  openGiftCraftInfoModal: {
-    gift: ApiStarGiftUnique;
-  } & WithTabId;
-  closeGiftCraftInfoModal: WithTabId | undefined;
-  selectGiftForCraft: {
-    gift?: ApiSavedStarGift;
-    slotIndex: number;
-  } & WithTabId;
-  selectPurchasedGiftForCraft: {
-    giftId: string;
-    slotIndex: number;
-  } & WithTabId;
-  loadMoreCraftableGifts: WithTabId | undefined;
-  loadMoreMarketCraftableGifts: WithTabId | undefined;
-  craftStarGift: WithTabId | undefined;
-
-  openStarGiftPriceDecreaseInfoModal: {
-    prices: ApiStarGiftUpgradePrice[];
-    currentPrice: number;
-    minPrice: number;
-    maxPrice: number;
-  } & WithTabId;
-  closeStarGiftPriceDecreaseInfoModal: WithTabId | undefined;
-  upgradeGift: {
-    gift: ApiInputSavedStarGift;
-    shouldKeepOriginalDetails?: boolean;
-    upgradeStars?: number;
-  } & WithTabId;
-  upgradePrepaidGift: {
-    peerId: string;
-    hash: string;
-    stars: number;
-  } & WithTabId;
-
-  openGiftWithdrawModal: {
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-  clearGiftWithdrawError: WithTabId | undefined;
-  closeGiftWithdrawModal: WithTabId | undefined;
-  openGiftStatusInfoModal: {
-    emojiStatus: ApiEmojiStatusCollectible;
-  } & WithTabId;
-  closeGiftStatusInfoModal: WithTabId | undefined;
-  openGiftInfoValueModal: {
-    gift: ApiStarGiftUnique;
-  } & WithTabId;
-  closeGiftInfoValueModal: WithTabId | undefined;
-  openGiftPreviewModal: {
-    originGift: ApiStarGift;
-    shouldShowCraftableOnStart?: boolean;
-  } & WithTabId;
-  closeGiftPreviewModal: WithTabId | undefined;
-  loadActiveGiftAuctions: undefined;
-  openActiveGiftAuctionsModal: WithTabId | undefined;
-  closeActiveGiftAuctionsModal: WithTabId | undefined;
-  openGiftAuctionModal: {
-    gift: ApiStarGiftRegular;
-  } & WithTabId;
-  closeGiftAuctionModal: {
-    shouldKeepAuction?: boolean;
-  } & WithTabId | undefined;
-  openGiftAuctionBidModal: {
-    auctionGiftId: string;
-    peerId?: string;
-    message?: string;
-    shouldHideName?: boolean;
-  } & WithTabId;
-  closeGiftAuctionBidModal: WithTabId | undefined;
-  openGiftAuctionInfoModal: {
-    auctionGiftId: string;
-  } & WithTabId;
-  closeGiftAuctionInfoModal: WithTabId | undefined;
-  openAboutStarGiftModal: WithTabId | undefined;
-  closeAboutStarGiftModal: WithTabId | undefined;
-  openGiftAuctionChangeRecipientModal: {
-    auctionGiftId: string;
-    oldPeerId: string;
-    newPeerId: string;
-    message?: string;
-    shouldHideName?: boolean;
-  } & WithTabId;
-  closeGiftAuctionChangeRecipientModal: WithTabId | undefined;
-  openGiftAuctionAcquiredModal: {
-    giftId: string;
-    giftTitle?: string;
-    giftSticker?: ApiSticker;
-  } & WithTabId;
-  closeGiftAuctionAcquiredModal: WithTabId | undefined;
-  sendStarGiftAuctionBid: {
-    giftId: string;
-    bidAmount: number;
-    peerId?: string;
-    message?: ApiFormattedText;
-    shouldHideName?: boolean;
-    isUpdateBid?: boolean;
-  } & WithTabId;
-  loadGiftAuction: {
-    giftId: string;
-  };
-  processStarGiftWithdrawal: {
-    gift: ApiInputSavedStarGift;
-    password: string;
-  } & WithTabId;
-
-  openGiftTransferModal: {
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-  transferGift: {
-    gift: ApiInputSavedStarGift;
-    transferStars?: number;
-    recipientId: string;
-  } & WithTabId;
-  removeGiftDescription: {
-    gift: ApiInputSavedStarGift;
-    price: number;
-  } & WithTabId;
-  closeGiftTransferModal: WithTabId | undefined;
-  openGiftTransferConfirmModal: {
-    gift: ApiSavedStarGift;
-    recipientId: string;
-  } & WithTabId;
-  closeGiftTransferConfirmModal: WithTabId | undefined;
-  openGiftDescriptionRemoveModal: {
-    gift: ApiSavedStarGift;
-    price: number;
-    details: ApiStarGiftAttributeOriginalDetails;
-  } & WithTabId;
-  closeGiftDescriptionRemoveModal: WithTabId | undefined;
-  openGiftOfferAcceptModal: {
-    peerId: string;
-    messageId: number;
-    gift: ApiStarGiftUnique;
-    price: ApiTypeCurrencyAmount;
-  } & WithTabId;
-  closeGiftOfferAcceptModal: WithTabId | undefined;
-  updateSelectedGiftCollection: {
-    peerId: string;
-    collectionId: number;
-  } & WithTabId;
-  resetSelectedGiftCollection: {
-    peerId: string;
-  } & WithTabId;
-
-  loadPeerSavedGifts: {
-    peerId: string;
-    shouldRefresh?: boolean;
-  } & WithTabId;
-  reloadPeerSavedGifts: {
-    peerId: string;
-  };
-  changeGiftVisibility: {
-    gift: ApiInputSavedStarGift;
-    shouldUnsave?: boolean;
-  } & WithTabId;
-  convertGiftToStars: {
-    gift: ApiInputSavedStarGift;
-  } & WithTabId;
-  deleteSavedGift: {
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-  toggleSavedGiftPinned: {
-    peerId: string;
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-
-  updateStarGiftPrice: {
-    gift: ApiInputSavedStarGift;
-    price: ApiTypeCurrencyAmount;
-  } & WithTabId;
-
-  loadStarGiftCollections: {
-    peerId: string;
-    hash?: string;
-  } & WithTabId;
-
-  acceptStarGiftOffer: {
-    messageId: number;
-  } & WithTabId;
-  declineStarGiftOffer: {
-    messageId: number;
-  } & WithTabId;
 
   setEmojiStatus: {
     emojiStatus: ApiEmojiStatusType;
@@ -3258,26 +2930,9 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSuggestedStatusModal: WithTabId | undefined;
 
-  updateGiftProfileFilter: {
-    peerId: string;
-    filter: Partial<GiftProfileFilterOptions>;
-  } & WithTabId;
-  resetGiftProfileFilter: {
-    peerId: string;
-  } & WithTabId;
-
   // Payment
   openPaymentMessageConfirmDialogOpen: { dialogKey: string } & WithTabId;
   closePaymentMessageConfirmDialogOpen: WithTabId | undefined;
-  openPriceConfirmModal: {
-    originalAmount: ApiTypeCurrencyAmount;
-    newAmount: ApiTypeCurrencyAmount;
-    directInfo: {
-      formId: string;
-      inputInvoice: ApiInputInvoice;
-    };
-  } & WithTabId;
-  closePriceConfirmModal: WithTabId | undefined;
 
   // Forums
   toggleForum: {

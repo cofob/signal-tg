@@ -17,10 +17,9 @@ import { buildApiBusinessIntro, buildApiBusinessLocation, buildApiBusinessWorkHo
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
 } from './common';
-import { buildApiDisallowedGiftsSettings, buildApiShareTheme } from './gifts';
 import { omitVirtualClassFields } from './helpers';
 import { buildApiAudioFromDocument } from './media';
-import { buildApiPeerTheme, buildApiWallpaper } from './misc';
+import { buildApiPeerTheme, buildApiShareTheme, buildApiWallpaper } from './misc';
 import {
   buildApiBotVerification,
   buildApiEmojiStatus,
@@ -37,8 +36,8 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, translationsDisabled, storiesPinnedAvailable,
       contactRequirePremium, businessWorkHours, businessLocation, businessIntro,
-      birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, stargiftsCount, botVerification,
-      botCanManageEmojiStatus, settings, sendPaidMessagesStars, displayGiftsButton, disallowedGifts,
+      birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, botVerification,
+      botCanManageEmojiStatus, settings, sendPaidMessagesStars,
       starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
       ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
@@ -64,8 +63,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,
     botInfo: botInfo && buildApiBotInfo(botInfo, userId),
     isContactRequirePremium: contactRequirePremium,
-    shouldDisplayGiftsButton: displayGiftsButton,
-    disallowedGifts: disallowedGifts && buildApiDisallowedGiftsSettings(disallowedGifts),
     birthday: birthday && buildApiBirthday(birthday),
     businessLocation: businessLocation && buildApiBusinessLocation(businessLocation),
     businessWorkHours: businessWorkHours && buildApiBusinessWorkHours(businessWorkHours),
@@ -76,7 +73,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     privateForwardName,
     botVerification: botVerification && buildApiBotVerification(botVerification),
     areAdsEnabled: sponsoredEnabled,
-    starGiftCount: stargiftsCount,
     starsRating: starsRating && buildApiStarsRating(starsRating),
     starsMyPendingRating: starsMyPendingRating && buildApiStarsRating(starsMyPendingRating),
     starsMyPendingRatingDate,

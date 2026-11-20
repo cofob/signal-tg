@@ -19,7 +19,6 @@ const WALLPAPER_FILE_TYPES = 'image/jpeg';
 
 const SETTINGS_ACTIONS: [SettingsScreens, RegularLangKey, SettingsAction][] = [
   [SettingsScreens.Main, 'TelegramPremium', 'openPremium'],
-  [SettingsScreens.Main, 'MenuSendGift', 'sendGift'],
   [SettingsScreens.Main, 'AskAQuestion', 'askQuestion'],
   [SettingsScreens.Main, 'MenuTelegramFaq', 'openFaq'],
   [SettingsScreens.Main, 'MenuPrivacyPolicy', 'openPrivacyPolicy'],
@@ -46,9 +45,6 @@ export function runSettingsAction(action: SettingsAction, tabId = getCurrentTabI
   switch (action) {
     case 'openPremium':
       actions.openPremiumModal({ tabId });
-      break;
-    case 'sendGift':
-      actions.openGiftRecipientPicker({ tabId });
       break;
     case 'openFaq':
       actions.openUrl({ url: FAQ_URL, tabId });

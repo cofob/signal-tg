@@ -96,7 +96,7 @@ const ProfilePhoto = ({
   );
   const hasMedia = photo || previewBlobUrl || isBlurredThumb;
 
-  const { className: peerColorClass, style: peerColorStyle } = usePeerColor({ peer, theme });
+  const { className: peerColorClass, style: peerColorStyle } = usePeerColor({ peer });
 
   useEffect(() => {
     if (videoRef.current && !canPlayVideo) {

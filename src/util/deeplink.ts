@@ -88,28 +88,16 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       case 'premiumReferrerLink':
         actions.openPremiumModal();
         return true;
-      case 'premiumMultigiftLink':
-        actions.openGiftRecipientPicker();
-        return true;
       case 'chatBoostLink':
         actions.processBoostParameters({
           usernameOrId: (parsedLink.username || parsedLink.id)!,
           isPrivate: Boolean(parsedLink.id),
         });
         return true;
-      case 'giftUniqueLink':
-        actions.openUniqueGiftBySlug({ slug: parsedLink.slug });
-        return true;
-      case 'giftAuctionLink':
-        actions.openGiftAuctionBySlug({ slug: parsedLink.slug });
-        return true;
       case 'settings': {
         switch (parsedLink.path?.split('/')[0]) {
           case 'premium':
             actions.openPremiumModal();
-            return true;
-          case 'send-gift':
-            actions.openGiftRecipientPicker();
             return true;
         }
 
@@ -159,7 +147,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     openChatWithDraft,
     checkChatlistInvite,
     openStoryViewerByUsername,
-    checkGiftCode,
   } = actions;
 
   switch (method) {
@@ -251,11 +238,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       break;
     }
 
-    case 'giftcode': {
-      const { slug } = params;
-      checkGiftCode({ slug });
-      break;
-    }
     default:
       // Unsupported deeplink
       return false;

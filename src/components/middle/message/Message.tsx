@@ -957,7 +957,6 @@ const Message = ({
     peer: messageColorPeer,
     noUserColors,
     shouldReset: true,
-    theme,
   });
 
   const hasWideMedia = Boolean(

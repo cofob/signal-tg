@@ -61,8 +61,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
   actions.hideEffectInComposer({ tabId });
 
   actions.closeStoryViewer({ tabId });
-  actions.closeGiftInfoModal({ tabId });
-  actions.closeGiftAuctionModal({ tabId });
 
   if (!currentMessageList || (
     currentMessageList.chatId !== chatId

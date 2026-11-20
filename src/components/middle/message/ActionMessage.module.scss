@@ -232,48 +232,6 @@ $service-hover-background: color-mix(in srgb, var(--message-service-background),
   text-wrap: balance;
 }
 
-.starGift {
-  cursor: var(--custom-cursor, pointer);
-  width: 13.75rem;
-}
-
-.uniqueGift {
-  margin-block: 0.25rem;
-
-  &::before {
-    content: "";
-
-    position: absolute;
-    z-index: -1;
-    inset: -0.25rem;
-
-    border-radius: calc(var(--border-radius-messages) + 0.25rem);
-
-    background-color: var(--message-service-background);
-  }
-
-  // The card keeps its backdrop in print, so its text must stay light
-  @media print {
-    --message-service-text: #fff;
-  }
-}
-
-.uniqueBackgroundWrapper {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-}
-
-.uniqueBackground {
-  position: absolute;
-  inset: 0;
-}
-
-.uniqueValue {
-  color: white;
-}
-
 .suggestedPostContainer {
   padding: 0.5rem 0.75rem !important;
 }
@@ -376,8 +334,4 @@ $service-hover-background: color-mix(in srgb, var(--message-service-background),
 .botForumTopicArrow {
   font-size: 1.5rem;
   opacity: 0.5;
-}
-
-.narrowWrapper {
-  max-width: 18rem;
 }

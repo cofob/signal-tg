@@ -575,7 +575,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
     callApi('fetchPrivacySettings', 'voiceMessages'),
     callApi('fetchPrivacySettings', 'bio'),
     callApi('fetchPrivacySettings', 'birthday'),
-    callApi('fetchPrivacySettings', 'gifts'),
     callApi('fetchPrivacySettings', 'noPaidMessages'),
     callApi('fetchPrivacySettings', 'savedMusic'),
   ]);
@@ -596,7 +595,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
     voiceMessagesSettings,
     bioSettings,
     birthdaySettings,
-    giftsSettings,
     noPaidMessagesSettings,
     savedMusicSettings,
   ] = result as {
@@ -621,7 +619,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
         voiceMessages: voiceMessagesSettings.rules,
         bio: bioSettings.rules,
         birthday: birthdaySettings.rules,
-        gifts: giftsSettings.rules,
         noPaidMessages: noPaidMessagesSettings.rules,
         savedMusic: savedMusicSettings.rules,
       },
@@ -966,10 +963,6 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
     // eslint-disable-next-line no-null/no-null
   const nonContactPeersPaidStars = payload.nonContactPeersPaidStars === null ? undefined
     : payload.nonContactPeersPaidStars || global.settings.byKey.nonContactPeersPaidStars;
-  const shouldDisplayGiftsButton = payload.shouldDisplayGiftsButton
-    ?? Boolean(global.settings.byKey.shouldDisplayGiftsButton);
-  const disallowedGifts = payload.disallowedGifts
-    ?? global.settings.byKey.disallowedGifts;
 
   // eslint-disable-next-line no-null/no-null
   const shouldUpdateUsersSettings = (payload.nonContactPeersPaidStars === null)
@@ -981,8 +974,6 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
     shouldHideReadMarks,
     shouldNewNonContactPeersRequirePremium,
     nonContactPeersPaidStars,
-    shouldDisplayGiftsButton,
-    disallowedGifts,
   });
   setGlobal(global);
 
@@ -991,8 +982,6 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
     shouldHideReadMarks,
     shouldNewNonContactPeersRequirePremium,
     nonContactPeersPaidStars,
-    shouldDisplayGiftsButton,
-    disallowedGifts,
   });
 
   global = getGlobal();
@@ -1007,8 +996,6 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
     nonContactPeersPaidStars: !result
       ? undefined
       : result.nonContactPeersPaidStars,
-    shouldDisplayGiftsButton: !result ? !shouldDisplayGiftsButton : result.shouldDisplayGiftsButton,
-    disallowedGifts: !result ? disallowedGifts : result.disallowedGifts,
   });
 
   if (shouldUpdateUsersSettings) {

@@ -1,8 +1,5 @@
 import type {
-  ApiInputSavedStarGift,
   ApiMissingInvitedUser,
-  ApiSavedStarGift,
-  ApiStarGiftCollection,
   ApiUser,
   ApiUserCommonChats,
   ApiUserFullInfo,
@@ -14,11 +11,8 @@ import type { GlobalState, TabArgs } from '../types';
 
 import { areDeepEqual } from '../../util/areDeepEqual';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
-import { mapValues, omit, omitUndefined, unique } from '../../util/iteratees';
+import { omit, omitUndefined, unique } from '../../util/iteratees';
 import { MEMO_EMPTY_ARRAY } from '../../util/memo';
-import { areInputSavedGiftsEqual } from '../helpers/payments';
-import { getSavedGiftKey } from '../helpers/stars';
-import { selectActiveGiftsCollectionId, selectTabState } from '../selectors';
 import { updateTabState } from './tabs';
 
 export function replaceUsers<T extends GlobalState>(global: T, newById: Record<string, ApiUser>): T {
@@ -329,89 +323,6 @@ export function updateBotAppPermissions<T extends GlobalState>(
           ...botAppPermissionsById[botId],
           ...permissions,
         },
-      },
-    },
-  };
-}
-
-export function replacePeerSavedGifts<T extends GlobalState>(
-  global: T,
-  peerId: string,
-  gifts: ApiSavedStarGift[],
-  nextOffset?: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-): T {
-  const tabState = selectTabState(global, tabId);
-
-  // Some non-unique gifts can be entirely identical and break `key`
-  const keyCounts = new Map<string, number>();
-  gifts.forEach((gift) => {
-    const id = getSavedGiftKey(gift, true);
-    const count = keyCounts.get(id) || 0;
-    if (count > 0) {
-      gift.localTag = count;
-    }
-    keyCounts.set(id, count + 1);
-  });
-
-  const activeCollectionId = selectActiveGiftsCollectionId(global, peerId, tabId);
-
-  return updateTabState(global, {
-    savedGifts: {
-      ...tabState.savedGifts,
-      collectionsByPeerId: {
-        ...tabState.savedGifts.collectionsByPeerId,
-        [peerId]: {
-          ...tabState.savedGifts.collectionsByPeerId[peerId],
-          [activeCollectionId]: {
-            gifts,
-            nextOffset,
-          },
-        },
-      },
-    },
-  }, tabId);
-}
-
-export function removePeerSavedGift<T extends GlobalState>(
-  global: T,
-  peerId: string,
-  inputGift: ApiInputSavedStarGift,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-): T {
-  const tabState = selectTabState(global, tabId);
-  const collections = tabState.savedGifts.collectionsByPeerId[peerId];
-  if (!collections) return global;
-
-  // `mapValues` widens numeric collection ids to string keys
-  const updatedCollections = mapValues(collections, ({ gifts, nextOffset }) => ({
-    gifts: gifts.filter((gift) => !gift.inputGift || !areInputSavedGiftsEqual(gift.inputGift, inputGift)),
-    nextOffset,
-  })) as typeof collections;
-
-  return updateTabState(global, {
-    savedGifts: {
-      ...tabState.savedGifts,
-      collectionsByPeerId: {
-        ...tabState.savedGifts.collectionsByPeerId,
-        [peerId]: updatedCollections,
-      },
-    },
-  }, tabId);
-}
-
-export function updatePeerStarGiftCollections<T extends GlobalState>(
-  global: T,
-  peerId: string,
-  collections: ApiStarGiftCollection[],
-): T {
-  return {
-    ...global,
-    starGiftCollections: {
-      ...global.starGiftCollections,
-      byPeerId: {
-        ...global.starGiftCollections?.byPeerId,
-        [peerId]: collections,
       },
     },
   };

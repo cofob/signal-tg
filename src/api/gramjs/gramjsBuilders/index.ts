@@ -9,7 +9,6 @@ import type {
   ApiChatBannedRights,
   ApiChatFolder,
   ApiChatReactions,
-  ApiDisallowedGiftsSettings,
   ApiDocument,
   ApiEmojiStatusType,
   ApiFormattedText,
@@ -25,13 +24,10 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiPhoneCall,
-  ApiPremiumGiftCodeOption,
   ApiPrivacyKey,
   ApiProfileTab,
   ApiReactionWithPaid,
   ApiReportReason,
-  ApiRequestInputInvoice,
-  ApiRequestInputSavedStarGift,
   ApiRequestInputShareTheme,
   ApiSendMessageAction,
   ApiSticker,
@@ -633,9 +629,6 @@ export function buildInputPrivacyKey(privacyKey: ApiPrivacyKey) {
     case 'birthday':
       return new GramJs.InputPrivacyKeyBirthday();
 
-    case 'gifts':
-      return new GramJs.InputPrivacyKeyStarGiftsAutoSave();
-
     case 'noPaidMessages':
       return new GramJs.InputPrivacyKeyNoPaidMessages();
 
@@ -728,18 +721,6 @@ export function buildInputPhoneCall({ id, accessHash }: ApiPhoneCall) {
 export function buildInputStorePaymentPurpose(
   purpose: ApiInputStorePaymentPurpose,
 ): GramJs.TypeInputStorePaymentPurpose {
-  if (purpose.type === 'giftcode') {
-    return new GramJs.InputStorePaymentPremiumGiftCode({
-      users: purpose.users.map((user) => buildInputUser(user.id, user.accessHash)),
-      boostPeer: purpose.boostChannel
-        ? buildInputPeer(purpose.boostChannel.id, purpose.boostChannel.accessHash)
-        : undefined,
-      currency: purpose.currency,
-      amount: BigInt(purpose.amount),
-      message: purpose.message && buildInputTextWithEntities(purpose.message),
-    });
-  }
-
   const randomId = generateRandomBigInt();
 
   if (purpose.type === 'starsgiveaway') {
@@ -771,124 +752,6 @@ export function buildInputStorePaymentPurpose(
     amount: BigInt(purpose.amount),
     randomId,
   });
-}
-
-function buildPremiumGiftCodeOption(optionData: ApiPremiumGiftCodeOption) {
-  return new GramJs.PremiumGiftCodeOption({
-    users: optionData.users,
-    months: optionData.months,
-    currency: optionData.currency,
-    amount: BigInt(optionData.amount),
-  });
-}
-
-export function buildDisallowedGiftsSettings(disallowedGifts: ApiDisallowedGiftsSettings) {
-  return new GramJs.DisallowedGiftsSettings({
-    disallowUnlimitedStargifts: disallowedGifts.shouldDisallowLimitedStarGifts,
-    disallowLimitedStargifts: disallowedGifts.shouldDisallowUnlimitedStarGifts,
-    disallowUniqueStargifts: disallowedGifts.shouldDisallowUniqueStarGifts,
-    disallowPremiumGifts: disallowedGifts.shouldDisallowPremiumGifts,
-  });
-}
-
-export function buildInputInvoice(invoice: ApiRequestInputInvoice) {
-  switch (invoice.type) {
-    case 'stargiftResale': {
-      const {
-        peer, slug,
-      } = invoice;
-      return new GramJs.InputInvoiceStarGiftResale({
-        toId: buildInputPeer(peer.id, peer.accessHash),
-        slug,
-        ton: invoice.currency === 'TON' || undefined,
-        showName: invoice.shouldShowName,
-        message: invoice.message && buildInputTextWithEntities(invoice.message),
-      });
-    }
-
-    case 'stargift': {
-      const {
-        peer, shouldHideName, giftId, message, shouldUpgrade,
-      } = invoice;
-      return new GramJs.InputInvoiceStarGift({
-        peer: buildInputPeer(peer.id, peer.accessHash),
-        hideName: shouldHideName || undefined,
-        giftId: BigInt(giftId),
-        message: message && buildInputTextWithEntities(message),
-        includeUpgrade: shouldUpgrade,
-      });
-    }
-
-    case 'premiumGiftStars': {
-      const {
-        user, message, months,
-      } = invoice;
-      return new GramJs.InputInvoicePremiumGiftStars({
-        months,
-        userId: buildInputUser(user.id, user.accessHash),
-        message: message && buildInputTextWithEntities(message),
-      });
-    }
-
-    case 'starsgiveaway': {
-      const purpose = buildInputStorePaymentPurpose(invoice.purpose);
-      return new GramJs.InputInvoiceStars({
-        purpose,
-      });
-    }
-
-    case 'stargiftUpgrade': {
-      return new GramJs.InputInvoiceStarGiftUpgrade({
-        stargift: buildInputSavedStarGift(invoice.inputSavedGift),
-        keepOriginalDetails: invoice.shouldKeepOriginalDetails,
-      });
-    }
-
-    case 'stargiftTransfer': {
-      return new GramJs.InputInvoiceStarGiftTransfer({
-        stargift: buildInputSavedStarGift(invoice.inputSavedGift),
-        toId: buildInputPeer(invoice.recipient.id, invoice.recipient.accessHash),
-      });
-    }
-
-    case 'stargiftDropOriginalDetails': {
-      return new GramJs.InputInvoiceStarGiftDropOriginalDetails({
-        stargift: buildInputSavedStarGift(invoice.inputSavedGift),
-      });
-    }
-
-    case 'stargiftPrepaidUpgrade': {
-      return new GramJs.InputInvoiceStarGiftPrepaidUpgrade({
-        peer: buildInputPeer(invoice.peer.id, invoice.peer.accessHash),
-        hash: invoice.hash,
-      });
-    }
-
-    case 'stargiftAuctionBid': {
-      const {
-        giftId, bidAmount, peer, message, shouldHideName, isUpdateBid,
-      } = invoice;
-      return new GramJs.InputInvoiceStarGiftAuctionBid({
-        giftId: BigInt(giftId),
-        bidAmount: BigInt(bidAmount),
-        peer: peer && buildInputPeer(peer.id, peer.accessHash || ''),
-        message: message && buildInputTextWithEntities(message),
-        hideName: shouldHideName || undefined,
-        updateBid: isUpdateBid || undefined,
-      });
-    }
-
-    case 'giveaway':
-    default: {
-      const purpose = buildInputStorePaymentPurpose(invoice.purpose);
-      const option = buildPremiumGiftCodeOption(invoice.option);
-
-      return new GramJs.InputInvoicePremiumGiftCode({
-        purpose,
-        option,
-      });
-    }
-  }
 }
 
 export function buildInputReaction(reaction?: ApiReactionWithPaid) {
@@ -1092,29 +955,12 @@ export function buildInputPrivacyRules(
   return privacyRules;
 }
 
-export function buildInputSavedStarGift(inputGift: ApiRequestInputSavedStarGift) {
-  if (inputGift.type === 'user') {
-    return new GramJs.InputSavedStarGiftUser({
-      msgId: inputGift.messageId,
-    });
-  }
-
-  return new GramJs.InputSavedStarGiftChat({
-    peer: buildInputPeer(inputGift.chat.id, inputGift.chat.accessHash),
-    savedId: BigInt(inputGift.savedId),
-  });
-}
-
 export function buildInputShareTheme(theme?: ApiRequestInputShareTheme) {
   switch (theme?.type) {
     case 'emojiBackdrop':
       return new GramJs.ShareThemeEmojiBackdrop({
         backdropId: theme.backdropId,
         emojis: theme.emojis.length ? theme.emojis.map(buildInputReaction) : undefined,
-      });
-    case 'gift':
-      return new GramJs.InputShareThemeGift({
-        stargift: buildInputSavedStarGift(theme.inputGift),
       });
     default:
       return new GramJs.ShareThemeDefault();
@@ -1125,8 +971,6 @@ export function buildInputProfileTab(profileTab: ApiProfileTab) {
   switch (profileTab) {
     case 'stories':
       return new GramJs.ProfileTabPosts();
-    case 'gifts':
-      return new GramJs.ProfileTabGifts();
     case 'media':
       return new GramJs.ProfileTabMedia();
     case 'documents':

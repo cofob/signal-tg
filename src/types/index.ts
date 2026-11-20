@@ -10,7 +10,6 @@ import type {
   ApiChat,
   ApiChatInviteImporter,
   ApiContact,
-  ApiDisallowedGiftsSettings,
   ApiDocument,
   ApiDraft,
   ApiExportedInvite,
@@ -32,9 +31,6 @@ import type {
   ApiReactionWithPaid,
   ApiRichMessage,
   ApiSessionData,
-  ApiStarGiftAttributeIdBackdrop,
-  ApiStarGiftAttributeIdPattern,
-  ApiStarGiftRegular,
   ApiSticker,
   ApiStickerSet,
   ApiStory,
@@ -46,7 +42,6 @@ import type {
   ApiVideo,
   ApiVoice,
   MediaContent,
-  StarGiftAttributeIdModel,
 } from '../api/types';
 import type { DC_IDS } from '../config';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
@@ -187,8 +182,6 @@ export interface AccountSettings {
   defaultHistoryTtl?: number;
   nonContactPeersPaidStars?: number;
   permanentFreeMessagesLink?: string;
-  shouldDisplayGiftsButton?: boolean;
-  disallowedGifts?: ApiDisallowedGiftsSettings;
   shouldHideReadMarks?: boolean;
   canTranslate: boolean;
   canTranslateChats: boolean;
@@ -211,7 +204,7 @@ export type SettingsHighlight = {
 
 export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'sendGift' | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openFaq'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 
@@ -234,7 +227,6 @@ export enum SettingsScreens {
   PrivacyProfilePhoto,
   PrivacyBio,
   PrivacyBirthday,
-  PrivacyGifts,
   PrivacySavedMusic,
   PrivacyPhoneCall,
   PrivacyPhoneP2P,
@@ -252,8 +244,6 @@ export enum SettingsScreens {
   PrivacyBioDeniedContacts,
   PrivacyBirthdayAllowedContacts,
   PrivacyBirthdayDeniedContacts,
-  PrivacyGiftsAllowedContacts,
-  PrivacyGiftsDeniedContacts,
   PrivacySavedMusicAllowedContacts,
   PrivacySavedMusicDeniedContacts,
   PrivacyPhoneCallAllowedContacts,
@@ -498,7 +488,6 @@ export type ProfileTabType =
   | 'similarChannels'
   | 'similarBots'
   | 'dialogs'
-  | 'gifts'
   | 'polls';
 export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif' | 'polls';
 export type MiddleSearchType = 'chat' | 'myChats' | 'channels';
@@ -544,7 +533,6 @@ export enum ProfileState {
   Profile,
   SharedMedia,
   MemberList,
-  GiftList,
   StoryList,
   SavedDialogs,
 }
@@ -662,14 +650,6 @@ export type IDimensions = {
 };
 
 export type ConfettiStyle = 'poppers' | 'top-down';
-
-export type StarGiftInfo = {
-  peerId: string;
-  gift: ApiStarGiftRegular;
-  shouldHideName?: boolean;
-  message?: ApiFormattedText;
-  shouldUpgrade?: boolean;
-};
 
 export type TypingDraft = {
   senderId: string;
@@ -810,8 +790,6 @@ export type WebPageMediaSize = 'large' | 'small';
 
 export type AttachmentCompression = 'compress' | 'original';
 
-export type StarGiftCategory = 'all' | 'myUnique' | 'collectible';
-
 export type CallSound = (
   'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
 );
@@ -820,24 +798,6 @@ export type BotAppPermissions = {
   geolocation?: boolean;
   camera?: boolean;
   microphone?: boolean;
-};
-
-export type GiftProfileFilterOptions = {
-  sortType: 'byDate' | 'byValue';
-  shouldIncludeUnlimited: boolean;
-  shouldIncludeLimited: boolean;
-  shouldIncludeUpgradable: boolean;
-  shouldIncludeUnique: boolean;
-  shouldIncludeDisplayed: boolean;
-  shouldIncludeHidden: boolean;
-};
-export type ResaleGiftsSortType = 'byDate' | 'byPrice' | 'byNumber';
-export type ResaleGiftsFilterOptions = {
-  sortType: ResaleGiftsSortType;
-  modelAttributes?: StarGiftAttributeIdModel[];
-  patternAttributes?: ApiStarGiftAttributeIdPattern[];
-  backdropAttributes?: ApiStarGiftAttributeIdBackdrop[];
-  starsOnly?: boolean;
 };
 
 export type SendMessageParams = {

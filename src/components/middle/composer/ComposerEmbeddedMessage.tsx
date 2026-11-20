@@ -6,7 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type {
   ApiChat, ApiInputDraftReplyInfo, ApiInputSuggestedPostInfo, ApiMessage, ApiPeer,
 } from '../../../api/types';
-import type { MessageListType, ThemeKey, ThreadId } from '../../../types/index';
+import type { MessageListType, ThreadId } from '../../../types/index';
 
 import { canEditMediaInEditor, isChatChannel, stripCustomEmoji } from '../../../global/helpers';
 import {
@@ -22,7 +22,6 @@ import {
   selectIsMessageProtected,
   selectSender,
   selectTabState,
-  selectTheme,
 } from '../../../global/selectors';
 import { selectIsMediaNsfw } from '../../../global/selectors/media';
 import { selectDraft, selectEditingId, selectEditingScheduledId } from '../../../global/selectors/threads';
@@ -72,7 +71,6 @@ type StateProps = {
   fromChatId?: string;
   isMediaNsfw?: boolean;
   isMessageProtected?: boolean;
-  theme: ThemeKey;
 };
 
 type OwnProps = {
@@ -178,7 +176,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     chatId,
     threadId,
     currentUserId,
-    theme,
     onClear,
     isCurrentUserPremium,
     isContextMenuDisabled,
@@ -301,7 +298,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
 
   const { className: peerColorClass, style: peerColorStyle } = usePeerColor({
     peer: sender,
-    theme,
   });
   const innerClassName = buildClassName('ComposerEmbeddedMessage_inner', peerColorClass);
 
@@ -608,7 +604,6 @@ export default memo(withGlobal<OwnProps>(
       fromChatId,
       isMediaNsfw,
       isMessageProtected: !editingId && selectIsMessageProtected(global, message),
-      theme: selectTheme(global),
     };
   },
 )(ComposerEmbeddedMessage));

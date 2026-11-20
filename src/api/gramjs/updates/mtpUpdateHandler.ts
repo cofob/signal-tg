@@ -38,7 +38,6 @@ import {
   buildApiPhoto, buildApiUsernames, buildPrivacyRules,
 } from '../apiBuilders/common';
 import { buildApiTopicEdit } from '../apiBuilders/forums';
-import { buildApiStarGiftAuctionUserState, buildApiTypeStarGiftAuctionState } from '../apiBuilders/gifts';
 import { omitVirtualClassFields } from '../apiBuilders/helpers';
 import {
   buildApiMessageExtendedMediaPreview,
@@ -1259,26 +1258,6 @@ export function updater(update: Update) {
     sendApiUpdate({
       '@type': 'updateStarsBalance',
       balance,
-    });
-  } else if (update instanceof GramJs.UpdateStarGiftAuctionState) {
-    const state = buildApiTypeStarGiftAuctionState(update.state);
-    if (!state) {
-      return;
-    }
-    sendApiUpdate({
-      '@type': 'updateStarGiftAuctionState',
-      giftId: update.giftId.toString(),
-      state,
-    });
-  } else if (update instanceof GramJs.UpdateStarGiftAuctionUserState) {
-    sendApiUpdate({
-      '@type': 'updateStarGiftAuctionUserState',
-      giftId: update.giftId.toString(),
-      userState: buildApiStarGiftAuctionUserState(update.userState),
-    });
-  } else if (update instanceof GramJs.UpdateStarGiftCraftFail) {
-    sendApiUpdate({
-      '@type': 'updateStarGiftCraftFail',
     });
   } else if (update instanceof GramJs.UpdatePaidReactionPrivacy) {
     sendApiUpdate({

@@ -77,7 +77,6 @@ const PeerChip = <T,>({
 
   const { className: peerColorClass, style: peerColorStyle } = usePeerColor({
     peer: anyPeer,
-    theme,
   });
 
   const chat = apiPeer && isApiPeerChat(apiPeer) ? apiPeer : undefined;

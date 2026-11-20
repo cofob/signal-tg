@@ -2,8 +2,6 @@ import type {
   ApiLimitTypeForPromo, ApiPremiumSection, ApiReactionEmoji,
 } from './api/types';
 import type {
-  GiftProfileFilterOptions,
-  ResaleGiftsFilterOptions,
 } from './types';
 
 export const APP_CODE_NAME = 'A';
@@ -162,7 +160,6 @@ export const INSTANT_VIEW_FONT_SIZE_ADJUST_MAX = 1.5;
 export const INSTANT_VIEW_FONT_SIZE_ADJUST_STEP = 0.1;
 
 export const NBSP = '\u00A0';
-export const NNBSP = '\u202F';
 
 export const FOLDERS_POSITION_TOP = 'top';
 export const FOLDERS_POSITION_LEFT = 'left';
@@ -423,8 +420,6 @@ export const GIVEAWAY_BOOST_PER_PREMIUM = 4;
 export const GIVEAWAY_MAX_ADDITIONAL_CHANNELS = 10;
 export const GIVEAWAY_MAX_ADDITIONAL_USERS = 10;
 export const GIVEAWAY_MAX_ADDITIONAL_COUNTRIES = 10;
-export const FRAGMENT_PHONE_CODE = '888';
-export const FRAGMENT_PHONE_LENGTH = 11;
 export const BOT_VERIFICATION_PEERS_LIMIT = 20;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];
@@ -502,20 +497,6 @@ export const PREMIUM_LIMITS_ORDER: ApiLimitTypeForPromo[] = [
   'moreAccounts',
   'recommendedChannels',
 ];
-
-export const DEFAULT_GIFT_PROFILE_FILTER_OPTIONS: GiftProfileFilterOptions = {
-  sortType: 'byDate',
-  shouldIncludeUnlimited: true,
-  shouldIncludeLimited: true,
-  shouldIncludeUnique: true,
-  shouldIncludeDisplayed: true,
-  shouldIncludeHidden: true,
-  shouldIncludeUpgradable: true,
-} as const;
-
-export const DEFAULT_RESALE_GIFTS_FILTER_OPTIONS: ResaleGiftsFilterOptions = {
-  sortType: 'byDate',
-};
 
 export const ACCOUNT_TTL_OPTIONS = [1, 3, 6, 12, 18, 24];
 

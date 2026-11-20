@@ -45,11 +45,10 @@ import type {
   ApiSessionData,
   ApiWallpaper,
 } from './misc';
-import type { ApiInputInvoice } from './payments';
 import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
-import type { ApiStarGiftAuctionUserState, ApiTypeCurrencyAmount, ApiTypeStarGiftAuctionState } from './stars';
+import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
@@ -689,14 +688,6 @@ export type ApiUpdatePeerBlocked = {
   isBlockedFromStories?: boolean;
 };
 
-export type ApiUpdateStarPaymentStateCompleted = {
-  '@type': 'updateStarPaymentStateCompleted';
-  paymentState: {
-    inputInvoice: ApiInputInvoice;
-  };
-  tabId: number;
-};
-
 export type ApiUpdatePrivacy = {
   '@type': 'updatePrivacy';
   key: ApiPrivacyKey;
@@ -959,22 +950,6 @@ export type ApiUpdateStarsBalance = {
   balance: ApiTypeCurrencyAmount;
 };
 
-export type ApiUpdateStarGiftAuctionState = {
-  '@type': 'updateStarGiftAuctionState';
-  giftId: string;
-  state: ApiTypeStarGiftAuctionState;
-};
-
-export type ApiUpdateStarGiftAuctionUserState = {
-  '@type': 'updateStarGiftAuctionUserState';
-  giftId: string;
-  userState: ApiStarGiftAuctionUserState;
-};
-
-export type ApiUpdateStarGiftCraftFail = {
-  '@type': 'updateStarGiftCraftFail';
-};
-
 export type ApiUpdateDeleteProfilePhoto = {
   '@type': 'updateDeleteProfilePhoto';
   peerId: string;
@@ -1048,7 +1023,7 @@ export type ApiUpdate = (
   ApiUpdateError | ApiUpdateResetContacts | ApiUpdateStartEmojiInteraction | ApiUpdateThreadReadState |
   ApiUpdateFavoriteStickers | ApiUpdateStickerSet | ApiUpdateStickerSets | ApiUpdateStickerSetsOrder |
   ApiUpdateRecentStickers | ApiUpdateSavedGifs | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
-  ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage | ApiUpdateStarPaymentStateCompleted |
+  ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage |
   ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
   ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
@@ -1067,8 +1042,7 @@ export type ApiUpdate = (
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
   ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateStarGiftAuctionState
-  | ApiUpdateStarGiftAuctionUserState | ApiUpdateStarGiftCraftFail | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateBotCommands
   | ApiUpdateQuickReplyMessage | ApiUpdateQuickReplies
   | ApiDeleteQuickReply | ApiUpdateDeleteQuickReplyMessages | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack

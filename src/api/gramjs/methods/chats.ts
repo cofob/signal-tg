@@ -56,9 +56,8 @@ import {
   getPeerKey,
 } from '../apiBuilders/chats';
 import { buildApiPhoto } from '../apiBuilders/common';
-import { buildApiShareTheme } from '../apiBuilders/gifts';
 import { buildApiMessage, buildMessageDraft } from '../apiBuilders/messages';
-import { buildApiWallpaper } from '../apiBuilders/misc';
+import { buildApiShareTheme, buildApiWallpaper } from '../apiBuilders/misc';
 import {
   buildApiBotVerification,
   buildApiPeerId,
@@ -773,8 +772,6 @@ async function getFullChannelInfo(
     botVerification,
     paidReactionsAvailable,
     hasScheduled,
-    stargiftsCount,
-    stargiftsAvailable,
     paidMessagesAvailable,
     mainTab,
     guardBotId,
@@ -879,8 +876,6 @@ async function getFullChannelInfo(
       botVerification: botVerification && buildApiBotVerification(botVerification),
       isPaidReactionAvailable: paidReactionsAvailable,
       hasScheduledMessages: hasScheduled,
-      starGiftCount: stargiftsCount,
-      areStarGiftsAvailable: Boolean(stargiftsAvailable),
       arePaidMessagesAvailable: paidMessagesAvailable,
       mainTab: mainTab && buildApiProfileTab(mainTab),
       guardBotId: guardBotId ? buildApiPeerId(guardBotId, 'user') : undefined,

@@ -145,14 +145,6 @@ export function buildContentClassName(
     if (webPage.document) {
       classNames.push('document');
     }
-
-    if (webPage.gift) {
-      classNames.push('gift');
-    }
-
-    if (webPage.auction) {
-      classNames.push('auction');
-    }
   }
 
   if (poll) {

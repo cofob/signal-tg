@@ -8,7 +8,7 @@ import {
 import { addExtraClass, setExtraStyles } from '../../lib/teact/teact-dom';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
-import type { ApiChatFolder, ApiLimitTypeWithModal, ApiStarGiftAuctionState, ApiUser } from '../../api/types';
+import type { ApiChatFolder, ApiLimitTypeWithModal, ApiUser } from '../../api/types';
 import type { TabState } from '../../global/types';
 
 import { BASE_EMOJI_KEYWORD_LANG, DEBUG, FOLDERS_POSITION_LEFT } from '../../config';
@@ -27,7 +27,6 @@ import {
   selectIsRightColumnShown,
   selectIsStoryViewerOpen,
   selectPerformanceSettingsValue,
-  selectTabSelectedGiftAuction,
   selectTabState,
   selectUser,
 } from '../../global/selectors';
@@ -145,7 +144,6 @@ type StateProps = {
   isAppConfigLoaded?: boolean;
   isFoldersSidebarShown: boolean;
   diceEmojies?: string[];
-  selectedGiftAuction?: ApiStarGiftAuctionState;
 };
 
 const APP_OUTDATED_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
@@ -199,7 +197,6 @@ const Main = ({
   isAppConfigLoaded,
   isFoldersSidebarShown,
   diceEmojies,
-  selectedGiftAuction,
 }: OwnProps & StateProps) => {
   const {
     initMain,
@@ -216,10 +213,6 @@ const Main = ({
     loadAvailableReactions,
     loadStickerSets,
     loadDiceStickers,
-    loadPremiumGifts,
-    loadTonGifts,
-    loadStarGifts,
-    loadMyUniqueGifts,
     loadDefaultTopicIcons,
     loadAddedStickers,
     loadFavoriteStickers,
@@ -250,6 +243,7 @@ const Main = ({
     loadAiComposeTones,
     loadQuickReplies,
     loadStarStatus,
+    loadPremiumGifts,
     loadAvailableEffects,
     loadPaidReactionPrivacy,
     loadPasswordInfo,
@@ -258,9 +252,7 @@ const Main = ({
     loadAllStories,
     loadAllHiddenStories,
     loadContentSettings,
-    loadGiftAuction,
     loadPromoData,
-    loadActiveGiftAuctions,
   } = getActions();
 
   if (DEBUG && !DEBUG_isLogged) {
@@ -347,16 +339,12 @@ const Main = ({
       loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
       loadPremiumGifts();
-      loadTonGifts();
-      loadStarGifts();
-      loadMyUniqueGifts();
       loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
       loadQuickReplies();
       loadTimezones();
       loadAiComposeTones();
-      loadActiveGiftAuctions();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 
@@ -465,15 +453,6 @@ const Main = ({
       type: parsedLocationHash.type,
     });
   }, [currentUserId]);
-
-  // Refresh gift auction subscription
-  const auctionTimeout = selectedGiftAuction?.state.type === 'active' ? selectedGiftAuction?.timeout : undefined;
-  const auctionGiftId = selectedGiftAuction?.gift.id;
-  useInterval(() => {
-    if (auctionGiftId) {
-      loadGiftAuction({ giftId: auctionGiftId });
-    }
-  }, auctionTimeout ? auctionTimeout * 1000 : undefined);
 
   // Restore Transition slide class after async rendering
   useLayoutEffect(() => {
@@ -712,8 +691,6 @@ export default memo(withGlobal<OwnProps>(
       deleteFolderDialogModal,
     } = selectTabState(global);
 
-    const selectedGiftAuction = selectTabSelectedGiftAuction(global);
-
     const { wasTimeFormatSetManually, foldersPosition } = selectSharedSettings(global);
 
     const gameMessage = openedGame && selectChatMessage(global, openedGame.chatId, openedGame.messageId);
@@ -769,7 +746,6 @@ export default memo(withGlobal<OwnProps>(
       isAppConfigLoaded: global.isAppConfigLoaded,
       isFoldersSidebarShown: foldersPosition === FOLDERS_POSITION_LEFT && !isMobile && selectAreFoldersPresent(global),
       diceEmojies: global.appConfig?.diceEmojies,
-      selectedGiftAuction,
     };
   },
 )(Main));

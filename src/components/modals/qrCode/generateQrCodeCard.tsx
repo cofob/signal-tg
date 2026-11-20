@@ -5,7 +5,7 @@ import jsxToHtml from '../../../util/element/jsxToHtml';
 import { MAX_WORKERS, requestMediaWorker } from '../../../util/launchMediaWorkers';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import {
-  enumerateEmojiItems, enumerateGiftModels, enumerateGiftSymbols, getIsCoveredByCard,
+  enumerateEmojiItems, getIsCoveredByCard,
 } from './helpers/floatingLayer';
 
 export const QR_CODE_CARD_MIME_TYPE = 'image/png';
@@ -32,7 +32,6 @@ const EXPORT_USERNAME_Y = EXPORT_QR_Y + EXPORT_QR_SIZE + EXPORT_USERNAME_GAP;
 const USERNAME_MIN_FONT_SIZE = 12;
 const WHITE_COLOR = '#ffffff';
 const GRADIENT_RADIUS_TO_CARD = 1.6;
-const SYMBOL_OPACITY = 0.37;
 const EXPORT_AREA: LayerRect = {
   left: 0, top: 0, width: EXPORT_WIDTH, height: EXPORT_HEIGHT,
 };
@@ -63,11 +62,6 @@ export type QrPreviewSnapshot = {
 
 export type QrLayerSnapshot = {
   emojiSources: (QrEmojiSource | undefined)[];
-  modelSource?: CanvasImageSource;
-  symbol?: {
-    url: string;
-    color: string;
-  };
 };
 
 export type QrMediaSource = HTMLCanvasElement | HTMLImageElement | HTMLVideoElement;
@@ -132,7 +126,7 @@ async function renderQrCodeCard(
   ctx.setTransform(EXPORT_SCALE, 0, 0, EXPORT_SCALE, 0, 0);
 
   drawThemeBackground(ctx, gradientStops);
-  await drawLayer(ctx, snapshot.layer);
+  drawLayer(ctx, snapshot.layer);
   drawCardLayout(ctx, snapshot.username, inkColor);
   await drawQr(ctx, url, inkColor);
 
@@ -169,22 +163,8 @@ function drawThemeBackground(ctx: CanvasRenderingContext2D, gradientStops: strin
   ctx.fillRect(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT);
 }
 
-async function drawLayer(ctx: CanvasRenderingContext2D, layer: QrLayerSnapshot) {
-  const { emojiSources, modelSource, symbol } = layer;
-
-  if (symbol) {
-    const symbolSource = await loadTintedImage(symbol.url, symbol.color);
-    if (symbolSource) {
-      ctx.save();
-      ctx.globalAlpha = SYMBOL_OPACITY;
-      drawLayerItems(ctx, enumerateGiftSymbols(EXPORT_AREA, EXPORT_ORIGIN), () => symbolSource);
-      ctx.restore();
-    }
-  }
-
-  if (modelSource) {
-    drawLayerItems(ctx, enumerateGiftModels(EXPORT_AREA, EXPORT_ORIGIN), () => modelSource);
-  }
+function drawLayer(ctx: CanvasRenderingContext2D, layer: QrLayerSnapshot) {
+  const { emojiSources } = layer;
 
   if (emojiSources.length) {
     const sources = emojiSources.map((emoji) => (
@@ -210,11 +190,6 @@ function drawLayerItems(
     ctx.drawImage(source, -item.size / 2, -item.size / 2, item.size, item.size);
     ctx.restore();
   });
-}
-
-async function loadTintedImage(url: string, color: string) {
-  const image = await loadImage(url).catch(() => undefined);
-  return image && createTintedCanvas(image, color);
 }
 
 function createTintedCanvas(source: QrMediaSource, color: string) {

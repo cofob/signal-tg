@@ -9,7 +9,6 @@ import {
 
 import { requestMeasure } from '../../../lib/fasterdom/fasterdom';
 import { getStickerMediaHash } from '../../../global/helpers';
-import { selectIsPremiumPurchaseBlocked } from '../../../global/selectors';
 import { IS_OFFSET_PATH_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import { buildCollectionByKey } from '../../../util/iteratees';
@@ -40,7 +39,6 @@ type OwnProps = {
 };
 
 type StateProps = {
-  isPremiumPurchaseBlocked?: boolean;
   birthdayNumbers?: ApiStickerSet;
   animatedEmojiEffects?: ApiStickerSet;
 };
@@ -48,14 +46,12 @@ type StateProps = {
 const UserBirthday = ({
   user,
   birthday,
-  isPremiumPurchaseBlocked,
   birthdayNumbers,
   animatedEmojiEffects,
   isInSettings,
 }: OwnProps & StateProps) => {
-  const { openGiftModal, requestConfetti } = getActions();
+  const { requestConfetti } = getActions();
   const ref = useRef<HTMLDivElement>();
-  const animationPlayedRef = useRef(false);
   const [isPlayingAnimation, playAnimation, stopAnimation] = useFlag();
 
   const lang = useLang();
@@ -116,8 +112,6 @@ const UserBirthday = ({
 
   useEffect(() => {
     if (isPlayingAnimation) {
-      animationPlayedRef.current = true;
-
       const column = document.getElementById(isInSettings ? 'LeftColumn' : 'RightColumn');
       if (!column) return;
 
@@ -149,39 +143,25 @@ const UserBirthday = ({
     return lang(`ProfileBirthday${isToday ? 'Today' : ''}Value`, { date: formattedDate });
   }, [age, formattedDate, isToday, lang]);
 
-  const canGiftPremium = isToday && !user.isPremium && !user.isSelf && !isPremiumPurchaseBlocked;
-
-  const handleOpenGiftModal = useLastCallback(() => {
-    openGiftModal({ forUserId: user.id });
-  });
-
   const handleClick = useLastCallback(() => {
     if (!isToday) return;
-
-    if (canGiftPremium && animationPlayedRef.current) {
-      handleOpenGiftModal();
-      return;
-    }
 
     playAnimation();
   });
 
-  const isStatic = !isToday && !canGiftPremium;
+  const isStatic = !isToday;
 
   return (
     <div className={styles.root}>
       <ListItem
         icon="birthday-filled"
         iconBg="purple"
-        secondaryIcon={canGiftPremium ? 'gift' : undefined}
-        secondaryIconClassName={styles.giftIcon}
         multiline
         narrow
         ref={ref}
         ripple={!isStatic}
         onClick={handleClick}
         isStatic={isStatic}
-        onSecondaryIconClick={handleOpenGiftModal}
       >
         <div className="title" dir={lang.isRtl ? 'rtl' : undefined}>
           {renderText(value)}
@@ -222,7 +202,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       birthdayNumbers,
       animatedEmojiEffects,
-      isPremiumPurchaseBlocked: selectIsPremiumPurchaseBlocked(global),
     };
   },
 )(UserBirthday));

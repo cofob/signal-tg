@@ -1,10 +1,8 @@
 import type {
-  ApiInputSavedStarGift,
   ApiReaction,
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiShareThemeEmojiBackdrop,
-  ApiShareThemeGift,
   ApiStickerSet,
 } from '../../../../api/types';
 
@@ -14,11 +12,8 @@ import {
   DEFAULT_SHARE_THEME_CENTER_COLOR,
   DEFAULT_SHARE_THEME_EDGE_COLOR,
 } from '../../../../util/qrCode/shareThemeColors';
-import { getGiftAttributes } from '../../../common/helpers/gifts';
 
-export type ShareThemeDraft = ApiShareThemeEmojiBackdrop
-  | ApiShareThemeGift & { inputGift?: ApiInputSavedStarGift }
-  | undefined;
+export type ShareThemeDraft = ApiShareThemeEmojiBackdrop | undefined;
 
 export type ShareThemeBackdropOption = {
   backdropId?: number;
@@ -56,11 +51,6 @@ export function buildBackdropOptions(backdrops?: ApiShareThemeBackdrop[]): Share
 export function getShareThemeBackdrop(
   theme: ApiShareTheme | undefined, backdrops?: ApiShareThemeBackdrop[],
 ): ShareThemeBackdropOption {
-  if (theme?.type === 'gift') {
-    const backdrop = getGiftAttributes(theme.gift)?.backdrop;
-    return backdrop || DEFAULT_BACKDROP_OPTION;
-  }
-
   const backdropId = theme?.backdropId;
   const backdrop = backdropId !== undefined
     ? backdrops?.find((option) => option.backdropId === backdropId)
@@ -98,10 +88,6 @@ export function toggleEmojiPick(emojis: ApiReaction[], reaction: ApiReaction) {
 
 export function getIsSameShareTheme(first: ShareThemeDraft, second: ShareThemeDraft) {
   if (!first || !second) return first === second;
-
-  if (first.type === 'gift' || second.type === 'gift') {
-    return first.type === 'gift' && second.type === 'gift' && first.gift.id === second.gift.id;
-  }
 
   return first.backdropId === second.backdropId
     && first.emojis.map(getReactionKey).join() === second.emojis.map(getReactionKey).join();

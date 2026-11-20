@@ -27,7 +27,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['edit/log-out', [SettingsScreens.Main, 'LogOutTitle']],
 
   ['premium', [SettingsScreens.Main, 'TelegramPremium']],
-  ['send-gift', [SettingsScreens.Main, 'MenuSendGift']],
 
   ['devices', [SettingsScreens.ActiveSessions]],
   ['devices/terminate-sessions', [
@@ -73,9 +72,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['privacy/profile-photos', [SettingsScreens.PrivacyProfilePhoto]],
   ['privacy/bio', [SettingsScreens.PrivacyBio]],
   ['privacy/birthday', [SettingsScreens.PrivacyBirthday]],
-  ['privacy/gifts', [SettingsScreens.PrivacyGifts]],
-  ['privacy/gifts/show-icon', [SettingsScreens.PrivacyGifts, 'PrivacyDisplayGiftsButton']],
-  ['privacy/gifts/accepted-types', [SettingsScreens.PrivacyGifts, 'PrivacyAcceptedGiftTitle']],
   ['privacy/saved-music', [SettingsScreens.PrivacySavedMusic]],
   ['privacy/forwards', [SettingsScreens.PrivacyForwarding]],
   ['privacy/calls', [SettingsScreens.PrivacyPhoneCall]],

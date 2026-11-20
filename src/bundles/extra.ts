@@ -21,7 +21,6 @@ export { default as PremiumLimitReachedModal } from '../components/main/premium/
 export { default as StatusPickerMenu } from '../components/left/main/StatusPickerMenu';
 export { default as SuggestedStatusModal } from '../components/modals/suggestedStatus/SuggestedStatusModal';
 export { default as BoostModal } from '../components/modals/boost/BoostModal';
-export { default as GiftCodeModal } from '../components/modals/giftcode/GiftCodeModal';
 export { default as DeleteAccountModal } from '../components/modals/deleteAccount/DeleteAccountModal';
 export { default as AgeVerificationModal } from '../components/modals/ageVerification/AgeVerificationModal';
 export { default as ChatlistModal } from '../components/modals/chatlist/ChatlistModal';
@@ -53,7 +52,6 @@ export { default as CountryPickerModal } from '../components/common/CountryPicke
 export { default as ReactorListModal } from '../components/middle/ReactorListModal';
 export { default as EmojiInteractionAnimation } from '../components/middle/EmojiInteractionAnimation';
 export { default as ChatLanguageModal } from '../components/middle/ChatLanguageModal';
-export { default as CollectibleInfoModal } from '../components/modals/collectible/CollectibleInfoModal';
 export { default as QrCodeModal } from '../components/modals/qrCode/QrCodeModal';
 
 export { default as LeftSearch } from '../components/left/search/LeftSearch';

@@ -72,7 +72,7 @@ import { getIsMobile } from '../hooks/useAppLayout';
 
 const UPDATE_THROTTLE = 5000;
 const APP_CONFIG_NANOTON_KEYS = [
-  'tonSuggestedPostAmountMax', 'tonSuggestedPostAmountMin', 'tonStargiftResaleAmountMax', 'tonStargiftResaleAmountMin',
+  'tonSuggestedPostAmountMax', 'tonSuggestedPostAmountMin',
 ] as const;
 
 // `patternColor` values the cache migration recognizes as defaults and replaces with the
@@ -1137,32 +1137,13 @@ function migrateNanotonsToBigInt(cached: GlobalState) {
       migrateCurrencyAmountToBigInt(localState?.draft?.suggestedPostInfo?.price);
     });
   });
-
-  Object.values(cached.messages.webPageById).forEach((webPage) => {
-    if (webPage.webpageType === 'full') webPage.gift?.resellPrice?.forEach(migrateCurrencyAmountToBigInt);
-  });
 }
 
 function migrateActionNanotonsToBigInt(action: ApiMessageAction) {
   switch (action.type) {
-    case 'giftPremium':
-    case 'giftCode':
-    case 'giftStars':
-    case 'giftTon':
-      if (action.cryptoAmount !== undefined) action.cryptoAmount = BigInt(action.cryptoAmount);
-      break;
-    case 'starGiftUnique':
-      migrateCurrencyAmountToBigInt(action.resaleAmount);
-      action.gift.resellPrice?.forEach(migrateCurrencyAmountToBigInt);
-      break;
     case 'suggestedPostApproval':
     case 'suggestedPostSuccess':
       migrateCurrencyAmountToBigInt(action.amount);
-      break;
-    case 'starGiftPurchaseOffer':
-    case 'starGiftPurchaseOfferDeclined':
-      migrateCurrencyAmountToBigInt(action.price);
-      action.gift.resellPrice?.forEach(migrateCurrencyAmountToBigInt);
       break;
   }
 }

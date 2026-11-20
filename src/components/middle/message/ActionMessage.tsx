@@ -8,7 +8,6 @@ import type {
   ApiKeyboardButton,
   ApiMessage,
   ApiPeer,
-  KeyboardButtonGiftOffer,
   KeyboardButtonNoForwardsRequest,
 } from '../../../api/types';
 import type { ApiMessageAction } from '../../../api/types/messageActions';
@@ -23,7 +22,6 @@ import { MediaViewerOrigin } from '../../../types';
 
 import { MESSAGE_APPEARANCE_DELAY } from '../../../config';
 import { getMessageHtmlId } from '../../../global/helpers';
-import { getPeerTitle } from '../../../global/helpers/peers';
 import { getMessageReplyInfo } from '../../../global/helpers/replies';
 import {
   selectActionMessageBg,
@@ -40,7 +38,6 @@ import { selectThreadReadState } from '../../../global/selectors/threads';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_ANDROID, IS_FLUID_BACKGROUND_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
-import { isLocalMessageId } from '../../../util/keys/messageKey';
 import { getServerTime } from '../../../util/serverTime';
 import { isElementInViewport } from '../../../util/visibility/isElementInViewport';
 import { preventMessageInputBlur } from '../helpers/preventMessageInputBlur';
@@ -56,15 +53,10 @@ import useShowTransition from '../../../hooks/useShowTransition';
 import useFluidBackgroundFilter from './hooks/useFluidBackgroundFilter';
 import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 
-import ConfirmDialog from '../../ui/ConfirmDialog';
 import ActionMessageText from './ActionMessageText';
 import ChannelPhoto from './actions/ChannelPhoto';
-import Gift from './actions/Gift';
 import GiveawayPrize from './actions/GiveawayPrize';
 import NoForwardsRequest from './actions/NoForwardsRequest';
-import StarGift from './actions/StarGift';
-import StarGiftPurchaseOffer from './actions/StarGiftPurchaseOffer';
-import StarGiftUnique from './actions/StarGiftUnique';
 import SuggestedBirthday from './actions/SuggestedBirthday';
 import SuggestedPhoto from './actions/SuggestedPhoto';
 import SuggestedPostApproval from './actions/SuggestedPostApproval';
@@ -117,8 +109,8 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'chatDeletePhoto',
   'unsupported',
 ]);
-const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>(['giftCode', 'prizeStars',
-  'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'starGiftPurchaseOffer', 'noForwardsRequest']);
+const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>(['prizeStars',
+  'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest']);
 const WITH_LINK_BREAKS_ACTIONS = new Set<ApiMessageAction['type']>([
   'todoCompletions',
   'todoAppendTasks',
@@ -156,19 +148,12 @@ const ActionMessage = ({
   onMessageUnmount,
 }: OwnProps & StateProps) => {
   const {
-    requestConfetti,
     openMediaViewer,
-    checkGiftCode,
-    openPremiumModal,
-    openGiftInfoModalFromMessage,
     toggleChannelRecommendations,
     animateUnreadReaction,
     markMentionsRead,
     markPollVotesRead,
     focusMessage,
-    openGiftOfferAcceptModal,
-    declineStarGiftOffer,
-    showNotification,
     toggleNoForwards,
   } = getActions();
 
@@ -176,7 +161,6 @@ const ActionMessage = ({
 
   const { id, chatId } = message;
   const action = message.content.action!;
-  const isLocal = isLocalMessageId(id);
 
   const isTextHidden = HIDDEN_TEXT_ACTIONS.has(action.type)
     || (action.type === 'setChatWallpaper' && !action.isSame
@@ -185,41 +169,21 @@ const ActionMessage = ({
   const withLinkBreaks = WITH_LINK_BREAKS_ACTIONS.has(action.type);
   const isFluidMultiline = IS_FLUID_BACKGROUND_SUPPORTED && !isSingleLine;
   const isClickableText = action.type === 'suggestedPostSuccess';
-  const isNarrowMessage = action.type === 'starGiftPurchaseOfferDeclined';
 
   const messageReplyInfo = getMessageReplyInfo(message);
   const { replyToMsgId, replyToPeerId } = messageReplyInfo || {};
 
   const withServiceReactions = Boolean(message.areReactionsPossible && message?.reactions?.results?.length);
 
-  const hasGiftOfferExpired = action.type === 'starGiftPurchaseOffer' && action.expiresAt <= getServerTime();
-  const shouldRenderGiftOfferButtons = action.type === 'starGiftPurchaseOffer'
-    && !message.isOutgoing && !action.isAccepted && !action.isDeclined && !hasGiftOfferExpired;
-
   const hasNoForwardsRequestExpired = action.type === 'noForwardsRequest'
     && (message.date + noForwardsRequestExpirePeriod) <= getServerTime();
   const shouldRenderNoForwardsButtons = action.type === 'noForwardsRequest'
     && !message.isOutgoing && !action.isExpired && !hasNoForwardsRequestExpired;
 
-  const shouldRenderInlineButtons = shouldRenderGiftOfferButtons || shouldRenderNoForwardsButtons;
-
   const shouldSkipRender = isInsideTopic && action.type === 'topicCreate';
 
   const lang = useLang();
   const { isTouchScreen } = useAppLayout();
-
-  const giftOfferInlineButtons: KeyboardButtonGiftOffer[][] = useMemo(() => [
-    [
-      {
-        action: { type: 'giftOffer', buttonType: 'reject' },
-        text: lang('GiftOfferReject'),
-      },
-      {
-        action: { type: 'giftOffer', buttonType: 'accept' },
-        text: lang('GiftOfferAccept'),
-      },
-    ],
-  ], [lang]);
 
   const noForwardsInlineButtons: KeyboardButtonNoForwardsRequest[][] = useMemo(() => [
     [
@@ -234,23 +198,8 @@ const ActionMessage = ({
     ],
   ], [lang]);
 
-  const [isRejectOfferDialogOpen, openRejectOfferDialog, closeRejectOfferDialog] = useFlag(false);
-
   const handleInlineButtonClick = useLastCallback((button: ApiKeyboardButton) => {
-    if (button.action.type === 'giftOffer') {
-      if (button.action.buttonType === 'accept') {
-        if (action.type === 'starGiftPurchaseOffer') {
-          openGiftOfferAcceptModal({
-            peerId: chatId,
-            messageId: id,
-            gift: action.gift,
-            price: action.price,
-          });
-        }
-      } else if (button.action.buttonType === 'reject') {
-        openRejectOfferDialog();
-      }
-    } else if (button.action.type === 'noForwardsRequest') {
+    if (button.action.type === 'noForwardsRequest') {
       if (action.type === 'noForwardsRequest') {
         const isAccept = button.action.buttonType === 'accept';
         toggleNoForwards({
@@ -260,15 +209,6 @@ const ActionMessage = ({
         });
       }
     }
-  });
-
-  const handleRejectOfferConfirm = useLastCallback(() => {
-    closeRejectOfferDialog();
-    declineStarGiftOffer({ messageId: id });
-  });
-
-  const handleRejectOfferClose = useLastCallback(() => {
-    closeRejectOfferDialog();
   });
 
   useOnIntersect(ref, !shouldSkipRender ? observeIntersectionForBottom : undefined);
@@ -355,13 +295,6 @@ const ActionMessage = ({
     message.hasUnreadMention,
   ]);
 
-  useEffect(() => {
-    if (action.type !== 'giftPremium') return;
-    if ((memoFirstUnreadIdRef?.current && id >= memoFirstUnreadIdRef.current) || isLocal) {
-      requestConfetti({});
-    }
-  }, [action.type, id, isLocal, memoFirstUnreadIdRef]);
-
   const fluidBackgroundStyle = useFluidBackgroundFilter(isFluidMultiline ? actionMessageBg : undefined);
 
   const handleKeyDown = useLastCallback((e: React.KeyboardEvent) => {
@@ -380,53 +313,6 @@ const ActionMessage = ({
           threadId,
           origin: MediaViewerOrigin.ChannelAvatar,
         });
-        break;
-      }
-
-      case 'giftCode': {
-        checkGiftCode({ slug: action.slug, message: { chatId: message.chatId, messageId: message.id } });
-        break;
-      }
-
-      case 'giftPremium': {
-        openPremiumModal({
-          isGift: true,
-          fromUserId: sender?.id,
-          toUserId: sender && sender.id === currentUserId ? chatId : currentUserId,
-          daysAmount: action.days,
-        });
-        break;
-      }
-
-      case 'starGift': {
-        openGiftInfoModalFromMessage({
-          chatId: message.chatId,
-          messageId: message.id,
-        });
-        break;
-      }
-
-      case 'starGiftUnique': {
-        if (action.gift.isBurned) {
-          showNotification({ message: lang('ActionStarGiftUniqueBurnedError') });
-          break;
-        }
-        openGiftInfoModalFromMessage({
-          chatId: message.chatId,
-          messageId: message.id,
-        });
-        break;
-      }
-
-      case 'starGiftPurchaseOffer': {
-        if (shouldRenderGiftOfferButtons) {
-          openGiftOfferAcceptModal({
-            peerId: chatId,
-            messageId: id,
-            gift: action.gift,
-            price: action.price,
-          });
-        }
         break;
       }
 
@@ -507,60 +393,12 @@ const ActionMessage = ({
         );
 
       case 'prizeStars':
-      case 'giftCode':
         return (
           <GiveawayPrize
             action={action}
-            sender={sender}
             observeIntersectionForLoading={observeIntersectionForLoading}
             observeIntersectionForPlaying={observeIntersectionForPlaying}
             onClick={handleClick}
-          />
-        );
-
-      case 'giftPremium':
-      case 'giftTon':
-      case 'giftStars':
-        return (
-          <Gift
-            action={action}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleClick}
-          />
-        );
-
-      case 'starGift':
-        return (
-          <StarGift
-            action={action}
-            message={message}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleClick}
-          />
-        );
-
-      case 'starGiftUnique':
-        return (
-          <StarGiftUnique
-            action={action}
-            message={message}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleClick}
-          />
-        );
-
-      case 'starGiftPurchaseOffer':
-        return (
-          <StarGiftPurchaseOffer
-            action={action}
-            message={message}
-            hasButtons={shouldRenderGiftOfferButtons}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={shouldRenderGiftOfferButtons ? handleClick : undefined}
           />
         );
 
@@ -606,8 +444,7 @@ const ActionMessage = ({
         return undefined;
     }
   }, [
-    action, message, observeIntersectionForLoading, sender, observeIntersectionForPlaying, shouldRenderGiftOfferButtons,
-    isInsideTopic,
+    action, message, observeIntersectionForLoading, observeIntersectionForPlaying, isInsideTopic,
   ]);
 
   if ((isInsideTopic && action.type === 'topicCreate') || action.type === 'phoneCall') {
@@ -644,7 +481,6 @@ const ActionMessage = ({
             <div className={buildClassName(
               styles.inlineWrapper,
               isClickableText && styles.hoverable,
-              isNarrowMessage && styles.narrowWrapper,
             )}
             >
               <span className={styles.fluidBackground} style={fluidBackgroundStyle}>
@@ -655,7 +491,6 @@ const ActionMessage = ({
           <div className={buildClassName(
             styles.inlineWrapper,
             isClickableText && styles.hoverable,
-            isNarrowMessage && styles.narrowWrapper,
           )}
           >
             <span
@@ -670,16 +505,9 @@ const ActionMessage = ({
           </div>
         </>
       )}
-      {(fullContent || shouldRenderInlineButtons) && (
+      {(fullContent || shouldRenderNoForwardsButtons) && (
         <div className={styles.contentWrapper}>
           {fullContent}
-          {shouldRenderGiftOfferButtons && (
-            <InlineButtons
-              className={styles.inlineButtons}
-              inlineButtons={giftOfferInlineButtons}
-              onClick={handleInlineButtonClick}
-            />
-          )}
           {shouldRenderNoForwardsButtons && (
             <InlineButtons
               className={styles.inlineButtons}
@@ -711,19 +539,6 @@ const ActionMessage = ({
           isAccountFrozen={isAccountFrozen}
         />
       )}
-      <ConfirmDialog
-        isOpen={isRejectOfferDialogOpen}
-        title={lang('GiftOfferRejectTitle')}
-        textParts={lang(
-          'GiftOfferRejectText',
-          { user: sender ? getPeerTitle(lang, sender) : lang('ActionFallbackSomeone') },
-          { withNodes: true, withMarkdown: true },
-        )}
-        confirmLabel={lang('GiftOfferReject')}
-        confirmIsDestructive
-        confirmHandler={handleRejectOfferConfirm}
-        onClose={handleRejectOfferClose}
-      />
     </div>
   );
 };

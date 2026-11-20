@@ -7,7 +7,6 @@ import type {
   ApiChatInviteInfo,
   ApiMessage,
   ApiPeer,
-  ApiPeerColorCollectible,
   ApiPreparedInlineMessage,
   ApiThreadInfo,
   ApiTopic,
@@ -384,7 +383,6 @@ export function getPeerColorKey(peer: ApiPeer | CustomPeer | undefined, isForAva
 
   if (peer.color) {
     if (peer.color.type === 'regular' && peer.color.color !== undefined) return peer.color.color;
-    if (peer.color.type === 'collectible' && !isForAvatar) return undefined; // Custom colors
   }
 
   return getPeerIdDividend(peer.id) % 7;
@@ -392,15 +390,10 @@ export function getPeerColorKey(peer: ApiPeer | CustomPeer | undefined, isForAva
 
 export function getPeerColorCount(peer: ApiPeer) {
   const key = getPeerColorKey(peer);
-  if (peer.color?.type === 'collectible') return getPeerColorCollectibleColorCount(peer.color);
   if (key === undefined) return 1;
 
   const global = getGlobal();
   return global.peerColors?.general[key].colors?.length || 1;
-}
-
-export function getPeerColorCollectibleColorCount(color: ApiPeerColorCollectible): number {
-  return color.colors.length;
 }
 
 export function getIsSavedDialog(chatId: string, threadId: ThreadId | undefined, currentUserId: string | undefined) {

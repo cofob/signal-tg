@@ -52,7 +52,6 @@ import {
   selectAllowedMessageActionsSlow,
   selectBot,
   selectCanForwardMessage,
-  selectCanGift,
   selectCanPlayAnimatedEmojis,
   selectCanScheduleUntilOnline,
   selectCanTranslateMessage,
@@ -171,7 +170,6 @@ type StateProps = {
   canReplyInChat?: boolean;
   isWithPaidReaction?: boolean;
   user?: ApiUser;
-  canGift?: boolean;
   savedDialogId?: string;
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
@@ -246,7 +244,6 @@ const ContextMenuContainer = ({
   canReplyInChat,
   isWithPaidReaction,
   user,
-  canGift,
   className,
   savedDialogId,
   noForwardsMyEnabled,
@@ -907,8 +904,6 @@ const ContextMenuContainer = ({
         onTranslateWithTone={handleTranslateWithTone}
         onShowOriginal={handleShowOriginal}
         onSelectLanguage={handleSelectLanguage}
-        userFullName={userFullName}
-        canGift={canGift}
         noForwardsNotice={noForwardsNotice}
       />
       <PinMessageModal
@@ -1049,8 +1044,6 @@ export default memo(withGlobal<OwnProps>(
     const storyData = message.content.storyData;
     const story = storyData ? selectPeerStory(global, storyData.peerId, storyData.id) : undefined;
 
-    const canGift = selectCanGift(global, message.chatId);
-
     const savedDialogId = selectSavedDialogIdFromMessage(global, message);
     const todoItemsMax = global.appConfig.todoItemsMax;
     const canAppendTodoList = message.content.todo?.todo.othersCanAppend
@@ -1114,7 +1107,6 @@ export default memo(withGlobal<OwnProps>(
       poll,
       story,
       user,
-      canGift: !message.isEphemeral && canGift,
       savedDialogId,
       webPage,
       noForwardsMyEnabled: userFullInfo?.noForwardsMyEnabled,

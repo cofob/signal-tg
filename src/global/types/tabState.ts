@@ -8,15 +8,11 @@ import type {
   ApiChatInviteInfo,
   ApiChatlistInvite,
   ApiChatType,
-  ApiCheckedGiftCode,
-  ApiCollectibleInfo,
   ApiDialog,
-  ApiEmojiStatusCollectible,
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
   ApiInputAiComposeTone,
-  ApiInputInvoice,
   ApiInputRichMessage,
   ApiLanguage,
   ApiLimitTypeWithModal,
@@ -34,24 +30,12 @@ import type {
   ApiReactionWithPaid,
   ApiRequestPeerType,
   ApiRichText,
-  ApiSavedGifts,
-  ApiSavedStarGift,
   ApiSearchPostsFlood,
   ApiSponsoredPeer,
-  ApiStarGift,
-  ApiStarGiftAttribute,
-  ApiStarGiftAttributeCounter,
-  ApiStarGiftAttributeOriginalDetails,
-  ApiStarGiftAuctionAcquiredGift,
-  ApiStarGiftUnique,
-  ApiStarGiftUpgradePrice,
   ApiStarGiveawayOption,
   ApiSticker,
-  ApiThumbnail,
-  ApiTypeCurrencyAmount,
   ApiTypePrepaidGiveaway,
   ApiTypeStoryView,
-  ApiUniqueStarGiftValueInfo,
   ApiUrlAuthResultRequest,
   ApiUser,
   ApiVideo,
@@ -67,7 +51,6 @@ import type {
   ChatRequestedTranslations,
   ConfettiStyle,
   FocusDirection,
-  GiftProfileFilterOptions,
   GlobalSearchContent,
   IAnchorPosition,
   InlineBotSettings,
@@ -85,7 +68,6 @@ import type {
   PlaybackSource,
   ProfileEditProgress,
   ProfileTabType,
-  ResaleGiftsFilterOptions,
   RoundVideoMode,
   ScrollTargetPosition,
   SettingsConfirmation,
@@ -101,8 +83,6 @@ import type { BrowserState } from '../../types/browser';
 import type { RegularLangKey } from '../../types/language';
 import type { WebAppMediaKind } from '../../types/webapp';
 import type { SearchResultKey } from '../../util/keys/searchResultKey';
-import type { RegularLangFnParameters } from '../../util/localization';
-import type { ProfileCollectionKey } from '../selectors/payments';
 import type { CallbackAction } from './actions';
 
 export type PollVote = {
@@ -307,26 +287,6 @@ export type TabState = {
     byUsername: Record<string, false | InlineBotSettings>;
   };
 
-  savedGifts: {
-    collectionsByPeerId: Record<string, Record<ProfileCollectionKey, ApiSavedGifts>>;
-    activeCollectionByPeerId: Record<string, number | undefined>;
-    filter: GiftProfileFilterOptions;
-  };
-
-  resaleGifts: {
-    giftId?: string;
-    gifts: ApiStarGift[];
-    count: number;
-    attributes?: ApiStarGiftAttribute[];
-    counters?: ApiStarGiftAttributeCounter[];
-    nextOffset?: string;
-    attributesHash?: string;
-    isLoading?: boolean;
-    isAllLoaded?: boolean;
-    filter: ResaleGiftsFilterOptions;
-    updateIteration: number;
-  };
-
   leftColumn: {
     contentKey: LeftColumnContent;
     settingsScreen: SettingsScreens;
@@ -503,17 +463,6 @@ export type TabState = {
     messageId?: number;
     votesByOption?: Record<string, PollVote[]>;
     offsets?: Record<string, string>;
-  };
-
-  isPaymentFormLoading?: boolean;
-
-  priceConfirmModal?: {
-    originalAmount: ApiTypeCurrencyAmount;
-    newAmount: ApiTypeCurrencyAmount;
-    directInfo?: {
-      formId: string;
-      inputInvoice: ApiInputInvoice;
-    };
   };
 
   chatCreation?: {
@@ -725,7 +674,6 @@ export type TabState = {
     isGift?: boolean;
     daysAmount?: number;
     isSuccess?: boolean;
-    gift?: ApiStarGift;
   };
 
   aiMessageEditorModal?: {
@@ -816,18 +764,9 @@ export type TabState = {
 
   isBrowserCloseConfirmationModalOpen?: boolean;
 
-  isGiftRecipientPickerOpen?: boolean;
-
   isQuickChatPickerOpen?: boolean;
 
   isFrozenAccountModalOpen?: boolean;
-
-  giftModal?: {
-    forPeerId: string;
-    gifts?: ApiPremiumGiftCodeOption[];
-    selectedResaleGift?: ApiStarGift;
-    selectedGift?: ApiPremiumGiftCodeOption | ApiStarGift;
-  };
 
   disableSharingAboutModal?: {
     userId: string;
@@ -873,15 +812,6 @@ export type TabState = {
     myBoosts?: ApiMyBoost[];
   };
 
-  giftCodeModal?: {
-    slug: string;
-    message?: {
-      chatId: string;
-      messageId: number;
-    };
-    info: ApiCheckedGiftCode;
-  };
-
   deleteAccountModal?: {
     selfDestructAccountDays: number;
   };
@@ -918,171 +848,8 @@ export type TabState = {
     message: ApiMessage;
   };
 
-  collectibleInfoModal?: ApiCollectibleInfo & {
-    peerId: string;
-    type: 'phone' | 'username';
-    collectible: string;
-  };
-
   qrCodeModal?: {
     peerId: string;
-    uniqueGifts?: ApiSavedStarGift[];
-    uniqueGiftsNextOffset?: string;
-  };
-
-  giftInfoModal?: {
-    peerId?: string;
-    recipientId?: string;
-    gift: ApiSavedStarGift | ApiStarGift;
-    craftSlotIndex?: number;
-    isFromMessage?: boolean;
-  };
-
-  giftInfoValueModal?: {
-    valueInfo: ApiUniqueStarGiftValueInfo;
-    gift: ApiStarGiftUnique;
-  };
-
-  lockedGiftModal?: {
-    untilDate?: number;
-    reason?: ApiFormattedText;
-  };
-
-  giftResalePriceComposerModal?: {
-    peerId?: string;
-    gift: ApiSavedStarGift | ApiStarGift;
-  };
-
-  giftTransferModal?: {
-    gift: ApiSavedStarGift;
-  };
-
-  giftTransferConfirmModal?: {
-    gift: ApiSavedStarGift;
-    recipientId: string;
-  };
-
-  giftDescriptionRemoveModal?: {
-    gift: ApiSavedStarGift;
-    price: number;
-    details: ApiStarGiftAttributeOriginalDetails;
-  };
-
-  giftOfferAcceptModal?: {
-    peerId: string;
-    messageId: number;
-    gift: ApiStarGiftUnique;
-    price: ApiTypeCurrencyAmount;
-  };
-
-  giftUpgradeModal?: {
-    sampleAttributes: ApiStarGiftAttribute[];
-    recipientId?: string;
-    gift?: ApiSavedStarGift;
-    prices?: ApiStarGiftUpgradePrice[];
-    nextPrices?: ApiStarGiftUpgradePrice[];
-    currentUpgradeStars?: number;
-    minPrice?: number;
-    maxPrice?: number;
-  };
-
-  giftCraftModal?: {
-    regularGiftId?: string;
-    regularGiftTitle?: string;
-    gift1?: ApiSavedStarGift;
-    gift2?: ApiSavedStarGift;
-    gift3?: ApiSavedStarGift;
-    gift4?: ApiSavedStarGift;
-    previewAttributes?: ApiStarGiftAttribute[];
-    myCraftableGifts?: ApiSavedStarGift[];
-    myCraftableGiftsNextOffset?: string;
-    shouldRefreshMyCraftableGifts?: boolean;
-    marketCraftableGifts?: ApiStarGiftUnique[];
-    marketCraftableGiftsNextOffset?: string;
-    marketCraftableGiftsCount?: number;
-    isMarketLoading?: boolean;
-    marketFilter: ResaleGiftsFilterOptions;
-    marketAttributes?: ApiStarGiftAttribute[];
-    marketCounters?: ApiStarGiftAttributeCounter[];
-    marketAttributesHash?: string;
-    marketUpdateIteration: number;
-    craftResult?: {
-      success: true;
-      gift: ApiStarGiftUnique;
-    } | {
-      success: false;
-      isError?: true;
-    };
-  };
-
-  giftCraftSelectModal?: {
-    slotIndex: number;
-    isLoading?: boolean;
-  };
-
-  giftCraftInfoModal?: {
-    gift: ApiStarGiftUnique;
-  };
-
-  giftWithdrawModal?: {
-    gift: ApiSavedStarGift;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
-  };
-
-  giftStatusInfoModal?: {
-    emojiStatus: ApiEmojiStatusCollectible;
-  };
-
-  giftPreviewModal?: {
-    attributes: ApiStarGiftAttribute[];
-    originGift: ApiStarGift;
-    shouldShowCraftableOnStart?: boolean;
-  };
-
-  giftAuctionModal?: {
-    auctionGiftId: string;
-    sampleAttributes?: ApiStarGiftAttribute[];
-  };
-
-  giftAuctionBidModal?: {
-    auctionGiftId: string;
-    peerId?: string;
-    message?: string;
-    shouldHideName?: boolean;
-  };
-
-  giftAuctionInfoModal?: {
-    auctionGiftId: string;
-  };
-
-  aboutStarGiftModal?: {
-    videoId?: string;
-    videoThumbnail?: ApiThumbnail;
-  };
-
-  giftAuctionChangeRecipientModal?: {
-    auctionGiftId: string;
-    oldPeerId?: string;
-    newPeerId?: string;
-    message?: string;
-    shouldHideName?: boolean;
-  };
-
-  giftAuctionAcquiredModal?: {
-    giftId?: string;
-    giftTitle?: string;
-    giftSticker?: ApiSticker;
-    acquiredGifts?: ApiStarGiftAuctionAcquiredGift[];
-  };
-
-  activeGiftAuctionsModal?: true;
-
-  starGiftPriceDecreaseInfoModal?: {
-    prices: ApiStarGiftUpgradePrice[];
-    currentPrice: number;
-    minPrice: number;
-    maxPrice: number;
   };
 
   suggestedStatusModal?: {
@@ -1117,8 +884,6 @@ export type TabState = {
 
   isTwoFaCheckModalOpen?: true;
 
-  isWaitingForStarGiftUpgrade?: true;
-  isWaitingForStarGiftTransfer?: true;
   insertingPeerIdMention?: string;
   shouldSaveAttachmentsCompression?: boolean;
 

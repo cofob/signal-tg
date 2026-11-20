@@ -47,7 +47,7 @@ const ProfilePoll = ({
 
   const lang = useLang();
 
-  const { className: peerColorClass, style: peerColorStyle } = usePeerColor({ peer: sender, theme });
+  const { className: peerColorClass, style: peerColorStyle } = usePeerColor({ peer: sender });
 
   const {
     isContextMenuOpen, contextMenuAnchor,

@@ -10,7 +10,7 @@ import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
 import type { ApiTypePeerColor } from './peers';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiStarGiftRegular, ApiStarGiftUnique, ApiTypeCurrencyAmount } from './stars';
+import type { ApiTypeCurrencyAmount } from './stars';
 import type {
   ApiMessageStoryData, ApiStory, ApiWebPageStickerData, ApiWebPageStoryData,
 } from './stories';
@@ -251,11 +251,6 @@ export interface ApiMessagePoll {
   attachedMedia?: MediaContent;
 }
 
-export interface ApiInvoice {
-  // Set for an invoice in Stars or TON
-  totalPrice?: ApiTypeCurrencyAmount;
-}
-
 export interface ApiMediaExtendedPreview {
   mediaType: 'extendedMediaPreview';
   width?: number;
@@ -424,19 +419,12 @@ export interface ApiWebPageFull {
   document?: ApiDocument;
   video?: ApiVideo;
   story?: ApiWebPageStoryData;
-  gift?: ApiStarGiftUnique;
-  auction?: ApiWebPageAuctionData;
   stickers?: ApiWebPageStickerData;
   cachedPage?: ApiInstantViewPage;
   cachedPageAudioById?: Record<string, ApiAudio>;
   aiComposeToneEmojiId?: string;
   hasLargeMedia?: boolean;
 }
-
-export type ApiWebPageAuctionData = {
-  gift: ApiStarGiftRegular;
-  endDate: number;
-};
 
 export type ApiWebPage = ApiWebPagePending | ApiWebPageEmpty | ApiWebPageFull;
 
@@ -1058,7 +1046,6 @@ export type ApiInlineButtonAction =
 export type ApiLocalButtonAction =
   { type: 'suggestedMessage'; buttonType: 'approve' | 'decline' | 'suggestChanges'; disabled?: boolean }
   | { type: 'openThread' }
-  | { type: 'giftOffer'; buttonType: 'accept' | 'reject' }
   | { type: 'noForwardsRequest'; buttonType: 'accept' | 'reject' };
 
 export type ApiKeyboardButton = {
@@ -1069,9 +1056,6 @@ export type ApiKeyboardButton = {
 
 export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'suggestedMessage' }>;
-};
-export type KeyboardButtonGiftOffer = ApiKeyboardButton & {
-  action: Extract<ApiLocalButtonAction, { type: 'giftOffer' }>;
 };
 export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'noForwardsRequest' }>;

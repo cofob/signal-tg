@@ -35,13 +35,9 @@ import type {
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
-  ApiSavedStarGift,
   ApiSession,
   ApiShareThemeBackdrop,
   ApiSponsoredMessage,
-  ApiStarGiftAuctionState,
-  ApiStarGiftCollection,
-  ApiStarGiftRegular,
   ApiStarsAmount,
   ApiStealthMode,
   ApiSticker,
@@ -74,7 +70,6 @@ import type {
   RepeatMode,
   ServiceNotification,
   SimilarBotsInfo,
-  StarGiftCategory,
   TextSummary,
   Thread,
   ThreadId,
@@ -363,20 +358,6 @@ export type GlobalState = {
     };
   };
   availableEffectById: Record<string, ApiAvailableEffect>;
-  starGifts?: {
-    byId: Record<string, ApiStarGiftRegular>;
-    idsByCategory: Record<StarGiftCategory, string[]>;
-  };
-  myUniqueGifts?: {
-    byId: Record<string, ApiSavedStarGift>;
-    ids: string[];
-    nextOffset?: string;
-  };
-  starGiftCollections?: {
-    byPeerId: Record<string, ApiStarGiftCollection[]>;
-  };
-  activeGiftAuctionIds?: string[];
-  giftAuctionByGiftId?: Record<string, ApiStarGiftAuctionState>;
 
   stickers: {
     setsById: Record<string, ApiStickerSet>;
@@ -444,7 +425,6 @@ export type GlobalState = {
   defaultTopicIconsId?: string;
   defaultStatusIconsId?: string;
   premiumGifts?: ApiStickerSet;
-  tonGifts?: ApiStickerSet;
   emojiKeywords: Record<string, EmojiKeywords | undefined>;
 
   emojiGroups: {

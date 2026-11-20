@@ -122,11 +122,6 @@ const PRIVACY_BIRTHDAY_SCREENS = [
   SettingsScreens.PrivacyBirthdayDeniedContacts,
 ];
 
-const PRIVACY_GIFTS_SCREENS = [
-  SettingsScreens.PrivacyGiftsAllowedContacts,
-  SettingsScreens.PrivacyGiftsDeniedContacts,
-];
-
 const PRIVACY_SAVED_MUSIC_SCREENS = [
   SettingsScreens.PrivacySavedMusicAllowedContacts,
   SettingsScreens.PrivacySavedMusicDeniedContacts,
@@ -265,7 +260,6 @@ const Settings = ({
       [SettingsScreens.PrivacyProfilePhoto]: PRIVACY_PROFILE_PHOTO_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyBio]: PRIVACY_BIO_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyBirthday]: PRIVACY_BIRTHDAY_SCREENS.includes(activeScreen),
-      [SettingsScreens.PrivacyGifts]: PRIVACY_GIFTS_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacySavedMusic]: PRIVACY_SAVED_MUSIC_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyPhoneCall]: PRIVACY_PHONE_CALL_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyPhoneP2P]: PRIVACY_PHONE_P2P_SCREENS.includes(activeScreen),
@@ -407,7 +401,6 @@ const Settings = ({
       case SettingsScreens.PrivacyProfilePhoto:
       case SettingsScreens.PrivacyBio:
       case SettingsScreens.PrivacyBirthday:
-      case SettingsScreens.PrivacyGifts:
       case SettingsScreens.PrivacySavedMusic:
       case SettingsScreens.PrivacyPhoneCall:
       case SettingsScreens.PrivacyForwarding:
@@ -426,7 +419,6 @@ const Settings = ({
       case SettingsScreens.PrivacyProfilePhotoAllowedContacts:
       case SettingsScreens.PrivacyBioAllowedContacts:
       case SettingsScreens.PrivacyBirthdayAllowedContacts:
-      case SettingsScreens.PrivacyGiftsAllowedContacts:
       case SettingsScreens.PrivacySavedMusicAllowedContacts:
       case SettingsScreens.PrivacyPhoneCallAllowedContacts:
       case SettingsScreens.PrivacyPhoneP2PAllowedContacts:
@@ -439,7 +431,6 @@ const Settings = ({
             isAllowList
             usersOnly={currentScreen === SettingsScreens.PrivacyNoPaidMessages}
             withPremiumCategory={currentScreen === SettingsScreens.PrivacyGroupChatsAllowedContacts}
-            withMiniAppsCategory={currentScreen === SettingsScreens.PrivacyGiftsAllowedContacts}
             screen={currentScreen}
             isActive={isScreenActive || privacyAllowScreens[currentScreen]}
             onReset={handleReset}
@@ -451,7 +442,6 @@ const Settings = ({
       case SettingsScreens.PrivacyProfilePhotoDeniedContacts:
       case SettingsScreens.PrivacyBioDeniedContacts:
       case SettingsScreens.PrivacyBirthdayDeniedContacts:
-      case SettingsScreens.PrivacyGiftsDeniedContacts:
       case SettingsScreens.PrivacySavedMusicDeniedContacts:
       case SettingsScreens.PrivacyPhoneCallDeniedContacts:
       case SettingsScreens.PrivacyPhoneP2PDeniedContacts:

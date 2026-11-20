@@ -6,7 +6,6 @@ import type {
   ApiAvatarUpload,
   ApiBirthday,
   ApiChat,
-  ApiDisallowedGiftsSettings,
   ApiInputPrivacyRules,
   ApiLanguage,
   ApiNotifyPeerType,
@@ -30,13 +29,13 @@ import { buildCollectionByKey } from '../../../util/iteratees';
 import { toJSNumber } from '../../../util/numbers';
 import { BLOCKED_LIST_LIMIT } from '../../../limits';
 import { buildApiPhoto, buildPrivacyRules } from '../apiBuilders/common';
-import { buildApiDisallowedGiftsSettings, buildApiShareThemeBackdrop } from '../apiBuilders/gifts';
 import {
   buildApiChatTheme,
   buildApiCountryList,
   buildApiLanguage,
   buildApiPasskey,
   buildApiSession,
+  buildApiShareThemeBackdrop,
   buildApiTimezone,
   buildApiWallpaper,
   buildApiWebSession,
@@ -50,7 +49,6 @@ import {
   getApiChatIdFromMtpPeer,
 } from '../apiBuilders/peers';
 import {
-  buildDisallowedGiftsSettings,
   buildInputBirthday,
   buildInputChannel,
   buildInputPeer,
@@ -742,8 +740,6 @@ export async function fetchGlobalPrivacySettings() {
     shouldHideReadMarks: Boolean(result.hideReadMarks),
     shouldNewNonContactPeersRequirePremium: Boolean(result.newNoncontactPeersRequirePremium),
     nonContactPeersPaidStars: toJSNumber(result.noncontactPeersPaidStars),
-    shouldDisplayGiftsButton: Boolean(result.displayGiftsButton),
-    disallowedGifts: result.disallowedGifts && buildApiDisallowedGiftsSettings(result.disallowedGifts),
   };
 }
 
@@ -752,24 +748,18 @@ export async function updateGlobalPrivacySettings({
   shouldHideReadMarks,
   shouldNewNonContactPeersRequirePremium,
   nonContactPeersPaidStars,
-  shouldDisplayGiftsButton,
-  disallowedGifts,
 }: {
   shouldArchiveAndMuteNewNonContact?: boolean;
   shouldHideReadMarks?: boolean;
   shouldNewNonContactPeersRequirePremium?: boolean;
   nonContactPeersPaidStars?: number | null;
-  shouldDisplayGiftsButton?: boolean;
-  disallowedGifts?: ApiDisallowedGiftsSettings;
 }) {
   const result = await invokeRequest(new GramJs.account.SetGlobalPrivacySettings({
     settings: new GramJs.GlobalPrivacySettings({
       ...(shouldArchiveAndMuteNewNonContact && { archiveAndMuteNewNoncontactPeers: true }),
       ...(shouldHideReadMarks && { hideReadMarks: true }),
       ...(shouldNewNonContactPeersRequirePremium && { newNoncontactPeersRequirePremium: true }),
-      displayGiftsButton: shouldDisplayGiftsButton || undefined,
       noncontactPeersPaidStars: BigInt(nonContactPeersPaidStars || 0),
-      disallowedGifts: disallowedGifts && buildDisallowedGiftsSettings(disallowedGifts),
     }),
   }));
 
@@ -782,8 +772,6 @@ export async function updateGlobalPrivacySettings({
     shouldHideReadMarks: Boolean(result.hideReadMarks),
     shouldNewNonContactPeersRequirePremium: Boolean(result.newNoncontactPeersRequirePremium),
     nonContactPeersPaidStars: toJSNumber(result.noncontactPeersPaidStars),
-    shouldDisplayGiftsButton,
-    disallowedGifts,
   };
 }
 

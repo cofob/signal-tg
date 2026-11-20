@@ -16,7 +16,7 @@ import { MAIN_THREAD_ID } from '../../../api/types';
 import { type BotAppPermissions, ManagementScreens } from '../../../types';
 
 import {
-  FRAGMENT_PHONE_CODE, FRAGMENT_PHONE_LENGTH, MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP,
+  MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP,
 } from '../../../config';
 import {
   getChatLink,
@@ -145,7 +145,6 @@ const ChatExtra = ({
     loadPeerStories,
     openSavedDialog,
     openMapModal,
-    requestCollectibleInfo,
     requestMainWebView,
     toggleUserEmojiStatusPermission,
     toggleUserLocationPermission,
@@ -306,18 +305,10 @@ const ChatExtra = ({
   const formattedNumber = phoneNumber && formatPhoneNumberWithCode(phoneCodeList, phoneNumber);
 
   const handlePhoneClick = useLastCallback(() => {
-    if (phoneNumber?.length === FRAGMENT_PHONE_LENGTH && phoneNumber.startsWith(FRAGMENT_PHONE_CODE)) {
-      requestCollectibleInfo({ collectible: phoneNumber, peerId: peerId!, type: 'phone' });
-      return;
-    }
     copy(formattedNumber!, 'PhoneCopied');
   });
 
   const handleUsernameClick = useLastCallback((username: ApiUsername, isChat?: boolean) => {
-    if (!username.isEditable) {
-      requestCollectibleInfo({ collectible: username.username, peerId: peerId!, type: 'username' });
-      return;
-    }
     copy(formatUsername(username.username, isChat), isChat ? 'LinkCopied' : 'UsernameCopied');
   });
 

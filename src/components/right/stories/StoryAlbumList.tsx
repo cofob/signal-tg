@@ -2,7 +2,7 @@ import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { ApiStoryAlbum } from '../../../api/types';
-import type { ProfileCollectionKey } from '../../../global/selectors/payments';
+import type { ProfileCollectionKey } from '../../../global/selectors/stories';
 import type { AnimationLevel } from '../../../types';
 import type { TabItem } from '../../common/AnimatedTabList';
 

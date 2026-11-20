@@ -2,11 +2,8 @@ import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
   ApiBoostsStatus,
-  ApiCheckedGiftCode,
   ApiGiveawayInfo,
-  ApiInvoice,
   ApiMyBoost,
-  ApiPaymentForm,
   ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
   ApiPremiumSection,
@@ -16,7 +13,6 @@ import type {
   ApiStarGiveawayOption,
   ApiStarsGiveawayWinnerOption,
   ApiTypeCurrencyAmount,
-  ApiUniqueStarGiftValueInfo,
 } from '../../types';
 
 import { STARS_CURRENCY_CODE, TON_CURRENCY_CODE } from '../../../config';
@@ -24,38 +20,6 @@ import { toJSNumber } from '../../../util/numbers';
 import { buildApiMessageEntity } from './common';
 import { buildApiDocument } from './messageContent';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
-
-export function buildApiPaymentForm(form: GramJs.payments.TypePaymentForm): ApiPaymentForm | undefined {
-  if (form instanceof GramJs.payments.PaymentFormStarGift) {
-    return {
-      type: 'stargift',
-      formId: String(form.formId),
-      invoice: buildApiInvoice(form.invoice),
-    };
-  }
-
-  if (form instanceof GramJs.payments.PaymentFormStars) {
-    return {
-      type: 'stars',
-      formId: String(form.formId),
-      invoice: buildApiInvoice(form.invoice),
-    };
-  }
-
-  return undefined;
-}
-
-function buildApiInvoice({ currency, prices }: GramJs.Invoice): ApiInvoice {
-  const totalPrice: ApiTypeCurrencyAmount | undefined = currency === TON_CURRENCY_CODE
-    ? { currency: TON_CURRENCY_CODE, amount: prices.reduce((acc, cur) => acc + cur.amount, 0n) }
-    : currency === STARS_CURRENCY_CODE ? {
-      currency: STARS_CURRENCY_CODE,
-      amount: prices.reduce((acc, cur) => acc + toJSNumber(cur.amount), 0),
-      nanos: 0,
-    } : undefined;
-
-  return { totalPrice };
-}
 
 export function buildApiPremiumPromo(promo: GramJs.help.PremiumPromo): ApiPremiumPromo {
   const {
@@ -189,22 +153,6 @@ export function buildApiGiveawayInfo(info: GramJs.payments.TypeGiveawayInfo): Ap
   }
 }
 
-export function buildApiCheckedGiftCode(giftcode: GramJs.payments.TypeCheckedGiftCode): ApiCheckedGiftCode {
-  const {
-    date, fromId, days, giveawayMsgId, toId, usedDate, viaGiveaway,
-  } = giftcode;
-
-  return {
-    date,
-    days,
-    toId: toId !== undefined ? buildApiPeerId(toId, 'user') : undefined,
-    fromId: fromId && getApiChatIdFromMtpPeer(fromId),
-    usedAt: usedDate,
-    isFromGiveaway: viaGiveaway,
-    giveawayMessageId: giveawayMsgId,
-  };
-}
-
 export function buildApiPremiumGiftCodeOption(option: GramJs.PremiumGiftCodeOption): ApiPremiumGiftCodeOption {
   const {
     amount, currency, months, users,
@@ -267,31 +215,5 @@ export function buildApiStarsGiveawayOptions(option: GramJs.StarsGiveawayOption)
     amount: toJSNumber(amount),
     currency,
     winners: winnerList,
-  };
-}
-
-export function buildApiUniqueStarGiftValueInfo(
-  info: GramJs.payments.UniqueStarGiftValueInfo): ApiUniqueStarGiftValueInfo {
-  const {
-    lastSaleOnFragment, currency, value, initialSaleDate, initialSaleStars, initialSalePrice,
-    lastSaleDate, lastSalePrice, floorPrice, averagePrice, listedCount, fragmentListedCount,
-    fragmentListedUrl, valueIsAverage,
-  } = info;
-
-  return {
-    isLastSaleOnFragment: lastSaleOnFragment,
-    isValueAverage: valueIsAverage,
-    currency,
-    value: toJSNumber(value),
-    initialSaleDate,
-    initialSaleStars: toJSNumber(initialSaleStars),
-    initialSalePrice: toJSNumber(initialSalePrice),
-    lastSaleDate,
-    lastSalePrice: toJSNumber(lastSalePrice),
-    floorPrice: toJSNumber(floorPrice),
-    averagePrice: toJSNumber(averagePrice),
-    listedCount,
-    fragmentListedCount,
-    fragmentListedUrl,
   };
 }

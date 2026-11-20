@@ -11,14 +11,11 @@ import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import Icon from '../../common/icons/Icon';
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
-import Switch from '../../gili/primitives/Switch';
 import ListItem from '../../ui/ListItem';
 import RadioGroup from '../../ui/RadioGroup';
 import PremiumStatusItem from './PremiumStatusItem';
 import PrivacyLockedOption from './PrivacyLockedOption';
-import SettingsAcceptedGift from './SettingsAcceptedGift';
 import SettingsPrivacyLastSeen from './SettingsPrivacyLastSeen';
 import SettingsPrivacyPublicProfilePhoto from './SettingsPrivacyPublicProfilePhoto';
 
@@ -35,7 +32,6 @@ type StateProps = {
   primaryPrivacy?: ApiPrivacySettings;
   secondaryPrivacy?: ApiPrivacySettings;
   isPremiumRequired?: boolean;
-  shouldDisplayGiftsButton?: boolean;
   isCurrentUserPremium?: boolean;
 };
 
@@ -49,34 +45,11 @@ const SettingsPrivacyVisibility = ({
   currentUserFallbackPhoto,
   isPremiumRequired,
   onReset,
-  shouldDisplayGiftsButton,
   isCurrentUserPremium,
 }: OwnProps & StateProps) => {
-  const { updateGlobalPrivacySettings, showNotification } = getActions();
-
-  const lang = useLang();
-
   useHistoryBack({
     isActive,
     onBack: onReset,
-  });
-
-  const handleShowGiftIconInChats = useLastCallback(() => {
-    if (!isCurrentUserPremium) {
-      showNotification({
-        message: lang('PrivacySubscribeToTelegramPremium'),
-        action: {
-          action: 'openPremiumModal',
-          payload: {},
-        },
-        actionText: { key: 'Open' },
-        icon: 'star',
-      });
-      return;
-    }
-    updateGlobalPrivacySettings({
-      shouldDisplayGiftsButton: !shouldDisplayGiftsButton,
-    });
   });
 
   const secondaryScreen = useMemo(() => {
@@ -93,28 +66,6 @@ const SettingsPrivacyVisibility = ({
 
   return (
     <div className="settings-content custom-scroll">
-      {screen === SettingsScreens.PrivacyGifts && (
-        <>
-          <Island>
-            <ListItem onClick={handleShowGiftIconInChats}>
-              <span>{lang('PrivacyDisplayGiftsButton')}</span>
-              <Switch
-                id="gift"
-                disabled={!isCurrentUserPremium}
-                checked={Boolean(shouldDisplayGiftsButton)}
-              />
-            </ListItem>
-          </Island>
-          <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-            {lang('PrivacyDisplayGiftIconInChats', {
-              icon: <Icon name="gift" className="gift-icon" />,
-              gift: lang('PrivacyDisplayGift'),
-            }, {
-              withNodes: true,
-            })}
-          </IslandDescription>
-        </>
-      )}
       <PrivacySubsection
         screen={screen}
         privacy={primaryPrivacy}
@@ -129,9 +80,6 @@ const SettingsPrivacyVisibility = ({
       )}
       {screen === SettingsScreens.PrivacyLastSeen && (
         <SettingsPrivacyLastSeen visibility={primaryPrivacy?.visibility} />
-      )}
-      {screen === SettingsScreens.PrivacyGifts && (
-        <SettingsAcceptedGift />
       )}
       {Boolean(secondaryScreen) && (
         <PrivacySubsection
@@ -203,8 +151,6 @@ function PrivacySubsection({
 
   const descriptionText = useMemo(() => {
     switch (screen) {
-      case SettingsScreens.PrivacyGifts:
-        return lang('PrivacyGiftsInfo');
       case SettingsScreens.PrivacySavedMusic:
         return lang('PrivacyMusicInfo');
       case SettingsScreens.PrivacyLastSeen:
@@ -233,8 +179,6 @@ function PrivacySubsection({
         return lang('PrivacyBioTitle');
       case SettingsScreens.PrivacyBirthday:
         return lang('PrivacyBirthdayTitle');
-      case SettingsScreens.PrivacyGifts:
-        return lang('PrivacyGiftsTitle');
       case SettingsScreens.PrivacySavedMusic:
         return lang('PrivacyMusicTitle');
       case SettingsScreens.PrivacyForwarding:
@@ -309,8 +253,6 @@ function PrivacySubsection({
         return SettingsScreens.PrivacyBioAllowedContacts;
       case SettingsScreens.PrivacyBirthday:
         return SettingsScreens.PrivacyBirthdayAllowedContacts;
-      case SettingsScreens.PrivacyGifts:
-        return SettingsScreens.PrivacyGiftsAllowedContacts;
       case SettingsScreens.PrivacySavedMusic:
         return SettingsScreens.PrivacySavedMusicAllowedContacts;
       case SettingsScreens.PrivacyForwarding:
@@ -338,8 +280,6 @@ function PrivacySubsection({
         return SettingsScreens.PrivacyBioDeniedContacts;
       case SettingsScreens.PrivacyBirthday:
         return SettingsScreens.PrivacyBirthdayDeniedContacts;
-      case SettingsScreens.PrivacyGifts:
-        return SettingsScreens.PrivacyGiftsDeniedContacts;
       case SettingsScreens.PrivacySavedMusic:
         return SettingsScreens.PrivacySavedMusicDeniedContacts;
       case SettingsScreens.PrivacyForwarding:
@@ -420,9 +360,6 @@ export default memo(withGlobal<OwnProps>(
       currentUserId,
       settings: {
         privacy,
-        byKey: {
-          shouldDisplayGiftsButton,
-        },
       },
     } = global;
 
@@ -448,10 +385,6 @@ export default memo(withGlobal<OwnProps>(
 
       case SettingsScreens.PrivacyBirthday:
         primaryPrivacy = privacy.birthday;
-        break;
-
-      case SettingsScreens.PrivacyGifts:
-        primaryPrivacy = privacy.gifts;
         break;
 
       case SettingsScreens.PrivacySavedMusic:
@@ -492,7 +425,6 @@ export default memo(withGlobal<OwnProps>(
       hasCurrentUserFullInfo: Boolean(currentUserFullInfo),
       currentUserFallbackPhoto: currentUserFullInfo?.fallbackPhoto,
       isPremiumRequired: screen === SettingsScreens.PrivacyVoiceMessages && !selectIsCurrentUserPremium(global),
-      shouldDisplayGiftsButton,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
     };
   },

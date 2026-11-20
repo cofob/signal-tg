@@ -60,22 +60,6 @@ export function buildApiPeerColor(peerColor: GramJs.TypePeerColor): ApiTypePeerC
     };
   }
 
-  if (peerColor instanceof GramJs.PeerColorCollectible) {
-    const {
-      collectibleId, giftEmojiId, backgroundEmojiId, accentColor, colors, darkAccentColor, darkColors,
-    } = peerColor;
-    return {
-      type: 'collectible',
-      giftEmojiId: giftEmojiId.toString(),
-      collectibleId: collectibleId.toString(),
-      backgroundEmojiId: backgroundEmojiId.toString(),
-      accentColor: int2hex(accentColor),
-      colors: colors.map((color) => int2hex(color)),
-      darkAccentColor: darkAccentColor ? int2hex(darkAccentColor) : undefined,
-      darkColors: darkColors?.map((color) => int2hex(color)),
-    };
-  }
-
   return undefined;
 }
 
@@ -181,12 +165,10 @@ export function buildApiPeerNotifySettings(
   };
 }
 
-export function buildApiProfileTab(profileTab: GramJs.TypeProfileTab): ApiProfileTab {
+export function buildApiProfileTab(profileTab: GramJs.TypeProfileTab): ApiProfileTab | undefined {
   switch (profileTab.className) {
     case 'ProfileTabPosts':
       return 'stories';
-    case 'ProfileTabGifts':
-      return 'gifts';
     case 'ProfileTabMedia':
       return 'media';
     case 'ProfileTabFiles':
@@ -199,6 +181,8 @@ export function buildApiProfileTab(profileTab: GramJs.TypeProfileTab): ApiProfil
       return 'links';
     case 'ProfileTabGifs':
       return 'gif';
+    case 'ProfileTabGifts':
+      return undefined;
     default: {
       const _exhaustiveCheck: never = profileTab;
       return _exhaustiveCheck;

@@ -4,7 +4,7 @@ import {
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiBotCommand, ApiChat, ApiDisallowedGifts,
+  ApiBotCommand, ApiChat,
 } from '../../api/types';
 import type { IAnchorPosition, ThreadId } from '../../types';
 import type { IconName } from '../../types/icons';
@@ -27,7 +27,6 @@ import {
 import { getIsChatMuted } from '../../global/helpers/notifications';
 import {
   selectBot,
-  selectCanGift,
   selectCanManage,
   selectCanManageAutoDelete,
   selectCanTranslateChat,
@@ -118,7 +117,6 @@ type StateProps = {
   canAddContact?: boolean;
   canDeleteChat?: boolean;
   canReportChat?: boolean;
-  canGift?: boolean;
   canCreateTopic?: boolean;
   canEditTopic?: boolean;
   hasLinkedChat?: boolean;
@@ -130,7 +128,6 @@ type StateProps = {
   isBot?: boolean;
   isChatWithSelf?: boolean;
   savedDialog?: ApiChat;
-  disallowedGifts?: ApiDisallowedGifts;
   isAccountFrozen?: boolean;
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
@@ -167,7 +164,6 @@ const HeaderMenuContainer = ({
   isPrivate,
   isMuted,
   canDeleteChat,
-  canGift,
   hasLinkedChat,
   canAddContact,
   canCreateTopic,
@@ -180,7 +176,6 @@ const HeaderMenuContainer = ({
   isChatWithSelf,
   savedDialog,
   canShowBoostModal,
-  disallowedGifts,
   isAccountFrozen,
   noForwardsMyEnabled,
   noForwardsPeerEnabled,
@@ -205,7 +200,6 @@ const HeaderMenuContainer = ({
     openAddContactDialog,
     openFrozenAccountModal,
     requestMasterAndRequestCall,
-    openGiftModal,
     openThreadWithInfo,
     openCreateTopicPanel,
     openEditTopicPanel,
@@ -218,7 +212,6 @@ const HeaderMenuContainer = ({
     setViewForumAsMessages,
     openBoostModal,
     reportMessages,
-    showNotification,
     toggleNoForwards,
     openDisableSharingAboutModal,
     setChatHistoryTtl,
@@ -240,13 +233,6 @@ const HeaderMenuContainer = ({
     (!isChatInfoShown && isForum) ? true : undefined, CLOSE_MENU_ANIMATION_DURATION,
   );
   const viewInfoLangKey = getViewInfoLangKey(isTopic, isBotForum);
-
-  const areAllGiftsDisallowed = useMemo(() => {
-    if (!disallowedGifts) {
-      return undefined;
-    }
-    return Object.values(disallowedGifts).every(Boolean);
-  }, [disallowedGifts]);
 
   const closeMuteModal = useLastCallback(() => {
     setIsMuteModalOpen(false);
@@ -371,20 +357,6 @@ const HeaderMenuContainer = ({
 
   const handleLinkedChatClick = useLastCallback(() => {
     openLinkedChat({ id: chatId });
-    closeMenu();
-  });
-
-  const handleGiftClick = useLastCallback(() => {
-    if (areAllGiftsDisallowed && chat) {
-      showNotification({ message: lang('SendDisallowError') });
-      return;
-    }
-    openGiftModal({ forUserId: chatId });
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      openGiftModal({ forUserId: chatId });
-    }
     closeMenu();
   });
 
@@ -817,14 +789,6 @@ const HeaderMenuContainer = ({
             </MenuItem>
           )}
           {botButtons}
-          {canGift && (
-            <MenuItem
-              icon="gift"
-              onClick={handleGiftClick}
-            >
-              {lang('ProfileSendAGift')}
-            </MenuItem>
-          )}
           {isBot && (
             <MenuItem
               icon={isBlocked ? 'bots' : 'hand-stop'}
@@ -914,7 +878,6 @@ export default memo(withGlobal<OwnProps>(
     const userFullInfo = isPrivate ? selectUserFullInfo(global, chatId) : undefined;
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
     const fullInfo = userFullInfo || chatFullInfo;
-    const canGift = selectCanGift(global, chatId);
 
     const topic = selectTopic(global, chatId, threadId);
     // Disable manual creation for bot forums
@@ -943,7 +906,6 @@ export default memo(withGlobal<OwnProps>(
       canAddContact,
       canDeleteChat: getCanDeleteChat(chat),
       canReportChat,
-      canGift,
       hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
       botCommands: chatBot ? userFullInfo?.botInfo?.commands : undefined,
       botPrivacyPolicyUrl: chatBot ? userFullInfo?.botInfo?.privacyPolicyUrl : undefined,
@@ -957,7 +919,6 @@ export default memo(withGlobal<OwnProps>(
       isBot: Boolean(chatBot),
       isChatWithSelf,
       savedDialog,
-      disallowedGifts: userFullInfo?.disallowedGifts,
       isAccountFrozen,
       noForwardsMyEnabled: userFullInfo?.noForwardsMyEnabled,
       noForwardsPeerEnabled: userFullInfo?.noForwardsPeerEnabled,

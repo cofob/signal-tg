@@ -159,9 +159,6 @@ export interface ApiChatTheme {
 export type ApiPeerTheme = {
   type: 'emoticon';
   emoticon: string;
-} | {
-  type: 'gift';
-  settings: ApiThemeSettings[];
 };
 
 export interface ApiSession {
@@ -330,7 +327,6 @@ export interface ApiAppConfig {
   areWidgetsDisabled?: boolean;
   premiumBotUsername: string;
   isPremiumPurchaseBlocked: boolean;
-  isGiveawayGiftsPurchaseAvailable: boolean;
   giveawayAddPeersMax: number;
   giveawayBoostsPerPremium: number;
   giveawayCountriesMax: number;
@@ -366,18 +362,11 @@ export interface ApiAppConfig {
   paidReactionMaxAmount?: number;
   isChannelRevenueWithdrawalEnabled?: boolean;
   isStarsGiftEnabled?: boolean;
-  starGiftMaxMessageLength?: number;
-  starGiftMaxConvertPeriod?: number;
   starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
-  savedGiftPinLimit?: number;
   freezeSinceDate?: number;
   freezeUntilDate?: number;
   freezeAppealUrl?: string;
-  starsStargiftResaleAmountMin?: number;
-  starsStargiftResaleAmountMax?: number;
-  starsStargiftResaleCommissionPermille?: number;
-  stargiftsCraftAttributePermilles?: number[];
   starsSuggestedPostAmountMax: number;
   starsSuggestedPostAmountMin: number;
   starsSuggestedPostCommissionPermille: number;
@@ -388,9 +377,6 @@ export interface ApiAppConfig {
   tonSuggestedPostCommissionPermille: number;
   tonSuggestedPostAmountMax: bigint;
   tonSuggestedPostAmountMin: bigint;
-  tonStargiftResaleAmountMax?: bigint;
-  tonStargiftResaleAmountMin?: bigint;
-  tonStargiftResaleCommissionPermille?: number;
   tonUsdRate?: number;
   tonTopupUrl: string;
   pollMaxAnswers: number;
@@ -521,15 +507,6 @@ export type ApiUrlAuthResult =
   | ApiUrlAuthResultAccepted
   | ApiUrlAuthResultExpired
   | ApiUrlAuthResultDefault;
-
-export interface ApiCollectibleInfo {
-  amount: number;
-  currency: string;
-  cryptoAmount: bigint;
-  cryptoCurrency: string;
-  purchaseDate: number;
-  url: string;
-}
 
 export type ApiLimitType =
   | 'uploadMaxFileparts'
