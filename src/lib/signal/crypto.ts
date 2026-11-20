@@ -51,6 +51,14 @@ export async function decryptAesCbc(
   return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, ciphertext));
 }
 
+/** AES-256-CBC with PKCS#7 padding */
+export async function encryptAesCbc(
+  key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>, iv: Uint8Array<ArrayBuffer>,
+) {
+  const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-CBC', false, ['encrypt']);
+  return new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, cryptoKey, plaintext));
+}
+
 export async function encryptAesCtr(
   key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>, counter: Uint8Array<ArrayBuffer>,
 ) {

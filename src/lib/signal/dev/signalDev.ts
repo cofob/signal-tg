@@ -5,6 +5,7 @@ import type { MessageChanges } from '../messages/MessageProcessor';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
+import { uploadAttachment } from '../attachments/uploadAttachment';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
@@ -114,6 +115,17 @@ const signalDev = {
     getContext();
     const message = await processor.sendDataMessage(conversationId, { body: text });
     console.log('[signal] Sent', message.sentAt, message.recipientStatus);
+  },
+
+  /** Uploads a `File` (for example from an `<input type="file">`) and sends it with an optional caption */
+  async sendFile(conversationId: string, file: File, caption?: string) {
+    const { connection } = getContext();
+    const pointer = await uploadAttachment(connection, new Uint8Array(await file.arrayBuffer()), {
+      contentType: file.type || 'application/octet-stream',
+      fileName: file.name,
+    });
+    const message = await processor.sendDataMessage(conversationId, { body: caption, attachments: [pointer] });
+    console.log('[signal] Sent file', message.sentAt, message.recipientStatus);
   },
 
   markRead(conversationId: string) {
