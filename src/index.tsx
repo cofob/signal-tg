@@ -56,6 +56,7 @@ async function init() {
   if (DEBUG) {
     // eslint-disable-next-line no-console
     console.log('>>> INIT');
+    void import('./lib/signal/dev/signalDev');
   }
 
   if (!(window as any).isCompatTestPassed) return;

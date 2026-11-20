@@ -9,4 +9,7 @@ Copied without changes from [signalapp/Signal-Android](https://github.com/signal
 | `WebSocketResources.proto` | `core/network/src/main/protowire/` |
 | `DeviceName.proto` | `core/util-jvm/src/main/protowire/` |
 
+`ProvisionEnvelope.proto` is `rust/provisioning/src/proto/provisioning.proto` from
+[signalapp/libsignal](https://github.com/signalapp/libsignal) `v0.108.3`, licensed under AGPL-3.0.
+
 After updating a schema, run `npm run signal:proto` to regenerate `../generated`.

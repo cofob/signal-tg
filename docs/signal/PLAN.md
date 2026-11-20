@@ -6,6 +6,25 @@
 
 Эталоны: Signal Android задаёт поведение и лимиты; Signal Desktop показывает, что умеет связанное устройство, и служит главным источником кода для переноса, потому что написан на TypeScript.
 
+## Ход работ
+
+Этап 0, сделано (2026-11-20):
+
+- `rust/libsignal/`: крейты libsignal v0.108.3; `rust/signal-wasm/`: WASM-мост протокола (имена функций как у `Native`) и TLS-клиент на rustls. Сборка: `npm run signal:wasm`, результат в `src/lib/signal/wasm/generated`.
+- `proxy/tunnel.ts`: туннель WebSocket -> TCP, `npm run signal:proxy`.
+- `dev/generateProto.ts`: генератор protobuf, `npm run signal:proto`; схемы в `src/lib/signal/proto/schema`.
+- `src/lib/signal/net`: TLS через туннель, HTTP/1.1, WebSocket, протокол `WebSocketResources`.
+- `src/lib/signal/account`, `receiver`, `chat`, `store`: привязка устройства, загрузка prekeys, чат-сокет, расшифровка конвертов, хранилище в IndexedDB.
+
+Проверено: сессия PQXDH и расшифровка в Node; TLS и туннель до `chat.signal.org`; в Chromium через `npm run dev` сокет привязки выдаёт ссылку `sgnl://linkdevice`.
+
+Не проверено: привязка телефоном и расшифровка первого сообщения. Проверка вручную:
+
+1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
+2. `npm run signal:proxy` (Node 24) и `npm run dev`.
+3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
+4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. `signalDev.listen()` переподключает, `signalDev.reset()` стирает локальные данные.
+
 ## 1. Проверенные факты
 
 Источники: клоны Signal-Android, Signal-Desktop, libsignal, RingRTC (2026-11-20), проверки сборки и сети из этого окружения.

@@ -36,7 +36,7 @@ type PendingRequest = {
 const REQUEST_TIMEOUT_MS = 30000;
 const KEEPALIVE_INTERVAL_MS = 30000;
 const KEEPALIVE_TIMEOUT_MS = 15000;
-const KEEPALIVE_PATH = '/v1/keepalive';
+const DEFAULT_KEEPALIVE_PATH = '/v1/keepalive';
 
 /**
  * Signal's request/response protocol over a WebSocket (`WebSocketResources.proto`), used by the
@@ -55,16 +55,14 @@ export default class ResourceSocket {
 
   private isClosed = false;
 
-  constructor(private socket: WebSocketClient, private shouldKeepAlive = true) {
+  constructor(private socket: WebSocketClient, private keepalivePath = DEFAULT_KEEPALIVE_PATH) {
     socket.onMessage = (data) => this.handleMessage(data);
     socket.onClose = (code, reason) => this.handleClose(code, reason);
-    if (shouldKeepAlive) {
-      this.keepaliveTimer = setInterval(() => this.sendKeepalive(), KEEPALIVE_INTERVAL_MS);
-    }
+    this.keepaliveTimer = setInterval(() => this.sendKeepalive(), KEEPALIVE_INTERVAL_MS);
   }
 
-  static async connect(host: string, path: string, headers?: Record<string, string>, shouldKeepAlive?: boolean) {
-    return new ResourceSocket(await WebSocketClient.connect(host, path, headers), shouldKeepAlive);
+  static async connect(host: string, path: string, headers?: Record<string, string>, keepalivePath?: string) {
+    return new ResourceSocket(await WebSocketClient.connect(host, path, headers), keepalivePath);
   }
 
   sendRequest({
@@ -137,7 +135,7 @@ export default class ResourceSocket {
 
   private async sendKeepalive() {
     try {
-      await this.sendRequest({ verb: 'GET', path: KEEPALIVE_PATH, timeout: KEEPALIVE_TIMEOUT_MS });
+      await this.sendRequest({ verb: 'GET', path: this.keepalivePath, timeout: KEEPALIVE_TIMEOUT_MS });
     } catch {
       this.close(1000, 'Keepalive failed');
     }

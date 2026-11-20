@@ -13,7 +13,7 @@
 //!   `markKyberPreKeyUsed(id, signedPreKeyId, baseKey)`
 //! - sender keys: `loadSenderKey(name, deviceId, distributionId)`, `storeSenderKey(name, deviceId, distributionId, record)`
 //!
-//! Loads resolve to `Uint8Array` or `null`.
+//! Loads resolve to `Uint8Array`, or to `undefined` or `null` when the record is missing.
 
 use async_trait::async_trait;
 use js_sys::{Array, Function, Promise, Reflect, Uint8Array};
