@@ -20,9 +20,11 @@ policy only limits what an escape from the engine could do.
 Widgets render through a shadow root in the application page, with the validator
 in `scope: 'shadow'`. There is no per-widget frame or CSP: the page's own policy
 is the second layer behind the validator and the renderer's checks. Upstream's
-invariant 6 asks that policy to limit `connect-src` to Telegram's endpoints and
-to keep third-party origins out of `frame-src`; the page keeps both open for Mini
-Apps and TON Connect. This does not guarantee immunity to rendering DoS or
+invariant 6 asks that policy to limit `connect-src` to the client's endpoints and
+to keep third-party origins out of `frame-src`; the page's policy (`buildCsp` in
+`vite.config.ts`) allows only same-origin frames and connects to its own origin,
+the Signal tunnel, any `wss:` host and `ws:` on localhost, for the tunnel chosen
+in the proxy setting. This does not guarantee immunity to rendering DoS or
 containment of a browser Worker-realm exploit.
 
 Widget local storage uses the account cache's existing encrypted vault path
