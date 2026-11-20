@@ -1,0 +1,46 @@
+[package]
+name = "signal-wasm"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+libsignal-core = { path = "../libsignal/rust/core" }
+libsignal-protocol = { path = "../libsignal/rust/protocol" }
+signal-crypto = { path = "../libsignal/rust/crypto" }
+zkgroup = { path = "../libsignal/rust/zkgroup" }
+usernames = { path = "../libsignal/rust/usernames" }
+libsignal-account-keys = { path = "../libsignal/rust/account-keys" }
+
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+rand = "0.9"
+hkdf = "0.13"
+sha2 = "0.11"
+uuid = "1.5"
+async-trait = "0.1"
+
+# `getrandom` has no default WebAssembly backend; enable the `crypto.getRandomValues` one for every major version in the tree
+getrandom04 = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
+getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+overflow-checks = true
+
+[profile.release.package.curve25519-dalek]
+opt-level = 3
+overflow-checks = false
+
+[profile.release.package.sha2]
+opt-level = 3
+overflow-checks = false
