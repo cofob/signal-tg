@@ -15,7 +15,7 @@ import {
   selectTabState,
   selectUserFullInfo,
 } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
+import { LIMITS } from '../../../limits';
 import renderText from '../../common/helpers/renderText';
 
 import useFlag from '../../../hooks/useFlag';
@@ -44,7 +44,6 @@ type StateProps = {
   currentAvatarPhoto?: ApiPhoto;
   currentBio?: string;
   progress?: ManagementProgress;
-  maxBioLength: number;
 };
 
 const ERROR_NAME_MISSING = 'BotNameRequired';
@@ -56,7 +55,6 @@ const ManageBot = ({
   progress,
   currentBio,
   isActive,
-  maxBioLength,
   onClose,
 }: OwnProps & StateProps) => {
   const {
@@ -193,8 +191,8 @@ const ManageBot = ({
             onChange={handleBioChange}
             label={lang('DescriptionPlaceholder')}
             disabled={isLoading}
-            maxLength={maxBioLength}
-            maxLengthIndicator={maxBioLength ? (maxBioLength - bio.length).toString() : undefined}
+            maxLength={LIMITS.aboutLength}
+            maxLengthIndicator={(LIMITS.aboutLength - bio.length).toString()}
           />
         </Island>
         <Island>
@@ -231,7 +229,6 @@ export default memo(withGlobal<OwnProps>(
     const user = selectBot(global, userId);
     const userFullInfo = selectUserFullInfo(global, userId);
     const { progress } = selectTabState(global).management;
-    const maxBioLength = selectCurrentLimit(global, 'aboutLength');
 
     return {
       userId,
@@ -239,7 +236,6 @@ export default memo(withGlobal<OwnProps>(
       currentAvatarPhoto: selectPeerAvatarPhoto(global, userId),
       progress,
       currentBio: userFullInfo?.bio,
-      maxBioLength,
     };
   },
 )(ManageBot));

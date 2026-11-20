@@ -160,7 +160,6 @@ const ChatOrUserPicker = ({
   const [topicIds, topics] = useMemo(() => {
     const global = getGlobal();
     const chatsById = global.chats.byId;
-    const chatFullInfoById = global.chats.fullInfoById;
 
     const chat = chatsById[forumId!];
 
@@ -171,7 +170,7 @@ const ChatOrUserPicker = ({
     const searchTitle = topicSearch.toLowerCase();
 
     const filteredTopics = Object.values(topicsInfo.topicsById).filter((topic) => (
-      getCanPostInChat(chat, topic, undefined, chatFullInfoById[forumId!])
+      getCanPostInChat(chat, topic)
       && (!searchTitle || topic.title.toLowerCase().includes(searchTitle))
     ));
     const topicThreadInfos = topicThreads && mapValues(topicThreads, (topicThread) => topicThread.threadInfo);

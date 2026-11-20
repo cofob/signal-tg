@@ -35,7 +35,6 @@ import type {
   ApiNotifyPeerType,
   ApiPeer,
   ApiPhoto,
-  ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiPrivacyKey,
   ApiPrivacySettings,
@@ -54,7 +53,6 @@ import type {
   ApiThemeParameters,
   ApiTodoItem,
   ApiTopPeerCategory,
-  ApiTypePrepaidGiveaway,
   ApiUpdate,
   ApiUser,
   ApiVideo,
@@ -650,29 +648,6 @@ export interface ActionPayloads {
   deleteSavedHistory: {
     chatId: string;
   } & WithTabId;
-  loadSponsoredMessages: {
-    peerId: string;
-  };
-  viewSponsored: {
-    randomId: string;
-  };
-  clickSponsored: {
-    randomId: string;
-    isMedia?: boolean;
-    isFullscreen?: boolean;
-  };
-  reportSponsored: {
-    peerId?: string;
-    randomId: string;
-    option?: string;
-  } & WithTabId;
-  openAboutAdsModal: {
-    randomId: string;
-    canReport?: boolean;
-    sponsorInfo?: string;
-    additionalInfo?: string;
-  } & WithTabId;
-  closeAboutAdsModal: WithTabId | undefined;
   openPreparedInlineMessageModal: {
     botId: string;
     messageId: string;
@@ -690,11 +665,8 @@ export interface ActionPayloads {
       threadId?: ThreadId;
     };
   } & WithTabId;
-  openPreviousReportAdModal: WithTabId | undefined;
   openPreviousReportModal: WithTabId | undefined;
-  closeReportAdModal: WithTabId | undefined;
   closeReportModal: WithTabId | undefined;
-  hideSponsored: WithTabId | undefined;
   loadSendAs: {
     chatId: string;
   };
@@ -779,9 +751,6 @@ export interface ActionPayloads {
     url: string;
     linkContext?: LinkContext;
   } & WithTabId;
-  resolveBusinessChatLink: {
-    slug: string;
-  } & WithTabId;
   openChatByUsername: {
     username: string;
     threadId?: ThreadId;
@@ -805,10 +774,6 @@ export interface ActionPayloads {
     linkContext?: LinkContext;
     isDirect?: boolean;
     noPaidMessagesToken?: string;
-  } & WithTabId;
-  processBoostParameters: {
-    usernameOrId: string;
-    isPrivate?: boolean;
   } & WithTabId;
   setScrollOffset: {
     chatId: string;
@@ -1323,36 +1288,6 @@ export interface ActionPayloads {
     isEnabled: boolean;
   };
 
-  launchPrepaidGiveaway: {
-    chatId: string;
-    giveawayId: string;
-    paymentPurpose: {
-      additionalChannelIds?: string[];
-      areWinnersVisible?: boolean;
-      countries?: string[];
-      prizeDescription?: string;
-      untilDate: number;
-      currency: string;
-      amount: number;
-    };
-  } & WithTabId;
-
-  launchPrepaidStarsGiveaway: {
-    chatId: string;
-    giveawayId: string;
-    paymentPurpose: {
-      additionalChannelIds?: string[];
-      areWinnersVisible?: boolean;
-      countries?: string[];
-      prizeDescription?: string;
-      untilDate: number;
-      currency: string;
-      stars: number;
-      users: number;
-      amount: number;
-    };
-  } & WithTabId;
-
   checkChatlistInvite: {
     slug: string;
   } & WithTabId;
@@ -1444,11 +1379,6 @@ export interface ActionPayloads {
   loadOutboxReadDate: {
     chatId: string;
     messageId: number;
-  };
-  loadQuickReplies: undefined;
-  sendQuickReply: {
-    chatId: string;
-    quickReplyId: number;
   };
   animateUnreadReaction: {
     chatId: string;
@@ -1785,15 +1715,6 @@ export interface ActionPayloads {
   };
   resetSelectedStoryAlbum: WithTabId | undefined;
 
-  openBoostModal: {
-    chatId: string;
-  } & WithTabId;
-  closeBoostModal: WithTabId | undefined;
-  applyBoost: {
-    slots: number[];
-    chatId: string;
-  } & WithTabId;
-
   // Media Viewer & Audio Player
   openMediaViewer: {
     chatId?: string;
@@ -1803,7 +1724,6 @@ export interface ActionPayloads {
     pageMedia?: MediaViewerPageMedia;
     mediaIndex?: number;
     isAvatarView?: boolean;
-    isSponsoredMessage?: boolean;
     origin: MediaViewerOrigin;
     withDynamicLoading?: boolean;
     timestamp?: number;
@@ -2667,7 +2587,6 @@ export interface ActionPayloads {
     suggestion: string;
   } & WithTabId;
   loadPeerColors: undefined;
-  loadTimezones: undefined;
   loadShareThemeBackdrops: undefined;
   loadAiComposeTones: undefined;
   openLeftColumnContent: {
@@ -2716,17 +2635,6 @@ export interface ActionPayloads {
     shouldNewNonContactPeersRequirePremium?: boolean;
     nonContactPeersPaidStars?: number | null;
   };
-
-  // Premium
-  openPremiumModal: ({
-    initialSection?: ApiPremiumSection;
-    fromUserId?: string;
-    toUserId?: string;
-    isSuccess?: boolean;
-    isGift?: boolean;
-    daysAmount?: number;
-  } & WithTabId) | undefined;
-  closePremiumModal: WithTabId | undefined;
 
   openAiMessageEditorModal: {
     chatId: string;
@@ -2797,13 +2705,6 @@ export interface ActionPayloads {
     tone: ApiInputAiComposeTone;
     num: number;
   } & WithTabId;
-
-  openGiveawayModal: ({
-    chatId: string;
-    gifts?: number[] | undefined;
-    prepaidGiveaway?: ApiTypePrepaidGiveaway | undefined;
-  } & WithTabId);
-  closeGiveawayModal: WithTabId | undefined;
 
   openLeaveGroupModal: {
     chatId: string;
@@ -2908,7 +2809,6 @@ export interface ActionPayloads {
     waveform: number[];
   };
 
-  loadPremiumGifts: undefined;
   loadStarStatus: undefined;
   loadDefaultTopicIcons: undefined;
   loadPremiumStickers: undefined;

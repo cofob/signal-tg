@@ -2,7 +2,6 @@ import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
   ApiBaseTheme,
-  ApiChatLink,
   ApiChatTheme,
   ApiConfig,
   ApiCountry,
@@ -17,7 +16,6 @@ import type {
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiThemeSettings,
-  ApiTimezone,
   ApiUrlAuthResult,
   ApiWallpaper,
   ApiWallpaperSettings,
@@ -29,8 +27,8 @@ import int2hex from '../../../util/int2hex';
 import { omitUndefined, pick } from '../../../util/iteratees';
 import { addDocumentToLocalDb, addUserToLocalDb } from '../helpers/localDb';
 import { buildApiFormattedText } from './common';
-import { buildApiDocument, buildMessageTextContent } from './messageContent';
-import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
+import { buildApiDocument } from './messageContent';
+import { buildApiPeerId } from './peers';
 import { buildApiReaction } from './reactions';
 import { buildApiUser } from './users';
 
@@ -394,23 +392,6 @@ export function buildApiLanguage(lang: GramJs.TypeLangPackLanguage): ApiLanguage
     stringsCount,
     translatedCount,
     translationsUrl,
-  };
-}
-
-export function buildApiTimezone(timezone: GramJs.TypeTimezone): ApiTimezone {
-  const { id, name, utcOffset } = timezone;
-  return {
-    id,
-    name,
-    utcOffset,
-  };
-}
-
-export function buildApiChatLink(data: GramJs.account.ResolvedBusinessChatLinks): ApiChatLink {
-  const chatId = getApiChatIdFromMtpPeer(data.peer);
-  return {
-    chatId,
-    text: buildMessageTextContent(data.message, data.entities),
   };
 }
 

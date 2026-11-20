@@ -18,8 +18,6 @@ import {
   type ApiMissingInvitedUser,
   type ApiRestrictionReason,
   type ApiSendAsPeerId,
-  type ApiSponsoredMessageReportResult,
-  type ApiSponsoredPeer,
   type ApiThreadInfo,
   type ApiTypingStatus,
   MAIN_THREAD_ID,
@@ -29,7 +27,6 @@ import { omitUndefined, pickTruthy } from '../../../util/iteratees';
 import { toJSNumber } from '../../../util/numbers';
 import { getServerTime } from '../../../util/serverTime';
 import { addPhotoToLocalDb, addUserToLocalDb } from '../helpers/localDb';
-import { serializeBytes } from '../helpers/misc';
 import { buildApiBotCommand } from './bots';
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
@@ -133,7 +130,6 @@ function buildApiChatFieldsFromPeerEntity(
     maxStoryId,
     hasStories: Boolean(maxStoryId) && !storiesUnavailable,
     emojiStatus,
-    boostLevel: channel?.level,
     botVerificationIconId,
     hasGeo: channel?.hasGeo,
     paidMessagesStars: toJSNumber(paidMessagesStars),
@@ -648,34 +644,6 @@ export function buildApiMissingInvitedUser(
   };
 }
 
-export function buildApiSponsoredMessageReportResult(
-  result: GramJs.channels.TypeSponsoredMessageReportResult,
-): ApiSponsoredMessageReportResult {
-  if (result instanceof GramJs.channels.SponsoredMessageReportResultReported) {
-    return {
-      type: 'reported',
-    };
-  }
-
-  if (result instanceof GramJs.channels.SponsoredMessageReportResultAdsHidden) {
-    return {
-      type: 'hidden',
-    };
-  }
-
-  const title = result.title;
-  const options = result.options.map((option) => ({
-    text: option.text,
-    option: serializeBytes(option.option),
-  }));
-
-  return {
-    type: 'selectOption',
-    title,
-    options,
-  };
-}
-
 export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInviteInfo {
   const {
     color, participants, participantsCount, photo, title, about, scam, fake, verified, megagroup, channel, broadcast,
@@ -706,19 +674,6 @@ export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInvite
     photo: apiPhoto,
     participantIds: participants?.map((participant) => buildApiPeerId(participant.id, 'user')).filter(Boolean),
     botVerification: botVerification && buildApiBotVerification(botVerification),
-  };
-}
-
-export function buildApiSponsoredPeer(sponsoredPeer: GramJs.SponsoredPeer): ApiSponsoredPeer {
-  const {
-    peer, randomId, additionalInfo, sponsorInfo,
-  } = sponsoredPeer;
-
-  return {
-    peerId: getApiChatIdFromMtpPeer(peer),
-    randomId: serializeBytes(randomId),
-    additionalInfo,
-    sponsorInfo,
   };
 }
 

@@ -12,7 +12,6 @@ import {
   selectBot,
   selectCanScheduleUntilOnline,
   selectChat,
-  selectChatFullInfo,
   selectCurrentMessageList,
   selectIsChatWithSelf,
   selectIsCurrentUserPremium,
@@ -262,18 +261,17 @@ export default memo(withGlobal<OwnProps>(
     const currentMessageList = selectCurrentMessageList(global);
     const { chatId, threadId } = currentMessageList || {};
     const chat = chatId && selectChat(global, chatId);
-    const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
     const chatBot = chatId && selectBot(global, chatId);
     const isSavedMessages = chatId ? selectIsChatWithSelf(global, chatId) : undefined;
 
     const sendOptions = chat
-      ? getAllowedAttachmentOptions(chat, chatFullInfo, Boolean(chatBot), isSavedMessages)
+      ? getAllowedAttachmentOptions(chat, Boolean(chatBot), isSavedMessages)
       : undefined;
     const threadInfo = chatId && threadId ? selectThreadInfo(global, chatId, threadId) : undefined;
     const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
     const topic = chatId && threadId ? selectTopic(global, chatId, threadId) : undefined;
     const canSendStickers = Boolean(
-      chat && threadId && getCanPostInChat(chat, topic, isMessageThread, chatFullInfo)
+      chat && threadId && getCanPostInChat(chat, topic, isMessageThread)
       && sendOptions?.canSendStickers,
     );
 

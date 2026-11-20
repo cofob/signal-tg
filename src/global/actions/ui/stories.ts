@@ -422,11 +422,3 @@ addActionHandler('updateStoryView', (global, actions, payload): ActionReturnType
     },
   }, tabId);
 });
-
-addActionHandler('closeBoostModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    boostModal: undefined,
-  }, tabId);
-});

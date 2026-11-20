@@ -195,11 +195,6 @@ const CalendarModal = ({
     if (!isCurrentUserPremium) {
       showNotification({
         message: lang('MessageScheduledRepeatPremium'),
-        action: {
-          action: 'openPremiumModal',
-          payload: {},
-        },
-        actionText: lang('PremiumMore'),
       });
       return;
     }

@@ -89,7 +89,6 @@ export type OwnProps = {
   canSearch?: boolean;
   canCall?: boolean;
   canMute?: boolean;
-  canShowBoostModal?: boolean;
   withForumActions?: boolean;
   canLeave?: boolean;
   canEnterVoiceChat?: boolean;
@@ -175,7 +174,6 @@ const HeaderMenuContainer = ({
   isBot,
   isChatWithSelf,
   savedDialog,
-  canShowBoostModal,
   isAccountFrozen,
   noForwardsMyEnabled,
   noForwardsPeerEnabled,
@@ -210,7 +208,6 @@ const HeaderMenuContainer = ({
     blockUser,
     unblockUser,
     setViewForumAsMessages,
-    openBoostModal,
     reportMessages,
     toggleNoForwards,
     openDisableSharingAboutModal,
@@ -389,15 +386,6 @@ const HeaderMenuContainer = ({
 
   const handleSearch = useLastCallback(() => {
     onSearchClick();
-    closeMenu();
-  });
-
-  const handleBoostClick = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      openBoostModal({ chatId });
-    }
     closeMenu();
   });
 
@@ -666,14 +654,6 @@ const HeaderMenuContainer = ({
               onClick={handleOpenAsMessages}
             >
               {lang('ForumViewAsMessages')}
-            </MenuItem>
-          )}
-          {canShowBoostModal && (
-            <MenuItem
-              icon="boost-outline"
-              onClick={handleBoostClick}
-            >
-              {lang(isChannel ? 'BoostingBoostChannelMenu' : 'BoostingBoostGroupMenu')}
             </MenuItem>
           )}
           {canAddContact && (

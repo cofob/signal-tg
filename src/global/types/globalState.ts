@@ -31,19 +31,16 @@ import type {
   ApiPrivacyKey,
   ApiPrivacySettings,
   ApiPromoData,
-  ApiQuickReply,
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiSponsoredMessage,
   ApiStarsAmount,
   ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
-  ApiTimezone,
   ApiTonAmount,
   ApiTopPeerCategory,
   ApiTranscription,
@@ -88,10 +85,6 @@ export type GlobalState = {
   appConfig: ApiAppConfig;
   promoData?: ApiPromoData;
   peerColors?: ApiPeerColors;
-  timezones?: {
-    byId: Record<string, ApiTimezone>;
-    hash: number;
-  };
   shareThemeBackdrops?: {
     list: ApiShareThemeBackdrop[];
     hash: number;
@@ -289,7 +282,6 @@ export type GlobalState = {
     playbackByChatId: Record<string, {
       byId: Record<number, number>;
     }>;
-    sponsoredByChatId: Record<string, ApiSponsoredMessage>;
     pollById: Record<string, ApiMessagePoll>;
     webPageById: Record<string, ApiWebPage>;
   };
@@ -317,11 +309,6 @@ export type GlobalState = {
     byChatId: Record<string, {
       byId: Record<number, ApiMessage>;
     }>;
-  };
-
-  quickReplies: {
-    messagesById: Record<number, ApiMessage>;
-    byId: Record<number, ApiQuickReply>;
   };
 
   chatFolders: {
@@ -422,7 +409,6 @@ export type GlobalState = {
   restrictedEmoji?: ApiStickerSet;
   defaultTopicIconsId?: string;
   defaultStatusIconsId?: string;
-  premiumGifts?: ApiStickerSet;
   emojiKeywords: Record<string, EmojiKeywords | undefined>;
 
   emojiGroups: {

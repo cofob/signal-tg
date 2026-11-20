@@ -85,7 +85,6 @@ type OwnProps = {
   canReport?: boolean;
   canShowReactionsCount?: boolean;
   canShowReactionList?: boolean;
-  canBuyPremium?: boolean;
   canEdit?: boolean;
   canAppendTodoList?: boolean;
   canForward?: boolean;
@@ -181,7 +180,6 @@ const MessageContextMenu = ({
   targetHref,
   canSendNow,
   canReschedule,
-  canBuyPremium,
   canReply,
   canQuote,
   canEdit,
@@ -422,12 +420,10 @@ const MessageContextMenu = ({
           isWithPaidReaction={isWithPaidReaction}
           isPrivate={isPrivate}
           isReady={isReady}
-          canBuyPremium={canBuyPremium}
           isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isInSavedMessages}
           canPlayAnimatedEmojis={canPlayAnimatedEmojis}
           onShowMore={handleOpenMessageReactionPicker}
-          onClose={onClose}
         />
       )}
 

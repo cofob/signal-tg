@@ -736,13 +736,6 @@ function getNodes(origin: MediaViewerOrigin, message?: ApiMessage, index?: numbe
       mediaSelector = '.Avatar img';
       break;
 
-    case MediaViewerOrigin.SponsoredMessage:
-      containerSelector = '.Transition_slide-active > .MessageList .sponsored-media-preview';
-      mediaSelector = `${MESSAGE_CONTENT_SELECTOR} img.full-media,`
-        + `${MESSAGE_CONTENT_SELECTOR} video.full-media,`
-        + `${MESSAGE_CONTENT_SELECTOR} img.thumbnail:not(.blurred-bg)`;
-      break;
-
     case MediaViewerOrigin.ScheduledInline:
     case MediaViewerOrigin.Inline:
     default:

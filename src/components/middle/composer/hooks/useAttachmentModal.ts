@@ -9,6 +9,7 @@ import { revokeAttachmentUrls } from '../../../../util/attachments';
 import generateUniqueId from '../../../../util/generateUniqueId';
 import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { rafPromise } from '../../../../util/schedulers';
+import { MAX_UPLOAD_SIZE } from '../../../../limits';
 import buildAttachment, {
   getPreparedPhotoDimensions,
   prepareAttachment,
@@ -19,7 +20,6 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 
 export default function useAttachmentModal({
   attachments,
-  fileSizeLimit,
   setAttachments,
   chatId,
   canAttachFiles,
@@ -31,7 +31,6 @@ export default function useAttachmentModal({
   shouldSendInHighQuality,
 }: {
   attachments: ApiAttachment[];
-  fileSizeLimit: number;
   setAttachments: (
     attachments: ApiAttachment[] | ((current: ApiAttachment[]) => ApiAttachment[]),
   ) => void;
@@ -137,7 +136,7 @@ export default function useAttachmentModal({
       })) {
         newAttachments.forEach((attachment) => revokeAttachmentUrls(attachment, attachments));
         showAllowedMessageTypesNotification({ chatId });
-      } else if (newAttachments.some(({ size }) => size > fileSizeLimit)) {
+      } else if (newAttachments.some(({ size }) => size > MAX_UPLOAD_SIZE)) {
         newAttachments.forEach((attachment) => revokeAttachmentUrls(attachment, attachments));
         openLimitReachedModal({
           limit: 'uploadMaxFileparts',

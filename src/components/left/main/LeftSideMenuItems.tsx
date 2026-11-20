@@ -18,7 +18,6 @@ import {
 import {
   selectTabState, selectTheme, selectUser,
 } from '../../../global/selectors';
-import { selectPremiumLimit } from '../../../global/selectors/limits';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { IS_MULTIACCOUNT_SUPPORTED } from '../../../util/browser/globalEnvironment';
 import { getPromptInstall } from '../../../util/installPrompt';
@@ -52,7 +51,6 @@ type StateProps = {
   theme: ThemeKey;
   canInstall?: boolean;
   attachBots: GlobalState['attachMenu']['bots'];
-  accountsTotalLimit: number;
 } & Pick<GlobalState, 'currentUserId' | 'archiveSettings'>;
 
 const LeftSideMenuItems = ({
@@ -63,7 +61,6 @@ const LeftSideMenuItems = ({
   canInstall,
   attachBots,
   currentUser,
-  accountsTotalLimit,
   onSelectArchived,
   onSelectContacts,
   onSelectSettings,
@@ -127,7 +124,6 @@ const LeftSideMenuItems = ({
         <>
           <AccountMenuItems
             currentUser={currentUser}
-            totalLimit={accountsTotalLimit}
             onSelectCurrent={onSelectSettings}
             onSwitchAccount={onSwitchAccount}
           />
@@ -237,7 +233,6 @@ export default memo(withGlobal<OwnProps>(
       canInstall: Boolean(tabState.canInstall),
       archiveSettings,
       attachBots,
-      accountsTotalLimit: selectPremiumLimit(global, 'moreAccounts'),
     };
   },
 )(LeftSideMenuItems));

@@ -26,6 +26,7 @@ import {
   updateRichMediaUpload,
 } from '../../../../util/tiptap/richMedia';
 import { callApi, cancelApiProgress } from '../../../../api/gramjs';
+import { MAX_UPLOAD_SIZE } from '../../../../limits';
 import buildAttachment, {
   prepareAttachment,
   prepareAttachmentsToSend,
@@ -40,7 +41,6 @@ type Params = {
   chat?: ApiChat;
   chatId: string;
   threadId: ThreadId;
-  fileSizeLimit: number;
   canSendPhotos: boolean;
   canSendVideos: boolean;
   canSendDocuments: boolean;
@@ -61,7 +61,6 @@ export default function useRichMedia({
   chat,
   chatId,
   threadId,
-  fileSizeLimit,
   canSendPhotos,
   canSendVideos,
   canSendDocuments,
@@ -210,7 +209,7 @@ export default function useRichMedia({
     shouldSendAsFile,
   ) => {
     const acceptedFiles = files.filter((file) => (
-      file.size <= fileSizeLimit
+      file.size <= MAX_UPLOAD_SIZE
       && (SUPPORTED_AUDIO_CONTENT_TYPES.has(file.type) ? canSendAudios && !shouldAppend
         : shouldSendAsFile || !RICH_MEDIA_CONTENT_TYPES.has(file.type)
           ? canSendDocuments && !shouldAppend

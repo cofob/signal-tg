@@ -1108,37 +1108,10 @@ addActionHandler('closeOneTimeMediaModal', (global, actions, payload): ActionRet
   setGlobal(global);
 });
 
-addActionHandler('closeReportAdModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    reportAdModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('closeReportModal', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
   return updateTabState(global, {
     reportModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openPreviousReportAdModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const reportAdModal = selectTabState(global, tabId).reportAdModal;
-  if (!reportAdModal) {
-    return undefined;
-  }
-
-  if (reportAdModal.sections.length === 1) {
-    actions.closeReportAdModal({ tabId });
-    return undefined;
-  }
-
-  return updateTabState(global, {
-    reportAdModal: {
-      ...reportAdModal,
-      sections: reportAdModal.sections.slice(0, -1),
-    },
   }, tabId);
 });
 
@@ -1253,29 +1226,6 @@ addActionHandler('closeDeleteMessageModal', (global, actions, payload): ActionRe
 
   return updateTabState(global, {
     deleteMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openAboutAdsModal', (global, actions, payload): ActionReturnType => {
-  const {
-    randomId, additionalInfo, canReport, sponsorInfo, tabId = getCurrentTabId(),
-  } = payload || {};
-
-  return updateTabState(global, {
-    aboutAdsModal: {
-      randomId,
-      canReport,
-      additionalInfo,
-      sponsorInfo,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeAboutAdsModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    aboutAdsModal: undefined,
   }, tabId);
 });
 

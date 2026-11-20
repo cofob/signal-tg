@@ -7,8 +7,6 @@ import type {
   ApiDice,
   ApiFormattedText,
   ApiGame,
-  ApiGiveaway,
-  ApiGiveawayResults,
   ApiLocation,
   ApiMediaExtendedPreview,
   ApiMediaTodo,
@@ -221,12 +219,6 @@ export function buildMessageMediaContent(
 
   const storyData = buildMessageStoryData(media);
   if (storyData) return { storyData };
-
-  const giveaway = buildGiveawayFromMedia(media);
-  if (giveaway) return { giveaway };
-
-  const giveawayResults = buildGiveawayResultsFromMedia(media);
-  if (giveawayResults) return { giveawayResults };
 
   const paidMedia = buildPaidMedia(media);
   if (paidMedia) return { paidMedia };
@@ -545,66 +537,6 @@ function buildDice(media: GramJs.MessageMediaDice): ApiDice | undefined {
     mediaType: 'dice',
     value,
     emoticon,
-  };
-}
-
-function buildGiveawayFromMedia(media: GramJs.TypeMessageMedia): ApiGiveaway | undefined {
-  if (!(media instanceof GramJs.MessageMediaGiveaway)) {
-    return undefined;
-  }
-
-  return buildGiveaway(media);
-}
-
-function buildGiveaway(media: GramJs.MessageMediaGiveaway): ApiGiveaway | undefined {
-  const {
-    channels, months, stars, quantity, untilDate, countriesIso2, onlyNewSubscribers, prizeDescription,
-  } = media;
-
-  const channelIds = channels.map((channel) => buildApiPeerId(channel, 'channel'));
-
-  return {
-    mediaType: 'giveaway',
-    channelIds,
-    months,
-    stars: toJSNumber(stars),
-    quantity,
-    untilDate,
-    countries: countriesIso2,
-    isOnlyForNewSubscribers: onlyNewSubscribers,
-    prizeDescription,
-  };
-}
-
-function buildGiveawayResultsFromMedia(media: GramJs.TypeMessageMedia): ApiGiveawayResults | undefined {
-  if (!(media instanceof GramJs.MessageMediaGiveawayResults)) {
-    return undefined;
-  }
-
-  return buildGiveawayResults(media);
-}
-
-function buildGiveawayResults(media: GramJs.MessageMediaGiveawayResults): ApiGiveawayResults | undefined {
-  const {
-    months, untilDate, onlyNewSubscribers, launchMsgId, unclaimedCount, winners, winnersCount,
-    additionalPeersCount, prizeDescription, refunded, channelId,
-  } = media;
-
-  const winnerIds = winners.map((winner) => buildApiPeerId(winner, 'user'));
-
-  return {
-    mediaType: 'giveawayResults',
-    months,
-    untilDate,
-    isOnlyForNewSubscribers: onlyNewSubscribers,
-    launchMessageId: launchMsgId,
-    channelId: buildApiPeerId(channelId, 'channel'),
-    unclaimedCount,
-    additionalPeersCount,
-    isRefunded: refunded,
-    prizeDescription,
-    winnerIds,
-    winnersCount,
   };
 }
 

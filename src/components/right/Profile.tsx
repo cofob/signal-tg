@@ -65,7 +65,6 @@ import {
   selectUserCommonChats,
   selectUserFullInfo,
 } from '../../global/selectors';
-import { selectPremiumLimit } from '../../global/selectors/limits';
 import { selectMessageDownloadableMedia } from '../../global/selectors/media';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
 import { selectActiveStoriesCollectionId } from '../../global/selectors/stories';
@@ -114,7 +113,6 @@ import Island from '../gili/layout/Island';
 import Surface from '../gili/layout/Surface';
 import ChatList from '../left/main/ChatList';
 import MediaStory from '../story/MediaStory';
-import Button from '../ui/Button';
 import FloatingActionButton from '../ui/FloatingActionButton';
 import InfiniteScroll from '../ui/InfiniteScroll';
 import ListItem, { type MenuItemContextAction } from '../ui/ListItem';
@@ -177,7 +175,6 @@ type StateProps = {
   similarBots?: string[];
   botPreviewMedia?: ApiBotPreviewMedia[];
   isCurrentUserPremium?: boolean;
-  limitSimilarPeers: number;
   isTopicInfo?: boolean;
   isSavedDialog?: boolean;
   isSavedMessages?: boolean;
@@ -295,7 +292,6 @@ const Profile = ({
   similarChannels,
   similarBots,
   isCurrentUserPremium,
-  limitSimilarPeers,
   isTopicInfo,
   isSavedDialog,
   isSavedMessages,
@@ -319,7 +315,6 @@ const Profile = ({
     setNewChatMembersDialogState,
     loadPeerProfileStories,
     loadStoriesArchive,
-    openPremiumModal,
     loadChannelRecommendations,
     loadBotRecommendations,
     loadPreviewMedias,
@@ -1125,31 +1120,13 @@ const Profile = ({
               <ListItem
                 key={channelId}
                 teactOrderKey={i}
-                className={buildClassName(
-                  'chat-item-clickable search-result',
-                  !isCurrentUserPremium && i === similarChannels!.length - 1 && 'blured',
-                )}
+                className="chat-item-clickable search-result"
 
                 onClick={() => openChat({ id: channelId })}
               >
                 <GroupChatInfo avatarSize="large" chatId={channelId} withFullInfo />
               </ListItem>
             ))}
-            {!isCurrentUserPremium && (
-              <>
-                <Button
-                  className={styles.showMoreChannels}
-                  onClick={() => openPremiumModal()}
-                  iconName="unlock-filled"
-                  iconAlignment="end"
-                >
-                  {lang('UnlockSimilar')}
-                </Button>
-                <div className={styles.moreSimilar}>
-                  {renderText(lang('MoreSimilarText', { limit: limitSimilarPeers }), ['simple_markdown'])}
-                </div>
-              </>
-            )}
           </div>
         ) : resultType === 'similarBots' ? (
           <div key={resultType}>
@@ -1157,10 +1134,7 @@ const Profile = ({
               <ListItem
                 key={userId}
                 teactOrderKey={i}
-                className={buildClassName(
-                  'chat-item-clickable search-result',
-                  !isCurrentUserPremium && i === similarBots!.length - 1 && 'blured',
-                )}
+                className="chat-item-clickable search-result"
 
                 onClick={() => openChat({ id: userId })}
               >
@@ -1170,20 +1144,6 @@ const Profile = ({
                 />
               </ListItem>
             ))}
-            {!isCurrentUserPremium && (
-              <>
-                <Button className={styles.showMoreBots} onClick={() => openPremiumModal()} iconName="unlock-filled">
-                  {lang('UnlockMoreSimilarBots')}
-                </Button>
-                <div className={styles.moreSimilar}>
-                  {renderText(lang('MoreSimilarBotsDescription', { count: limitSimilarPeers }, {
-                    withNodes: true,
-                    withMarkdown: true,
-                    pluralValue: limitSimilarPeers,
-                  }))}
-                </div>
-              </>
-            )}
           </div>
         ) : undefined}
       </div>
@@ -1476,7 +1436,6 @@ export default memo(withGlobal<OwnProps>(
       isSavedDialog,
       isSavedMessages,
       isSynced: global.isSynced,
-      limitSimilarPeers: selectPremiumLimit(global, 'recommendedChannels'),
       members: hasMembersTab ? members : undefined,
       adminMembersById: hasMembersTab ? adminMembersById : undefined,
       commonChatIds: commonChats?.ids,

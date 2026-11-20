@@ -55,7 +55,6 @@ import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 
 import ActionMessageText from './ActionMessageText';
 import ChannelPhoto from './actions/ChannelPhoto';
-import GiveawayPrize from './actions/GiveawayPrize';
 import NoForwardsRequest from './actions/NoForwardsRequest';
 import SuggestedBirthday from './actions/SuggestedBirthday';
 import SuggestedPhoto from './actions/SuggestedPhoto';
@@ -109,8 +108,9 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'chatDeletePhoto',
   'unsupported',
 ]);
-const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>(['prizeStars',
-  'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest']);
+const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>([
+  'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest',
+]);
 const WITH_LINK_BREAKS_ACTIONS = new Set<ApiMessageAction['type']>([
   'todoCompletions',
   'todoAppendTasks',
@@ -392,16 +392,6 @@ const ActionMessage = ({
           />
         );
 
-      case 'prizeStars':
-        return (
-          <GiveawayPrize
-            action={action}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onClick={handleClick}
-          />
-        );
-
       case 'channelJoined':
         return (
           <SimilarChannels
@@ -444,7 +434,7 @@ const ActionMessage = ({
         return undefined;
     }
   }, [
-    action, message, observeIntersectionForLoading, observeIntersectionForPlaying, isInsideTopic,
+    action, message, observeIntersectionForLoading, isInsideTopic,
   ]);
 
   if ((isInsideTopic && action.type === 'topicCreate') || action.type === 'phoneCall') {

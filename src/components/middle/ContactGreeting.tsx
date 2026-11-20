@@ -5,17 +5,14 @@ import { getActions, withGlobal } from '../../global';
 
 import type { MessageList } from '../../types';
 import {
-  type ApiBusinessIntro, type ApiSticker, type ApiUpdateConnectionStateType, type ApiUser,
+  type ApiSticker, type ApiUpdateConnectionStateType,
   MAIN_THREAD_ID,
 } from '../../api/types';
 
-import { getUserFullName } from '../../global/helpers';
 import {
   selectChat,
   selectChatLastMessageId,
   selectCurrentMessageList,
-  selectUser,
-  selectUserFullInfo,
 } from '../../global/selectors';
 import { selectThreadReadState } from '../../global/selectors/threads';
 
@@ -36,8 +33,6 @@ type StateProps = {
   lastMessageId?: number;
   connectionState?: ApiUpdateConnectionStateType;
   currentMessageList?: MessageList;
-  businessIntro?: ApiBusinessIntro;
-  user?: ApiUser;
 };
 
 const ContactGreeting = ({
@@ -46,8 +41,6 @@ const ContactGreeting = ({
   connectionState,
   lastMessageId,
   currentMessageList,
-  businessIntro,
-  user,
 }: OwnProps & StateProps) => {
   const {
     loadGreetingStickers,
@@ -60,12 +53,11 @@ const ContactGreeting = ({
   const containerRef = useRef<HTMLDivElement>();
 
   const sticker = useMemo(() => {
-    if (businessIntro?.sticker) return businessIntro.sticker;
     if (!defaultStickers?.length) return undefined;
 
     const randomIndex = Math.floor(Math.random() * defaultStickers.length);
     return defaultStickers[randomIndex];
-  }, [businessIntro?.sticker, defaultStickers]);
+  }, [defaultStickers]);
 
   useEffect(() => {
     if (areDefaultStickersLoaded || connectionState !== 'connectionStateReady') {
@@ -92,14 +84,11 @@ const ContactGreeting = ({
     });
   });
 
-  const title = businessIntro?.title || lang('ConversationEmptyPlaceholder');
-  const description = businessIntro?.description || lang('ConversationGreetingText');
-
   return (
     <div className={styles.root}>
       <div className={styles.wrapper}>
-        <p className={styles.title} dir="auto">{title}</p>
-        <p className={styles.description} dir="auto">{description}</p>
+        <p className={styles.title} dir="auto">{lang('ConversationEmptyPlaceholder')}</p>
+        <p className={styles.description} dir="auto">{lang('ConversationGreetingText')}</p>
 
         <div ref={containerRef} className={styles.sticker} onClick={handleStickerSelect}>
           {sticker && (
@@ -112,11 +101,6 @@ const ContactGreeting = ({
           )}
         </div>
       </div>
-      {businessIntro && (
-        <div className={styles.explainer}>
-          {lang('ChatEmptyStateIntroFooter', { user: getUserFullName(lang, user) })}
-        </div>
-      )}
     </div>
   );
 };
@@ -129,8 +113,6 @@ export default memo(withGlobal<OwnProps>(
       return {} as Complete<StateProps>;
     }
 
-    const user = selectUser(global, userId);
-    const fullInfo = selectUserFullInfo(global, userId);
     const {
       unreadCount,
     } = selectThreadReadState(global, chat.id, MAIN_THREAD_ID) || {};
@@ -144,8 +126,6 @@ export default memo(withGlobal<OwnProps>(
       lastMessageId: unreadCount ? lastMessageId : undefined,
       connectionState: global.connectionState,
       currentMessageList: selectCurrentMessageList(global),
-      businessIntro: fullInfo?.businessIntro,
-      user,
     };
   },
 )(ContactGreeting));

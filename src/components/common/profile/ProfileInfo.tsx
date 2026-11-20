@@ -7,7 +7,6 @@ import type {
   ApiPeerPhotos,
   ApiPeerProfileColorSet,
   ApiPhoto,
-  ApiSticker,
   ApiTopic,
   ApiUser,
   ApiUserFullInfo,
@@ -25,7 +24,6 @@ import { getActions, withGlobal } from '../../../global/index';
 import {
   selectChat,
   selectCurrentMessageList,
-  selectCustomEmoji,
   selectPeer,
   selectPeerAvatarPhoto,
   selectPeerHasProfileBackground,
@@ -90,7 +88,6 @@ type StateProps = {
   messagesCount?: number;
   animationLevel: AnimationLevel;
   emojiStatus?: ApiEmojiStatusType;
-  emojiStatusSticker?: ApiSticker;
   emojiStatusSlug?: string;
   profilePhotos?: ApiPeerPhotos;
   avatarPhoto?: ApiPhoto;
@@ -126,7 +123,6 @@ const ProfileInfo = ({
   messagesCount,
   animationLevel,
   emojiStatus,
-  emojiStatusSticker,
   emojiStatusSlug,
   profilePhotos,
   avatarPhoto,
@@ -141,8 +137,6 @@ const ProfileInfo = ({
 }: OwnProps & StateProps) => {
   const {
     openMediaViewer,
-    openPremiumModal,
-    openStickerSet,
     openPrivacySettingsNoticeModal,
     loadMoreProfilePhotos,
     openProfileRatingModal,
@@ -234,17 +228,6 @@ const ProfileInfo = ({
       mediaIndex: currentPhotoIndex,
       origin: isForSettings ? MediaViewerOrigin.SettingsAvatar : MediaViewerOrigin.ProfileAvatar,
     });
-  });
-
-  const handleStatusClick = useLastCallback(() => {
-    if (!peerId) {
-      openStickerSet({
-        stickerSetInfo: emojiStatusSticker!.stickerSetInfo,
-      });
-      return;
-    }
-
-    openPremiumModal({ fromUserId: peerId });
   });
 
   const selectPreviousMedia = useLastCallback(() => {
@@ -590,7 +573,6 @@ const ProfileInfo = ({
             withEmojiStatus
             withStatusTextColor
             emojiStatusSize={EMOJI_STATUS_SIZE}
-            onEmojiStatusClick={handleStatusClick}
             noLoopLimit
             canCopyTitle
             isScrolling
@@ -628,7 +610,6 @@ export default memo(withGlobal<OwnProps>(
     const { animationLevel } = selectSharedSettings(global);
 
     const emojiStatus = peer?.emojiStatus;
-    const emojiStatusSticker = emojiStatus ? selectCustomEmoji(global, emojiStatus.documentId) : undefined;
     const emojiStatusSlug = emojiStatus?.type === 'collectible' ? emojiStatus.slug : undefined;
 
     const profileColor = peer && selectPeerProfileColor(global, peer);
@@ -648,7 +629,6 @@ export default memo(withGlobal<OwnProps>(
       mediaIndex,
       avatarOwnerId,
       animationLevel,
-      emojiStatusSticker,
       emojiStatusSlug,
       emojiStatus,
       profilePhotos,

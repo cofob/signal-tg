@@ -19,7 +19,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import Avatar from '../../common/Avatar';
-import Icon from '../../common/icons/Icon';
 import Button from '../../ui/Button';
 import InputText from '../../ui/InputText';
 import Link from '../../ui/Link';
@@ -62,7 +61,7 @@ const USERNAME_ERROR_KEYS: Record<string, RegularLangKey> = {
 const BotCreationModal = ({
   modal, isOpen, manager, botAllowedSuffixes, isPremium,
 }: OwnProps & StateProps) => {
-  const { closeBotCreationModal, openPremiumModal, openChatWithInfo } = getActions();
+  const { closeBotCreationModal, openChatWithInfo } = getActions();
   const { createBot } = getPromiseActions();
 
   const lang = useLang();
@@ -100,11 +99,6 @@ const BotCreationModal = ({
 
   const handleUsernameChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(e.currentTarget.value.trim());
-  });
-
-  const handlePremiumClick = useLastCallback(() => {
-    closeBotCreationModal();
-    openPremiumModal();
   });
 
   const handleManagerClick = useLastCallback(() => {
@@ -148,13 +142,8 @@ const BotCreationModal = ({
     if (premiumSuffix) {
       return lang('CreateBotUsernamePremium', {
         suffix: premiumSuffix,
-        link: (
-          <Link isPrimary onClick={handlePremiumClick}>
-            {lang('CreateBotUsernameSubscribe')}
-            <Icon name="next" className={styles.subscribeIcon} />
-          </Link>
-        ),
-      }, { withNodes: true });
+        link: lang('CreateBotUsernameSubscribe'),
+      });
     }
     if (modal.occupiedUsername === username) return lang('UsernameInUse');
     if (hasCheckFailed) return lang('SomethingWentWrong');
@@ -196,7 +185,7 @@ const BotCreationModal = ({
 
     return lang('CreateBotUsernameHint', {
       suffixes: lang.disjunction(hintSuffixes.map((suffix) => `'${suffix}'`)),
-      premium: <Link isPrimary onClick={handlePremiumClick}>{lang('TelegramPremium')}</Link>,
+      premium: lang('TelegramPremium'),
     }, { withNodes: true });
   }
 

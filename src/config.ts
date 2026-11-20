@@ -1,6 +1,4 @@
-import type {
-  ApiLimitTypeForPromo, ApiPremiumSection, ApiReactionEmoji,
-} from './api/types';
+import type { ApiReactionEmoji } from './api/types';
 import type {
 } from './types';
 
@@ -32,7 +30,6 @@ export const TEST_SESSION = import.meta.env.TG_TEST_SESSION;
 export const SESSION_LEGACY_USER_KEY = 'user_auth';
 export const SESSION_ACCOUNT_PREFIX = 'account';
 
-export const MULTIACCOUNT_MAX_SLOTS = 6;
 export const GLOBAL_STATE_CACHE_DISABLED = false;
 export const GLOBAL_STATE_CACHE_PREFIX = 'tt-global-state';
 export const SHARED_STATE_CACHE_KEY = 'tt-shared-state';
@@ -123,7 +120,6 @@ export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
 
-export const SPONSORED_MESSAGE_CACHE_MS = 300000; // 5 min
 
 export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
 export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
@@ -403,10 +399,6 @@ export const SUPPORT_URL = 'https://support.signal.org/';
 export const PRIVACY_URL = 'https://signal.org/legal/#privacy-policy';
 export const GENERAL_TOPIC_ID = 1;
 export const FRESH_AUTH_PERIOD = 86400; // 1 day
-export const GIVEAWAY_BOOST_PER_PREMIUM = 4;
-export const GIVEAWAY_MAX_ADDITIONAL_CHANNELS = 10;
-export const GIVEAWAY_MAX_ADDITIONAL_USERS = 10;
-export const GIVEAWAY_MAX_ADDITIONAL_COUNTRIES = 10;
 export const BOT_VERIFICATION_PEERS_LIMIT = 20;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];
@@ -428,62 +420,6 @@ export const GROUP_CALL_DEFAULT_VOLUME = 100 * GROUP_CALL_VOLUME_MULTIPLIER;
 
 export const ONE_TIME_MEDIA_TTL_SECONDS = 2147483647;
 export const EPHEMERAL_MESSAGE_TTL_SECONDS = 48 * 60 * 60;
-
-// Premium
-export const PREMIUM_FEATURE_SECTIONS = [
-  'stories',
-  'double_limits',
-  'more_upload',
-  'faster_download',
-  'voice_to_text',
-  'no_ads',
-  'infinite_reactions',
-  'premium_stickers',
-  'animated_emoji',
-  'advanced_chat_management',
-  'profile_badge',
-  'animated_userpics',
-  'emoji_status',
-  'translations',
-  'saved_tags',
-  'last_seen',
-  'message_privacy',
-  'effects',
-  'ai_compose',
-  'rich_formatting',
-  'todo',
-  'pm_noforwards',
-] as const;
-
-export const PREMIUM_BOTTOM_VIDEOS: ApiPremiumSection[] = [
-  'faster_download',
-  'voice_to_text',
-  'advanced_chat_management',
-  'infinite_reactions',
-  'profile_badge',
-  'animated_userpics',
-  'emoji_status',
-  'translations',
-  'saved_tags',
-  'last_seen',
-  'message_privacy',
-  'effects',
-  'todo',
-];
-
-export const PREMIUM_LIMITS_ORDER: ApiLimitTypeForPromo[] = [
-  'channels',
-  'dialogFolderPinned',
-  'channelsPublic',
-  'savedGifs',
-  'stickersFaved',
-  'aboutLength',
-  'captionLength',
-  'dialogFilters',
-  'dialogFiltersChats',
-  'moreAccounts',
-  'recommendedChannels',
-];
 
 export const ACCOUNT_TTL_OPTIONS = [1, 3, 6, 12, 18, 24];
 

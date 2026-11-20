@@ -16,7 +16,6 @@ import {
 } from '../../../config';
 import { signalUnknownPasskey, toCredentialCreationOptions } from '../../../util/browser/passkeys';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { buildCollectionByKey } from '../../../util/iteratees';
 import { fetchBuiltInLanguages, getTranslationFn, loadAndChangeLanguage } from '../../../util/localization';
 import { requestPermission } from '../../../util/notifications';
 import { refreshPushNotificationState, suspendPushForPasscode } from '../../../util/pushNotifications';
@@ -870,22 +869,6 @@ addActionHandler('loadPeerColors', async (global): Promise<void> => {
       generalHash: generalResult?.hash || currentPeerColors.generalHash,
       profile: profileResult?.colors || currentPeerColors.profile,
       profileHash: profileResult?.hash || currentPeerColors.profileHash,
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('loadTimezones', async (global): Promise<void> => {
-  const hash = global.timezones?.hash;
-  const result = await callApi('fetchTimezones', hash);
-  if (!result) return;
-
-  global = getGlobal();
-  global = {
-    ...global,
-    timezones: {
-      byId: buildCollectionByKey(result.timezones, 'id'),
-      hash: result.hash,
     },
   };
   setGlobal(global);

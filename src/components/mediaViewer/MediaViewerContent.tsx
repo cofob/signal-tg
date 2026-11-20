@@ -2,7 +2,7 @@ import { memo } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiDimensions, ApiMessage, ApiPageCaption, ApiSponsoredMessage,
+  ApiDimensions, ApiMessage, ApiPageCaption,
 } from '../../api/types';
 import type { MediaViewerOrigin, ThreadId } from '../../types';
 import type { MediaViewerItem, ViewableMedia } from './helpers/getViewableMedia';
@@ -45,12 +45,11 @@ type OwnProps = {
   isMoving?: boolean;
   onClose: () => void;
   onFooterClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  handleSponsoredClick: () => void;
 };
 
 type StateProps = {
   viewableMedia?: ViewableMedia;
-  textMessage?: ApiMessage | ApiSponsoredMessage;
+  textMessage?: ApiMessage;
   origin?: MediaViewerOrigin;
   isProtected?: boolean;
   volume: number;
@@ -84,7 +83,6 @@ const MediaViewerContent = ({
   maxTimestamp,
   onClose,
   onFooterClick,
-  handleSponsoredClick,
 }: OwnProps & StateProps) => {
   const { updateLastPlaybackTimestamp } = getActions();
 
@@ -92,7 +90,6 @@ const MediaViewerContent = ({
   const captionContainerId = useUniqueId();
 
   const isAvatar = item.type === 'avatar';
-  const isSponsoredMessage = item.type === 'sponsoredMessage';
   const { media, caption } = viewableMedia || {};
 
   const {
@@ -168,8 +165,6 @@ const MediaViewerContent = ({
             volume={0}
             isClickDisabled={isMoving}
             playbackRate={1}
-            isSponsoredMessage={isSponsoredMessage}
-            handleSponsoredClick={handleSponsoredClick}
           />
         </div>
       );
@@ -192,7 +187,6 @@ const MediaViewerContent = ({
     item.type === 'pageBlock' ? item.pageMedia.messageId : item.type === 'message' ? item.message.id : undefined,
     item.type === 'pageBlock' ? item.pageMedia.threadId : item.type === 'message' ? threadId : undefined,
   );
-  const buttonText = textMessage && 'buttonText' in textMessage ? textMessage.buttonText : undefined;
   const hasFooter = Boolean(textParts || captionParts);
   const posterSize = calculateMediaViewerDimensions(dimensions!, hasFooter, isVideo);
   const isForceMobileVersion = isMobile || shouldForceMobileVersion(posterSize);
@@ -233,20 +227,16 @@ const MediaViewerContent = ({
           volume={volume}
           isClickDisabled={isMoving}
           playbackRate={playbackRate}
-          isSponsoredMessage={isSponsoredMessage}
-          handleSponsoredClick={handleSponsoredClick}
           timestamp={timestamp}
         />
       ))}
       {(textParts || captionParts) && (
         <MediaViewerFooter
           text={textParts || captionParts!}
-          buttonText={buttonText}
           onClick={onFooterClick}
           isProtected={isProtected}
           isForceMobileVersion={isForceMobileVersion}
           isForVideo={isVideo && !isGif}
-          handleSponsoredClick={handleSponsoredClick}
         />
       )}
     </div>
@@ -265,10 +255,9 @@ export default memo(withGlobal<OwnProps>(
       threadId,
     } = selectTabState(global).mediaViewer;
     const message = item.type === 'message' ? item.message : undefined;
-    const sponsoredMessage = item.type === 'sponsoredMessage' ? item.message : undefined;
     // A rich message tile uses its block caption instead of the message text
     const isRichMediaTile = message && isRichMediaMessage(message);
-    const textMessage = isRichMediaTile ? undefined : message || sponsoredMessage;
+    const textMessage = isRichMediaTile ? undefined : message;
     const pageMedia = item.type === 'pageBlock' ? item.pageMedia : undefined;
     const viewableMedia = selectViewableMedia(global, item);
 

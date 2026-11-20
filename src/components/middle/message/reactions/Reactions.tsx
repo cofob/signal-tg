@@ -56,7 +56,6 @@ const Reactions = ({
     addLocalPaidReaction,
     updateMiddleSearch,
     performMiddleSearch,
-    openPremiumModal,
     resetLocalPaidReactions,
     showNotification,
     openFrozenAccountModal,
@@ -112,12 +111,7 @@ const Reactions = ({
       return;
     }
     if (areTags) {
-      if (!isCurrentUserPremium) {
-        openPremiumModal({
-          initialSection: 'saved_tags',
-        });
-        return;
-      }
+      if (!isCurrentUserPremium) return;
 
       updateMiddleSearch({ chatId: message.chatId, threadId, update: { savedTag: reaction } });
       performMiddleSearch({ chatId: message.chatId, threadId });

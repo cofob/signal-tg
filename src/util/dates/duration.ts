@@ -7,7 +7,6 @@ import {
 const HUNDREDTH_IN_MS = 10;
 const TWO_DIGIT_MINUTES = 10;
 const MILLISECONDS_IN_SECOND = 1000;
-const DAYS_IN_SHORT_YEAR = 360;
 const DURATION_PARTS = [
   { multiplier: 1, type: 'Seconds' },
   { multiplier: MINUTE, type: 'Minutes' },
@@ -43,22 +42,6 @@ export function formatCountdown(lang: LangFn, secondsLeft: number) {
 
   const years = Math.ceil(days / (YEAR / DAY));
   return lang('Years', { count: years }, { pluralValue: years });
-}
-
-export function formatCountdownDays(lang: LangFn, days: number) {
-  if (days < WEEK / DAY) {
-    return lang('Days', { count: days }, { pluralValue: days });
-  }
-  if (days < MONTH / DAY) {
-    const count = Math.floor(days / (WEEK / DAY));
-    return lang('Weeks', { count }, { pluralValue: count });
-  }
-  if (days < DAYS_IN_SHORT_YEAR) {
-    const count = Math.floor(days / (MONTH / DAY));
-    return lang('Months', { count }, { pluralValue: count });
-  }
-  const count = Math.floor(days / DAYS_IN_SHORT_YEAR);
-  return lang('Years', { count }, { pluralValue: count });
 }
 
 export function formatCountdownShort(lang: LangFn, msLeft: number): string {

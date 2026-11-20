@@ -24,20 +24,16 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiPeer,
-  ApiPhoto,
   ApiPollResult,
   ApiPreparedInlineMessage,
-  ApiQuickReply,
   ApiReplyInfo,
   ApiSearchPostsFlood,
-  ApiSponsoredMessage,
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
   ApiSuggestedPost,
   ApiThreadInfo,
   ApiVideo,
-  MediaContent,
 } from '../../types';
 import type { ApiMessageAction } from '../../types/messageActions';
 import { ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../types';
@@ -46,7 +42,6 @@ import {
   DELETED_COMMENTS_CHANNEL_ID,
   LOCAL_MESSAGES_LIMIT,
   SERVICE_NOTIFICATIONS_USER_ID,
-  SPONSORED_MESSAGE_CACHE_MS,
 } from '../../../config';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
 import buildUploadingMedia from '../../../util/buildUploadingMedia';
@@ -74,7 +69,6 @@ import {
 } from './bots';
 import {
   buildApiFormattedText,
-  buildApiPhoto,
 } from './common';
 import { type OmitVirtualFields } from './helpers';
 import { buildApiRichText } from './instantView';
@@ -86,7 +80,7 @@ import {
   buildMessageTextContent,
 } from './messageContent';
 import { buildApiRestrictionReasons } from './misc';
-import { buildApiPeerColor, buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
+import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 import { buildMessageReactions } from './reactions';
 
 const MIN_SCHEDULED_PERIOD = 10;
@@ -104,44 +98,6 @@ let currentUserId!: string;
 
 export function setMessageBuilderCurrentUserId(_currentUserId: string) {
   currentUserId = _currentUserId;
-}
-
-export function buildApiSponsoredMessage(
-  mtpMessage: GramJs.SponsoredMessage, chatId: string,
-): ApiSponsoredMessage | undefined {
-  const {
-    message, entities, randomId, recommended, sponsorInfo, additionalInfo, buttonText, canReport, title, url, color,
-  } = mtpMessage;
-
-  let photo: ApiPhoto | undefined;
-  if (mtpMessage.photo instanceof GramJs.Photo) {
-    addPhotoToLocalDb(mtpMessage.photo);
-    photo = buildApiPhoto(mtpMessage.photo);
-  }
-
-  let media: MediaContent | undefined;
-  if (mtpMessage.media) {
-    media = buildMessageMediaContent(mtpMessage.media);
-  }
-
-  return {
-    chatId,
-    randomId: serializeBytes(randomId),
-    expiresAt: Math.round(Date.now() / 1000) + SPONSORED_MESSAGE_CACHE_MS,
-    isRecommended: recommended,
-    sponsorInfo,
-    additionalInfo,
-    buttonText,
-    canReport,
-    title,
-    url,
-    peerColor: color && buildApiPeerColor(color),
-    photo,
-    content: {
-      ...media,
-      text: buildMessageTextContent(message, entities),
-    },
-  };
 }
 
 export function buildApiMessage(mtpMessage: GramJs.TypeMessage): ApiMessage | undefined {
@@ -272,7 +228,6 @@ export function buildApiMessageWithChatId(
   if (content.text && emojiOnlyCount) content.text.emojiOnlyCount = emojiOnlyCount;
 
   const hasComments = mtpMessage.replies?.comments;
-  const senderBoosts = mtpMessage.fromBoostsApplied;
   const factCheck = mtpMessage.factcheck && buildApiFactCheck(mtpMessage.factcheck);
   const isVideoProcessingPending = mtpMessage.videoProcessingPending;
   const areReactionsPossible = mtpMessage.reactionsArePossible;
@@ -323,8 +278,6 @@ export function buildApiMessageWithChatId(
     isForwardingAllowed,
     hasComments,
     savedPeerId,
-    senderBoosts,
-    viaBusinessBotId: mtpMessage.viaBusinessBotId?.toString(),
     factCheck,
     effectId: mtpMessage.effect?.toString(),
     isInvertedMedia,
@@ -847,15 +800,6 @@ export function buildApiThreadInfo(
     fromChannelId: fromChannelPeer && fromMessageId ? getApiChatIdFromMtpPeer(fromChannelPeer) : undefined,
     fromMessageId,
   });
-}
-
-export function buildApiQuickReply(reply: GramJs.TypeQuickReply): ApiQuickReply {
-  const { shortcutId, shortcut, topMessage } = reply;
-  return {
-    id: shortcutId,
-    shortcut,
-    topMessageId: topMessage,
-  };
 }
 
 export function buildApiReportResult(

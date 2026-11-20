@@ -14,7 +14,6 @@ import './api/topPeers';
 import './api/bots';
 import './api/settings';
 import './api/twoFaSettings';
-import './api/payments';
 import './api/passcode';
 import './api/stars';
 import './api/reactions';

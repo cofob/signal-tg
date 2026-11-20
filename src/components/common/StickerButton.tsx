@@ -137,16 +137,10 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   const handleClick = () => {
     if (isContextMenuOpen) return;
     if (isLocked) {
-      const initialSection = isEffectEmoji ? 'effects' : isCustomEmoji ? 'animated_emoji' : 'premium_stickers';
       showNotification({
         message: { key: isCustomEmoji || isEffectEmoji
           ? 'PremiumUnlockEmoji'
           : 'PremiumUnlockStickers' },
-        actionText: { key: 'PremiumMore' },
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection },
-        },
       });
       return;
     }

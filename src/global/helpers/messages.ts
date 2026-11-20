@@ -97,14 +97,14 @@ export function getMessageTranscription(message: ApiMessage) {
 export function hasMessageText(message: MediaContainer) {
   const {
     action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
-    webPage, contact, location, game, storyData, giveaway, giveawayResults, paidMedia, widget,
+    webPage, contact, location, game, storyData, paidMedia, widget,
   } = message.content;
 
   if (pollId) return false;
 
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
-    || location || game || storyData || giveaway || giveawayResults || dice
+    || location || game || storyData || dice
     || paidMedia || widget || action?.type === 'phoneCall'
   );
 }

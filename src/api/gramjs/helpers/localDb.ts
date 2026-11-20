@@ -6,7 +6,7 @@ import localDb, { type InlineBotRepairInfo, type RepairInfo } from '../localDb';
 export type MessageRepairContext = Pick<GramJs.TypeMessage, 'peerId' | 'id'>;
 export type MediaRepairContext = MessageRepairContext;
 
-export function addMessageToLocalDb(message: GramJs.TypeMessage | GramJs.TypeSponsoredMessage) {
+export function addMessageToLocalDb(message: GramJs.TypeMessage) {
   if (message instanceof GramJs.Message) {
     if (message.media) addMediaToLocalDb(message.media, message);
 
@@ -18,10 +18,6 @@ export function addMessageToLocalDb(message: GramJs.TypeMessage | GramJs.TypeSpo
   if (message instanceof GramJs.MessageService && 'photo' in message.action) {
     const photo = addMessageRepairInfo(message.action.photo, message);
     addPhotoToLocalDb(photo);
-  }
-
-  if (message instanceof GramJs.SponsoredMessage && message.photo) {
-    addPhotoToLocalDb(message.photo);
   }
 }
 

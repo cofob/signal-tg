@@ -68,7 +68,6 @@ interface StateProps {
   canSearch?: boolean;
   canCall?: boolean;
   canMute?: boolean;
-  canShowBoostModal?: boolean;
   canLeave?: boolean;
   canEnterVoiceChat?: boolean;
   canCreateVoiceChat?: boolean;
@@ -95,7 +94,6 @@ const HeaderActions = ({
   canSearch,
   canCall,
   canMute,
-  canShowBoostModal,
   canLeave,
   canEnterVoiceChat,
   canCreateVoiceChat,
@@ -393,7 +391,6 @@ const HeaderActions = ({
           canSearch={canSearch}
           canCall={canCall}
           canMute={canMute}
-          canShowBoostModal={canShowBoostModal}
           canLeave={canLeave}
           canEnterVoiceChat={canEnterVoiceChat}
           canCreateVoiceChat={canCreateVoiceChat}
@@ -456,7 +453,6 @@ export default memo(withGlobal<OwnProps>(
     const canEnterVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && chat.isCallActive;
     const canCreateVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && !chat.isCallActive
       && getHasAdminRight(chat, 'manageCall') && !chat.isMonoforum;
-    const canShowBoostModal = (isSuperGroup || isChannel) && !chat.isMonoforum;
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
 
@@ -475,7 +471,6 @@ export default memo(withGlobal<OwnProps>(
       canSearch,
       canCall,
       canMute,
-      canShowBoostModal,
       canLeave,
       canEnterVoiceChat,
       canCreateVoiceChat,

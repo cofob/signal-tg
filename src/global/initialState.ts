@@ -185,7 +185,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
 
   messages: {
     byChatId: {},
-    sponsoredByChatId: {},
     pollById: {},
     webPageById: {},
     playbackByChatId: {},
@@ -218,11 +217,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
 
   scheduledMessages: {
     byChatId: {},
-  },
-
-  quickReplies: {
-    byId: {},
-    messagesById: {},
   },
 
   chatFolders: {

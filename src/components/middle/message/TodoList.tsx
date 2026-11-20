@@ -63,11 +63,6 @@ const TodoList = ({
     if (!isCurrentUserPremium) {
       showNotification({
         message: lang('SubscribeToTelegramPremiumForToggleTask'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'todo' },
-        },
-        actionText: lang('PremiumMore'),
       });
       return;
     }

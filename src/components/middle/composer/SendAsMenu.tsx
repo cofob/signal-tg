@@ -118,11 +118,6 @@ const SendAsMenu = ({
                 key: 'SelectSendAsPeerPremiumHint',
                 options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
               },
-              actionText: { key: 'Open' },
-              action: {
-                action: 'openPremiumModal',
-                payload: {},
-              },
             });
           }
         };

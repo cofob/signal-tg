@@ -4,7 +4,6 @@ import type {
   ApiAttachBot,
   ApiAudio,
   ApiBirthday,
-  ApiBoostsStatus,
   ApiChatInviteInfo,
   ApiChatlistInvite,
   ApiChatType,
@@ -18,23 +17,16 @@ import type {
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMissingInvitedUser,
-  ApiMyBoost,
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
-  ApiPremiumGiftCodeOption,
-  ApiPremiumPromo,
-  ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiReactionWithPaid,
   ApiRequestPeerType,
   ApiRichText,
   ApiSearchPostsFlood,
-  ApiSponsoredPeer,
-  ApiStarGiveawayOption,
   ApiSticker,
-  ApiTypePrepaidGiveaway,
   ApiTypeStoryView,
   ApiUrlAuthResultRequest,
   ApiUser,
@@ -261,13 +253,6 @@ export type TabState = {
     messageId: number;
   };
 
-  aboutAdsModal?: {
-    randomId: string;
-    canReport?: boolean;
-    sponsorInfo?: string;
-    additionalInfo?: string;
-  };
-
   reactionPicker?: {
     chatId?: string;
     messageId?: number;
@@ -300,7 +285,6 @@ export type TabState = {
     currentContent?: GlobalSearchContent;
     chatId?: string;
     foundTopicIds?: number[];
-    sponsoredPeer?: ApiSponsoredPeer;
     searchFlood?: ApiSearchPostsFlood;
     fetchingStatus?: {
       chats?: boolean;
@@ -398,7 +382,6 @@ export type TabState = {
     withDynamicLoading?: boolean;
     mediaIndex?: number;
     isAvatarView?: boolean;
-    isSponsoredMessage?: boolean;
     standaloneMedia?: MediaViewerMedia[];
     pageMedia?: MediaViewerPageMedia;
     origin?: MediaViewerOrigin;
@@ -489,19 +472,6 @@ export type TabState = {
   historyCalendarSelectedAt?: number;
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];
-
-  reportAdModal?: {
-    chatId?: string;
-    randomId: string;
-    sections: {
-      title: string;
-      subtitle?: string;
-      options: {
-        text: string;
-        option: string;
-      }[];
-    }[];
-  };
 
   reportModal?: {
     chatId?: string;
@@ -665,17 +635,6 @@ export type TabState = {
     url: string;
   };
 
-  premiumModal?: {
-    isOpen?: boolean;
-    promo: ApiPremiumPromo;
-    initialSection?: ApiPremiumSection;
-    fromUserId?: string;
-    toUserId?: string;
-    isGift?: boolean;
-    daysAmount?: number;
-    isSuccess?: boolean;
-  };
-
   aiMessageEditorModal?: {
     chatId: string;
     threadId: ThreadId;
@@ -730,16 +689,6 @@ export type TabState = {
     isSilent?: boolean;
     scheduledAt?: number;
     scheduleRepeatPeriod?: number;
-  };
-
-  giveawayModal?: {
-    chatId: string;
-    isOpen?: boolean;
-    gifts?: ApiPremiumGiftCodeOption[];
-    selectedMemberIds?: string[];
-    selectedChannelIds?: string[];
-    prepaidGiveaway?: ApiTypePrepaidGiveaway;
-    starOptions?: ApiStarGiveawayOption[];
   };
 
   deleteMessageModal?: {
@@ -804,12 +753,6 @@ export type TabState = {
       folderId: number;
       suggestedPeerIds?: string[];
     };
-  };
-
-  boostModal?: {
-    chatId: string;
-    boostStatus?: ApiBoostsStatus;
-    myBoosts?: ApiMyBoost[];
   };
 
   deleteAccountModal?: {

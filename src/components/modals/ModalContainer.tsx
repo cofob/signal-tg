@@ -12,14 +12,12 @@ import useShowTransition from '../../hooks/useShowTransition';
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
-import AboutAdsModal from './aboutAds/AboutAdsModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AiTonePreviewModal from './aiTonePreview/AiTonePreviewModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
 import BirthdaySetupModal from './birthday/BirthdaySetupModal.async';
-import BoostModal from './boost/BoostModal.async';
 import BotCreationModal from './botCreation/BotCreationModal.async';
 import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
@@ -49,7 +47,6 @@ import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
-import ReportAdModal from './reportAd/ReportAdModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
@@ -64,7 +61,6 @@ import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
   'aiMessageEditorModal' |
-  'boostModal' |
   'chatlistModal' |
   'urlAuth' |
   'safeLinkModalUrl' |
@@ -72,7 +68,6 @@ type ModalKey = keyof Pick<TabState,
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
   'requestedAttachBotInstall' |
-  'reportAdModal' |
   'reportModal' |
   'paidReactionModal' |
   'pollModal' |
@@ -85,7 +80,6 @@ type ModalKey = keyof Pick<TabState,
   'suggestedStatusModal' |
   'emojiStatusAccessModal' |
   'locationAccessModal' |
-  'aboutAdsModal' |
   'preparedMessageModal' |
   'sharePreparedMessageModal' |
   'requestPeerModal' |
@@ -174,13 +168,11 @@ const WrappedModalBoundary = <T,>({
 
 const LEGACY_MODALS: LegacyModalRegistry = {
   aiMessageEditorModal: AiMessageEditorModal,
-  boostModal: BoostModal,
   chatlistModal: ChatlistModal,
   urlAuth: UrlAuthModal,
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
   requestedAttachBotInstall: AttachBotInstallModal,
-  reportAdModal: ReportAdModal,
   reportModal: ReportModal,
   browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
@@ -191,7 +183,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   suggestedStatusModal: SuggestedStatusModal,
   emojiStatusAccessModal: EmojiStatusAccessModal,
   locationAccessModal: LocationAccessModal,
-  aboutAdsModal: AboutAdsModal,
   preparedMessageModal: PreparedMessageModal,
   sharePreparedMessageModal: SharePreparedMessageModal,
   requestPeerModal: RequestPeerModal,

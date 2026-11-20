@@ -46,6 +46,7 @@ import { notifyAboutMessage } from '../../../util/notifications';
 import { debounce, pause, throttle } from '../../../util/schedulers';
 import { extractCurrentThemeParams } from '../../../util/themeStyle';
 import { callApi } from '../../../api/gramjs';
+import { LIMITS, MAX_FOLDERS } from '../../../limits';
 import {
   getIsSavedDialog,
   getUserFirstOrLastName,
@@ -142,7 +143,6 @@ import {
   selectUserFullInfo,
 } from '../../selectors';
 import { selectGroupCall } from '../../selectors/calls';
-import { selectCurrentLimit } from '../../selectors/limits';
 import {
   selectDraft,
   selectThread,
@@ -1221,7 +1221,7 @@ addActionHandler('toggleChatPinned', (global, actions, payload): ActionReturnTyp
     return;
   }
 
-  const limit = selectCurrentLimit(global, 'dialogFolderPinned');
+  const limit = LIMITS.dialogFolderPinned;
 
   if (folderId) {
     const folder = selectChatFolder(global, folderId);
@@ -1291,7 +1291,7 @@ addActionHandler('toggleSavedDialogPinned', (global, actions, payload): ActionRe
     return;
   }
 
-  const limit = selectCurrentLimit(global, 'savedDialogsPinned');
+  const limit = LIMITS.savedDialogsPinned;
 
   const isPinned = selectIsChatPinned(global, id, SAVED_FOLDER_ID);
 
@@ -1362,7 +1362,7 @@ addActionHandler('editChatFolders', (global, actions, payload): ActionReturnType
   const {
     chatId, idsToRemove, idsToAdd, tabId = getCurrentTabId(),
   } = payload;
-  const limit = selectCurrentLimit(global, 'dialogFiltersChats');
+  const limit = LIMITS.dialogFiltersChats;
 
   const isLimitReached = idsToAdd
     .some((id) => selectChatFolder(global, id).includedChatIds.length >= limit);
@@ -1420,8 +1420,7 @@ addActionHandler('addChatFolder', async (global, actions, payload): Promise<void
   const { folder, tabId = getCurrentTabId() } = payload;
   const { orderedIds, byId } = global.chatFolders;
 
-  const limit = selectCurrentLimit(global, 'dialogFilters');
-  if (Object.keys(byId).length >= limit) {
+  if (Object.keys(byId).length >= MAX_FOLDERS) {
     actions.openLimitReachedModal({
       limit: 'dialogFilters',
       tabId,
@@ -1731,36 +1730,6 @@ addActionHandler('openTelegramLink', (global, actions, payload): ActionReturnTyp
   const { url, linkContext } = payload;
 
   if (isDeepLink(url)) processDeepLink(url, linkContext);
-});
-
-addActionHandler('processBoostParameters', async (global, actions, payload): Promise<void> => {
-  const { usernameOrId, isPrivate, tabId = getCurrentTabId() } = payload;
-
-  let chat: ApiChat | undefined;
-
-  if (isPrivate) {
-    chat = selectChat(global, usernameOrId);
-    if (!chat) {
-      actions.showNotification({ message: { key: 'PrivateChannelInaccessible' }, tabId });
-      return;
-    }
-  } else {
-    chat = await fetchChatByUsername(global, usernameOrId);
-    if (!chat) {
-      actions.showNotification({ message: { key: 'NoUsernameFound' }, tabId });
-      return;
-    }
-  }
-
-  if (!isChatChannel(chat) && !isChatSuperGroup(chat)) {
-    actions.openChat({ id: chat.id, tabId });
-    return;
-  }
-
-  actions.openBoostModal({
-    chatId: chat.id,
-    tabId,
-  });
 });
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
@@ -2358,9 +2327,7 @@ addActionHandler('unlinkDiscussionGroup', async (global, actions, payload): Prom
 
 addActionHandler('setActiveChatFolder', (global, actions, payload): ActionReturnType => {
   const { activeChatFolder, tabId = getCurrentTabId() } = payload;
-  const maxFolders = selectCurrentLimit(global, 'dialogFilters');
-
-  const isBlocked = activeChatFolder + 1 > maxFolders;
+  const isBlocked = activeChatFolder + 1 > MAX_FOLDERS;
 
   if (isBlocked) {
     actions.openLimitReachedModal({
@@ -3515,29 +3482,6 @@ addActionHandler('setPeerShareTheme', async (global, actions, payload): Promise<
     global = updatePeerFullInfo(global, peerId, { shareTheme: oldShareTheme });
     setGlobal(global);
   }
-});
-
-addActionHandler('resolveBusinessChatLink', async (global, actions, payload): Promise<void> => {
-  const { slug, tabId = getCurrentTabId() } = payload;
-  const result = await callApi('resolveBusinessChatLink', { slug });
-  if (!result) {
-    actions.showNotification({
-      message: {
-        key: 'BusinessLinkErrorExpired',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      tabId,
-    });
-    return;
-  }
-
-  const { chatLink } = result;
-
-  actions.openChatWithDraft({
-    chatId: chatLink.chatId,
-    text: chatLink.text,
-    tabId,
-  });
 });
 
 addActionHandler('loadDiscussion', async (global, actions, payload): Promise<void> => {

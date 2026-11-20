@@ -49,7 +49,7 @@ const EditTopic = ({
   isCurrentUserPremium,
   onClose,
 }: OwnProps & StateProps) => {
-  const { editTopic, openPremiumModal } = getActions();
+  const { editTopic } = getActions();
   const [title, setTitle] = useState('');
   const [iconEmojiId, setIconEmojiId] = useState<string | undefined>(undefined);
   const lang = useLang();
@@ -104,10 +104,7 @@ const EditTopic = ({
   }, [handleEditTopic, isLoading, isTouched]);
 
   const handleCustomEmojiSelect = useCallback((emoji: ApiSticker) => {
-    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) {
-      openPremiumModal({ initialSection: 'animated_emoji' });
-      return;
-    }
+    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) return;
 
     if (emoji.id === DEFAULT_TOPIC_ICON_STICKER_ID) {
       setIconEmojiId(RESET_ICON_ID);
@@ -115,7 +112,7 @@ const EditTopic = ({
     }
 
     setIconEmojiId(emoji.id);
-  }, [isCurrentUserPremium, openPremiumModal]);
+  }, [isCurrentUserPremium]);
 
   const dummyTopic = useMemo(() => {
     return {

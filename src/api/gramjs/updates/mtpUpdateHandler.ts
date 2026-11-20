@@ -56,7 +56,6 @@ import {
   buildApiMessageFromNotification,
   buildApiMessageFromShort,
   buildApiMessageFromShortChat,
-  buildApiQuickReply,
   buildMessageDraft,
 } from '../apiBuilders/messages';
 import {
@@ -361,44 +360,6 @@ export function updater(update: Update) {
         });
       }
     }
-  } else if (update instanceof GramJs.UpdateQuickReplyMessage) {
-    const message = buildApiMessage(update.message);
-    if (!message) return;
-
-    const media = update.message instanceof GramJs.Message ? update.message.media : undefined;
-    const poll = media ? buildMessagePollFromMedia(media) : undefined;
-    const webPages = media ? buildWebPagesFromMedia(media) : undefined;
-
-    sendApiUpdate({
-      '@type': 'updateQuickReplyMessage',
-      id: message.id,
-      message,
-      poll,
-      webPages,
-    });
-  } else if (update instanceof GramJs.UpdateDeleteQuickReplyMessages) {
-    sendApiUpdate({
-      '@type': 'deleteQuickReplyMessages',
-      quickReplyId: update.shortcutId,
-      messageIds: update.messages,
-    });
-  } else if (update instanceof GramJs.UpdateQuickReplies) {
-    const quickReplies = update.quickReplies.map(buildApiQuickReply);
-    sendApiUpdate({
-      '@type': 'updateQuickReplies',
-      quickReplies,
-    });
-  } else if (update instanceof GramJs.UpdateNewQuickReply) {
-    const quickReply = buildApiQuickReply(update.quickReply);
-    sendApiUpdate({
-      '@type': 'updateQuickReplies',
-      quickReplies: [quickReply],
-    });
-  } else if (update instanceof GramJs.UpdateDeleteQuickReply) {
-    sendApiUpdate({
-      '@type': 'deleteQuickReply',
-      quickReplyId: update.shortcutId,
-    });
   } else if (
     update instanceof GramJs.UpdateEditMessage
     || update instanceof GramJs.UpdateEditChannelMessage

@@ -50,7 +50,6 @@ import {
   selectIsChatProtected,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsInSelectMode,
   selectIsViewportNewest,
   selectMonoforumChannel,
@@ -171,11 +170,8 @@ type StateProps = {
   isBotForum?: boolean;
   currentUserId: string;
   isAccountFrozen?: boolean;
-  areAdsEnabled?: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
   isChatProtected?: boolean;
-  hasCustomGreeting?: boolean;
-  isAppConfigLoaded?: boolean;
   monoforumChannelId?: string;
   canTranslate?: boolean;
   translationLanguage?: string;
@@ -297,13 +293,10 @@ const MessageList = ({
   currentUserId,
   isContactRequirePremium,
   paidMessagesStars,
-  areAdsEnabled,
   channelJoinInfo,
   isChatProtected,
   isAccountFrozen,
-  hasCustomGreeting,
   monoforumChannelId,
-  isAppConfigLoaded,
   canTranslate,
   translationLanguage,
   shouldAutoTranslate,
@@ -318,7 +311,7 @@ const MessageList = ({
   onScrollDownToggle,
 }: OwnProps & StateProps) => {
   const {
-    loadViewportMessages, setScrollOffset, loadSponsoredMessages, loadMessageReactions, copyMessagesByIds,
+    loadViewportMessages, setScrollOffset, loadMessageReactions, copyMessagesByIds,
     loadMessageViews, loadPeerStoriesByIds, loadFactChecks, requestChatTranslation,
   } = getActions();
   const lang = useLang();
@@ -518,15 +511,6 @@ const MessageList = ({
   useSyncEffect(() => {
     memoFirstUnreadIdRef.current = firstUnreadId;
   }, [firstUnreadId]);
-
-  const canShowSponsoredMessages = Boolean(areAdsEnabled && type === 'thread');
-
-  useEffect(() => {
-    const canHaveAds = isChannelChat || isBot;
-    if (canShowSponsoredMessages && canHaveAds && isSynced && isReady && isAppConfigLoaded) {
-      loadSponsoredMessages({ peerId: chatId });
-    }
-  }, [chatId, isSynced, isReady, isChannelChat, isBot, canShowSponsoredMessages, isAppConfigLoaded]);
 
   // Updated only once when messages are loaded (as we want the unread divider to keep its position)
   useSyncEffect(() => {
@@ -1400,7 +1384,7 @@ const MessageList = ({
 
   const activeKey = isRestricted ? (
     Content.Restricted
-  ) : paidMessagesStars && !hasMessages && !hasCustomGreeting ? (
+  ) : paidMessagesStars && !hasMessages ? (
     Content.StarsRequired
   ) : isContactRequirePremium && !hasMessages ? (
     Content.PremiumRequired
@@ -1446,7 +1430,6 @@ const MessageList = ({
       />
     ) : activeKey === Content.MessageList ? (
       <MessageListContent
-        canShowAds={canShowSponsoredMessages && isChannelChat}
         chatId={chatId}
         isComments={isComments}
         isChannelChat={isChannelChat}
@@ -1560,12 +1543,7 @@ export default memo(withGlobal<OwnProps>(
     const chatFullInfo = !isUserId(chatId) ? selectChatFullInfo(global, chatId) : undefined;
     const isEmptyThread = selectThreadInfo(global, chatId, threadId)?.messagesCount === 0;
 
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-    const areAdsEnabled = !isCurrentUserPremium || selectUserFullInfo(global, currentUserId)?.areAdsEnabled;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
-
-    const hasCustomGreeting = Boolean(userFullInfo?.businessIntro);
-    const isAppConfigLoaded = global.isAppConfigLoaded;
 
     const monoforumChannelId = selectMonoforumChannel(global, chatId)?.id;
     const canTranslate = selectCanTranslateChat(global, chatId) && !chatFullInfo?.isTranslationDisabled;
@@ -1585,7 +1563,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       isActive,
-      areAdsEnabled,
       isChatLoaded: true,
       restrictionReasons: chat.restrictionReasons,
       ignoreRestrictionReasons: global.appConfig.ignoreRestrictionReasons,
@@ -1623,8 +1600,6 @@ export default memo(withGlobal<OwnProps>(
       isChatProtected: selectIsChatProtected(global, chatId),
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
-      hasCustomGreeting,
-      isAppConfigLoaded,
       monoforumChannelId,
       canTranslate,
       translationLanguage,

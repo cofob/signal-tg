@@ -50,7 +50,6 @@ const PublicPostsSearchLauncher = ({
 }: OwnProps & StateProps) => {
   const {
     checkSearchPostsFlood,
-    openPremiumModal,
   } = getActions();
 
   const lang = useLang();
@@ -83,10 +82,6 @@ const PublicPostsSearchLauncher = ({
 
   const onCheckFlood = useLastCallback(() => {
     checkSearchPostsFlood({});
-  });
-
-  const handleSubscribePremiumClick = useLastCallback(() => {
-    openPremiumModal();
   });
 
   const renderLimitReached = () => {
@@ -199,14 +194,6 @@ const PublicPostsSearchLauncher = ({
           <div className={styles.premiumDescription}>
             {lang('PublicPostsPremiumFeatureDescription')}
           </div>
-          <Button
-            className={styles.subscribePremiumButton}
-            color="primary"
-            noForcedUpperCase
-            onClick={handleSubscribePremiumClick}
-          >
-            {lang('PublicPostsSubscribeToPremium')}
-          </Button>
           <div className={styles.premiumSubtitle}>
             {lang('PublicPostsPremiumFeatureSubtitle')}
           </div>

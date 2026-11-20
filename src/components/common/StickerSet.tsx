@@ -124,7 +124,6 @@ const StickerSet = ({
     clearRecentStickers,
     clearRecentCustomEmoji,
     clearRecentReactions,
-    openPremiumModal,
     toggleStickerSet,
     loadStickers,
   } = getActions();
@@ -166,15 +165,11 @@ const StickerSet = ({
   });
 
   const handleAddClick = useLastCallback(() => {
-    if (isPremiumSet && !isCurrentUserPremium) {
-      openPremiumModal({
-        initialSection: 'animated_emoji',
-      });
-    } else {
-      toggleStickerSet({
-        stickerSetId: stickerSet.id,
-      });
-    }
+    if (isPremiumSet && !isCurrentUserPremium) return;
+
+    toggleStickerSet({
+      stickerSetId: stickerSet.id,
+    });
   });
 
   const handleDefaultTopicIconClick = useLastCallback(() => {

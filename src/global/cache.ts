@@ -635,7 +635,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentlyFoundSettingIds',
       'peerColors',
       'savedReactionTags',
-      'timezones',
       'shareThemeBackdrops',
       'availableEffectById',
     ]),
@@ -1003,7 +1002,6 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
     byChatId,
     pollById: pickTruthy(global.messages.pollById, pollIdsToSave),
     webPageById: pickTruthy(global.messages.webPageById, webPageIdsToSave),
-    sponsoredByChatId: {},
     playbackByChatId: {},
   };
 }

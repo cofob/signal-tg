@@ -48,7 +48,6 @@ import {
   buildApiChatlistInvite,
   buildApiChatReactions,
   buildApiMissingInvitedUser,
-  buildApiSponsoredPeer,
   buildApiThreadInfoFromDialog,
   buildChatMember,
   buildChatMembers,
@@ -767,8 +766,6 @@ async function getFullChannelInfo(
     storiesPinnedAvailable,
     viewForumAsMessages,
     emojiset,
-    boostsApplied,
-    boostsUnrestrict,
     botVerification,
     paidReactionsAvailable,
     hasScheduled,
@@ -871,8 +868,6 @@ async function getFullChannelInfo(
       areParticipantsHidden: participantsHidden,
       isTranslationDisabled: translationsDisabled,
       hasPinnedStories: Boolean(storiesPinnedAvailable),
-      boostsApplied,
-      boostsToUnrestrict: boostsUnrestrict,
       botVerification: botVerification && buildApiBotVerification(botVerification),
       isPaidReactionAvailable: paidReactionsAvailable,
       hasScheduledMessages: hasScheduled,
@@ -2210,12 +2205,6 @@ export function updatePaidMessagesPrice({
   }), {
     shouldReturnTrue: true,
   });
-}
-
-export async function fetchSponsoredPeer({ query }: { query: string }) {
-  const result = await invokeRequest(new GramJs.contacts.GetSponsoredPeers({ q: query }));
-  if (!result || result instanceof GramJs.contacts.SponsoredPeersEmpty) return undefined;
-  return buildApiSponsoredPeer(result.peers[0]);
 }
 
 export function toggleAutoTranslation({

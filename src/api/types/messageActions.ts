@@ -192,32 +192,6 @@ export interface ApiMessageActionSuggestBirthday extends ActionMediaType {
   birthday: ApiBirthday;
 }
 
-export interface ApiMessageActionGiveawayLaunch extends ActionMediaType {
-  type: 'giveawayLaunch';
-  stars?: number;
-}
-
-export interface ApiMessageActionGiveawayResults extends ActionMediaType {
-  type: 'giveawayResults';
-  isStars?: true;
-  winnersCount: number;
-  unclaimedCount: number;
-}
-
-export interface ApiMessageActionBoostApply extends ActionMediaType {
-  type: 'boostApply';
-  boosts: number;
-}
-
-export interface ApiMessageActionPrizeStars extends ActionMediaType {
-  type: 'prizeStars';
-  isUnclaimed?: true;
-  stars: number;
-  transactionId: string;
-  boostPeerId: string;
-  giveawayMsgId: number;
-}
-
 export interface ApiMessageActionChannelJoined extends ActionMediaType {
   type: 'channelJoined';
   isViaRequest?: true;
@@ -321,16 +295,14 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionCha
   | ApiMessageActionSetChatTheme | ApiMessageActionSetChatWallpaper
   | ApiMessageActionGameScore | ApiMessageActionPhoneCall
   | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction | ApiMessageActionBotAllowed
-  | ApiMessageActionBoostApply | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
+  | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
   | ApiMessageActionRequestedPeer | ApiMessageActionManagedBotCreated
   | ApiMessageActionGroupCall | ApiMessageActionInviteToGroupCall | ApiMessageActionGroupCallScheduled
   | ApiMessageActionChatJoinedByRequest | ApiMessageActionChatJoinedViaCommunity
   | ApiMessageActionWebViewDataSent
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
-  | ApiMessageActionChannelJoined | ApiMessageActionGiveawayLaunch
-  | ApiMessageActionGiveawayResults
-  | ApiMessageActionPrizeStars
+  | ApiMessageActionChannelJoined
   | ApiMessageActionPaidMessagesRefunded | ApiMessageActionNoPaidMessagesTokenUsed | ApiMessageActionPaidMessagesPrice
   | ApiMessageActionSuggestedPostApproval
   | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund | ApiMessageActionTodoCompletions

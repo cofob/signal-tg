@@ -4,37 +4,26 @@ import type { ActionReturnType, AiEditorResult, GlobalState } from '../../types'
 import { compareAiTones, getToneCacheKey } from '../../../util/aiComposeTones';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { callApi } from '../../../api/gramjs';
+import { LIMITS } from '../../../limits';
 import { hasAiEditorContent } from '../../helpers/aiMessageEditor';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { updateTabState } from '../../reducers/tabs';
 import { selectTabState } from '../../selectors';
-import { selectCurrentLimit } from '../../selectors/limits';
-import { selectIsCurrentUserPremium } from '../../selectors/users';
 
 export function showToneLimitNotification<T extends GlobalState>(
   global: T,
   actions: { showNotification: AnyFunction },
   tabId: number,
 ): boolean {
-  const isPremium = selectIsCurrentUserPremium(global);
-  const limit = selectCurrentLimit(global, 'aiComposeToneSaved');
+  const limit = LIMITS.aiComposeToneSaved;
 
   const customToneCount = (global.aiComposeTones?.tones || []).filter((t) => 'id' in t).length;
   if (customToneCount < limit) return false;
 
-  if (isPremium) {
-    actions.showNotification({
-      message: { key: 'AiToneLimitReachedPremium', variables: { limit: limit.toString() } },
-      tabId,
-    });
-  } else {
-    actions.showNotification({
-      message: { key: 'AiToneLimitReached' },
-      action: { action: 'openPremiumModal', payload: { tabId } },
-      actionText: { key: 'PremiumMore' },
-      tabId,
-    });
-  }
+  actions.showNotification({
+    message: { key: 'AiToneLimitReachedPremium', variables: { limit: limit.toString() } },
+    tabId,
+  });
 
   return true;
 }

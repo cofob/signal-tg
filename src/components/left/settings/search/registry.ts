@@ -281,9 +281,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
 ];
 
 export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  ...buildEntries(SettingsScreens.Main, ['TelegramPremium'], {
-    requires: 'canBuyPremium', icon: 'star', iconBg: 'premium',
-  }),
   ...buildEntries(SettingsScreens.Main, ['MenuSignalSupport'], { icon: 'help-filled', iconBg: 'blue' }),
   ...buildEntries(SettingsScreens.Main, ['MenuPrivacyPolicy'], { icon: 'privacy-policy-filled', iconBg: 'green' }),
   ...buildEntries(SettingsScreens.Main, ['LogOutTitle'], {

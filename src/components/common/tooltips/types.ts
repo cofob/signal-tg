@@ -6,8 +6,6 @@ import type {
   ApiBotInlineMediaResult,
   ApiBotInlineResult,
   ApiChatMember,
-  ApiMessage,
-  ApiQuickReply,
   ApiSticker,
   ApiUser,
 } from '../../../api/types';
@@ -34,8 +32,6 @@ export type RichEditorTooltipContext = {
   inlineBots?: Record<string, false | InlineBotSettings>;
   botCommands?: ApiBotCommand[] | false;
   chatBotCommands?: ApiBotCommand[];
-  quickReplies?: Record<number, ApiQuickReply>;
-  quickReplyMessages?: Record<number, ApiMessage>;
   isSavedMessages?: boolean;
   isInScheduledList?: boolean;
   isCurrentUserPremium?: boolean;
@@ -51,7 +47,6 @@ export type RichEditorTooltipItem =
   | ApiSticker
   | ApiUser
   | ApiBotCommand
-  | ApiQuickReply
   | ApiBotInlineResult
   | ApiBotInlineMediaResult;
 

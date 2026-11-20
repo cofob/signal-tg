@@ -203,7 +203,7 @@ export type SettingsHighlight = {
 
 export type SettingsConfirmation = 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openSupport'
+export type SettingsAction = SettingsConfirmation | 'openSupport'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 
@@ -371,7 +371,6 @@ export enum MediaViewerOrigin {
   ChannelAvatar,
   SuggestedAvatar,
   PreviewMedia,
-  SponsoredMessage,
   PollPreview,
   RichPageBlock,
   IVPageBlock,

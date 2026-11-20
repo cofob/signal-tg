@@ -43,21 +43,15 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     }
 
     case 'updateUser': {
-      Object.values(global.byTabId).forEach(({ id: tabId }) => {
-        if (selectIsChatWithSelf(global, update.id) && update.user.isPremium !== selectIsCurrentUserPremium(global)) {
-          if (update.user.isPremium && global.byTabId[tabId].premiumModal) {
-            actions.openPremiumModal({ isSuccess: true, tabId });
-          }
-
-          // Reset translation cache cause premium provides additional formatting
-          global = {
-            ...global,
-            translations: {
-              byChatId: {},
-            },
-          };
-        }
-      });
+      if (selectIsChatWithSelf(global, update.id) && update.user.isPremium !== selectIsCurrentUserPremium(global)) {
+        // Reset translation cache cause premium provides additional formatting
+        global = {
+          ...global,
+          translations: {
+            byChatId: {},
+          },
+        };
+      }
 
       const localUser = selectUser(global, update.id);
 

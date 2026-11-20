@@ -4,7 +4,6 @@ import type {
   ApiAudio, ApiPeer, ApiPhoto, ApiProfileTab, ApiReportReason,
 } from '../../types';
 
-import { buildApiChatLink } from '../apiBuilders/misc';
 import {
   buildInputDocument,
   buildInputPeer,
@@ -77,33 +76,6 @@ export async function changeSessionTtl({
   }));
 
   return result;
-}
-
-export async function resolveBusinessChatLink({ slug }: { slug: string }) {
-  const result = await invokeRequest(new GramJs.account.ResolveBusinessChatLink({
-    slug,
-  }), {
-    shouldIgnoreErrors: true,
-  });
-  if (!result) return undefined;
-
-  const chatLink = buildApiChatLink(result);
-
-  return {
-    chatLink,
-  };
-}
-
-export function toggleSponsoredMessages({
-  enabled,
-}: {
-  enabled: boolean;
-}) {
-  return invokeRequest(new GramJs.account.ToggleSponsoredMessages({
-    enabled,
-  }), {
-    shouldReturnTrue: true,
-  });
 }
 
 export function buildApiAccountDays(ttl: GramJs.AccountDaysTTL): { days: number } {

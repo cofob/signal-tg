@@ -6,7 +6,6 @@ import { LeftColumnContent, SettingsScreens } from '../../types';
 
 import { requestMeasure, requestMutation } from '../../lib/fasterdom/fasterdom';
 import { selectTabState } from '../../global/selectors';
-import { selectCurrentLimit } from '../../global/selectors/limits';
 import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import { IS_MAC_OS } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
@@ -28,9 +27,6 @@ type StateProps = {
   folderInvitesById: Record<number, ApiChatlistExportedInvite[]>;
   orderedFolderIds?: number[];
   activeChatFolder: number;
-  maxFolders: number;
-  maxChatLists: number;
-  maxFolderInvites: number;
 };
 
 type OwnProps = {
@@ -43,10 +39,7 @@ const FoldersSidebar = ({
   chatFoldersById,
   orderedFolderIds,
   activeChatFolder,
-  maxFolders,
-  maxChatLists,
   folderInvitesById,
-  maxFolderInvites,
   isActive,
 }: OwnProps & StateProps) => {
   const {
@@ -75,10 +68,7 @@ const FoldersSidebar = ({
     sidebarMode: true,
     orderedFolderIds,
     chatFoldersById,
-    maxFolders,
-    maxChatLists,
     folderInvitesById,
-    maxFolderInvites,
   });
 
   const {
@@ -226,9 +216,6 @@ export default memo(withGlobal(
       folderInvitesById,
       orderedFolderIds,
       activeChatFolder,
-      maxFolders: selectCurrentLimit(global, 'dialogFilters'),
-      maxFolderInvites: selectCurrentLimit(global, 'chatlistInvites'),
-      maxChatLists: selectCurrentLimit(global, 'chatlistJoined'),
     };
   },
 )(FoldersSidebar));

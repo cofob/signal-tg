@@ -34,25 +34,20 @@ export function buildCommandSuggestion(
     allow: () => config.command!.isEnabled(),
     items: ({ query }) => filterCommands(config, query),
     command: ({ editor: currentEditor, range, props }) => {
-      const { sendBotCommand, sendQuickReply } = getActions();
+      const { sendBotCommand } = getActions();
       const context = config.getContext();
-      if ('shortcut' in props) {
-        replaceEditorRange(currentEditor, range, { type: 'text', text: `/${props.shortcut}` });
-        sendQuickReply({ chatId: context.chatId, quickReplyId: props.id });
-      } else {
-        const command = props as ApiBotCommand;
-        const bot = getGlobal().users.byId[command.botId];
-        const username = bot ? getMainUsername(bot) : undefined;
-        const suffix = context.chatBotCommands && username ? `@${username}` : '';
-        const commandText = `/${command.command}${suffix}`;
-        replaceEditorRange(currentEditor, range, { type: 'text', text: commandText });
-        sendBotCommand({
-          command: commandText,
-          chatId: context.chatId,
-          threadId: context.threadId ?? MAIN_THREAD_ID,
-          botId: command.botId,
-        });
-      }
+      const command = props as ApiBotCommand;
+      const bot = getGlobal().users.byId[command.botId];
+      const username = bot ? getMainUsername(bot) : undefined;
+      const suffix = context.chatBotCommands && username ? `@${username}` : '';
+      const commandText = `/${command.command}${suffix}`;
+      replaceEditorRange(currentEditor, range, { type: 'text', text: commandText });
+      sendBotCommand({
+        command: commandText,
+        chatId: context.chatId,
+        threadId: context.threadId ?? MAIN_THREAD_ID,
+        botId: command.botId,
+      });
       config.command?.onSelect();
     },
     shouldResetDismissed: ({ transaction }) => transaction.docChanged,
@@ -71,14 +66,8 @@ function filterCommands(config: RichEditorTooltipsConfig, query: string) {
   const commands = context.botCommands && context.botCommands.length
     ? context.botCommands
     : context.chatBotCommands;
-  const quickReplies = context.isCurrentUserPremium
-    ? Object.values(context.quickReplies || {}).filter(
-      (quickReply) => !query || quickReply.shortcut.startsWith(query),
-    )
-    : [];
-  const filteredCommands = commands?.filter((command) => (
+  return commands?.filter((command) => (
     (!context.isInScheduledList || !command.isEphemeral)
     && (!query || command.command.startsWith(query))
   )) || [];
-  return [...quickReplies, ...filteredCommands];
 }

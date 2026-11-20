@@ -15,7 +15,6 @@ type OwnProps = {
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd: NoneToVoidFunction;
   onRemoveFormatting: NoneToVoidFunction;
-  onSubscribeToPremium: NoneToVoidFunction;
 };
 
 const RemoveFormattingModal = ({
@@ -23,7 +22,6 @@ const RemoveFormattingModal = ({
   onClose,
   onCloseAnimationEnd,
   onRemoveFormatting,
-  onSubscribeToPremium,
 }: OwnProps) => {
   const lang = useLang();
   const title = lang('RemoveRichFormattingTitle');
@@ -50,15 +48,6 @@ const RemoveFormattingModal = ({
       </p>
       <ModalFooterActions isVertical>
         <Button
-          size="smaller"
-          color="primary"
-          fluid
-          onClick={onSubscribeToPremium}
-        >
-          {lang('RichFormattingSubscribe')}
-        </Button>
-        <Button
-          isText
           size="smaller"
           color="primary"
           fluid

@@ -66,10 +66,6 @@ export async function fetchFullUser({
     localDb.documents[botInfo.descriptionDocument.id.toString()] = botInfo.descriptionDocument;
   }
 
-  if (result.fullUser.businessIntro?.sticker instanceof GramJs.Document) {
-    localDb.documents[result.fullUser.businessIntro.sticker.id.toString()] = result.fullUser.businessIntro.sticker;
-  }
-
   const fullInfo = buildApiUserFullInfo(result);
   const users = result.users.map(buildApiUser).filter(Boolean);
   const userStatusesById = buildApiUserStatuses(result.users);

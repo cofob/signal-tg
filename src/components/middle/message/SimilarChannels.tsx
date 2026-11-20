@@ -240,17 +240,15 @@ function MoreChannels({
   channelsCount: number;
   isCurrentUserPremium: boolean;
 }) {
-  const { openPremiumModal, openChatWithInfo } = getActions();
+  const { openChatWithInfo } = getActions();
   const lang = useLang();
 
   const handleClickMore = () => {
-    if (isCurrentUserPremium) {
-      openChatWithInfo({
-        id: chatId, shouldReplaceHistory: true, profileTab: 'similarChannels', forceScrollProfileTab: true,
-      });
-    } else {
-      openPremiumModal();
-    }
+    if (!isCurrentUserPremium) return;
+
+    openChatWithInfo({
+      id: chatId, shouldReplaceHistory: true, profileTab: 'similarChannels', forceScrollProfileTab: true,
+    });
   };
 
   return (

@@ -8,7 +8,6 @@ import type { ApiChatAdminRights } from './chats';
 import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
-import type { ApiTypePeerColor } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiTypeCurrencyAmount } from './stars';
 import type {
@@ -305,34 +304,6 @@ export type ApiDice = {
   mediaType: 'dice';
   value: number;
   emoticon: string;
-};
-
-export type ApiGiveaway = {
-  mediaType: 'giveaway';
-  quantity: number;
-  months?: number;
-  stars?: number;
-  untilDate: number;
-  isOnlyForNewSubscribers?: true;
-  countries?: string[];
-  channelIds: string[];
-  prizeDescription?: string;
-};
-
-export type ApiGiveawayResults = {
-  mediaType: 'giveawayResults';
-  months?: number;
-  stars?: number;
-  untilDate: number;
-  isRefunded?: true;
-  isOnlyForNewSubscribers?: true;
-  channelId: string;
-  prizeDescription?: string;
-  winnersCount?: number;
-  winnerIds: string[];
-  additionalPeersCount?: number;
-  launchMessageId: number;
-  unclaimedCount: number;
 };
 
 export type ApiNewPoll = {
@@ -722,8 +693,6 @@ export type MediaContent = {
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;
-  giveaway?: ApiGiveaway;
-  giveawayResults?: ApiGiveawayResults;
   paidMedia?: ApiPaidMedia;
   dice?: ApiDice;
   ttlSeconds?: number;
@@ -785,7 +754,6 @@ export interface ApiMessage {
   isKeyboardSelective?: boolean;
   isKeyboardFullHeight?: boolean;
   viaBotId?: string;
-  viaBusinessBotId?: string;
   guestChatViaId?: string;
   postAuthorTitle?: string;
   isScheduled?: boolean;
@@ -809,7 +777,6 @@ export interface ApiMessage {
   hasComments?: boolean;
   readDate?: number;
   savedPeerId?: string;
-  senderBoosts?: number;
   factCheck?: ApiFactCheck;
   effectId?: string;
   isInvertedMedia?: true;
@@ -984,22 +951,6 @@ export type ApiMessageReportResult = {
 
 export type ApiMessageOutgoingStatus = 'read' | 'succeeded' | 'pending' | 'failed';
 
-export type ApiSponsoredMessage = {
-  chatId: string;
-  randomId: string;
-  isRecommended?: true;
-  expiresAt: number;
-  sponsorInfo?: string;
-  additionalInfo?: string;
-  buttonText?: string;
-  canReport?: true;
-  title: string;
-  url: string;
-  photo?: ApiPhoto;
-  content: MediaContent;
-  peerColor?: ApiTypePeerColor;
-};
-
 // KeyboardButtons
 
 export interface ApiKeyboardButtonStyle {
@@ -1123,28 +1074,11 @@ export type ApiMessagesBotApp = ApiBotApp & {
   shouldRequestWriteAccess?: boolean;
 };
 
-export type ApiQuickReply = {
-  id: number;
-  shortcut: string;
-  topMessageId: number;
-};
-
 export type ApiFactCheck = {
   shouldFetch?: true;
   hash: string;
   countryCode?: string;
   text?: ApiFormattedText;
-};
-
-export type ApiSponsoredMessageReportResult = {
-  type: 'reported' | 'hidden' | 'premiumRequired';
-} | {
-  type: 'selectOption';
-  title: string;
-  options: {
-    text: string;
-    option: string;
-  }[];
 };
 
 export type ApiPreparedInlineMessage = {
