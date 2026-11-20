@@ -1,6 +1,6 @@
 # План: перевод Telegram Web A на Signal
 
-Статус: черновик для согласования, 2026-11-20.
+Статус: согласован 2026-11-20, решения в разделе 9. Название продукта: TeleSignal.
 
 Цель: веб-клиент на кодовой базе Telegram Web A (Teact, `src/global`, компоненты), который работает как связанное устройство Signal (как Signal Desktop) и поддерживает функции Signal, доступные связанному устройству. Вся клиентская логика и криптография выполняются в браузере: libsignal собирается в WebAssembly. Прокси нужен только для сетевого доступа к серверам Signal. Функции Telegram без аналога в Signal удаляются.
 
@@ -48,7 +48,7 @@
         | HTTPS + WSS на свой origin
         v
 proxy/  (Node 24, без зависимостей, без состояния)
-  allowlist хостов Signal, закреплённый CA Signal, CORS, перенос заголовков для WS
+  WebSocket -> TCP туннель к хостам из allowlist, TLS не расшифровывает
         |
         v
 Серверы Signal (chat, storage, cdn0/2/3, cdsi)
@@ -57,7 +57,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 Решения:
 
 - **Архитектура повторяет Telegram Web A.** GramJS живёт в Worker мастер-вкладки и отдаёт `ApiUpdate`; на его место встаёт движок Signal. Мастер-вкладка держит единственный WebSocket устройства, другие вкладки ходят через неё (`src/util/browser/multitab.ts`).
-- **WASM-мост в форке libsignal.** Добавляем цель `wasm` в макросы `rust/bridge/shared` (wasm-bindgen, хранилища через async-колбэки в JS) рядом с `node`. Тогда `libsignal/node/ts` работает поверх WASM с заменой одного `Native`-модуля, а код Desktop, который вызывает `@signalapp/libsignal-client`, переносится почти без изменений. В мост не входит `libsignal-net`: сеть пишем на TypeScript через прокси.
+- **WASM-мост.** Нужные крейты libsignal v0.108.3 лежат в `rust/libsignal/` без изменений, кроме перечисленных в `rust/libsignal/NOTICE.md`. Собственный крейт `rust/signal-wasm/` (wasm-bindgen) экспортирует функции с теми же именами и сигнатурами, что у `Native` в `libsignal/node/ts/Native.ts`, только нужное подмножество. Перенесённая обёртка `node/ts` работает поверх него, поэтому код Desktop, который вызывает `@signalapp/libsignal-client`, переносится почти без изменений. `libsignal-net` в сборку не входит: сеть пишем на TypeScript через туннель.
 - **CDSI** требует патча `attest` в форке: BoringSSL заменяется чистым Rust (`x509-cert`, `p256`, `ecdsa`, `sha2`) за фичей. До патча поиск по номеру недоступен; контакты с телефона приходят с ACI через синхронизацию, поиск по юзернейму CDSI не нужен.
 - **Protobuf:** свой генератор TS-кодеков в `dev/` (как `npm run gramjs:tl`), без runtime-зависимостей. `.proto` копируются из Signal Android с указанием версии.
 - **Хранилище:** IndexedDB без новых зависимостей. Сырой конверт сначала сохраняется в `unprocessed`, потом подтверждается серверу (как в Desktop), поэтому сбой вкладки не теряет сообщения. Вызывается `navigator.storage.persist()`. При заданном код-пароле ключи и история шифруются (расширяем `src/util/passcode`).
@@ -74,7 +74,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 | Размер прокси | 200–300 строк | ~100 строк |
 | Риск | Злоумышленный прокси может вызывать API от имени устройства, но не прочитает и не подделает сообщения без ключей | Сложнее, медленнее на больших вложениях |
 
-Рекомендация: начать с P1 на своём хосте, а сетевой слой сделать за интерфейсом транспорта, чтобы P2 подключался без изменений выше. Выбор режима остаётся за тобой, см. раздел 9.
+Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
 
 ## 3. Соответствие функций
 
@@ -136,7 +136,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 | Business, платные сообщения, медиа и реакции, реклама, эффекты сообщений | `BusinessHours`, `ContactGreeting`, quick replies, `common/paidMessage`, `modals/paidReaction`, `Sponsored*`, `MessageEffect.tsx` | |
 | Перевод и AI | `reducers/translations.ts`, `actions/api/ai.ts`, `AiMessageEditorModal`, `modals/aiTonePreview` | Определение языка (`lib/fasttext`) нужно только переводу, решаем вместе с ним |
 | Викторины, to-do списки | `middle/message/poll` (части), `TodoList` | Опросы остаются |
-| Отложенные сообщения Telegram | `scheduledIds`, методы отложенных | В Android отложенные локальные, решение в разделе 9 |
+| Серверные отложенные сообщения Telegram | методы отложенных в `src/api/gramjs` | UI отложенных остаётся для локальных (раздел 9) |
 | Сохранённые диалоги и теги «Избранного» | `fetchSavedChats`, `toggleSavedDialogPinned`, теги реакций | Note to Self остаётся |
 | Shareable chatlists, custom emoji, emoji status, TGS-стикеры | `modals/chatlist`, `StatusPickerMenu`, `emojiStatusAccess`, `lib/tlottie` | |
 | Instant View | `components/iv`, `InstantViewTab` | Используется в `MessageRichText`, отделяем при удалении |
@@ -155,7 +155,7 @@ proxy/  (Node 24, без зависимостей, без состояния)
 ### Этап 0. Спайки, снимающие риски
 
 1. **libsignal в WASM.** Форк libsignal, цель `wasm` в макросах моста, сборка через wasm-bindgen, `node/ts` поверх WASM. Готово, когда в браузере две пары хранилищ проводят сессию PQXDH, шифруют и расшифровывают сообщение, sealed sender и sender key работают, размер `.wasm` измерен.
-2. **Прокси P1** с allowlist (chat, storage, cdn0/2/3, cdsi), закреплённым CA из Desktop и переносом заголовков для WebSocket. Готово, когда браузер открывает `wss://.../v1/websocket/provisioning/`.
+2. **Прокси-туннель и TLS в WASM.** Туннель WebSocket -> TCP с allowlist (chat, storage, cdn0/2/3, cdsi, contentproxy), rustls в WASM с закреплённым CA Signal, клиенты HTTP/1.1 и WebSocket на TypeScript. Готово, когда браузер открывает `wss://chat.signal.org/v1/websocket/provisioning/` через туннель.
 3. **Генератор protobuf** (`npm run signal:proto`): `SignalService`, `Provisioning`, `WebSocketResources`, `Groups`, `DecryptedGroups`, `StorageService`, `Backup`. Готово, когда кодеки проходят раунд-трип на образцах из Desktop.
 4. **Привязка и первое сообщение.** QR в браузере, скан с Android, расшифровка `ProvisionMessage`, `PUT /v1/devices/link`, загрузка prekeys, WebSocket, расшифровка входящего конверта. Готово, когда текст с телефона виден в консоли.
 
@@ -198,7 +198,7 @@ WebRTC браузера не может говорить с RingRTC (факт 5)
 - Пока все вкладки закрыты, сообщения копятся на сервере Signal. Android регистрирует для push токен FCM (`lib/libsignal-service/.../RegistrationApi.kt`); Web Push в API Signal я не нашёл (вывод, код сервера не проверял). Значит, уведомлений при закрытом браузере не будет.
 - Очистка данных сайта удаляет ключи и историю, после неё нужна повторная привязка. `navigator.storage.persist()` снижает риск вытеснения, но не защищает от ручной очистки.
 - История до привязки доступна только через link-and-sync (этап 4) и только если основное устройство её отправило.
-- Создавать превью ссылок без утечки адреса нельзя: страницу загружает прокси (P1) или туннель (P2). Desktop ходит через `contentproxy.signal.org`, это поведение повторяем на этапе 4.
+- Превью ссылок: как Desktop, через `contentproxy.signal.org` (HTTP CONNECT). Браузер открывает через туннель TLS к content proxy, внутри CONNECT к сайту и второй TLS с публичными корневыми сертификатами (`webpki-roots`). Наш прокси видит только хост content proxy, сайт видит IP Signal.
 
 ## 7. Риски
 
@@ -212,17 +212,17 @@ WebRTC браузера не может говорить с RingRTC (факт 5)
 
 ## 8. Новые зависимости и инструменты
 
-- Форк libsignal (AGPLv3) как исходник WASM-модуля. Ты это разрешил.
+- Крейты libsignal (AGPLv3) в `rust/libsignal/`, rustls для TLS в WASM, wasm-bindgen.
 - Инструменты сборки: Rust по `rust-toolchain` libsignal, цель `wasm32-unknown-unknown`, `wasm-bindgen-cli`, `protoc`. Собранный `.wasm` коммитим, чтобы фронтенд собирался без Rust, или собираем в CI.
 - Новых npm-пакетов план не требует: protobuf через свой генератор, хранилище в IndexedDB через `idb-keyval` и прямой API, прокси на `node:http` и `node:https`.
 
-## 9. Решения, нужные от тебя
+## 9. Принятые решения (2026-11-20)
 
-1. Режим прокси: P1 (рекомендую для старта) или сразу P2.
-2. Protobuf: свой генератор (рекомендую) или `@bufbuild/protobuf`/`protobufjs` как новая зависимость.
-3. Хранилище: IndexedDB (рекомендую) или SQLite в WASM с FTS5 (новая зависимость, быстрее поиск и сложные запросы).
-4. Звонки: оставить этап R вне плана или начинать исследование параллельно.
-5. Отложенные сообщения: удалить вместе с серверными Telegram или переделать в локальные, которые отправляются только при открытой вкладке.
-6. Название и иконка: имя и логотип Signal использовать нельзя (товарный знак).
-7. Языки в сборке: какие, кроме английского и русского.
-8. Где публиковать форк libsignal и нужны ли PR в upstream.
+1. Прокси: P2, туннель без расшифровки TLS.
+2. Protobuf: свой генератор.
+3. Хранилище: IndexedDB.
+4. Звонки: исследование этапа R идёт параллельно с основными этапами, результаты в `docs/signal/CALLS_RESEARCH.md`.
+5. Отложенные сообщения: локальные, отправляются только при открытой вкладке; интерфейс предупреждает об этом при планировании.
+6. Название: TeleSignal.
+7. Языки: английский и русский.
+8. Форк libsignal: в этом репозитории, `rust/libsignal/`.
