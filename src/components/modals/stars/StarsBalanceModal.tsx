@@ -70,7 +70,6 @@ const StarsBalanceModal = ({
 }: OwnProps & StateProps) => {
   const {
     closeStarsBalanceModal, loadStarsTransactions, loadStarsSubscriptions, openStarsGiftingPickerModal, openInvoice,
-    openWalletModal,
   } = getActions();
 
   const isTon = modal?.currency === TON_CURRENCY_CODE;
@@ -223,7 +222,7 @@ const StarsBalanceModal = ({
     return (
       <>
         <ParticlesHeader
-          model="diamond-3d"
+          model="diamond"
           color="blue"
           title={title}
           description={lang('GramEarningsText')}
@@ -264,14 +263,6 @@ const StarsBalanceModal = ({
       toggleExtraClass(heroTitleElement, styles.heroTitleHidden, isCollapsed);
       toggleExtraClass(headerElement, styles.headerCollapsed, isCollapsed);
     });
-  });
-
-  // The wallet's native dialog would cover this modal, so the wallet is closed while it is open. When the wallet
-  // opened it, leaving reopens the wallet.
-  const handleClose = useLastCallback(() => {
-    closeStarsBalanceModal();
-
-    if (modal?.shouldReturnToWallet) openWalletModal();
   });
 
   const handleSwitchTab = useLastCallback((index: number) => {
@@ -335,7 +326,7 @@ const StarsBalanceModal = ({
 
   const header = (
     <ModalHeader ref={headerRef} className={styles.header} noMask>
-      <ModalCloseButton onBack={modal?.shouldReturnToWallet ? handleClose : undefined} />
+      <ModalCloseButton />
       <ModalTitle>
         <span className={styles.headerTitle}>{title}</span>
       </ModalTitle>
@@ -356,7 +347,7 @@ const StarsBalanceModal = ({
       dialogClassName={styles.dialog}
       noContentInlinePadding
       noScrollable
-      onClose={handleClose}
+      onClose={closeStarsBalanceModal}
     >
       <div
         className={buildClassName(

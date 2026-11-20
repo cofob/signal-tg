@@ -111,7 +111,6 @@ export function getNestedRichText(text: ApiRichText): ApiRichText {
     case 'autoEmail':
     case 'autoPhone':
     case 'bankCard':
-    case 'tonAddress':
     case 'mentionName':
     case 'date':
     case 'button':

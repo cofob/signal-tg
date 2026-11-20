@@ -33,12 +33,12 @@ export function formatTonTextFromNanos(lang: LangFn, nanos: bigint, isShort?: bo
   });
 }
 
-export function formatTonNumber(lang: LangFn, nanos: bigint, isShort?: boolean) {
+function formatTonNumber(lang: LangFn, nanos: bigint, isShort?: boolean) {
   return formatTonParts(lang, nanos, isShort).join('');
 }
 
 // The whole part is grouped as a `bigint`, so the full amount keeps every nanoton a float would round off
-export function formatTonParts(lang: LangFn, nanos: bigint, isShort?: boolean): [whole: string, fraction?: string] {
+function formatTonParts(lang: LangFn, nanos: bigint, isShort?: boolean): [whole: string, fraction?: string] {
   const formatter = lang.internalFormatters.preciseNumber;
   const [whole, fraction] = (isShort ? formatTonShortFromNanos(nanos) : formatTonFromNanos(nanos)).split('.');
   const formattedWhole = formatter.format(BigInt(whole));

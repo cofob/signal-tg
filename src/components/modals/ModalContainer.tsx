@@ -52,7 +52,6 @@ import GiftRecipientPicker from './gift/recipient/GiftRecipientPicker.async';
 import GiftResalePriceComposerModal from './gift/resale/GiftResalePriceComposerModal.async';
 import StarGiftPriceDecreaseInfoModal from './gift/StarGiftPriceDecreaseInfoModal.async';
 import GiftStatusInfoModal from './gift/status/GiftStatusInfoModal.async';
-import GiftMoveToWalletModal from './gift/transfer/GiftMoveToWalletModal.async';
 import GiftTransferConfirmModal from './gift/transfer/GiftTransferConfirmModal.async';
 import GiftTransferModal from './gift/transfer/GiftTransferModal.async';
 import GiftUpgradeModal from './gift/upgrade/GiftUpgradeModal.async';
@@ -96,8 +95,6 @@ import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
 import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
-import WalletCardModal from './wallet/WalletCardModal.async';
-import WalletModal from './wallet/WalletModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
@@ -115,8 +112,6 @@ type ModalKey = keyof Pick<TabState,
   'reportAdModal' |
   'reportModal' |
   'starsBalanceModal' |
-  'walletModal' |
-  'walletCardModal' |
   'starsPayment' |
   'starsTransactionModal' |
   'paidReactionModal' |
@@ -160,7 +155,6 @@ type ModalKey = keyof Pick<TabState,
   'giftStatusInfoModal' |
   'giftTransferModal' |
   'giftTransferConfirmModal' |
-  'giftMoveToWalletModal' |
   'giftDescriptionRemoveModal' |
   'giftOfferAcceptModal' |
   'chatRefundModal' |
@@ -263,8 +257,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   collectibleInfoModal: CollectibleInfoModal,
   starsPayment: StarsPaymentModal,
   starsBalanceModal: StarsBalanceModal,
-  walletModal: WalletModal,
-  walletCardModal: WalletCardModal,
   starsTransactionModal: StarsTransactionInfoModal,
   chatInviteModal: ChatInviteModal,
   paidReactionModal: PaidReactionModal,
@@ -304,7 +296,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   requestPeerModal: RequestPeerModal,
   giftTransferModal: GiftTransferModal,
   giftTransferConfirmModal: GiftTransferConfirmModal,
-  giftMoveToWalletModal: GiftMoveToWalletModal,
   giftDescriptionRemoveModal: GiftDescriptionRemoveModal,
   giftOfferAcceptModal: GiftOfferAcceptModal,
   chatRefundModal: ChatRefundModal,

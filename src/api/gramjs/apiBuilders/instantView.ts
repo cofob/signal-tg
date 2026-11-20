@@ -237,7 +237,7 @@ export function buildApiRichText(text: GramJs.TypeRichText, context: PageMediaCo
   }
 
   if (text instanceof GramJs.TextTonAddress) {
-    return { type: 'tonAddress', text: buildApiRichText(text.text, context) };
+    return buildApiRichText(text.text, context);
   }
 
   if (text instanceof GramJs.TextMentionName) {

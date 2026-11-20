@@ -41,7 +41,7 @@ export function animate(tick: TickFunction, schedulerFn: Scheduler) {
   });
 }
 
-export function animateInstantly(tick: TickFunction, schedulerFn: Scheduler) {
+function animateInstantly(tick: TickFunction, schedulerFn: Scheduler) {
   if (tick()) {
     schedulerFn(() => {
       animateInstantly(tick, schedulerFn);

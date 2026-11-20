@@ -69,7 +69,6 @@ import {
   isMessageTranslatable,
   isOwnMessage,
   isServiceNotificationMessage,
-  isUserBot,
   isUserRightBanned,
   prepareMessageReplyInfo,
 } from '../helpers';
@@ -1668,14 +1667,4 @@ export function selectWidgetChatType<T extends GlobalState>(global: T, chatId: s
   if (!chat) return undefined;
   if (isChatChannel(chat)) return 'channel';
   return isChatBasicGroup(chat) ? 'group' : 'supergroup';
-}
-
-// The bot that speaks for a widget: the inline bot it came through, otherwise its author, when that is a bot
-export function selectWidgetBotId<T extends GlobalState>(global: T, message: ApiMessage) {
-  if (message.viaBotId) return message.viaBotId;
-
-  // A message in a private chat carries no sender: the chat is its author
-  const authorId = message.forwardInfo ? message.forwardInfo.fromId : selectSender(global, message)?.id;
-  const author = authorId ? selectUser(global, authorId) : undefined;
-  return author && isUserBot(author) ? author.id : undefined;
 }

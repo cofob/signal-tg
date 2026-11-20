@@ -89,7 +89,6 @@ import {
   selectCanManageAutoDelete,
   selectCanPlayAnimatedEmojis,
   selectCanScheduleUntilOnline,
-  selectCanSendMoneyToUser,
   selectChat,
   selectChatFullInfo,
   selectChatHistoryTtl,
@@ -276,7 +275,6 @@ type StateProps = {
   currentMessageList?: MessageList;
   isChatWithBot?: boolean;
   isChatWithSelf?: boolean;
-  canSendMoney?: boolean;
   isChannel?: boolean;
   isForCurrentMessageList: boolean;
   isRightColumnShown?: boolean;
@@ -424,7 +422,6 @@ const Composer = ({
   canSendVoiceByPrivacy,
   isChatWithBot,
   isChatWithSelf,
-  canSendMoney,
   isChannel,
   fileSizeLimit,
   isRightColumnShown,
@@ -3048,7 +3045,6 @@ const Composer = ({
               onTodoListCreate={handleTodoListCreate}
               isScheduled={isInScheduledList}
               attachBots={isInMessageList ? attachBots : undefined}
-              canSendMoney={isInMessageList ? canSendMoney : undefined}
               peerType={attachMenuPeerType}
               shouldCollectDebugLogs={shouldCollectDebugLogs}
               theme={theme}
@@ -3583,7 +3579,6 @@ export default memo(withGlobal<OwnProps>(
       user,
       isChatWithBot,
       isChatWithSelf,
-      canSendMoney: selectCanSendMoneyToUser(global, chatId),
       isForCurrentMessageList,
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, chatId),
       isChannel: chat ? isChatChannel(chat) : undefined,

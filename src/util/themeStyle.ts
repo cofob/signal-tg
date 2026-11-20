@@ -70,7 +70,7 @@ export function validateHexColor(color: unknown): color is string {
   return typeof color === 'string' && /^#[0-9A-F]{6}$/i.test(color);
 }
 
-export function getPropertyHexColor(style: CSSStyleDeclaration, property: string) {
+function getPropertyHexColor(style: CSSStyleDeclaration, property: string) {
   const value = style.getPropertyValue(property);
   if (!value) return undefined;
   return prepareHexColor(value.trim())?.slice(0, HEX_COLOR_LENGTH);

@@ -69,16 +69,12 @@ import type {
   ApiStickerSetInfo,
   ApiThemeParameters,
   ApiTodoItem,
-  ApiTonConnectConnectRequest,
   ApiTopPeerCategory,
   ApiTypeCurrencyAmount,
   ApiTypePrepaidGiveaway,
   ApiUpdate,
   ApiUser,
   ApiVideo,
-  ApiWalletCardSticker,
-  ApiWalletGiftDeposit,
-  ApiWidgetWalletCall,
   BotsPrivacyType,
   KeyboardButtonSuggestedMessage,
   LinkContext,
@@ -1499,10 +1495,6 @@ export interface ActionPayloads {
   } & WithTabId;
 
   loadStarStatus: undefined;
-  loadCurrencyRates: undefined;
-  setWalletCurrency: {
-    currency: string;
-  };
   loadStarsTransactions: {
     type: StarsTransactionType;
     isTon?: boolean;
@@ -1531,212 +1523,8 @@ export interface ActionPayloads {
     };
     shouldIgnoreBalance?: boolean;
     currency?: ApiTypeCurrencyAmount['currency'];
-    shouldReturnToWallet?: boolean;
   } & WithTabId;
   closeStarsBalanceModal: WithTabId | undefined;
-
-  openWalletTonConnect: {
-    dappClientId: string;
-    connectRequest: ApiTonConnectConnectRequest;
-    traceId?: string;
-  } & WithTabId;
-  openWalletTonConnectRequest: {
-    sessionId: string;
-    messageId: number;
-  } & WithTabId;
-  loadWalletTonConnectSessions: undefined;
-  unlockWalletTonConnectRequest: {
-    sessionId: string;
-    requestMsgId: number;
-    passcode?: string;
-    password?: string;
-  } & WithTabId;
-  respondWalletTonConnect: {
-    sessionId: string;
-    requestMsgId?: number;
-    passcode?: string;
-    password?: string;
-    isDeclined?: boolean;
-  } & WithTabId;
-  openWalletTonConnectOauth: WithTabId | undefined;
-  connectWalletTonConnectOauth: {
-    passcode?: string;
-    password?: string;
-  } & WithTabId;
-  finishWalletTonConnectDisconnects: { sessionIds: string[] };
-  disconnectWalletTonConnect: { sessionId: string; passcode?: string; password?: string } & WithTabId;
-  disconnectAllWalletTonConnect: { passcode?: string; password?: string } & WithTabId;
-  clearWalletTonConnectError: WithTabId | undefined;
-  openWidgetWalletCall: {
-    callId: string;
-    botId: string;
-    chatId: string;
-    messageId: number;
-    call: ApiWidgetWalletCall;
-  } & WithTabId;
-  respondWidgetWalletCall: {
-    passcode?: string;
-    password?: string;
-  } & WithTabId;
-  declineWidgetWalletCall: WithTabId | undefined;
-  clearWalletTonConnect: WithTabId | undefined;
-
-  openWalletModal: {
-    shouldOpenTonConnect?: boolean;
-    initialRecipient?: string;
-    // Nanotons
-    initialAmount?: bigint;
-    initialComment?: string;
-    isInitialCommentEncrypted?: boolean;
-    shouldCloseAfterSend?: boolean;
-    shouldCloseOnBack?: boolean;
-    initialTransactionId?: string;
-    shouldShowIntro?: boolean;
-    shouldReleaseKey?: boolean;
-    shouldOpenCollectibles?: boolean;
-    shouldOpenReceive?: boolean;
-  } & WithTabId | undefined;
-  openWalletTransaction: {
-    transactionId: string;
-  } & WithTabId;
-  closeWalletModal: WithTabId | undefined;
-  openWalletCardModal: {
-    userId: string;
-  } & WithTabId;
-  closeWalletCardModal: WithTabId | undefined;
-  dismissWalletIntro: WithTabId | undefined;
-  loadWalletMnemonic: {
-    password?: string;
-    passcode?: string;
-    // A wallet kept on this device instead of the current one
-    savedAddress?: string;
-  } & WithTabId | undefined;
-  clearWalletMnemonic: WithTabId | undefined;
-  enableWalletBackup: {
-    // Absent when the phrase kept on the device should be used instead
-    words?: string[];
-    password?: string;
-    passcode?: string;
-  } & WithTabId;
-  disableWalletBackup: {
-    fromAddress: string;
-    // Replaces the signing key on the chain
-    shouldRotateKey?: boolean;
-    password?: string;
-  } & WithTabId;
-  // Sends the key rotation that `disableWalletBackup` prepared, with the phrase that the user saw
-  confirmWalletKeyRotation: {
-    password?: string;
-  } & WithTabId;
-  clearWalletKeyRotation: WithTabId | undefined;
-  loadWalletKeyRotationFee: undefined;
-  clearWalletBackup: WithTabId | undefined;
-  dropWalletVaultSecrets: WithTabId | undefined;
-  replaceWallet: {
-    fromAddress: string;
-    // Words import a wallet, `savedAddress` restores one kept here; without either the server generates one
-    words?: string[];
-    savedAddress?: string;
-    shouldSaveCurrent?: boolean;
-    password?: string;
-    // Required for `savedAddress`, because its phrase is read from the device
-    passcode?: string;
-  } & WithTabId;
-  clearWalletReplace: WithTabId | undefined;
-  keepWalletPhrase: {
-    words: string[];
-  } & WithTabId;
-  loadSavedWallets: undefined;
-  loadWalletKeyRotationPending: undefined;
-  removeSavedWallet: {
-    address: string;
-    passcode: string;
-  } & WithTabId;
-  clearWalletSavedRemoval: WithTabId | undefined;
-  loadWalletState: undefined;
-  loadExistingWaltBalance: undefined;
-  openWalletTransferLink: {
-    // A wallet address or a `@username`
-    to?: string;
-    // A user whose current address the server is asked for
-    userId?: string;
-    // Nanotons
-    amount?: bigint;
-    comment?: string;
-    isCommentEncrypted?: boolean;
-    shouldCloseAfterSend?: boolean;
-    shouldCloseOnBack?: boolean;
-  } & WithTabId;
-  watchWalletActivity: undefined;
-  unwatchWalletActivity: undefined;
-  loadWalletGaslessInfo: undefined;
-  loadWalletTransactions: {
-    shouldRefresh?: boolean;
-  } | undefined;
-  updateWalletCardDraft: {
-    stickers: ApiWalletCardSticker[];
-    backgroundAddress?: string;
-  };
-  saveWalletCardDraft: undefined;
-  loadWalletCollectibles: {
-    shouldRefresh?: boolean;
-  } | undefined;
-  loadWalletUserAddresses: {
-    userIds?: string[];
-    addresses?: string[];
-    isForced?: boolean;
-  };
-  loadWalletDomainAddress: {
-    domain: string;
-  } & WithTabId;
-  searchWalletRecipients: {
-    query: string;
-  } & WithTabId;
-  loadWalletTransferFee: {
-    toAddress: string;
-    comment?: string;
-    shouldEncryptComment?: boolean;
-    collectibleAddress?: string;
-  } & WithTabId;
-  clearWalletTransferFee: WithTabId | undefined;
-  sendWalletTransfer: {
-    fromAddress: string;
-    toAddress: string;
-    toUserId?: string;
-    // Nanotons
-    amount: bigint;
-    comment?: string;
-    shouldEncryptComment?: boolean;
-    // The fees are taken out of `amount` instead of on top of it
-    shouldSendAll?: boolean;
-    collectibleAddress?: string;
-    giftDeposit?: ApiWalletGiftDeposit;
-    isGasless?: boolean;
-    // The wallet shows the sent transfer flying into its history, which takes the place of the notification
-    isAnimated?: boolean;
-    password?: string;
-    passcode?: string;
-  } & WithTabId;
-  clearWalletTransfer: WithTabId | undefined;
-  loadWalletGiftDeposit: {
-    collectibleAddress: string;
-  } & WithTabId;
-  clearWalletGiftDeposit: WithTabId | undefined;
-  displayWalletGift: {
-    collectibleAddress: string;
-    shouldDisplay?: boolean;
-  } & WithTabId;
-  loadWalletCollectibleGift: {
-    collectibleAddress: string;
-  };
-  decryptWalletComment: {
-    transactionId: string;
-    password?: string;
-    passcode?: string;
-  } & WithTabId;
-  clearWalletCommentDecryption: WithTabId | undefined;
-
-  openOnrampSession: WithTabId | undefined;
 
   checkChatlistInvite: {
     slug: string;
@@ -3060,10 +2848,7 @@ export interface ActionPayloads {
 
   // Passcode
   setPasscode: { passcode: string } & WithTabId;
-  clearPasscode: {
-    // The wallet phrases of the account go with the passcode instead of blocking its removal
-    shouldDropWalletKeys?: boolean;
-  } | undefined;
+  clearPasscode: undefined;
   lockScreen: undefined;
   unlockScreen: { passcode: string };
   unlockScreenWithPasskey: { isConditional?: boolean } | undefined;
@@ -3474,12 +3259,6 @@ export interface ActionPayloads {
   } & WithTabId;
   clearGiftWithdrawError: WithTabId | undefined;
   closeGiftWithdrawModal: WithTabId | undefined;
-  openGiftMoveToWalletModal: {
-    gift: ApiSavedStarGift;
-  } & WithTabId;
-  closeGiftMoveToWalletPasswordStep: WithTabId | undefined;
-  clearGiftMoveToWalletError: WithTabId | undefined;
-  closeGiftMoveToWalletModal: WithTabId | undefined;
   openGiftStatusInfoModal: {
     emojiStatus: ApiEmojiStatusCollectible;
   } & WithTabId;
@@ -3543,10 +3322,6 @@ export interface ActionPayloads {
   processStarGiftWithdrawal: {
     gift: ApiInputSavedStarGift;
     password: string;
-  } & WithTabId;
-  moveGiftToWallet: {
-    shouldKeepOnProfile?: boolean;
-    password?: string;
   } & WithTabId;
 
   openGiftTransferModal: {

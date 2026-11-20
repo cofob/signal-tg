@@ -22,22 +22,9 @@ export function convertCurrencyFromBaseUnit(amount: number, currency: string) {
   return amount / 10 ** getCurrencyExp(currency);
 }
 
-function convertCurrencyToBaseUnit(amount: number, currency: string) {
-  return amount * 10 ** getCurrencyExp(currency);
-}
-
 // The only way from nanotons to a float, which is only fit for display, plurals and fiat
 export function convertTonFromNanos(nanos: bigint): number {
   return convertCurrencyFromBaseUnit(Number(nanos), TON_CURRENCY_CODE);
-}
-
-// The decimal point is shifted in the digit string. Parsing through a float would lose nanotons on large amounts.
-export function parseTonToNanos(value: string): bigint {
-  const exp = getCurrencyExp(TON_CURRENCY_CODE);
-  const [whole = '', fraction = '', ...rest] = value.split('.');
-  const digits = `${whole}${fraction.slice(0, exp).padEnd(exp, '0')}`;
-
-  return !rest.length && /^\d+$/.test(digits) ? BigInt(digits) : 0n;
 }
 
 // Takes the number at the start and ignores the rest, as `parseFloat` does, e.g. `1.2.3` gives 1.2 and `1e3` gives 1000
@@ -104,34 +91,6 @@ export function convertTonToUsd(nanos: bigint, usdRate: number): number {
   return convertTonFromNanos(nanos) * usdRate * 100;
 }
 
-// Through USD, as `payments.getCurrencyRates` does
-function convertTonToCurrency(nanos: bigint, tonUsdRate: number, currency: string, currencyRate: number): number {
-  return convertCurrencyToBaseUnit(convertTonFromNanos(nanos) * tonUsdRate * currencyRate, currency);
-}
-
-export function formatTonInFiat(
-  nanos: bigint,
-  tonUsdRate: number | undefined,
-  currency: string,
-  currencyRate: number | undefined,
-  locale?: string,
-  options?: {
-    shouldOmitFractions?: boolean;
-    isPrecise?: boolean;
-  },
-): string | undefined {
-  if (tonUsdRate === undefined || currencyRate === undefined) {
-    return undefined;
-  }
-
-  return formatCurrencyAsString(
-    convertTonToCurrency(nanos, tonUsdRate, currency, currencyRate),
-    currency,
-    locale,
-    { shouldOmitFractions: options?.shouldOmitFractions, isPrecise: options?.isPrecise },
-  );
-}
-
 export function formatCurrencyAsString(
   totalPrice: number,
   currency: string,
@@ -178,7 +137,7 @@ function getPreciseFractionDigits(price: number, currency: string) {
   return Math.min(Math.max(exp, digits), MAX_FRACTION_DIGITS);
 }
 
-export function getCurrencyExp(currency: string) {
+function getCurrencyExp(currency: string) {
   if (currency === TON_CURRENCY_CODE) {
     return 9;
   }

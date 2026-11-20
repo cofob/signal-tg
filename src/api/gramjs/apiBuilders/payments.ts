@@ -4,7 +4,6 @@ import type {
   ApiBoost,
   ApiBoostsStatus,
   ApiCheckedGiftCode,
-  ApiCurrencyRate,
   ApiGiveawayInfo,
   ApiInvoice,
   ApiLabeledPrice,
@@ -666,12 +665,5 @@ export function buildApiUniqueStarGiftValueInfo(
     listedCount,
     fragmentListedCount,
     fragmentListedUrl,
-  };
-}
-
-export function buildApiCurrencyRate(rate: GramJs.CurrencyRate): ApiCurrencyRate {
-  return {
-    currency: rate.currency,
-    rate: rate.rate,
   };
 }

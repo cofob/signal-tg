@@ -4,13 +4,14 @@ import { memo, useRef } from '@teact';
 import type { ApiSticker } from '../../../api/types';
 
 import buildClassName from '../../../util/buildClassName';
+import { LOCAL_TGS_PREVIEW_URLS, LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
 import { REM } from '../../common/helpers/mediaDimensions';
 
 import useLastCallback from '../../../hooks/useLastCallback.ts';
 
+import AnimatedIconWithPreview from '../../common/AnimatedIconWithPreview';
 import InteractiveSparkles from '../../common/InteractiveSparkles';
 import StickerView from '../../common/StickerView';
-import WalletDiamond from '../wallet/WalletDiamond';
 import SwayingStar from './SwayingStar.tsx';
 
 import styles from './ParticlesHeader.module.scss';
@@ -18,7 +19,7 @@ import styles from './ParticlesHeader.module.scss';
 import Cocoon from '../../../assets/cocoon.avif';
 
 interface OwnProps {
-  model: 'swaying-star' | 'diamond-3d' | 'ai-egg' | 'sticker';
+  model: 'swaying-star' | 'diamond' | 'ai-egg' | 'sticker';
   sticker?: ApiSticker;
   color: 'purple' | 'gold' | 'blue';
   title: TeactNode;
@@ -30,7 +31,7 @@ interface OwnProps {
 }
 
 const GIFT_STICKER_SIZE = 8 * REM;
-const DIAMOND_3D_SIZE = 130;
+const DIAMOND_SIZE = 130;
 
 const PARTICLE_PARAMS = {
   centerShift: [0, -36] as const,
@@ -85,9 +86,13 @@ function ParticlesHeader({
           draggable={false}
           onMouseMove={handleMouseMove}
         />
-      ) : model === 'diamond-3d' ? (
-        <div className={buildClassName(styles.diamond3d, modelClassName)} onMouseMove={handleMouseMove}>
-          <WalletDiamond size={DIAMOND_3D_SIZE} />
+      ) : model === 'diamond' ? (
+        <div className={buildClassName(styles.diamond, modelClassName)} onMouseMove={handleMouseMove}>
+          <AnimatedIconWithPreview
+            tgsUrl={LOCAL_TGS_URLS.BlueDiamond}
+            previewUrl={LOCAL_TGS_PREVIEW_URLS.BlueDiamond}
+            size={DIAMOND_SIZE}
+          />
         </div>
       ) : model === 'sticker' && sticker && (
         <div

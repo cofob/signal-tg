@@ -1620,14 +1620,6 @@ export interface LangPair {
   'GiftTransferTitle': undefined;
   'GiftTransferTON': undefined;
   'GiftTransferConfirmButtonFree': undefined;
-  'GiftTransferUnlocksTitle': undefined;
-  'GiftMoveToWallet': undefined;
-  'GiftMoveToWalletText': undefined;
-  'GiftMoveToWalletKeep': undefined;
-  'GiftMoveAppear': undefined;
-  'GiftMoveButton': undefined;
-  'GiftMoveToWalletDone': undefined;
-  'GiftMoveError': undefined;
   'RemoveGiftDescriptionTitle': undefined;
   'RemoveGiftDescriptionConfirmText': undefined;
   'RemoveGiftDescriptionSuccessMessage': undefined;
@@ -1852,10 +1844,6 @@ export interface LangPair {
   'BotAuthUnverifiedApp': undefined;
   'ActionGiftTextUnknown': undefined;
   'ActionGiftTextUnknownYou': undefined;
-  'ActionGramTransferTicker': undefined;
-  'ActionGramTransferSent': undefined;
-  'ActionGramTransferReceived': undefined;
-  'WalletUnknownUser': undefined;
   'ActionGiftUniqueSent': undefined;
   'ActionStarGiftUpgradedSelf': undefined;
   'ActionStarGiftTransferredSelf': undefined;
@@ -2494,287 +2482,6 @@ export interface LangPair {
   'SettingsPerformanceDesc': undefined;
   'SettingsStickersDesc': undefined;
   'SettingsSessionsDesc': undefined;
-  'WalletProvisioning': undefined;
-  'WalletUnavailable': undefined;
-  'WalletLoadError': undefined;
-  'WalletSendMoney': undefined;
-  'WalletTransactionUnsupportedPeer': undefined;
-  'WalletTitle': undefined;
-  'WalletMenuItem': undefined;
-  'WalletAddFunds': undefined;
-  'WalletSend': undefined;
-  'WalletCurrencyTicker': undefined;
-  'WalletShowAddress': undefined;
-  'WalletReceiveTitle': undefined;
-  'WalletReceiveCopyHint': undefined;
-  'WalletReceiveNetworkNote': undefined;
-  'WalletReceiveBuy': undefined;
-  'WalletReceiveAddressCopied': undefined;
-  'WalletReceiveShowQr': undefined;
-  'WalletReceivePeerShowQr': undefined;
-  'WalletReceivePeerNote': undefined;
-  'WalletBuyCurrency': undefined;
-  'WalletBuyError': undefined;
-  'WalletSendTitle': undefined;
-  'WalletSendRecipient': undefined;
-  'WalletSendRecent': undefined;
-  'WalletSendUnlinkedWallet': undefined;
-  'WalletSendSwitchCurrency': undefined;
-  'WalletRecipientGramWallet': undefined;
-  'WalletSendAmount': undefined;
-  'WalletSendFeeUnavailable': undefined;
-  'WalletNetworkFeesTitle': undefined;
-  'WalletSendMax': undefined;
-  'WalletSendComment': undefined;
-  'WalletPrivateCommentInfo': undefined;
-  'WalletPublicCommentInfo': undefined;
-  'WalletCommentTooLong': undefined;
-  'WalletCommentEncryptionUnavailable': undefined;
-  'WalletSendContinue': undefined;
-  'WalletFeatureInstantTitle': undefined;
-  'WalletFeatureInstantText': undefined;
-  'WalletFeatureNoFeesTitle': undefined;
-  'WalletFeatureNoFeesText': undefined;
-  'WalletFeatureVerifiedTitle': undefined;
-  'WalletFeatureVerifiedText': undefined;
-  'WalletTermsLink': undefined;
-  'WalletTransactionTitle': undefined;
-  'WalletTransactionSender': undefined;
-  'WalletTransactionRecipient': undefined;
-  'WalletTransactionDate': undefined;
-  'WalletTabTransactions': undefined;
-  'WalletTabCollectibles': undefined;
-  'WalletCollectibleTitle': undefined;
-  'WalletCollectibleSell': undefined;
-  'WalletCollectibleTransfer': undefined;
-  'WalletSendCollectibleTitle': undefined;
-  'WalletSendCollectibleSuccess': undefined;
-  'WalletCollectibleNotOwned': undefined;
-  'WalletCollectibleOnSale': undefined;
-  'WalletCollectibleNotReady': undefined;
-  'WalletCollectibleUnavailable': undefined;
-  'WalletTransactionIncoming': undefined;
-  'WalletTransactionOutgoing': undefined;
-  'WalletTransactionDeposit': undefined;
-  'WalletTransactionTopUp': undefined;
-  'WalletTransactionTopUpCrypto': undefined;
-  'WalletTransactionWithdrawal': undefined;
-  'WalletTransactionSending': undefined;
-  'WalletTransactionFailed': undefined;
-  'WalletTransactionKeyChange': undefined;
-  'WalletTransactionIncomingCollectible': undefined;
-  'WalletTransactionOutgoingCollectible': undefined;
-  'WalletTransactionMovedToProfile': undefined;
-  'WalletTransactionMovedFromProfile': undefined;
-  'WalletCollectibleGift': undefined;
-  'WalletCollectibleUsername': undefined;
-  'WalletCollectibleNumber': undefined;
-  'WalletCollectibleItemIn': undefined;
-  'WalletCollectibleItemOut': undefined;
-  'WalletCollectibleShowInGifts': undefined;
-  'WalletMoveToGifts': undefined;
-  'WalletMoveToGiftsText': undefined;
-  'WalletMoveToGiftsDone': undefined;
-  'WalletStickerAddToCard': undefined;
-  'WalletStickerRemoveFromCard': undefined;
-  'WalletStickerApplyColor': undefined;
-  'WalletStickerRemoveColor': undefined;
-  'WalletStickerTutorialTile': undefined;
-  'WalletStickerGridFooter': undefined;
-  'WalletStickerSaveErrorTitle': undefined;
-  'WalletStickerSaveError': undefined;
-  'WalletStickerProfileError': undefined;
-  'WalletStickerInvalidError': undefined;
-  'WalletStickerBackgroundError': undefined;
-  'WalletTransactionComment': undefined;
-  'WalletCommentEncrypted': undefined;
-  'WalletTransactionDomain': undefined;
-  'WalletTransactionProvider': undefined;
-  'WalletTransactionAddress': undefined;
-  'WalletTransactionFee': undefined;
-  'WalletTransactionFeeFree': undefined;
-  'WalletTransactionOpenWallet': undefined;
-  'WalletTransactionNotFound': undefined;
-  'WalletSendSuccess': undefined;
-  'WalletSendSuccessGasless': undefined;
-  'WalletSendError': undefined;
-  'WalletSendFailedTitle': undefined;
-  'WalletSendPasswordRequired': undefined;
-  'WalletSendPending': undefined;
-  'WalletExportError': undefined;
-  'WalletBackupDisabledError': undefined;
-  'WalletBackupFailedError': undefined;
-  'WalletPhraseOutdatedError': undefined;
-  'WalletRotationPendingError': undefined;
-  'WalletNoLocalSecretError': undefined;
-  'WalletPhraseNotKept': undefined;
-  'WalletReplaced': undefined;
-  'WalletCreatedTitle': undefined;
-  'WalletReplaceError': undefined;
-  'WalletProofInvalidError': undefined;
-  'WalletBackupPartsMissingError': undefined;
-  'WalletPasscodeTitle': undefined;
-  'WalletPasscodeInvalid': undefined;
-  'WalletDisableBackupTitle': undefined;
-  'WalletDisableBackupText': undefined;
-  'WalletDisableBackupRotateText': undefined;
-  'WalletUpdatePhrase': undefined;
-  'WalletUpdatePhraseHint': undefined;
-  'WalletDisableBackupConfirm': undefined;
-  'WalletReleaseKeyTitle': undefined;
-  'WalletReleaseKeyText': undefined;
-  'WalletReleaseKeyRemove': undefined;
-  'WalletLogoutWarning': undefined;
-  'WalletAppPasscodePlaceholder': undefined;
-  'WalletAppPasscodeDescription': undefined;
-  'PasscodeWalletKeyOtherAccounts': undefined;
-  'WalletWrongPhraseError': undefined;
-  'WalletEnableBackup': undefined;
-  'WalletDisableBackup': undefined;
-  'WalletBackupOffHint': undefined;
-  'WalletBackupHint': undefined;
-  'WalletBackupTitle': undefined;
-  'WalletExistingWaltBalance': undefined;
-  'WalletProtectBanner': undefined;
-  'WalletProtectAccountBanner': undefined;
-  'WalletBackupEnabledTitle': undefined;
-  'WalletBackupEnabledText': undefined;
-  'WalletEnterPhraseTitle': undefined;
-  'WalletEnterPhraseSubtitle': undefined;
-  'WalletPhrase12Words': undefined;
-  'WalletPhrase24Words': undefined;
-  'WalletPastePhrase': undefined;
-  'WalletPaste': undefined;
-  'WalletSessionTooFreshError': undefined;
-  'WalletDecryptError': undefined;
-  'WalletSendInvalidAddress': undefined;
-  'WalletLogoutKeyRotation': undefined;
-  'WalletSendDomainNotFound': undefined;
-  'WalletSendDomainLookupFailed': undefined;
-  'WalletLinkNoWallet': undefined;
-  'WalletSendWalletChanged': undefined;
-  'WalletSendInactiveAddress': undefined;
-  'WalletSendInsufficientFunds': undefined;
-  'WalletDepositFunds': undefined;
-  'WalletUnsupportedWallet': undefined;
-  'WalletRecoveryPhraseTitle': undefined;
-  'WalletSettingsTitle': undefined;
-  'WalletWhatIsWallet': undefined;
-  'WalletWhatIsGram': undefined;
-  'WalletViewInExplorer': undefined;
-  'WalletCopyAddress': undefined;
-  'WalletAddressNoLinkedAccount': undefined;
-  'WalletHowItWorksTitle': undefined;
-  'WalletHowItWorksSubtitle': undefined;
-  'WalletHowItWorksDone': undefined;
-  'WalletShowRecoveryPhrase': undefined;
-  'WalletRecoveryPhraseHint': undefined;
-  'WalletYourRecoveryPhrase': undefined;
-  'WalletRecoveryPhraseSubtitle': undefined;
-  'WalletPhraseInfoNeverShare': undefined;
-  'WalletPhraseInfoCanSteal': undefined;
-  'WalletPhraseInfoSupport': undefined;
-  'WalletDeleteWallet': undefined;
-  'WalletDeleteTitle': undefined;
-  'WalletDeleteText': undefined;
-  'WalletDeleteSave': undefined;
-  'WalletDeleteAnyway': undefined;
-  'WalletReplaceTitle': undefined;
-  'WalletReplaceCreate': undefined;
-  'WalletReplaceImport': undefined;
-  'WalletImportPhraseSubtitle': undefined;
-  'WalletSecretPhraseTitle': undefined;
-  'WalletSecretPhraseWhy': undefined;
-  'WalletSecretPhraseWhyText': undefined;
-  'WalletEnterSecretPhrase': undefined;
-  'WalletPhraseKeepError': undefined;
-  'WalletPhraseKept': undefined;
-  'WalletWrongPhraseTitle': undefined;
-  'WalletWrongPhraseText': undefined;
-  'WalletIntroTitle': undefined;
-  'WalletIntroYouCan': undefined;
-  'WalletIntroSendTitle': undefined;
-  'WalletIntroSendText': undefined;
-  'WalletIntroTradeTitle': undefined;
-  'WalletIntroTradeText': undefined;
-  'WalletIntroStoreTitle': undefined;
-  'WalletIntroStoreText': undefined;
-  'WalletRestored': undefined;
-  'WalletOtherWalletsTitle': undefined;
-  'WalletSavedImport': undefined;
-  'WalletConnectRetry': undefined;
-  'WalletKeyMismatchError': undefined;
-  'WalletSendPendingError': undefined;
-  'WalletSendGaslessUnavailable': undefined;
-  'WalletConnectBusyError': undefined;
-  'WalletOtherWalletsHint': undefined;
-  'WalletReplacedElsewhere': undefined;
-  'WalletPasscodeRequiredTitle': undefined;
-  'WalletPasscodeRequiredText': undefined;
-  'WalletPasscodeRequiredSetUp': undefined;
-  'WalletSwitchTitle': undefined;
-  'WalletSwitchKeep': undefined;
-  'WalletSwitchAnyway': undefined;
-  'WalletSwitchConfirm': undefined;
-  'WalletConnectedApps': undefined;
-  'WalletConnectActive': undefined;
-  'WalletConnectEmpty': undefined;
-  'WalletConnectApp': undefined;
-  'WalletConnectTitle': undefined;
-  'WalletConnect': undefined;
-  'WalletDisconnect': undefined;
-  'WalletConnectAccess': undefined;
-  'WalletDisconnectAll': undefined;
-  'WalletDisconnectAllTitle': undefined;
-  'WalletDisconnectAllText': undefined;
-  'WalletDisconnectAllConfirm': undefined;
-  'WalletConnectDisconnectedAll': undefined;
-  'WalletConnectAppAccess': undefined;
-  'WalletConnectProofAccess': undefined;
-  'WalletConnectPermissionInfo': undefined;
-  'WalletConnectRequest': undefined;
-  'WalletConnectScreenTitle': undefined;
-  'WalletConnectUnlock': undefined;
-  'WalletConnectTransfer': undefined;
-  'WalletConnectConfirmed': undefined;
-  'WalletConnectDeclined': undefined;
-  'WalletConnectExpired': undefined;
-  'WalletConnectInvalid': undefined;
-  'WalletConnectError': undefined;
-  'WalletConnectManifestError': undefined;
-  'WalletConnectManifestInvalid': undefined;
-  'WalletConnectSessionClosed': undefined;
-  'WalletConnectSessionChanged': undefined;
-  'WalletConnectRequestMissing': undefined;
-  'WalletConnectHandled': undefined;
-  'WalletConnectStale': undefined;
-  'WalletConnectUnavailable': undefined;
-  'WalletConnectUnsupported': undefined;
-  'WalletConnectContractData': undefined;
-  'WalletConnectSignData': undefined;
-  'WalletConnectSign': undefined;
-  'WalletConnectSignMessageNote': undefined;
-  'WalletConnectReviewSign': undefined;
-  'WalletConnectBinaryData': undefined;
-  'WalletConnectBlindSign': undefined;
-  'WalletConnectDataCopied': undefined;
-  'WalletConnectStateInit': undefined;
-  'WalletConnectFeeUnavailable': undefined;
-  'WalletConnectPreview': undefined;
-  'WalletConnectActionWithdraw': undefined;
-  'WalletConnectActionDeposit': undefined;
-  'WalletConnectActionTransfer': undefined;
-  'WalletConnectActionExcess': undefined;
-  'WalletConnectActionCallContract': undefined;
-  'WalletConnectActionDeployContract': undefined;
-  'WalletConnectActionCollectible': undefined;
-  'WalletConnectActionToken': undefined;
-  'WalletConnectActionUnknown': undefined;
-  'WalletConnectEmulationFailed': undefined;
-  'WalletConnectEmulationIncomplete': undefined;
-  'WalletTransactionSimulationFailed': undefined;
-  'WalletConnectFeeEstimating': undefined;
-  'WalletConnectData': undefined;
   'RichMediaCollage': undefined;
   'RichMediaSlideshow': undefined;
   'RichMediaRetry': undefined;
@@ -4580,33 +4287,14 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionBotAllowedFromApp': {
     'app': V;
   };
-  'ActionGramTransferText': {
-    'from': V;
-    'amount': V;
-    'worth': V;
-  };
   'ActionGramTransferTextYou': {
     'from': V;
     'amount': V;
     'worth': V;
   };
-  'ActionGramTransferPreview': {
-    'from': V;
-    'amount': V;
-  };
   'ActionGramTransferPreviewYou': {
     'from': V;
     'amount': V;
-  };
-  'ActionGramReceivedText': {
-    'amount': V;
-    'worth': V;
-  };
-  'ActionGramReceivedPreview': {
-    'amount': V;
-  };
-  'ActionGramTransferWorth': {
-    'fiat': V;
   };
   'ActionGiftTextCost': {
     'from': V;
@@ -5451,85 +5139,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SettingsLanguageDesc': {
     'language': V;
-  };
-  'WalletSendAddressLinked': {
-    'name': V;
-  };
-  'WalletSendRecipientWallet': {
-    'name': V;
-  };
-  'WalletSendBalance': {
-    'amount': V;
-  };
-  'WalletSendNetworkFee': {
-    'amount': V;
-  };
-  'WalletSendMinAmount': {
-    'amount': V;
-  };
-  'WalletSendAmountButton': {
-    'amount': V;
-  };
-  'WalletTermsNotice': {
-    'link': V;
-  };
-  'WalletTransactionsHidden': {
-    'amount': V;
-  };
-  'WalletStickerColorRestricted': {
-    'collections': V;
-  };
-  'WalletStickerColorCollection': {
-    'collection': V;
-  };
-  'WalletDisableBackupFee': {
-    'amount': V;
-    'fiat': V;
-  };
-  'AreYouSureLogoutGrams': {
-    'amount': V;
-  };
-  'WalletSecretPhraseSubtitle': {
-    'why': V;
-  };
-  'WalletAlsoHaveOldWallets': {
-    'amount': V;
-  };
-  'WalletAlsoHaveEarnings': {
-    'amount': V;
-  };
-  'WalletIntroRate': {
-    'rate': V;
-  };
-  'WalletSwitchText': {
-    'address': V;
-  };
-  'WalletConnectSuccess': {
-    'name': V;
-  };
-  'WalletConnectDisconnected': {
-    'name': V;
-  };
-  'WalletConnectToApp': {
-    'name': V;
-  };
-  'WalletConnectRequestTitle': {
-    'name': V;
-  };
-  'WalletConnectRequestAppPending': {
-    'name': V;
-  };
-  'WalletConnectRequestAppProcessed': {
-    'name': V;
-  };
-  'WalletConnectRequestAppDeclined': {
-    'name': V;
-  };
-  'WalletConnectRequestAppExpired': {
-    'name': V;
-  };
-  'WalletConnectFee': {
-    'amount': V;
   };
   'ActionGiftStarsSubtitle': {
     'peer': V;
@@ -6411,22 +6020,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PollModalAddMoreText': {
     'count': V;
   };
-  'WalletNetworkFeesInfo': {
-    'fee': V;
-    'count': V;
-  };
-  'WalletNetworkFeesInfoShort': {
-    'count': V;
-  };
-  'WalletStickerLimitError': {
-    'count': V;
-  };
-  'WalletConnectExpiresIn': {
-    'count': V;
-  };
-  'WalletConnectRecipients': {
-    'count': V;
-  };
   'RichMediaSkippedFiles': {
     'count': V;
   };
@@ -6897,17 +6490,7 @@ export interface LangKeyGroups {
       | 'MediaAccessMicrophoneText'
       | 'MediaAccessCameraMicrophoneText'
       | 'ContextMenuNoForwardsPeer'
-      | 'RatingReflectsActivity'
-      | 'WalletSendAddressLinked'
-      | 'WalletSendRecipientWallet'
-      | 'WalletConnectSuccess'
-      | 'WalletConnectDisconnected'
-      | 'WalletConnectToApp'
-      | 'WalletConnectRequestTitle'
-      | 'WalletConnectRequestAppPending'
-      | 'WalletConnectRequestAppProcessed'
-      | 'WalletConnectRequestAppDeclined'
-      | 'WalletConnectRequestAppExpired';
+      | 'RatingReflectsActivity';
     variables: 'name';
   };
   'limit,premiumLimit': {
@@ -7203,7 +6786,6 @@ export interface LangKeyGroups {
       | 'StarsPerMonth'
       | 'StarsSubscribeBotButtonMonth'
       | 'ActionPaymentUsedRecurring'
-      | 'ActionGramReceivedPreview'
       | 'ActionStarGiftConvertTextYou'
       | 'ActionStarGiftConvertedTextYou'
       | 'ActionStarGiftChannelText'
@@ -7223,15 +6805,6 @@ export interface LangKeyGroups {
       | 'DescriptionSuggestedPostMinimumOffer'
       | 'GiftAuctionPlaceBidButton'
       | 'GiftAuctionAddToBid'
-      | 'WalletSendBalance'
-      | 'WalletSendNetworkFee'
-      | 'WalletSendMinAmount'
-      | 'WalletSendAmountButton'
-      | 'WalletTransactionsHidden'
-      | 'AreYouSureLogoutGrams'
-      | 'WalletAlsoHaveOldWallets'
-      | 'WalletAlsoHaveEarnings'
-      | 'WalletConnectFee'
       | 'NotificationStarsGiftSentYou'
       | 'PricePerMonth';
     variables: 'amount';
@@ -7329,7 +6902,6 @@ export interface LangKeyGroups {
       | 'CocoonFeature3Text'
       | 'CocoonFooterText'
       | 'AiMessageEditorDailyLimitReached'
-      | 'WalletTermsNotice'
       | 'GiftPremiumFeaturesTerms'
       | 'CreditsSummaryOptionsAbout'
       | 'MiniAppsDisclaimerButton'
@@ -7622,27 +7194,15 @@ export interface LangKeyGroups {
   };
   'amount,from,worth': {
     keys:
-      | 'ActionGramTransferText'
       | 'ActionGramTransferTextYou';
     variables: 'amount' | 'from' | 'worth';
   };
   'amount,from': {
     keys:
-      | 'ActionGramTransferPreview'
       | 'ActionGramTransferPreviewYou'
       | 'ActionGiveawayStarsStartedGroup'
       | 'ActionGiveawayStarsStarted';
     variables: 'amount' | 'from';
-  };
-  'amount,worth': {
-    keys:
-      | 'ActionGramReceivedText';
-    variables: 'amount' | 'worth';
-  };
-  'fiat': {
-    keys:
-      | 'ActionGramTransferWorth';
-    variables: 'fiat';
   };
   'cost,from': {
     keys:
@@ -8047,36 +7607,6 @@ export interface LangKeyGroups {
       | 'TranslateToButton';
     variables: 'language';
   };
-  'collections': {
-    keys:
-      | 'WalletStickerColorRestricted';
-    variables: 'collections';
-  };
-  'collection': {
-    keys:
-      | 'WalletStickerColorCollection';
-    variables: 'collection';
-  };
-  'amount,fiat': {
-    keys:
-      | 'WalletDisableBackupFee';
-    variables: 'amount' | 'fiat';
-  };
-  'why': {
-    keys:
-      | 'WalletSecretPhraseSubtitle';
-    variables: 'why';
-  };
-  'rate': {
-    keys:
-      | 'WalletIntroRate';
-    variables: 'rate';
-  };
-  'address': {
-    keys:
-      | 'WalletSwitchText';
-    variables: 'address';
-  };
   'chat,moreBoosts': {
     keys:
       | 'ChannelBoostMoreBoostsNeededText';
@@ -8326,10 +7856,6 @@ export interface LangPluralKeyGroups {
       | 'FwdMessagesToChats'
       | 'AiTonePreviewUsedBy2'
       | 'PollModalAddMoreText'
-      | 'WalletNetworkFeesInfoShort'
-      | 'WalletStickerLimitError'
-      | 'WalletConnectExpiresIn'
-      | 'WalletConnectRecipients'
       | 'RichMediaSkippedFiles'
       | 'AmongWinners'
       | 'BoostingBoostsCount'
@@ -8509,11 +8035,6 @@ export interface LangPluralKeyGroups {
     keys:
       | 'GiftAuctionItemsBought';
     variables: 'count' | 'gift';
-  };
-  'count,fee': {
-    keys:
-      | 'WalletNetworkFeesInfo';
-    variables: 'count' | 'fee';
   };
   'count,duration': {
     keys:

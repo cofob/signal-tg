@@ -11,7 +11,6 @@ import { removeGiftAuction } from '../../reducers/gifts';
 import { updateTabState } from '../../reducers/tabs';
 import {
   selectChatMessage, selectIsCurrentUserFrozen, selectShouldRemoveGiftAuction, selectStarsPayment, selectTabState,
-  selectWalletAddress,
 } from '../../selectors';
 
 function buildShortSavedGift(gift: ApiStarGiftUnique, fromId?: string): ApiSavedStarGift {
@@ -119,7 +118,6 @@ addActionHandler('openStarsBalanceModal', (global, actions, payload): ActionRetu
     topup,
     shouldIgnoreBalance,
     currency = STARS_CURRENCY_CODE,
-    shouldReturnToWallet,
     tabId = getCurrentTabId(),
   } = payload || {};
 
@@ -154,7 +152,6 @@ addActionHandler('openStarsBalanceModal', (global, actions, payload): ActionRetu
       originGift,
       topup,
       currency,
-      shouldReturnToWallet,
     },
   }, tabId);
 });
@@ -547,53 +544,6 @@ addActionHandler('openGiftWithdrawModal', (global, actions, payload): ActionRetu
 });
 
 addTabStateResetterAction('closeGiftWithdrawModal', 'giftWithdrawModal');
-
-addActionHandler('openGiftMoveToWalletModal', (global, actions, payload): ActionReturnType => {
-  const { gift, tabId = getCurrentTabId() } = payload;
-
-  // The dialog shows the address when there is one: without a wallet the server creates it during the move
-  if (!selectWalletAddress(global)) {
-    actions.loadWalletState();
-  }
-  actions.loadPasswordInfo();
-
-  return updateTabState(global, {
-    giftMoveToWalletModal: {
-      gift,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeGiftMoveToWalletModal', 'giftMoveToWalletModal');
-
-addActionHandler('closeGiftMoveToWalletPasswordStep', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const giftMoveToWalletModal = selectTabState(global, tabId).giftMoveToWalletModal;
-  if (!giftMoveToWalletModal) return undefined;
-
-  return updateTabState(global, {
-    giftMoveToWalletModal: {
-      ...giftMoveToWalletModal,
-      isPasswordStep: undefined,
-      errorKey: undefined,
-      passwordErrorKey: undefined,
-    },
-  }, tabId);
-});
-
-addActionHandler('clearGiftMoveToWalletError', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const giftMoveToWalletModal = selectTabState(global, tabId).giftMoveToWalletModal;
-  if (!giftMoveToWalletModal) return undefined;
-
-  return updateTabState(global, {
-    giftMoveToWalletModal: {
-      ...giftMoveToWalletModal,
-      errorKey: undefined,
-      passwordErrorKey: undefined,
-    },
-  }, tabId);
-});
 
 addActionHandler('openGiftStatusInfoModal', (global, actions, payload): ActionReturnType => {
   const { emojiStatus, tabId = getCurrentTabId() } = payload || {};

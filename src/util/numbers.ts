@@ -24,10 +24,6 @@ export function getBigIntAbs(value: bigint) {
   return value < 0n ? -value : value;
 }
 
-export function getBigIntMax(left: bigint, right: bigint) {
-  return left > right ? left : right;
-}
-
 // Integer math keeps every nanoton, unlike multiplying a float share
 export function multiplyBigIntByPermille(value: bigint, permille: number) {
   return (value * BigInt(Math.round(permille))) / PERMILLE_DIVISOR;

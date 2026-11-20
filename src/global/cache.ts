@@ -7,7 +7,6 @@ import type {
   ApiKeyboardButton,
   ApiMessage,
   ApiPhoto,
-  ApiTonAmount,
   ApiTypeCurrencyAmount,
   ApiVideo,
 } from '../api/types';
@@ -37,12 +36,11 @@ import {
   TON_CURRENCY_CODE,
 } from '../config';
 import { buildColor, serializeColor } from '../lib/color';
-import { toRawAddress } from '../lib/ton/address';
 import { MAIN_IDB_STORE } from '../util/browser/idb';
 import { isUserId } from '../util/entities/ids';
 import { getOrderedIds } from '../util/folderManager';
 import {
-  compact, omit, pick, pickTruthy, unique,
+  compact, pick, pickTruthy, unique,
 } from '../util/iteratees';
 import { ACCOUNT_SLOT, getGlobalStateCacheKey, GLOBAL_STATE_CACHE_KEY } from '../util/multiaccount';
 import { parseJsonWithBigInt, stringifyJsonWithBigInt } from '../util/numbers';
@@ -68,17 +66,13 @@ import {
   selectTopicsInfo,
   selectViewportIds,
   selectVisibleUsers,
-  selectWalletTransactions,
 } from './selectors';
 
 import { getIsMobile } from '../hooks/useAppLayout';
 
 const UPDATE_THROTTLE = 5000;
-// The cached history is only a head start; the first page from the server replaces it
-const WALLET_TRANSACTIONS_CACHE_LIMIT = 20;
 const APP_CONFIG_NANOTON_KEYS = [
   'tonSuggestedPostAmountMax', 'tonSuggestedPostAmountMin', 'tonStargiftResaleAmountMax', 'tonStargiftResaleAmountMin',
-  'walletTransferMinNanos',
 ] as const;
 
 // `patternColor` values the cache migration recognizes as defaults and replaces with the
@@ -521,11 +515,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
     cached.cacheVersion = 8;
   }
 
-  if (cached.cacheVersion < 9) {
-    migrateWalletNftAddresses(cached);
-    cached.cacheVersion = 9;
-  }
-
   if (!cached.auth) {
     cached.auth = initialState.auth;
     cached.auth.rememberMe = untypedCached.authRememberMe;
@@ -642,8 +631,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'timezones',
       'shareThemeBackdrops',
       'availableEffectById',
-      'walletCurrency',
-      'currencyRates',
     ]),
     lastIsChatInfoShown: !getIsMobile() ? global.lastIsChatInfoShown : undefined,
     stickers: reduceStickers(global),
@@ -655,7 +642,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
     settings: reduceSettings(global),
     chatFolders: reduceChatFolders(global),
     groupCalls: reduceGroupCalls(global),
-    wallet: reduceWallet(global),
     reactions: {
       ...pick(global.reactions, [
         'defaultTags',
@@ -781,9 +767,6 @@ function reduceUsers<T extends GlobalState>(global: T): GlobalState['users'] {
     ...getOrderedIds(ARCHIVED_FOLDER_ID)?.slice(0, GLOBAL_STATE_CACHE_ARCHIVED_CHAT_LIST_LIMIT).filter(isUserId) || [],
     ...getOrderedIds(ALL_FOLDER_ID)?.filter(isUserId) || [],
     ...global.contactList?.userIds || [],
-    // The cached wallet history shows its peers by name
-    ...selectWalletTransactions(global)?.slice(0, WALLET_TRANSACTIONS_CACHE_LIMIT)
-      .flatMap(({ peer }) => (peer.type === 'user' ? [peer.userId] : [])) || [],
     ...Object.keys(byId),
   ]).slice(0, GLOBAL_STATE_CACHE_USER_LIST_LIMIT);
 
@@ -827,10 +810,6 @@ function reduceChats<T extends GlobalState>(global: T): GlobalState['chats'] {
     ...currentChatIds,
     ...messagesChatIds,
     ...topPeerIds,
-    // The cached wallet history shows its channels by name. They go before the folders, whose long lists are cut by
-    // the chat limit.
-    ...selectWalletTransactions(global)?.slice(0, WALLET_TRANSACTIONS_CACHE_LIMIT)
-      .flatMap(({ peer }) => (peer.type === 'channel' ? [peer.channelId] : [])) || [],
     ...global.recentlyFoundChatIds || [],
     ...getOrderedIds(ARCHIVED_FOLDER_ID)?.slice(0, GLOBAL_STATE_CACHE_ARCHIVED_CHAT_LIST_LIMIT) || [],
     ...getOrderedIds(ALL_FOLDER_ID) || [],
@@ -972,12 +951,6 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
     const cleanedById = Object.values(byId).reduce((acc, message) => {
       if (!message || message.isTypingDraft) return acc;
 
-      // Only the request that sends a transfer replaces its pending message, and a reload drops that request.
-      // If the transfer went out, the server's message comes with the history.
-      if (message.content.action?.type === 'gramTransfer' && message.sendingState === 'messageSendingStatePending') {
-        return acc;
-      }
-
       let cleanedMessage = omitLocalMedia(message);
       cleanedMessage = omitLocalPaidReactions(cleanedMessage);
       acc[message.id] = cleanedMessage;
@@ -1118,32 +1091,6 @@ function reduceGroupCalls<T extends GlobalState>(global: T): GlobalState['groupC
   };
 }
 
-// A wallet still being created is not worth keeping: the next `wallet.getState` says whether it exists
-function reduceWallet<T extends GlobalState>(global: T): GlobalState['wallet'] {
-  const { wallet } = global;
-
-  if (!wallet?.status || wallet.status === 'provisioning') {
-    return undefined;
-  }
-
-  return {
-    status: wallet.status,
-    state: wallet.state,
-    // The logout warning counts their last known balances while the network has not answered
-    savedWallets: wallet.savedWallets,
-    // Kept to be saved after a reload
-    cardDraft: wallet.cardDraft,
-    // Sent transfers are kept with their hash and seqno, and transfers without an answer with their body hashes. A
-    // transfer that did not reach the server is not kept. The history cursor is reset to the stale marker.
-    // The chat card of a pending transfer is not cached, and after a reload its local id can go to another message
-    transactions: wallet.transactions
-      ?.filter((item) => item.msgHash || item.bodyHashes || (!item.isPending && item.id !== item.localId))
-      .slice(0, WALLET_TRANSACTIONS_CACHE_LIMIT)
-      .map((item) => (item.localMessageId === undefined ? item : omit(item, ['localMessageId']))),
-    nextOffset: '',
-  };
-}
-
 function reduceAvailableReactions(
   availableReactions?: ApiAvailableReaction[],
 ): ApiAvailableReaction[] | undefined {
@@ -1174,36 +1121,9 @@ function migrateButtonActions(cached: GlobalState) {
   });
 }
 
-// A cache saved by an earlier app version holds TON amounts as plain numbers, and the wallet balance is an
-// `ApiTonAmount` object
-// Collectibles compare by the raw NFT address. A cached card has its stickers without one and comes again with the
-// profile.
-function migrateWalletNftAddresses(cached: GlobalState) {
-  Object.values(cached.users.fullInfoById).forEach((fullInfo) => {
-    delete fullInfo.walletCard;
-  });
-
-  cached.wallet?.transactions?.forEach(({ collectible }) => {
-    if (collectible) collectible.address = toRawAddress(collectible.address) ?? collectible.address;
-  });
-}
-
+// A cache saved by an earlier app version holds TON amounts as plain numbers
 function migrateNanotonsToBigInt(cached: GlobalState) {
-  const { wallet, appConfig } = cached;
-
-  if (wallet?.state) {
-    const balance = wallet.state.balance as bigint | number | ApiTonAmount;
-    wallet.state.balance = BigInt(typeof balance === 'object' ? balance.amount : balance);
-  }
-
-  wallet?.transactions?.forEach((transaction) => {
-    transaction.amount = BigInt(transaction.amount);
-    if (transaction.fee !== undefined) transaction.fee = BigInt(transaction.fee);
-  });
-
-  wallet?.savedWallets?.forEach((savedWallet) => {
-    if (savedWallet.balance !== undefined) savedWallet.balance = BigInt(savedWallet.balance);
-  });
+  const { appConfig } = cached;
 
   APP_CONFIG_NANOTON_KEYS.forEach((key) => {
     const value = appConfig?.[key];
@@ -1228,9 +1148,6 @@ function migrateNanotonsToBigInt(cached: GlobalState) {
 
 function migrateActionNanotonsToBigInt(action: ApiMessageAction) {
   switch (action.type) {
-    case 'gramTransfer':
-      action.amount = BigInt(action.amount);
-      break;
     case 'giftPremium':
     case 'giftCode':
     case 'giftStars':
