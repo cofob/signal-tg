@@ -479,7 +479,7 @@ async function buildMessages(records: MessageRecord[], conversation: Conversatio
 }
 
 /** Messages that the app shows, from `fromId` toward older or newer ones */
-async function collectShownMessages(conversationId: string, fromId: number, count: number, isNewer: boolean) {
+export async function collectShownMessages(conversationId: string, fromId: number, count: number, isNewer: boolean) {
   const result: MessageRecord[] = [];
   let cursorId = fromId;
   while (result.length < count) {
