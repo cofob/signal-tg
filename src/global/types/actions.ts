@@ -476,11 +476,9 @@ export interface ActionPayloads {
     startAttach?: string | boolean;
     attach?: string;
     text?: string;
-    noPaidMessagesToken?: string;
   } & WithTabId;
   openChatByContactToken: {
     token: string;
-    noPaidMessagesToken?: string;
   } & WithTabId;
   toggleSavedDialogPinned: {
     id: string;
@@ -545,9 +543,6 @@ export interface ActionPayloads {
     messageIds?: number[];
   } | undefined;
   sendMessage: Partial<SendMessageParams> & WithTabId;
-  sendMessages: {
-    sendParams: SendMessageParams[];
-  };
   sendDiceInCurrentChat: {
     emoji: string;
   } & WithTabId;
@@ -600,7 +595,6 @@ export interface ActionPayloads {
     publicData: string;
     publicDataHash: string;
   };
-  resetLocalPaidMessages: WithTabId | undefined;
   deleteParticipantHistory: {
     peerId: string;
     chatId: string;
@@ -659,12 +653,6 @@ export interface ActionPayloads {
     message: ApiPreparedInlineMessage;
   } & WithTabId;
   closeSharePreparedMessageModal: WithTabId | undefined;
-  updateSharePreparedMessageModalSendArgs: {
-    args?: {
-      peerId: string;
-      threadId?: ThreadId;
-    };
-  } & WithTabId;
   openPreviousReportModal: WithTabId | undefined;
   closeReportModal: WithTabId | undefined;
   loadSendAs: {
@@ -773,7 +761,6 @@ export interface ActionPayloads {
     onChatChanged?: CallbackAction;
     linkContext?: LinkContext;
     isDirect?: boolean;
-    noPaidMessagesToken?: string;
   } & WithTabId;
   setScrollOffset: {
     chatId: string;
@@ -1143,10 +1130,6 @@ export interface ActionPayloads {
     chatId: string;
     isEnabled: boolean;
   };
-  updatePaidMessagesPrice: {
-    chatId: string;
-    paidMessagesStars: number;
-  } & WithTabId;
   toggleAutoTranslation: {
     chatId: string;
     isEnabled: boolean;
@@ -1883,10 +1866,6 @@ export interface ActionPayloads {
     userId: string;
     note: ApiFormattedText;
   } & WithTabId;
-  toggleNoPaidMessagesException: {
-    userId: string;
-    shouldRefundCharged: boolean;
-  };
   openDisableSharingAboutModal: {
     userId: string;
   } & WithTabId;
@@ -1987,8 +1966,7 @@ export interface ActionPayloads {
   forwardStory: {
     toChatId: string;
   } & WithTabId;
-  forwardAudio: { toChatId: string; toThreadId?: ThreadId; confirmedStars?: number } & WithTabId;
-  clearAudioPendingSend: WithTabId | undefined;
+  forwardAudio: { toChatId: string; toThreadId?: ThreadId } & WithTabId;
   sendAudioToSavedMessages: { audio: ApiAudio } & WithTabId;
 
   // GIFs
@@ -2105,7 +2083,6 @@ export interface ActionPayloads {
     threadId: ThreadId;
     isSilent?: boolean;
     scheduledAt?: number;
-    paidMessagesStars?: number;
   } & WithTabId;
   sendInlineBotApiResult: {
     chat: ApiChat;
@@ -2116,7 +2093,6 @@ export interface ActionPayloads {
     sendAs?: ApiPeer;
     isSilent?: boolean;
     scheduledAt?: number;
-    allowPaidStars?: number;
   };
   resetInlineBot: {
     username: string;
@@ -2433,8 +2409,6 @@ export interface ActionPayloads {
   updateShouldSaveAttachmentsCompression: { shouldSave: boolean } & WithTabId;
   applyDefaultAttachmentsCompression: undefined;
 
-  setPaidMessageAutoApprove: undefined;
-
   updateArchiveSettings: {
     isMinimized?: boolean;
     isHidden?: boolean;
@@ -2461,7 +2435,6 @@ export interface ActionPayloads {
   showNotification: Omit<ApiNotification, 'localId'> & { localId?: string } & WithTabId;
   showAllowedMessageTypesNotification: {
     chatId: string;
-    messageListType?: MessageListType;
   } & WithTabId;
   dismissNotification: { localId: string } & WithTabId;
 
@@ -2612,8 +2585,6 @@ export interface ActionPayloads {
   updateGlobalPrivacySettings: {
     shouldArchiveAndMuteNewNonContact?: boolean;
     shouldHideReadMarks?: boolean;
-    shouldNewNonContactPeersRequirePremium?: boolean;
-    nonContactPeersPaidStars?: number | null;
   };
 
   openAiMessageEditorModal: {
@@ -2804,10 +2775,6 @@ export interface ActionPayloads {
     duration?: number;
   } & WithTabId;
   closeSuggestedStatusModal: WithTabId | undefined;
-
-  // Payment
-  openPaymentMessageConfirmDialogOpen: { dialogKey: string } & WithTabId;
-  closePaymentMessageConfirmDialogOpen: WithTabId | undefined;
 
   // Forums
   toggleForum: {

@@ -208,7 +208,6 @@ export interface ApiSessionData {
 export type ApiNotification = {
   localId: string;
   containerSelector?: string;
-  type?: 'paidMessage' | undefined;
   title?: string | AdvancedLangFnParameters;
   cacheBreaker?: string;
   actionText?: string | AdvancedLangFnParameters;
@@ -342,9 +341,6 @@ export interface ApiAppConfig {
   maxPinnedStoriesCount: number;
   groupTranscribeLevelMin: number;
   canLimitNewMessagesWithoutPremium: boolean;
-  starsPaidMessagesAvailable?: boolean;
-  starsPaidMessageCommissionPermille?: number;
-  starsPaidMessageAmountMax?: number;
   starsUsdWithdrawRateX1000: number;
   starsUsdSellRateX1000?: number;
   bandwidthPremiumNotifyPeriod?: number;

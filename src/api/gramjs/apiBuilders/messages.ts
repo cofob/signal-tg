@@ -282,7 +282,6 @@ export function buildApiMessageWithChatId(
     isInvertedMedia,
     isVideoProcessingPending,
     reportDeliveryUntilDate: mtpMessage.reportDeliveryUntilDate,
-    paidMessageStars: toJSNumber(mtpMessage.paidMessageStars),
     restrictionReasons,
     summaryLanguageCode: mtpMessage.summaryFromLanguage,
     fromRank: mtpMessage.fromRank,
@@ -491,7 +490,6 @@ export function buildLocalMessage({
   story,
   isInvertedMedia,
   isPending,
-  messagePriceInStars,
   dice,
   action,
 }: {
@@ -516,7 +514,6 @@ export function buildLocalMessage({
   story?: ApiStory | ApiStorySkipped;
   isInvertedMedia?: true;
   isPending?: true;
-  messagePriceInStars?: number;
   dice?: string;
   action?: ApiMessageAction;
 }) {
@@ -570,7 +567,6 @@ export function buildLocalMessage({
     isForwardingAllowed: true,
     isInvertedMedia,
     ...(isPending && { sendingState: 'messageSendingStatePending' }),
-    ...(messagePriceInStars && { paidMessageStars: messagePriceInStars }),
   } satisfies ApiMessage;
 
   const emojiOnlyCount = getEmojiOnlyCountForMessage(message.content, message.groupedId);

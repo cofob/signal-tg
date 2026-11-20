@@ -1,7 +1,5 @@
 import { getSmoothStep, lerp } from '../../../../util/math';
 
-export const BOUNCE_MS = 320;
-
 const RISE_END = 0.25;
 const DIP_END = 0.6;
 

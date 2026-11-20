@@ -18,7 +18,6 @@
 
   background: rgba(#999999, 0.6);
 
-  .message-price,
   .message-time,
   .message-imported,
   .message-signature,
@@ -28,12 +27,6 @@
   .message-pinned {
     font-size: 0.75rem;
     white-space: nowrap;
-  }
-
-  .message-price {
-    display: inline-flex;
-    align-items: center;
-    margin-inline-end: 0.25rem;
   }
 
   .message-replies-wrapper {

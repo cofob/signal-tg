@@ -126,8 +126,6 @@ const SettingsHeader = ({
         return <h3>{lang('PrivacyForwards')}</h3>;
       case SettingsScreens.PrivacyVoiceMessages:
         return <h3>{lang('PrivacyVoiceMessages')}</h3>;
-      case SettingsScreens.PrivacyMessages:
-        return <h3>{lang('PrivacyMessages')}</h3>;
       case SettingsScreens.PrivacyGroupChats:
         return <h3>{lang('AutodownloadGroupChats')}</h3>;
       case SettingsScreens.PrivacyPhoneCall:
@@ -162,9 +160,6 @@ const SettingsHeader = ({
       case SettingsScreens.PrivacyPhoneCallDeniedContacts:
       case SettingsScreens.PrivacyPhoneP2PDeniedContacts:
         return <h3>{lang('NeverAllow')}</h3>;
-
-      case SettingsScreens.PrivacyNoPaidMessages:
-        return <h3>{lang('RemoveFeeTitle')}</h3>;
 
       case SettingsScreens.Performance:
         return <h3>{lang('MenuAnimations')}</h3>;

@@ -460,8 +460,6 @@
   }
 
   > .Button.main-button {
-    --paid-stars-padding: 0.625rem;
-
     @include mixins.composer-action-button-pill;
 
     z-index: 2;
@@ -475,32 +473,6 @@
 
     .icon-new-send {
       font-size: 1.75rem;
-    }
-
-    &.has-paid-stars .icon-new-send {
-      display: none;
-    }
-
-    // Same approach as `.bot-menu`: explicit width from a measured CSS variable, animated by CSS
-    &.paid {
-      width: calc(var(--paid-stars-width, 0px) + 2 * var(--paid-stars-padding));
-      min-width: var(--composer-main-button-width);
-    }
-
-    .paidStars {
-      display: flex;
-      flex-shrink: 0;
-      gap: 0.125rem;
-      align-items: center;
-
-      font-family: var(--font-family-monospace);
-      font-size: 1rem;
-      font-weight: var(--font-weight-semibold);
-      color: var(--color-primary-foreground);
-
-      .icon {
-        font-size: 1.25rem;
-      }
     }
 
     @media (hover: hover) {
@@ -953,11 +925,6 @@
     }
   }
 
-  .placeholder-star-icon {
-    margin-inline-start: 0.25rem;
-    margin-inline-end: 0.0625rem;
-    line-height: 1;
-  }
   .placeholder-text {
     pointer-events: none;
 

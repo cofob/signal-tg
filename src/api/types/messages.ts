@@ -782,7 +782,6 @@ export interface ApiMessage {
   isVideoProcessingPending?: true;
   areReactionsPossible?: true;
   reportDeliveryUntilDate?: number;
-  paidMessageStars?: number;
   restrictionReasons?: ApiRestrictionReason[];
   summaryLanguageCode?: string;
   fromRank?: string;

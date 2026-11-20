@@ -47,7 +47,6 @@ export interface ApiUser {
   hasMainMiniApp?: boolean;
   botActiveUsers?: number;
   botVerificationIconId?: string;
-  paidMessagesStars?: number;
   isBotForum?: boolean;
   canManageBotForumTopics?: boolean;
   canManageBots?: boolean;
@@ -82,7 +81,6 @@ export interface ApiUserFullInfo {
   isBotAccessEmojiGranted?: boolean;
   hasScheduledMessages?: boolean;
   botVerification?: ApiBotVerification;
-  paidMessagesStars?: number;
   settings?: ApiPeerSettings;
   mainTab?: ApiProfileTab;
   savedMusic?: ApiAudio;

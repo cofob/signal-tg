@@ -75,7 +75,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['privacy/calls', [SettingsScreens.PrivacyPhoneCall]],
   ['privacy/calls/p2p', [SettingsScreens.PrivacyPhoneCall, 'PrivacyP2P']],
   ['privacy/voice', [SettingsScreens.PrivacyVoiceMessages]],
-  ['privacy/messages', [SettingsScreens.PrivacyMessages]],
   ['privacy/invites', [SettingsScreens.PrivacyGroupChats]],
   ['privacy/archive-and-mute', [
     SettingsScreens.Privacy, 'ArchiveAndMute', { requires: 'canDisplayAutoarchiveSetting' },

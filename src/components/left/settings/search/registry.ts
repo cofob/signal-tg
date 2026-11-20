@@ -269,11 +269,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'PrivacyVoiceMessages',
   },
   {
-    screen: SettingsScreens.PrivacyMessages,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'PrivacyMessages',
-  },
-  {
     screen: SettingsScreens.PrivacyGroupChats,
     parent: SettingsScreens.Privacy,
     titleKey: 'AutodownloadGroupChats',
@@ -381,10 +376,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ]),
   ...buildEntries(SettingsScreens.PrivacyLastSeen, ['HideReadTime'], { requires: 'canHideReadTime' }),
   ...buildEntries(SettingsScreens.PrivacyPhoneCall, ['PrivacyP2P']),
-  ...buildEntries(SettingsScreens.PrivacyMessages, ['PrivacyMessagesTitle'], { isSectionHeader: true }),
-  ...buildEntries(SettingsScreens.PrivacyMessages, [
-    'P2PEverybody', 'PrivacyMessagesContactsAndPremium', 'PrivacyChargeForMessages',
-  ]),
 
   ...buildEntries(SettingsScreens.AutoDeleteMessages, [
     'SetAutoDeleteTimer', 'SettingsItemPrivacyOff', 'SetCustomTime',

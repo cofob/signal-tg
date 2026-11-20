@@ -11,7 +11,6 @@ import buildClassName from '../../../util/buildClassName';
 import {
   formatCalendarDate, formatCompactTimestamp, formatDateTime, isSameLocalDay, secondsToDate,
 } from '../../../util/localization/dateFormat';
-import { formatStarsAsIcon } from '../../../util/localization/format';
 import { getRepeatPeriodText } from '../../../util/scheduledMessages';
 import { formatIntegerCompact } from '../../../util/text/textFormat';
 import renderText from '../../common/helpers/renderText';
@@ -41,7 +40,6 @@ type OwnProps = {
   onTranslationClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
-  paidMessageStars?: number;
 };
 
 const MessageMeta = ({
@@ -58,7 +56,6 @@ const MessageMeta = ({
   onClick,
   onTranslationClick,
   onOpenThread,
-  paidMessageStars,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
   const { showNotification } = getActions();
@@ -191,15 +188,6 @@ const MessageMeta = ({
       )}
       {signature && (
         <span className="message-signature">{renderText(signature)}</span>
-      )}
-      {Boolean(paidMessageStars) && (
-        <span className="message-price">
-          {
-            formatStarsAsIcon(lang, paidMessageStars, {
-              asFont: true,
-            })
-          }
-        </span>
       )}
       <span className="message-time" title={dateTitle} onMouseEnter={markActivated}>
         {Boolean(message.anchorMsgId) && `${lang('EphemeralUpdated')} `}

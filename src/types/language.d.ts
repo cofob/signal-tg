@@ -964,20 +964,6 @@ export interface LangPair {
   'QrCodeColors': undefined;
   'QrCodeDefaultColor': undefined;
   'QrCodeEmoji': undefined;
-  'QrFree': undefined;
-  'QrFreeNoTimeLimit': undefined;
-  'QrFreeMenuReset': undefined;
-  'QrFreeMenuDisableTimer': undefined;
-  'QrFreeMenuDisableTimerAbout': undefined;
-  'QrFreeMenuEnableTimer': undefined;
-  'QrFreeMenuEnableTimerAbout': undefined;
-  'QrFreeMenuRestoreFee': undefined;
-  'QrFreeToastExpires': undefined;
-  'QrFreeToastPermanent': undefined;
-  'QrFreeToastReset': undefined;
-  'QrFreeToastRestored': undefined;
-  'QrFreeToastExpired': undefined;
-  'QrFreeToastExpiring': undefined;
   'NoOneJoined': undefined;
   'NoOneJoinedYet': undefined;
   'CopyLink': undefined;
@@ -1434,9 +1420,6 @@ export interface LangPair {
   'PrivacyMusicInfo': undefined;
   'PrivacyValueBots': undefined;
   'SendDisallowError': undefined;
-  'Review': undefined;
-  'CheckPrivacyCallsText': undefined;
-  'CheckPrivacyInviteText': undefined;
   'AllChatsSearchContext': undefined;
   'PrivateChatsSearchContext': undefined;
   'GroupChatsSearchContext': undefined;
@@ -1596,31 +1579,13 @@ export interface LangPair {
   'PeerPersonalAccount': undefined;
   'PeerChannel': undefined;
   'WebAppCollapse': undefined;
-  'PrivacyDescriptionMessagesContactsAndPremium': undefined;
-  'PrivacyChargeForMessages': undefined;
-  'PrivacyDescriptionChargeForMessages': undefined;
-  'RemoveFeeTitle': undefined;
-  'ExceptionTitlePrivacyChargeForMessages': undefined;
-  'SectionTitleStarsForForMessages': undefined;
-  'SubtitlePrivacyAddUsers': undefined;
-  'PrivacyPaidMessagesValue': undefined;
-  'TitleConfirmPayment': undefined;
   'ButtonUndo': undefined;
-  'NoPaidTokenInvalid': undefined;
-  'NoPaidTokenUserInvalid': undefined;
   'ContactLinkInvalid': undefined;
-  'StoryTooltipGifSent': undefined;
-  'StoryTooltipStickerSent': undefined;
-  'StoryTooltipReactionSent': undefined;
   'TitleFrozenAccount': undefined;
   'SubtitleFrozenAccount': undefined;
   'ComposerTitleFrozenAccount': undefined;
   'ComposerSubtitleFrozenAccount': undefined;
   'DescriptionRestrictedMedia': undefined;
-  'DescriptionScheduledPaidMediaNotAllowed': undefined;
-  'DescriptionScheduledPaidMessagesNotAllowed': undefined;
-  'GroupMessagesChargePrice': undefined;
-  'RightsChargeStarsAbout': undefined;
   'FrozenAccountModalTitle': undefined;
   'FrozenAccountViolationTitle': undefined;
   'FrozenAccountViolationSubtitle': undefined;
@@ -1629,7 +1594,6 @@ export interface LangPair {
   'FrozenAccountAppealTitle': undefined;
   'ButtonAppeal': undefined;
   'ButtonUnderstood': undefined;
-  'ActionPaidMessagePriceFreeYou': undefined;
   'NotificationTitleNotSupportedInFrozenAccount': undefined;
   'NotificationMessageNotSupportedInFrozenAccount': undefined;
   'NotificationMessageTextHidden': undefined;
@@ -2260,9 +2224,6 @@ export interface LangPair {
   'PrivacyBioTitle': undefined;
   'PrivacyBirthday': undefined;
   'PrivacyBirthdayTitle': undefined;
-  'PrivacyMessages': undefined;
-  'PrivacyMessagesContactsAndPremium': undefined;
-  'PrivacyMessagesTitle': undefined;
   'PrivacyPhoneInfo': undefined;
   'PrivacyPhoneInfo3': undefined;
   'PrivacyPhoneTitle2': undefined;
@@ -2333,8 +2294,6 @@ export interface LangPair {
   'StoryHeaderEdited': undefined;
   'StoryToastRemovedFromProfileText': undefined;
   'StoryToastSavedToProfileText': undefined;
-  'StoryToastViewInChat': undefined;
-  'StoryTooltipMessageSent': undefined;
   'StoryTooltipVideoHasNoSound': undefined;
   'StoryViewListEmptyTextSearch': undefined;
   'StoryViewListNotFullyRecorded': undefined;
@@ -2805,9 +2764,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'domain': V;
     'phone': V;
   };
-  'ForwardForStars': {
-    'price': V;
-  };
   'BlockUserTitle': {
     'user': V;
   };
@@ -2945,12 +2901,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'GuardManagedByDescription': {
     'approvalInfo': V;
     'managedBy': V;
-  };
-  'QrFreeRemoveFee': {
-    'amount': V;
-  };
-  'QrFreeExpiresIn': {
-    'time': V;
   };
   'LinkExpiresIn': {
     'time': V;
@@ -3376,82 +3326,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionRemovedFromCommunity': {
     'from': V;
   };
-  'SectionDescriptionStarsForForMessages': {
-    'percent': V;
-    'amount': V;
-  };
-  'MessagesPlaceholderPaidUser': {
-    'peer': V;
-    'amount': V;
-  };
-  'MessagesPlaceholderPaidChannel': {
-    'peer': V;
-    'amount': V;
-  };
-  'ComposerPlaceholderPaidMessage': {
-    'amount': V;
-  };
-  'ComposerPlaceholderPaidReply': {
-    'amount': V;
-  };
-  'ForwardPaidChatsConfirmation': {
-    'chatsSelected': V;
-    'payConfirmation': V;
-  };
-  'MessageSentPaidToastText': {
-    'amount': V;
-  };
-  'ActionPaidOneMessageOutgoing': {
-    'amount': V;
-  };
-  'ActionPaidOneMessageIncoming': {
-    'user': V;
-    'amount': V;
-  };
-  'PaneMessagePaidMessageCharge': {
-    'peer': V;
-    'amount': V;
-  };
-  'NoPaidTokenImported': {
-    'user': V;
-  };
-  'SetPriceGroupDescription': {
-    'percent': V;
-    'amount': V;
-  };
   'FrozenAccountAppealSubtitle': {
     'botLink': V;
     'date': V;
-  };
-  'ActionPaidMessagePrice': {
-    'peer': V;
-    'amount': V;
-  };
-  'ActionPaidMessagePriceYou': {
-    'amount': V;
-  };
-  'ActionPaidMessagePriceFree': {
-    'peer': V;
-  };
-  'ActionMessageChannelFree': {
-    'peer': V;
-  };
-  'ActionMessageChannelDisabled': {
-    'peer': V;
-  };
-  'ApiMessageActionPaidMessagesRefundedOutgoing': {
-    'stars': V;
-    'user': V;
-  };
-  'ApiMessageActionPaidMessagesRefundedIncoming': {
-    'user': V;
-    'stars': V;
-  };
-  'ActionNoPaidTokenUsed': {
-    'user': V;
-  };
-  'ActionNoPaidTokenUsedYou': {
-    'user': V;
   };
   'ComposerTitleForwardFrom': {
     'users': V;
@@ -4246,25 +4123,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'CommunityWithChats': {
     'count': V;
   };
-  'ConfirmationModalPaymentForMessage': {
-    'user': V;
-    'amount': V;
-    'totalAmount': V;
-    'count': V;
-  };
-  'PayForMessage': {
-    'count': V;
-  };
-  'ForwardPaidChatsSelected': {
-    'paidChatsCount': V;
-  };
-  'ForwardPaidChatsPayConfirmation': {
-    'totalAmount': V;
-    'count': V;
-  };
-  'MessageSentPaidToastTitle': {
-    'count': V;
-  };
   'MessageActionTodoTaskCount': {
     'count': V;
   };
@@ -4465,9 +4323,6 @@ export interface LangKeyGroups {
       | 'ActionSuggestedPhoto'
       | 'ActionSuggestedBirthdayYou'
       | 'ActionSuggestedBirthday'
-      | 'NoPaidTokenImported'
-      | 'ActionNoPaidTokenUsed'
-      | 'ActionNoPaidTokenUsedYou'
       | 'ActionSuggestedPostIncoming'
       | 'InviteRestrictedPremiumReasonSingle'
       | 'BirthdayTitleForPeer'
@@ -4645,7 +4500,6 @@ export interface LangKeyGroups {
       | 'PollResultsTime'
       | 'TimeIn'
       | 'MessageMetaEditedAtTime'
-      | 'QrFreeExpiresIn'
       | 'LinkExpiresIn'
       | 'InviteLinkExpiresIn'
       | 'LastSeenTodayAt'
@@ -4759,9 +4613,6 @@ export interface LangKeyGroups {
       | 'BotSharedToOne'
       | 'PlaylistTitle'
       | 'ActionChangedWallpaperBothYou'
-      | 'ActionPaidMessagePriceFree'
-      | 'ActionMessageChannelFree'
-      | 'ActionMessageChannelDisabled'
       | 'SuggestedPostRejected'
       | 'SuggestedPostRejectedWithReason'
       | 'SuggestedPostConfirmMessage'
@@ -4775,11 +4626,6 @@ export interface LangKeyGroups {
     keys:
       | 'BotAuthPhoneNumberText';
     variables: 'domain' | 'phone';
-  };
-  'price': {
-    keys:
-      | 'ForwardForStars';
-    variables: 'price';
   };
   'timer': {
     keys:
@@ -4859,27 +4705,6 @@ export interface LangKeyGroups {
       | 'GuardManagedByDescription';
     variables: 'approvalInfo' | 'managedBy';
   };
-  'amount': {
-    keys:
-      | 'QrFreeRemoveFee'
-      | 'StarsAmount'
-      | 'StarsAmountIconLast'
-      | 'SendPaidReaction'
-      | 'ActionStarGiftConvertTextYou'
-      | 'ActionStarGiftConvertedTextYou'
-      | 'GramAmount'
-      | 'GramAmountIconLast'
-      | 'ComposerPlaceholderPaidMessage'
-      | 'ComposerPlaceholderPaidReply'
-      | 'MessageSentPaidToastText'
-      | 'ActionPaidOneMessageOutgoing'
-      | 'ActionPaidMessagePriceYou'
-      | 'TitleSuggestedPostAmountForAnyTime'
-      | 'ButtonOfferAmount'
-      | 'SuggestedPostChargedYou'
-      | 'DescriptionSuggestedPostMinimumOffer';
-    variables: 'amount';
-  };
   'phone': {
     keys:
       | 'UsernameByPhoneNotFound';
@@ -4953,6 +4778,21 @@ export interface LangKeyGroups {
       | 'SubscribeTagAbout'
       | 'UsernamePurchaseAvailable';
     variables: 'link';
+  };
+  'amount': {
+    keys:
+      | 'StarsAmount'
+      | 'StarsAmountIconLast'
+      | 'SendPaidReaction'
+      | 'ActionStarGiftConvertTextYou'
+      | 'ActionStarGiftConvertedTextYou'
+      | 'GramAmount'
+      | 'GramAmountIconLast'
+      | 'TitleSuggestedPostAmountForAnyTime'
+      | 'ButtonOfferAmount'
+      | 'SuggestedPostChargedYou'
+      | 'DescriptionSuggestedPostMinimumOffer';
+    variables: 'amount';
   };
   'bot,duration': {
     keys:
@@ -5131,41 +4971,10 @@ export interface LangKeyGroups {
       | 'ActionJoinedViaCommunity';
     variables: 'community' | 'from';
   };
-  'amount,percent': {
-    keys:
-      | 'SectionDescriptionStarsForForMessages'
-      | 'SetPriceGroupDescription';
-    variables: 'amount' | 'percent';
-  };
-  'amount,peer': {
-    keys:
-      | 'MessagesPlaceholderPaidUser'
-      | 'MessagesPlaceholderPaidChannel'
-      | 'PaneMessagePaidMessageCharge'
-      | 'ActionPaidMessagePrice';
-    variables: 'amount' | 'peer';
-  };
-  'chatsSelected,payConfirmation': {
-    keys:
-      | 'ForwardPaidChatsConfirmation';
-    variables: 'chatsSelected' | 'payConfirmation';
-  };
-  'amount,user': {
-    keys:
-      | 'ActionPaidOneMessageIncoming'
-      | 'SuggestedPostCharged';
-    variables: 'amount' | 'user';
-  };
   'botLink,date': {
     keys:
       | 'FrozenAccountAppealSubtitle';
     variables: 'botLink' | 'date';
-  };
-  'stars,user': {
-    keys:
-      | 'ApiMessageActionPaidMessagesRefundedOutgoing'
-      | 'ApiMessageActionPaidMessagesRefundedIncoming';
-    variables: 'stars' | 'user';
   };
   'changes': {
     keys:
@@ -5189,6 +4998,11 @@ export interface LangKeyGroups {
       | 'SuggestedPostPublished'
       | 'SuggestedPostPublishedYou';
     variables: 'date' | 'peer';
+  };
+  'amount,user': {
+    keys:
+      | 'SuggestedPostCharged';
+    variables: 'amount' | 'user';
   };
   'duration,peer': {
     keys:
@@ -5527,8 +5341,6 @@ export interface LangPluralKeyGroups {
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
-      | 'PayForMessage'
-      | 'MessageSentPaidToastTitle'
       | 'MessageActionTodoTaskCount'
       | 'HintTodoListTasksCount2'
       | 'TextAgeVerificationModal'
@@ -5612,21 +5424,6 @@ export interface LangPluralKeyGroups {
     keys:
       | 'ActionGameScoreNoGame';
     variables: 'count' | 'from';
-  };
-  'amount,count,totalAmount,user': {
-    keys:
-      | 'ConfirmationModalPaymentForMessage';
-    variables: 'amount' | 'count' | 'totalAmount' | 'user';
-  };
-  'paidChatsCount': {
-    keys:
-      | 'ForwardPaidChatsSelected';
-    variables: 'paidChatsCount';
-  };
-  'count,totalAmount': {
-    keys:
-      | 'ForwardPaidChatsPayConfirmation';
-    variables: 'count' | 'totalAmount';
   };
   'link,points,time': {
     keys:

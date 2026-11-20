@@ -108,7 +108,6 @@ export interface ApiChat {
   // Locally determined field
   detectedLanguage?: string;
 
-  paidMessagesStars?: number;
   ttlPeriod?: number;
 }
 
@@ -179,7 +178,6 @@ export interface ApiChatFullInfo {
   hasPinnedStories?: boolean;
   isPaidReactionAvailable?: boolean;
   hasScheduledMessages?: boolean;
-  arePaidMessagesAvailable?: true;
 
   botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;

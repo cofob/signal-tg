@@ -769,7 +769,6 @@ async function getFullChannelInfo(
     botVerification,
     paidReactionsAvailable,
     hasScheduled,
-    paidMessagesAvailable,
     mainTab,
     guardBotId,
     ttlPeriod,
@@ -871,7 +870,6 @@ async function getFullChannelInfo(
       botVerification: botVerification && buildApiBotVerification(botVerification),
       isPaidReactionAvailable: paidReactionsAvailable,
       hasScheduledMessages: hasScheduled,
-      arePaidMessagesAvailable: paidMessagesAvailable,
       mainTab: mainTab && buildApiProfileTab(mainTab),
       guardBotId: guardBotId ? buildApiPeerId(guardBotId, 'user') : undefined,
       shareTheme: shareTheme && buildApiShareTheme(shareTheme),
@@ -2192,19 +2190,6 @@ export async function fetchChannelRecommendations({ chat }: { chat?: ApiChat }) 
     similarChannels,
     count: result instanceof GramJs.messages.ChatsSlice ? result.count : similarChannels.length,
   };
-}
-
-export function updatePaidMessagesPrice({
-  chat, paidMessagesStars,
-}: {
-  chat?: ApiChat; paidMessagesStars: number;
-}) {
-  return invokeRequest(new GramJs.channels.UpdatePaidMessagesPrice({
-    channel: chat ? buildInputChannel(chat.id, chat.accessHash) : new GramJs.InputChannelEmpty(),
-    sendPaidMessagesStars: BigInt(paidMessagesStars),
-  }), {
-    shouldReturnTrue: true,
-  });
 }
 
 export function toggleAutoTranslation({

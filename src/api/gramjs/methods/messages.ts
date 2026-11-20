@@ -377,7 +377,7 @@ export function sendMessageLocal(
     chat, lastMessageId, text, entities, richMessage, replyInfo, suggestedPostInfo,
     attachment, sticker, story, gif, audio, poll, todo,
     contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
-    messagePriceInStars, dice,
+    dice,
   } = params;
 
   if (!chat) return undefined;
@@ -407,7 +407,6 @@ export function sendMessageLocal(
     story,
     isInvertedMedia,
     isPending,
-    messagePriceInStars,
     dice,
   });
 
@@ -433,7 +432,7 @@ export function sendApiMessage(
     attachment, sticker, story, gif, audio, poll, todo, contact, dice,
 
     isSilent, scheduledAt, scheduleRepeatPeriod, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
-    isInvertedMedia, webPageMediaSize, webPageUrl, messagePriceInStars,
+    isInvertedMedia, webPageMediaSize, webPageUrl,
   } = params;
 
   if (!chat) return undefined;
@@ -471,7 +470,6 @@ export function sendApiMessage(
       isSilent,
       scheduledAt,
       scheduleRepeatPeriod,
-      messagePriceInStars,
     }, randomId, localMessage, onProgress, cancelSendingStatusTimeout);
   }
 
@@ -609,7 +607,6 @@ export function sendApiMessage(
       sendAs: sendAs && buildInputPeer(sendAs.id, sendAs.accessHash),
       updateStickersetsOrder: shouldUpdateStickerSetOrder || undefined,
       invertMedia: isInvertedMedia || undefined,
-      allowPaidStars: messagePriceInStars ? BigInt(messagePriceInStars) : undefined,
       suggestedPost: suggestedPostInfo && buildInputSuggestedPost(suggestedPostInfo),
     };
 
@@ -902,7 +899,6 @@ function sendGroupedMedia(
     scheduledAt,
     scheduleRepeatPeriod,
     sendAs,
-    messagePriceInStars,
   }: {
     chat: ApiChat;
     text?: string;
@@ -915,7 +911,6 @@ function sendGroupedMedia(
     scheduledAt?: number;
     scheduleRepeatPeriod?: number;
     sendAs?: ApiPeer;
-    messagePriceInStars?: number;
   },
   randomId: GramJs.long,
   localMessage: ApiMessage,
@@ -991,7 +986,6 @@ function sendGroupedMedia(
 
     const { singleMediaByIndex, localMessages, cancelSendingStatusTimeouts } = groupedUploads[groupedId];
     delete groupedUploads[groupedId];
-    const count = Object.values(singleMediaByIndex).length;
 
     const update = await invokeRequest(new GramJs.messages.SendMultiMedia({
       clearDraft: true,
@@ -1002,7 +996,6 @@ function sendGroupedMedia(
       ...(scheduledAt && { scheduleDate: scheduledAt }),
       ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
-      ...(messagePriceInStars && { allowPaidStars: BigInt(messagePriceInStars * count) }),
       ...(suggestedPostInfo && { suggestedPost: buildInputSuggestedPost(suggestedPostInfo) }),
     }), {
       shouldIgnoreUpdates: true,
@@ -2482,7 +2475,7 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
   const {
     fromChat, toChat, toThreadId, messages, isSilent,
     scheduledAt, scheduleRepeatPeriod, sendAs, withMyScore, noAuthors, noCaptions,
-    forwardedLocalMessagesSlice, messagePriceInStars,
+    forwardedLocalMessagesSlice,
   } = params;
 
   if (!forwardedLocalMessagesSlice) return;
@@ -2491,7 +2484,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
     messageIds, localMessages,
   } = forwardedLocalMessagesSlice;
 
-  const priceInStars = messagePriceInStars ? messagePriceInStars * messageIds.length : undefined;
   const isFromEphemeral = messages[0]?.isEphemeral;
   const apiMessageIds = isFromEphemeral ? messageIds.map(getMtpEphemeralMessageId) : messageIds;
 
@@ -2511,7 +2503,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
       ...(scheduledAt && { scheduleDate: scheduledAt }),
       ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
-      ...(priceInStars && { allowPaidStars: BigInt(priceInStars) }),
     }), {
       shouldThrow: true,
       shouldIgnoreUpdates: true,

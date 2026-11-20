@@ -1,5 +1,5 @@
 import {
-  memo, useCallback, useEffect,
+  memo, useCallback,
   useMemo, useState,
 } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
@@ -8,7 +8,6 @@ import type { ApiChat, ApiChatBannedRights, ApiChatMember } from '../../../api/t
 import { ManagementProgress, ManagementScreens } from '../../../types';
 
 import {
-  DEFAULT_CHARGE_FOR_MESSAGES,
 } from '../../../config';
 import {
   selectChat,
@@ -17,16 +16,13 @@ import {
 } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 
-import useFlag from '../../../hooks/useFlag';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useManagePermissions from '../hooks/useManagePermissions';
 
-import PaidMessagePrice from '../../common/paidMessage/PaidMessagePrice';
 import PrivateChatInfo from '../../common/PrivateChatInfo';
-import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
-import Switch from '../../gili/primitives/Switch';
+import Island, { IslandTitle } from '../../gili/layout/Island';
 import PermissionCheckboxList, { MEDIA_DROPDOWN_ROW_COUNT } from '../../main/PermissionCheckboxList';
 import FloatingActionButton from '../../ui/FloatingActionButton';
 import ListItem from '../../ui/ListItem';
@@ -45,9 +41,6 @@ type StateProps = {
   currentUserId?: string;
   removedUsersCount: number;
   members?: ApiChatMember[];
-  arePaidMessagesAvailable?: boolean;
-  groupPeersPaidStars: number;
-  canChargeForMessages?: boolean;
 };
 
 const ITEM_HEIGHT = 48;
@@ -102,11 +95,8 @@ const ManageGroupPermissions = ({
   members,
   onClose,
   isActive,
-  arePaidMessagesAvailable,
-  canChargeForMessages,
-  groupPeersPaidStars,
 }: OwnProps & StateProps) => {
-  const { updateChatDefaultBannedRights, updatePaidMessagesPrice } = getActions();
+  const { updateChatDefaultBannedRights } = getActions();
 
   const {
     permissions, havePermissionChanged, isLoading, handlePermissionChange, setIsLoading,
@@ -134,16 +124,6 @@ const ManageGroupPermissions = ({
 
   const [isMediaDropdownOpen, setIsMediaDropdownOpen] = useState(false);
 
-  const [isPriceForMessagesChanged, markPriceForMessagesChanged, unmarkPriceForMessagesChanged] = useFlag();
-  const [isPriceForMessagesOpen, setIsPriceForMessagesOpen] = useState(canChargeForMessages);
-  const [chargeForMessages, setChargeForMessages] = useState<number>(groupPeersPaidStars);
-
-  useEffect(() => {
-    if (progress === ManagementProgress.Complete) {
-      unmarkPriceForMessagesChanged();
-    }
-  }, [progress]);
-
   const handleSavePermissions = useLastCallback(() => {
     if (!chat) {
       return;
@@ -151,23 +131,6 @@ const ManageGroupPermissions = ({
 
     setIsLoading(true);
     updateChatDefaultBannedRights({ chatId: chat.id, bannedRights: permissions });
-  });
-
-  const handleUpdatePaidMessagesPrice = useLastCallback(() => {
-    if (!chat) return;
-    updatePaidMessagesPrice({
-      chatId: chat?.id,
-      paidMessagesStars: isPriceForMessagesOpen ? chargeForMessages : 0,
-    });
-  });
-
-  const handleUpdatePermissions = useLastCallback(() => {
-    if (isPriceForMessagesChanged) {
-      handleUpdatePaidMessagesPrice();
-    }
-    if (havePermissionChanged) {
-      handleSavePermissions();
-    }
   });
 
   const exceptionMembers = useMemo(() => {
@@ -208,17 +171,7 @@ const ManageGroupPermissions = ({
     }, '');
   }, [chat, lang]);
 
-  const handleChargeStarsForMessages = useLastCallback(() => {
-    setIsPriceForMessagesOpen(!isPriceForMessagesOpen);
-    markPriceForMessagesChanged();
-  });
-
-  const handleChargeForMessagesChange = useLastCallback((value: number) => {
-    setChargeForMessages(value);
-    markPriceForMessagesChanged();
-  });
-
-  const arePermissionsChanged = isPriceForMessagesChanged || havePermissionChanged;
+  const arePermissionsChanged = havePermissionChanged;
   const arePermissionsLoading = progress === ManagementProgress.InProgress || isLoading;
   return (
     <div
@@ -243,34 +196,6 @@ const ManageGroupPermissions = ({
             shiftedClassName="part"
           />
         </Island>
-
-        {arePaidMessagesAvailable && (
-          <Island>
-            <ListItem onClick={handleChargeStarsForMessages}>
-              <span>{lang('GroupMessagesChargePrice')}</span>
-              <Switch
-                id="charge_for_messages"
-                checked={Boolean(isPriceForMessagesOpen)}
-              />
-            </ListItem>
-          </Island>
-        )}
-        {arePaidMessagesAvailable && (
-          <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-            {lang('RightsChargeStarsAbout')}
-          </IslandDescription>
-        )}
-
-        {isPriceForMessagesOpen && (
-          <Island>
-            <PaidMessagePrice
-              canChangeChargeForMessages
-              isGroupChat
-              chargeForMessages={chargeForMessages}
-              onChange={handleChargeForMessagesChange}
-            />
-          </Island>
-        )}
 
         <Island>
           <ListItem
@@ -312,7 +237,7 @@ const ManageGroupPermissions = ({
 
       <FloatingActionButton
         isShown={arePermissionsChanged}
-        onClick={handleUpdatePermissions}
+        onClick={handleSavePermissions}
         ariaLabel={lang('Save')}
         disabled={arePermissionsLoading}
         iconName="check"
@@ -328,18 +253,12 @@ export default memo(withGlobal<OwnProps>(
     const fullInfo = selectChatFullInfo(global, chatId);
     const { progress } = selectTabState(global).management;
 
-    const paidMessagesStars = chat?.paidMessagesStars;
-    const configStarsPaidMessageCommissionPermille = global.appConfig.starsPaidMessageCommissionPermille;
-
     return {
       chat,
       progress,
       currentUserId: global.currentUserId,
       removedUsersCount: fullInfo?.kickedMembers?.length || 0,
       members: fullInfo?.members,
-      arePaidMessagesAvailable: Boolean(fullInfo?.arePaidMessagesAvailable && configStarsPaidMessageCommissionPermille),
-      canChargeForMessages: Boolean(paidMessagesStars && configStarsPaidMessageCommissionPermille),
-      groupPeersPaidStars: paidMessagesStars || DEFAULT_CHARGE_FOR_MESSAGES,
     };
   },
 )(ManageGroupPermissions));

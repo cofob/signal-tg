@@ -341,7 +341,6 @@ type StateProps = {
   webPage?: ApiWebPage;
   maxTimestamp?: number;
   lastPlaybackTimestamp?: number;
-  paidMessageStars?: number;
   isChatWithUser?: boolean;
   isAccountFrozen?: boolean;
   minFutureTime?: number;
@@ -475,7 +474,6 @@ const Message = ({
   lastPlaybackTimestamp,
   isMediaNsfw,
   isReplyMediaNsfw,
-  paidMessageStars,
   isChatWithUser,
   isAccountFrozen,
   minFutureTime,
@@ -972,10 +970,6 @@ const Message = ({
   const withAppendix = contentClassName.includes('has-appendix');
   const emojiSize = getCustomEmojiSize(text?.emojiOnlyCount);
 
-  const paidMessageStarsInMeta = !isChatWithUser
-    ? (isAlbum && paidMessageStars ? album.messages.length * paidMessageStars : paidMessageStars)
-    : undefined;
-
   let metaPosition!: MetaPosition;
   if (phoneCall) {
     metaPosition = 'none';
@@ -1225,7 +1219,6 @@ const Message = ({
         onClick={handleMetaClick}
         onTranslationClick={handleTranslationClick}
         onOpenThread={handleOpenThread}
-        paidMessageStars={paidMessageStarsInMeta}
       />
     );
 
@@ -2125,7 +2118,6 @@ export default memo(withGlobal<OwnProps>(
     } = ownProps;
     const {
       id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
-      paidMessageStars,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2375,7 +2367,6 @@ export default memo(withGlobal<OwnProps>(
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,
-      paidMessageStars,
       isChatWithUser,
       isAccountFrozen,
       isMediaNsfw,

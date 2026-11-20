@@ -127,7 +127,6 @@ export function groupMessages(
         || message.isEphemeral !== nextMessage.isEphemeral
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
         || message.guestChatViaId !== nextMessage.guestChatViaId
-        || (!withUsers && message.paidMessageStars)
         || (nextMessage.suggestedPostInfo)
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle

@@ -36,7 +36,7 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       fallbackPhoto, personalPhoto, translationsDisabled, storiesPinnedAvailable,
       contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, botVerification,
-      botCanManageEmojiStatus, settings, sendPaidMessagesStars,
+      botCanManageEmojiStatus, settings,
       starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
       ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
@@ -73,7 +73,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     starsMyPendingRatingDate,
     isBotCanManageEmojiStatus: botCanManageEmojiStatus,
     hasScheduledMessages: hasScheduled,
-    paidMessagesStars: toJSNumber(sendPaidMessagesStars),
     settings: buildApiPeerSettings(settings),
     mainTab: mainTab && buildApiProfileTab(mainTab),
     savedMusic: savedMusic && buildApiSavedMusic(savedMusic, userId),
@@ -95,7 +94,6 @@ export function buildApiPeerSettings({
   phoneCountry,
   nameChangeDate,
   photoChangeDate,
-  chargePaidMessageStars,
 }: GramJs.PeerSettings): ApiPeerSettings {
   return {
     isAutoArchived: Boolean(autoarchived),
@@ -106,7 +104,6 @@ export function buildApiPeerSettings({
     phoneCountry,
     nameChangeDate,
     photoChangeDate,
-    chargedPaidMessageStars: toJSNumber(chargePaidMessageStars),
   };
 }
 
@@ -118,7 +115,7 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
   const {
     id, firstName, lastName, fake, scam, support, closeFriend, storiesUnavailable,
     botActiveUsers, botVerificationIcon, botInlinePlaceholder, botAttachMenu, botCanEdit,
-    sendPaidMessagesStars, profileColor, botForumView, botForumCanManageTopics, botGuestchat,
+    profileColor, botForumView, botForumCanManageTopics, botGuestchat,
     botGuard, botCanManageBots,
   } = mtpUser;
   const storiesMaxId = mtpUser.storiesMaxId?.maxId;
@@ -162,7 +159,6 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     botVerificationIconId: botVerificationIcon?.toString(),
     color: mtpUser.color && buildApiPeerColor(mtpUser.color),
     profileColor: profileColor && buildApiPeerColor(profileColor),
-    paidMessagesStars: toJSNumber(sendPaidMessagesStars),
     isBotForum: botForumView,
     canManageBotForumTopics: botForumCanManageTopics,
     canManageBots: botCanManageBots,

@@ -336,8 +336,6 @@ export type TabState = {
     byChatId: Record<string, ManagementState>;
   };
 
-  paymentMessageConfirmDialogKey?: string;
-
   storyViewer: {
     isRibbonShown?: boolean;
     isArchivedRibbonShown?: boolean;
@@ -430,7 +428,6 @@ export type TabState = {
     messageIds?: number[];
     storyId?: number;
     audioItem?: PlaybackItemRef;
-    audioPendingSend?: { toChatId: string; toThreadId?: ThreadId; stars: number };
     toChatId?: string;
     toThreadId?: ThreadId;
     withMyScore?: boolean;
@@ -556,11 +553,6 @@ export type TabState = {
     webAppKey: string;
     message: ApiPreparedInlineMessage;
     filter: ApiChatType[];
-    pendingSendArgs?: {
-      peerId: string;
-      threadId?: ThreadId;
-      starsForSendMessage?: number;
-    };
   };
 
   browser: BrowserState;
