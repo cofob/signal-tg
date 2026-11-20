@@ -56,6 +56,15 @@ type Items = {
   pniIdentityKeyPair: KeyPairBytes;
   // Next ids for generated keys, per local service id
   nextKeyIds: Record<string, { preKey: number; signedPreKey: number; kyberPreKey: number }>;
+  // Blocked phone numbers without a known ACI, kept so the blocked list we sync does not unblock them
+  blockedE164s: string[];
+  // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
+  notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
+};
+
+export type NotificationDefaults = {
+  isMuted?: boolean;
+  shouldShowPreviews?: boolean;
 };
 
 export type IdentityRecord = {

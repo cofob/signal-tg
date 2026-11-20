@@ -6,7 +6,18 @@ import type {
   ConversationRecord, MessageRecord, NewMessageRecord, SendStatus,
 } from '../db/MessageDb';
 import type {
-  DataMessage, EditMessage, ReceiptMessage, SyncMessage, SyncMessage_Sent, TypingMessage,
+  AddressableMessage,
+  AddressableMessageSchema,
+  ConversationIdentifier,
+  ConversationIdentifierSchema,
+  DataMessage,
+  EditMessage,
+  ReceiptMessage,
+  SyncMessage,
+  SyncMessage_DeleteForMe,
+  SyncMessage_DeleteForMeSchema,
+  SyncMessage_Sent,
+  TypingMessage,
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
@@ -16,18 +27,28 @@ import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { AccountRecord } from '../store/SignalStore';
 
-import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { fetchProfile } from '../profiles/fetchProfile';
+import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
-  sendMessage, sendReadSync, sendReceipts, sendTyping, sendViewedSync, sendViewOnceOpenSync,
+  sendBlockedSync,
+  sendDeleteForMeSync,
+  sendMessage,
+  sendMessageRequestResponseSync,
+  sendReadSync,
+  sendReceipts,
+  sendTyping,
+  sendViewedSync,
+  sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
+import { getIsConversationAccepted } from './messageRequests';
 
 import { Member_Role } from '../proto/generated/Groups_pb';
 import {
@@ -81,7 +102,10 @@ type MessageSource = {
   destinationAci?: string;
   sentTo?: { serviceId: string; isSealedSender: boolean }[];
   expirationStartTimestamp?: number;
+  serverGuid?: string;
 };
+
+type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -92,9 +116,26 @@ const DELETE_FOR_EVERYONE_MAX_AGE_MS = DAY_MS;
 export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+const UUID_BYTE_LENGTH = 16;
 const STATUS_RANK: Record<SendStatus, number> = {
   failed: 0, pending: 1, sent: 2, delivered: 3, read: 4, viewed: 5,
 };
+// Signal Desktop `ts/models/conversations.preload.ts` (`destroyMessages`): a conversation delete names this many of
+// its latest messages, so other devices find where it ended
+const CONVERSATION_DELETE_MESSAGE_COUNT = 5;
+const BLOCK_RESPONSES = new Set<MessageRequestResponseType>([
+  SyncMessage_MessageRequestResponse_Type.BLOCK,
+  SyncMessage_MessageRequestResponse_Type.BLOCK_AND_DELETE,
+  SyncMessage_MessageRequestResponse_Type.BLOCK_AND_SPAM,
+]);
+const DELETE_RESPONSES = new Set<MessageRequestResponseType>([
+  SyncMessage_MessageRequestResponse_Type.DELETE,
+  SyncMessage_MessageRequestResponse_Type.BLOCK_AND_DELETE,
+]);
+const SPAM_RESPONSES = new Set<MessageRequestResponseType>([
+  SyncMessage_MessageRequestResponse_Type.SPAM,
+  SyncMessage_MessageRequestResponse_Type.BLOCK_AND_SPAM,
+]);
 const STATUS_BY_RECEIPT_TYPE: Record<ReceiptMessage_Type, SendStatus> = {
   [ReceiptMessage_Type.DELIVERY]: 'delivered',
   [ReceiptMessage_Type.READ]: 'read',
@@ -164,8 +205,10 @@ export default class MessageProcessor {
       const found = await this.db.getConversation(conversationId)
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
       if (!found) throw new Error(`Unknown conversation ${conversationId}`);
-      const outgoing = createOutgoingDataMessage(account, found, init, sentAt);
-      const { message: added } = await this.addMessage(found, {
+      // Writing accepts the message request, so the message carries our profile key
+      const accepted = found.isAccepted ? found : await this.putConversation({ ...found, isAccepted: true });
+      const outgoing = createOutgoingDataMessage(account, accepted, init, sentAt);
+      const { message: added } = await this.addMessage(accepted, {
         conversationId,
         kind: 'message',
         authorAci: account.aci,
@@ -175,13 +218,13 @@ export default class MessageProcessor {
         isOutgoing: true,
         dataMessage: toBinary(DataMessageSchema, outgoing),
         body: outgoing.body || undefined,
-        expireTimer: found.expireTimer || undefined,
-        expiresAt: found.expireTimer ? sentAt + found.expireTimer * 1000 : undefined,
+        expireTimer: accepted.expireTimer || undefined,
+        expiresAt: accepted.expireTimer ? sentAt + accepted.expireTimer * 1000 : undefined,
         readAt: sentAt,
-        recipientStatus: buildPendingStatus(getRecipientAcis(found, account.aci)),
+        recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
       });
       onStored?.(added);
-      return { conversation: found, message: added, dataMessage: outgoing };
+      return { conversation: accepted, message: added, dataMessage: outgoing };
     });
 
     return this.sendStoredMessage(conversation, message, { case: 'dataMessage', value: dataMessage }, {
@@ -319,16 +362,130 @@ export default class MessageProcessor {
     }
   }
 
-  /** Deletes messages on this device only; other devices keep them, since `deleteForMe` sync is not sent yet */
-  deleteForMe(messageIds: number[]) {
-    return this.runSerial(async () => {
+  /** Deletes messages on this device and tells our other devices (Signal Desktop `ts/util/deleteForMe.preload.ts`) */
+  async deleteForMe(messageIds: number[]) {
+    const deletes = await this.runSerial(async () => {
+      const deletedByConversationId = new Map<string, MessageRecord[]>();
       for (const id of messageIds) {
         const message = await this.db.getMessage(id);
         if (!message) continue;
-        await this.db.deleteMessage(id);
-        this.changes.deletedMessages.push({ conversationId: message.conversationId, id });
+        await this.removeMessage(message);
+        const { conversationId } = message;
+        deletedByConversationId.set(conversationId, [...deletedByConversationId.get(conversationId) ?? [], message]);
       }
+
+      const result: { conversation: ConversationRecord; messages: MessageRecord[] }[] = [];
+      for (const [conversationId, messages] of deletedByConversationId) {
+        const conversation = await this.updateLastMessage(conversationId);
+        const addressable = messages.filter(isAddressableMessage);
+        if (conversation && addressable.length) result.push({ conversation, messages: addressable });
+      }
+      return result;
     });
+    if (!deletes.length) return;
+
+    await this.syncDeleteForMe({
+      messageDeletes: deletes.map(({ conversation, messages }) => ({
+        conversation: buildConversationIdentifier(conversation),
+        messages: messages.map(buildAddressableMessage),
+      })),
+    });
+  }
+
+  /**
+   * Deletes every message of a conversation here and on our other devices, which find the end of the
+   * conversation by its latest messages (`destroyMessages` in Signal Desktop `ts/models/conversations.preload.ts`).
+   * A conversation without such messages goes as a local-only delete.
+   */
+  async deleteConversation(conversationId: string) {
+    const deleted = await this.runSerial(async () => {
+      const conversation = await this.db.getConversation(conversationId);
+      if (!conversation) return undefined;
+      const latest = await this.db.findLatestMessages(
+        conversationId, CONVERSATION_DELETE_MESSAGE_COUNT, isAddressableMessage,
+      );
+      const latestNonExpiring = latest.some(({ expireTimer }) => expireTimer)
+        ? await this.db.findLatestMessages(
+          conversationId,
+          CONVERSATION_DELETE_MESSAGE_COUNT,
+          (message) => isAddressableMessage(message) && !message.expireTimer,
+        )
+        : undefined;
+      await this.deleteMessagesUpTo(conversationId);
+      await this.updateLastMessage(conversationId);
+      return { conversation, latest, latestNonExpiring };
+    });
+    if (!deleted) return;
+
+    const { conversation, latest, latestNonExpiring } = deleted;
+    const identifier = buildConversationIdentifier(conversation);
+    await this.syncDeleteForMe(latest.length ? {
+      conversationDeletes: [{
+        conversation: identifier,
+        mostRecentMessages: latest.map(buildAddressableMessage),
+        mostRecentNonExpiringMessages: latestNonExpiring?.map(buildAddressableMessage),
+        isFullDelete: true,
+      }],
+    } : {
+      localOnlyConversationDeletes: [{ conversation: identifier }],
+    });
+  }
+
+  /**
+   * Answers a message request here and on our other devices (`syncMessageRequestResponse` and
+   * `applyMessageRequestResponse` in Signal Desktop `ts/models/conversations.preload.ts`). Accepting shares our
+   * profile key with the contact; a spam report names the contact's latest messages. A changed block also sends
+   * the blocked list, since this device does not write the storage service yet.
+   */
+  async respondToMessageRequest(conversationId: string, type: MessageRequestResponseType) {
+    const account = await this.getAccount();
+    const { previous, conversation, spamServerGuids } = await this.runSerial(async () => {
+      const found = await this.db.getConversation(conversationId);
+      if (!found || found.id === account.aci) throw new Error('The conversation has no message request');
+      // A delete removes the messages that the report names, so they are collected first
+      const reported = SPAM_RESPONSES.has(type) && found.type === 'private'
+        ? await this.db.findLatestMessages(found.id, MAX_SPAM_REPORT_MESSAGES, (message) => (
+          !message.isOutgoing && message.authorAci === found.id && Boolean(message.serverGuid)
+        ))
+        : [];
+      return {
+        previous: found,
+        conversation: await this.applyMessageRequestResponse(found, type),
+        spamServerGuids: reported.map(({ serverGuid }) => serverGuid!),
+      };
+    });
+
+    const context = this.client.getSenderContext();
+    const isGroup = conversation.type === 'group';
+    await sendMessageRequestResponseSync(context, {
+      type,
+      threadAci: isGroup ? undefined : conversation.id,
+      groupId: isGroup ? bufferFromBase64(conversation.id) : undefined,
+    });
+    if (Boolean(previous.isBlocked) !== Boolean(conversation.isBlocked)) await this.sendBlockedList();
+    if (spamServerGuids.length) {
+      await reportSpam(context.connection, conversation.id, spamServerGuids, conversation.reportingToken);
+    }
+    if (type === SyncMessage_MessageRequestResponse_Type.ACCEPT && !isGroup) {
+      await this.sendToConversation(conversation, {
+        flags: DataMessage_Flags.PROFILE_KEY_UPDATE,
+      }, this.allocateTimestamp(), false);
+    }
+  }
+
+  /** Unblocks a conversation without accepting its message request, and sends the blocked list */
+  async unblock(conversationId: string) {
+    const isChanged = await this.runSerial(async () => {
+      const conversation = await this.db.getConversation(conversationId);
+      if (!conversation?.isBlocked) return false;
+      await this.putConversation({ ...conversation, isBlocked: false });
+      const blockedE164s = await this.client.store.getItem('blockedE164s');
+      if (conversation.e164 && blockedE164s?.includes(conversation.e164)) {
+        await this.client.store.setItem('blockedE164s', blockedE164s.filter((e164) => e164 !== conversation.e164));
+      }
+      return true;
+    });
+    if (isChanged) await this.sendBlockedList();
   }
 
   /** Votes in a poll; an empty `optionIndexes` takes the vote back */
@@ -407,7 +564,9 @@ export default class MessageProcessor {
 
     const context = this.client.getSenderContext();
     if (context.account.isReadReceiptsEnabled) {
-      const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
+      const receipted = viewed
+        .filter(({ conversation }) => getIsConversationAccepted(conversation, context.account.aci))
+        .map(({ message }) => message);
       for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
         await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
       }
@@ -421,12 +580,15 @@ export default class MessageProcessor {
 
   /**
    * Sends a typing indicator to a conversation; it reaches only devices online now. Signal sends none while
-   * typing indicators are turned off.
+   * typing indicators are turned off, and none to message requests.
    */
   async sendTyping(conversationId: string, isTyping: boolean) {
     const conversation = await this.db.getConversation(conversationId);
     const context = this.client.getSenderContext();
-    if (!conversation || context.account.isTypingIndicatorsEnabled === false) return;
+    if (!conversation || context.account.isTypingIndicatorsEnabled === false
+      || !getIsConversationAccepted(conversation, context.account.aci)) {
+      return;
+    }
     const recipients = getRecipientAcis(conversation, context.account.aci);
     await sendTyping(context, recipients, isTyping, this.getGroupTarget(conversation));
   }
@@ -457,7 +619,7 @@ export default class MessageProcessor {
     if (!conversation || !messages.length) return;
 
     const context = this.client.getSenderContext();
-    if (context.account.isReadReceiptsEnabled && conversation.isAccepted) {
+    if (context.account.isReadReceiptsEnabled && getIsConversationAccepted(conversation, context.account.aci)) {
       for (const [authorAci, timestamps] of groupTimestampsByAuthor(messages)) {
         await sendReceipts(context, authorAci, ReceiptMessage_Type.READ, timestamps);
       }
@@ -475,10 +637,14 @@ export default class MessageProcessor {
     let pinIndexById: Map<string, number> | undefined;
 
     await this.runSerial(async () => {
+      const blockedE164s = new Set(await store.getItem('blockedE164s'));
+      const blockedE164Count = blockedE164s.size;
       for (const { record } of records) {
         if (record.case === 'contact') {
           const contact = record.value;
           const aci = contact.aci || (contact.aciBinary.length ? uuidToString(contact.aciBinary) : undefined);
+          // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
+          if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
           if (!aci || aci === account.aci) continue;
           if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
 
@@ -526,6 +692,8 @@ export default class MessageProcessor {
           });
         }
       }
+
+      if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
 
       if (!pinIndexById) return;
       for (const conversation of await this.db.getConversations()) {
@@ -655,6 +823,7 @@ export default class MessageProcessor {
   private async handleContent(decrypted: DecryptedEnvelope) {
     const { senderServiceId, senderDeviceId, envelope, isSealedSender } = decrypted;
     const body = decrypted.content.content;
+    const selfAci = this.client.getSenderContext().account.aci;
     const source: MessageSource = {
       authorAci: senderServiceId,
       authorDeviceId: senderDeviceId,
@@ -662,7 +831,21 @@ export default class MessageProcessor {
       serverTimestamp: Number(envelope.serverTimestamp) || undefined,
       isOutgoing: false,
       isSealedSender,
+      serverGuid: envelope.serverGuid
+        || (envelope.serverGuidBinary.length ? uuidToString(envelope.serverGuidBinary) : undefined),
     };
+
+    if (senderServiceId !== selfAci) {
+      const sender = await this.db.getConversation(senderServiceId);
+      // Signal Desktop `ts/textsecure/MessageReceiver.preload.ts` drops everything from blocked senders
+      if (sender?.isBlocked) return;
+      // Signal Desktop `onEnvelopeUnsealed` in `ts/background.preload.ts`: the latest token goes with spam reports
+      const token = envelope.reportSpamToken;
+      if (token.length && !(sender?.reportingToken && buffersEqual(sender.reportingToken, token))) {
+        const conversation = sender ?? await this.ensurePrivateConversation(senderServiceId);
+        await this.putConversation({ ...conversation, reportingToken: token });
+      }
+    }
 
     switch (body.case) {
       case 'dataMessage': {
@@ -676,7 +859,7 @@ export default class MessageProcessor {
         this.queueDeliveryReceipt(senderServiceId, source.sentAt);
         break;
       case 'syncMessage':
-        if (senderServiceId === this.client.getSenderContext().account.aci) {
+        if (senderServiceId === selfAci) {
           await this.handleSyncMessage(source, body.value);
         }
         break;
@@ -684,7 +867,7 @@ export default class MessageProcessor {
         await this.handleReceipt(senderServiceId, body.value);
         break;
       case 'typingMessage':
-        this.handleTyping(senderServiceId, body.value);
+        await this.handleTyping(senderServiceId, body.value);
         break;
       default:
         // Stories and calls are not supported yet
@@ -757,12 +940,14 @@ export default class MessageProcessor {
         ? Object.fromEntries(source.sentTo.map(({ serviceId }) => [serviceId, 'sent' as const]))
         : undefined,
       isSealedSender: source.isSealedSender,
+      serverGuid: source.serverGuid,
     });
   }
 
   private async handleEditMessage(source: MessageSource, edit: EditMessage) {
     const target = await this.db.findMessage(source.authorAci, Number(edit.targetSentTimestamp));
     if (!target?.dataMessage || !edit.dataMessage || target.deletedAt) return;
+    if (!source.isOutgoing && (await this.db.getConversation(target.conversationId))?.isBlocked) return;
 
     await this.putMessage({
       ...target,
@@ -813,7 +998,10 @@ export default class MessageProcessor {
         break;
       }
       case 'messageRequestResponse':
-        await this.applyMessageRequestResponse(content.value);
+        await this.applyMessageRequestResponseSync(content.value);
+        break;
+      case 'deleteForMe':
+        await this.applyDeleteForMeSync(content.value);
         break;
       default:
         break;
@@ -855,10 +1043,12 @@ export default class MessageProcessor {
   }
 
   /** Turning typing indicators off also hides those of others */
-  private handleTyping(senderAci: string, typing: TypingMessage) {
+  private async handleTyping(senderAci: string, typing: TypingMessage) {
     if (this.client.getSenderContext().account.isTypingIndicatorsEnabled === false) return;
+    const conversationId = typing.groupId.length ? bufferToBase64(typing.groupId) : senderAci;
+    if ((await this.db.getConversation(conversationId))?.isBlocked) return;
     this.events.onTyping({
-      conversationId: typing.groupId.length ? bufferToBase64(typing.groupId) : senderAci,
+      conversationId,
       senderAci,
       isTyping: typing.action === TypingMessage_Action.STARTED,
     });
@@ -930,7 +1120,6 @@ export default class MessageProcessor {
           expireTimer: group.expireTimer || undefined,
           isAnnouncementsOnly: group.isAnnouncementsOnly,
           avatarPath: group.avatarUrl,
-          isAccepted: conversation.isAccepted || group.members.some(({ aci }) => aci === account.aci),
         });
       });
       this.flush();
@@ -1082,6 +1271,7 @@ export default class MessageProcessor {
     }
   }
 
+  /** The primary device sends its whole blocked list, which replaces ours */
   private async applyBlockedSync(blocked: NonNullable<Extract<SyncMessage['content'], { case: 'blocked' }>['value']>) {
     const blockedIds = new Set([
       ...blocked.acis,
@@ -1090,10 +1280,16 @@ export default class MessageProcessor {
       ...blocked.groupIds.map(bufferToBase64),
       ...blocked.blockedGroups.map(({ groupId }) => bufferToBase64(groupId)),
     ]);
+    const blockedE164s = new Set([...blocked.numbers, ...blocked.blockedE164s.map(({ e164 }) => e164)]);
+    blockedE164s.delete('');
+    const unknownE164s = new Set(blockedE164s);
+
     for (const conversation of await this.db.getConversations()) {
-      const isBlocked = blockedIds.has(conversation.id);
+      const isBlocked = blockedIds.has(conversation.id)
+        || Boolean(conversation.e164 && blockedE164s.has(conversation.e164));
       if (Boolean(conversation.isBlocked) !== isBlocked) await this.putConversation({ ...conversation, isBlocked });
       blockedIds.delete(conversation.id);
+      if (conversation.e164) unknownE164s.delete(conversation.e164);
     }
     // Unknown groups need their master key, so only private conversations are created here
     for (const id of blockedIds) {
@@ -1101,35 +1297,199 @@ export default class MessageProcessor {
       const conversation = await this.ensurePrivateConversation(id);
       await this.putConversation({ ...conversation, isBlocked: true });
     }
+    await this.client.store.setItem('blockedE164s', [...unknownE164s]);
   }
 
-  private async applyMessageRequestResponse(
+  /** Sends our whole blocked list (Signal Desktop `getBlockSync` in `ts/textsecure/SendMessage.preload.ts`) */
+  private async sendBlockedList() {
+    const blocked = (await this.db.getConversations()).filter(({ isBlocked }) => isBlocked);
+    const acis = blocked.filter(({ type }) => type === 'private').map(({ id }) => id);
+    const groupIds = blocked.filter(({ type }) => type === 'group').map(({ id }) => bufferFromBase64(id));
+    const e164s = [...new Set([
+      ...await this.client.store.getItem('blockedE164s') ?? [],
+      ...blocked.map(({ e164 }) => e164).filter(Boolean),
+    ])];
+
+    await sendBlockedSync(this.client.getSenderContext(), {
+      numbers: e164s,
+      blockedE164s: e164s.map((e164) => ({ e164 })),
+      acis,
+      blockedAcis: acis.map((aci) => ({ aciBinary: uuidToBytes(aci) })),
+      groupIds,
+      blockedGroups: groupIds.map((groupId) => ({ groupId })),
+    });
+  }
+
+  /** The delete is done here either way, so a failed sync is only reported */
+  private async syncDeleteForMe(deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>) {
+    try {
+      await sendDeleteForMeSync(this.client.getSenderContext(), deleteForMe);
+    } catch (err) {
+      this.events.onError(err as Error);
+    }
+  }
+
+  private async applyMessageRequestResponseSync(
     response: NonNullable<Extract<SyncMessage['content'], { case: 'messageRequestResponse' }>['value']>,
   ) {
     const id = response.groupId.length
       ? bufferToBase64(response.groupId)
       : response.threadAci || uuidToString(response.threadAciBinary);
     const conversation = await this.db.getConversation(id);
-    if (!conversation) return;
+    if (conversation) await this.applyMessageRequestResponse(conversation, response.type);
+  }
 
-    const { type } = response;
-    const isBlock = type === SyncMessage_MessageRequestResponse_Type.BLOCK
-      || type === SyncMessage_MessageRequestResponse_Type.BLOCK_AND_DELETE
-      || type === SyncMessage_MessageRequestResponse_Type.BLOCK_AND_SPAM;
-    const isDelete = type === SyncMessage_MessageRequestResponse_Type.DELETE
-      || type === SyncMessage_MessageRequestResponse_Type.BLOCK_AND_DELETE;
+  /**
+   * Accepting unblocks and shares our profile; blocking and deleting stop sharing it; spam marks the conversation
+   * reported (`applyMessageRequestResponse` in Signal Desktop `ts/models/conversations.preload.ts`)
+   */
+  private async applyMessageRequestResponse(conversation: ConversationRecord, type: MessageRequestResponseType) {
+    const isAccept = type === SyncMessage_MessageRequestResponse_Type.ACCEPT;
+    const isBlock = BLOCK_RESPONSES.has(type);
+    const isDelete = DELETE_RESPONSES.has(type);
 
-    if (isDelete) {
-      for (const messageId of await this.db.deleteConversationMessages(id)) {
-        this.changes.deletedMessages.push({ conversationId: id, id: messageId });
-      }
-    }
-    await this.putConversation({
+    if (isDelete) await this.deleteMessagesUpTo(conversation.id);
+    return this.putConversation({
       ...conversation,
-      isAccepted: type === SyncMessage_MessageRequestResponse_Type.ACCEPT || conversation.isAccepted,
-      isBlocked: isBlock || conversation.isBlocked,
+      isAccepted: isAccept || (!isBlock && !isDelete && conversation.isAccepted),
+      isBlocked: !isAccept && (isBlock || conversation.isBlocked),
+      isReported: SPAM_RESPONSES.has(type) || conversation.isReported,
       unreadCount: isDelete ? 0 : conversation.unreadCount,
+      isMarkedUnread: isDelete ? false : conversation.isMarkedUnread,
       lastMessageId: isDelete ? undefined : conversation.lastMessageId,
+    });
+  }
+
+  /** Signal Desktop `onDeleteForMeSync` in `ts/background.preload.ts` and `ts/util/deleteForMe.preload.ts` */
+  private async applyDeleteForMeSync(deleteForMe: SyncMessage_DeleteForMe) {
+    const changedIds = new Set<string>();
+
+    for (const { conversation: identifier, messages } of deleteForMe.messageDeletes) {
+      const conversation = await this.findConversation(identifier);
+      if (!conversation) continue;
+      for (const target of messages) {
+        const message = await this.findAddressableMessage(conversation.id, target);
+        if (message) await this.removeMessage(message);
+      }
+      changedIds.add(conversation.id);
+    }
+
+    for (const item of deleteForMe.conversationDeletes) {
+      const conversation = await this.findConversation(item.conversation);
+      if (!conversation) continue;
+      // Disappearing messages may be gone here, so the latest lasting ones mark the end too
+      const newest = await this.findNewestMessage(conversation.id, item.mostRecentMessages)
+        ?? await this.findNewestMessage(conversation.id, item.mostRecentNonExpiringMessages);
+      if (newest) await this.deleteMessagesUpTo(conversation.id, newest.id);
+      if (item.isFullDelete) await this.deleteLocalOnlyConversation(conversation.id);
+      changedIds.add(conversation.id);
+    }
+
+    for (const { conversation: identifier } of deleteForMe.localOnlyConversationDeletes) {
+      const conversation = await this.findConversation(identifier);
+      if (!conversation) continue;
+      await this.deleteLocalOnlyConversation(conversation.id);
+      changedIds.add(conversation.id);
+    }
+
+    for (const item of deleteForMe.attachmentDeletes) {
+      const conversation = await this.findConversation(item.conversation);
+      const message = conversation && item.targetMessage
+        && await this.findAddressableMessage(conversation.id, item.targetMessage);
+      if (message?.dataMessage) await this.deleteAttachment(message, item.clientUuid, item.fallbackDigest);
+    }
+
+    for (const id of changedIds) await this.updateLastMessage(id);
+  }
+
+  /** Removes the attachment with `clientUuid`, or else the one with `digest` (Signal Desktop `deleteAttachmentFromMessage`) */
+  private async deleteAttachment(message: MessageRecord, clientUuid: Uint8Array, digest: Uint8Array) {
+    const dataMessage = fromBinary(DataMessageSchema, message.dataMessage!);
+    const { attachments } = dataMessage;
+    let index = clientUuid.length ? attachments.findIndex((item) => buffersEqual(item.clientUuid, clientUuid)) : -1;
+    if (index === -1 && digest.length) index = attachments.findIndex((item) => buffersEqual(item.digest, digest));
+    if (index === -1) return;
+
+    attachments.splice(index, 1);
+    await this.putMessage({ ...message, dataMessage: toBinary(DataMessageSchema, dataMessage) });
+  }
+
+  /** A conversation with no message that other devices could name loses its remaining notices */
+  private async deleteLocalOnlyConversation(conversationId: string) {
+    const [addressable] = await this.db.findLatestMessages(conversationId, 1, isAddressableMessage);
+    if (!addressable) await this.deleteMessagesUpTo(conversationId);
+  }
+
+  private async findConversation(identifier?: ConversationIdentifier) {
+    const { case: kind, value } = identifier?.identifier ?? {};
+    switch (kind) {
+      case 'threadServiceId':
+        return this.db.getConversation(value as string);
+      case 'threadServiceIdBinary':
+        // A 17-byte value is a PNI, which has no conversation here
+        return (value as Uint8Array).length === UUID_BYTE_LENGTH
+          ? this.db.getConversation(uuidToString(value as Uint8Array))
+          : undefined;
+      case 'threadGroupId':
+        return this.db.getConversation(bufferToBase64(value as Uint8Array));
+      case 'threadE164':
+        return (await this.db.getConversations()).find(({ e164 }) => e164 === value);
+      default:
+        return undefined;
+    }
+  }
+
+  private async findAddressableMessage(conversationId: string, target: AddressableMessage) {
+    const { case: kind, value } = target.author;
+    let authorAci: string | undefined;
+    if (kind === 'authorServiceId') {
+      authorAci = value;
+    } else if (kind === 'authorServiceIdBinary' && value.length === UUID_BYTE_LENGTH) {
+      authorAci = uuidToString(value);
+    } else if (kind === 'authorE164') {
+      authorAci = (await this.db.getConversations()).find(({ type, e164 }) => type === 'private' && e164 === value)?.id;
+    }
+    if (!authorAci || !target.sentTimestamp) return undefined;
+
+    const message = await this.db.findMessage(authorAci, Number(target.sentTimestamp));
+    return message?.conversationId === conversationId ? message : undefined;
+  }
+
+  /** The newest of the named messages that is still here; ids grow in arrival order */
+  private async findNewestMessage(conversationId: string, targets: AddressableMessage[]) {
+    let newest: MessageRecord | undefined;
+    for (const target of targets) {
+      const message = await this.findAddressableMessage(conversationId, target);
+      if (message && (!newest || message.id > newest.id)) newest = message;
+    }
+    return newest;
+  }
+
+  private async removeMessage(message: MessageRecord) {
+    await this.db.deleteMessage(message.id);
+    this.changes.deletedMessages.push({ conversationId: message.conversationId, id: message.id });
+  }
+
+  /** Deletes the messages of a conversation up to `maxId`, every message by default */
+  private async deleteMessagesUpTo(conversationId: string, maxId?: number) {
+    for (const id of await this.db.deleteConversationMessages(conversationId, maxId)) {
+      this.changes.deletedMessages.push({ conversationId, id });
+    }
+  }
+
+  /** Points the conversation at its latest remaining message and recounts unread ones after deletes */
+  private async updateLastMessage(conversationId: string) {
+    const conversation = await this.db.getConversation(conversationId);
+    if (!conversation) return undefined;
+    const [last] = await this.db.getMessages(conversationId, 1);
+    const unreadCount = (await this.db.getUnreadMessages(conversationId)).length;
+    if (last?.id === conversation.lastMessageId && unreadCount === conversation.unreadCount) return conversation;
+    return this.putConversation({
+      ...conversation,
+      lastMessageId: last?.id,
+      lastMessageAt: last?.sentAt ?? conversation.lastMessageAt,
+      unreadCount,
+      isMarkedUnread: last ? conversation.isMarkedUnread : false,
     });
   }
 
@@ -1237,12 +1597,17 @@ function createOutgoingDataMessage(
   return message;
 }
 
-/** Sets the fields every data message from this device carries: timestamp, profile key and group */
+/**
+ * Sets the fields every data message from this device carries: timestamp, group and, once the message request is
+ * accepted, our profile key
+ */
 function setOutgoingFields(
   message: DataMessage, account: AccountRecord, conversation: ConversationRecord, timestamp: number,
 ) {
   message.timestamp = BigInt(timestamp);
-  message.profileKey = account.profileKey ?? message.profileKey;
+  message.profileKey = getIsConversationAccepted(conversation, account.aci)
+    ? account.profileKey ?? message.profileKey
+    : new Uint8Array();
   message.groupV2 = conversation.masterKey
     ? create(GroupContextV2Schema, { masterKey: conversation.masterKey, revision: conversation.revision })
     : undefined;
@@ -1267,6 +1632,28 @@ function getResultError(results: RecipientResult[], serviceId: string) {
 /** Keeps the last version of each record */
 function dedupeById<T extends { id: string | number }>(records: T[]) {
   return [...new Map(records.map((record) => [record.id, record])).values()];
+}
+
+/** Messages that other devices can find by author and timestamp; notices have no author */
+function isAddressableMessage(message: MessageRecord) {
+  return message.kind === 'message' && Boolean(message.authorAci);
+}
+
+function buildConversationIdentifier(
+  conversation: ConversationRecord,
+): MessageInitShape<typeof ConversationIdentifierSchema> {
+  return {
+    identifier: conversation.type === 'group'
+      ? { case: 'threadGroupId', value: bufferFromBase64(conversation.id) }
+      : { case: 'threadServiceId', value: conversation.id },
+  };
+}
+
+function buildAddressableMessage(message: MessageRecord): MessageInitShape<typeof AddressableMessageSchema> {
+  return {
+    author: { case: 'authorServiceId', value: message.authorAci },
+    sentTimestamp: BigInt(message.sentAt),
+  };
 }
 
 function hasMessageContent(message: DataMessage) {

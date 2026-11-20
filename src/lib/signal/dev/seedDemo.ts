@@ -31,6 +31,8 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
   const bob = crypto.randomUUID();
   const carol = crypto.randomUUID();
   const dave = crypto.randomUUID();
+  const eve = crypto.randomUUID();
+  const frank = crypto.randomUUID();
   const now = Date.now();
 
   await store.setItem('account', {
@@ -91,8 +93,26 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       unreadCount: 1,
       isAccepted: true,
     },
+    // A message request from a group whose members we do not know
+    {
+      id: btoa(String.fromCharCode(...getRandomBytes(32))),
+      localId: 7,
+      type: 'group',
+      masterKey: getRandomBytes(32),
+      revision: 1,
+      title: 'Crypto giveaway',
+      memberAcis: [me, frank],
+      adminAcis: [frank],
+      unreadCount: 1,
+    },
+    {
+      id: frank, localId: 8, type: 'private', profileName: 'Frank', unreadCount: 0,
+    },
+    {
+      id: eve, localId: 9, type: 'private', profileName: 'Eve', e164: '+15550100009', unreadCount: 0, isBlocked: true,
+    },
   ];
-  const [, aliceChat, bobChat, carolChat, daveChat, group] = conversations;
+  const [, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat] = conversations;
 
   const messages: [ConversationRecord, DemoMessage][] = [
     [aliceChat, {
@@ -225,6 +245,14 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     }],
     [group, {
       authorAci: carol, sentAt: now - 5 * MINUTE, isOutgoing: false, dataMessage: { body: 'Count me in!' },
+    }],
+    [requestGroup, {
+      authorAci: frank, sentAt: now - 3 * MINUTE, isOutgoing: false,
+      dataMessage: { body: 'Double your coins today, limited offer!' },
+    }],
+    [eveChat, {
+      authorAci: eve, sentAt: now - 600 * MINUTE, isOutgoing: false, readAt: now,
+      dataMessage: { body: 'You won a prize' },
     }],
   ];
 
