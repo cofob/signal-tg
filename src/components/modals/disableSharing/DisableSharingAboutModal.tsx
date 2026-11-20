@@ -33,7 +33,6 @@ const DisableSharingAboutModal = ({
   const {
     closeDisableSharingAboutModal,
     toggleNoForwards,
-    openPremiumModal,
   } = getActions();
   const lang = useLang();
 
@@ -51,11 +50,6 @@ const DisableSharingAboutModal = ({
       toggleNoForwards({ userId, isEnabled: true });
     }
     closeDisableSharingAboutModal();
-  });
-
-  const handleOpenPremium = useLastCallback(() => {
-    closeDisableSharingAboutModal();
-    openPremiumModal({ initialSection: 'pm_noforwards' });
   });
 
   const header = useMemo(() => {
@@ -80,32 +74,19 @@ const DisableSharingAboutModal = ({
   }, [lang]);
 
   const footer = useMemo(() => {
-    if (isCurrentUserPremium) {
-      return (
-        <div className={styles.footer}>
-          <Button
-            onClick={handleDisableSharing}
-            noForcedUpperCase
-          >
-            {lang('DisableSharing')}
-          </Button>
-        </div>
-      );
-    }
+    if (!isCurrentUserPremium) return undefined;
 
     return (
       <div className={styles.footer}>
         <Button
-          onClick={handleOpenPremium}
-          iconName="unlock-filled"
-          iconClassName={styles.unlockIcon}
+          onClick={handleDisableSharing}
           noForcedUpperCase
         >
-          {lang('UnlockButtonTitle')}
+          {lang('DisableSharing')}
         </Button>
       </div>
     );
-  }, [isCurrentUserPremium, lang, handleDisableSharing, handleOpenPremium]);
+  }, [isCurrentUserPremium, lang, handleDisableSharing]);
 
   return (
     <TableAboutModal

@@ -117,7 +117,6 @@ const MiddleHeader = ({
     openPreviousChat,
     toggleLeftColumn,
     exitMessageSelectMode,
-    openPremiumModal,
     openStickerSet,
     updateMiddleSearch,
   } = getActions();
@@ -161,10 +160,6 @@ const MiddleHeader = ({
     setTimeout(() => {
       isBackButtonActiveRef.current = true;
     }, BACK_BUTTON_INACTIVE_TIME);
-  });
-
-  const handleUserStatusClick = useLastCallback(() => {
-    openPremiumModal({ fromUserId: chatId });
   });
 
   const handleChannelStatusClick = useLastCallback(() => {
@@ -312,7 +307,6 @@ const MiddleHeader = ({
               storyViewerOrigin={StoryViewerOrigin.MiddleHeaderAvatar}
               emojiStatusSize={EMOJI_STATUS_SIZE}
               noRtl
-              onEmojiStatusClick={handleUserStatusClick}
             />
           ) : (
             <GroupChatInfo

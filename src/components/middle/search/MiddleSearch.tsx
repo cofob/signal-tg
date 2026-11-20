@@ -128,7 +128,6 @@ const MiddleSearch = ({
     focusMessage,
     closeMiddleSearch,
     openHistoryCalendar,
-    openPremiumModal,
     loadSavedReactionTags,
   } = getActions();
 
@@ -538,12 +537,7 @@ const MiddleSearch = ({
   });
 
   const activateSearchTag = useLastCallback((tag: ApiReaction) => {
-    if (areSavedTagsDisabled) {
-      openPremiumModal({
-        initialSection: 'saved_tags',
-      });
-      return;
-    }
+    if (areSavedTagsDisabled) return;
 
     updateSearchParams({ savedTag: tag });
   });

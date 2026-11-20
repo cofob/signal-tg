@@ -135,12 +135,7 @@ export const AiEditorErrorMessage = memo(({
   isPremium,
   onRetry,
 }: AiEditorErrorMessageProps) => {
-  const { openPremiumModal } = getActions();
   const lang = useLang();
-
-  const handleOpenPremiumModal = useLastCallback(() => {
-    openPremiumModal({ initialSection: 'ai_compose' });
-  });
 
   if (!error) return undefined;
 
@@ -151,13 +146,7 @@ export const AiEditorErrorMessage = memo(({
       {isFloodError ? (
         isPremium
           ? lang('AiMessageEditorDailyLimitReachedPremium')
-          : lang('AiMessageEditorDailyLimitReached', {
-            link: (
-              <Link isPrimary onClick={handleOpenPremiumModal}>
-                {lang('TelegramPremium')}
-              </Link>
-            ),
-          }, { withNodes: true })
+          : lang('AiMessageEditorDailyLimitReached', { link: lang('TelegramPremium') })
       ) : lang('AiMessageEditorGenericError')}
       {!isFloodError && onRetry && (
         <>

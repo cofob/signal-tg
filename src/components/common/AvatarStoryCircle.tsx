@@ -136,7 +136,7 @@ export default memo(withGlobal<OwnProps>((global, { peerId }): Complete<StatePro
   };
 })(AvatarStoryCircle));
 
-export function drawGradientCircle({
+function drawGradientCircle({
   canvas,
   size,
   strokeWidth: strokeWidthPx = STROKE_WIDTH,

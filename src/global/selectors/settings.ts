@@ -9,7 +9,6 @@ import { selectSharedSettings } from './sharedState';
 import {
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
-  selectIsPremiumPurchaseBlocked,
 } from './users';
 
 const getReferencedWallpaperBackgroundsMemo = memoized(getReferencedWallpaperBackgrounds);
@@ -79,7 +78,6 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   const isPremium = selectIsCurrentUserPremium(global);
 
   return {
-    canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
     isPasswordStateKnown: hasPassword !== undefined,
     hasPassword,
     hasPasscode,

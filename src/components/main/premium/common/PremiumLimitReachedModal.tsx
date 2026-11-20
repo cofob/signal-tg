@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from '../../../../lib/teact/teact';
+import { memo, useEffect } from '../../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../../global';
 
 import type { ApiLimitTypeWithModal } from '../../../../api/types';
@@ -7,7 +7,7 @@ import type { LangKey } from '../../../../types/language';
 import type { LangFn } from '../../../../util/localization';
 
 import { MAX_UPLOAD_FILEPART_SIZE } from '../../../../config';
-import { selectIsCurrentUserPremium, selectIsPremiumPurchaseBlocked } from '../../../../global/selectors';
+import { selectIsCurrentUserPremium } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { formatFileSize } from '../../../../util/text/textFormat';
 import renderText from '../../../common/helpers/renderText';
@@ -17,21 +17,8 @@ import useLang from '../../../../hooks/useLang';
 
 import Button from '../../../ui/Button';
 import Modal from '../../../ui/Modal';
-import PremiumLimitsCompare from './PremiumLimitsCompare';
 
 import styles from './PremiumLimitReachedModal.module.scss';
-
-const LIMIT_DESCRIPTION = {
-  dialogFiltersChats: 'LimitReachedChatInFolders',
-  uploadMaxFileparts: 'LimitReachedFileSize',
-  dialogFilters: 'LimitReachedFolders',
-  dialogFolderPinned: 'LimitReachedPinDialogs',
-  channelsPublic: 'LimitReachedPublicLinks',
-  channels: 'LimitReachedCommunities',
-  chatlistInvites: 'LimitReachedFolderLinks',
-  chatlistJoined: 'LimitReachedSharedFolders',
-  savedDialogsPinned: 'LimitReachedPinSavedDialogs',
-} as const satisfies Record<ApiLimitTypeWithModal, LangKey>;
 
 const LIMIT_DESCRIPTION_BLOCKED = {
   dialogFiltersChats: 'LimitReachedChatInFoldersLocked',
@@ -82,7 +69,6 @@ function getLimiterDescription({
   lang,
   limitType,
   isPremium,
-  canBuyPremium,
   defaultValue,
   premiumValue,
   valueFormatter,
@@ -90,7 +76,6 @@ function getLimiterDescription({
   lang: LangFn;
   limitType?: ApiLimitTypeWithModal;
   isPremium?: boolean;
-  canBuyPremium?: boolean;
   defaultValue?: number;
   premiumValue?: number;
   valueFormatter?: (...args: any[]) => string;
@@ -108,12 +93,6 @@ function getLimiterDescription({
       : lang(LIMIT_DESCRIPTION_PREMIUM[limitType], { limit: premiumValueFormatted });
   }
 
-  if (canBuyPremium) {
-    return limitType === 'channelsPublic'
-      ? lang(LIMIT_DESCRIPTION[limitType], { limit2: premiumValueFormatted })
-      : lang(LIMIT_DESCRIPTION[limitType], { limit: defaultValueFormatted, limit2: premiumValueFormatted });
-  }
-
   return limitType === 'channelsPublic'
     ? lang(LIMIT_DESCRIPTION_BLOCKED[limitType])
     : lang(LIMIT_DESCRIPTION_BLOCKED[limitType], { limit: defaultValueFormatted });
@@ -127,7 +106,6 @@ type StateProps = {
   defaultValue?: number;
   premiumValue?: number;
   isPremium?: boolean;
-  canBuyPremium?: boolean;
 };
 
 const PremiumLimitReachedModal = ({
@@ -135,17 +113,11 @@ const PremiumLimitReachedModal = ({
   premiumValue,
   limit,
   isPremium,
-  canBuyPremium,
 }: OwnProps & StateProps) => {
-  const { closeLimitReachedModal, openPremiumModal } = getActions();
+  const { closeLimitReachedModal } = getActions();
   const lang = useLang();
 
   const [isClosing, startClosing, stopClosing] = useFlag();
-
-  const handleClick = useCallback(() => {
-    openPremiumModal();
-    startClosing();
-  }, [openPremiumModal, startClosing]);
 
   useEffect(() => {
     if (!limit && isClosing) stopClosing();
@@ -157,13 +129,11 @@ const PremiumLimitReachedModal = ({
     lang,
     limitType: limit,
     isPremium,
-    canBuyPremium,
     defaultValue,
     premiumValue,
     valueFormatter,
   });
   const icon = limit && LIMIT_ICON[limit];
-  const canUpgrade = canBuyPremium && !isPremium;
 
   return (
     <Modal
@@ -173,25 +143,14 @@ const PremiumLimitReachedModal = ({
       title={title}
       className={styles.root}
     >
-      {!canUpgrade && (
-        <div className={styles.limitBadge}>
-          <i className={buildClassName(styles.limitIcon, icon, 'icon')} />
-          <div className={styles.limitValue}>
-            {valueFormatter?.(
-              lang, isPremium ? premiumValue : defaultValue,
-            ) || (isPremium ? premiumValue : defaultValue)}
-          </div>
+      <div className={styles.limitBadge}>
+        <i className={buildClassName(styles.limitIcon, icon, 'icon')} />
+        <div className={styles.limitValue}>
+          {valueFormatter?.(
+            lang, isPremium ? premiumValue : defaultValue,
+          ) || (isPremium ? premiumValue : defaultValue)}
         </div>
-      )}
-
-      {canUpgrade && (
-        <PremiumLimitsCompare
-          className={styles.limitCompare}
-          leftValue={valueFormatter?.(lang, defaultValue) || defaultValue?.toString()}
-          rightValue={valueFormatter?.(lang, premiumValue) || premiumValue?.toString()}
-          floatingBadgeIcon={icon}
-        />
-      )}
+      </div>
 
       <div>
         {renderText(description || '', ['simple_markdown', 'br'])}
@@ -204,22 +163,8 @@ const PremiumLimitReachedModal = ({
           onClick={startClosing}
           color="primary"
         >
-          {lang(canUpgrade ? 'Cancel' : 'OK')}
+          {lang('OK')}
         </Button>
-        {canUpgrade
-          && (
-            <Button
-              className="confirm-dialog-button"
-              isText
-              onClick={handleClick}
-              color="primary"
-              iconName="double-badge"
-              iconClassName={styles.x2}
-              iconAlignment="end"
-            >
-              {lang('IncreaseLimit')}
-            </Button>
-          )}
       </div>
     </Modal>
   );
@@ -233,7 +178,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       defaultValue: limit ? limits?.[limit][0] : undefined,
       premiumValue: limit ? limits?.[limit][1] : undefined,
-      canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
       isPremium,
     };
   },

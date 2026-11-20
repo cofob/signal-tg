@@ -50,14 +50,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
 
   const tabState = selectTabState(global, tabId);
   if (!selectCanOpenMessageList(global, chatId, threadId, type, tabId)) return;
-  if (tabState.premiumModal?.promo && tabState.premiumModal?.isOpen) {
-    global = updateTabState(global, {
-      premiumModal: {
-        ...tabState.premiumModal,
-        isOpen: false,
-      },
-    }, tabId);
-  }
   actions.hideEffectInComposer({ tabId });
 
   actions.closeStoryViewer({ tabId });

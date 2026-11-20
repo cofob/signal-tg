@@ -103,7 +103,6 @@ import {
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
   selectIsInSelectMode,
-  selectIsPremiumPurchaseBlocked,
   selectIsReactionPickerOpen,
   selectIsRightColumnShown,
   selectLanguageCode,
@@ -326,7 +325,6 @@ type StateProps = {
   availableReactions?: ApiAvailableReaction[];
   topReactions?: ApiReaction[];
   canPlayAnimatedEmojis?: boolean;
-  canBuyPremium?: boolean;
   shouldCollectDebugLogs?: boolean;
   sentStoryReaction?: ApiReaction;
   stealthMode?: ApiStealthMode;
@@ -468,7 +466,6 @@ const Composer = ({
   className,
   availableReactions,
   topReactions,
-  canBuyPremium,
   canPlayAnimatedEmojis,
   shouldCollectDebugLogs,
   sentStoryReaction,
@@ -539,7 +536,6 @@ const Composer = ({
     applyDefaultAttachmentsCompression,
     setIsRichInputExpanded,
     setSettingOption,
-    openPremiumModal,
     openAiMessageEditorModal,
     setHiddenBotKeyboardId,
   } = getActions();
@@ -802,12 +798,6 @@ const Composer = ({
   const handleRemoveUnsupported = useLastCallback(() => {
     richEditor.replaceValue(removeUnsupportedRichBlocks(richEditor.getValue()));
     closeRemoveUnsupportedDialog();
-  });
-
-  const handleSubscribeToPremium = useLastCallback(() => {
-    shouldFocusAfterFormattingRemovalRef.current = false;
-    closeRemoveFormattingModal();
-    openPremiumModal();
   });
 
   const handleRemoveFormattingModalCloseAnimationEnd = useLastCallback(() => {
@@ -1262,11 +1252,6 @@ const Composer = ({
     if (!notificationNumber) {
       showNotification({
         message: lang('UnlockPremiumEmojiHint'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'animated_emoji' },
-        },
-        actionText: lang('PremiumMore'),
       });
     } else {
       showNotification({
@@ -1810,11 +1795,6 @@ const Composer = ({
     if (!isCurrentUserPremium) {
       showNotification({
         message: lang('SubscribeToTelegramPremiumForCreateToDo'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'todo' },
-        },
-        actionText: lang('PremiumMore'),
       });
       return;
     }
@@ -2862,7 +2842,6 @@ const Composer = ({
           onToggleReaction={handleToggleReaction}
           isPrivate
           isReady={isReady}
-          canBuyPremium={canBuyPremium}
           isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isChatWithSelf}
           isInStoryViewer={isInStoryViewer}
@@ -3403,7 +3382,6 @@ const Composer = ({
           onClose={handleCloseRemoveFormattingModal}
           onCloseAnimationEnd={handleRemoveFormattingModalCloseAnimationEnd}
           onRemoveFormatting={handleRemoveFormatting}
-          onSubscribeToPremium={handleSubscribeToPremium}
         />
       )}
     </div>
@@ -3598,7 +3576,6 @@ export default memo(withGlobal<OwnProps>(
       slowMode,
       currentMessageList,
       isReactionPickerOpen: selectIsReactionPickerOpen(global),
-      canBuyPremium: !isCurrentUserPremium && !selectIsPremiumPurchaseBlocked(global),
       canPlayAnimatedEmojis: selectCanPlayAnimatedEmojis(global),
       canSendOneTimeMedia: !isChatWithSelf && isChatWithUser && !isChatWithBot && !isInScheduledList,
       shouldCollectDebugLogs,

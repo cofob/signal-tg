@@ -35,7 +35,6 @@ import type {
   ApiNotifyPeerType,
   ApiPeer,
   ApiPhoto,
-  ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiPrivacyKey,
   ApiPrivacySettings,
@@ -2677,17 +2676,6 @@ export interface ActionPayloads {
     shouldNewNonContactPeersRequirePremium?: boolean;
     nonContactPeersPaidStars?: number | null;
   };
-
-  // Premium
-  openPremiumModal: ({
-    initialSection?: ApiPremiumSection;
-    fromUserId?: string;
-    toUserId?: string;
-    isSuccess?: boolean;
-    isGift?: boolean;
-    daysAmount?: number;
-  } & WithTabId) | undefined;
-  closePremiumModal: WithTabId | undefined;
 
   openAiMessageEditorModal: {
     chatId: string;

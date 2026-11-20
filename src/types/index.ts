@@ -204,7 +204,7 @@ export type SettingsHighlight = {
 
 export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openFaq'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 

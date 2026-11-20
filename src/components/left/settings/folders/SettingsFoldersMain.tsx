@@ -85,7 +85,6 @@ const SettingsFoldersMain = ({
     openDeleteChatFolderModal,
     sortChatFolders,
     toggleDialogFilterTags,
-    openPremiumModal,
     setSharedSettingOption,
   } = getActions();
 
@@ -416,10 +415,7 @@ const SettingsFoldersMain = ({
             checked={isPremium && areTagsEnabled}
             onChange={handleToggleTags}
             onClickLabel={(event) => {
-              if (!isPremium) {
-                event.preventDefault();
-                openPremiumModal();
-              }
+              if (!isPremium) event.preventDefault();
             }}
           />
           {!isPremium && <Icon name="lock-filled" className="settings-folders-lock-icon" />}

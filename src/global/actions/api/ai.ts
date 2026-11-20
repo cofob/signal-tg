@@ -30,8 +30,6 @@ export function showToneLimitNotification<T extends GlobalState>(
   } else {
     actions.showNotification({
       message: { key: 'AiToneLimitReached' },
-      action: { action: 'openPremiumModal', payload: { tabId } },
-      actionText: { key: 'PremiumMore' },
       tabId,
     });
   }

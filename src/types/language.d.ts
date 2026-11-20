@@ -31,27 +31,11 @@ export interface LangPair {
   'PasscodeControllerErrorCurrent': undefined;
   'LimitReachedPublicLinksLocked': undefined;
   'LimitReachedPublicLinksPremium': undefined;
-  'PremiumPreviewLimits': undefined;
-  'PremiumPreviewStickers': undefined;
-  'PremiumPreviewNoAds': undefined;
-  'PremiumPreviewVoiceToText': undefined;
-  'PremiumPreviewProfileBadge': undefined;
-  'PremiumPreviewDownloadSpeed': undefined;
-  'PremiumPreviewUploads': undefined;
-  'PremiumPreviewAdvancedChatManagement': undefined;
-  'PremiumPreviewAnimatedProfiles': undefined;
   'PremiumPreviewReactionsDescription': undefined;
   'PremiumPreviewStickersDescription': undefined;
   'PremiumPreviewNoAdsDescription': undefined;
-  'PremiumPreviewVoiceToTextDescription': undefined;
-  'PremiumPreviewProfileBadgeDescription': undefined;
-  'PremiumPreviewDownloadSpeedDescription': undefined;
-  'PremiumPreviewTodoDescription': undefined;
-  'PremiumPreviewUploadsDescription': undefined;
   'PremiumPreviewAdvancedChatManagementDescription': undefined;
   'PremiumPreviewAnimatedProfilesDescription': undefined;
-  'PremiumPreviewNoForwards': undefined;
-  'PremiumPreviewNoForwardsDescription': undefined;
   'PremiumLimitAccountsTitle': undefined;
   'PremiumLimitAccountsNoPremium': undefined;
   'PremiumLimitAccounts': undefined;
@@ -612,12 +596,6 @@ export interface LangPair {
   'NewContact': undefined;
   'Done': undefined;
   'LimitReached': undefined;
-  'IncreaseLimit': undefined;
-  'LimitFree': undefined;
-  'LimitPremium': undefined;
-  'TelegramPremiumSubscribedTitle': undefined;
-  'AboutPremiumDescription': undefined;
-  'AboutPremiumDescription2': undefined;
   'OpenUrlTitle': undefined;
   'OpenUrlWarning': undefined;
   'OpenUrlConfirm': undefined;
@@ -1129,20 +1107,6 @@ export interface LangPair {
   'FilterMuted': undefined;
   'FilterRead': undefined;
   'FilterArchived': undefined;
-  'GroupsAndChannelsLimitTitle': undefined;
-  'PinChatsLimitTitle': undefined;
-  'PublicLinksLimitTitle': undefined;
-  'SavedGifsLimitTitle': undefined;
-  'FavoriteStickersLimitTitle': undefined;
-  'BioLimitTitle': undefined;
-  'CaptionsLimitTitle': undefined;
-  'FoldersLimitTitle': undefined;
-  'ChatPerFolderLimitTitle': undefined;
-  'BioLimitSubtitle': undefined;
-  'CaptionsLimitSubtitle': undefined;
-  'TelegramPremiumUserDialogSubtitle': undefined;
-  'TelegramPremiumSubscribedSubtitle': undefined;
-  'TelegramPremiumSubtitle': undefined;
   'EditMessageAriaLabel': undefined;
   'Emoji1': undefined;
   'Emoji2': undefined;
@@ -1318,7 +1282,6 @@ export interface LangPair {
   'RemoveRichFormattingTitle': undefined;
   'RemoveRichFormattingText': undefined;
   'RemoveRichFormatting': undefined;
-  'RichFormattingSubscribe': undefined;
   'RichEditorBlockMenu': undefined;
   'RichEditorBlockPlaceholder': undefined;
   'RichEditorHeading': undefined;
@@ -1537,7 +1500,6 @@ export interface LangPair {
   'WebAppCameraAccessRevoked': undefined;
   'WebAppMicrophoneAccessRevoked': undefined;
   'WebAppMediaAccessRevoked': undefined;
-  'UnlockMoreSimilarBots': undefined;
   'ViewButtonRequestJoin': undefined;
   'ViewButtonMessage': undefined;
   'ViewButtonBot': undefined;
@@ -1673,7 +1635,6 @@ export interface LangPair {
   'DescriptionScheduledPaidMessagesNotAllowed': undefined;
   'GroupMessagesChargePrice': undefined;
   'RightsChargeStarsAbout': undefined;
-  'UnlockButtonTitle': undefined;
   'FrozenAccountModalTitle': undefined;
   'FrozenAccountViolationTitle': undefined;
   'FrozenAccountViolationSubtitle': undefined;
@@ -1744,17 +1705,11 @@ export interface LangPair {
   'TitleGroupToDoList': undefined;
   'TitleYourToDoList': undefined;
   'MenuButtonAppendTodoList': undefined;
-  'PremiumMore': undefined;
   'SubscribeToTelegramPremiumForToggleTask': undefined;
   'SubscribeToTelegramPremiumForCreateToDo': undefined;
   'SubscribeToTelegramPremiumForAppendToDo': undefined;
   'ToDoListTasksLimitReached': undefined;
   'ToDoListTasksTitle': undefined;
-  'PremiumPreviewTodo': undefined;
-  'PremiumPreviewAiTools': undefined;
-  'PremiumPreviewAiToolsDescription': undefined;
-  'PremiumPreviewRichFormatting': undefined;
-  'PremiumPreviewRichFormattingDescription': undefined;
   'NativeDownloadFailed': undefined;
   'MediaSpoilerSensitive': undefined;
   'TextSensitiveModal': undefined;
@@ -1780,7 +1735,6 @@ export interface LangPair {
   'PublicPostsLimitReached': undefined;
   'PublicPostsPremiumFeatureDescription': undefined;
   'PublicPostsPremiumFeatureSubtitle': undefined;
-  'PublicPostsSubscribeToPremium': undefined;
   'AllStoriesCategory': undefined;
   'TitleRating': undefined;
   'RatingYourReflectsActivity': undefined;
@@ -1904,7 +1858,6 @@ export interface LangPair {
   'InviteBlockedOr': undefined;
   'InviteBlockedNoLinkTitle': undefined;
   'InviteBlockedPremiumTitle': undefined;
-  'InviteBlockedPremiumButton': undefined;
   'InviteRestrictedPremiumReason': undefined;
   'InviteViaLinkButton': undefined;
   'StoryUnsupported': undefined;
@@ -2188,7 +2141,6 @@ export interface LangPair {
   'ChatContextViewAsTopics': undefined;
   'ChatEmptyTopicPlaceholderText': undefined;
   'ChatEmptyTopicPlaceholderTitle': undefined;
-  'ChatMessagingRestrictedPlaceholderAction': undefined;
   'ChatPaidMediaPurchased': undefined;
   'ChatPlayOnceVoiceMessageTooltip': undefined;
   'ChatAllowedFiles': undefined;
@@ -2225,7 +2177,6 @@ export interface LangPair {
   'ClearSearchAlert': undefined;
   'StoryPrivacyOptionCloseFriends': undefined;
   'Yes': undefined;
-  'ConnectedAccountsLimitTitle': undefined;
   'Connecting': undefined;
   'ContactsAndPremium': undefined;
   'ConversationSearchPlaceholder': undefined;
@@ -2308,7 +2259,6 @@ export interface LangPair {
   'MaximumReactionsHeader': undefined;
   'May': undefined;
   'MessageNotFound': undefined;
-  'MessagePremiumUnlock': undefined;
   'MoreSimilar': undefined;
   'MuteForForever': undefined;
   'MyNotes': undefined;
@@ -2326,44 +2276,13 @@ export interface LangPair {
   'PhoneCopied': undefined;
   'PmReadShowWhen': undefined;
   'PopularReactions': undefined;
-  'PremiumMessageEffects': undefined;
-  'PremiumMessageEffectsInfo': undefined;
   'PremiumLastSeenButton1': undefined;
-  'PremiumLastSeenButton2': undefined;
   'PremiumLastSeenHeader1': undefined;
   'PremiumLastSeenSet': undefined;
-  'PremiumOr': undefined;
-  'PremiumPreviewEmoji': undefined;
-  'PremiumPreviewEmojiDescription': undefined;
-  'PremiumPreviewEmojiStatus': undefined;
-  'PremiumPreviewEmojiStatusDescription': undefined;
-  'PremiumPreviewLastSeen': undefined;
-  'PremiumPreviewLastSeenDescription': undefined;
-  'PremiumPreviewMessagePrivacy': undefined;
-  'PremiumPreviewMessagePrivacyDescription': undefined;
-  'PremiumPreviewReactions2': undefined;
-  'PremiumPreviewReactions2Description': undefined;
-  'PremiumPreviewStories': undefined;
-  'PremiumPreviewStoriesDescription': undefined;
   'PremiumPreviewTags': undefined;
-  'PremiumPreviewTags2': undefined;
-  'PremiumPreviewTagsDescription2': undefined;
-  'PremiumPreviewTranslations': undefined;
-  'PremiumPreviewTranslationsDescription': undefined;
   'PremiumReadButton1': undefined;
   'PremiumReadHeader1': undefined;
-  'PremiumReadHeader2': undefined;
   'PremiumReadSet': undefined;
-  'PremiumStoriesCaptionDescription': undefined;
-  'PremiumStoriesExpirationDescription': undefined;
-  'PremiumStoriesFormattingDescription': undefined;
-  'PremiumStoriesPriority': undefined;
-  'PremiumStoriesPriorityDescription': undefined;
-  'PremiumStoriesSaveToGallery': undefined;
-  'PremiumStoriesSaveToGalleryDescription': undefined;
-  'PremiumStoriesStealthDescription': undefined;
-  'PremiumStoriesViews': undefined;
-  'PremiumStoriesViewsDescription': undefined;
   'PreviewDeletePhoto': undefined;
   'PrivacyProfilePhotoPublicPhotoInfo': undefined;
   'PrivacyProfilePhotoPublicPhotoSuccess': undefined;
@@ -2376,10 +2295,6 @@ export interface LangPair {
   'PrivacyBioTitle': undefined;
   'PrivacyBirthday': undefined;
   'PrivacyBirthdayTitle': undefined;
-  'PrivacyLastSeenPremium': undefined;
-  'PrivacyLastSeenPremiumForPremium': undefined;
-  'PrivacyLastSeenPremiumInfo': undefined;
-  'PrivacyLastSeenPremiumInfoForPremium': undefined;
   'PrivacyMessages': undefined;
   'PrivacyMessagesContactsAndPremium': undefined;
   'PrivacyMessagesTitle': undefined;
@@ -2445,7 +2360,6 @@ export interface LangPair {
   'ShowOriginalButton': undefined;
   'ShowTranslateButton': undefined;
   'ShowTranslateChatButton': undefined;
-  'SimilarChannelsLimitTitle': undefined;
   'SomeReactions': undefined;
   'SortBy': undefined;
   'SortByReactions': undefined;
@@ -2491,20 +2405,15 @@ export interface LangPair {
   'StoryPrivacyOptionSelectedContacts': undefined;
   'StoryPrivacyOptionSelectedContactsDetail': undefined;
   'StoryReactionsHint': undefined;
-  'StoryRepliesLockedButton': undefined;
   'StorySave': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
-  'TelegramPremiumUserGiftedPremiumDialogSubtitle': undefined;
-  'TelegramPremiumUserStatusDialogSubtitle': undefined;
   'TelegramStars': undefined;
   'TopicClosedByAdmin': undefined;
   'Understood': undefined;
   'Unlock': undefined;
   'UnlockPremiumEmojiHint': undefined;
   'UnlockPremiumEmojiHint2': undefined;
-  'UnlockSimilar': undefined;
-  'UpgradedStories': undefined;
   'UploadSpeedLimited': undefined;
   'UserInfoCustomPhoto': undefined;
   'UserInfoCustomVideo': undefined;
@@ -2561,14 +2470,9 @@ export interface LangPair {
   'MediaviewGroupPhoto': undefined;
   'MediaviewProfilePhotoByYou': undefined;
   'MediaviewProfilePublicPhoto': undefined;
-  'MessagesPrivacyPremiumAbout': undefined;
   'MiniAppsDisclaimerLink': undefined;
   'MiniAppsDisclaimerText': undefined;
   'MiniAppsDisclaimerTitle': undefined;
-  'PremiumStoriesAboutMobile': undefined;
-  'PremiumStoriesSubtitleCaption': undefined;
-  'PremiumStoriesSubtitleExpiration': undefined;
-  'PremiumStoriesSubtitleLinks': undefined;
   'ReportPleaseSelectMessages': undefined;
   'ReportSponsoredReportedLink': undefined;
   'SettingsTitleChatName': undefined;
@@ -2753,25 +2657,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'limit': V;
     'limit2': V;
   };
-  'LimitReachedFileSize': {
-    'limit': V;
-    'limit2': V;
-  };
-  'LimitReachedFolders': {
-    'limit': V;
-    'limit2': V;
-  };
-  'LimitReachedPinDialogs': {
-    'limit': V;
-    'limit2': V;
-  };
-  'LimitReachedPublicLinks': {
-    'limit2': V;
-  };
-  'LimitReachedCommunities': {
-    'limit': V;
-    'limit2': V;
-  };
   'LimitReachedChatInFoldersLocked': {
     'limit': V;
   };
@@ -2801,13 +2686,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'LimitReachedCommunitiesPremium': {
     'limit': V;
-  };
-  'PremiumPreviewLimitsDescription': {
-    'limit1': V;
-    'limit2': V;
-    'limit3': V;
-    'limit4': V;
-    'limit5': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -2980,12 +2858,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'user': V;
   };
   'AddContactSharedContactExceptionInfo': {
-    'user': V;
-  };
-  'SubscribeToPremium': {
-    'price': V;
-  };
-  'TelegramPremiumUserDialogTitle': {
     'user': V;
   };
   'OpenUrlText': {
@@ -3194,27 +3066,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'date': V;
     'time': V;
   };
-  'GroupsAndChannelsLimitSubtitle': {
-    'count': V;
-  };
-  'PinChatsLimitSubtitle': {
-    'count': V;
-  };
-  'PublicLinksLimitSubtitle': {
-    'count': V;
-  };
-  'SavedGifsLimitSubtitle': {
-    'count': V;
-  };
-  'FavoriteStickersLimitSubtitle': {
-    'count': V;
-  };
-  'FoldersLimitSubtitle': {
-    'count': V;
-  };
-  'ChatPerFolderLimitSubtitle': {
-    'count': V;
-  };
   'ChatOutgoingContextMixedReactionCount': {
     'count': V;
     'total': V;
@@ -3255,9 +3106,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ProfileBirthdayTodayValue': {
     'date': V;
-  };
-  'GiftDiscount': {
-    'percent': V;
   };
   'UserUpdatedName': {
     'user': V;
@@ -3859,14 +3707,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ButtonSensitiveAlways': {
     'years': V;
   };
-  'DialogTitlePremiumGiftSentTo': {
-    'user': V;
-    'amount': V;
-  };
-  'DialogTitlePremiumGiftReceivedFrom': {
-    'user': V;
-    'amount': V;
-  };
   'ButtonSearchPublicPosts': {
     'query': V;
   };
@@ -4055,9 +3895,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ClearHistoryMessageSingle': {
     'chat': V;
   };
-  'ConnectedAccountsLimitSubtitle': {
-    'count': V;
-  };
   'ConversationShareLinkTooltipChatOne': {
     'user': V;
   };
@@ -4085,26 +3922,14 @@ export interface LangPairWithVariables<V = LangVariable> {
   'FactCheckFooter': {
     'country': V;
   };
-  'LimitReachedFolderLinks': {
-    'limit': V;
-    'limit2': V;
-  };
   'LimitReachedFolderLinksLocked': {
     'limit': V;
   };
   'LimitReachedFolderLinksPremium': {
     'limit': V;
   };
-  'LimitReachedPinSavedDialogs': {
-    'limit': V;
-    'limit2': V;
-  };
   'LimitReachedPinnedTopics': {
     'limit': V;
-  };
-  'LimitReachedSharedFolders': {
-    'limit': V;
-    'limit2': V;
   };
   'LimitReachedSharedFoldersLocked': {
     'limit': V;
@@ -4140,17 +3965,8 @@ export interface LangPairWithVariables<V = LangVariable> {
   'PremiumLastSeenText1Locked': {
     'user': V;
   };
-  'PremiumLastSeenText2': {
-    'user': V;
-  };
   'PremiumReadText1': {
     'user': V;
-  };
-  'PremiumReadText2': {
-    'user': V;
-  };
-  'PricePerMonth': {
-    'amount': V;
   };
   'PushReactText': {
     'emoji': V;
@@ -4164,9 +3980,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'RevenueSharingAdsInfo4Subtitle2': {
     'details': V;
-  };
-  'SimilarChannelsLimitSubtitle': {
-    'count': V;
   };
   'StarsReactionText': {
     'chat': V;
@@ -4196,9 +4009,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'user': V;
   };
   'StoryYouMentionedTitle': {
-    'user': V;
-  };
-  'TelegramPremiumUserGiftedPremiumOutboundDialogSubtitle': {
     'user': V;
   };
   'TranslateToButton': {
@@ -4235,10 +4045,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'bot': V;
   };
   'MiniAppsDisclaimerButton': {
-    'link': V;
-  };
-  'PremiumEmojiStatusTitle': {
-    'user': V;
     'link': V;
   };
   'ReportSponsoredReportedLearn': {
@@ -4739,7 +4545,6 @@ export interface LangKeyGroups {
       | 'WebAppShareMessageInfo'
       | 'NewContactPhoneHiddenText'
       | 'AddContactSharedContactExceptionInfo'
-      | 'TelegramPremiumUserDialogTitle'
       | 'BlockUserTitle'
       | 'UserInfoBlockConfirmationTitle'
       | 'NoVoiceMessagesAllowed'
@@ -4774,9 +4579,7 @@ export interface LangKeyGroups {
       | 'DeleteMessagesOptionAlso'
       | 'ExpiredStoryMentioned'
       | 'PremiumLastSeenText1Locked'
-      | 'PremiumLastSeenText2'
       | 'PremiumReadText1'
-      | 'PremiumReadText2'
       | 'StoryCloseFriendsHint'
       | 'StoryContactsHint'
       | 'StoryHideFrom'
@@ -4785,7 +4588,6 @@ export interface LangKeyGroups {
       | 'StorySharedTo'
       | 'StoryShowBackTo'
       | 'StoryYouMentionedTitle'
-      | 'TelegramPremiumUserGiftedPremiumOutboundDialogSubtitle'
       | 'UserInfoCustomPhotoInfo'
       | 'UserInfoResetToOriginalAlertText'
       | 'UserInfoSetCustomPhoto'
@@ -4835,20 +4637,8 @@ export interface LangKeyGroups {
   };
   'limit,limit2': {
     keys:
-      | 'LimitReachedChatInFolders'
-      | 'LimitReachedFileSize'
-      | 'LimitReachedFolders'
-      | 'LimitReachedPinDialogs'
-      | 'LimitReachedCommunities'
-      | 'LimitReachedFolderLinks'
-      | 'LimitReachedPinSavedDialogs'
-      | 'LimitReachedSharedFolders';
+      | 'LimitReachedChatInFolders';
     variables: 'limit' | 'limit2';
-  };
-  'limit2': {
-    keys:
-      | 'LimitReachedPublicLinks';
-    variables: 'limit2';
   };
   'limit': {
     keys:
@@ -4871,11 +4661,6 @@ export interface LangKeyGroups {
       | 'LimitReachedSharedFoldersPremium'
       | 'MoreSimilarText';
     variables: 'limit';
-  };
-  'limit1,limit2,limit3,limit4,limit5': {
-    keys:
-      | 'PremiumPreviewLimitsDescription';
-    variables: 'limit1' | 'limit2' | 'limit3' | 'limit4' | 'limit5';
   };
   'volume': {
     keys:
@@ -5098,16 +4883,15 @@ export interface LangKeyGroups {
       | 'StoryMentionedTitle';
     variables: 'peer';
   };
-  'price': {
-    keys:
-      | 'SubscribeToPremium'
-      | 'ForwardForStars';
-    variables: 'price';
-  };
   'domain,phone': {
     keys:
       | 'BotAuthPhoneNumberText';
     variables: 'domain' | 'phone';
+  };
+  'price': {
+    keys:
+      | 'ForwardForStars';
+    variables: 'price';
   };
   'timer': {
     keys:
@@ -5143,18 +4927,9 @@ export interface LangKeyGroups {
       | 'LimitReachedFavoriteGifsSubtitle'
       | 'LimitReachedFavoriteStickers'
       | 'LimitReachedFavoriteStickersSubtitle'
-      | 'GroupsAndChannelsLimitSubtitle'
-      | 'PinChatsLimitSubtitle'
-      | 'PublicLinksLimitSubtitle'
-      | 'SavedGifsLimitSubtitle'
-      | 'FavoriteStickersLimitSubtitle'
-      | 'FoldersLimitSubtitle'
-      | 'ChatPerFolderLimitSubtitle'
       | 'MessageTimerShortHours'
       | 'MessageTimerShortDays'
-      | 'MediaViewDownloading'
-      | 'ConnectedAccountsLimitSubtitle'
-      | 'SimilarChannelsLimitSubtitle';
+      | 'MediaViewDownloading';
     variables: 'count';
   };
   'duration,time': {
@@ -5216,8 +4991,7 @@ export interface LangKeyGroups {
       | 'TitleSuggestedPostAmountForAnyTime'
       | 'ButtonOfferAmount'
       | 'SuggestedPostChargedYou'
-      | 'DescriptionSuggestedPostMinimumOffer'
-      | 'PricePerMonth';
+      | 'DescriptionSuggestedPostMinimumOffer';
     variables: 'amount';
   };
   'phone': {
@@ -5271,11 +5045,6 @@ export interface LangKeyGroups {
     keys:
       | 'ProfileOpenAppAbout';
     variables: 'terms';
-  };
-  'percent': {
-    keys:
-      | 'GiftDiscount';
-    variables: 'percent';
   };
   'time,user': {
     keys:
@@ -5500,9 +5269,7 @@ export interface LangKeyGroups {
   'amount,user': {
     keys:
       | 'ActionPaidOneMessageIncoming'
-      | 'SuggestedPostCharged'
-      | 'DialogTitlePremiumGiftSentTo'
-      | 'DialogTitlePremiumGiftReceivedFrom';
+      | 'SuggestedPostCharged';
     variables: 'amount' | 'user';
   };
   'botLink,date': {
@@ -5791,11 +5558,6 @@ export interface LangKeyGroups {
     keys:
       | 'UsernameAlso';
     variables: 'usernames';
-  };
-  'link,user': {
-    keys:
-      | 'PremiumEmojiStatusTitle';
-    variables: 'link' | 'user';
   };
   'id': {
     keys:

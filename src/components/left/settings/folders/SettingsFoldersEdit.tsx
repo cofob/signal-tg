@@ -107,7 +107,6 @@ const SettingsFoldersEdit = ({
     loadChatlistInvites,
     openLimitReachedModal,
     showNotification,
-    openPremiumModal,
   } = getActions();
 
   const isCreating = state.mode === 'create';
@@ -491,10 +490,7 @@ const SettingsFoldersEdit = ({
                 key={color}
                 type="button"
                 onClick={() => {
-                  if (!isCurrentUserPremium) {
-                    openPremiumModal();
-                    return;
-                  }
+                  if (!isCurrentUserPremium) return;
 
                   dispatch({ type: 'setColor', payload: color });
                 }}
@@ -509,10 +505,7 @@ const SettingsFoldersEdit = ({
             <button
               type="button"
               onClick={() => {
-                if (!isCurrentUserPremium) {
-                  openPremiumModal();
-                  return;
-                }
+                if (!isCurrentUserPremium) return;
 
                 dispatch({ type: 'setColor', payload: undefined });
               }}

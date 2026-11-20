@@ -9,24 +9,6 @@
   padding-bottom: var(--message-list-bottom-inset);
 
   color: var(--color-white);
-
-  .button {
-    width: auto;
-    height: 2.25rem;
-    margin-top: 1.0625rem;
-
-    line-height: 2.25rem;
-    color: var(--color-white);
-    text-transform: none;
-
-    background-color: var(--action-message-bg);
-
-    transition: filter 150ms ease-in-out;
-
-    &:not(.disabled):not(:disabled):hover {
-      opacity: 0.85;
-    }
-  }
 }
 
 .inner {

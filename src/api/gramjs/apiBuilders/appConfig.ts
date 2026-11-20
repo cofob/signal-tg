@@ -1,6 +1,6 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
-import type { ApiAppConfig, ApiLimitType, ApiPremiumSection } from '../../types';
+import type { ApiAppConfig, ApiLimitType } from '../../types';
 
 import { omitUndefined } from '../../../util/iteratees';
 import {
@@ -58,10 +58,8 @@ export interface GramJsAppConfig extends LimitsConfig {
   web_app_allowed_protocols?: string[];
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
-  premium_purchase_blocked: boolean;
   premium_bot_username: string;
   premium_invoice_slug: string;
-  premium_promo_order: string[];
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
@@ -191,8 +189,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     premiumBotUsername: appConfig.premium_bot_username,
-    premiumPromoOrder: appConfig.premium_promo_order as ApiPremiumSection[],
-    isPremiumPurchaseBlocked: appConfig.premium_purchase_blocked,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,

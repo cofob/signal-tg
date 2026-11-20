@@ -12,7 +12,6 @@ import type {
   ApiSticker,
   ApiVideo,
 } from './messages';
-import type { ApiPremiumSection } from './payments';
 import type { ApiBotVerification } from './peers';
 import type { ApiUser } from './users';
 
@@ -326,8 +325,6 @@ export interface ApiAppConfig {
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
   premiumBotUsername: string;
-  isPremiumPurchaseBlocked: boolean;
-  premiumPromoOrder: ApiPremiumSection[];
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
@@ -528,11 +525,6 @@ export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
   | 'moreAccounts'
   | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
 )>;
-
-export type ApiLimitTypeForPromo = Exclude<ApiLimitType,
-  'uploadMaxFileparts' | 'messageLength' | 'chatlistInvites' | 'chatlistJoined' | 'savedDialogsPinned'
-  | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
->;
 
 export type ApiPeerNotifySettings = {
   mutedUntil?: number;

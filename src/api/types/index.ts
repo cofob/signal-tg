@@ -5,7 +5,6 @@ export * from './updates';
 export * from './media';
 export * from './instantView';
 export * from './richMessage';
-export * from './payments';
 export * from './settings';
 export * from './bots';
 export * from './misc';

@@ -1854,8 +1854,6 @@ addActionHandler('createBot', async (global, actions, payload): Promise<void> =>
           variables: { limit, premiumLimit: selectPremiumLimit(global, 'botsCreate') },
           options: { withNodes: true, withMarkdown: true },
         },
-        action: isPremium ? undefined : { action: 'openPremiumModal', payload: { tabId } },
-        actionText: isPremium ? undefined : { key: 'PremiumMore' },
         tabId,
       });
       return;

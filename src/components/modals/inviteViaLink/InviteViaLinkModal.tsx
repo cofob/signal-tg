@@ -36,7 +36,7 @@ const InviteViaLinkModal = ({
   modal,
   chat,
 }: OwnProps & StateProps) => {
-  const { sendInviteMessages, closeInviteViaLinkModal, openPremiumModal } = getActions();
+  const { sendInviteMessages, closeInviteViaLinkModal } = getActions();
   const { missingUsers } = modal || {};
 
   const lang = useLang();
@@ -65,10 +65,6 @@ const InviteViaLinkModal = ({
   const handleSendInviteLink = useLastCallback(() => {
     sendInviteMessages({ chatId: chat!.id, userIds: selectedMemberIds });
     closeInviteViaLinkModal();
-  });
-
-  const handleOpenPremiumModal = useLastCallback(() => {
-    openPremiumModal();
   });
 
   const canSendInviteLink = useMemo(() => {
@@ -145,13 +141,6 @@ const InviteViaLinkModal = ({
           <p className={styles.contentText}>
             {premiumSectionText}
           </p>
-          <Button
-            withPremiumGradient
-            isShiny
-            onClick={handleOpenPremiumModal}
-          >
-            {lang('InviteBlockedPremiumButton')}
-          </Button>
         </>
       )}
       {hasPremiumSection && hasSelectableSection && (

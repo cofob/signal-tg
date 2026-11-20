@@ -1,7 +1,7 @@
 import {
   memo,
 } from '../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../global';
+import { withGlobal } from '../../../global';
 
 import {
   DEFAULT_MAXIMUM_CHARGE_FOR_MESSAGES,
@@ -13,8 +13,6 @@ import { formatPercent } from '../../../util/text/textFormat';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import Button from '../../ui/Button';
-import Icon from '../icons/Icon';
 import PaidMessageSlider from './PaidMessageSlider';
 
 type OwnProps = {
@@ -39,16 +37,10 @@ function PaidMessagePrice({
   chargeForMessages,
   onChange,
 }: OwnProps & StateProps) {
-  const { openPremiumModal } = getActions();
-
   const lang = useLang();
 
   const handleChargeForMessagesChange = useLastCallback((value: number) => {
     onChange?.(value);
-  });
-
-  const handleUnlockWithPremium = useLastCallback(() => {
-    openPremiumModal({ initialSection: 'message_privacy' });
   });
 
   return (
@@ -65,20 +57,6 @@ function PaidMessagePrice({
         canChangeChargeForMessages={canChangeChargeForMessages}
         readOnly={!canChangeChargeForMessages}
       />
-      {!canChangeChargeForMessages && (
-        <Button
-          color="primary"
-          fluid
-          noForcedUpperCase
-          className="settings-unlock-button"
-          onClick={handleUnlockWithPremium}
-        >
-          <span className="settings-unlock-button-title">
-            {lang('UnlockButtonTitle')}
-            <Icon name="lock-filled" className="settings-unlock-button-icon" />
-          </span>
-        </Button>
-      )}
       {canChangeChargeForMessages && (
         <p className="settings-item-description-larger" dir={lang.isRtl ? 'rtl' : undefined}>
           {lang(isGroupChat ? 'SetPriceGroupDescription' : 'SectionDescriptionStarsForForMessages', {

@@ -14,7 +14,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
 import ListItem from '../../ui/ListItem';
 import RadioGroup from '../../ui/RadioGroup';
-import PremiumStatusItem from './PremiumStatusItem';
 import PrivacyLockedOption from './PrivacyLockedOption';
 import SettingsPrivacyLastSeen from './SettingsPrivacyLastSeen';
 import SettingsPrivacyPublicProfilePhoto from './SettingsPrivacyPublicProfilePhoto';
@@ -346,7 +345,6 @@ function PrivacySubsection({
           </Island>
         </>
       )}
-      {isPremiumRequired && <PremiumStatusItem />}
     </>
   );
 }

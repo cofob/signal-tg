@@ -26,8 +26,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['edit/channel', [SettingsScreens.EditProfile, 'PersonalChannelTitle']],
   ['edit/log-out', [SettingsScreens.Main, 'LogOutTitle']],
 
-  ['premium', [SettingsScreens.Main, 'TelegramPremium']],
-
   ['devices', [SettingsScreens.ActiveSessions]],
   ['devices/terminate-sessions', [
     SettingsScreens.ActiveSessions, 'TerminateAllSessions', { requires: 'hasOtherSessions' },

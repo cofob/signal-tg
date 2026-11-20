@@ -54,7 +54,6 @@ import CalendarModal from '../../common/CalendarModal.async';
 import Icon from '../../common/icons/Icon';
 import SharedCanvas from '../../common/SharedCanvas';
 import { refreshRichEditorTooltips } from '../../common/tooltips/extensions/RichEditorTooltips';
-import Button from '../../ui/Button';
 import FormattedDateModal from './FormattedDateModal';
 import RichEditorToolbar from './RichEditorToolbar';
 
@@ -151,7 +150,6 @@ const MessageInput = ({
     editLastMessage,
     replyToNextMessage,
     showAllowedMessageTypesNotification,
-    openPremiumModal,
   } = getActions();
 
   let inputRef = useRef<HTMLDivElement>();
@@ -648,8 +646,6 @@ const MessageInput = ({
     showAllowedMessageTypesNotification({ chatId, messageListType });
   }
 
-  const handleOpenPremiumModal = useLastCallback(() => openPremiumModal());
-
   useEffect(() => {
     if (IS_TOUCH_ENV) {
       return;
@@ -811,11 +807,6 @@ const MessageInput = ({
             >
               {isMainInputLocked && <Icon name="lock-filled" className="placeholder-icon" />}
               {placeholder}
-              {isStoryInput && isNeedPremium && (
-                <Button className="unlock-button" size="tiny" color="adaptive" onClick={handleOpenPremiumModal}>
-                  {lang('StoryRepliesLockedButton')}
-                </Button>
-              )}
             </span>
           </div>
         </div>

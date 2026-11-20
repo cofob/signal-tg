@@ -35,7 +35,6 @@ const StealthModeModal = ({
     closeStealthModal,
     activateStealthMode,
     showNotification,
-    openPremiumModal,
     openStoryViewer,
   } = getActions();
 
@@ -59,7 +58,6 @@ const StealthModeModal = ({
 
   const handleActivate = useLastCallback(() => {
     if (!isCurrentUserPremium) {
-      openPremiumModal({ initialSection: 'stories' });
       handleClose();
       return;
     }

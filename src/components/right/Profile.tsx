@@ -114,7 +114,6 @@ import Island from '../gili/layout/Island';
 import Surface from '../gili/layout/Surface';
 import ChatList from '../left/main/ChatList';
 import MediaStory from '../story/MediaStory';
-import Button from '../ui/Button';
 import FloatingActionButton from '../ui/FloatingActionButton';
 import InfiniteScroll from '../ui/InfiniteScroll';
 import ListItem, { type MenuItemContextAction } from '../ui/ListItem';
@@ -319,7 +318,6 @@ const Profile = ({
     setNewChatMembersDialogState,
     loadPeerProfileStories,
     loadStoriesArchive,
-    openPremiumModal,
     loadChannelRecommendations,
     loadBotRecommendations,
     loadPreviewMedias,
@@ -1136,19 +1134,9 @@ const Profile = ({
               </ListItem>
             ))}
             {!isCurrentUserPremium && (
-              <>
-                <Button
-                  className={styles.showMoreChannels}
-                  onClick={() => openPremiumModal()}
-                  iconName="unlock-filled"
-                  iconAlignment="end"
-                >
-                  {lang('UnlockSimilar')}
-                </Button>
-                <div className={styles.moreSimilar}>
-                  {renderText(lang('MoreSimilarText', { limit: limitSimilarPeers }), ['simple_markdown'])}
-                </div>
-              </>
+              <div className={styles.moreSimilar}>
+                {renderText(lang('MoreSimilarText', { limit: limitSimilarPeers }), ['simple_markdown'])}
+              </div>
             )}
           </div>
         ) : resultType === 'similarBots' ? (
@@ -1171,18 +1159,13 @@ const Profile = ({
               </ListItem>
             ))}
             {!isCurrentUserPremium && (
-              <>
-                <Button className={styles.showMoreBots} onClick={() => openPremiumModal()} iconName="unlock-filled">
-                  {lang('UnlockMoreSimilarBots')}
-                </Button>
-                <div className={styles.moreSimilar}>
-                  {renderText(lang('MoreSimilarBotsDescription', { count: limitSimilarPeers }, {
-                    withNodes: true,
-                    withMarkdown: true,
-                    pluralValue: limitSimilarPeers,
-                  }))}
-                </div>
-              </>
+              <div className={styles.moreSimilar}>
+                {renderText(lang('MoreSimilarBotsDescription', { count: limitSimilarPeers }, {
+                  withNodes: true,
+                  withMarkdown: true,
+                  pluralValue: limitSimilarPeers,
+                }))}
+              </div>
             )}
           </div>
         ) : undefined}

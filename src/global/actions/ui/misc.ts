@@ -570,13 +570,7 @@ addActionHandler('setReactionEffect', (global, actions, payload): ActionReturnTy
   const effectId = effect?.id;
 
   const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (effect?.isPremium && !isCurrentUserPremium) {
-    actions.openPremiumModal({
-      initialSection: 'effects',
-      tabId,
-    });
-    return;
-  }
+  if (effect?.isPremium && !isCurrentUserPremium) return;
 
   if (!effectId) return;
 

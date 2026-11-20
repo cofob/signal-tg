@@ -62,7 +62,6 @@ import {
   selectIsCurrentUserPremium,
   selectIsMessageProtected,
   selectIsMessageUnread,
-  selectIsPremiumPurchaseBlocked,
   selectIsReactionPickerOpen,
   selectMessageTranslations,
   selectPeerStory,
@@ -129,7 +128,6 @@ type StateProps = {
   canReply?: boolean;
   canPin?: boolean;
   canShowReactionsCount?: boolean;
-  canBuyPremium?: boolean;
   canShowReactionList?: boolean;
   canUnpin?: boolean;
   canDelete?: boolean;
@@ -215,7 +213,6 @@ const ContextMenuContainer = ({
   isPrivate,
   isCurrentUserPremium,
   canForward,
-  canBuyPremium,
   canFaveSticker,
   canUnfaveSticker,
   canCopy,
@@ -283,7 +280,6 @@ const ContextMenuContainer = ({
     showOriginalMessage,
     openChatLanguageModal,
     openMessageReactionPicker,
-    openPremiumModal,
     loadOutboxReadDate,
     copyMessageLink,
     openDeleteMessageModal,
@@ -571,11 +567,6 @@ const ContextMenuContainer = ({
     if (!isCurrentUserPremium) {
       showNotification({
         message: lang('SubscribeToTelegramPremiumForAppendToDo'),
-        action: {
-          action: 'openPremiumModal',
-          payload: { initialSection: 'todo' },
-        },
-        actionText: lang('PremiumMore'),
       });
     } else {
       openTodoListModal({
@@ -720,11 +711,7 @@ const ContextMenuContainer = ({
   });
 
   const handleToggleReaction = useLastCallback((reaction: ApiReaction) => {
-    if (isInSavedMessages && !isCurrentUserPremium) {
-      openPremiumModal({
-        initialSection: 'saved_tags',
-      });
-    } else {
+    if (!isInSavedMessages || isCurrentUserPremium) {
       toggleReaction({
         chatId: message.chatId, messageId: message.id, reaction, shouldAddToRecent: true,
       });
@@ -820,7 +807,6 @@ const ContextMenuContainer = ({
         messageListType={messageListType}
         isPrivate={isPrivate}
         isCurrentUserPremium={isCurrentUserPremium}
-        canBuyPremium={canBuyPremium}
         isOpen={isMenuOpen}
         enabledReactions={enabledReactions}
         reactionsLimit={reactionsLimit}
@@ -1089,7 +1075,6 @@ export default memo(withGlobal<OwnProps>(
       canShowReactionsCount: !message.isEphemeral && canShowReactionsCount,
       canShowReactionList: !message.isEphemeral && !isLocal && !isAction && !isScheduled && !hasTtl
         && !(chat && !isPrivate && !isChatAdmin(chat) && isUserRightBanned(chat, 'sendReactions')),
-      canBuyPremium: !message.isEphemeral && !isCurrentUserPremium && !selectIsPremiumPurchaseBlocked(global),
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, message.chatId),
       canTranslate: !message.isEphemeral && canTranslate,
       canShowOriginal: !message.isEphemeral && hasTranslation && !isChatTranslated,

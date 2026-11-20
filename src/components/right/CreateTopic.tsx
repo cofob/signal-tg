@@ -45,7 +45,7 @@ const CreateTopic = ({
   isCurrentUserPremium,
   onClose,
 }: OwnProps & StateProps) => {
-  const { createTopic, openPremiumModal } = getActions();
+  const { createTopic } = getActions();
   const [title, setTitle] = useState('');
   const [iconColorIndex, setIconColorIndex] = useState(0);
   const [iconEmojiId, setIconEmojiId] = useState<string | undefined>(undefined);
@@ -84,10 +84,7 @@ const CreateTopic = ({
   }, [chat, createTopic, iconColorIndex, iconEmojiId, title]);
 
   const handleCustomEmojiSelect = useCallback((emoji: ApiSticker) => {
-    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) {
-      openPremiumModal({ initialSection: 'animated_emoji' });
-      return;
-    }
+    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) return;
 
     if (emoji.id === DEFAULT_TOPIC_ICON_STICKER_ID) {
       setIconEmojiId(undefined);
@@ -95,7 +92,7 @@ const CreateTopic = ({
     }
 
     setIconEmojiId(emoji.id);
-  }, [isCurrentUserPremium, openPremiumModal]);
+  }, [isCurrentUserPremium]);
 
   const dummyTopic = useMemo(() => {
     return {

@@ -3014,7 +3014,6 @@ addActionHandler('reportSponsored', async (global, actions, payload): Promise<vo
   if (!result) return;
 
   if (result.type === 'premiumRequired') {
-    actions.openPremiumModal({ initialSection: 'no_ads', tabId });
     actions.closeReportAdModal({ tabId });
     return;
   }
@@ -3064,10 +3063,7 @@ addActionHandler('reportSponsored', async (global, actions, payload): Promise<vo
 addActionHandler('hideSponsored', async (global, actions, payload): Promise<void> => {
   const { tabId = getCurrentTabId() } = payload || {};
   const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (!isCurrentUserPremium) {
-    actions.openPremiumModal({ initialSection: 'no_ads', tabId });
-    return;
-  }
+  if (!isCurrentUserPremium) return;
 
   const result = await callApi('toggleSponsoredMessages', { enabled: false });
   if (!result) return;

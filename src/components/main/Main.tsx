@@ -88,7 +88,6 @@ import GameModal from './GameModal';
 import HistoryCalendar from './HistoryCalendar.async';
 import NewContactModal from './NewContactModal.async';
 import PremiumLimitReachedModal from './premium/common/PremiumLimitReachedModal.async';
-import PremiumMainModal from './premium/PremiumMainModal.async';
 import ConfettiContainer from './visualEffects/ConfettiContainer';
 import WaveContainer from './visualEffects/WaveContainer';
 
@@ -124,7 +123,6 @@ type StateProps = {
   openedGame?: TabState['openedGame'];
   gameTitle?: string;
   isRatePhoneCallModalOpen?: boolean;
-  isPremiumModalOpen?: boolean;
   botTrustRequest?: TabState['botTrustRequest'];
   botTrustRequestBot?: ApiUser;
   requestedAttachBotInChat?: TabState['requestedAttachBotInChat'];
@@ -180,7 +178,6 @@ const Main = ({
   requestedAttachBotInChat,
   requestedBotStartGroup,
   requestedDraft,
-  isPremiumModalOpen,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
   isCurrentUserPremium,
@@ -649,7 +646,6 @@ const Main = ({
         requestedBotStartGroup={requestedBotStartGroup}
       />
       <MessageListHistoryHandler />
-      <PremiumMainModal isOpen={isPremiumModalOpen} />
       <PremiumLimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
@@ -677,7 +673,6 @@ export default memo(withGlobal<OwnProps>(
       historyCalendarSelectedAt,
       newContact,
       ratingPhoneCall,
-      premiumModal,
       deleteMessageModal,
       isMasterTab,
       limitReachedModal,
@@ -726,7 +721,6 @@ export default memo(withGlobal<OwnProps>(
       requestedAttachBotInChat,
       requestedBotStartGroup,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
-      isPremiumModalOpen: premiumModal?.isOpen,
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

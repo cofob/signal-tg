@@ -12,7 +12,7 @@ import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'addlist' | 'message' | 'premium_offer' | 'premium' | 'oauth' |
+  'msg' | 'msg_url' | 'addlist' | 'message' | 'oauth' |
   'newbot' | 'contact';
 
 interface PublicMessageLink {
@@ -105,11 +105,6 @@ interface ContactLink {
   noPaidMessagesToken?: string;
 }
 
-interface PremiumReferrerLink {
-  type: 'premiumReferrerLink';
-  ref?: string;
-}
-
 interface SettingsScreenLink {
   type: 'settings';
   path?: string;
@@ -140,7 +135,6 @@ type DeepLink =
   PrivateChannelLink |
   BusinessChatLink |
   ContactLink |
-  PremiumReferrerLink |
   SettingsScreenLink |
   OAuthLink |
   NewBotLink;
@@ -291,8 +285,6 @@ function parseTgLink(url: URL) {
       return buildBusinessChatLink({ slug: queryParams.slug });
     case 'contactLink':
       return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
-    case 'premiumReferrerLink':
-      return buildPremiumReferrerLink({ ref: queryParams.ref });
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
     case 'oauth':
@@ -510,9 +502,6 @@ function getTgDeepLinkType(
       return 'businessChatLink';
     case 'contact':
       return 'contactLink';
-    case 'premium_offer':
-    case 'premium':
-      return 'premiumReferrerLink';
     case 'settings': {
       return 'settings';
     }
@@ -783,17 +772,6 @@ function buildNewBotLink(params: BuilderParams<NewBotLink>): BuilderReturnType<N
     managerUsername,
     username,
     name,
-  };
-}
-
-function buildPremiumReferrerLink(params: BuilderParams<PremiumReferrerLink>): BuilderReturnType<PremiumReferrerLink> {
-  const {
-    ref,
-  } = params;
-
-  return {
-    type: 'premiumReferrerLink',
-    ref,
   };
 }
 

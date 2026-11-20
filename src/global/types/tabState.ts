@@ -21,8 +21,6 @@ import type {
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
-  ApiPremiumPromo,
-  ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiReactionWithPaid,
   ApiRequestPeerType,
@@ -658,17 +656,6 @@ export type TabState = {
     matchCode?: string;
     request?: Omit<ApiUrlAuthResultRequest, 'type' | 'bot'> & { botId: string };
     url: string;
-  };
-
-  premiumModal?: {
-    isOpen?: boolean;
-    promo: ApiPremiumPromo;
-    initialSection?: ApiPremiumSection;
-    fromUserId?: string;
-    toUserId?: string;
-    isGift?: boolean;
-    daysAmount?: number;
-    isSuccess?: boolean;
   };
 
   aiMessageEditorModal?: {

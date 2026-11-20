@@ -446,12 +446,6 @@ addActionHandler('saveGif', async (global, actions, payload): Promise<void> => {
           },
           options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
         },
-      ...(!isPremium && {
-        action: {
-          action: 'openPremiumModal',
-          payload: { tabId },
-        },
-      }),
       className: 'bold-link',
       tabId,
     });
@@ -506,12 +500,6 @@ addActionHandler('faveSticker', (global, actions, payload): ActionReturnType => 
           },
           options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
         },
-      ...(!isPremium && {
-        action: {
-          action: 'openPremiumModal',
-          payload: { tabId },
-        },
-      }),
       className: 'bold-link',
       tabId,
     });

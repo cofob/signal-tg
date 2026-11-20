@@ -85,16 +85,7 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
           slug: parsedLink.slug,
         });
         return true;
-      case 'premiumReferrerLink':
-        actions.openPremiumModal();
-        return true;
       case 'settings': {
-        switch (parsedLink.path?.split('/')[0]) {
-          case 'premium':
-            actions.openPremiumModal();
-            return true;
-        }
-
         if (parsedLink.path) {
           actions.openSettingsLink({ path: parsedLink.path });
         } else {

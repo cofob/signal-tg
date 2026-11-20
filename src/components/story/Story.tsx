@@ -984,21 +984,19 @@ export default memo(withGlobal<OwnProps>((global, {
       storyList,
     },
     forwardMessages: { storyId: forwardedStoryId },
-    premiumModal,
     safeLinkModalUrl,
     mapModal,
     reportModal,
     paymentMessageConfirmDialogKey,
     storyStealthModal,
   } = tabState;
-  const { isOpen: isPremiumModalOpen } = premiumModal || {};
   const isStealthModalOpen = Boolean(storyStealthModal);
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
     paymentMessageConfirmDialogKey
     || viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
-    || isPremiumModalOpen || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
+    || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;
