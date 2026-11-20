@@ -448,6 +448,11 @@
 
   &.has-shadow {
     box-shadow: 0 1px 2px var(--color-default-shadow);
+
+    // Signal bubbles are flat
+    html.theme-signal & {
+      box-shadow: none;
+    }
   }
 
   &.has-solid-background,

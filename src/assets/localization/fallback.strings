@@ -554,6 +554,7 @@
 "UploadImage" = "Upload image";
 "SetColor" = "Set a color";
 "ThemeResetToDefaults" = "Reset to default";
+"ThemeSignal" = "Signal";
 "BackgroundBlurred" = "Blurred";
 "BackgroundPatternIntensity" = "Pattern Intensity";
 "SettingsInformation" = "Edit profile";

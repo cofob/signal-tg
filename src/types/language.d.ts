@@ -468,6 +468,7 @@ export interface LangPair {
   'UploadImage': undefined;
   'SetColor': undefined;
   'ThemeResetToDefaults': undefined;
+  'ThemeSignal': undefined;
   'BackgroundBlurred': undefined;
   'BackgroundPatternIntensity': undefined;
   'SettingsInformation': undefined;

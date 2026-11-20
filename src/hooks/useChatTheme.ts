@@ -5,8 +5,10 @@ import type { ApiThemeSettings } from '../api/types';
 import type { ThemeKey } from '../types';
 import type { ThemePalette } from '../util/theme';
 
+import { selectIsSignalTheme } from '../global/selectors';
 import { applyThemeStyle, hasActiveThemeTransition } from '../util/switchTheme';
 import { buildThemePalette, isThemePaletteTransitionSafe } from '../util/theme';
+import useSelector from './data/useSelector';
 
 export default function useChatTheme(
   containerRef: ElementRef<HTMLDivElement>,
@@ -16,7 +18,8 @@ export default function useChatTheme(
   canAnimate?: boolean,
   serviceBackground?: string,
 ) {
-  const palette = buildThemePalette(theme, settings);
+  const isSignalTheme = useSelector(selectIsSignalTheme);
+  const palette = buildThemePalette(theme, settings, isSignalTheme);
   const variables = useMemo(() => serviceBackground
     ? { ...palette.variables, '--action-message-bg': serviceBackground } : palette.variables,
   [palette, serviceBackground]);

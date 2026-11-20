@@ -25,7 +25,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import useMedia from '../../../hooks/useMedia';
 
 import AnimatedIconFromSticker from '../../common/AnimatedIconFromSticker';
-import Icon from '../../common/icons/Icon';
 
 import styles from './ChatThemesPicker.module.scss';
 
@@ -39,9 +38,12 @@ type StateProps = {
   chatThemes?: ApiChatTheme[];
   theme: ThemeKey;
   selectedEmoticon?: string;
+  isSignalTheme?: boolean;
 };
 
-const ChatThemesPicker = ({ chatThemes, theme, selectedEmoticon }: StateProps) => {
+const ChatThemesPicker = ({
+  chatThemes, theme, selectedEmoticon, isSignalTheme,
+}: StateProps) => {
   const { loadChatThemes, applyChatTheme } = getActions();
 
   const containerRef = useRef<HTMLDivElement>();
@@ -60,23 +62,25 @@ const ChatThemesPicker = ({ chatThemes, theme, selectedEmoticon }: StateProps) =
     applyChatTheme({ emoticon });
   });
 
-  const handleDefaultSelect = useLastCallback(() => {
-    if (selectedEmoticon) handleSelect(undefined);
+  const handlePresetSelect = useLastCallback((isSignal?: boolean) => {
+    applyChatTheme({ isSignalTheme: isSignal });
   });
 
   return (
     <div ref={containerRef} className={buildClassName(styles.root, 'no-scrollbar')} dir="auto">
-      <button
-        type="button"
-        className={buildClassName(styles.tile, !selectedEmoticon && styles.selected)}
-        aria-label={lang('ThemeResetToDefaults')}
-        aria-pressed={!selectedEmoticon}
-        onClick={handleDefaultSelect}
-      >
-        <div className={styles.preview}>
-          <Icon name="close" className={styles.defaultIcon} />
-        </div>
-      </button>
+      <ThemePresetTile
+        theme={theme}
+        label={lang('ThemeSignal')}
+        isSignalTheme
+        isSelected={!selectedEmoticon && Boolean(isSignalTheme)}
+        onSelect={handlePresetSelect}
+      />
+      <ThemePresetTile
+        theme={theme}
+        label={lang('Telegram')}
+        isSelected={!selectedEmoticon && !isSignalTheme}
+        onSelect={handlePresetSelect}
+      />
 
       {chatThemes?.map((chatTheme) => (
         <ChatThemeTile
@@ -90,6 +94,47 @@ const ChatThemesPicker = ({ chatThemes, theme, selectedEmoticon }: StateProps) =
     </div>
   );
 };
+
+type PresetProps = {
+  theme: ThemeKey;
+  label: string;
+  isSignalTheme?: boolean;
+  isSelected: boolean;
+  onSelect: (isSignalTheme?: boolean) => void;
+};
+
+// Built-in palettes with their default wallpaper's base color
+const ThemePresetTile = memo(({
+  theme, label, isSignalTheme, isSelected, onSelect,
+}: PresetProps) => {
+  const palette = buildThemePalette(theme, undefined, isSignalTheme);
+  const { baseColor } = buildWallpaperRenderModel(theme, { isSignalTheme });
+
+  const handleClick = useLastCallback(() => {
+    if (!isSelected) onSelect(isSignalTheme);
+  });
+
+  return (
+    <button
+      type="button"
+      className={buildClassName(styles.tile, isSelected && styles.selected)}
+      aria-pressed={isSelected}
+      onClick={handleClick}
+    >
+      <div className={styles.preview} style={`background-color: ${baseColor}`}>
+        <span
+          className={buildClassName(styles.bubble, styles.bubbleOut)}
+          style={`background-color: ${palette.outgoingColor}`}
+        />
+        <span
+          className={buildClassName(styles.bubble, styles.bubbleIn)}
+          style={`background-color: ${palette.incomingColor}`}
+        />
+        <span className={styles.label} style={`color: ${palette.incomingTextColor}`}>{label}</span>
+      </div>
+    </button>
+  );
+});
 
 type OwnProps = {
   chatTheme: ApiChatTheme;
@@ -225,12 +270,13 @@ const ChatThemeTile = memo(({
 export default memo(withGlobal(
   (global): Complete<StateProps> => {
     const theme = selectTheme(global);
-    const { chatThemeEmoticon } = selectThemeValues(global, theme) || {};
+    const { chatThemeEmoticon, isSignalTheme } = selectThemeValues(global, theme) || {};
 
     return {
       chatThemes: global.settings.chatThemes,
       theme,
       selectedEmoticon: chatThemeEmoticon,
+      isSignalTheme,
     };
   },
 )(ChatThemesPicker));
