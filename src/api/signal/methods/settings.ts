@@ -1,6 +1,7 @@
-import type { ApiConfig } from '../../types';
+import type { ApiConfig, ApiPeerColors } from '../../types';
 
 import { getServerTime } from '../../../util/serverTime';
+import { AVATAR_COLORS } from '../builders/users';
 
 // The config is local, so it is checked again only once a day
 const CONFIG_TTL = 24 * 60 * 60;
@@ -23,5 +24,13 @@ export function fetchConfig() {
     editTimeLimit: EDIT_TIME_LIMIT,
     maxForwardedCount: 0,
     ratingEDecay: 0,
+  });
+}
+
+/** Signal's avatar colors as the app's peer colors; users and chats pick one in `buildAvatarColor` */
+export function fetchPeerColors() {
+  return Promise.resolve<{ colors: ApiPeerColors['general']; hash: undefined }>({
+    hash: undefined,
+    colors: Object.fromEntries(AVATAR_COLORS.map((color, index) => [index, { colors: [color] }])),
   });
 }
