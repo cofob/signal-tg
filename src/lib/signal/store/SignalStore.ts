@@ -29,6 +29,20 @@ export type AccountRecord = {
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
   isDemo?: boolean;
+  // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
+  historyTransfer?: HistoryTransferState;
+};
+
+/** Where the primary device uploaded the message history archive */
+export type TransferArchive = {
+  cdn: number;
+  key: string;
+};
+
+export type HistoryTransferState = {
+  archive?: TransferArchive;
+  // Chat items an interrupted import stored; the next import skips them
+  importedItemCount?: number;
 };
 
 // Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it

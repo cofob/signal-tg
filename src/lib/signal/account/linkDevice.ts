@@ -99,6 +99,8 @@ export async function linkDevice(store: SignalStore, message: ProvisionMessage, 
     accountEntropyPool: message.accountEntropyPool || undefined,
     mediaRootBackupKey: getOptionalBytes(message.mediaRootBackupKey),
     ephemeralBackupKey: getOptionalBytes(message.ephemeralBackupKey),
+    // The primary device sends the key when the user chose to transfer message history
+    historyTransfer: message.ephemeralBackupKey.length ? {} : undefined,
     authCredentialSalt: getOptionalBytes(message.authCredentialSalt),
     isReadReceiptsEnabled: message.readReceipts,
   };
@@ -111,6 +113,15 @@ export async function linkDevice(store: SignalStore, message: ProvisionMessage, 
   if (hasPni) await uploadOneTimePreKeys(store, credentials, 'pni', pniServiceId!, pniIdentityKeyPair!);
 
   return account;
+}
+
+/** Removes this device from the account (`DELETE /v1/devices/{id}`); linked devices may remove only themselves */
+export async function unlinkDevice(account: AccountRecord) {
+  await sendJsonRequest(SIGNAL_CHAT_HOST, {
+    method: 'DELETE',
+    path: `/v1/devices/${account.deviceId}`,
+    credentials: getAccountCredentials(account),
+  });
 }
 
 export function getAccountCredentials(account: AccountRecord) {

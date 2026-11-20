@@ -159,6 +159,12 @@
 "SignalProxyErrorInvalid" = "Invalid URL";
 "SignalProxyErrorProtocol" = "Use wss://, or ws:// on localhost";
 "SignalProxyErrorCredentials" = "Remove the user name and password";
+"SignalHistorySyncTitle" = "Syncing messages";
+"SignalHistorySyncWaiting" = "Preparing to download...";
+"SignalHistorySyncDownloading" = "Downloading {percent}...";
+"SignalHistorySyncImporting" = "Finalizing message transfer {percent}...";
+"SignalHistorySyncNote" = "This may take a few minutes";
+"SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
 "LoginPasskey" = "Log in with Passkey";
 "YourName" = "Your Name";
 "LoginRegisterDesc" = "Enter your name and add a profile photo.";

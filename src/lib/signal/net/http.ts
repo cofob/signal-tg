@@ -22,7 +22,7 @@ export type HttpRequest = {
 export type HttpResponse = {
   status: number;
   headers: Map<string, string>;
-  body: Uint8Array;
+  body: Uint8Array<ArrayBuffer>;
 };
 
 type HttpConnection = {
@@ -285,7 +285,7 @@ async function readResponse(
     }
   }
 
-  let body: Uint8Array;
+  let body: Uint8Array<ArrayBuffer>;
   if (method === 'HEAD' || status === HTTP_NO_CONTENT || status === HTTP_NOT_MODIFIED) {
     body = new Uint8Array(0);
   } else if (headers.get('transfer-encoding')?.toLowerCase().includes('chunked')) {

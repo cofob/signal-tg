@@ -15,6 +15,7 @@ signal-crypto = { path = "../libsignal/rust/crypto" }
 zkgroup = { path = "../libsignal/rust/zkgroup" }
 usernames = { path = "../libsignal/rust/usernames" }
 libsignal-account-keys = { path = "../libsignal/rust/account-keys" }
+libsignal-message-backup = { path = "../libsignal/rust/message-backup" }
 
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"

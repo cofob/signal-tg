@@ -29,8 +29,8 @@ const IV_LENGTH = 16;
 const MAC_LENGTH = 32;
 const KEY_LENGTH = 32;
 const SALT = new Uint8Array(32);
-// `backup5` (link and sync) is added once message history import is supported
-const LINK_CAPABILITIES = ['nopni', 'nopni2'];
+// E164-less linking and link and sync, as in Signal Desktop (`LinkedDeviceCapabilities` in `ts/types/LinkedDevices.std.ts`)
+const LINK_CAPABILITIES = ['nopni', 'nopni2', 'backup5'];
 const HTTP_OK = 200;
 
 /**

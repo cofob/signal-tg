@@ -138,6 +138,10 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalHistorySyncTitle': undefined;
+  'SignalHistorySyncWaiting': undefined;
+  'SignalHistorySyncNote': undefined;
+  'SignalHistorySyncFailed': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2626,6 +2630,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'SignalHistorySyncDownloading': {
+    'percent': V;
+  };
+  'SignalHistorySyncImporting': {
+    'percent': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -4557,6 +4567,12 @@ export interface LangKeyGroups {
       | 'LimitReachedPinnedTopics'
       | 'LimitReachedSharedFoldersPremium';
     variables: 'limit';
+  };
+  'percent': {
+    keys:
+      | 'SignalHistorySyncDownloading'
+      | 'SignalHistorySyncImporting';
+    variables: 'percent';
   };
   'volume': {
     keys:
