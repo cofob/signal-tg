@@ -299,6 +299,8 @@ const Main = ({
       checkAppVersion();
       loadAuthorizations();
       loadPasswordInfo();
+      loadNotificationSettings();
+      loadNotificationExceptions();
     }
   }, [isMasterTab, isSynced]);
 
@@ -313,8 +315,6 @@ const Main = ({
       loadDefaultTagReactions();
       loadAttachBots();
 
-      loadNotificationSettings();
-      loadNotificationExceptions();
       loadTopPeers({ category: 'botsInline' });
       loadTopReactions();
       loadStarStatus();

@@ -1,9 +1,11 @@
 export {
+  deleteHistory,
   fetchChat,
   fetchChatFolders,
   fetchChats,
   fetchFullChat,
   fetchPeerSettings,
+  hidePeerSettingsBar,
   requestChatUpdate,
   searchChats,
   toggleChatArchived,
@@ -33,5 +35,12 @@ export {
   sendReaction,
 } from './messages';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers,
+  blockUser,
+  fetchBlockedUsers,
+  fetchNotifyDefaultSettings,
+  unblockUser,
+  updateNotificationSettings,
+} from './settings';
+export {
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
 } from './users';

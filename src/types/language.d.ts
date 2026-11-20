@@ -138,6 +138,17 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'MessageRequestAccept': undefined;
+  'MessageRequestDelete': undefined;
+  'MessageRequestBlock': undefined;
+  'MessageRequestReport': undefined;
+  'MessageRequestBlockText': undefined;
+  'MessageRequestBlockGroupText': undefined;
+  'MessageRequestDeleteTitle': undefined;
+  'MessageRequestDeleteText': undefined;
+  'MessageRequestReportTitle': undefined;
+  'MessageRequestReportText': undefined;
+  'MessageRequestReportAndBlock': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2626,6 +2637,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'MessageRequestBlockTitle': {
+    'title': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -4558,6 +4572,18 @@ export interface LangKeyGroups {
       | 'LimitReachedSharedFoldersPremium';
     variables: 'limit';
   };
+  'title': {
+    keys:
+      | 'MessageRequestBlockTitle'
+      | 'FolderLinkNotificationDeletedTitle'
+      | 'FolderLinkNotificationAddedTitle'
+      | 'FolderLinkNotificationUpdatedTitle'
+      | 'ActionChangedTitleYou'
+      | 'ActionChangedTitleChannel'
+      | 'ActionCreatedChatYou'
+      | 'AiToneCreated';
+    variables: 'title';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -4981,17 +5007,6 @@ export interface LangKeyGroups {
     keys:
       | 'FolderLinkSubtitleAdd';
     variables: 'chats' | 'title';
-  };
-  'title': {
-    keys:
-      | 'FolderLinkNotificationDeletedTitle'
-      | 'FolderLinkNotificationAddedTitle'
-      | 'FolderLinkNotificationUpdatedTitle'
-      | 'ActionChangedTitleYou'
-      | 'ActionChangedTitleChannel'
-      | 'ActionCreatedChatYou'
-      | 'AiToneCreated';
-    variables: 'title';
   };
   'from,text': {
     keys:

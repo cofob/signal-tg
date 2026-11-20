@@ -40,6 +40,8 @@ export interface ApiEmojiStatusCollectible {
 }
 
 export interface ApiPeerSettings {
+  // A Signal message request: the bar offers accepting, deleting, blocking and reporting
+  isMessageRequest?: boolean;
   isAutoArchived?: boolean;
   canReportSpam?: boolean;
   canAddContact?: boolean;

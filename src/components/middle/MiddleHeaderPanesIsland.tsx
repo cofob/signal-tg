@@ -2,7 +2,7 @@ import { memo, useLayoutEffect, useRef, useSignal } from '@teact';
 import { addExtraClass, setExtraStyles } from '@teact/teact-dom';
 import { withGlobal } from '../../global';
 
-import type { ApiChat, ApiUserFullInfo } from '../../api/types';
+import type { ApiChat, ApiPeerSettings } from '../../api/types';
 import type { MessageListType, ThreadId } from '../../types';
 import type { Signal } from '../../util/signals';
 import { MAIN_THREAD_ID } from '../../api/types';
@@ -12,6 +12,7 @@ import {
 } from '../../lib/fasterdom/fasterdom';
 import {
   selectChat,
+  selectChatFullInfo,
   selectCurrentMiddleSearch,
   selectTabState,
   selectUserFullInfo,
@@ -46,7 +47,7 @@ type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  userFullInfo?: ApiUserFullInfo;
+  settings?: ApiPeerSettings;
   isHidden?: boolean;
 };
 
@@ -89,15 +90,13 @@ const MiddleHeaderPanesIsland = ({
   threadId,
   messageListType,
   chat,
-  userFullInfo,
+  settings,
   getCurrentPinnedIndex,
   getLoadingPinnedId,
   isHidden,
   isChatClosing,
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
-  const { settings } = userFullInfo || {};
-
   const [getPinnedState, setPinnedState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getGroupCallState, setGroupCallState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getChatReportState, setChatReportState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
@@ -400,6 +399,7 @@ const MiddleHeaderPanesIsland = ({
         canBlockContact={settings?.canBlockContact}
         canReportSpam={settings?.canReportSpam}
         isAutoArchived={settings?.isAutoArchived}
+        isMessageRequest={settings?.isMessageRequest}
         onPaneStateChange={setChatReportState}
       />
       <BotVerificationPane
@@ -428,11 +428,12 @@ export default memo(withGlobal<OwnProps>(
     chatId,
   }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
-    const userFullInfo = selectUserFullInfo(global, chatId);
+    // Signal groups have the bar of a message request too
+    const settings = selectUserFullInfo(global, chatId)?.settings ?? selectChatFullInfo(global, chatId)?.settings;
 
     return {
       chat,
-      userFullInfo,
+      settings,
       isHidden: Boolean(selectCurrentMiddleSearch(global) || selectTabState(global).isRichInputExpanded),
     };
   },

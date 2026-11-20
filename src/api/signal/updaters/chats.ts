@@ -15,7 +15,7 @@ import {
   getIsReadByRecipient,
   getPinnedConversations,
 } from '../builders/chats';
-import { buildApiUser, buildApiUserFullInfo } from '../builders/users';
+import { buildApiUser, buildApiUserFullInfo, buildPeerSettings } from '../builders/users';
 import { getCurrentAccount } from '../client';
 import { db } from '../engine';
 import { getPeerId } from '../peers';
@@ -117,17 +117,24 @@ async function sendConversationChanges(
   }
 
   if (isPrivate) {
-    const fullInfo = buildApiUserFullInfo(conversation);
-    if (!areDeepEqual(fullInfo, buildApiUserFullInfo(previous))) {
+    const fullInfo = buildApiUserFullInfo(conversation, selfAci);
+    if (!areDeepEqual(fullInfo, buildApiUserFullInfo(previous, selfAci))) {
       sendApiUpdate({ '@type': 'updateUserFullInfo', id, fullInfo });
     }
-    if (Boolean(previous.isBlocked) !== Boolean(conversation.isBlocked)) {
-      sendApiUpdate({ '@type': 'updatePeerBlocked', id, isBlocked: Boolean(conversation.isBlocked) });
+  } else {
+    if (!areDeepEqual(pick(previous, GROUP_FULL_INFO_FIELDS), pick(conversation, GROUP_FULL_INFO_FIELDS))) {
+      const { fullInfo, users } = await buildGroupFullInfo(conversation, selfAci);
+      sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(users, 'id') });
+      sendApiUpdate({ '@type': 'updateChatFullInfo', id, fullInfo });
     }
-  } else if (!areDeepEqual(pick(previous, GROUP_FULL_INFO_FIELDS), pick(conversation, GROUP_FULL_INFO_FIELDS))) {
-    const { fullInfo, users } = await buildGroupFullInfo(conversation, selfAci);
-    sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(users, 'id') });
-    sendApiUpdate({ '@type': 'updateChatFullInfo', id, fullInfo });
+    const settings = buildPeerSettings(conversation, selfAci);
+    if (!areDeepEqual(settings, buildPeerSettings(previous, selfAci))) {
+      sendApiUpdate({ '@type': 'updateChatFullInfo', id, fullInfo: { settings } });
+    }
+  }
+
+  if (Boolean(previous.isBlocked) !== Boolean(conversation.isBlocked)) {
+    sendApiUpdate({ '@type': 'updatePeerBlocked', id, isBlocked: Boolean(conversation.isBlocked) });
   }
 }
 

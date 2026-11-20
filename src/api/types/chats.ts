@@ -7,6 +7,7 @@ import type {
   ApiBotVerification,
   ApiEmojiStatusType,
   ApiFakeType,
+  ApiPeerSettings,
   ApiProfileTab,
   ApiSendAsPeerId,
   ApiShareTheme,
@@ -137,6 +138,8 @@ export interface ApiCommunityLinkedPeer {
 }
 
 export interface ApiChatFullInfo {
+  // The chat header bar of a group message request
+  settings?: ApiPeerSettings;
   peerTheme?: ApiPeerTheme;
   wallpaper?: ApiWallpaper;
   isCache?: boolean;

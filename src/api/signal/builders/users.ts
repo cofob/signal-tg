@@ -1,6 +1,7 @@
 import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
 import type { ApiPeerSettings, ApiUser, ApiUserFullInfo } from '../../types';
 
+import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
 import { getPeerId } from '../peers';
 
 const HASH_MULTIPLIER = 31;
@@ -23,24 +24,22 @@ export function buildApiUser(conversation: ConversationRecord, selfAci: string):
   };
 }
 
-export function buildApiUserFullInfo(conversation: ConversationRecord): ApiUserFullInfo {
+export function buildApiUserFullInfo(conversation: ConversationRecord, selfAci: string): ApiUserFullInfo {
   return {
     bio: [conversation.aboutEmoji, conversation.about].filter(Boolean).join(' ') || undefined,
     isBlocked: Boolean(conversation.isBlocked),
     ttlPeriod: conversation.expireTimer,
-    settings: buildPeerSettings(conversation),
+    settings: buildPeerSettings(conversation, selfAci),
   };
 }
 
 /**
- * A message request shows the chat header bar with blocking and reporting. It is a private conversation with
- * messages from someone outside our contacts that we neither accepted nor answered; writing first accepts it
- * (Signal Desktop `ts/util/isConversationAccepted.preload.ts`).
+ * A message request shows the chat header bar with accepting, deleting, blocking and reporting; a blocked
+ * conversation shows the unblock bar instead
  */
-export function buildPeerSettings(conversation: ConversationRecord): ApiPeerSettings {
-  const isMessageRequest = conversation.type === 'private' && !conversation.isAccepted && !conversation.systemName
-    && !conversation.isBlocked && conversation.lastMessageId !== undefined;
-  return isMessageRequest ? { canBlockContact: true, canReportSpam: true } : {};
+export function buildPeerSettings(conversation: ConversationRecord, selfAci: string): ApiPeerSettings {
+  const isMessageRequest = !conversation.isBlocked && !getIsConversationAccepted(conversation, selfAci);
+  return isMessageRequest ? { isMessageRequest: true, canBlockContact: true, canReportSpam: true } : {};
 }
 
 /** People in the phone's contacts or whose message request we accepted, whom Signal Desktop offers to write to */
