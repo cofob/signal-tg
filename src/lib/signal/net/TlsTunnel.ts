@@ -1,4 +1,4 @@
-import { SIGNAL_CA_PEM, SIGNAL_TUNNEL_URL } from '../config';
+import { getSignalTunnelUrl, SIGNAL_CA_PEM } from '../config';
 import { wasm } from '../wasm';
 
 const DEFAULT_PORT = 443;
@@ -32,7 +32,7 @@ export default class TlsTunnel {
   }
 
   static open(host: string, port = DEFAULT_PORT): Promise<TlsTunnel> {
-    const url = new URL(SIGNAL_TUNNEL_URL ?? getDefaultTunnelUrl());
+    const url = new URL(getSignalTunnelUrl() ?? getDefaultTunnelUrl());
     url.searchParams.set('host', host);
     url.searchParams.set('port', String(port));
 

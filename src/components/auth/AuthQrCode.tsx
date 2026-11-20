@@ -22,8 +22,10 @@ import useLastCallback from '../../hooks/useLastCallback';
 import useMediaTransitionDeprecated from '../../hooks/useMediaTransitionDeprecated';
 import useMultiaccountInfo from '../../hooks/useMultiaccountInfo';
 
+import SignalProxyForm from '../common/SignalProxyForm';
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
+import Modal from '../ui/Modal';
 
 type StateProps = {
   auth: GlobalState['auth'];
@@ -51,6 +53,7 @@ const AuthCode = ({
   const continueText = useLangString('AuthContinueOnThisLanguage', suggestedLanguage);
   const [isLoading, markIsLoading, unmarkIsLoading] = useFlag();
   const [isQrMounted, markQrMounted, unmarkQrMounted] = useFlag();
+  const [isProxyModalOpen, openProxyModal, closeProxyModal] = useFlag();
 
   const accountsInfo = useMultiaccountInfo();
   const hasActiveAccount = Object.values(accountsInfo).length > 0;
@@ -146,12 +149,23 @@ const AuthCode = ({
           <li><span>{lang('SignalLinkHelp2', undefined, { withNodes: true, withMarkdown: true })}</span></li>
           <li><span>{lang('SignalLinkHelp3')}</span></li>
         </ol>
+        <Button className="auth-button" isText onClick={openProxyModal}>
+          {lang('SignalProxySettings')}
+        </Button>
         {suggestedLanguage && suggestedLanguage !== language && continueText && (
           <Button className="auth-button" isText isLoading={isLoading} onClick={handleLangChange}>
             {continueText}
           </Button>
         )}
       </div>
+      <Modal
+        isOpen={isProxyModalOpen}
+        title={lang('SignalProxyTitle')}
+        hasCloseButton
+        onClose={closeProxyModal}
+      >
+        <SignalProxyForm onSave={closeProxyModal} />
+      </Modal>
     </div>
   );
 };

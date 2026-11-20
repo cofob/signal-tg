@@ -2,8 +2,10 @@ import { memo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { AccountSettings } from '../../../types';
+import { SettingsScreens } from '../../../types';
 
 import { AUTODOWNLOAD_FILESIZE_MB_LIMITS } from '../../../config';
+import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { pick } from '../../../util/iteratees';
 import { clearMediaCache } from '../../../util/settingsActions';
 
@@ -35,7 +37,9 @@ type StateProps = Pick<AccountSettings, (
   'canAutoLoadFileInGroups' |
   'canAutoLoadFileInChannels' |
   'autoLoadFileMaxSizeMb'
-)>;
+)> & {
+  signalProxyUrl?: string;
+};
 
 const SettingsDataStorage = ({
   isActive,
@@ -52,9 +56,10 @@ const SettingsDataStorage = ({
   canAutoLoadFileInGroups,
   canAutoLoadFileInChannels,
   autoLoadFileMaxSizeMb,
+  signalProxyUrl,
   onReset,
 }: OwnProps & StateProps) => {
-  const { setSettingOption } = getActions();
+  const { setSettingOption, openSettingsScreen } = getActions();
 
   const lang = useLang();
 
@@ -76,6 +81,10 @@ const SettingsDataStorage = ({
 
   const handleFileSizeChange = useLastCallback((value: number) => {
     setSettingOption({ autoLoadFileMaxSizeMb: AUTODOWNLOAD_FILESIZE_MB_LIMITS[value] });
+  });
+
+  const handleOpenSignalProxy = useLastCallback(() => {
+    openSettingsScreen({ screen: SettingsScreens.SignalProxy });
   });
 
   function renderContentSizeSlider() {
@@ -174,13 +183,25 @@ const SettingsDataStorage = ({
           </span>
         </ListItem>
       </Island>
+      <Island>
+        <ListItem
+          icon="web"
+          narrow
+          onClick={handleOpenSignalProxy}
+        >
+          {lang('SignalProxyTitle')}
+          <span className="settings-item__current-value">
+            {signalProxyUrl ? new URL(signalProxyUrl).host : lang('SignalProxyDefault')}
+          </span>
+        </ListItem>
+      </Island>
     </div>
   );
 };
 
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
-    return pick(global.settings.byKey, [
+    const accountSettings = pick(global.settings.byKey, [
       'canAutoLoadPhotoFromContacts',
       'canAutoLoadPhotoInPrivateChats',
       'canAutoLoadPhotoInGroups',
@@ -195,5 +216,11 @@ export default memo(withGlobal<OwnProps>(
       'canAutoLoadFileInChannels',
       'autoLoadFileMaxSizeMb',
     ]);
+    const { signalProxyUrl } = selectSharedSettings(global);
+
+    return {
+      ...accountSettings,
+      signalProxyUrl,
+    };
   },
 )(SettingsDataStorage));

@@ -50,6 +50,12 @@ export async function sendHttpRequest(host: string, request: HttpRequest): Promi
   return sendOnConnection(host, connection, request);
 }
 
+/** Closes the idle keep-alive connections, so the next requests open new ones through the current tunnel */
+export function closeIdleHttpConnections() {
+  idleConnections.forEach(({ tunnel }) => tunnel.close());
+  idleConnections.clear();
+}
+
 async function sendOnConnection(host: string, connection: HttpConnection, request: HttpRequest) {
   const { tunnel, reader } = connection;
   const headers: Record<string, string> = {

@@ -229,6 +229,10 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.GeneralChatBackground });
           return;
 
+        case SettingsScreens.SignalProxy:
+          openSettingsScreen({ screen: SettingsScreens.DataStorage });
+          return;
+
         case SettingsScreens.PrivacyPhoneNumber:
         case SettingsScreens.PrivacyAddByPhone:
         case SettingsScreens.PrivacyLastSeen:

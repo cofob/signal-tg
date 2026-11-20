@@ -110,6 +110,8 @@ proxy/  (Node 24, без зависимостей, без состояния)
 
 Выбран P2. TLS делает rustls внутри `rust/signal-wasm` в sans-IO режиме: TypeScript передаёт байты между туннелем и TLS-сессией. Для хостов Signal доверяем только закреплённому CA Signal. Поверх TLS работают свои клиенты HTTP/1.1 и WebSocket, поэтому заголовки авторизации WebSocket задаём сами.
 
+Адрес туннеля по умолчанию задаёт сборка (`SIGNAL_TUNNEL_URL`, иначе `/tunnel` своего origin). Пользователь меняет его настройкой «Прокси-сервер» (раздел «Данные и память» или кнопка на экране привязки, `SharedSettings.signalProxyUrl`): допускаются `wss://` и `ws://` для localhost, после сохранения API переподключается через новый туннель.
+
 ## 2a. Аккаунты без номера телефона
 
 Signal позволяет аккаунты без номера: у них нет PNI и номера, собеседники находят их по юзернейму. Поддержка есть в выпущенной libsignal v0.108.3 (`AuthCredentialWithPniResponse::receive_without_pni`, поле `ProvisionMessage.authCredentialSalt`) и в Signal Desktop (capability `nopni2`, «e164-less linking», `ts/textsecure/Provisioner.preload.ts`, `ts/services/groupCredentialFetcher.preload.ts`). В main libsignal после v0.108.3 два коммита, к этому не относящихся.

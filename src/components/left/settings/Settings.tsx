@@ -45,6 +45,7 @@ import SettingsPrivacyBlockedUsers from './SettingsPrivacyBlockedUsers';
 import SettingsPrivacyVisibility from './SettingsPrivacyVisibility';
 import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityExceptionList';
 import SettingsQuickReaction from './SettingsQuickReaction';
+import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
 import SettingsTwoFa from './twoFa/SettingsTwoFa';
 
@@ -326,7 +327,14 @@ const Settings = ({
         );
       case SettingsScreens.DataStorage:
         return (
-          <SettingsDataStorage isActive={isScreenActive} onReset={handleReset} />
+          <SettingsDataStorage
+            isActive={isScreenActive || activeScreen === SettingsScreens.SignalProxy}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.SignalProxy:
+        return (
+          <SettingsSignalProxy isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.Privacy:
         return (
