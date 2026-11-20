@@ -26,7 +26,6 @@ import type {
   ApiMessagePoll,
   ApiPaidReactionPrivacyType,
   ApiPhoto,
-  ApiQuickReply,
   ApiReaction,
   ApiReactions,
   ApiStickerSet,
@@ -323,30 +322,6 @@ export type ApiUpdateScheduledMessage = {
     message: Partial<ApiMessage>;
   }
 );
-
-export type ApiUpdateQuickReplyMessage = {
-  '@type': 'updateQuickReplyMessage';
-  id: number;
-  message: Partial<ApiMessage>;
-  poll?: ApiMessagePoll;
-  webPages?: ApiWebPage[];
-};
-
-export type ApiUpdateDeleteQuickReplyMessages = {
-  '@type': 'deleteQuickReplyMessages';
-  quickReplyId: number;
-  messageIds: number[];
-};
-
-export type ApiUpdateQuickReplies = {
-  '@type': 'updateQuickReplies';
-  quickReplies: ApiQuickReply[];
-};
-
-export type ApiDeleteQuickReply = {
-  '@type': 'deleteQuickReply';
-  quickReplyId: number;
-};
 
 export type ApiUpdatePinnedMessageIds = {
   '@type': 'updatePinnedIds';
@@ -1043,8 +1018,7 @@ export type ApiUpdate = (
   ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateBotCommands
-  | ApiUpdateQuickReplyMessage | ApiUpdateQuickReplies
-  | ApiDeleteQuickReply | ApiUpdateDeleteQuickReplyMessages | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
+  | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
   | ApiUpdateAiComposeTones

@@ -6,7 +6,6 @@ import type {
   ApiBotCommand,
   ApiBotInlineMediaResult,
   ApiBotInlineResult,
-  ApiQuickReply,
   ApiSticker,
   ApiUser,
 } from '../../../api/types';
@@ -107,7 +106,6 @@ const RichEditorTooltipContainer = ({
   ) => config.sticker?.onSelect(sticker, isSilent, shouldSchedule));
   const handleStackCustomEmojiSelect = useLastCallback((emoji: ApiSticker) => customEmojiSuggestion?.command(emoji));
   const handleCommandSelect = useLastCallback((command: ApiBotCommand) => suggestion?.command(command));
-  const handleQuickReplySelect = useLastCallback((quickReply: ApiQuickReply) => suggestion?.command(quickReply));
   const handleInlineBotLoadMore = useLastCallback(() => {
     if (!inlineBotState || !inlineBot) {
       return;
@@ -221,9 +219,8 @@ const RichEditorTooltipContainer = ({
     );
   }
 
-  if (surface === 'command' && context.currentUser) {
+  if (surface === 'command') {
     const botCommands = suggestion.items.filter((item): item is ApiBotCommand => 'botId' in item);
-    const filteredQuickReplies = suggestion.items.filter((item): item is ApiQuickReply => 'shortcut' in item);
 
     return (
       <div className={buildClassName(styles.root, styles.compact, styles.command)}>
@@ -231,11 +228,7 @@ const RichEditorTooltipContainer = ({
           isOpen={isOpen}
           selectedIndex={selectedIndex}
           botCommands={botCommands}
-          quickReplies={filteredQuickReplies}
-          quickReplyMessages={context.quickReplyMessages}
-          self={context.currentUser}
           onCommandSelect={handleCommandSelect}
-          onQuickReplySelect={handleQuickReplySelect}
         />
       </div>
     );

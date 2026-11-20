@@ -12,7 +12,7 @@ import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'addlist' | 'message' | 'oauth' |
+  'msg' | 'msg_url' | 'addlist' | 'oauth' |
   'newbot' | 'contact';
 
 interface PublicMessageLink {
@@ -94,11 +94,6 @@ interface PrivateChannelLink {
   channelId: string;
 }
 
-interface BusinessChatLink {
-  type: 'businessChatLink';
-  slug: string;
-}
-
 interface ContactLink {
   type: 'contactLink';
   token: string;
@@ -133,7 +128,6 @@ type DeepLink =
   PublicUsernameOrBotLink |
   GroupCallLink |
   PrivateChannelLink |
-  BusinessChatLink |
   ContactLink |
   SettingsScreenLink |
   OAuthLink |
@@ -281,8 +275,6 @@ function parseTgLink(url: URL) {
     case 'privateChannelLink': {
       return buildPrivateChannelLink({ channelId: queryParams.channel });
     }
-    case 'businessChatLink':
-      return buildBusinessChatLink({ slug: queryParams.slug });
     case 'contactLink':
       return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
     case 'settings':
@@ -400,8 +392,6 @@ function parseHttpLink(url: URL): DeepLink | undefined {
     case 'privateChannelLink': {
       return buildPrivateChannelLink({ channelId: pathParams[1] });
     }
-    case 'businessChatLink':
-      return buildBusinessChatLink({ slug: pathParams[1] });
     case 'contactLink':
       return buildContactLink({ token: pathParams[1], noPaidMessagesToken: queryParams.free });
     case 'newBotLink':
@@ -433,7 +423,6 @@ function getHttpDeepLinkType(
   } else if (len === 2) {
     if (method === 'addlist') return 'chatFolderLink';
     if (method === 'login') return 'loginCodeLink';
-    if (method === 'm') return 'businessChatLink';
     if (method === 'contact') return 'contactLink';
     if (method === 'c') return 'privateChannelLink';
 
@@ -498,8 +487,6 @@ function getTgDeepLinkType(
       return 'loginCodeLink';
     case 'passport':
       return 'telegramPassportLink';
-    case 'message':
-      return 'businessChatLink';
     case 'contact':
       return 'contactLink';
     case 'settings': {
@@ -728,21 +715,6 @@ function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType
     type: 'contactLink',
     token,
     noPaidMessagesToken: noPaidMessagesToken || undefined,
-  };
-}
-
-function buildBusinessChatLink(params: BuilderParams<BusinessChatLink>): BuilderReturnType<BusinessChatLink> {
-  const {
-    slug,
-  } = params;
-
-  if (!slug) {
-    return undefined;
-  }
-
-  return {
-    type: 'businessChatLink',
-    slug,
   };
 }
 

@@ -2730,16 +2730,6 @@
 "BotWebViewStartPermission" = "To launch this web app, you will connect to its website.";
 "Bots_one" = "{count} bot";
 "Bots_other" = "{count} bots";
-"BusinessHoursDayClosed" = "Closed";
-"BusinessHoursDayFullOpened" = "Open 24 hours";
-"BusinessHoursProfile" = "Business hours";
-"BusinessHoursProfileNowClosed" = "Closed";
-"BusinessHoursProfileNowOpen" = "Open";
-"BusinessHoursProfileSwitchLocal" = "local time";
-"BusinessHoursProfileSwitchMy" = "my time";
-"BusinessLinkErrorExpired" = "Link Expired";
-"BusinessLocationCopied" = "Business address copied";
-"BusinessProfileLocation" = "Location";
 "CallCameraAccessNeeded" = "Telegram needs access to camera for Video Call.";
 "Calls" = "Calls";
 "ChannelTitleInfo" = "Channel Info";
@@ -2755,7 +2745,6 @@
 "ChatContextViewAsTopics" = "View as Topics";
 "ChatDeleteMessagesConfirmation_one" = "Delete message";
 "ChatDeleteMessagesConfirmation_other" = "Delete {count} messages";
-"ChatEmptyStateIntroFooter" = "{user} added the message above for all empty chats";
 "ChatEmptyTopicPlaceholderText" = "Send a message to\nstart this topic.";
 "ChatEmptyTopicPlaceholderTitle" = "Almost done!";
 "ChatMessagingRestrictedPlaceholder" = "Only Premium users can message {user}.";

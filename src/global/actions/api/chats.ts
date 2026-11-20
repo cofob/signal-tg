@@ -3633,29 +3633,6 @@ addActionHandler('setPeerShareTheme', async (global, actions, payload): Promise<
   }
 });
 
-addActionHandler('resolveBusinessChatLink', async (global, actions, payload): Promise<void> => {
-  const { slug, tabId = getCurrentTabId() } = payload;
-  const result = await callApi('resolveBusinessChatLink', { slug });
-  if (!result) {
-    actions.showNotification({
-      message: {
-        key: 'BusinessLinkErrorExpired',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      tabId,
-    });
-    return;
-  }
-
-  const { chatLink } = result;
-
-  actions.openChatWithDraft({
-    chatId: chatLink.chatId,
-    text: chatLink.text,
-    tabId,
-  });
-});
-
 addActionHandler('loadDiscussion', async (global, actions, payload): Promise<void> => {
   const { chatId, threadId } = payload;
   const chat = selectChat(global, chatId);

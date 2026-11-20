@@ -13,7 +13,6 @@ import type {
 import { toJSNumber } from '../../../util/numbers';
 import { addDocumentToLocalDb, addSavedMusicRepairInfo } from '../helpers/localDb';
 import { buildApiBotInfo } from './bots';
-import { buildApiBusinessIntro, buildApiBusinessLocation, buildApiBusinessWorkHours } from './business';
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
 } from './common';
@@ -35,7 +34,7 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       about, commonChatsCount, pinnedMsgId, botInfo, blocked,
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, translationsDisabled, storiesPinnedAvailable,
-      contactRequirePremium, businessWorkHours, businessLocation, businessIntro,
+      contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, botVerification,
       botCanManageEmojiStatus, settings, sendPaidMessagesStars,
       starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
@@ -64,9 +63,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     botInfo: botInfo && buildApiBotInfo(botInfo, userId),
     isContactRequirePremium: contactRequirePremium,
     birthday: birthday && buildApiBirthday(birthday),
-    businessLocation: businessLocation && buildApiBusinessLocation(businessLocation),
-    businessWorkHours: businessWorkHours && buildApiBusinessWorkHours(businessWorkHours),
-    businessIntro: businessIntro && buildApiBusinessIntro(businessIntro),
     personalChannelId: personalChannelId !== undefined
       ? buildApiPeerId(personalChannelId, 'channel') : undefined,
     personalChannelMessageId: personalChannelMessage,

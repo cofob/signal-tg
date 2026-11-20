@@ -36,7 +36,6 @@ import {
   buildApiPasskey,
   buildApiSession,
   buildApiShareThemeBackdrop,
-  buildApiTimezone,
   buildApiWallpaper,
   buildApiWebSession,
   buildLangStrings,
@@ -687,20 +686,6 @@ export function setShareTheme({ peer, theme }: { peer: ApiPeer; theme?: ApiReque
     peer: buildInputPeer(peer.id, peer.accessHash),
     theme: buildInputShareTheme(theme),
   }));
-}
-
-export async function fetchTimezones(hash?: number) {
-  const result = await invokeRequest(new GramJs.help.GetTimezonesList({
-    hash: hash ?? DEFAULT_PRIMITIVES.INT,
-  }));
-  if (!result || result instanceof GramJs.help.TimezonesListNotModified) return undefined;
-
-  const timezones = result.timezones.map(buildApiTimezone);
-
-  return {
-    timezones,
-    hash: result.hash,
-  };
 }
 
 export async function fetchCountryList({ langCode = 'en' }: { langCode?: string }) {

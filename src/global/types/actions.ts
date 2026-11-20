@@ -779,9 +779,6 @@ export interface ActionPayloads {
     shouldIgnoreCache?: boolean;
     linkContext?: LinkContext;
   } & WithTabId;
-  resolveBusinessChatLink: {
-    slug: string;
-  } & WithTabId;
   openChatByUsername: {
     username: string;
     threadId?: ThreadId;
@@ -1410,11 +1407,6 @@ export interface ActionPayloads {
   loadOutboxReadDate: {
     chatId: string;
     messageId: number;
-  };
-  loadQuickReplies: undefined;
-  sendQuickReply: {
-    chatId: string;
-    quickReplyId: number;
   };
   animateUnreadReaction: {
     chatId: string;
@@ -2627,7 +2619,6 @@ export interface ActionPayloads {
     suggestion: string;
   } & WithTabId;
   loadPeerColors: undefined;
-  loadTimezones: undefined;
   loadShareThemeBackdrops: undefined;
   loadAiComposeTones: undefined;
   openLeftColumnContent: {

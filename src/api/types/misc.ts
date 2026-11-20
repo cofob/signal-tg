@@ -444,12 +444,6 @@ export interface ApiPendingSuggestion {
   url: string;
 }
 
-export interface ApiTimezone {
-  id: string;
-  name: string;
-  utcOffset: number;
-}
-
 export interface GramJsEmojiInteraction {
   v: number;
   a: {

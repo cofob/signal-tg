@@ -91,7 +91,6 @@ import {
   buildApiEphemeralMessage,
   buildApiFactCheck,
   buildApiMessage,
-  buildApiQuickReply,
   buildApiReportResult,
   buildApiSearchPostsFlood,
   buildApiSponsoredMessage,
@@ -3224,60 +3223,6 @@ export async function fetchOutboxReadDate({ chat, messageId }: { chat: ApiChat; 
   if (!result) return undefined;
 
   return { date: result.date };
-}
-
-export async function fetchQuickReplies() {
-  const result = await invokeRequest(new GramJs.messages.GetQuickReplies({
-    hash: DEFAULT_PRIMITIVES.BIGINT,
-  }));
-  if (!result || result instanceof GramJs.messages.QuickRepliesNotModified) return undefined;
-
-  const messages = result.messages.map(buildApiMessage).filter(Boolean);
-
-  const quickReplies = result.quickReplies.map(buildApiQuickReply);
-
-  return {
-    messages,
-    quickReplies,
-  };
-}
-
-export async function sendQuickReply({
-  chat,
-  shortcutId,
-}: {
-  chat: ApiChat;
-  shortcutId: number;
-}) {
-  // Remove this request when the client fully supports quick replies and caches them
-  const messages = await invokeRequest(new GramJs.messages.GetQuickReplyMessages({
-    shortcutId,
-    hash: DEFAULT_PRIMITIVES.BIGINT,
-  }));
-  if (!messages || messages instanceof GramJs.messages.MessagesNotModified) return;
-
-  const ids = messages.messages.map((m) => m.id);
-  const randomIds = ids.map(() => generateRandomBigInt());
-
-  const result = await invokeRequest(new GramJs.messages.SendQuickReplyMessages({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    shortcutId,
-    id: ids,
-    randomId: randomIds,
-  }), {
-    shouldIgnoreUpdates: true,
-  });
-
-  if (!result) return;
-
-  // Hack to prevent client from thinking that those messages were local
-  if ('updates' in result) {
-    const filteredUpdates = result.updates
-      .filter((u): u is GramJs.UpdateMessageID => !(u instanceof GramJs.UpdateMessageID));
-    result.updates = filteredUpdates;
-  }
-
-  handleGramJsUpdate(result);
 }
 
 export async function exportMessageLink({

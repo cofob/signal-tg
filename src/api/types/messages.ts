@@ -755,7 +755,6 @@ export interface ApiMessage {
   isKeyboardSelective?: boolean;
   isKeyboardFullHeight?: boolean;
   viaBotId?: string;
-  viaBusinessBotId?: string;
   guestChatViaId?: string;
   postAuthorTitle?: string;
   isScheduled?: boolean;
@@ -1090,12 +1089,6 @@ export type ApiBotApp = {
 export type ApiMessagesBotApp = ApiBotApp & {
   isInactive?: boolean;
   shouldRequestWriteAccess?: boolean;
-};
-
-export type ApiQuickReply = {
-  id: number;
-  shortcut: string;
-  topMessageId: number;
 };
 
 export type ApiFactCheck = {

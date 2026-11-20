@@ -174,7 +174,6 @@ type StateProps = {
   areAdsEnabled?: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
   isChatProtected?: boolean;
-  hasCustomGreeting?: boolean;
   isAppConfigLoaded?: boolean;
   monoforumChannelId?: string;
   canTranslate?: boolean;
@@ -301,7 +300,6 @@ const MessageList = ({
   channelJoinInfo,
   isChatProtected,
   isAccountFrozen,
-  hasCustomGreeting,
   monoforumChannelId,
   isAppConfigLoaded,
   canTranslate,
@@ -1400,7 +1398,7 @@ const MessageList = ({
 
   const activeKey = isRestricted ? (
     Content.Restricted
-  ) : paidMessagesStars && !hasMessages && !hasCustomGreeting ? (
+  ) : paidMessagesStars && !hasMessages ? (
     Content.StarsRequired
   ) : isContactRequirePremium && !hasMessages ? (
     Content.PremiumRequired
@@ -1564,7 +1562,6 @@ export default memo(withGlobal<OwnProps>(
     const areAdsEnabled = !isCurrentUserPremium || selectUserFullInfo(global, currentUserId)?.areAdsEnabled;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
-    const hasCustomGreeting = Boolean(userFullInfo?.businessIntro);
     const isAppConfigLoaded = global.isAppConfigLoaded;
 
     const monoforumChannelId = selectMonoforumChannel(global, chatId)?.id;
@@ -1623,7 +1620,6 @@ export default memo(withGlobal<OwnProps>(
       isChatProtected: selectIsChatProtected(global, chatId),
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
-      hasCustomGreeting,
       isAppConfigLoaded,
       monoforumChannelId,
       canTranslate,

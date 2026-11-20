@@ -31,7 +31,6 @@ import type {
   ApiPrivacyKey,
   ApiPrivacySettings,
   ApiPromoData,
-  ApiQuickReply,
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
@@ -43,7 +42,6 @@ import type {
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
-  ApiTimezone,
   ApiTonAmount,
   ApiTopPeerCategory,
   ApiTranscription,
@@ -88,10 +86,6 @@ export type GlobalState = {
   appConfig: ApiAppConfig;
   promoData?: ApiPromoData;
   peerColors?: ApiPeerColors;
-  timezones?: {
-    byId: Record<string, ApiTimezone>;
-    hash: number;
-  };
   shareThemeBackdrops?: {
     list: ApiShareThemeBackdrop[];
     hash: number;
@@ -319,11 +313,6 @@ export type GlobalState = {
     byChatId: Record<string, {
       byId: Record<number, ApiMessage>;
     }>;
-  };
-
-  quickReplies: {
-    messagesById: Record<number, ApiMessage>;
-    byId: Record<number, ApiQuickReply>;
   };
 
   chatFolders: {

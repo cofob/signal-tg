@@ -20,7 +20,6 @@ import type {
   ApiMessageEntity,
   ApiNewMediaTodo,
   ApiPeer,
-  ApiQuickReply,
   ApiReaction,
   ApiStealthMode,
   ApiSticker,
@@ -326,9 +325,6 @@ type StateProps = {
   sentStoryReaction?: ApiReaction;
   stealthMode?: ApiStealthMode;
   canSendOneTimeMedia?: boolean;
-  quickReplyMessages?: Record<number, ApiMessage>;
-  quickReplies?: Record<number, ApiQuickReply>;
-  canSendQuickReplies?: boolean;
   webPagePreview?: ApiWebPage;
   noWebPage?: boolean;
   isContactRequirePremium?: boolean;
@@ -465,9 +461,6 @@ const Composer = ({
   sentStoryReaction,
   stealthMode,
   canSendOneTimeMedia,
-  quickReplyMessages,
-  quickReplies,
-  canSendQuickReplies,
   webPagePreview,
   noWebPage,
   isContactRequirePremium,
@@ -1082,8 +1075,6 @@ const Composer = ({
     if (!shouldSend) clearAiMessageEditorPendingResult();
   }, [isInMessageList, aiMessageEditorPendingResult, chatId,
     clearAiMessageEditorPendingResult, threadId, updateRichMessage]);
-
-  const hasQuickReplies = Boolean(quickReplies && Object.keys(quickReplies).length);
 
   useDraft({
     draft,
@@ -2107,8 +2098,6 @@ const Composer = ({
     inlineBots,
     botCommands,
     chatBotCommands,
-    quickReplies: canSendQuickReplies && isCurrentUserPremium ? quickReplies : undefined,
-    quickReplyMessages,
     isSavedMessages: isChatWithSelf,
     isInScheduledList,
     isCurrentUserPremium,
@@ -2139,7 +2128,6 @@ const Composer = ({
     && (
       (botCommands && botCommands.length)
       || chatBotCommands?.length
-      || (hasQuickReplies && canSendQuickReplies && isCurrentUserPremium)
     ),
   ));
   const getIsFormatterEnabled = useLastCallback(() => Boolean(
@@ -3471,8 +3459,6 @@ export default memo(withGlobal<OwnProps>(
       : undefined;
     const isInScheduledList = messageListType === 'scheduled';
 
-    const canSendQuickReplies = isChatWithUser && !isChatWithBot && !isInScheduledList && !isChatWithSelf;
-
     const noWebPage = selectNoWebPage(global, chatId, threadId);
     const isSilentPosting = chat && getChatNotifySettings(
       chat,
@@ -3570,9 +3556,6 @@ export default memo(withGlobal<OwnProps>(
       sentStoryReaction,
       stealthMode: global.stories.stealthMode,
       replyToTopic,
-      quickReplyMessages: global.quickReplies.messagesById,
-      quickReplies: global.quickReplies.byId,
-      canSendQuickReplies,
       noWebPage,
       webPagePreview,
       isContactRequirePremium: userFullInfo?.isContactRequirePremium,

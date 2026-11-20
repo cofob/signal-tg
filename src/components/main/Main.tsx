@@ -233,9 +233,7 @@ const Main = ({
     loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
-    loadTimezones,
     loadAiComposeTones,
-    loadQuickReplies,
     loadStarStatus,
     loadAvailableEffects,
     loadPaidReactionPrivacy,
@@ -334,8 +332,6 @@ const Main = ({
       loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
-      loadQuickReplies();
-      loadTimezones();
       loadAiComposeTones();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);

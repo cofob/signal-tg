@@ -80,11 +80,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
         });
         return true;
       }
-      case 'businessChatLink':
-        actions.resolveBusinessChatLink({
-          slug: parsedLink.slug,
-        });
-        return true;
       case 'settings': {
         if (parsedLink.path) {
           actions.openSettingsLink({ path: parsedLink.path });

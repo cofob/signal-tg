@@ -121,10 +121,6 @@ export function selectSettingsKeys<T extends GlobalState>(global: T) {
   return global.settings.byKey;
 }
 
-export function selectTimezones<T extends GlobalState>(global: T) {
-  return global.timezones?.byId;
-}
-
 export function selectReferencedWallpaperBackgrounds<T extends GlobalState>(global: T) {
   return getReferencedWallpaperBackgroundsMemo(
     selectSharedSettings(global).themes,

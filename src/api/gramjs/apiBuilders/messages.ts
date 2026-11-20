@@ -27,7 +27,6 @@ import type {
   ApiPhoto,
   ApiPollResult,
   ApiPreparedInlineMessage,
-  ApiQuickReply,
   ApiReplyInfo,
   ApiSearchPostsFlood,
   ApiSponsoredMessage,
@@ -322,7 +321,6 @@ export function buildApiMessageWithChatId(
     isForwardingAllowed,
     hasComments,
     savedPeerId,
-    viaBusinessBotId: mtpMessage.viaBusinessBotId?.toString(),
     factCheck,
     effectId: mtpMessage.effect?.toString(),
     isInvertedMedia,
@@ -845,15 +843,6 @@ export function buildApiThreadInfo(
     fromChannelId: fromChannelPeer && fromMessageId ? getApiChatIdFromMtpPeer(fromChannelPeer) : undefined,
     fromMessageId,
   });
-}
-
-export function buildApiQuickReply(reply: GramJs.TypeQuickReply): ApiQuickReply {
-  const { shortcutId, shortcut, topMessage } = reply;
-  return {
-    id: shortcutId,
-    shortcut,
-    topMessageId: topMessage,
-  };
 }
 
 export function buildApiReportResult(

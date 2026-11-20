@@ -338,7 +338,6 @@ type StateProps = {
   shouldWarnAboutFiles?: boolean;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   canTranscribeVoice?: boolean;
-  viaBusinessBot?: ApiUser;
   guestFromSender?: ApiPeer;
   effect?: ApiAvailableEffect;
   poll?: ApiMessagePoll;
@@ -473,7 +472,6 @@ const Message = ({
   shouldWarnAboutFiles,
   tags,
   canTranscribeVoice,
-  viaBusinessBot,
   guestFromSender,
   effect,
   poll,
@@ -1046,10 +1044,8 @@ const Message = ({
     scrollTargetPosition,
   });
 
-  const viaBusinessBotTitle = viaBusinessBot ? getPeerFullTitle(lang, viaBusinessBot) : undefined;
-
   const canShowPostAuthor = !message.senderId;
-  const signature = viaBusinessBotTitle || (canShowPostAuthor && message.postAuthorTitle)
+  const signature = (canShowPostAuthor && message.postAuthorTitle)
     || ((asForwarded || isChatWithSelf) && forwardInfo?.postAuthorTitle)
     || undefined;
 
@@ -2152,7 +2148,7 @@ export default memo(withGlobal<OwnProps>(
     } = ownProps;
     const {
       id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
-      viaBusinessBotId, effectId, paidMessageStars,
+      effectId, paidMessageStars,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2286,8 +2282,6 @@ export default memo(withGlobal<OwnProps>(
     const canTranscribeVoice = !message.isEphemeral
       && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
 
-    const viaBusinessBot = viaBusinessBotId ? selectUser(global, viaBusinessBotId) : undefined;
-
     const effect = effectId ? global.availableEffectById[effectId] : undefined;
 
     const poll = selectPollFromMessage(global, message);
@@ -2402,7 +2396,6 @@ export default memo(withGlobal<OwnProps>(
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
       tags: global.savedReactionTags?.byKey,
       canTranscribeVoice,
-      viaBusinessBot,
       minFutureTime,
       effect,
       poll,

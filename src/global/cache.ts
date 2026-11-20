@@ -628,7 +628,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentlyFoundSettingIds',
       'peerColors',
       'savedReactionTags',
-      'timezones',
       'shareThemeBackdrops',
       'availableEffectById',
     ]),

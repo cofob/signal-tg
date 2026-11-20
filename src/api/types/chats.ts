@@ -306,11 +306,6 @@ export interface ApiMissingInvitedUser {
   isRequiringPremiumToMessage?: boolean;
 }
 
-export interface ApiChatLink {
-  chatId: string;
-  text: ApiFormattedText;
-}
-
 export type ApiDraft = {
   text?: ApiFormattedText;
   richMessage?: ApiInputRichMessage;

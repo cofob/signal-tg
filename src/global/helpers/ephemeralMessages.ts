@@ -27,7 +27,6 @@ export function buildAnchoredEphemeralMessage(anchor: ApiMessage, ephemeral: Api
     replyInfo: anchor.replyInfo,
     forwardInfo: anchor.forwardInfo,
     viaBotId: anchor.viaBotId,
-    viaBusinessBotId: anchor.viaBusinessBotId,
     guestChatViaId: anchor.guestChatViaId,
     postAuthorTitle: anchor.postAuthorTitle,
     fromRank: anchor.fromRank,

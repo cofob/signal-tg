@@ -15,8 +15,7 @@ import { makeMessageTrackKey, makeScheduledMessageTrackKey } from '../../../util
 import * as playbackController from '../../../util/audioPlayback/playbackController';
 import { isChannelId, isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import {
-  buildCollectionByKey, omit, unique,
+import { omit, unique,
 } from '../../../util/iteratees';
 import { buildMessageKey, getMessageKey, isLocalMessageId } from '../../../util/keys/messageKey';
 import { buildSearchResultKey } from '../../../util/keys/searchResultKey';
@@ -59,8 +58,6 @@ import {
   deleteEphemeralMessages,
   deleteMessageWidgetStorage,
   deletePeerPhoto,
-  deleteQuickReply,
-  deleteQuickReplyMessages,
   deleteTopic,
   moveMessageWidgetStorage,
   removeChatFromChatLists,
@@ -75,8 +72,6 @@ import {
   updatePeerFullInfo,
   updatePoll,
   updatePollVote,
-  updateQuickReplies,
-  updateQuickReplyMessage,
   updateScheduledMessage,
 } from '../../reducers';
 import { appendShufflePlaylist, removeTrackFromShuffle } from '../../reducers/audioPlayer';
@@ -674,48 +669,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
       setGlobal(global);
 
-      break;
-    }
-
-    case 'updateQuickReplyMessage': {
-      const {
-        id, message, poll, webPages,
-      } = update;
-
-      global = updateQuickReplyMessage(global, id, message);
-
-      if (poll) {
-        global = updatePoll(global, poll.summary.id, poll);
-      }
-
-      global = addWebPages(global, webPages);
-
-      setGlobal(global);
-
-      break;
-    }
-
-    case 'deleteQuickReplyMessages': {
-      const { messageIds } = update;
-
-      global = deleteQuickReplyMessages(global, messageIds);
-      setGlobal(global);
-
-      break;
-    }
-
-    case 'updateQuickReplies': {
-      const { quickReplies } = update;
-      const byId = buildCollectionByKey(quickReplies, 'id');
-
-      global = updateQuickReplies(global, byId);
-      setGlobal(global);
-      break;
-    }
-
-    case 'deleteQuickReply': {
-      global = deleteQuickReply(global, update.quickReplyId);
-      setGlobal(global);
       break;
     }
 

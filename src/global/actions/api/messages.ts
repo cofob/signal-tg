@@ -114,8 +114,6 @@ import {
   updateMessageTranslation,
   updateOutlyingLists,
   updatePeerFullInfo,
-  updateQuickReplies,
-  updateQuickReplyMessages,
   updateRequestedMessageTranslation,
   updateScheduledMessage,
   updateScheduledMessages,
@@ -4075,29 +4073,6 @@ addActionHandler('loadOutboxReadDate', async (global, actions, payload): Promise
       setGlobal(global);
     }
   }
-});
-
-addActionHandler('loadQuickReplies', async (global): Promise<void> => {
-  const result = await callApi('fetchQuickReplies');
-  if (!result) return;
-
-  global = getGlobal();
-  global = updateQuickReplyMessages(global, buildCollectionByKey(result.messages, 'id'));
-  global = updateQuickReplies(global, result.quickReplies);
-
-  setGlobal(global);
-});
-
-addActionHandler('sendQuickReply', (global, actions, payload): ActionReturnType => {
-  const { chatId, quickReplyId } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return global;
-  callApi('sendQuickReply', {
-    chat,
-    shortcutId: quickReplyId,
-  });
-
-  return global;
 });
 
 addActionHandler('copyMessageLink', async (global, actions, payload): Promise<void> => {

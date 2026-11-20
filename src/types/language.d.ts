@@ -2114,16 +2114,6 @@ export interface LangPair {
   'BotProfilePermissionMicrophone': undefined;
   'BotRemoveFromMenuTitle': undefined;
   'BotWebViewStartPermission': undefined;
-  'BusinessHoursDayClosed': undefined;
-  'BusinessHoursDayFullOpened': undefined;
-  'BusinessHoursProfile': undefined;
-  'BusinessHoursProfileNowClosed': undefined;
-  'BusinessHoursProfileNowOpen': undefined;
-  'BusinessHoursProfileSwitchLocal': undefined;
-  'BusinessHoursProfileSwitchMy': undefined;
-  'BusinessLinkErrorExpired': undefined;
-  'BusinessLocationCopied': undefined;
-  'BusinessProfileLocation': undefined;
   'CallCameraAccessNeeded': undefined;
   'Calls': undefined;
   'ChannelTitleInfo': undefined;
@@ -3850,9 +3840,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ChannelVisibilityConfirmMakePrivateChannel': {
     'currentUsername': V;
   };
-  'ChatEmptyStateIntroFooter': {
-    'user': V;
-  };
   'ChatMessagingRestrictedPlaceholder': {
     'user': V;
   };
@@ -4529,7 +4516,6 @@ export interface LangKeyGroups {
       | 'BirthdayTitleForPeer'
       | 'RankEditText'
       | 'BotRemoveFromMenu'
-      | 'ChatEmptyStateIntroFooter'
       | 'ChatMessagingRestrictedPlaceholder'
       | 'ConversationShareLinkTooltipChatOne'
       | 'DeleteAllFrom'
