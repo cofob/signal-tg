@@ -1,4 +1,3 @@
-import type { FC } from '../../../lib/teact/teact';
 import { memo, useMemo } from '../../../lib/teact/teact';
 
 import type { ApiAvailableReaction, ApiReaction } from '../../../api/types';
@@ -6,6 +5,7 @@ import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 
 import { isSameReaction } from '../../../global/helpers';
 import buildClassName from '../../../util/buildClassName';
+import renderText from '../helpers/renderText';
 
 import useThumbnail from '../../../hooks/media/useThumbnail';
 import useMedia from '../../../hooks/useMedia';
@@ -27,14 +27,14 @@ type OwnProps = {
   observeIntersection?: ObserveFn;
 };
 
-const ReactionStaticEmoji: FC<OwnProps> = ({
+const ReactionStaticEmoji = ({
   reaction,
   availableReactions,
   className,
   size,
   withIconHeart,
   observeIntersection,
-}) => {
+}: OwnProps) => {
   const availableReaction = useMemo(() => (
     availableReactions?.find((available) => isSameReaction(available.reaction, reaction))
   ), [availableReactions, reaction]);
@@ -72,10 +72,24 @@ const ReactionStaticEmoji: FC<OwnProps> = ({
     );
   }
 
+  const sizeStyle = size ? `width: ${size}px; height: ${size}px` : undefined;
+
+  // Any emoji can be a reaction in Signal; emoji outside the reaction catalog render as in text
+  if (reaction.type === 'emoji' && !availableReaction) {
+    return (
+      <div
+        className={buildClassName('ReactionStaticEmoji', 'ReactionStaticEmoji--plain', className)}
+        style={size ? `${sizeStyle}; font-size: ${size}px` : undefined}
+      >
+        {renderText(reaction.emoticon, ['hq_emoji'])}
+      </div>
+    );
+  }
+
   return (
     <div
       className={buildClassName('ReactionStaticEmoji', className)}
-      style={size ? `width: ${size}px; height: ${size}px` : undefined}
+      style={sizeStyle}
     >
       <img
         ref={thumbRef}

@@ -180,6 +180,8 @@ export async function buildGroupFullInfo(
       members,
       adminMembersById: buildCollectionByKey(members.filter(({ isAdmin }) => isAdmin), 'userId'),
       canViewMembers: true,
+      // Signal allows any emoji as a reaction
+      enabledReactions: { type: 'all' },
       // New members of Signal groups do not see earlier messages
       isPreHistoryHidden: true,
     },
