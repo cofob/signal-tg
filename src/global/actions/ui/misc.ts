@@ -14,7 +14,7 @@ import { getAllNotificationsCount } from '../../../util/folderManager';
 import getIsAppUpdateNeeded from '../../../util/getIsAppUpdateNeeded';
 import { shouldShowErrorDialog } from '../../../util/getReadableErrorText';
 import { compact, unique } from '../../../util/iteratees';
-import { getTranslationFn, refreshFromCache } from '../../../util/localization';
+import { getTranslationFn } from '../../../util/localization';
 import updateIcon from '../../../util/updateIcon';
 import { setPageTitle, setPageTitleInstant } from '../../../util/updatePageTitle';
 import {
@@ -817,10 +817,6 @@ addActionHandler('setShouldCloseRightColumn', (global, actions, payload): Action
   return updateTabState(global, {
     shouldCloseRightColumn: value,
   }, tabId);
-});
-
-addActionHandler('refreshLangPackFromCache', (global, actions, payload): ActionReturnType => {
-  refreshFromCache(payload.langCode);
 });
 
 addActionHandler('processPremiumFloodWait', (global, actions, payload): ActionReturnType => {

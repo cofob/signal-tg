@@ -1,4 +1,4 @@
-import type { ApiError, ApiPrivacySettings, ApiUsername } from '../../../api/types';
+import type { ApiPrivacySettings, ApiUsername } from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 import type { ActionReturnType } from '../../types';
 import {
@@ -11,17 +11,14 @@ import {
 import {
   APP_CONFIG_REFETCH_INTERVAL,
   COUNTRIES_WITH_12H_TIME_FORMAT,
-  LANG_PACK,
   MUTE_INDEFINITE_TIMESTAMP,
   UNMUTE_TIMESTAMP,
 } from '../../../config';
 import { signalUnknownPasskey, toCredentialCreationOptions } from '../../../util/browser/passkeys';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { changeLanguage, getTranslationFn } from '../../../util/localization';
-import { requestPermission, subscribe } from '../../../util/notifications';
-import {
-  reconcilePushNotifications, suspendPushForPasscode, unregisterPushAccount,
-} from '../../../util/pushNotifications';
+import { fetchBuiltInLanguages, getTranslationFn, loadAndChangeLanguage } from '../../../util/localization';
+import { requestPermission } from '../../../util/notifications';
+import { refreshPushNotificationState, suspendPushForPasscode } from '../../../util/pushNotifications';
 import requestActionTimeout from '../../../util/requestActionTimeout';
 import { getServerTime } from '../../../util/serverTime';
 import { runSettingsAction } from '../../../util/settingsActions';
@@ -448,18 +445,12 @@ addActionHandler('updateWebNotificationSettings', async (global, actions, payloa
   const oldSettings = global.settings.byKey;
   global = replaceSettings(global, payload);
   setGlobal(global);
-  const { hasWebNotifications, hasPushNotifications } = global.settings.byKey;
-  if (!oldSettings.hasPushNotifications && hasPushNotifications) {
-    await subscribe();
-  }
-  if (oldSettings.hasPushNotifications && !hasPushNotifications) {
-    await unregisterPushAccount();
-  }
+  const { hasWebNotifications } = global.settings.byKey;
   if (oldSettings.shouldShowPushPreviewsWhenLocked !== global.settings.byKey.shouldShowPushPreviewsWhenLocked) {
     if (global.passcode.hasPasscode && !global.settings.byKey.shouldShowPushPreviewsWhenLocked) {
       await suspendPushForPasscode(true);
     }
-    await reconcilePushNotifications();
+    await refreshPushNotificationState();
   }
   if (!oldSettings.hasWebNotifications && hasWebNotifications) {
     const isGranted = await requestPermission();
@@ -485,13 +476,10 @@ addActionHandler('updateContactSignUpNotification', async (global, actions, payl
 });
 
 addActionHandler('loadLanguages', async (global): Promise<void> => {
-  const result = await callApi('fetchLanguages');
-  if (!result) {
-    return;
-  }
+  const languages = await fetchBuiltInLanguages();
 
   global = getGlobal();
-  global = updateSharedSettings(global, { languages: result });
+  global = updateSharedSettings(global, { languages });
   setGlobal(global);
 });
 
@@ -502,15 +490,9 @@ addActionHandler('openLanguageModal', async (global, actions, payload): Promise<
   global = updateTabState(global, { languageModal: modal }, tabId);
   setGlobal(global);
 
-  let language;
-  let error: 'unsupported' | 'failed' | undefined;
-  try {
-    language = await callApi('fetchLanguage', { langPack: LANG_PACK, langCode });
-    if (!language) error = 'failed';
-  } catch (err) {
-    error = ['LANG_CODE_NOT_SUPPORTED', 'LANG_CODE_INVALID'].includes((err as ApiError).message)
-      ? 'unsupported' : 'failed';
-  }
+  const languages = await fetchBuiltInLanguages();
+  const language = languages.find((item) => item.langCode === langCode);
+  const error = language ? undefined : 'unsupported';
 
   global = getGlobal();
   if (selectTabState(global, tabId).languageModal?.requestId !== requestId) return;
@@ -531,7 +513,7 @@ addActionHandler('applyLanguage', async (global, actions, payload): Promise<void
     setGlobal(global);
   }
 
-  const hasChanged = await changeLanguage(language);
+  const hasChanged = await loadAndChangeLanguage(language.langCode);
   global = getGlobal();
   if (hasChanged && getTranslationFn().rawCode === language.langCode) {
     const settings = selectSharedSettings(global);

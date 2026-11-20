@@ -13,7 +13,7 @@ import {
 import type { ApiPageCaption, ApiRichText } from '../../api/types';
 import { ApiMessageEntityTypes } from '../../api/types';
 
-import { TME_LINK_PREFIX } from '../../config';
+import { USERNAME_LINK_PREFIX } from '../../config';
 import { getRichTextPlainText } from '../../global/helpers/richMessage';
 import { getFormattedDateFormatString } from '../dates/formattedDate';
 import {
@@ -259,7 +259,7 @@ function buildOrderedListAttributes(node: ProseMirrorNode) {
 function buildMentionHref(node: ProseMirrorNode) {
   return node.attrs.userId
     ? `tg://user?id=${node.attrs.userId}`
-    : `${TME_LINK_PREFIX}${node.attrs.username}`;
+    : `${USERNAME_LINK_PREFIX}${node.attrs.username}`;
 }
 
 export function serializeTiptapPlainText(fragment: Fragment, parent?: ProseMirrorNode): string {

@@ -28,7 +28,6 @@ import {
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
-  TME_LINK_PREFIX,
   VERIFICATION_CODES_USER_ID,
   VIDEO_STICKER_MIME_TYPE,
   WEB_APP_PLATFORM,
@@ -503,13 +502,13 @@ export function isUploadingFileSticker(attachment: ApiAttachment) {
 
 export function getMessageLink(peer: ApiPeer, topicId?: ThreadId, messageId?: number) {
   const chatUsername = getMainUsername(peer);
+  const params = new URLSearchParams(chatUsername
+    ? { domain: chatUsername }
+    : { channel: getRawPeerId(peer.id).toString() });
+  if (messageId) params.set('post', String(messageId));
+  if (topicId && topicId !== MAIN_THREAD_ID) params.set('thread', String(topicId));
 
-  const normalizedId = getRawPeerId(peer.id).toString();
-
-  const chatPart = chatUsername || `c/${normalizedId}`;
-  const topicPart = topicId && topicId !== MAIN_THREAD_ID ? `/${topicId}` : '';
-  const messagePart = messageId ? `/${messageId}` : '';
-  return `${TME_LINK_PREFIX}${chatPart}${topicPart}${messagePart}`;
+  return `tg://${chatUsername ? 'resolve' : 'privatepost'}?${params}`;
 }
 
 export function splitMessagesForForwarding(messages: ApiMessage[], limit: number): ApiMessage[][] {

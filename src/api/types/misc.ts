@@ -369,7 +369,7 @@ export interface ApiAppConfig {
   tonSuggestedPostAmountMax: bigint;
   tonSuggestedPostAmountMin: bigint;
   tonUsdRate?: number;
-  tonTopupUrl: string;
+  tonTopupUrl?: string;
   pollMaxAnswers: number;
   pollClosePeriodMax: number;
   pollCountriesMax: number;

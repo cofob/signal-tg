@@ -29,7 +29,6 @@ import Avatar from '../../common/Avatar';
 import FullNameTitle from '../../common/FullNameTitle';
 import Icon from '../../common/icons/Icon';
 import PeerBadge from '../../common/PeerBadge';
-import SafeLink from '../../common/SafeLink';
 import Button from '../../ui/Button';
 import Checkbox from '../../ui/Checkbox';
 import DropdownMenu from '../../ui/DropdownMenu';
@@ -351,7 +350,7 @@ const PaidReactionModal = ({
       </Button>
       <p className={styles.disclaimer}>
         {lang('StarsReactionTerms', {
-          link: <SafeLink text={lang('StarsReactionLinkText')} url={lang('StarsReactionLink')} />,
+          link: lang('StarsReactionLinkText'),
         }, {
           withNodes: true,
         })}

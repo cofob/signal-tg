@@ -8,7 +8,6 @@ import type { AiEditorContent, AiEditorResult } from '../../../../global/types';
 import type { MenuItemContextAction } from '../../../ui/ListItem';
 import type { TabWithProperties } from '../../../ui/TabList';
 
-import { TME_LINK_PREFIX } from '../../../../config';
 import { hasAiEditorContent } from '../../../../global/helpers/aiMessageEditor';
 import { selectTabState } from '../../../../global/selectors';
 import { compareAiTones, getInputTone } from '../../../../util/aiComposeTones';
@@ -112,7 +111,7 @@ const AiTextStyleEditor = ({
       icon: 'forward',
       handler: () => {
         closeAiMessageEditorModal();
-        openChatWithDraft({ text: { text: `${TME_LINK_PREFIX}addstyle/${entry.slug}` } });
+        openChatWithDraft({ text: { text: `tg://addstyle?set=${encodeURIComponent(entry.slug)}` } });
       },
     });
 

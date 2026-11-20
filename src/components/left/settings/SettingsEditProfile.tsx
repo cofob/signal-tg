@@ -9,7 +9,7 @@ import type {
 import type { GlobalState } from '../../../global/types';
 import { ProfileEditProgress, SettingsScreens } from '../../../types';
 
-import { PURCHASE_USERNAME, TME_LINK_PREFIX, USERNAME_PURCHASE_ERROR } from '../../../config';
+import { PURCHASE_USERNAME, USERNAME_LINK_PREFIX, USERNAME_PURCHASE_ERROR } from '../../../config';
 import { getChatAvatarHash } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import {
@@ -326,7 +326,7 @@ const SettingsEditProfile = ({
   }, [handlePersonalChannelRemove, lang, personalChannelId]);
 
   function renderPurchaseLink() {
-    const purchaseInfoLink = `${TME_LINK_PREFIX}${PURCHASE_USERNAME}`;
+    const purchaseInfoLink = `${USERNAME_LINK_PREFIX}${PURCHASE_USERNAME}`;
 
     return (
       <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
@@ -421,16 +421,6 @@ const SettingsEditProfile = ({
         <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
           {renderText(lang('UsernameHelp'), ['br', 'simple_markdown'])}
         </IslandDescription>
-        {editableUsername && (
-          <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-            {lang('UsernameLink')}
-            <br />
-            <span className="username-link">
-              {TME_LINK_PREFIX}
-              {editableUsername}
-            </span>
-          </IslandDescription>
-        )}
 
         {shouldRenderUsernamesManage && (
           <ManageUsernames

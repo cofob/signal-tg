@@ -4,7 +4,7 @@ import type { SettingsAction } from '../types';
 import type { RegularLangKey } from '../types/language';
 import { SettingsScreens } from '../types';
 
-import { FAQ_URL, PRIVACY_URL } from '../config';
+import { PRIVACY_URL, SUPPORT_URL } from '../config';
 import {
   selectIsWallpaperUploading, selectTabState, selectTheme, selectUserFullInfo,
 } from '../global/selectors';
@@ -18,8 +18,7 @@ import { clearWidgetStorage } from './widgetStorage';
 const WALLPAPER_FILE_TYPES = 'image/jpeg';
 
 const SETTINGS_ACTIONS: [SettingsScreens, RegularLangKey, SettingsAction][] = [
-  [SettingsScreens.Main, 'AskAQuestion', 'askQuestion'],
-  [SettingsScreens.Main, 'MenuTelegramFaq', 'openFaq'],
+  [SettingsScreens.Main, 'MenuSignalSupport', 'openSupport'],
   [SettingsScreens.Main, 'MenuPrivacyPolicy', 'openPrivacyPolicy'],
   [SettingsScreens.Main, 'LogOutTitle', 'logOut'],
   [SettingsScreens.EditProfile, 'SettingsBirthday', 'setBirthday'],
@@ -42,8 +41,8 @@ export function runSettingsAction(action: SettingsAction, tabId = getCurrentTabI
   const actions = getActions();
 
   switch (action) {
-    case 'openFaq':
-      actions.openUrl({ url: FAQ_URL, tabId });
+    case 'openSupport':
+      actions.openUrl({ url: SUPPORT_URL, tabId });
       break;
     case 'openPrivacyPolicy':
       actions.openUrl({ url: PRIVACY_URL, tabId });

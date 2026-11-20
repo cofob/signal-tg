@@ -308,7 +308,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       canAutoLoadFileInChannels: false,
       autoLoadFileMaxSizeMb: 10,
       hasWebNotifications: true,
-      hasPushNotifications: false,
       shouldShowPushPreviewsWhenLocked: false,
       shouldNotifyAboutPinnedMessages: true,
       notificationSoundVolume: NOTIFICATION_MAX_VOLUME / 2,

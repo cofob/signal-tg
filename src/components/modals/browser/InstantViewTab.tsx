@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiWebPageFull } from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 
-import { TME_LINK_PREFIX } from '../../../config';
+import { USERNAME_LINK_PREFIX } from '../../../config';
 import { getInstantViewBrowserTabKey } from '../../../global/helpers';
 import { selectFullWebPage, selectTheme } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
@@ -74,7 +74,7 @@ const InstantViewTab = ({
   });
 
   const handleTelegramChannelClick = useLastCallback((channelUsername: string) => {
-    handleOpenTelegramLink(`${TME_LINK_PREFIX}${channelUsername}`);
+    handleOpenTelegramLink(`${USERNAME_LINK_PREFIX}${channelUsername}`);
   });
 
   const handleWrongLayoutClick = useLastCallback((e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => {

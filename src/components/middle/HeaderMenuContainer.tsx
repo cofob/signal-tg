@@ -527,8 +527,8 @@ const HeaderMenuContainer = ({
         onClick={() => {
           if (hasPrivacyCommand && !botPrivacyPolicyUrl) {
             sendBotCommand({ command: '/privacy', chatId, threadId });
-          } else {
-            openUrl({ url: botPrivacyPolicyUrl || lang('BotDefaultPrivacyPolicy') });
+          } else if (botPrivacyPolicyUrl) {
+            openUrl({ url: botPrivacyPolicyUrl });
           }
           closeMenu();
         }}

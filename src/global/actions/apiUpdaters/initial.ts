@@ -16,8 +16,6 @@ import { retryLocalization } from '../../../util/localization';
 import { getAccountsInfo, getAccountSlotUrl } from '../../../util/multiaccount';
 import { setServerTimeOffset } from '../../../util/serverTime';
 import { updateSessionUserId } from '../../../util/sessions';
-import { finishWebLogin, rejectWebLogin } from '../../../util/webLogin';
-import { forceWebsync } from '../../../util/websync';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
@@ -48,10 +46,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateUserAlreadyAuthorized':
       onUpdateUserAlreadyAuthorized(global, update);
-      break;
-
-    case 'updateWebAuthTokenFailed':
-      onUpdateWebAuthTokenFailed(global);
       break;
 
     case 'updatePasskeyOption':
@@ -139,8 +133,6 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
 
   switch (authState) {
     case 'authorizationStateLoggingOut':
-      void forceWebsync(false);
-
       global = updateAuth(global, {
         isLoggingOut: true,
       });
@@ -156,13 +148,6 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
       global = updateAuth(global, {
         hint: update.hint,
       });
-
-      if (update.noReset) {
-        global = updateAuth(global, {
-          hasWebAuthTokenPasswordRequired: true,
-        });
-      }
-
       setGlobal(global);
       break;
     case 'authorizationStateWaitQrCode':
@@ -177,8 +162,6 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
       if (wasAuthReady) {
         break;
       }
-
-      void forceWebsync(true);
 
       global = updateAuth(global, {
         isLoggingOut: false,
@@ -219,15 +202,6 @@ function onUpdateUserAlreadyAuthorized<T extends GlobalState>(global: T, update:
   if (!slot) return;
   const url = getAccountSlotUrl(Number(slot));
   window.location.replace(url);
-}
-
-function onUpdateWebAuthTokenFailed<T extends GlobalState>(global: T) {
-  rejectWebLogin();
-
-  global = updateAuth(global, {
-    hasWebAuthTokenFailed: true,
-  });
-  setGlobal(global);
 }
 
 function onUpdatePasskeyOption<T extends GlobalState>(global: T, update: ApiUpdatePasskeyOption) {
@@ -313,5 +287,4 @@ function onUpdateCurrentUser<T extends GlobalState>(global: T, update: ApiUpdate
   setGlobal(global);
 
   updateSessionUserId(currentUser.id);
-  finishWebLogin(currentUser.id);
 }

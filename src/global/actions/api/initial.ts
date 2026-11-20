@@ -24,24 +24,18 @@ import {
 } from '../../../util/passcode';
 import { broadcastPasscodeReset } from '../../../util/passcode/channel';
 import { unregisterPushAccount } from '../../../util/pushNotifications';
-import {
-  consumeInvalidWebLogin, getPendingWebLogin, resetInitialLocationHash, resetLocationHash,
-} from '../../../util/routing';
+import { resetInitialLocationHash, resetLocationHash } from '../../../util/routing';
 import { pause } from '../../../util/schedulers';
 import {
   checkSessionLocked,
   clearAllStoredSessions,
   clearStoredSession,
-  hasStoredSession,
   loadStoredSession,
   storeSession,
 } from '../../../util/sessions';
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
-import { interruptWebLogin, rejectWebLogin, resolveWebLogin } from '../../../util/webLogin';
-import { webLoginHandoffPromise } from '../../../util/webLoginHandoff';
-import { forceWebsync } from '../../../util/websync';
 import {
-  callApi, callApiLocal, closeApi, initApi, reconnectApi, setShouldEnableDebugLog,
+  callApi, callApiLocal, initApi, reconnectApi, setShouldEnableDebugLog,
 } from '../../../api/gramjs';
 import { forceUpdateSharedStateCache, removeGlobalFromCache, removeSharedStateFromCache } from '../../cache';
 import {
@@ -57,68 +51,48 @@ import { selectSharedSettings } from '../../selectors/sharedState';
 import { destroySharedStatePort, resetSharedStatePort } from '../../shared/sharedStateConnector';
 
 let resetStoragePromise: Promise<boolean> | undefined;
-let isInitializingApi = false;
 
 const API_DESTROY_TIMEOUT_MS = 3000;
 
-addActionHandler('initApi', async (global, actions): Promise<void> => {
-  if (isInitializingApi) return;
-  isInitializingApi = true;
-  try {
-    if (global.passcode.isScreenLocked || checkSessionLocked()) return;
-    if (!await webLoginHandoffPromise) rejectWebLogin();
-    if (consumeInvalidWebLogin()) rejectWebLogin(true);
-    interruptWebLogin();
-    if (getPendingWebLogin() && !await resolveWebLogin()) return;
-    global = getGlobal();
-    if (global.passcode.isScreenLocked || checkSessionLocked()
-      || !selectTabState(global, getCurrentTabId()).isMasterTab) return;
-    const request = getPendingWebLogin();
-    const token = hasStoredSession() ? undefined : request?.token;
-    // Clearing the token marks it as dispatched so `interruptWebLogin()` rejects interrupted logins and prevents replay
-    if (token) request!.token = undefined;
+addActionHandler('initApi', (global, actions): ActionReturnType => {
+  if (global.passcode.isScreenLocked || checkSessionLocked()
+    || !selectTabState(global, getCurrentTabId()).isMasterTab) return;
 
-    const {
-      shouldAllowHttpTransport,
-      shouldForceHttpTransport,
-      shouldDebugExportedSenders,
-      shouldCollectDebugLogs,
-      language,
-      signalProxyUrl,
-    } = selectSharedSettings(global);
+  const {
+    shouldAllowHttpTransport,
+    shouldForceHttpTransport,
+    shouldDebugExportedSenders,
+    shouldCollectDebugLogs,
+    language,
+    signalProxyUrl,
+  } = selectSharedSettings(global);
 
-    const hasTestParam = request ? request.isTest : window.location.search.includes('test');
+  const hasTestParam = window.location.search.includes('test');
 
-    const isTestServer = request?.isTest ?? global.config?.isTestServer ?? hasTestParam;
-    const accountsInfo = getAccountsInfo();
-    const accountIds = Object.values(accountsInfo)
-      .filter((info) => Boolean(info.isTest) === isTestServer)
-      .map(({ userId }) => userId)
-      .filter(Boolean);
+  const isTestServer = global.config?.isTestServer ?? hasTestParam;
+  const accountsInfo = getAccountsInfo();
+  const accountIds = Object.values(accountsInfo)
+    .filter((info) => Boolean(info.isTest) === isTestServer)
+    .map(({ userId }) => userId)
+    .filter(Boolean);
 
-    void initApi(actions.apiUpdate, {
-      userAgent: navigator.userAgent,
-      platform: PLATFORM_ENV,
-      sessionData: loadStoredSession(),
-      isWebmSupported: IS_WEBM_SUPPORTED,
-      maxBufferSize: MAX_BUFFER_SIZE,
-      webAuthToken: token,
-      webAuthUserId: token ? request!.userId : undefined,
-      dcId: token ? request!.dcId : undefined,
-      shouldAllowHttpTransport,
-      shouldForceHttpTransport,
-      shouldDebugExportedSenders,
-      langCode: language,
-      isTestServerRequested: hasTestParam,
-      accountIds,
-      hasPasskeySupport: IS_WEBAUTHN_SUPPORTED,
-      signalProxyUrl,
-    });
+  void initApi(actions.apiUpdate, {
+    userAgent: navigator.userAgent,
+    platform: PLATFORM_ENV,
+    sessionData: loadStoredSession(),
+    isWebmSupported: IS_WEBM_SUPPORTED,
+    maxBufferSize: MAX_BUFFER_SIZE,
+    shouldAllowHttpTransport,
+    shouldForceHttpTransport,
+    shouldDebugExportedSenders,
+    langCode: language,
+    isTestServerRequested: hasTestParam,
+    accountIds,
+    hasPasskeySupport: IS_WEBAUTHN_SUPPORTED,
+    signalProxyUrl,
+  });
 
-    void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
-  } finally {
-    isInitializingApi = false;
-  }
+  void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
 });
 
 // Reconnecting moves the live connections, an open link code and new requests to the new tunnel
@@ -260,7 +234,6 @@ addActionHandler('signOut', async (global, actions, payload): Promise<void> => {
     resetLocationHash();
     await unregisterPushAccount();
     await Promise.race([callApi('destroy'), pause(API_DESTROY_TIMEOUT_MS)]);
-    await forceWebsync(false);
   } catch (err) {
     // Do nothing
   }
@@ -344,11 +317,6 @@ addActionHandler('disconnect', (): ActionReturnType => {
 });
 
 addActionHandler('destroyConnection', (): ActionReturnType => {
-  if (getPendingWebLogin()) {
-    interruptWebLogin();
-    void closeApi(false);
-    return;
-  }
   void callApiLocal('destroy', true, true);
 });
 

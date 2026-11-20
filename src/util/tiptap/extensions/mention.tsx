@@ -7,7 +7,7 @@ import { getGlobal } from '../../../global';
 import type { ApiPeer } from '../../../api/types';
 import type { TeactNodeViewComponentProps } from '../TeactNodeViewRenderer';
 
-import { TME_LINK_PREFIX } from '../../../config';
+import { USERNAME_LINK_PREFIX } from '../../../config';
 import { requestMutation } from '../../../lib/fasterdom/fasterdom';
 import { selectPeer, selectPeerByUsername, selectUser } from '../../../global/selectors';
 import {
@@ -75,7 +75,7 @@ export const MentionNode = Node.create({
     return ['a', {
       href: HTMLAttributes.userId
         ? `tg://user?id=${HTMLAttributes.userId}`
-        : `${TME_LINK_PREFIX}${HTMLAttributes.username}`,
+        : `${USERNAME_LINK_PREFIX}${HTMLAttributes.username}`,
     }, 0];
   },
 
@@ -85,7 +85,7 @@ export const MentionNode = Node.create({
       return `[${label}](tg://user?id=${node.attrs.userId})`;
     }
 
-    return node.attrs?.username ? `[${label}](${TME_LINK_PREFIX}${node.attrs.username})` : label;
+    return node.attrs?.username ? `[${label}](${USERNAME_LINK_PREFIX}${node.attrs.username})` : label;
   },
 
   addNodeView() {

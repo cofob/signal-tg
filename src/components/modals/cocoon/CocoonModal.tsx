@@ -6,9 +6,7 @@ import type { TabState } from '../../../global/types';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import SafeLink from '../../common/SafeLink';
 import Button from '../../ui/Button';
-import Link from '../../ui/Link';
 import ParticlesHeader from '../common/ParticlesHeader';
 import TableAboutModal, { type TableAboutData } from '../common/TableAboutModal';
 
@@ -19,7 +17,7 @@ export type OwnProps = {
 };
 
 const CocoonModal = ({ modal }: OwnProps) => {
-  const { closeCocoonModal, openTelegramLink } = getActions();
+  const { closeCocoonModal } = getActions();
   const isOpen = Boolean(modal);
 
   const lang = useLang();
@@ -28,27 +26,13 @@ const CocoonModal = ({ modal }: OwnProps) => {
     closeCocoonModal();
   });
 
-  const openLinkAndClose = useLastCallback((url: string) => {
-    openTelegramLink({ url });
-    handleClose();
-  });
-
   const listItemData = useMemo(() => {
     const feature1Description = lang('CocoonFeature1Text', {
-      username: (
-        <Link
-          isPrimary
-          onClick={() => {
-            openLinkAndClose(lang('CocoonFeature1UsernameLink'));
-          }}
-        >
-          {lang('CocoonFeature1Username')}
-        </Link>
-      ),
+      username: lang('CocoonFeature1Username'),
     }, { withNodes: true, withMarkdown: true });
 
     const feature3Description = lang('CocoonFeature3Text', {
-      link: <SafeLink url={lang('CocoonFeature3Link')} text={lang('CocoonFeature3LinkText')} />,
+      link: lang('CocoonFeature3LinkText'),
     }, {
       withNodes: true,
       withMarkdown: true,
@@ -79,11 +63,7 @@ const CocoonModal = ({ modal }: OwnProps) => {
       <div className={styles.footer}>
         <span className={styles.footerText}>
           {lang('CocoonFooterText', {
-            link: (
-              <Link isPrimary onClick={() => openLinkAndClose(lang('CocoonFooterLink'))}>
-                {lang('CocoonFooterLinkText')}
-              </Link>
-            ),
+            link: lang('CocoonFooterLinkText'),
           }, { withNodes: true, withMarkdown: true })}
         </span>
         <Button iconName="understood" onClick={handleClose}>

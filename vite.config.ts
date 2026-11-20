@@ -14,7 +14,8 @@ import { createWidgetSandbox } from './src/lib/widget-sandbox/vite.ts';
 import packageJson from './package.json' with { type: 'json' };
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
-const PRODUCTION_URL = 'https://web.telegram.org/a';
+// The public address of the deployment, for the page's canonical and social metadata; set `BASE_URL` in production
+const DEFAULT_BASE_URL = 'http://localhost:1234/';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
@@ -80,14 +81,14 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   } = env;
   const appEnv = env.APP_ENV || (mode === 'development' ? 'development' : 'production');
   const defaultAppTitle = `Telegram${appEnv !== 'production' ? ' Beta' : ''}`;
-  const baseUrl = env.BASE_URL || PRODUCTION_URL;
+  const baseUrl = env.BASE_URL || DEFAULT_BASE_URL;
   const appTitle = env.APP_TITLE || defaultAppTitle;
   const isProductionApp = appEnv === 'production';
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';
   const publicUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
   const socialImageUrl = new URL(isProductionApp ? 'icon-512x512.png' : 'icon-dev-512x512.png', publicUrl).href;
   const widgetSandbox = await createWidgetSandbox();
-  const csp = buildCsp(appEnv);
+  const csp = buildCsp(appEnv, env.SIGNAL_TUNNEL_URL);
   const responseHeaders = {
     'Content-Security-Policy': csp,
     'Service-Worker-Allowed': '/',
@@ -193,7 +194,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     TG_SOCIAL_IMAGE_URL: socialImageUrl,
     TG_TELEGRAM_API_ID: telegramApiId,
     TG_TELEGRAM_API_HASH: telegramApiHash,
-    TG_VAPID_KEY: env.VAPID_KEY || '',
     TG_TEST_SESSION: env.TEST_SESSION || '',
     TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
   });
@@ -302,21 +302,28 @@ function setViteEnv(env: Record<string, string>) {
   });
 }
 
-function buildCsp(appEnv: string) {
+// The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy setting
+// (`SharedSettings.signalProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
+// client terminates with Signal's certificate authority, so a wrong host cannot read traffic, but the policy no longer
+// stops scripts from reaching other `wss:` servers. A local tunnel stays usable through `ws:` on `localhost` and
+// `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `http://ipc.localhost` and, in
+// development, `ipc:` carry Tauri's in-process IPC.
+function buildCsp(appEnv: string, tunnelUrl?: string) {
+  const isDevelopment = appEnv === 'development';
+  const tunnelOrigin = tunnelUrl ? new URL(tunnelUrl).origin : '';
+
   return `
   default-src 'self';
-  connect-src 'self' wss://*.web.telegram.org blob: http: https: wss: ${appEnv === 'development' ? 'ipc: ws:' : ''};
-  script-src 'self' 'wasm-unsafe-eval'
-    https://t.me/_websync_ https://telegram.me/_websync_ https://telegram.dog/_websync_;
-  worker-src 'self'${appEnv === 'development' ? ' blob:' : ''};
+  connect-src 'self' ${tunnelOrigin} wss: ws://localhost:* ws://127.0.0.1:* blob: data: http://ipc.localhost${
+    isDevelopment ? ' ipc:' : ''};
+  script-src 'self' 'wasm-unsafe-eval';
+  worker-src 'self'${isDevelopment ? ' blob:' : ''};
   style-src 'self' 'unsafe-inline';
   font-src 'self' data:;
-  img-src 'self' data: blob: https://ss3.4sqi.net/img/categories_v2/;
+  img-src 'self' data: blob:;
   media-src 'self' blob: data:;
   object-src 'none';
-  frame-src http: https:
-    bitkeep: bnc: bybitapp: echooo: imtokenv2: mytonwallet-tc:
-    nicegram-tc: safepal-tc: tonkeeper-pro-tc: tonkeeper-tc:;
+  frame-src 'self';
   base-uri 'none';
   form-action 'none';`
     .replace(/\s+/g, ' ').trim();

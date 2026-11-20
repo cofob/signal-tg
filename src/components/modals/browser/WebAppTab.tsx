@@ -14,7 +14,7 @@ import type {
 } from '../../../types/webapp';
 import type { ThemePalette } from '../../../util/theme';
 
-import { TME_LINK_PREFIX, VERIFY_AGE_MIN_DEFAULT } from '../../../config';
+import { VERIFY_AGE_MIN_DEFAULT } from '../../../config';
 import { getLuminance, mixColors } from '../../../lib/color';
 import { requestMeasure } from '../../../lib/fasterdom/fasterdom';
 import { convertToApiChatType, getUserFullName } from '../../../global/helpers';
@@ -144,7 +144,6 @@ const WebAppTab = ({
     closeBrowserTab,
     sendWebViewData,
     toggleAttachBot,
-    openTelegramLink,
     switchBotInline,
     sharePhoneWithBot,
     updateWebApp,
@@ -682,15 +681,6 @@ const WebAppTab = ({
 
     if (eventType === 'web_app_exit_fullscreen') {
       exitIfFullscreenCallback();
-    }
-
-    if (eventType === 'web_app_open_tg_link') {
-      // A background tab must not navigate the client
-      if (!isActive) return;
-      changeBrowserModalState({ state: 'minimized' });
-
-      const linkUrl = TME_LINK_PREFIX + eventData.path_full;
-      openTelegramLink({ url: linkUrl, shouldIgnoreCache: eventData.force_request });
     }
 
     if (eventType === 'web_app_setup_back_button') {

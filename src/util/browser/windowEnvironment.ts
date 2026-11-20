@@ -1,5 +1,5 @@
 import {
-  IS_TEST, PRODUCTION_HOSTNAME, SVG_NAMESPACE, VIDEO_RECORDING_MIME_TYPE,
+  IS_TEST, SVG_NAMESPACE, VIDEO_RECORDING_MIME_TYPE,
 } from '../../config';
 import { requestForcedReflow, requestMutation } from '../../lib/fasterdom/fasterdom.ts';
 import { IS_TAURI } from './globalEnvironment';
@@ -33,7 +33,6 @@ export function getPlatform() {
   return undefined;
 }
 
-export const IS_PRODUCTION_HOST = window.location.host === PRODUCTION_HOSTNAME;
 export const PLATFORM_ENV = getPlatform();
 export const IS_MAC_OS = PLATFORM_ENV === 'macOS';
 export const IS_WINDOWS = PLATFORM_ENV === 'Windows';
