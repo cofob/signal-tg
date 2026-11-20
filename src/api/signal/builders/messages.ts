@@ -17,7 +17,6 @@ import type {
 } from '../../types';
 import type { MentionedUser } from './bodyRanges';
 
-import { ONE_TIME_MEDIA_TTL_SECONDS } from '../../../config';
 import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { uuidToString } from '../../../lib/signal/serviceId';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
@@ -80,14 +79,14 @@ export async function buildApiMessageWithPoll(
     ...media,
     text: body ? buildApiFormattedText(body, bodyRanges, mentionedUsers) : undefined,
     pollId: poll?.summary.id,
-    ttlSeconds: dataMessage.isViewOnce ? ONE_TIME_MEDIA_TTL_SECONDS : media.ttlSeconds,
   });
   if (content.text) content.text.emojiOnlyCount = getEmojiOnlyCountForMessage(content);
-  // Gift badges, payments and other content without a counterpart in the app
+  // View-once media (the app has no flow for it yet), gift badges, payments and other content without
+  // a counterpart in the app
   if (!Object.keys(content).length) content.action = { mediaType: 'action', type: 'unsupported' };
 
   const isMentioned = Boolean(selfAci) && dataMessage.bodyRanges.some((range) => getMentionAci(range) === selfAci);
-  const hasViewableMedia = Boolean(content.voice || content.video?.isRound || dataMessage.isViewOnce);
+  const hasViewableMedia = Boolean(content.voice || content.video?.isRound);
   return {
     message: {
       ...base,
@@ -114,12 +113,6 @@ export async function buildApiMessageWithPoll(
  */
 export function getIsMessageHidden(message: MessageRecord) {
   return message.kind === 'message' && !message.dataMessage;
-}
-
-/** Signal shows an outgoing message read once any recipient read it */
-export function getIsOutgoingMessageRead(message: MessageRecord) {
-  return message.isOutgoing && Object.values(message.recipientStatus ?? {})
-    .some((status) => status === 'read' || status === 'viewed');
 }
 
 /** Resolves users by ACI once for messages built together; users seen only in groups get a private conversation */

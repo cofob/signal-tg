@@ -37,7 +37,7 @@ import { getCurrentAccount } from '../client';
 import { db, logError, processor } from '../engine';
 import { uploadMessageAttachment } from '../media';
 import { getConversationByPeerId, getUserPeerId } from '../peers';
-import { reportLastReadOutbox, trackLocalMessage } from '../updaters/messages';
+import { trackLocalMessage } from '../updaters/messages';
 import { sendApiUpdate } from '../updates';
 
 type DataMessageInit = MessageInitShape<typeof DataMessageSchema>;
@@ -87,7 +87,6 @@ export async function fetchMessages({
   const records = [...newer.reverse(), ...older.slice(olderSkip)];
 
   const { messages, users } = await buildMessages(records, conversation);
-  void reportLastReadOutbox(conversation).catch(logError);
   return {
     messages,
     users,
