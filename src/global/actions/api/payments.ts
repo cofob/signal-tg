@@ -23,64 +23,16 @@ import {
 } from '../../index';
 import {
   updateChatFullInfo,
-  updateStarsPayment,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import {
   selectChat,
   selectChatFullInfo,
   selectIsCurrentUserFrozen,
-  selectStarsPayment,
   selectTabState,
 } from '../../selectors';
 
 const LOCAL_BOOST_COOLDOWN = 86400; // 24 hours
-
-addActionHandler('openInvoice', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId(), ...inputInvoice } = payload;
-
-  const requestInputInvoice = getRequestInputInvoice(global, inputInvoice);
-  if (!requestInputInvoice) {
-    return;
-  }
-
-  global = updateTabState(global, {
-    isPaymentFormLoading: true,
-  }, tabId);
-  setGlobal(global);
-
-  const theme = extractCurrentThemeParams();
-  const form = await callApi('getPaymentForm', requestInputInvoice, theme);
-
-  if (!form) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = updateTabState(global, {
-    isPaymentFormLoading: false,
-  }, tabId);
-
-  if ('error' in form) {
-    setGlobal(global);
-
-    handlePaymentFormError(form.error, tabId);
-    return;
-  }
-
-  if (form.type === 'stars') {
-    global = updateTabState(global, {
-      starsPayment: {
-        inputInvoice,
-        form,
-        status: 'pending',
-      },
-    }, tabId);
-  }
-
-  setGlobal(global);
-});
 
 addActionHandler('sendStarGift', (global, actions, payload): ActionReturnType => {
   const {
@@ -132,20 +84,12 @@ addActionHandler('sendPremiumGiftByStars', (global, actions, payload): ActionRet
 });
 
 addActionHandler('sendStarPaymentForm', async (global, actions, payload): Promise<void> => {
-  const { directInfo, tabId = getCurrentTabId() } = payload;
-  const starPayment = selectStarsPayment(global, tabId);
-  const inputInvoice = starPayment?.inputInvoice || directInfo?.inputInvoice;
-  if (!inputInvoice) return;
+  const { directInfo: { inputInvoice, formId }, tabId = getCurrentTabId() } = payload;
 
   const requestInputInvoice = getRequestInputInvoice(global, inputInvoice);
   if (!requestInputInvoice) {
     return;
   }
-
-  const formId = (starPayment.form?.formId || starPayment.subscriptionInfo?.subscriptionFormId || directInfo?.formId)!;
-
-  global = updateStarsPayment(global, { status: 'pending' }, tabId);
-  setGlobal(global);
 
   const result = await callApi('sendStarPaymentForm', {
     inputInvoice: requestInputInvoice,
@@ -153,26 +97,13 @@ addActionHandler('sendStarPaymentForm', async (global, actions, payload): Promis
   });
 
   if (!result) {
-    global = getGlobal();
-    global = updateStarsPayment(global, { status: 'failed' }, tabId);
-    setGlobal(global);
-    actions.closeStarsPaymentModal({ tabId });
     actions.closeGiftModal({ tabId });
     return;
   }
 
-  global = getGlobal();
-  global = updateStarsPayment(global, { status: 'paid' }, tabId);
-  setGlobal(global);
-  actions.closeStarsPaymentModal({ tabId });
-
-  if ('channelId' in result) {
-    actions.openChat({ id: result.channelId, tabId });
-  }
-
   actions.apiUpdate({
     '@type': 'updateStarPaymentStateCompleted',
-    paymentState: directInfo ? { inputInvoice } : starPayment,
+    paymentState: { inputInvoice },
     tabId,
   });
   actions.loadStarStatus();
@@ -302,35 +233,6 @@ addActionHandler('openGiftModal', async (global, actions, payload): Promise<void
       gifts,
       selectedResaleGift,
       selectedGift,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('openStarsGiftModal', async (global, actions, payload): Promise<void> => {
-  const {
-    forUserId,
-    tabId = getCurrentTabId(),
-  } = payload || {};
-
-  if (selectIsCurrentUserFrozen(global)) {
-    actions.openFrozenAccountModal({ tabId });
-    return;
-  }
-
-  const chat = forUserId ? selectChat(global, forUserId) : undefined;
-  if (forUserId && !chat) return;
-
-  const starsGiftOptions = await callApi('fetchStarsGiftOptions', {
-    chat,
-  });
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    starsGiftModal: {
-      isOpen: true,
-      forUserId,
-      starsGiftOptions,
     },
   }, tabId);
   setGlobal(global);
@@ -719,11 +621,6 @@ async function payInputStarInvoice<T extends GlobalState>(
   const balance = price.currency === TON_CURRENCY_CODE ? global.ton?.balance : global.stars?.balance;
 
   if (balance === undefined) return;
-
-  if (balance.amount < price.amount) {
-    actions.openStarsBalanceModal({ currency: price.currency, tabId });
-    return;
-  }
 
   const requestInputInvoice = getRequestInputInvoice(global, inputInvoice);
   if (!requestInputInvoice) {

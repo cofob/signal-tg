@@ -176,7 +176,6 @@ export function sendPaidReaction({
     private: buildInputPaidReactionPrivacy(isPrivate, peerId),
   }), {
     shouldReturnTrue: true,
-    shouldThrow: true,
   });
 }
 

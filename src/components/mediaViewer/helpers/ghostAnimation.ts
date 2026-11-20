@@ -736,11 +736,6 @@ function getNodes(origin: MediaViewerOrigin, message?: ApiMessage, index?: numbe
       mediaSelector = '.Avatar img';
       break;
 
-    case MediaViewerOrigin.StarsTransaction:
-      containerSelector = '.transaction-media-preview';
-      mediaSelector = index === 0 ? `.stars-transaction-media-${index} :is(img, video)` : undefined;
-      break;
-
     case MediaViewerOrigin.SponsoredMessage:
       containerSelector = '.Transition_slide-active > .MessageList .sponsored-media-preview';
       mediaSelector = `${MESSAGE_CONTENT_SELECTOR} img.full-media,`
@@ -784,7 +779,6 @@ function applyShape(ghost: HTMLDivElement, origin: MediaViewerOrigin) {
     case MediaViewerOrigin.ScheduledAlbum:
     case MediaViewerOrigin.Inline:
     case MediaViewerOrigin.ScheduledInline:
-    case MediaViewerOrigin.StarsTransaction:
     case MediaViewerOrigin.PreviewMedia:
     case MediaViewerOrigin.PollPreview:
       ghost.classList.add('rounded-corners');

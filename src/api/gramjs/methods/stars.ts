@@ -3,7 +3,6 @@ import { RPCError } from '../../../lib/gramjs/errors';
 
 import type { GiftProfileFilterOptions, ResaleGiftsFilterOptions } from '../../../types';
 import type {
-  ApiChat,
   ApiPeer,
   ApiRequestInputSavedStarGift,
   ApiStarGiftAttributeId,
@@ -28,11 +27,7 @@ import {
 } from '../apiBuilders/gifts';
 import {
   buildApiCurrencyAmount,
-  buildApiStarsGiftOptions,
   buildApiStarsGiveawayOptions,
-  buildApiStarsSubscription,
-  buildApiStarsTransaction,
-  buildApiStarTopupOption,
   buildApiUniqueStarGiftValueInfo,
 } from '../apiBuilders/payments';
 import { buildApiUser } from '../apiBuilders/users';
@@ -40,7 +35,6 @@ import {
   buildInputPeer,
   buildInputSavedStarGift,
   buildInputStarsAmount,
-  buildInputUser,
   DEFAULT_PRIMITIVES } from '../gramjsBuilders';
 import { checkErrorType, wrapError } from '../helpers/misc';
 import { invokeRequest } from './client';
@@ -221,22 +215,6 @@ export function deleteStarGift({
   }));
 }
 
-export async function fetchStarsGiftOptions({
-  chat,
-}: {
-  chat?: ApiChat;
-}) {
-  const result = await invokeRequest(new GramJs.payments.GetStarsGiftOptions({
-    userId: chat && buildInputUser(chat.id, chat.accessHash),
-  }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  return result.map(buildApiStarsGiftOptions);
-}
-
 export async function fetchStarsStatus({
   isTon,
 }: {
@@ -256,148 +234,7 @@ export async function fetchStarsStatus({
     return undefined;
   }
 
-  return {
-    nextHistoryOffset: result.nextOffset,
-    history: result.history?.map(buildApiStarsTransaction).filter(Boolean),
-    nextSubscriptionOffset: result.subscriptionsNextOffset,
-    subscriptions: result.subscriptions?.map(buildApiStarsSubscription),
-    balance,
-  };
-}
-
-export async function fetchStarsTransactions({
-  peer,
-  offset = DEFAULT_PRIMITIVES.STRING,
-  limit = DEFAULT_PRIMITIVES.INT,
-  isInbound,
-  isOutbound,
-  isTon,
-}: {
-  peer?: ApiPeer;
-  offset?: string;
-  limit?: number;
-  isInbound?: boolean;
-  isOutbound?: boolean;
-  isTon?: boolean;
-}) {
-  const inputPeer = peer ? buildInputPeer(peer.id, peer.accessHash) : new GramJs.InputPeerSelf();
-  const result = await invokeRequest(new GramJs.payments.GetStarsTransactions({
-    peer: inputPeer,
-    offset,
-    limit,
-    inbound: isInbound || undefined,
-    outbound: isOutbound || undefined,
-    ton: isTon || undefined,
-  }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  const balance = buildApiCurrencyAmount(result.balance);
-  if (!balance) {
-    return undefined;
-  }
-
-  return {
-    nextOffset: result.nextOffset,
-    history: result.history?.map(buildApiStarsTransaction).filter(Boolean),
-    balance,
-  };
-}
-
-export async function fetchStarsTransactionById({
-  id, peer, ton,
-}: {
-  id: string;
-  peer?: ApiPeer;
-  ton?: true;
-}) {
-  const inputPeer = peer ? buildInputPeer(peer.id, peer.accessHash) : new GramJs.InputPeerSelf();
-  const result = await invokeRequest(new GramJs.payments.GetStarsTransactionsByID({
-    peer: inputPeer,
-    ton,
-    id: [new GramJs.InputStarsTransaction({
-      id,
-    })],
-  }));
-
-  if (!result?.history?.[0]) {
-    return undefined;
-  }
-
-  return {
-    transaction: buildApiStarsTransaction(result?.history[0]),
-  };
-}
-
-export async function fetchStarsSubscriptions({
-  offset = DEFAULT_PRIMITIVES.STRING,
-  peer,
-}: {
-  offset?: string; limit?: number;
-  peer?: ApiPeer;
-}) {
-  const inputPeer = peer ? buildInputPeer(peer.id, peer.accessHash) : new GramJs.InputPeerSelf();
-  const result = await invokeRequest(new GramJs.payments.GetStarsSubscriptions({
-    peer: inputPeer,
-    offset,
-  }));
-
-  if (!result?.subscriptions) {
-    return undefined;
-  }
-
-  const balance = buildApiCurrencyAmount(result.balance);
-  if (!balance) {
-    return undefined;
-  }
-
-  return {
-    nextOffset: result.subscriptionsNextOffset,
-    subscriptions: result.subscriptions.map(buildApiStarsSubscription),
-    balance,
-  };
-}
-
-export async function changeStarsSubscription({
-  peer, subscriptionId, isCancelled,
-}: {
-  peer?: ApiPeer;
-  subscriptionId: string;
-  isCancelled: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.payments.ChangeStarsSubscription({
-    peer: peer ? buildInputPeer(peer.id, peer.accessHash) : new GramJs.InputPeerSelf(),
-    subscriptionId,
-    canceled: isCancelled,
-  }));
-
-  return result;
-}
-
-export async function fulfillStarsSubscription({
-  peer, subscriptionId,
-}: {
-  peer?: ApiPeer;
-  subscriptionId: string;
-}) {
-  const result = await invokeRequest(new GramJs.payments.FulfillStarsSubscription({
-    peer: peer ? buildInputPeer(peer.id, peer.accessHash) : new GramJs.InputPeerSelf(),
-    subscriptionId,
-  }));
-
-  return result;
-}
-
-export async function fetchStarsTopupOptions() {
-  const result = await invokeRequest(new GramJs.payments.GetStarsTopupOptions());
-
-  if (!result) {
-    return undefined;
-  }
-
-  return result.map(buildApiStarTopupOption);
+  return balance;
 }
 
 export async function fetchUniqueStarGift({ slug }: {

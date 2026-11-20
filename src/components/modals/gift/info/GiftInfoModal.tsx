@@ -901,8 +901,6 @@ const GiftInfoModal = ({
         closeButtonColor={isGiftUnique ? 'translucent-white' : undefined}
         moreMenuItems={moreMenuItems}
         onClose={handleClose}
-        withBalanceBar={Boolean(canBuyGift)}
-        currencyInBalanceBar={confirmPrice?.currency}
         isLowStackPriority={renderingModal?.craftSlotIndex !== undefined ? true : undefined}
       />
       {uniqueGift && currentUser && Boolean(confirmPrice) && (

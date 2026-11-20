@@ -35,8 +35,6 @@ import type {
   ApiStarGiftAttributeIdBackdrop,
   ApiStarGiftAttributeIdPattern,
   ApiStarGiftRegular,
-  ApiStarsSubscription,
-  ApiStarsTransaction,
   ApiSticker,
   ApiStickerSet,
   ApiStory,
@@ -213,7 +211,7 @@ export type SettingsHighlight = {
 
 export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openStars' | 'openTon' | 'sendGift' | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openPremium' | 'sendGift' | 'openFaq'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 
@@ -382,7 +380,6 @@ export enum MediaViewerOrigin {
   SearchResult,
   ChannelAvatar,
   SuggestedAvatar,
-  StarsTransaction,
   PreviewMedia,
   SponsoredMessage,
   PollPreview,
@@ -662,17 +659,6 @@ export type ActiveDownloads = Record<string, {
 export type IDimensions = {
   width: number;
   height: number;
-};
-
-export type StarsTransactionType = 'all' | 'inbound' | 'outbound';
-export type StarsTransactionHistory = Record<StarsTransactionType, {
-  transactions: ApiStarsTransaction[];
-  nextOffset?: string;
-} | undefined>;
-export type StarsSubscriptions = {
-  list: ApiStarsSubscription[];
-  nextOffset?: string;
-  isLoading?: boolean;
 };
 
 export type ConfettiStyle = 'poppers' | 'top-down';

@@ -73,7 +73,6 @@ const ForwardRecipientPicker = ({
     forwardAudio,
     showNotification,
     copyMessageLink,
-    openStarsBalanceModal,
     setPaidMessageAutoApprove,
     clearAudioPendingSend,
   } = getActions();
@@ -255,18 +254,6 @@ const ForwardRecipientPicker = ({
       return;
     }
 
-    if (paidChatsInfo.totalStars > 0) {
-      const starsBalance = getGlobal().stars?.balance?.amount || 0;
-      if (paidChatsInfo.totalStars > starsBalance) {
-        openStarsBalanceModal({
-          topup: {
-            balanceNeeded: paidChatsInfo.totalStars,
-          },
-        });
-        return;
-      }
-    }
-
     executeForward();
   });
 
@@ -319,18 +306,6 @@ const ForwardRecipientPicker = ({
   });
 
   const handlePaymentConfirm = useLastCallback(() => {
-    const totalStars = pendingMusicTarget?.stars ?? paidChatsInfo.totalStars;
-    const starsBalance = getGlobal().stars?.balance?.amount || 0;
-
-    if (totalStars > starsBalance) {
-      openStarsBalanceModal({
-        topup: {
-          balanceNeeded: totalStars,
-        },
-      });
-      return;
-    }
-
     closePaymentConfirm();
     if (shouldAutoApprove) {
       setPaidMessageAutoApprove();

@@ -123,22 +123,6 @@ export type ApiInputStorePaymentGiftcode = {
   message?: ApiFormattedText;
 };
 
-export type ApiInputStorePaymentStarsTopup = {
-  type: 'stars';
-  stars: number;
-  currency: string;
-  amount: number;
-  spendPurposePeer?: ApiPeer;
-};
-
-export type ApiInputStorePaymentStarsGift = {
-  type: 'starsgift';
-  user: ApiUser;
-  stars: number;
-  currency: string;
-  amount: number;
-};
-
 export type ApiInputStorePaymentStarsGiveaway = {
   type: 'starsgiveaway';
   isOnlyForNewSubscribers?: boolean;
@@ -154,8 +138,8 @@ export type ApiInputStorePaymentStarsGiveaway = {
   users: number;
 };
 
-export type ApiInputStorePaymentPurpose = ApiInputStorePaymentGiveaway | ApiInputStorePaymentGiftcode |
-  ApiInputStorePaymentStarsTopup | ApiInputStorePaymentStarsGift | ApiInputStorePaymentStarsGiveaway;
+export type ApiInputStorePaymentPurpose = ApiInputStorePaymentGiveaway | ApiInputStorePaymentGiftcode
+  | ApiInputStorePaymentStarsGiveaway;
 
 export interface ApiPremiumGiftCodeOption {
   users: number;
@@ -246,21 +230,7 @@ export interface ApiStarGiveawayOption {
   winners: ApiStarsGiveawayWinnerOption[];
 }
 
-export type ApiPaymentStatus = 'paid' | 'failed' | 'pending' | 'cancelled';
-
 /* Used for Invoice UI */
-export type ApiInputInvoiceMessage = {
-  type: 'message';
-  chatId: string;
-  messageId: number;
-  isExtendedMedia?: boolean;
-};
-
-export type ApiInputInvoiceSlug = {
-  type: 'slug';
-  slug: string;
-};
-
 export type ApiInputInvoiceGiveaway = {
   type: 'giveaway';
   chatId: string;
@@ -290,22 +260,6 @@ export type ApiInputInvoiceGiftCode = {
   amount: number;
   option: ApiPremiumGiftCodeOption;
   message?: ApiFormattedText;
-};
-
-export type ApiInputInvoiceStars = {
-  type: 'stars';
-  stars: number;
-  currency: string;
-  amount: number;
-  spendPurposePeerId?: string;
-};
-
-export type ApiInputInvoiceStarsGift = {
-  type: 'starsgift';
-  userId: string;
-  stars: number;
-  currency: string;
-  amount: number;
 };
 
 export type ApiInputInvoiceStarGift = {
@@ -341,11 +295,6 @@ export type ApiInputInvoiceStarsGiveaway = {
   users: number;
 };
 
-export type ApiInputInvoiceChatInviteSubscription = {
-  type: 'chatInviteSubscription';
-  hash: string;
-};
-
 export type ApiInputInvoiceStarGiftUpgrade = {
   type: 'stargiftUpgrade';
   inputSavedGift: ApiInputSavedStarGift;
@@ -379,34 +328,16 @@ export type ApiInputInvoiceStarGiftAuctionBid = {
   isUpdateBid?: boolean;
 };
 
-export type ApiInputInvoice = ApiInputInvoiceMessage | ApiInputInvoiceSlug | ApiInputInvoiceGiveaway
-  | ApiInputInvoiceGiftCode | ApiInputInvoicePremiumGiftStars | ApiInputInvoiceStars | ApiInputInvoiceStarsGift
-  | ApiInputInvoiceStarsGiveaway | ApiInputInvoiceStarGift | ApiInputInvoiceChatInviteSubscription
-  | ApiInputInvoiceStarGiftUpgrade | ApiInputInvoiceStarGiftTransfer | ApiInputInvoiceStarGiftResale
-  | ApiInputInvoiceStarGiftDropOriginalDetails | ApiInputInvoiceStarGiftPrepaidUpgrade
-  | ApiInputInvoiceStarGiftAuctionBid;
+export type ApiInputInvoice = ApiInputInvoiceGiveaway | ApiInputInvoiceGiftCode | ApiInputInvoicePremiumGiftStars
+  | ApiInputInvoiceStarsGiveaway | ApiInputInvoiceStarGift | ApiInputInvoiceStarGiftUpgrade
+  | ApiInputInvoiceStarGiftTransfer | ApiInputInvoiceStarGiftResale | ApiInputInvoiceStarGiftDropOriginalDetails
+  | ApiInputInvoiceStarGiftPrepaidUpgrade | ApiInputInvoiceStarGiftAuctionBid;
 
 /* Used for Invoice request */
-export type ApiRequestInputInvoiceMessage = {
-  type: 'message';
-  chat: ApiChat;
-  messageId: number;
-};
-
-export type ApiRequestInputInvoiceSlug = {
-  type: 'slug';
-  slug: string;
-};
-
 export type ApiRequestInputInvoiceGiveaway = {
   type: 'giveaway';
   purpose: ApiInputStorePaymentPurpose;
   option: ApiPremiumGiftCodeOption;
-};
-
-export type ApiRequestInputInvoiceStars = {
-  type: 'stars';
-  purpose: ApiInputStorePaymentPurpose;
 };
 
 export type ApiRequestInputInvoicePremiumGiftStars = {
@@ -437,11 +368,6 @@ export type ApiRequestInputInvoiceStarGiftResale = {
   currency: typeof TON_CURRENCY_CODE | typeof STARS_CURRENCY_CODE;
   shouldShowName?: true;
   message?: ApiFormattedText;
-};
-
-export type ApiRequestInputInvoiceChatInviteSubscription = {
-  type: 'chatInviteSubscription';
-  hash: string;
 };
 
 export type ApiRequestInputInvoiceStarGiftUpgrade = {
@@ -477,10 +403,8 @@ export type ApiRequestInputInvoiceStarGiftAuctionBid = {
   isUpdateBid?: boolean;
 };
 
-export type ApiRequestInputInvoice = ApiRequestInputInvoiceMessage | ApiRequestInputInvoiceSlug
-  | ApiRequestInputInvoiceGiveaway | ApiRequestInputInvoiceStars | ApiRequestInputInvoiceStarsGiveaway
-  | ApiRequestInputInvoiceChatInviteSubscription | ApiRequestInputInvoiceStarGift
-  | ApiRequestInputInvoiceStarGiftUpgrade | ApiRequestInputInvoiceStarGiftTransfer
+export type ApiRequestInputInvoice = ApiRequestInputInvoiceGiveaway | ApiRequestInputInvoiceStarsGiveaway
+  | ApiRequestInputInvoiceStarGift | ApiRequestInputInvoiceStarGiftUpgrade | ApiRequestInputInvoiceStarGiftTransfer
   | ApiRequestInputInvoicePremiumGiftStars | ApiRequestInputInvoiceStarGiftResale
   | ApiRequestInputInvoiceStarGiftDropOriginalDetails | ApiRequestInputInvoiceStarGiftPrepaidUpgrade
   | ApiRequestInputInvoiceStarGiftAuctionBid;

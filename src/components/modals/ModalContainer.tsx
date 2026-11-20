@@ -82,12 +82,6 @@ import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
-import ChatRefundModal from './stars/chatRefund/ChatRefundModal.async';
-import StarsGiftModal from './stars/gift/StarsGiftModal.async';
-import StarsBalanceModal from './stars/StarsBalanceModal.async';
-import StarsPaymentModal from './stars/StarsPaymentModal.async';
-import StarsSubscriptionModal from './stars/subscription/StarsSubscriptionModal.async';
-import StarsTransactionInfoModal from './stars/transaction/StarsTransactionModal.async';
 import StealthModeModal from './storyStealthMode/StealthModeModal.async';
 import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
@@ -110,9 +104,6 @@ type ModalKey = keyof Pick<TabState,
   'collectibleInfoModal' |
   'reportAdModal' |
   'reportModal' |
-  'starsBalanceModal' |
-  'starsPayment' |
-  'starsTransactionModal' |
   'paidReactionModal' |
   'pollModal' |
   'musicPicker' |
@@ -120,8 +111,6 @@ type ModalKey = keyof Pick<TabState,
   'suggestedPostApprovalModal' |
   'browser' |
   'chatInviteModal' |
-  'starsSubscriptionModal' |
-  'starsGiftModal' |
   'giftModal' |
   'isGiftRecipientPickerOpen' |
   'isBrowserCloseConfirmationModalOpen' |
@@ -155,7 +144,6 @@ type ModalKey = keyof Pick<TabState,
   'giftTransferConfirmModal' |
   'giftDescriptionRemoveModal' |
   'giftOfferAcceptModal' |
-  'chatRefundModal' |
   'disableSharingAboutModal' |
   'priceConfirmModal' |
   'isFrozenAccountModalOpen' |
@@ -253,15 +241,10 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   reportModal: ReportModal,
   browser: BrowserModal,
   collectibleInfoModal: CollectibleInfoModal,
-  starsPayment: StarsPaymentModal,
-  starsBalanceModal: StarsBalanceModal,
-  starsTransactionModal: StarsTransactionInfoModal,
   chatInviteModal: ChatInviteModal,
   paidReactionModal: PaidReactionModal,
   suggestMessageModal: SuggestMessageModal,
   suggestedPostApprovalModal: SuggestedPostApprovalModal,
-  starsSubscriptionModal: StarsSubscriptionModal,
-  starsGiftModal: StarsGiftModal,
   giftModal: PremiumGiftModal,
   isGiftRecipientPickerOpen: GiftRecipientPicker,
   isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,
@@ -295,7 +278,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   giftTransferConfirmModal: GiftTransferConfirmModal,
   giftDescriptionRemoveModal: GiftDescriptionRemoveModal,
   giftOfferAcceptModal: GiftOfferAcceptModal,
-  chatRefundModal: ChatRefundModal,
   disableSharingAboutModal: DisableSharingAboutModal,
   priceConfirmModal: PriceConfirmModal,
   isFrozenAccountModalOpen: FrozenAccountModal,

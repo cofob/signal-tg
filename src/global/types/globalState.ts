@@ -43,7 +43,6 @@ import type {
   ApiStarGiftCollection,
   ApiStarGiftRegular,
   ApiStarsAmount,
-  ApiStarTopupOption,
   ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
@@ -76,8 +75,6 @@ import type {
   ServiceNotification,
   SimilarBotsInfo,
   StarGiftCategory,
-  StarsSubscriptions,
-  StarsTransactionHistory,
   TextSummary,
   Thread,
   ThreadId,
@@ -527,14 +524,10 @@ export type GlobalState = {
   };
 
   stars?: {
-    topupOptions: ApiStarTopupOption[];
     balance: ApiStarsAmount;
-    history: StarsTransactionHistory;
-    subscriptions?: StarsSubscriptions;
   };
   ton?: {
     balance: ApiTonAmount;
-    history: StarsTransactionHistory;
   };
 };
 

@@ -1,20 +1,17 @@
 import { memo, useEffect } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiStarsAmount, ApiTonAmount } from '../../../api/types';
 import { SettingsScreens } from '../../../types';
 
 import {
-  FAQ_URL, PRIVACY_URL, TON_CURRENCY_CODE,
+  FAQ_URL, PRIVACY_URL,
 } from '../../../config';
-import { formatStarsAmount } from '../../../global/helpers/payments';
 import {
   selectIsGiveawayGiftsPurchaseAvailable,
   selectIsPremiumPurchaseBlocked,
 } from '../../../global/selectors';
 import { IS_ANDROID, IS_IOS } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
-import { formatStarsAsIcon, formatTonAsIcon } from '../../../util/localization/format';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -37,8 +34,6 @@ type StateProps = {
   currentUserId?: string;
   canBuyPremium?: boolean;
   isGiveawayAvailable?: boolean;
-  starsBalance?: ApiStarsAmount;
-  tonBalance?: ApiTonAmount;
 };
 
 const SettingsMain = ({
@@ -47,8 +42,6 @@ const SettingsMain = ({
   sessionCount,
   canBuyPremium,
   isGiveawayAvailable,
-  starsBalance,
-  tonBalance,
   onReset,
 }: OwnProps & StateProps) => {
   const {
@@ -56,7 +49,6 @@ const SettingsMain = ({
     openPremiumModal,
     openUrl,
     openGiftRecipientPicker,
-    openStarsBalanceModal,
     openSettingsScreen,
     openSettingsConfirmation,
   } = getActions();
@@ -239,41 +231,6 @@ const SettingsMain = ({
             </ListItem>
           )}
 
-          <ListItem
-            icon="stars-filled"
-            iconBg="orange"
-            narrow
-            onClick={() => openStarsBalanceModal({})}
-          >
-            {lang('MenuStars')}
-            {Boolean(starsBalance) && (
-              <span className="settings-item__current-value">
-                {formatStarsAsIcon(lang, formatStarsAmount(lang, starsBalance), {
-                  asFont: true,
-                  withIconLast: true,
-                  className: styles.balanceStar,
-                })}
-              </span>
-            )}
-          </ListItem>
-
-          <ListItem
-            icon="earnings"
-            iconBg="blue"
-            narrow
-            onClick={() => openStarsBalanceModal({ currency: TON_CURRENCY_CODE })}
-          >
-            {lang('GramEarnings')}
-            {Boolean(tonBalance) && (
-              <span className="settings-item__current-value">
-                {formatTonAsIcon(lang, tonBalance.amount, {
-                  withIconLast: true,
-                  className: styles.balanceGem,
-                })}
-              </span>
-            )}
-          </ListItem>
-
           {isGiveawayAvailable && (
             <ListItem
               icon="gift-filled"
@@ -321,16 +278,12 @@ export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const { currentUserId } = global;
     const isGiveawayAvailable = selectIsGiveawayGiftsPurchaseAvailable(global);
-    const starsBalance = global.stars?.balance;
-    const tonBalance = global.ton?.balance;
 
     return {
       sessionCount: global.activeSessions.orderedHashes.length,
       currentUserId,
       canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
       isGiveawayAvailable,
-      starsBalance,
-      tonBalance,
     };
   },
 )(SettingsMain));

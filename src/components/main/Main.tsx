@@ -91,7 +91,6 @@ import NewContactModal from './NewContactModal.async';
 import PremiumLimitReachedModal from './premium/common/PremiumLimitReachedModal.async';
 import GiveawayModal from './premium/GiveawayModal.async';
 import PremiumMainModal from './premium/PremiumMainModal.async';
-import StarsGiftingPickerModal from './premium/StarsGiftingPickerModal.async';
 import ConfettiContainer from './visualEffects/ConfettiContainer';
 import WaveContainer from './visualEffects/WaveContainer';
 
@@ -138,7 +137,6 @@ type StateProps = {
   isReactionPickerOpen: boolean;
   isGiveawayModalOpen?: boolean;
   isDeleteMessageModalOpen?: boolean;
-  isStarsGiftingPickerModal?: boolean;
   isCurrentUserPremium?: boolean;
   noRightColumnAnimation?: boolean;
   withInterfaceAnimations?: boolean;
@@ -189,7 +187,6 @@ const Main = ({
   isPremiumModalOpen,
   isGiveawayModalOpen,
   isDeleteMessageModalOpen,
-  isStarsGiftingPickerModal,
   isReactionPickerOpen,
   isCurrentUserPremium,
   deleteFolderDialog,
@@ -680,7 +677,6 @@ const Main = ({
       <MessageListHistoryHandler />
       <PremiumMainModal isOpen={isPremiumModalOpen} />
       <GiveawayModal isOpen={isGiveawayModalOpen} />
-      <StarsGiftingPickerModal isOpen={isStarsGiftingPickerModal} />
       <PremiumLimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
@@ -711,7 +707,6 @@ export default memo(withGlobal<OwnProps>(
       premiumModal,
       giveawayModal,
       deleteMessageModal,
-      starsGiftingPickerModal,
       isMasterTab,
       limitReachedModal,
       deleteFolderDialogModal,
@@ -764,7 +759,6 @@ export default memo(withGlobal<OwnProps>(
       isPremiumModalOpen: premiumModal?.isOpen,
       isGiveawayModalOpen: giveawayModal?.isOpen,
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
-      isStarsGiftingPickerModal: starsGiftingPickerModal?.isOpen,
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,
       isMasterTab,

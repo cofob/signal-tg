@@ -14,7 +14,6 @@ import type {
 } from './messages';
 import type { ApiPremiumSection } from './payments';
 import type { ApiBotVerification } from './peers';
-import type { ApiStarsSubscriptionPricing } from './stars';
 import type { ApiUser } from './users';
 
 export interface ApiInitialArgs {
@@ -294,9 +293,6 @@ export type ApiChatInviteInfo = {
   color: number;
   isBroadcast?: boolean;
   isRequestNeeded?: boolean;
-  subscriptionFormId?: string;
-  canRefulfillSubscription?: boolean;
-  subscriptionPricing?: ApiStarsSubscriptionPricing;
   botVerification?: ApiBotVerification;
 };
 
@@ -332,7 +328,6 @@ export interface ApiAppConfig {
   whitelistedDomains: string[];
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
-  premiumInvoiceSlug?: string;
   premiumBotUsername: string;
   isPremiumPurchaseBlocked: boolean;
   isGiveawayGiftsPurchaseAvailable: boolean;

@@ -133,11 +133,6 @@ addActionHandler('updateBrowserCachedSize', (global, actions, payload): ActionRe
   return global;
 });
 
-addActionHandler('setWebAppPaymentSlug', (global, actions, payload): ActionReturnType => {
-  const { key, tabId = getCurrentTabId() } = payload;
-  return updateWebApp(global, key, { slug: payload.slug }, tabId);
-});
-
 addActionHandler('cancelBotTrustRequest', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
   return updateTabState(global, {

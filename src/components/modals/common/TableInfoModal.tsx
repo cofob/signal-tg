@@ -36,8 +36,6 @@ type OwnProps = {
   headerRightToolBar?: TeactNode;
   onClose: NoneToVoidFunction;
   onButtonClick?: NoneToVoidFunction;
-  withBalanceBar?: boolean;
-  currencyInBalanceBar?: 'TON' | 'XTR';
   isLowStackPriority?: true;
 };
 
@@ -60,9 +58,7 @@ const TableInfoModal = ({
   headerRightToolBar,
   onClose,
   onButtonClick,
-  withBalanceBar,
   isLowStackPriority,
-  currencyInBalanceBar,
 }: OwnProps) => {
   const { openChat } = getActions();
 
@@ -86,8 +82,6 @@ const TableInfoModal = ({
       moreMenuItems={moreMenuItems}
       headerRightToolBar={headerRightToolBar}
       onClose={onClose}
-      withBalanceBar={withBalanceBar}
-      currencyInBalanceBar={currencyInBalanceBar}
       isLowStackPriority={isLowStackPriority}
     >
       {headerAvatarPeer && (

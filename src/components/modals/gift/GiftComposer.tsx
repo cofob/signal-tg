@@ -71,7 +71,7 @@ function GiftComposer({
   giftAuction,
 }: OwnProps & StateProps) {
   const {
-    sendStarGift, sendPremiumGiftByStars, openInvoice, openGiftUpgradeModal, openStarsBalanceModal,
+    sendStarGift, sendPremiumGiftByStars, openGiftUpgradeModal,
     openGiftAuctionBidModal, openGiftAuctionInfoModal, openGiftAuctionChangeRecipientModal,
   } = getActions();
 
@@ -170,10 +170,6 @@ function GiftComposer({
     });
   });
 
-  const handleGetMoreStars = useLastCallback(() => {
-    openStarsBalanceModal({});
-  });
-
   const handleLearnMoreClick = useLastCallback(() => {
     if (!giftAuction) return;
     openGiftAuctionInfoModal({ auctionGiftId: giftAuction.gift.id });
@@ -222,17 +218,6 @@ function GiftComposer({
       });
       return;
     }
-
-    if (isPremiumGift) {
-      openInvoice({
-        type: 'giftcode',
-        userIds: [peerId],
-        currency: gift.currency,
-        amount: gift.amount,
-        option: gift,
-        message: giftMessage ? { text: giftMessage } : undefined,
-      });
-    }
   });
 
   const canUseStarsPayment = hasPremiumByStars && starBalance && (starBalance.amount > giftByStars.amount);
@@ -269,25 +254,6 @@ function GiftComposer({
               label={lang('GiftPremiumPayWithStarsAcc')}
             />
           </ListItem>
-        )}
-
-        {hasPremiumByStars && starBalance && (
-          <div className={styles.description}>
-            {lang('GiftPremiumDescriptionYourBalance', {
-              stars: formatStarsAsIcon(lang, starBalance.amount, { className: styles.switcherStarIcon }),
-              link: (
-                <Link isPrimary onClick={handleGetMoreStars}>
-                  {lang('GetMoreStarsLinkText', undefined, {
-                    withNodes: true,
-                    specialReplacement: NEXT_ARROW_REPLACEMENT,
-                  })}
-                </Link>
-              ),
-            }, {
-              withNodes: true,
-              withMarkdown: true,
-            })}
-          </div>
         )}
 
         {isStarGift && Boolean(gift.upgradeStars) && !areUniqueStarGiftsDisallowed && (

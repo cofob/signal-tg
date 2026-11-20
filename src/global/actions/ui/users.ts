@@ -49,8 +49,6 @@ addActionHandler('closeSuggestedStatusModal', (global, actions, payload): Action
   }, tabId);
 });
 
-addTabStateResetterAction('closeChatRefundModal', 'chatRefundModal');
-
 addActionHandler('openDisableSharingAboutModal', (global, actions, payload): ActionReturnType => {
   const { userId, tabId = getCurrentTabId() } = payload;
 

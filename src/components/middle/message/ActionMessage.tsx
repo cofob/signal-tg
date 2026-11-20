@@ -159,9 +159,7 @@ const ActionMessage = ({
     requestConfetti,
     openMediaViewer,
     checkGiftCode,
-    openPrizeStarsTransactionFromGiveaway,
     openPremiumModal,
-    openStarsTransactionFromGift,
     openGiftInfoModalFromMessage,
     toggleChannelRecommendations,
     animateUnreadReaction,
@@ -390,29 +388,12 @@ const ActionMessage = ({
         break;
       }
 
-      case 'prizeStars': {
-        openPrizeStarsTransactionFromGiveaway({
-          chatId: message.chatId,
-          messageId: message.id,
-        });
-        break;
-      }
-
       case 'giftPremium': {
         openPremiumModal({
           isGift: true,
           fromUserId: sender?.id,
           toUserId: sender && sender.id === currentUserId ? chatId : currentUserId,
           daysAmount: action.days,
-        });
-        break;
-      }
-
-      case 'giftTon':
-      case 'giftStars': {
-        openStarsTransactionFromGift({
-          chatId: message.chatId,
-          messageId: message.id,
         });
         break;
       }

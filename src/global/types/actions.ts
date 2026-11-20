@@ -23,7 +23,6 @@ import type {
   ApiInputAiComposeTone,
   ApiInputEphemeralReplyInfo,
   ApiInputInvoice,
-  ApiInputInvoiceStarGift,
   ApiInputMessageReplyInfo,
   ApiInputRichMessage,
   ApiInputSavedStarGift,
@@ -38,7 +37,6 @@ import type {
   ApiNewMediaTodo,
   ApiNotification,
   ApiNotifyPeerType,
-  ApiPaymentStatus,
   ApiPeer,
   ApiPhoto,
   ApiPremiumGiftCodeOption,
@@ -62,8 +60,6 @@ import type {
   ApiStarGiftRegular,
   ApiStarGiftUnique,
   ApiStarGiftUpgradePrice,
-  ApiStarsSubscription,
-  ApiStarsTransaction,
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
@@ -123,7 +119,6 @@ import type {
   SharedMediaType,
   Size,
   StarGiftInfo,
-  StarsTransactionType,
   StoryViewerOrigin,
   ThemeKey,
   ThreadId,
@@ -904,32 +899,12 @@ export interface ActionPayloads {
   } & WithTabId;
   resetChatCreation: WithTabId | undefined;
 
-  // payment
-  closeStarsPaymentModal: WithTabId | undefined;
-  resetPaymentStatus: WithTabId | undefined;
   sendStarPaymentForm: {
-    directInfo?: {
+    directInfo: {
       formId: string;
       inputInvoice: ApiInputInvoice;
     };
   } & WithTabId;
-  openStarsTransactionModal: {
-    transaction: ApiStarsTransaction;
-  } & WithTabId;
-  openStarsTransactionFromGift: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  closeStarsTransactionModal: WithTabId | undefined;
-  openStarsSubscriptionModal: {
-    subscription: ApiStarsSubscription;
-  } & WithTabId;
-  closeStarsSubscriptionModal: WithTabId | undefined;
-  openPrizeStarsTransactionFromGiveaway: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  closePrizeStarsTransactionFromGiveaway: WithTabId | undefined;
 
   // ui
   dismissDialog: WithTabId | undefined;
@@ -1414,38 +1389,6 @@ export interface ActionPayloads {
       amount: number;
     };
   } & WithTabId;
-
-  loadStarStatus: undefined;
-  loadStarsTransactions: {
-    type: StarsTransactionType;
-    isTon?: boolean;
-  };
-  loadStarsSubscriptions: undefined;
-  changeStarsSubscription: {
-    peerId?: string;
-    id: string;
-    isCancelled: boolean;
-  };
-  fulfillStarsSubscription: {
-    peerId?: string;
-    id: string;
-  };
-  openStarsBalanceModal: {
-    originStarsPayment?: TabState['starsPayment'];
-    originGift?: StarGiftInfo;
-    originReaction?: {
-      chatId: string;
-      messageId: number;
-      amount: number;
-    };
-    topup?: {
-      balanceNeeded: number;
-      purpose?: string;
-    };
-    shouldIgnoreBalance?: boolean;
-    currency?: ApiTypeCurrencyAmount['currency'];
-  } & WithTabId;
-  closeStarsBalanceModal: WithTabId | undefined;
 
   checkChatlistInvite: {
     slug: string;
@@ -2071,10 +2014,6 @@ export interface ActionPayloads {
     userId: string;
     shouldRefundCharged: boolean;
   };
-  openChatRefundModal: {
-    userId: string;
-  } & WithTabId;
-  closeChatRefundModal: WithTabId | undefined;
   openDisableSharingAboutModal: {
     userId: string;
   } & WithTabId;
@@ -2419,10 +2358,6 @@ export interface ActionPayloads {
   loadPreviewMedias: {
     botId: string;
   };
-  setWebAppPaymentSlug: {
-    key: string;
-    slug?: string;
-  } & WithTabId;
 
   cancelBotTrustRequest: WithTabId | undefined;
   markBotTrusted: {
@@ -2967,9 +2902,6 @@ export interface ActionPayloads {
     shouldSkipInFuture?: boolean;
   } & WithTabId);
 
-  openStarsGiftingPickerModal: WithTabId | undefined;
-  closeStarsGiftingPickerModal: WithTabId | undefined;
-
   openPaidReactionModal: {
     chatId: string;
     messageId: number;
@@ -3038,6 +2970,7 @@ export interface ActionPayloads {
 
   loadPremiumGifts: undefined;
   loadTonGifts: undefined;
+  loadStarStatus: undefined;
   loadStarGifts: undefined;
   loadMyUniqueGifts: {
     shouldRefresh?: true;
@@ -3313,12 +3246,6 @@ export interface ActionPayloads {
     messageId: number;
   } & WithTabId;
 
-  openStarsGiftModal: ({
-    chatId?: string;
-    forUserId?: string;
-  } & WithTabId) | undefined;
-  closeStarsGiftModal: WithTabId | undefined;
-
   setEmojiStatus: {
     emojiStatus: ApiEmojiStatusType;
     referrerWebAppKey?: string;
@@ -3339,17 +3266,9 @@ export interface ActionPayloads {
     peerId: string;
   } & WithTabId;
 
-  // Invoice
-  openInvoice: Exclude<ApiInputInvoice, ApiInputInvoiceStarGift> & WithTabId;
-
   // Payment
   validatePaymentPassword: {
     password: string;
-  } & WithTabId;
-
-  processOriginStarsPayment: {
-    originData: TabState['starsBalanceModal'];
-    status: ApiPaymentStatus;
   } & WithTabId;
 
   openPaymentMessageConfirmDialogOpen: { dialogKey: string } & WithTabId;

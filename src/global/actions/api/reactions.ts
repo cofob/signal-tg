@@ -1,6 +1,5 @@
 import type { ActionReturnType } from '../../types';
 import {
-  type ApiError,
   ApiMediaFormat,
   type ApiMessage,
   type ApiReaction,
@@ -312,7 +311,7 @@ addActionHandler('addLocalPaidReaction', (global, actions, payload): ActionRetur
 
 addActionHandler('sendPaidReaction', async (global, actions, payload): Promise<void> => {
   const {
-    chatId, messageId, forcedAmount, tabId = getCurrentTabId(),
+    chatId, messageId, forcedAmount,
   } = payload;
   const chat = selectChat(global, chatId);
   const message = selectChatMessage(global, chatId, messageId);
@@ -328,19 +327,13 @@ addActionHandler('sendPaidReaction', async (global, actions, payload): Promise<v
   }
   actions.resetLocalPaidReactions({ chatId, messageId });
 
-  try {
-    await callApi('sendPaidReaction', {
-      chat,
-      messageId,
-      count,
-      isPrivate: paidReaction?.localIsPrivate,
-      peerId: paidReaction?.localPeerId,
-    });
-  } catch (error) {
-    if ((error as ApiError).message === 'BALANCE_TOO_LOW') {
-      actions.openStarsBalanceModal({ originReaction: { chatId, messageId, amount: count }, tabId });
-    }
-  }
+  await callApi('sendPaidReaction', {
+    chat,
+    messageId,
+    count,
+    isPrivate: paidReaction?.localIsPrivate,
+    peerId: paidReaction?.localPeerId,
+  });
 });
 
 addActionHandler('startActiveReaction', (global, actions, payload): ActionReturnType => {

@@ -219,16 +219,6 @@ addActionHandler('clickBotInlineButton', (global, actions, payload): ActionRetur
       break;
     }
 
-    case 'buy': {
-      actions.openInvoice({
-        type: 'message',
-        chatId: chat.id,
-        messageId,
-        tabId,
-      });
-      break;
-    }
-
     case 'game': {
       void answerCallbackButton(global, {
         chat,

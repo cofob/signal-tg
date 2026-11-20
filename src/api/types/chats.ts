@@ -106,8 +106,6 @@ export interface ApiChat {
   hasUnreadStories?: boolean;
   maxStoryId?: number;
 
-  subscriptionUntil?: number;
-
   // Locally determined field
   detectedLanguage?: string;
 

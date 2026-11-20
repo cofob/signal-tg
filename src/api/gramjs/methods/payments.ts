@@ -19,7 +19,6 @@ import {
   buildApiPremiumGiftCodeOption,
   buildApiPremiumPromo,
 } from '../apiBuilders/payments';
-import { buildApiPeerId } from '../apiBuilders/peers';
 import {
   buildInputInvoice,
   buildInputPeer,
@@ -53,22 +52,6 @@ export async function sendStarPaymentForm({
   }
 
   handleGramJsUpdate(result.updates);
-
-  if (inputInvoice.type === 'chatInviteSubscription') {
-    const updates = 'updates' in result.updates ? result.updates.updates : undefined;
-
-    const mtpChannelId = updates?.find((update): update is GramJs.UpdateChannel => (
-      update instanceof GramJs.UpdateChannel
-    ))?.channelId;
-
-    if (!mtpChannelId) {
-      return undefined;
-    }
-
-    return {
-      channelId: buildApiPeerId(mtpChannelId, 'channel'),
-    };
-  }
 
   return {
     completed: true,

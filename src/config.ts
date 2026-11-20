@@ -21,8 +21,6 @@ export const IS_TEST = APP_ENV === 'test';
 export const IS_PERF = APP_ENV === 'perf';
 export const IS_BETA = APP_ENV === 'staging';
 
-export const PAID_MESSAGES_PURPOSE = 'paid_messages';
-
 export const DEBUG = APP_ENV !== 'production';
 export const DEBUG_MORE = false;
 export const DEBUG_CALLS = false;

@@ -1,6 +1,6 @@
 import type { FC } from '../../../lib/teact/teact';
 import { memo } from '../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../global';
+import { withGlobal } from '../../../global';
 
 import type {
   ApiChat,
@@ -17,10 +17,7 @@ import { formatStarsAsIcon } from '../../../util/localization/format';
 
 import useFrozenProps from '../../../hooks/useFrozenProps';
 import useLang from '../../../hooks/useLang';
-import useLastCallback from '../../../hooks/useLastCallback';
 import useHeaderPane, { type PaneState } from '../hooks/useHeaderPane';
-
-import Button from '../../ui/Button';
 
 import styles from './PaidMessageChargePane.module.scss';
 
@@ -44,24 +41,15 @@ const PaidMessageChargePane: FC<OwnProps & StateProps> = ({
   const lang = useLang();
 
   const {
-    peerId: renderingPeerId,
     chargedPaidMessageStars: renderingChargedStars,
     chat: renderingChat,
-  } = useFrozenProps({ peerId, chargedPaidMessageStars, chat }, !isOpen);
-
-  const {
-    openChatRefundModal,
-  } = getActions();
+  } = useFrozenProps({ chargedPaidMessageStars, chat }, !isOpen);
 
   const { ref, shouldRender } = useHeaderPane({
     isOpen,
     measureKey: peerId,
     withResizeObserver: true,
     onStateChange: onPaneStateChange,
-  });
-
-  const handleRefund = useLastCallback(() => {
-    openChatRefundModal({ userId: renderingPeerId });
   });
 
   if (!shouldRender || !renderingChargedStars) return undefined;
@@ -83,17 +71,6 @@ const PaidMessageChargePane: FC<OwnProps & StateProps> = ({
       <span className={styles.message}>
         {message}
       </span>
-      <Button
-        isText
-        noForcedUpperCase
-        pill
-        fluid
-        size="tiny"
-        className={styles.button}
-        onClick={handleRefund}
-      >
-        {lang('RemoveFeeTitle')}
-      </Button>
     </div>
   );
 };

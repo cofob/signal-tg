@@ -27,8 +27,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['edit/log-out', [SettingsScreens.Main, 'LogOutTitle']],
 
   ['premium', [SettingsScreens.Main, 'TelegramPremium']],
-  ['stars', [SettingsScreens.Main, 'MenuStars']],
-  ['ton', [SettingsScreens.Main, 'GramEarnings']],
   ['send-gift', [SettingsScreens.Main, 'MenuSendGift']],
 
   ['devices', [SettingsScreens.ActiveSessions]],

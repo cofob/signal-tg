@@ -9,8 +9,6 @@ import type { ActionReturnType } from '../../types';
 
 import {
   DEFAULT_RESALE_GIFTS_FILTER_OPTIONS,
-  STARS_CURRENCY_CODE,
-  TON_CURRENCY_CODE,
 } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByCallback, buildCollectionByKey } from '../../../util/iteratees';
@@ -21,8 +19,6 @@ import { RESALE_GIFTS_LIMIT } from '../../../limits';
 import { areInputSavedGiftsEqual, getRequestInputSavedStarGift } from '../../helpers/payments';
 import { addActionHandler, getGlobal, getPromiseActions, setGlobal } from '../../index';
 import {
-  appendStarsSubscriptions,
-  appendStarsTransactions,
   removePeerSavedGift,
   replaceGiftAuction,
   replacePeerSavedGifts,
@@ -30,7 +26,6 @@ import {
   updatePeerFullInfo,
   updatePeerStarGiftCollections,
   updateStarsBalance,
-  updateStarsSubscriptionLoading,
   updateUsers,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
@@ -50,94 +45,14 @@ import {
 const loadingQrCodeGiftsKeys = new Set<string>();
 
 addActionHandler('loadStarStatus', async (global): Promise<void> => {
-  const currentStarsStatus = global.stars;
-  const needsTopupOptions = !currentStarsStatus?.topupOptions;
-
-  const [starsStatus, tonStatus, topupOptions] = await Promise.all([
+  const [starsBalance, tonBalance] = await Promise.all([
     callApi('fetchStarsStatus'),
     callApi('fetchStarsStatus', { isTon: true }),
-    needsTopupOptions ? callApi('fetchStarsTopupOptions') : undefined,
   ]);
 
-  if (!(starsStatus || tonStatus) || (needsTopupOptions && !topupOptions)) {
-    return;
-  }
-
   global = getGlobal();
-
-  if (starsStatus && starsStatus.balance.currency === STARS_CURRENCY_CODE) {
-    global = {
-      ...global,
-      stars: {
-        ...currentStarsStatus,
-        balance: starsStatus.balance,
-        topupOptions: topupOptions || currentStarsStatus!.topupOptions,
-        history: {
-          all: undefined,
-          inbound: undefined,
-          outbound: undefined,
-        },
-        subscriptions: undefined,
-      },
-    };
-
-    if (starsStatus.history) {
-      global = appendStarsTransactions(global, 'all', starsStatus.history, starsStatus.nextHistoryOffset);
-    }
-
-    if (starsStatus.subscriptions) {
-      global = appendStarsSubscriptions(global, starsStatus.subscriptions, starsStatus.nextSubscriptionOffset);
-    }
-  }
-
-  if (tonStatus?.balance.currency === TON_CURRENCY_CODE) {
-    global = {
-      ...global,
-      ton: {
-        ...tonStatus,
-        balance: tonStatus.balance,
-        history: {
-          all: undefined,
-          inbound: undefined,
-          outbound: undefined,
-        },
-      },
-    };
-
-    global = updateStarsBalance(global, tonStatus.balance);
-
-    if (tonStatus.history) {
-      global = appendStarsTransactions(global, 'all', tonStatus.history, tonStatus.nextHistoryOffset, true);
-    }
-  }
-
-  setGlobal(global);
-});
-
-addActionHandler('loadStarsTransactions', async (global, actions, payload): Promise<void> => {
-  const { type, isTon } = payload;
-
-  const history = isTon ? global.ton?.history[type] : global.stars?.history[type];
-  const offset = history?.nextOffset;
-  if (history && !offset) return; // Already loaded all
-
-  const result = await callApi('fetchStarsTransactions', {
-    isInbound: type === 'inbound',
-    isOutbound: type === 'outbound',
-    offset: offset || '',
-    isTon,
-  });
-
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = updateStarsBalance(global, result.balance);
-  if (result.history) {
-    global = appendStarsTransactions(global, type, result.history, result.nextOffset, isTon);
-  }
+  if (starsBalance) global = updateStarsBalance(global, starsBalance);
+  if (tonBalance) global = updateStarsBalance(global, tonBalance);
   setGlobal(global);
 });
 
@@ -448,60 +363,6 @@ addActionHandler('reloadPeerSavedGifts', (global, actions, payload): ActionRetur
   }
 });
 
-addActionHandler('loadStarsSubscriptions', async (global): Promise<void> => {
-  const subscriptions = global.stars?.subscriptions;
-  const offset = subscriptions?.nextOffset;
-  if (subscriptions && !offset) return; // Already loaded all
-
-  global = updateStarsSubscriptionLoading(global, true);
-  setGlobal(global);
-
-  const result = await callApi('fetchStarsSubscriptions', {
-    offset: offset || '',
-  });
-
-  if (!result || result.balance.currency !== STARS_CURRENCY_CODE) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = updateStarsBalance(global, result.balance);
-  global = appendStarsSubscriptions(global, result.subscriptions, result.nextOffset);
-  setGlobal(global);
-});
-
-addActionHandler('changeStarsSubscription', async (global, actions, payload): Promise<void> => {
-  const { peerId, id, isCancelled } = payload;
-
-  const peer = peerId ? selectPeer(global, peerId) : undefined;
-
-  if (peerId && !peer) return;
-
-  await callApi('changeStarsSubscription', {
-    peer,
-    subscriptionId: id,
-    isCancelled,
-  });
-
-  actions.loadStarStatus();
-});
-
-addActionHandler('fulfillStarsSubscription', async (global, actions, payload): Promise<void> => {
-  const { peerId, id } = payload;
-
-  const peer = peerId ? selectPeer(global, peerId) : undefined;
-
-  if (peerId && !peer) return;
-
-  await callApi('fulfillStarsSubscription', {
-    peer,
-    subscriptionId: id,
-  });
-
-  actions.loadStarStatus();
-});
-
 addActionHandler('changeGiftVisibility', async (global, actions, payload): Promise<void> => {
   const { gift, shouldUnsave, tabId = getCurrentTabId() } = payload;
 
@@ -542,7 +403,7 @@ addActionHandler('changeGiftVisibility', async (global, actions, payload): Promi
 });
 
 addActionHandler('convertGiftToStars', async (global, actions, payload): Promise<void> => {
-  const { gift, tabId = getCurrentTabId() } = payload;
+  const { gift } = payload;
 
   const requestInputGift = getRequestInputSavedStarGift(global, gift);
   if (!requestInputGift) return;
@@ -557,7 +418,7 @@ addActionHandler('convertGiftToStars', async (global, actions, payload): Promise
 
   const peerId = gift.type === 'user' ? global.currentUserId! : gift.chatId;
   actions.reloadPeerSavedGifts({ peerId });
-  actions.openStarsBalanceModal({ tabId });
+  actions.loadStarStatus();
 });
 
 addActionHandler('deleteSavedGift', async (global, actions, payload): Promise<void> => {

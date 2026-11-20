@@ -44,15 +44,6 @@ const PriceConfirmModal = ({
       return;
     }
 
-    if (currentBalance.amount < newAmount.amount) {
-      actions.openStarsBalanceModal({
-        currency: newAmount.currency,
-        tabId: getCurrentTabId(),
-      });
-      actions.closePriceConfirmModal();
-      return;
-    }
-
     actions.sendStarPaymentForm({
       directInfo: modal.directInfo,
       tabId: getCurrentTabId(),

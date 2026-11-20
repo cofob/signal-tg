@@ -41,11 +41,9 @@ import {
   MESSAGE_LIST_SLICE,
   RE_TELEGRAM_LINK,
   SERVICE_NOTIFICATIONS_USER_ID,
-  STARS_CURRENCY_CODE,
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
-  TON_CURRENCY_CODE,
 } from '../../../config';
 import { revokeAttachmentUrls } from '../../../util/attachments';
 import { ensureProtocol } from '../../../util/browser/url';
@@ -625,32 +623,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     ? selectChatLastMessageId(global, chatId!) : threadInfo?.lastMessageId;
 
   const messagePriceInStars = await getPeerStarsForMessage(global, chatId!);
-
-  const suggestedPostPrice = draftSuggestedPostInfo?.price;
-  if (suggestedPostPrice?.amount && !draftReplyInfo) {
-    if (suggestedPostPrice.currency === STARS_CURRENCY_CODE) {
-      const currentBalance = global.stars?.balance?.amount || 0;
-
-      if (suggestedPostPrice.amount > currentBalance) {
-        actions.openStarsBalanceModal({
-          topup: {
-            balanceNeeded: suggestedPostPrice.amount,
-          },
-          tabId,
-        });
-        return;
-      }
-    } else {
-      const currentTonBalance = global.ton?.balance?.amount || 0n;
-      if (suggestedPostPrice.amount > currentTonBalance) {
-        actions.openStarsBalanceModal({
-          currency: TON_CURRENCY_CODE,
-          tabId,
-        });
-        return;
-      }
-    }
-  }
 
   const suggestedMessage = draftReplyInfo && draftSuggestedPostInfo
     ? selectChatMessage(global, chatId!, draftReplyInfo.replyToMsgId) : undefined;
@@ -3178,35 +3150,6 @@ addActionHandler('approveSuggestedPost', async (global, actions, payload): Promi
   const chat = selectChat(global, chatId);
   if (!chat) return;
 
-  const message = selectChatMessage(global, chatId, messageId);
-
-  const isAdmin = selectIsMonoforumAdmin(global, chatId);
-
-  const price = message?.suggestedPostInfo?.price;
-  if (!isAdmin && price?.amount) {
-    if (price.currency === STARS_CURRENCY_CODE) {
-      const currentBalance = global.stars?.balance?.amount || 0;
-      if (price.amount > currentBalance) {
-        actions.openStarsBalanceModal({
-          topup: {
-            balanceNeeded: price.amount,
-          },
-          tabId,
-        });
-        return;
-      }
-    } else {
-      const currentTonBalance = global.ton?.balance?.amount || 0n;
-      if (price.amount > currentTonBalance) {
-        actions.openStarsBalanceModal({
-          currency: TON_CURRENCY_CODE,
-          tabId,
-        });
-        return;
-      }
-    }
-  }
-
   const result = await callApi('toggleSuggestedPostApproval', {
     chat,
     messageId,
@@ -3797,12 +3740,6 @@ addActionHandler('forwardAudio', async (global, actions, payload): Promise<void>
         },
       }, tabId);
       setGlobal(global);
-      return;
-    }
-
-    const starsBalance = global.stars?.balance?.amount || 0;
-    if (messagePriceInStars > starsBalance) {
-      actions.openStarsBalanceModal({ topup: { balanceNeeded: messagePriceInStars }, tabId });
       return;
     }
   }

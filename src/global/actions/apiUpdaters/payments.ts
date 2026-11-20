@@ -16,48 +16,7 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
   switch (update['@type']) {
     case 'updateStarPaymentStateCompleted': {
       const { paymentState, tabId } = update;
-      const { inputInvoice, subscriptionInfo, form } = paymentState;
-      if (inputInvoice?.type === 'chatInviteSubscription' && subscriptionInfo) {
-        const amount = subscriptionInfo.subscriptionPricing!.amount;
-
-        actions.showNotification({
-          tabId,
-          title: {
-            key: 'StarsSubscriptionCompleted',
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-          message: {
-            key: 'StarsSubscriptionCompletedText',
-            variables: {
-              amount,
-              channel: subscriptionInfo.title,
-            },
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'], pluralValue: amount },
-          },
-          icon: 'star',
-        });
-      }
-
-      if (form?.invoice.subscriptionPeriod) {
-        const amount = form.invoice.totalAmount;
-        actions.showNotification({
-          tabId,
-          title: {
-            key: 'StarsSubscriptionCompleted',
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-          message: {
-            key: 'StarsSubscriptionCompletedText',
-            variables: {
-              amount,
-              channel: form.title,
-            },
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'], pluralValue: amount },
-          },
-          icon: 'star',
-        });
-      }
-
+      const { inputInvoice } = paymentState;
       if (inputInvoice?.type === 'giftcode') {
         if (!inputInvoice.userIds) {
           return;
@@ -88,22 +47,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
           });
           actions.requestConfetti({ withStars: true, tabId });
           actions.closeGiftModal({ tabId });
-        }
-      }
-
-      if (inputInvoice?.type === 'starsgift') {
-        if (!inputInvoice.userId) {
-          return;
-        }
-        const starsModalState = selectTabState(global, tabId).starsGiftModal;
-
-        if (starsModalState?.isOpen && inputInvoice.userId === starsModalState.forUserId) {
-          global = updateTabState(global, {
-            starsGiftModal: {
-              ...starsModalState,
-              isCompleted: true,
-            },
-          }, tabId);
         }
       }
 
@@ -219,10 +162,7 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateStarsBalance': {
       global = updateStarsBalance(global, update.balance);
-
       setGlobal(global);
-
-      actions.loadStarStatus();
       break;
     }
 

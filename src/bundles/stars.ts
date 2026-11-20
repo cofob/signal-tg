@@ -1,10 +1,4 @@
 /* eslint-disable @stylistic/max-len */
-export { default as StarsGiftModal } from '../components/modals/stars/gift/StarsGiftModal';
-export { default as StarsGiftingPickerModal } from '../components/main/premium/StarsGiftingPickerModal';
-export { default as StarsBalanceModal } from '../components/modals/stars/StarsBalanceModal';
-export { default as StarPaymentModal } from '../components/modals/stars/StarsPaymentModal';
-export { default as StarsTransactionInfoModal } from '../components/modals/stars/transaction/StarsTransactionModal';
-export { default as StarsSubscriptionModal } from '../components/modals/stars/subscription/StarsSubscriptionModal';
 export { default as PaidReactionModal } from '../components/modals/paidReaction/PaidReactionModal';
 export { default as GiftModal } from '../components/modals/gift/GiftModal';
 export { default as GiftRecipientPicker } from '../components/modals/gift/recipient/GiftRecipientPicker';
@@ -30,6 +24,5 @@ export { default as GiftTransferModal } from '../components/modals/gift/transfer
 export { default as GiftTransferConfirmModal } from '../components/modals/gift/transfer/GiftTransferConfirmModal';
 export { default as GiftDescriptionRemoveModal } from '../components/modals/gift/message/GiftDescriptionRemoveModal';
 export { default as GiftOfferAcceptModal } from '../components/modals/gift/offer/GiftOfferAcceptModal';
-export { default as ChatRefundModal } from '../components/modals/stars/chatRefund/ChatRefundModal';
 export { default as PriceConfirmModal } from '../components/modals/priceConfirm/PriceConfirmModal';
 export { default as ActiveGiftAuctionsModal } from '../components/modals/gift/auction/ActiveGiftAuctionsModal';

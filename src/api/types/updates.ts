@@ -1,4 +1,3 @@
-import type { TabState } from '../../global/types';
 import type {
   GroupCallConnectionData,
   GroupCallConnectionState,
@@ -46,6 +45,7 @@ import type {
   ApiSessionData,
   ApiWallpaper,
 } from './misc';
+import type { ApiInputInvoice } from './payments';
 import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
@@ -691,7 +691,9 @@ export type ApiUpdatePeerBlocked = {
 
 export type ApiUpdateStarPaymentStateCompleted = {
   '@type': 'updateStarPaymentStateCompleted';
-  paymentState: TabState['starsPayment'];
+  paymentState: {
+    inputInvoice: ApiInputInvoice;
+  };
   tabId: number;
 };
 

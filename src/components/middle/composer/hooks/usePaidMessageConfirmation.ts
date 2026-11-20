@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from '../../../../lib/teact/teact';
 import { getActions, getGlobal } from '../../../../global';
 
-import { PAID_MESSAGES_PURPOSE } from '../../../../config';
 import { selectTabState } from '../../../../global/selectors';
 
 import useLastCallback from '../../../../hooks/useLastCallback';
@@ -9,8 +8,6 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 export default function usePaidMessageConfirmation(
   dialogKey: string,
   starsForAllMessages: number,
-  isStarsBalanceModeOpen: boolean,
-  starsBalance: number,
   shouldDelayConfirmHandler?: boolean,
 ) {
   const {
@@ -18,7 +15,6 @@ export default function usePaidMessageConfirmation(
   } = getGlobal().settings.byKey;
 
   const [shouldAutoApprove, setShouldAutoApprove] = useState(Boolean(shouldPaidMessageAutoApprove));
-  const [isWaitingStarsTopup, setIsWaitingStarsTopup] = useState(false);
   const confirmPaymentHandlerRef = useRef<NoneToVoidFunction | undefined>(undefined);
 
   const closeConfirmDialog = useLastCallback(() => {
@@ -34,30 +30,8 @@ export default function usePaidMessageConfirmation(
     };
   }, [dialogKey]);
 
-  useEffect(() => {
-    if (isWaitingStarsTopup && !isStarsBalanceModeOpen) {
-      setIsWaitingStarsTopup(false);
-
-      if (starsBalance > starsForAllMessages) {
-        confirmPaymentHandlerRef?.current?.();
-      }
-    }
-  }, [isWaitingStarsTopup, isStarsBalanceModeOpen, starsBalance, starsForAllMessages]);
-
-  const handleStarsTopup = useLastCallback(() => {
-    getActions().openStarsBalanceModal({
-      topup: {
-        balanceNeeded: starsForAllMessages,
-        purpose: PAID_MESSAGES_PURPOSE,
-      },
-    });
-    setIsWaitingStarsTopup(true);
-  });
-
   const dialogHandler = useLastCallback(() => {
-    if (starsForAllMessages > starsBalance) {
-      handleStarsTopup();
-    } else if (shouldDelayConfirmHandler) {
+    if (shouldDelayConfirmHandler) {
       setTimeout(() => {
         confirmPaymentHandlerRef?.current?.();
       }, 250);
@@ -77,11 +51,6 @@ export default function usePaidMessageConfirmation(
       confirmPaymentHandlerRef.current = () => handler(...args);
       if (!shouldPaidMessageAutoApprove) {
         getActions().openPaymentMessageConfirmDialogOpen({ dialogKey });
-        return;
-      }
-
-      if (starsForAllMessages > starsBalance) {
-        handleStarsTopup();
         return;
       }
     }

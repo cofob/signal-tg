@@ -349,17 +349,6 @@ export async function importContactToken({ token }: { token: string }) {
   }
 }
 
-export async function fetchPaidMessagesRevenue({ user }: {
-  user: ApiUser;
-  shouldRefundCharged?: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.account.GetPaidMessagesRevenue({
-    userId: buildInputUser(user.id, user.accessHash),
-  }));
-  if (!result) return undefined;
-  return toJSNumber(result.starsAmount);
-}
-
 export async function fetchProfilePhotos({
   peer,
   offset = 0,

@@ -119,7 +119,6 @@ type StateProps = {
   limitLinks: number;
   limitFolders: number;
   limits?: NonNullable<GlobalState['appConfig']>['limits'];
-  premiumSlug?: string;
   premiumBotUsername?: string;
   premiumPromoOrder?: ApiPremiumSection[];
 };
@@ -138,7 +137,6 @@ const PremiumMainModal = ({
   limitFolders,
   limitPins,
   limits,
-  premiumSlug,
   premiumBotUsername,
   isSuccess,
   isGift,
@@ -148,7 +146,7 @@ const PremiumMainModal = ({
   gift,
 }: OwnProps & StateProps) => {
   const {
-    closePremiumModal, openInvoice, requestConfetti, openChatByUsername, loadStickers, openStickerSet,
+    closePremiumModal, requestConfetti, openChatByUsername, loadStickers, openStickerSet,
   } = getActions();
 
   const lang = useLang();
@@ -184,12 +182,7 @@ const PremiumMainModal = ({
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    if (premiumSlug) {
-      openInvoice({
-        type: 'slug',
-        slug: premiumSlug,
-      });
-    } else if (premiumBotUsername) {
+    if (premiumBotUsername) {
       openChatByUsername({
         username: premiumBotUsername,
         startParam: startParam || 'promo',
@@ -537,7 +530,6 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     limitPins: selectPremiumLimit(global, 'dialogFolderPinned'),
     limitLinks: selectPremiumLimit(global, 'channelsPublic'),
     limits: global.appConfig.limits,
-    premiumSlug: global.appConfig.premiumInvoiceSlug,
     premiumBotUsername: global.appConfig.premiumBotUsername,
     premiumPromoOrder: global.appConfig.premiumPromoOrder,
   };

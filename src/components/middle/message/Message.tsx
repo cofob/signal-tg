@@ -1716,7 +1716,7 @@ const Message = ({
 
     if (paidMedia) {
       return (
-        <PaidMediaOverlay chatId={chatId} messageId={messageId} paidMedia={paidMedia} isOutgoing={isOwn}>
+        <PaidMediaOverlay paidMedia={paidMedia} isOutgoing={isOwn}>
           {content}
         </PaidMediaOverlay>
       );

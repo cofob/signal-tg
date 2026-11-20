@@ -4,15 +4,8 @@ import type { ActionReturnType } from '../../types';
 import { DEFAULT_GIFT_PROFILE_FILTER_OPTIONS } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler, setGlobal } from '../../index';
-import { updateStarsPayment } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import { selectActiveGiftsCollectionId, selectTabState } from '../../selectors';
-
-addActionHandler('resetPaymentStatus', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateStarsPayment(global, { status: undefined }, tabId);
-});
 
 addActionHandler('closeGiveawayModal', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};

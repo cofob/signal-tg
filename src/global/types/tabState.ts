@@ -26,8 +26,6 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
-  ApiPaymentFormStars,
-  ApiPaymentStatus,
   ApiPhoneCall,
   ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
@@ -48,9 +46,6 @@ import type {
   ApiStarGiftUnique,
   ApiStarGiftUpgradePrice,
   ApiStarGiveawayOption,
-  ApiStarsSubscription,
-  ApiStarsTransaction,
-  ApiStarTopupOption,
   ApiSticker,
   ApiThumbnail,
   ApiTypeCurrencyAmount,
@@ -98,7 +93,6 @@ import type {
   SettingsScreens,
   SharedMediaType,
   ShuffleState,
-  StarGiftInfo,
   StoryViewerOrigin,
   TabThread,
   ThreadId,
@@ -512,12 +506,6 @@ export type TabState = {
   };
 
   isPaymentFormLoading?: boolean;
-  starsPayment: {
-    form?: ApiPaymentFormStars;
-    subscriptionInfo?: ApiChatInviteInfo;
-    inputInvoice?: ApiInputInvoice;
-    status?: ApiPaymentStatus;
-  };
 
   priceConfirmModal?: {
     originalAmount: ApiTypeCurrencyAmount;
@@ -834,33 +822,11 @@ export type TabState = {
 
   isFrozenAccountModalOpen?: boolean;
 
-  starsGiftingPickerModal?: {
-    isOpen?: boolean;
-  };
-
-  starsGiftModal?: {
-    isCompleted?: boolean;
-    isOpen?: boolean;
-    forUserId?: string;
-    starsGiftOptions?: ApiStarTopupOption[];
-  };
-
-  starsTransactionModal?: {
-    transaction: ApiStarsTransaction;
-  };
-  starsSubscriptionModal?: {
-    subscription: ApiStarsSubscription;
-  };
-
   giftModal?: {
     forPeerId: string;
     gifts?: ApiPremiumGiftCodeOption[];
     selectedResaleGift?: ApiStarGift;
     selectedGift?: ApiPremiumGiftCodeOption | ApiStarGift;
-  };
-  chatRefundModal?: {
-    userId: string;
-    starsToRefund: number;
   };
 
   disableSharingAboutModal?: {
@@ -962,21 +928,6 @@ export type TabState = {
     peerId: string;
     uniqueGifts?: ApiSavedStarGift[];
     uniqueGiftsNextOffset?: string;
-  };
-
-  starsBalanceModal?: {
-    originStarsPayment?: TabState['starsPayment'];
-    originGift?: StarGiftInfo;
-    originReaction?: {
-      chatId: string;
-      messageId: number;
-      amount: number;
-    };
-    topup?: {
-      balanceNeeded: number;
-      purpose?: string;
-    };
-    currency?: ApiTypeCurrencyAmount['currency'];
   };
 
   giftInfoModal?: {

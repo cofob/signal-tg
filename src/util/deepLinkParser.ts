@@ -12,8 +12,8 @@ import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'invoice' | 'addlist' | 'boost' | 'giftcode' | 'message' | 'premium_offer' |
-  'premium_multigift' | 'stars_topup' | 'nft' | 'stars' | 'ton' | 'stargift_auction' | 'premium' | 'oauth' |
+  'msg' | 'msg_url' | 'addlist' | 'boost' | 'giftcode' | 'message' | 'premium_offer' |
+  'premium_multigift' | 'nft' | 'stargift_auction' | 'premium' | 'oauth' |
   'newbot' | 'contact';
 
 interface PublicMessageLink {
@@ -132,14 +132,6 @@ interface GiftAuctionLink {
   slug: string;
 }
 
-interface StarsModalLink {
-  type: 'stars';
-}
-
-interface TonModalLink {
-  type: 'ton';
-}
-
 interface SettingsScreenLink {
   type: 'settings';
   path?: string;
@@ -175,8 +167,6 @@ type DeepLink =
   ChatBoostLink |
   GiftUniqueLink |
   GiftAuctionLink |
-  StarsModalLink |
-  TonModalLink |
   SettingsScreenLink |
   OAuthLink |
   NewBotLink;
@@ -337,10 +327,6 @@ function parseTgLink(url: URL) {
       return buildGiftUniqueLink({ slug: queryParams.slug });
     case 'giftAuctionLink':
       return buildGiftAuctionLink({ slug: queryParams.slug });
-    case 'stars':
-      return { type: 'stars' } satisfies StarsModalLink;
-    case 'ton':
-      return { type: 'ton' } satisfies TonModalLink;
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
     case 'oauth':
@@ -599,10 +585,6 @@ function getTgDeepLinkType(
       return 'giftUniqueLink';
     case 'stargift_auction':
       return 'giftAuctionLink';
-    case 'stars':
-      return 'stars';
-    case 'ton':
-      return 'ton';
     case 'settings': {
       return 'settings';
     }

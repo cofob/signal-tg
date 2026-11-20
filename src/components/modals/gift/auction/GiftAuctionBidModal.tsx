@@ -4,7 +4,6 @@ import { getActions, getGlobal, withGlobal } from '../../../../global';
 import type {
   ApiPeer,
   ApiStarGiftAuctionState,
-  ApiStarsAmount,
 } from '../../../../api/types';
 import type { TabState } from '../../../../global/types';
 
@@ -31,7 +30,6 @@ import Modal from '../../../ui/Modal';
 import TextTimer from '../../../ui/TextTimer';
 import Transition from '../../../ui/Transition';
 import StarSlider from '../../paidReaction/StarSlider';
-import BalanceBlock from '../../stars/BalanceBlock';
 
 import styles from './GiftAuctionBidModal.module.scss';
 
@@ -41,7 +39,6 @@ export type OwnProps = {
 
 type StateProps = {
   auctionState?: ApiStarGiftAuctionState;
-  starBalance?: ApiStarsAmount;
   currentUserPeer?: ApiPeer;
   topBidderIds?: string[];
 };
@@ -57,7 +54,6 @@ const DEFAULT_TOP_BIDDERS_COUNT = 3;
 const GiftAuctionBidModal = ({
   modal,
   auctionState,
-  starBalance,
   currentUserPeer,
   topBidderIds,
 }: OwnProps & StateProps) => {
@@ -335,10 +331,6 @@ const GiftAuctionBidModal = ({
       onClose={closeGiftAuctionBidModal}
       isLowStackPriority
     >
-      <div className={styles.headerControlPanel}>
-        <BalanceBlock balance={starBalance} className={styles.modalBalance} withAddButton />
-      </div>
-
       <StarSlider
         className={styles.slider}
         defaultValue={currentMinBid}
@@ -393,7 +385,7 @@ const GiftAuctionBidModal = ({
 
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
-    const { stars, currentUserId } = global;
+    const { currentUserId } = global;
     const { giftAuctionBidModal } = selectTabState(global);
     const auctionGiftId = giftAuctionBidModal?.auctionGiftId;
     const giftAuction = auctionGiftId
@@ -407,7 +399,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       auctionState: giftAuction,
-      starBalance: stars?.balance,
       currentUserPeer,
       topBidderIds,
     };

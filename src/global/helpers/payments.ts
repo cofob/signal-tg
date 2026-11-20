@@ -1,14 +1,11 @@
 import type {
   ApiInputInvoice,
   ApiInputSavedStarGift,
-  ApiMessage,
   ApiRequestInputInvoice,
   ApiRequestInputSavedStarGift,
   ApiStarsAmount,
-  ApiStarsTransaction,
   ApiTypeCurrencyAmount,
 } from '../../api/types';
-import type { CustomPeer } from '../../types';
 import type { LangFn } from '../../util/localization';
 import type { GlobalState } from '../types';
 
@@ -20,8 +17,6 @@ import { selectChat, selectPeer, selectUser } from '../selectors';
 export function getRequestInputInvoice<T extends GlobalState>(
   global: T, inputInvoice: ApiInputInvoice,
 ): ApiRequestInputInvoice | undefined {
-  if (inputInvoice.type === 'slug') return inputInvoice;
-
   if (inputInvoice.type === 'stargiftResale') {
     const {
       slug,
@@ -56,66 +51,6 @@ export function getRequestInputInvoice<T extends GlobalState>(
       giftId,
       message,
       shouldUpgrade,
-    };
-  }
-
-  if (inputInvoice.type === 'starsgift') {
-    const {
-      userId, stars, amount, currency,
-    } = inputInvoice;
-    const user = selectUser(global, userId);
-
-    if (!user) return undefined;
-
-    return {
-      type: 'stars',
-      purpose: {
-        type: 'starsgift',
-        user,
-        stars,
-        amount,
-        currency,
-      },
-    };
-  }
-
-  if (inputInvoice.type === 'stars') {
-    const {
-      stars, amount, currency, spendPurposePeerId,
-    } = inputInvoice;
-
-    const spendPurposePeer = spendPurposePeerId ? selectPeer(global, spendPurposePeerId) : undefined;
-
-    return {
-      type: 'stars',
-      purpose: {
-        type: 'stars',
-        stars,
-        amount,
-        currency,
-        spendPurposePeer,
-      },
-    };
-  }
-
-  if (inputInvoice.type === 'chatInviteSubscription') {
-    const { hash } = inputInvoice;
-
-    return {
-      type: 'chatInviteSubscription',
-      hash,
-    };
-  }
-
-  if (inputInvoice.type === 'message') {
-    const chat = selectChat(global, inputInvoice.chatId);
-    if (!chat) {
-      return undefined;
-    }
-    return {
-      type: 'message',
-      chat,
-      messageId: inputInvoice.messageId,
     };
   }
 
@@ -302,104 +237,6 @@ export function getRequestInputSavedStarGift<T extends GlobalState>(
   return undefined;
 }
 
-export function shouldUseCustomPeer(transaction: ApiStarsTransaction) {
-  return transaction.peer.type !== 'peer' || Boolean(transaction.isPostsSearch);
-}
-
-export function buildStarsTransactionCustomPeer(
-  transaction: ApiStarsTransaction,
-): CustomPeer {
-  const { peer } = transaction;
-  const isForTon = transaction.amount.currency === TON_CURRENCY_CODE;
-
-  if (transaction.isPostsSearch) {
-    return {
-      avatarIcon: 'search',
-      isCustomPeer: true,
-      title: '',
-      peerColorId: 5,
-    };
-  }
-
-  if (peer.type === 'appStore') {
-    return {
-      avatarIcon: 'star',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionAppleTopUpTitle',
-      subtitleKey: 'StarsIntroTransactionAppleTopUpSubtitle',
-      peerColorId: 5,
-    };
-  }
-
-  if (peer.type === 'playMarket') {
-    return {
-      avatarIcon: 'star',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionGoogleTopUpTitle',
-      subtitleKey: 'StarsIntroTransactionGoogleTopUpSubtitle',
-      peerColorId: 3,
-    };
-  }
-
-  if (peer.type === 'fragment') {
-    if (isForTon) {
-      return {
-        avatarIcon: 'fragment',
-        isCustomPeer: true,
-        titleKey: 'StarsGiftReceivedTitle',
-        subtitleKey: 'StarsIntroTransactionGiftUnknownUser',
-        customPeerAvatarColor: '#000000',
-      };
-    }
-    return {
-      avatarIcon: 'fragment',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionFragmentTopUpTitle',
-      subtitleKey: 'StarsIntroTransactionFragmentTopUpSubtitle',
-      customPeerAvatarColor: '#000000',
-    };
-  }
-
-  if (peer.type === 'premiumBot') {
-    return {
-      avatarIcon: 'star',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionPremiumBotTopUpTitle',
-      subtitleKey: 'StarsIntroTransactionPremiumBotTopUpSubtitle',
-      peerColorId: 1,
-      withPremiumGradient: true,
-    };
-  }
-
-  if (peer.type === 'ads') {
-    return {
-      avatarIcon: 'star',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionTelegramAdsTitle',
-      subtitleKey: 'StarsIntroTransactionTelegramAdsSubtitle',
-      peerColorId: 2,
-    };
-  }
-
-  if (peer.type === 'api') {
-    return {
-      avatarIcon: 'bots',
-      isCustomPeer: true,
-      titleKey: 'StarsIntroTransactionTelegramBotApiTitle',
-      subtitleKey: 'StarsIntroTransactionTelegramBotApiSubtitle',
-      peerColorId: 4,
-    };
-  }
-
-  return {
-    avatarIcon: 'star',
-    isCustomPeer: true,
-    titleKey: 'StarsIntroTransactionUnsupportedTitle',
-    subtitleKey: 'StarsIntroTransactionUnsupportedTitle',
-    peerColorId: 0,
-  };
-}
-
 export function formatStarsTransactionAmount(lang: LangFn, currencyAmount: ApiTypeCurrencyAmount) {
   if (currencyAmount.currency === STARS_CURRENCY_CODE) {
     const amount = currencyAmount.amount + currencyAmount.nanos / 1e9;
@@ -422,77 +259,6 @@ export function formatStarsTransactionAmount(lang: LangFn, currencyAmount: ApiTy
   }
 
   return undefined;
-}
-
-export function formatStarsAmount(lang: LangFn, starsAmount: ApiStarsAmount) {
-  return lang.number(starsAmount.amount + starsAmount.nanos / 1e9);
-}
-
-export function getStarsTransactionFromGift(message: ApiMessage): ApiStarsTransaction | undefined {
-  const { action } = message.content;
-
-  if (action?.type === 'giftStars') {
-    const { transactionId, stars } = action;
-
-    return {
-      id: transactionId,
-      amount: {
-        currency: STARS_CURRENCY_CODE,
-        amount: stars,
-        nanos: 0,
-      },
-      peer: {
-        type: 'peer',
-        id: message.isOutgoing ? message.chatId : (message.senderId || message.chatId),
-      },
-      date: message.date,
-      isGift: true,
-      isMyGift: message.isOutgoing || undefined,
-    };
-  }
-
-  if (action?.type === 'giftTon') {
-    const { transactionId, cryptoAmount } = action;
-
-    return {
-      id: transactionId,
-      amount: {
-        currency: TON_CURRENCY_CODE,
-        amount: cryptoAmount,
-      },
-      peer: {
-        type: 'fragment',
-      },
-      date: message.date,
-      isGift: true,
-      isMyGift: message.isOutgoing || undefined,
-    };
-  }
-
-  return undefined;
-}
-
-export function getPrizeStarsTransactionFromGiveaway(message: ApiMessage): ApiStarsTransaction | undefined {
-  const { action } = message.content;
-
-  if (action?.type !== 'prizeStars') return undefined;
-
-  const { transactionId, stars, boostPeerId } = action;
-
-  return {
-    id: transactionId,
-    amount: {
-      currency: STARS_CURRENCY_CODE,
-      amount: stars,
-      nanos: 0,
-    },
-    peer: {
-      type: 'peer',
-      id: boostPeerId,
-    },
-    date: message.date,
-    giveawayPostId: message.id,
-  };
 }
 
 export function areInputSavedGiftsEqual(one: ApiInputSavedStarGift, two: ApiInputSavedStarGift) {

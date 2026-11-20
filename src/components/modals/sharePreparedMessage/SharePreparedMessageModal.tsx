@@ -30,8 +30,6 @@ export type OwnProps = {
 
 type StateProps = {
   paymentMessageConfirmDialogKey?: string;
-  starsBalance: number;
-  isStarsBalanceModalOpen: boolean;
 };
 
 export type SendParams = {
@@ -42,7 +40,7 @@ export type SendParams = {
 const PAYMENT_DIALOG_KEY = 'sharePreparedMessage';
 
 const SharePreparedMessageModal = ({
-  modal, paymentMessageConfirmDialogKey, isStarsBalanceModalOpen, starsBalance,
+  modal, paymentMessageConfirmDialogKey,
 }: OwnProps & StateProps) => {
   const {
     closeSharePreparedMessageModal,
@@ -76,7 +74,7 @@ const SharePreparedMessageModal = ({
     shouldAutoApprove: shouldPaidMessageAutoApprove,
     setAutoApprove: setShouldPaidMessageAutoApprove,
     handleWithConfirmation: handleActionWithPaymentConfirmation,
-  } = usePaidMessageConfirmation(PAYMENT_DIALOG_KEY, starsForSendMessage || 0, isStarsBalanceModalOpen, starsBalance);
+  } = usePaidMessageConfirmation(PAYMENT_DIALOG_KEY, starsForSendMessage || 0);
 
   const handleClose = useLastCallback(() => {
     closeSharePreparedMessageModal();
@@ -180,12 +178,8 @@ export default memo(withGlobal(
   (global): Complete<StateProps> => {
     const tabState = selectTabState(global);
     const { paymentMessageConfirmDialogKey } = tabState;
-    const starsBalance = global.stars?.balance.amount || 0;
-    const isStarsBalanceModalOpen = Boolean(tabState.starsBalanceModal);
     return {
       paymentMessageConfirmDialogKey,
-      starsBalance,
-      isStarsBalanceModalOpen,
     };
   },
 )(SharePreparedMessageModal));

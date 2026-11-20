@@ -207,7 +207,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     premiumBotUsername: appConfig.premium_bot_username,
-    premiumInvoiceSlug: appConfig.premium_invoice_slug,
     premiumPromoOrder: appConfig.premium_promo_order as ApiPremiumSection[],
     isPremiumPurchaseBlocked: appConfig.premium_purchase_blocked,
     isGiveawayGiftsPurchaseAvailable: appConfig.giveaway_gifts_purchase_available,

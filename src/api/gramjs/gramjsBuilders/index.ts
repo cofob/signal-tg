@@ -728,26 +728,6 @@ export function buildInputPhoneCall({ id, accessHash }: ApiPhoneCall) {
 export function buildInputStorePaymentPurpose(
   purpose: ApiInputStorePaymentPurpose,
 ): GramJs.TypeInputStorePaymentPurpose {
-  if (purpose.type === 'stars') {
-    return new GramJs.InputStorePaymentStarsTopup({
-      stars: BigInt(purpose.stars),
-      currency: purpose.currency,
-      amount: BigInt(purpose.amount),
-      spendPurposePeer: purpose.spendPurposePeer
-        ? buildInputPeer(purpose.spendPurposePeer.id, purpose.spendPurposePeer.accessHash)
-        : undefined,
-    });
-  }
-
-  if (purpose.type === 'starsgift') {
-    return new GramJs.InputStorePaymentStarsGift({
-      userId: buildInputUser(purpose.user.id, purpose.user.accessHash),
-      stars: BigInt(purpose.stars),
-      currency: purpose.currency,
-      amount: BigInt(purpose.amount),
-    });
-  }
-
   if (purpose.type === 'giftcode') {
     return new GramJs.InputStorePaymentPremiumGiftCode({
       users: purpose.users.map((user) => buildInputUser(user.id, user.accessHash)),
@@ -813,19 +793,6 @@ export function buildDisallowedGiftsSettings(disallowedGifts: ApiDisallowedGifts
 
 export function buildInputInvoice(invoice: ApiRequestInputInvoice) {
   switch (invoice.type) {
-    case 'message': {
-      return new GramJs.InputInvoiceMessage({
-        peer: buildInputPeer(invoice.chat.id, invoice.chat.accessHash),
-        msgId: invoice.messageId,
-      });
-    }
-
-    case 'slug': {
-      return new GramJs.InputInvoiceSlug({
-        slug: invoice.slug,
-      });
-    }
-
     case 'stargiftResale': {
       const {
         peer, slug,
@@ -852,13 +819,6 @@ export function buildInputInvoice(invoice: ApiRequestInputInvoice) {
       });
     }
 
-    case 'stars': {
-      const purpose = buildInputStorePaymentPurpose(invoice.purpose);
-      return new GramJs.InputInvoiceStars({
-        purpose,
-      });
-    }
-
     case 'premiumGiftStars': {
       const {
         user, message, months,
@@ -874,12 +834,6 @@ export function buildInputInvoice(invoice: ApiRequestInputInvoice) {
       const purpose = buildInputStorePaymentPurpose(invoice.purpose);
       return new GramJs.InputInvoiceStars({
         purpose,
-      });
-    }
-
-    case 'chatInviteSubscription': {
-      return new GramJs.InputInvoiceChatInviteSubscription({
-        hash: invoice.hash,
       });
     }
 

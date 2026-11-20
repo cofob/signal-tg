@@ -14,7 +14,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 
 import AnimatedIconWithPreview from '../common/AnimatedIconWithPreview';
 import Icon from '../common/icons/Icon';
-import Sparkles from '../common/Sparkles';
 import Button from '../ui/Button';
 
 import styles from './RequirementToContactMessage.module.scss';
@@ -32,14 +31,10 @@ type StateProps = {
 function RequirementToContactMessage({
   patternColor, peer, paidMessagesStars,
 }: OwnProps & StateProps) {
-  const { openPremiumModal, openStarsBalanceModal } = getActions();
+  const { openPremiumModal } = getActions();
   const lang = useLang();
 
   const handleOpenPremiumModal = useLastCallback(() => openPremiumModal());
-
-  const handleGetMoreStars = useLastCallback(() => {
-    openStarsBalanceModal({});
-  });
 
   if (!peer) return undefined;
 
@@ -73,24 +68,17 @@ function RequirementToContactMessage({
               : renderText(lang('MessageLockedPremium', { peer: getPeerTitle(lang, peer) }), ['simple_markdown'])
           }
         </span>
-        <Button
-          color="translucent-black"
-          size="default"
-          pill
-          onClick={paidMessagesStars ? handleGetMoreStars : handleOpenPremiumModal}
-          className={styles.button}
-        >
-          {
-            paidMessagesStars
-              ? (
-                <>
-                  {lang('ButtonBuyStars')}
-                  <Sparkles preset="button" />
-                </>
-              )
-              : lang('MessagePremiumUnlock')
-          }
-        </Button>
+        {!paidMessagesStars && (
+          <Button
+            color="translucent-black"
+            size="default"
+            pill
+            onClick={handleOpenPremiumModal}
+            className={styles.button}
+          >
+            {lang('MessagePremiumUnlock')}
+          </Button>
+        )}
       </div>
     </div>
   );

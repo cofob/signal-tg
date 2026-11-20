@@ -2,7 +2,7 @@ import {
   memo, useEffect, useMemo,
 } from '../../../lib/teact/teact';
 
-import type { ApiStarGiveawayOption, ApiStarTopupOption } from '../../../api/types';
+import type { ApiStarGiveawayOption } from '../../../api/types';
 
 import buildClassName from '../../../util/buildClassName';
 import { formatCurrency } from '../../../util/formatCurrency';
@@ -22,12 +22,11 @@ const MAX_STARS_COUNT = 6;
 
 type OwnProps = {
   isActive?: boolean;
-  options?: ApiStarTopupOption[] | ApiStarGiveawayOption[];
-  selectedStarOption?: ApiStarTopupOption | ApiStarGiveawayOption;
+  options?: ApiStarGiveawayOption[];
+  selectedStarOption?: ApiStarGiveawayOption;
   selectedStarCount?: number;
-  starsNeeded?: number;
   className?: string;
-  onClick: (option: ApiStarTopupOption | ApiStarGiveawayOption) => void;
+  onClick: (option: ApiStarGiveawayOption) => void;
 };
 
 const StarTopupOptionList = ({
@@ -36,7 +35,6 @@ const StarTopupOptionList = ({
   options,
   selectedStarOption,
   selectedStarCount,
-  starsNeeded,
   onClick,
 }: OwnProps) => {
   const lang = useLang();
@@ -52,18 +50,12 @@ const StarTopupOptionList = ({
   const [renderingOptions, canExtend] = useMemo(() => {
     if (!options) return [undefined, false];
 
-    const maxOption = options.reduce((max, option) => (
-      max.stars > option.stars ? max : option
-    ));
-    const forceShowAll = starsNeeded && maxOption.stars < starsNeeded;
-
-    const result: { option: ApiStarTopupOption | ApiStarGiveawayOption; starsCount: number; isWide: boolean }[] = [];
+    const result: { option: ApiStarGiveawayOption; starsCount: number; isWide: boolean }[] = [];
     let currentStackedStarsCount = 0;
     let canExtendOptions = false;
     options.forEach((option, index) => {
       if (!option.isExtended) currentStackedStarsCount++;
 
-      if (starsNeeded && !forceShowAll && option.stars < starsNeeded) return;
       if (!areOptionsExtended && option.isExtended) {
         canExtendOptions = true;
         return;
@@ -76,7 +68,7 @@ const StarTopupOptionList = ({
     });
 
     return [result, canExtendOptions];
-  }, [areOptionsExtended, options, starsNeeded]);
+  }, [areOptionsExtended, options]);
 
   return (
     <div className={buildClassName(styles.options, className)}>

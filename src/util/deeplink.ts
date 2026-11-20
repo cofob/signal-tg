@@ -7,7 +7,7 @@ import type { DeepLinkMethod } from './deepLinkParser';
 import { LeftColumnContent } from '../types';
 
 import {
-  API_CHAT_TYPES, RE_TG_LINK, TON_CURRENCY_CODE,
+  API_CHAT_TYPES, RE_TG_LINK,
 } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { tryParseDeepLink } from './deepLinkParser';
@@ -108,12 +108,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
           case 'premium':
             actions.openPremiumModal();
             return true;
-          case 'stars':
-            actions.openStarsBalanceModal({});
-            return true;
-          case 'ton':
-            actions.openStarsBalanceModal({ currency: TON_CURRENCY_CODE });
-            return true;
           case 'send-gift':
             actions.openGiftRecipientPicker();
             return true;
@@ -126,12 +120,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
         }
         return true;
       }
-      case 'stars':
-        actions.openStarsBalanceModal({});
-        return true;
-      case 'ton':
-        actions.openStarsBalanceModal({ currency: TON_CURRENCY_CODE });
-        return true;
       case 'oauth':
         if (linkContext?.type !== 'inner') return false;
         actions.requestLinkUrlAuth({ url: parsedLink.url });
@@ -168,12 +156,10 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     openChatByUsername,
     openChatByPhoneNumber,
     openStickerSet,
-    openInvoice,
     openChatWithDraft,
     checkChatlistInvite,
     openStoryViewerByUsername,
     checkGiftCode,
-    openStarsBalanceModal,
   } = actions;
 
   switch (method) {
@@ -262,21 +248,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
 
     case 'login': {
       // const { code, token } = params;
-      break;
-    }
-
-    case 'invoice': {
-      const { slug } = params;
-      openInvoice({ type: 'slug', slug });
-      break;
-    }
-
-    case 'stars_topup': {
-      const { balance, purpose } = params;
-      const balanceNeeded = Number(balance);
-      if (!balanceNeeded || balanceNeeded < 0) return true;
-
-      openStarsBalanceModal({ topup: { balanceNeeded, purpose } });
       break;
     }
 

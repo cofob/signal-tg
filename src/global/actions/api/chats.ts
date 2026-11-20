@@ -1675,21 +1675,6 @@ addActionHandler('checkChatInvite', async (global, actions, payload): Promise<vo
     return;
   }
 
-  if (result.invite.subscriptionFormId) {
-    global = updateTabState(global, {
-      starsPayment: {
-        inputInvoice: {
-          type: 'chatInviteSubscription',
-          hash,
-        },
-        subscriptionInfo: result.invite,
-        status: 'pending',
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
   global = updateTabState(global, {
     chatInviteModal: {
       hash,
@@ -1775,7 +1760,6 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
     checkChatInvite,
     openStickerSet,
     openChatWithDraft,
-    openInvoice,
     checkChatlistInvite,
     openChatByUsername: openChatByUsernameAction,
     openStoryViewerByUsername,
@@ -1885,19 +1869,7 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
 
   const shouldTryOpenChat = (part1 && !part2) || Number.isInteger(Number(part2)) || isWebApp;
 
-  if (part1.startsWith('$')) {
-    openInvoice({
-      type: 'slug',
-      slug: part1.substring(1),
-      tabId,
-    });
-  } else if (part1 === 'invoice') {
-    openInvoice({
-      type: 'slug',
-      slug: part2,
-      tabId,
-    });
-  } else if (shouldTryOpenChat) {
+  if (shouldTryOpenChat) {
     openChatByUsernameAction({
       username: part1,
       messageId: messageId || Number(chatOrChannelPostId),

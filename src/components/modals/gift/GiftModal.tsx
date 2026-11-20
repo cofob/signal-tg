@@ -584,7 +584,6 @@ const GiftModal = ({
       contentClassName={styles.content}
       className={buildClassName(styles.modalDialog, styles.root)}
       isLowStackPriority
-      withBalanceBar
     >
       <Button
         className={styles.closeButton}

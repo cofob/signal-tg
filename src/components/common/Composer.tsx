@@ -354,8 +354,6 @@ type StateProps = {
   shouldPaidMessageAutoApprove?: boolean;
   isSilentPosting?: boolean;
   paymentMessageConfirmDialogKey?: string;
-  starsBalance: number;
-  isStarsBalanceModalOpen: boolean;
   disallowedGifts?: ApiDisallowedGifts;
   isAccountFrozen?: boolean;
   isAppConfigLoaded?: boolean;
@@ -500,8 +498,6 @@ const Composer = ({
   richMessageMaxTableColumns,
   isSilentPosting,
   paymentMessageConfirmDialogKey,
-  starsBalance,
-  isStarsBalanceModalOpen,
   disallowedGifts,
   isAccountFrozen,
   isAppConfigLoaded,
@@ -860,7 +856,7 @@ const Composer = ({
     shouldAutoApprove: shouldPaidMessageAutoApprove,
     setAutoApprove: setShouldPaidMessageAutoApprove,
     handleWithConfirmation: handleActionWithPaymentConfirmation,
-  } = usePaidMessageConfirmation(paymentDialogKey, starsForAllMessages, isStarsBalanceModalOpen, starsBalance);
+  } = usePaidMessageConfirmation(paymentDialogKey, starsForAllMessages);
 
   const isPaidSendDeferred = starsForAllMessages > 0 && !shouldPaidMessageAutoApprove;
 
@@ -3556,8 +3552,6 @@ export default memo(withGlobal<OwnProps>(
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
     const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
-    const starsBalance = global.stars?.balance.amount || 0;
-    const isStarsBalanceModalOpen = Boolean(tabState.starsBalanceModal);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const isAppConfigLoaded = global.isAppConfigLoaded;
     const insertingPeerIdMention = tabState.insertingPeerIdMention;
@@ -3661,8 +3655,6 @@ export default memo(withGlobal<OwnProps>(
       shouldPaidMessageAutoApprove,
       isSilentPosting,
       paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
-      starsBalance,
-      isStarsBalanceModalOpen,
       shouldDisplayGiftsButton: userFullInfo?.shouldDisplayGiftsButton,
       disallowedGifts: userFullInfo?.disallowedGifts,
       isAccountFrozen,

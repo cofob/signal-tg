@@ -1,7 +1,6 @@
 import type { STARS_CURRENCY_CODE, TON_CURRENCY_CODE } from '../../config';
-import type { ApiWebDocument } from './bots';
 import type { ApiChat } from './chats';
-import type { ApiFormattedText, ApiSticker, BoughtPaidMedia } from './messages';
+import type { ApiFormattedText, ApiSticker } from './messages';
 import type { ApiUser } from './users';
 
 export interface ApiStarGiftRegular {
@@ -219,105 +218,6 @@ export interface ApiTonAmount {
   currency: typeof TON_CURRENCY_CODE;
   // Nanotons
   amount: bigint;
-}
-
-export interface ApiStarsTransactionPeerUnsupported {
-  type: 'unsupported';
-}
-
-export interface ApiStarsTransactionPeerAppStore {
-  type: 'appStore';
-}
-
-export interface ApiStarsTransactionPeerPlayMarket {
-  type: 'playMarket';
-}
-
-export interface ApiStarsTransactionPeerPremiumBot {
-  type: 'premiumBot';
-}
-
-export interface ApiStarsTransactionPeerFragment {
-  type: 'fragment';
-}
-
-export interface ApiStarsTransactionPeerAds {
-  type: 'ads';
-}
-
-export interface ApiStarsTransactionApi {
-  type: 'api';
-}
-
-export interface ApiStarsTransactionPeerPeer {
-  type: 'peer';
-  id: string;
-}
-
-export type ApiStarsTransactionPeer =
-  | ApiStarsTransactionPeerUnsupported
-  | ApiStarsTransactionPeerAppStore
-  | ApiStarsTransactionPeerPlayMarket
-  | ApiStarsTransactionPeerPremiumBot
-  | ApiStarsTransactionPeerFragment
-  | ApiStarsTransactionPeerAds
-  | ApiStarsTransactionApi
-  | ApiStarsTransactionPeerPeer;
-
-export interface ApiStarsTransaction {
-  id?: string;
-  peer: ApiStarsTransactionPeer;
-  messageId?: number;
-  amount: ApiTypeCurrencyAmount;
-  isRefund?: true;
-  isGift?: true;
-  starGift?: ApiStarGift;
-  giveawayPostId?: number;
-  isMyGift?: true; // Used only for outgoing star gift messages
-  isReaction?: true;
-  hasFailed?: true;
-  isPending?: true;
-  date: number;
-  title?: string;
-  description?: string;
-  photo?: ApiWebDocument;
-  extendedMedia?: BoughtPaidMedia[];
-  subscriptionPeriod?: number;
-  starRefCommision?: number;
-  isGiftUpgrade?: true;
-  isGiftResale?: true;
-  paidMessages?: number;
-  isPostsSearch?: true;
-  isDropOriginalDetails?: true;
-  isPrepaidUpgrade?: true;
-  isStarGiftAuctionBid?: true;
-}
-
-export interface ApiStarsSubscription {
-  id: string;
-  peerId: string;
-  until: number;
-  pricing: ApiStarsSubscriptionPricing;
-  isCancelled?: true;
-  canRefulfill?: true;
-  hasMissingBalance?: true;
-  chatInviteHash?: string;
-  hasBotCancelled?: true;
-  title?: string;
-  photo?: ApiWebDocument;
-  invoiceSlug?: string;
-}
-
-export type ApiStarsSubscriptionPricing = {
-  period: number;
-  amount: number;
-};
-
-export interface ApiStarTopupOption {
-  isExtended?: true;
-  stars: number;
-  currency: string;
-  amount: number;
 }
 
 export interface ApiStarsGiveawayWinnerOption {
