@@ -14,3 +14,4 @@ dev/perf/screenshot*
 
 # Rust build output
 rust/*/target/
+proxy/target/

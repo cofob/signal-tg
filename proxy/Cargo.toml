@@ -1,0 +1,29 @@
+[package]
+name = "telesignal-tunnel"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Versions match the lockfile of the vendored libsignal (`rust/libsignal/Cargo.lock`)
+[dependencies]
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "net", "time", "io-util", "macros", "signal", "sync"] }
+tokio-tungstenite = { version = "0.29.0", default-features = false }
+tungstenite = { version = "0.29.0", default-features = false, features = ["handshake"] }
+http = "1.4.2"
+httparse = "1.10.1"
+# Already in the tree through `tokio-tungstenite`: its `WebSocketStream` is a `futures` `Stream` and `Sink`
+futures-util = { version = "0.3.32", default-features = false, features = ["sink", "std"] }
+# Already in the tree through `tungstenite`: Base64 for `Proxy-Authorization`
+data-encoding = "2.11.0"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# The library's error types name their cases; `#[must_use]` on every getter adds noise
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+expect_used = "warn"
+indexing_slicing = "warn"
+panic = "warn"
+unwrap_used = "warn"
