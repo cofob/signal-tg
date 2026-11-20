@@ -89,7 +89,7 @@ export const KEYBOARD_SHORTCUTS: Record<KeyboardShortcutId, KeyboardShortcut> = 
   savedMessages: {
     section: 'general',
     scope: 'global',
-    titleKey: 'SavedMessages',
+    titleKey: 'NoteToSelf',
     isEditable: true,
     defaults: [
       { combo: 'Mod+Shift+S', environment: 'notFirefox' },

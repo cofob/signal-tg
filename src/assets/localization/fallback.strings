@@ -317,7 +317,7 @@
 "DialogPin" = "Pin";
 "ConversationPinMessagesFor" = "Pin for me and {user}";
 "ConversationPinMessageAlertPinAndNotifyMembers" = "Pin and notify all members";
-"SavedMessages" = "Saved Messages";
+"NoteToSelf" = "Note to Self";
 "SavedMessagesShort" = "Saved";
 "AccDescrPrevious" = "Previous";
 "ReportReasonSpam" = "Spam";
@@ -1490,7 +1490,7 @@
 "AudioPlayerClose" = "Close";
 "AudioAddToProfile" = "Add to Profile";
 "AudioRemoveFromProfile" = "Remove from Profile";
-"AudioAddToSaved" = "Add to Saved Messages";
+"AudioAddToNoteToSelf" = "Add to Note to Self";
 "AudioOpenPlaylist" = "Playlist";
 "AudioRepeatList" = "Repeat list";
 "AudioRepeatSong" = "Repeat song";
@@ -1678,7 +1678,6 @@
 "DragToSortAria" = "Drag to sort";
 "MenuInstallApp" = "Install App";
 "MenuMyProfile" = "My Profile";
-"MenuSavedMessages" = "Saved Messages";
 "MenuArchivedChats" = "Archived Chats";
 "MenuContacts" = "Contacts";
 "MenuSettings" = "Settings";
@@ -2579,10 +2578,10 @@
 "MenuAddCaption" = "Add Caption";
 "FwdMessagesToChats_one" = "Message forwarded to {count} chat";
 "FwdMessagesToChats_other" = "Message forwarded to {count} chats";
-"FwdMessagesToSaved_one" = "Message forwarded to **Saved Messages**";
-"FwdMessagesToSaved_other" = "Messages forwarded to **Saved Messages**";
+"FwdMessagesToNoteToSelf_one" = "Message forwarded to **Note to Self**";
+"FwdMessagesToNoteToSelf_other" = "Messages forwarded to **Note to Self**";
 "AudioForwardedToChat" = "Audio forwarded to a chat";
-"AudioForwardedToSaved" = "Audio forwarded to **Saved Messages**";
+"AudioForwardedToNoteToSelf" = "Audio forwarded to **Note to Self**";
 "MenuCopyDate" = "Copy Date";
 "DateCopiedToast" = "Date copied to clipboard";
 "ReminderSetToast" = "You set up a reminder in **Saved Messages**";
