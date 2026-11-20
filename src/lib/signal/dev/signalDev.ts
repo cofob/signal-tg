@@ -7,6 +7,7 @@ import { startDeviceLink } from '../account/provisioning';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { sendContent } from '../sender/sendContent';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
+import { fetchStorageSnapshot } from '../storage/storageService';
 import { parseContactSync } from '../sync/contactSync';
 import { initSignalWasm } from '../wasm';
 
@@ -70,6 +71,32 @@ const signalDev = {
     console.log('[signal] Connected to the chat socket');
   },
 
+  /** Reads the storage service and prints record counts and contacts */
+  async syncStorage() {
+    const account = await store.getItem('account');
+    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
+
+    const snapshot = await fetchStorageSnapshot(account, connection);
+    if (!snapshot) {
+      console.log('[signal] Storage service has no manifest yet');
+      return;
+    }
+    const records = [...snapshot.records.values()];
+    const countsByType: Record<string, number> = {};
+    for (const record of records) {
+      const type = Object.keys(record).find((key) => key !== '$unknownFields') ?? 'unknown';
+      countsByType[type] = (countsByType[type] ?? 0) + 1;
+    }
+    console.log(`[signal] Storage manifest version ${snapshot.version}:`, countsByType);
+    console.table(records.flatMap(({ contact }) => (contact ? [{
+      aci: contact.aci,
+      e164: contact.e164,
+      name: [contact.systemGivenName || contact.givenName, contact.systemFamilyName || contact.familyName]
+        .filter(Boolean).join(' '),
+      archived: contact.archived,
+    }] : [])));
+  },
+
   async reset() {
     connection?.close();
     connection = undefined;
@@ -82,7 +109,15 @@ function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEn
   const from = `${senderServiceId}.${senderDeviceId}`;
   const sent = content.syncMessage?.sent?.message;
   const contactsBlob = content.syncMessage?.contacts?.blob;
-  if (contactsBlob) {
+  const keys = content.syncMessage?.keys;
+  if (keys) {
+    void store.getItem('account').then((account) => account && store.setItem('account', {
+      ...account,
+      accountEntropyPool: keys.accountEntropyPool ?? account.accountEntropyPool,
+      mediaRootBackupKey: keys.mediaRootBackupKey ?? account.mediaRootBackupKey,
+    }));
+    console.log('[signal] Received account keys from the primary device');
+  } else if (contactsBlob) {
     void downloadAttachment(contactsBlob).then((data) => {
       const contacts = parseContactSync(data);
       console.log(`[signal] Contact sync: ${contacts.length} contacts`);

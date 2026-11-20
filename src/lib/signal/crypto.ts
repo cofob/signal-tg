@@ -4,6 +4,7 @@ import { wasm } from './wasm';
 const PADDING_BLOCK = 80;
 const PADDING_TERMINATOR = 0x80;
 const MAX_REGISTRATION_ID = 0x3fff;
+const AES_GCM_NONCE_LENGTH = 12;
 
 const textEncoder = new TextEncoder();
 
@@ -49,6 +50,14 @@ export async function encryptAesCtr(
   const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-CTR', false, ['encrypt']);
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-CTR', counter, length: 128 }, cryptoKey, plaintext);
   return new Uint8Array(ciphertext);
+}
+
+/** AES-256-GCM with the 12-byte nonce prepended to the ciphertext, as storage service records use */
+export async function decryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, data: Uint8Array) {
+  const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['decrypt']);
+  const iv = data.slice(0, AES_GCM_NONCE_LENGTH);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, data.slice(AES_GCM_NONCE_LENGTH));
+  return new Uint8Array(plaintext);
 }
 
 /** HKDF-SHA256 */
