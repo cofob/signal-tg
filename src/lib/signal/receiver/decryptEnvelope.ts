@@ -22,6 +22,8 @@ export type DecryptedEnvelope = {
   destinationServiceId: string;
   content: Content;
   isSealedSender: boolean;
+  // Group id of the sealed sender envelope
+  groupId?: Uint8Array;
 };
 
 type DecryptionErrorDetails = {
@@ -102,6 +104,7 @@ async function decrypt(store: SignalStore, account: AccountRecord, envelope: Env
 
     const messageType = wasm.UnidentifiedSenderMessageContent_GetMsgType(usmc);
     const contents = wasm.UnidentifiedSenderMessageContent_GetContents(usmc);
+    const groupId = wasm.UnidentifiedSenderMessageContent_GetGroupId(usmc);
     const senderAddress = wasm.ProtocolAddress_New(senderServiceId, senderDeviceId);
     let plaintext: Uint8Array;
     try {
@@ -117,7 +120,7 @@ async function decrypt(store: SignalStore, account: AccountRecord, envelope: Env
         ciphertext: contents,
         messageType,
         contentHint: wasm.UnidentifiedSenderMessageContent_GetContentHint(usmc),
-        groupId: wasm.UnidentifiedSenderMessageContent_GetGroupId(usmc),
+        groupId,
       });
     }
 
@@ -128,6 +131,7 @@ async function decrypt(store: SignalStore, account: AccountRecord, envelope: Env
       destinationServiceId: local.serviceId,
       content: fromBinary(ContentSchema, plaintext),
       isSealedSender: true,
+      groupId,
     };
   }
 
