@@ -195,6 +195,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     TG_TELEGRAM_API_HASH: telegramApiHash,
     TG_VAPID_KEY: env.VAPID_KEY || '',
     TG_TEST_SESSION: env.TEST_SESSION || '',
+    TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
   });
 
   return {
@@ -304,7 +305,7 @@ function setViteEnv(env: Record<string, string>) {
 function buildCsp(appEnv: string) {
   return `
   default-src 'self';
-  connect-src 'self' wss://*.web.telegram.org blob: http: https: wss: ${appEnv === 'development' ? 'ipc:' : ''};
+  connect-src 'self' wss://*.web.telegram.org blob: http: https: wss: ${appEnv === 'development' ? 'ipc: ws:' : ''};
   script-src 'self' 'wasm-unsafe-eval'
     https://t.me/_websync_ https://telegram.me/_websync_ https://telegram.dog/_websync_;
   worker-src 'self'${appEnv === 'development' ? ' blob:' : ''};
