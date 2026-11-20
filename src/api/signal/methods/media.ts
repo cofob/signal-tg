@@ -2,11 +2,13 @@ import type { ApiOnProgress } from '../../types';
 import { ApiMediaFormat } from '../../types';
 
 import { MEDIA_CACHE_DISABLED, MEDIA_CACHE_NAME, MEDIA_CACHE_NAME_AVATARS } from '../../../config';
+import { AttachmentUnavailableError } from '../../../lib/signal/attachments/downloadAttachment';
 import { downloadGroupAvatar } from '../../../lib/signal/groups/fetchGroup';
 import { downloadProfileAvatar } from '../../../lib/signal/profiles/fetchProfile';
 import * as cacheApi from '../../../util/cacheApi';
+import { parseAttachmentMediaId, STICKER_SLOT } from '../builders/media';
 import { getCurrentAccount } from '../client';
-import { store } from '../engine';
+import { processor, store } from '../engine';
 import { fetchAttachmentBlob, getAttachmentPointer } from '../media/attachments';
 import { renderBlurHash } from '../media/blurHash';
 import { getConversationByPeerId } from '../peers';
@@ -56,7 +58,16 @@ export async function downloadMedia(
 async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgress?: ApiOnProgress) {
   const pointer = await getAttachmentPointer(mediaId);
   if (!pointer) throw new Error(`Attachment ${mediaId} is not found`);
-  if (!isThumbnail || pointer.contentType.startsWith('image/')) return fetchAttachmentBlob(pointer, onProgress);
+  if (!isThumbnail || pointer.contentType.startsWith('image/')) {
+    return fetchAttachmentBlob(pointer, onProgress).catch(async (err: unknown) => {
+      // The message then shows the media as unavailable and stops asking for it
+      const { messageId, slot } = parseAttachmentMediaId(mediaId)!;
+      if (err instanceof AttachmentUnavailableError && slot !== STICKER_SLOT) {
+        await processor.markAttachmentUnavailable(messageId, slot);
+      }
+      throw err;
+    });
+  }
 
   // Signal attachments have no thumbnails: images serve their own sizes, other media their BlurHash
   const { blurHash, width, height } = pointer;

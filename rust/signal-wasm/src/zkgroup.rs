@@ -9,7 +9,10 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use wasm_bindgen::prelude::*;
 use zkgroup::auth::{AuthCredentialWithPni, AuthCredentialWithPniResponse};
-use zkgroup::groups::{GroupMasterKey, GroupPublicParams, GroupSecretParams, ProfileKeyCiphertext, UuidCiphertext};
+use zkgroup::groups::{
+    GroupMasterKey, GroupPublicParams, GroupSecretParams, GroupSendEndorsement, GroupSendEndorsementsResponse,
+    GroupSendToken, ProfileKeyCiphertext, UuidCiphertext,
+};
 use zkgroup::profiles::{
     ExpiringProfileKeyCredential, ExpiringProfileKeyCredentialResponse, ProfileKey,
     ProfileKeyCredentialRequestContext,
@@ -39,7 +42,7 @@ fn service_id(bytes: &[u8], operation: &str) -> JsResult<ServiceId> {
         .ok_or_else(|| generic_error("invalid service ID", operation))
 }
 
-fn aci(bytes: &[u8], operation: &str) -> JsResult<Aci> {
+pub(crate) fn aci(bytes: &[u8], operation: &str) -> JsResult<Aci> {
     Aci::try_from(service_id(bytes, operation)?).map_err(|_| generic_error("expected an ACI", operation))
 }
 
@@ -305,4 +308,92 @@ pub fn ServerPublicParams_CreateExpiringProfileKeyCredentialPresentationDetermin
         group_secret_params,
         credential,
     )))
+}
+
+/// Returns seconds since the epoch
+#[wasm_bindgen]
+pub fn GroupSendEndorsementsResponse_GetExpiration(response: &[u8]) -> JsResult<f64> {
+    let response: GroupSendEndorsementsResponse = decode(response, "GroupSendEndorsementsResponse_GetExpiration")?;
+    Ok(response.expiration().epoch_seconds() as f64)
+}
+
+/// Verifies the endorsements of `group_members` (concatenated service IDs that include `local_user`) at
+/// `now` in seconds. Returns each member's endorsement in the order of `group_members`, then the combined
+/// endorsement of everyone but `local_user`.
+#[wasm_bindgen]
+pub fn GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds(
+    response: &[u8],
+    group_members: &[u8],
+    local_user: &[u8],
+    now: f64,
+    group_params: &[u8],
+    server_params: &ServerPublicParams,
+) -> JsResult<Vec<js_sys::Uint8Array>> {
+    let operation = "GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds";
+    let response: GroupSendEndorsementsResponse = decode(response, operation)?;
+    let group_params: GroupSecretParams = decode(group_params, operation)?;
+    let local_user = service_id(local_user, operation)?;
+    let members = group_members
+        .chunks(SERVICE_ID_FIXED_WIDTH_LENGTH)
+        .map(|chunk| service_id(chunk, operation))
+        .collect::<JsResult<Vec<_>>>()?;
+    let local_user_index = members
+        .iter()
+        .position(|member| *member == local_user)
+        .ok_or_else(|| generic_error("local user not included in member list", operation))?;
+
+    // `receive_with_service_ids` parallelizes with rayon, which has no threads in WebAssembly
+    let endorsements = response
+        .receive_with_service_ids_single_threaded(
+            members,
+            Timestamp::from_epoch_seconds(now as u64),
+            &group_params,
+            &server_params.0,
+        )
+        .map_err(verification_failure(operation))?;
+    let combined = GroupSendEndorsement::combine(
+        endorsements[..local_user_index]
+            .iter()
+            .chain(&endorsements[local_user_index + 1..])
+            .map(|received| received.decompressed),
+    );
+    Ok(endorsements
+        .iter()
+        .map(|received| encode(&received.compressed))
+        .chain([encode(&combined.compress())])
+        .map(|bytes| js_sys::Uint8Array::from(bytes.as_slice()))
+        .collect())
+}
+
+#[wasm_bindgen]
+pub fn GroupSendEndorsement_Combine(endorsements: Vec<js_sys::Uint8Array>) -> JsResult<Vec<u8>> {
+    let operation = "GroupSendEndorsement_Combine";
+    let endorsements = endorsements
+        .iter()
+        .map(|bytes| decode::<GroupSendEndorsement>(&bytes.to_vec(), operation))
+        .collect::<JsResult<Vec<_>>>()?;
+    Ok(encode(&GroupSendEndorsement::combine(endorsements)))
+}
+
+#[wasm_bindgen]
+pub fn GroupSendEndorsement_Remove(endorsement: &[u8], to_remove: &[u8]) -> JsResult<Vec<u8>> {
+    let operation = "GroupSendEndorsement_Remove";
+    let endorsement: GroupSendEndorsement = decode(endorsement, operation)?;
+    let to_remove: GroupSendEndorsement = decode(to_remove, operation)?;
+    Ok(encode(&endorsement.remove(&to_remove)))
+}
+
+#[wasm_bindgen]
+pub fn GroupSendEndorsement_ToToken(endorsement: &[u8], group_params: &[u8]) -> JsResult<Vec<u8>> {
+    let operation = "GroupSendEndorsement_ToToken";
+    let endorsement: GroupSendEndorsement = decode(endorsement, operation)?;
+    let group_params: GroupSecretParams = decode(group_params, operation)?;
+    Ok(encode(&endorsement.to_token(group_params)))
+}
+
+/// `expiration` is in seconds
+#[wasm_bindgen]
+pub fn GroupSendToken_ToFullToken(token: &[u8], expiration: f64) -> JsResult<Vec<u8>> {
+    let token: GroupSendToken = decode(token, "GroupSendToken_ToFullToken")?;
+    Ok(encode(&token.into_full_token(Timestamp::from_epoch_seconds(expiration as u64))))
 }

@@ -6,6 +6,7 @@ import type { DecryptionError } from './decryptEnvelope';
 
 import { ContentHint, sendContent } from '../sender/sendContent';
 import { sendNullMessage } from '../sender/sendMessage';
+import { getSenderKeyDistributionMessage } from '../sender/sendToGroup';
 import { wasm } from '../wasm';
 
 import { ContentSchema } from '../proto/generated/SignalService_pb';
@@ -32,11 +33,17 @@ export async function requestResend(context: SenderContext, { details }: Decrypt
 
 /**
  * Answers a `DecryptionErrorMessage` about a message this device sent: archives the session it names,
- * then resends the message if it is still in the sent log, or sends a null message to start a new session
- * (Signal Desktop `ts/util/handleRetry.preload.ts`, `onRetryRequest`)
+ * then resends the message if it is still in the sent log. Group messages carry our sender key
+ * distribution message, since the failed message may have used our sender key. Without the message,
+ * the requester gets the distribution message of the group it names, or a null message that starts
+ * a new session (Signal Desktop `ts/util/handleRetry.preload.ts`, `onRetryRequest`).
  */
 export async function handleRetryRequest(
-  context: SenderContext, senderServiceId: string, senderDeviceId: number, message: Uint8Array,
+  context: SenderContext,
+  senderServiceId: string,
+  senderDeviceId: number,
+  message: Uint8Array,
+  groupId?: Uint8Array,
 ) {
   const request = wasm.DecryptionErrorMessage_Deserialize(message);
   if (wasm.DecryptionErrorMessage_GetDeviceId(request) !== context.account.deviceId) return;
@@ -50,11 +57,23 @@ export async function handleRetryRequest(
 
   const sentProto = await context.store.getSentProto(timestamp);
   if (sentProto?.recipients.includes(senderServiceId)) {
-    await sendContent(context, senderServiceId, fromBinary(ContentSchema, sentProto.content), {
+    const content = fromBinary(ContentSchema, sentProto.content);
+    const distributionMessage = sentProto.groupId
+      && await getSenderKeyDistributionMessage(context, sentProto.groupId, senderServiceId);
+    if (distributionMessage) content.senderKeyDistributionMessage = distributionMessage;
+    await sendContent(context, senderServiceId, content, {
       timestamp,
       contentHint: sentProto.contentHint,
       groupId: sentProto.groupId,
       isUrgent: sentProto.isUrgent,
+    });
+    return;
+  }
+
+  const distributionMessage = groupId && await getSenderKeyDistributionMessage(context, groupId, senderServiceId);
+  if (distributionMessage) {
+    await sendContent(context, senderServiceId, { senderKeyDistributionMessage: distributionMessage }, {
+      timestamp: Date.now(), contentHint: ContentHint.Implicit, groupId, isUrgent: false,
     });
     return;
   }

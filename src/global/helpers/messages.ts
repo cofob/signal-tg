@@ -331,7 +331,7 @@ export function isAnonymousOwnMessage(message: ApiMessage) {
 
 export function getSendingState(message: ApiMessage) {
   if (!message.sendingState) {
-    return 'succeeded';
+    return message.isDelivered ? 'delivered' : 'succeeded';
   }
 
   return message.sendingState === 'messageSendingStateFailed' ? 'failed' : 'pending';

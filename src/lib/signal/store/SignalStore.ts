@@ -29,6 +29,20 @@ export type AccountRecord = {
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
   isDemo?: boolean;
+  // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
+  historyTransfer?: HistoryTransferState;
+};
+
+/** Where the primary device uploaded the message history archive */
+export type TransferArchive = {
+  cdn: number;
+  key: string;
+};
+
+export type HistoryTransferState = {
+  archive?: TransferArchive;
+  // Chat items an interrupted import stored; the next import skips them
+  importedItemCount?: number;
 };
 
 // Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it
@@ -80,7 +94,36 @@ export type UnprocessedEnvelope = {
     // Serialized `Content`
     content: Uint8Array;
     isSealedSender: boolean;
+    groupId?: Uint8Array;
   };
+};
+
+/** A device that our sender key distribution message reached */
+export type SenderKeyDevice = {
+  serviceId: string;
+  deviceId: number;
+  registrationId: number;
+};
+
+/** Our sender key for a group (Signal Desktop `SenderKeyInfoType`) */
+export type SenderKeyInfoRecord = {
+  // UUID string
+  distributionId: string;
+  createdAt: number;
+  memberDevices: SenderKeyDevice[];
+};
+
+/**
+ * Group send endorsements received with the group state. Each endorsement authorizes sealed sender sends
+ * to a member; combined, they authorize one multi-recipient send.
+ */
+export type GroupSendEndorsementsRecord = {
+  // Seconds since the epoch
+  expiration: number;
+  // Endorsement of each member, us included, by ACI
+  members: Record<string, Uint8Array>;
+  // Combined endorsement of every member but us
+  combined: Uint8Array;
 };
 
 /** Content we sent, kept so a recipient that failed to decrypt it can ask for it again */
@@ -204,6 +247,31 @@ export default class SignalStore {
 
   setSenderKey(key: string, record: Uint8Array) {
     return this.db.set(`senderKey:${key}`, record);
+  }
+
+  removeSenderKey(key: string) {
+    return this.db.del(`senderKey:${key}`);
+  }
+
+  /** `groupId` is the base64 group identifier */
+  getSenderKeyInfo(groupId: string) {
+    return this.db.get<SenderKeyInfoRecord>(`senderKeyInfo:${groupId}`);
+  }
+
+  setSenderKeyInfo(groupId: string, record: SenderKeyInfoRecord) {
+    return this.db.set(`senderKeyInfo:${groupId}`, record);
+  }
+
+  getGroupSendEndorsements(groupId: string) {
+    return this.db.get<GroupSendEndorsementsRecord>(`groupSendEndorsements:${groupId}`);
+  }
+
+  setGroupSendEndorsements(groupId: string, record: GroupSendEndorsementsRecord) {
+    return this.db.set(`groupSendEndorsements:${groupId}`, record);
+  }
+
+  removeGroupSendEndorsements(groupId: string) {
+    return this.db.del(`groupSendEndorsements:${groupId}`);
   }
 
   addSentProto(record: SentProtoRecord) {

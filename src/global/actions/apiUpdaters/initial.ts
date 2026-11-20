@@ -154,6 +154,7 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
       global = updateAuth(global, {
         isLoadingQrCode: false,
         qrCode: update.qrCode,
+        historySync: update.historySync,
       });
       setGlobal(global);
       break;

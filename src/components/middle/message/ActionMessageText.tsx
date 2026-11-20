@@ -545,6 +545,12 @@ const ActionMessageText = ({
       case 'historyClear':
         return lang('ActionHistoryCleared');
 
+      case 'deleted':
+        return lang('ActionMessageDeleted');
+
+      case 'viewOnce':
+        return lang(action.isViewed ? 'ActionViewOnceViewed' : 'ActionViewOnceMedia');
+
       case 'setMessagesTtl': {
         const { period, autoSettingFromId } = action;
 

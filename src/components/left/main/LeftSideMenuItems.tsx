@@ -140,7 +140,7 @@ const LeftSideMenuItems = ({
         icon="saved-messages"
         onClick={handleSelectSaved}
       >
-        {lang('MenuSavedMessages')}
+        {lang('NoteToSelf')}
       </MenuItem>
       {archiveSettings.isHidden && (
         <MenuItem

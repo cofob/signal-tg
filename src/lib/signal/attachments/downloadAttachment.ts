@@ -10,8 +10,17 @@ type DownloadAttachmentOptions = {
 };
 
 const HTTP_OK = 200;
+// Transit tier objects expire after some weeks; the CDN then answers 404 (CDN 0: 403)
+const HTTP_GONE_STATUSES = new Set([403, 404]);
 // Signal Desktop `ts/textsecure/downloadAttachment.preload.ts` (`checkSize`) allows 5% over the expected length
 const MAX_LENGTH_FACTOR = 1.05;
+
+/** The CDN no longer has the attachment, so later downloads fail as well */
+export class AttachmentUnavailableError extends Error {
+  constructor(status: number) {
+    super(`Attachment is no longer available (HTTP ${status})`);
+  }
+}
 
 /**
  * Downloads an attachment from the CDN in `cdnNumber` and returns its decrypted, unpadded bytes. A body much
@@ -42,7 +51,7 @@ export async function downloadAttachment(
       onProgress?.(receivedLength, totalLength);
     },
   });
-  // Transit tier objects expire after some weeks; the CDN then answers 404 (CDN 0: 403)
+  if (HTTP_GONE_STATUSES.has(response.status)) throw new AttachmentUnavailableError(response.status);
   if (response.status !== HTTP_OK) throw new Error(`Attachment download failed with HTTP ${response.status}`);
 
   return decryptAttachment(response.body, pointer.key, pointer.digest, pointer.size);

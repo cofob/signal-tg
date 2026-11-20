@@ -10,13 +10,16 @@ import type {
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
-import type { OutgoingMessage, RecipientResult } from '../sender/sendMessage';
+import type { RecipientResult, SenderContext } from '../sender/sendContent';
+import type { OutgoingMessage } from '../sender/sendMessage';
+import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
+import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
@@ -51,6 +54,16 @@ export type MessageEdit = {
   bodyRanges: MessageInitShape<typeof BodyRangeSchema>[];
   // The full text of a long body, uploaded as a `LONG_TEXT_CONTENT_TYPE` attachment
   bodyAttachment?: MessageInitShape<typeof AttachmentPointerSchema>;
+};
+
+export type ConversationPatch = Partial<ConversationRecord> & Pick<ConversationRecord, 'id' | 'type'>;
+
+export type PinnedMessage = Omit<NonNullable<ConversationRecord['pinnedMessages']>[number], 'messageId'>;
+
+/** Transferred message history to store, see `importHistory` */
+export type HistoryBatch = {
+  conversations: ConversationPatch[];
+  messages: { record: NewMessageRecord; pin?: PinnedMessage }[];
 };
 
 export type TypingEvent = {
@@ -122,6 +135,9 @@ export default class MessageProcessor {
 
   private lastTimestamp = 0;
 
+  // Receipts and syncs for local changes made without a connection, sent after the next one
+  private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -136,6 +152,7 @@ export default class MessageProcessor {
   /** Starts the disappearing messages timer for messages stored earlier */
   start() {
     void this.runSerial(() => this.deleteExpiredMessages());
+    void this.flushPendingSends();
   }
 
   stop() {
@@ -358,6 +375,17 @@ export default class MessageProcessor {
     }, sentAt);
   }
 
+  /** Remembers that the CDN no longer has an attachment, so it is not downloaded again */
+  async markAttachmentUnavailable(messageId: number, index: number) {
+    await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      if (!message || message.unavailableAttachmentIndexes?.includes(index)) return;
+      await this.putMessage({
+        ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], index],
+      });
+    });
+  }
+
   /** Ends our own poll */
   async endPoll(messageId: number) {
     const account = await this.getAccount();
@@ -402,18 +430,19 @@ export default class MessageProcessor {
     });
     if (!viewed.length) return;
 
-    const context = this.client.getSenderContext();
-    if (context.account.isReadReceiptsEnabled) {
-      const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
-      for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
-        await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
+    await this.sendWhenConnected(async (context) => {
+      if (context.account.isReadReceiptsEnabled) {
+        const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
+        for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
+          await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
+        }
       }
-    }
-    const views = viewed.map(({ message }) => ({ senderAci: message.authorAci, timestamp: message.sentAt }));
-    await sendViewedSync(context, views);
-    for (const [index, { isViewOnce }] of viewed.entries()) {
-      if (isViewOnce) await sendViewOnceOpenSync(context, views[index]);
-    }
+      const views = viewed.map(({ message }) => ({ senderAci: message.authorAci, timestamp: message.sentAt }));
+      await sendViewedSync(context, views);
+      for (const [index, { isViewOnce }] of viewed.entries()) {
+        if (isViewOnce) await sendViewOnceOpenSync(context, views[index]);
+      }
+    });
   }
 
   /**
@@ -424,12 +453,8 @@ export default class MessageProcessor {
     const conversation = await this.db.getConversation(conversationId);
     const context = this.client.getSenderContext();
     if (!conversation || context.account.isTypingIndicatorsEnabled === false) return;
-    await sendTyping(
-      context,
-      getRecipientAcis(conversation, context.account.aci),
-      isTyping,
-      conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
-    );
+    const recipients = getRecipientAcis(conversation, context.account.aci);
+    await sendTyping(context, recipients, isTyping, this.getGroupTarget(conversation));
   }
 
   /**
@@ -457,13 +482,15 @@ export default class MessageProcessor {
     this.flush();
     if (!conversation || !messages.length) return;
 
-    const context = this.client.getSenderContext();
-    if (context.account.isReadReceiptsEnabled && conversation.isAccepted) {
-      for (const [authorAci, timestamps] of groupTimestampsByAuthor(messages)) {
-        await sendReceipts(context, authorAci, ReceiptMessage_Type.READ, timestamps);
+    await this.sendWhenConnected(async (context) => {
+      if (context.account.isReadReceiptsEnabled && conversation.isAccepted) {
+        for (const [authorAci, timestamps] of groupTimestampsByAuthor(messages)) {
+          await sendReceipts(context, authorAci, ReceiptMessage_Type.READ, timestamps);
+        }
       }
-    }
-    await sendReadSync(context, messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt })));
+      const reads = messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt }));
+      await sendReadSync(context, reads);
+    });
   }
 
   /**
@@ -546,13 +573,16 @@ export default class MessageProcessor {
     });
   }
 
-  /** Fetches the profile behind a private conversation and stores its decrypted fields */
+  /**
+   * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
+   * is in the account, other profile keys are in their recipients.
+   */
   async refreshProfile(aci: string) {
-    const { store, connection } = this.client.getSenderContext();
-    const recipient = await store.getRecipient(aci);
-    if (!recipient?.profileKey) return;
+    const { store, connection, account } = this.client.getSenderContext();
+    const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
+    if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, recipient.profileKey);
+    const profile = await fetchProfile(connection, aci, profileKey);
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
@@ -568,6 +598,74 @@ export default class MessageProcessor {
       });
     });
     this.flush();
+  }
+
+  /**
+   * Stores transferred message history (`backups/importBackup.ts`): the conversation fields first, creating absent
+   * conversations, then the messages in order. A message whose author and timestamp are stored already is skipped,
+   * so an interrupted import can run again. Nothing goes to `onChanges`: the import ends before the app lists chats,
+   * and the app loads them from the database. Returns the number of stored messages.
+   */
+  importHistory({ conversations, messages }: HistoryBatch) {
+    return this.runSerial(async () => {
+      const updated = new Map<string, ConversationRecord>();
+      let nextLocalId: number | undefined;
+      const getConversation = async (id: string) => updated.get(id) ?? this.db.getConversation(id);
+
+      for (const patch of conversations) {
+        const existing = await getConversation(patch.id);
+        if (!existing) nextLocalId ??= await this.db.allocateLocalId();
+        updated.set(patch.id, {
+          ...existing ?? { localId: nextLocalId!++, unreadCount: 0 },
+          ...patch,
+        });
+      }
+
+      const added = await this.db.addMessagesIfAbsent(messages.map(({ record }) => record));
+      for (const [index, message] of added.entries()) {
+        if (!message) continue;
+        const conversation = await getConversation(message.conversationId);
+        if (!conversation) throw new Error(`Imported message of unknown conversation ${message.conversationId}`);
+        const { pin } = messages[index];
+        const isUnread = !message.isOutgoing && !message.readAt && message.kind === 'message';
+        updated.set(conversation.id, {
+          ...conversation,
+          lastMessageId: message.id,
+          lastMessageAt: message.sentAt,
+          unreadCount: conversation.unreadCount + (isUnread ? 1 : 0),
+          pinnedMessages: pin
+            ? [...conversation.pinnedMessages ?? [], { ...pin, messageId: message.id }]
+            : conversation.pinnedMessages,
+        });
+      }
+
+      await this.db.putConversations([...updated.values()]);
+      if (added.some((message) => message?.expiresAt)) this.scheduleExpiration();
+      return added.filter(Boolean).length;
+    });
+  }
+
+  /**
+   * Sends receipts or syncs for a local change now, or after the next connection while there is none.
+   * A send that fails because the connection closed meanwhile waits for the next one as well.
+   */
+  private async sendWhenConnected(send: (context: SenderContext) => Promise<void>) {
+    if (!this.client.isConnected) {
+      this.pendingSends.push(send);
+      return;
+    }
+    try {
+      await send(this.client.getSenderContext());
+    } catch (err) {
+      if (this.client.isConnected) throw err;
+      this.pendingSends.push(send);
+    }
+  }
+
+  private async flushPendingSends() {
+    for (const send of this.pendingSends.splice(0)) {
+      await this.sendWhenConnected(send).catch(this.events.onError);
+    }
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -634,12 +732,23 @@ export default class MessageProcessor {
     try {
       return await sendMessage(this.client.getSenderContext(), recipients, content, {
         ...options,
-        groupId: conversation.type === 'group' ? bufferFromBase64(conversation.id) : undefined,
+        group: this.getGroupTarget(conversation),
       });
     } catch (err) {
       this.events.onError(err as Error);
       return recipients.map((serviceId) => ({ serviceId, error: err as Error }));
     }
+  }
+
+  /** Group sends renew the send endorsements of the group through its state */
+  private getGroupTarget(conversation: ConversationRecord): GroupTarget | undefined {
+    if (conversation.type !== 'group' || !conversation.masterKey) return undefined;
+    const { id, masterKey } = conversation;
+    return {
+      id: bufferFromBase64(id),
+      secretParams: wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+      refresh: () => this.refreshGroup(id, masterKey),
+    };
   }
 
   private async handleContent(decrypted: DecryptedEnvelope) {
@@ -889,13 +998,17 @@ export default class MessageProcessor {
     const conversation = existing ?? await this.putConversation({
       id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
     });
-    if (!existing || (existing.revision ?? -1) < revision) this.refreshGroup(id, masterKey);
+    if (!existing || (existing.revision ?? -1) < revision) void this.refreshGroup(id, masterKey);
     return conversation;
   }
 
-  /** Fetches the group state outside the envelope queue; group changes are not applied one by one yet */
+  /**
+   * Fetches the group state outside the envelope queue, with its send endorsements; group changes are not
+   * applied one by one yet. Concurrent refreshes of a group share one fetch.
+   */
   private refreshGroup(id: string, masterKey: Uint8Array) {
-    if (this.groupRefreshes.has(id)) return;
+    const running = this.groupRefreshes.get(id);
+    if (running) return running;
 
     const refresh = (async () => {
       const { account, connection, store } = this.client.getSenderContext();
@@ -920,10 +1033,19 @@ export default class MessageProcessor {
         });
       });
       this.flush();
+      await saveGroupSendEndorsements(
+        store,
+        account.aci,
+        id,
+        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+        group.members.map(({ aci }) => aci),
+        group.sendEndorsementsResponse,
+      );
     })();
 
     this.groupRefreshes.set(id, refresh);
     refresh.catch(this.events.onError).finally(() => this.groupRefreshes.delete(id));
+    return refresh;
   }
 
   /**
@@ -1268,7 +1390,7 @@ function groupTimestampsByAuthor(messages: MessageRecord[]) {
 }
 
 /** The conversation id of a group: its base64 group identifier */
-function getGroupId(masterKey: Uint8Array) {
+export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
   return bufferToBase64(wasm.GroupPublicParams_GetGroupIdentifier(publicParams));

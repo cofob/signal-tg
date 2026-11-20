@@ -1,6 +1,6 @@
 import { memo } from '../../../../lib/teact/teact';
 
-import type { ApiReaction, ApiReactionCustomEmoji } from '../../../../api/types';
+import type { ApiReaction, ApiReactionCustomEmoji, ApiReactionEmoji } from '../../../../api/types';
 
 import buildClassName from '../../../../util/buildClassName';
 import { REM } from '../../../common/helpers/mediaDimensions';
@@ -9,13 +9,15 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 
 import CustomEmoji from '../../../common/CustomEmoji';
 import Icon from '../../../common/icons/Icon';
+import ReactionStaticEmoji from '../../../common/reactions/ReactionStaticEmoji';
 
 import styles from './ReactionSelectorReaction.module.scss';
 
 const REACTION_SIZE = 2 * REM;
 
 type OwnProps = {
-  reaction: ApiReactionCustomEmoji;
+  // Emoji reactions without catalog animations, as Signal allows any emoji
+  reaction: ApiReactionCustomEmoji | ApiReactionEmoji;
   chosen?: boolean;
   isReady?: boolean;
   noAppearAnimation?: boolean;
@@ -49,10 +51,13 @@ const ReactionSelectorCustomReaction = ({
       style={style}
       onClick={handleClick}
     >
-      <CustomEmoji
-        documentId={reaction.documentId}
-        size={REACTION_SIZE}
-      />
+      {reaction.type === 'emoji' && <ReactionStaticEmoji reaction={reaction} size={REACTION_SIZE} />}
+      {reaction.type === 'custom' && (
+        <CustomEmoji
+          documentId={reaction.documentId}
+          size={REACTION_SIZE}
+        />
+      )}
       {isLocked && (
         <Icon className={styles.lock} name="lock-filled" />
       )}

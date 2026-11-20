@@ -95,7 +95,7 @@ export function getChatTypeLangKey(chat: ApiChat): RegularLangKey {
 
 export function getChatTitle(lang: LangFn, chat: ApiChat, isSelf = false) {
   if (isSelf) {
-    return lang('SavedMessages');
+    return lang('NoteToSelf');
   }
   return chat.title || lang('HiddenName');
 }

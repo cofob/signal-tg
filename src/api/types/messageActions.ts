@@ -271,7 +271,19 @@ export interface ApiMessageActionUnsupported extends ActionMediaType {
   type: 'unsupported';
 }
 
-export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle
+// Signal: the placeholder of a message its author or a group admin deleted for everyone
+export interface ApiMessageActionDeleted extends ActionMediaType {
+  type: 'deleted';
+}
+
+// Signal: view-once media, which the app cannot open yet; `isViewed` once it was opened on any of our devices
+export interface ApiMessageActionViewOnce extends ActionMediaType {
+  type: 'viewOnce';
+  isViewed?: true;
+}
+
+export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
+  | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate
   | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage

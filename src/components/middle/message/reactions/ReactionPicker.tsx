@@ -35,6 +35,7 @@ import useTuckFilter from '../../../../hooks/useTuckFilter';
 
 import CustomEmojiPicker from '../../../common/CustomEmojiPicker';
 import Menu from '../../../ui/Menu';
+import EmojiPicker from '../../composer/EmojiPicker';
 import ReactionPickerLimited from './ReactionPickerLimited';
 
 import styles from './ReactionPicker.module.scss';
@@ -51,6 +52,7 @@ interface StateProps {
   position?: IAnchorPosition;
   isTranslucent?: boolean;
   sendAsMessage?: boolean;
+  hasReactionCatalog?: boolean;
 }
 
 const FULL_PICKER_SHIFT_DELTA = { x: -23, y: -64 };
@@ -67,6 +69,7 @@ const ReactionPicker = ({
   isCurrentUserPremium,
   shouldUseFullPicker,
   sendAsMessage,
+  hasReactionCatalog,
 }: OwnProps & StateProps) => {
   const {
     toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction,
@@ -115,6 +118,10 @@ const ReactionPicker = ({
       chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
     });
     closeReactionPicker();
+  });
+
+  const handleEmojiSelect = useLastCallback((emoticon: string) => {
+    handleToggleReaction({ type: 'emoji', emoticon });
   });
 
   const handleToggleReaction = useLastCallback((reaction: ApiReaction) => {
@@ -207,31 +214,45 @@ const ReactionPicker = ({
       backdropExcludedSelector=".Modal.confirm"
       onClose={closeReactionPicker}
     >
-      <CustomEmojiPicker
-        chatId={renderedChatId}
-        idPrefix="message-emoji-set-"
-        isHidden={!isOpen || !(shouldUseFullPicker || renderedStoryId)}
-        loadAndPlay={Boolean(isOpen && shouldUseFullPicker)}
-        isReactionPicker
-        isTuckEnabled={shouldUseTuck}
-        className={buildClassName(
-          !shouldUseFullPicker && !renderedStoryId && styles.hidden,
-          shouldUseTuck && styles.extendedPicker,
-        )}
-        pickerListStyle={shouldUseTuck ? pickerListStyle : undefined}
-        selectedReactionIds={selectedReactionIds}
-        isTranslucent={isTranslucent}
-        onCustomEmojiSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleCustomReaction}
-        onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-      />
-      {!shouldUseFullPicker && Boolean(renderedChatId) && (
-        <ReactionPickerLimited
+      {!hasReactionCatalog && !renderedStoryId ? (
+        <EmojiPicker
           chatId={renderedChatId}
+          idPrefix="message-reaction-emoji-"
+          isHidden={!isOpen}
           loadAndPlay={isOpen}
-          onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-          selectedReactionIds={selectedReactionIds}
-          message={message}
+          isTranslucent={isTranslucent}
+          onEmojiSelect={handleEmojiSelect}
+          onCustomEmojiSelect={handleToggleCustomReaction}
         />
+      ) : (
+        <>
+          <CustomEmojiPicker
+            chatId={renderedChatId}
+            idPrefix="message-emoji-set-"
+            isHidden={!isOpen || !(shouldUseFullPicker || renderedStoryId)}
+            loadAndPlay={Boolean(isOpen && shouldUseFullPicker)}
+            isReactionPicker
+            isTuckEnabled={shouldUseTuck}
+            className={buildClassName(
+              !shouldUseFullPicker && !renderedStoryId && styles.hidden,
+              shouldUseTuck && styles.extendedPicker,
+            )}
+            pickerListStyle={shouldUseTuck ? pickerListStyle : undefined}
+            selectedReactionIds={selectedReactionIds}
+            isTranslucent={isTranslucent}
+            onCustomEmojiSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleCustomReaction}
+            onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
+          />
+          {!shouldUseFullPicker && Boolean(renderedChatId) && (
+            <ReactionPickerLimited
+              chatId={renderedChatId}
+              loadAndPlay={isOpen}
+              onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
+              selectedReactionIds={selectedReactionIds}
+              message={message}
+            />
+          )}
+        </>
       )}
     </Menu>
   );
@@ -254,6 +275,8 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
   const areAllReactionsAllowed = chatFullInfo?.enabledReactions?.type === 'all'
     && chatFullInfo?.enabledReactions?.areCustomAllowed;
 
+  // Signal has no reaction catalog: any emoji is a reaction, so the picker shows the full emoji set
+  const hasReactionCatalog = Boolean(global.reactions.availableReactions?.length);
   const currentReactions = message?.reactions?.results;
   const shouldUseCurrentReactions = Boolean(maxUniqueReactions && currentReactions
     && currentReactions.length >= maxUniqueReactions);
@@ -263,10 +286,11 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     story,
     position,
     shouldUseFullPicker: (chat?.isForbidden || areSomeReactionsAllowed || shouldUseCurrentReactions) ? false
-      : (areAllReactionsAllowed || isPrivateChat),
+      : (areAllReactionsAllowed || isPrivateChat || !hasReactionCatalog),
     isTranslucent: selectIsContextMenuTranslucent(global),
     isCurrentUserPremium: selectIsCurrentUserPremium(global),
     sendAsMessage,
+    hasReactionCatalog,
   };
 })(ReactionPicker));
 

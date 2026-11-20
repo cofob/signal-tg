@@ -86,7 +86,7 @@ function StoryMusic({
       >
         {!isProtected && (
           <MenuItem icon="saved-messages" onClick={handleSendToSavedMessages}>
-            {lang('AudioAddToSaved')}
+            {lang('AudioAddToNoteToSelf')}
           </MenuItem>
         )}
         <MenuItem

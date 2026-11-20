@@ -2,10 +2,12 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
 import type { DataMessageSchema, EditMessageSchema, ReceiptMessage_Type } from '../proto/generated/SignalService_pb';
-import type { SenderContext, SendPayload } from './sendContent';
+import type { RecipientResult, SenderContext, SendOptions } from './sendContent';
+import type { GroupTarget } from './sendToGroup';
 
 import { getRandomPadding } from '../crypto';
-import { ContentHint, sendContent } from './sendContent';
+import { ContentHint, sendContent, sendToEach } from './sendContent';
+import { sendWithSenderKey } from './sendToGroup';
 
 import { ContentSchema, SyncMessageSchema, TypingMessage_Action } from '../proto/generated/SignalService_pb';
 
@@ -13,29 +15,20 @@ export type OutgoingMessage =
   | { case: 'dataMessage'; value: MessageInitShape<typeof DataMessageSchema> }
   | { case: 'editMessage'; value: MessageInitShape<typeof EditMessageSchema> };
 
-export type RecipientResult = {
-  serviceId: string;
-  isSealedSender?: boolean;
-  error?: Error;
-};
-
 type MessageOptions = {
   timestamp: number;
-  // Group identifier of group messages (`GroupPublicParams_GetGroupIdentifier`)
-  groupId?: Uint8Array;
+  group?: GroupTarget;
   expirationStartTimestamp?: number;
 };
 
 const SENT_PROTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SENT_PROTO_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
-// Sends to group members run in parallel; encryption itself is serialized by the protocol lock
-const SEND_CONCURRENCY = 8;
 
 let lastSentProtoPruneAt = 0;
 
 /**
- * Sends a data or edit message to its recipients one by one (groups fan out to their members), then a sent
- * transcript to our other devices, and keeps the content for a day so recipients can ask for a resend
+ * Sends a data or edit message to its recipients (group messages with sender key where possible), then a
+ * sent transcript to our other devices, and keeps the content for a day so recipients can ask for a resend
  * (Signal Desktop `ts/textsecure/SendMessage.preload.ts`). A message to ourselves sends only the transcript.
  */
 export async function sendMessage(
@@ -44,16 +37,17 @@ export async function sendMessage(
   const { store, account } = context;
   const others = recipients.filter((serviceId) => serviceId !== account.aci);
   const content = { content: message };
+  const groupId = options.group?.id;
   const results = await sendToRecipients(context, others, content, {
-    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId: options.groupId,
-  });
+    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId,
+  }, options.group);
 
   await store.addSentProto({
     timestamp: options.timestamp,
     content: toBinary(ContentSchema, create(ContentSchema, content)),
     contentHint: ContentHint.Resendable,
     recipients: others,
-    groupId: options.groupId,
+    groupId,
     isUrgent: true,
     savedAt: Date.now(),
   });
@@ -63,7 +57,7 @@ export async function sendMessage(
       content: {
         case: 'sent',
         value: {
-          destinationServiceId: !options.groupId ? others[0] : undefined,
+          destinationServiceId: !groupId ? others[0] : undefined,
           timestamp: BigInt(options.timestamp),
           message: message.case === 'dataMessage' ? message.value : undefined,
           editMessage: message.case === 'editMessage' ? message.value : undefined,
@@ -97,7 +91,7 @@ export function sendReceipts(
 
 /** Sends a typing indicator; it is delivered only to devices online now */
 export function sendTyping(
-  context: SenderContext, recipients: string[], isTyping: boolean, groupId?: Uint8Array,
+  context: SenderContext, recipients: string[], isTyping: boolean, group?: GroupTarget,
 ) {
   const timestamp = Date.now();
   return sendToRecipients(context, recipients.filter((serviceId) => serviceId !== context.account.aci), {
@@ -106,12 +100,12 @@ export function sendTyping(
       value: {
         timestamp: BigInt(timestamp),
         action: isTyping ? TypingMessage_Action.STARTED : TypingMessage_Action.STOPPED,
-        groupId,
+        groupId: group?.id,
       },
     },
   }, {
-    timestamp, contentHint: ContentHint.Implicit, groupId, isOnline: true, isUrgent: false,
-  });
+    timestamp, contentHint: ContentHint.Implicit, groupId: group?.id, isOnline: true, isUrgent: false,
+  }, group);
 }
 
 /** Tells our other devices which messages were read here */
@@ -145,29 +139,18 @@ export function sendNullMessage(context: SenderContext, destination: string) {
   }, { timestamp: Date.now(), contentHint: ContentHint.Implicit, isUrgent: false });
 }
 
+/** Group content goes with sender key to the members that allow it, and one by one to the rest */
 async function sendToRecipients(
   context: SenderContext,
   recipients: string[],
-  payload: SendPayload,
-  options: Parameters<typeof sendContent>[3],
+  content: MessageInitShape<typeof ContentSchema>,
+  options: SendOptions & { contentHint: ContentHint },
+  group?: GroupTarget,
 ): Promise<RecipientResult[]> {
-  const results: RecipientResult[] = [];
-  let nextIndex = 0;
-  async function sendNext() {
-    while (nextIndex < recipients.length) {
-      const index = nextIndex++;
-      const serviceId = recipients[index];
-      try {
-        const { isSealedSender } = await sendContent(context, serviceId, payload, options);
-        results[index] = { serviceId, isSealedSender };
-      } catch (err) {
-        results[index] = { serviceId, error: err as Error };
-      }
-    }
-  }
+  if (!group) return sendToEach(context, recipients, content, options);
 
-  await Promise.all(Array.from({ length: Math.min(SEND_CONCURRENCY, recipients.length) }, sendNext));
-  return results;
+  const { results, remaining } = await sendWithSenderKey(context, group, recipients, content, options);
+  return [...results, ...await sendToEach(context, remaining, content, options)];
 }
 
 function syncToOtherDevices(

@@ -75,7 +75,7 @@ const QuickPreviewModalHeader = ({
 
   const savedMessagesStatus = isSavedDialog
     ? (messagesCount !== undefined
-      ? lang('Messages', { count: messagesCount }, { pluralValue: messagesCount }) : lang('SavedMessages'))
+      ? lang('Messages', { count: messagesCount }, { pluralValue: messagesCount }) : lang('NoteToSelf'))
     : undefined;
   const realChatId = isSavedDialog && threadId ? String(threadId) : chatId;
   const displayChatId = chat?.isMonoforum ? chat.linkedMonoforumId! : realChatId;

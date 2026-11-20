@@ -38,6 +38,8 @@ export type GroupState = {
   inviteLinkPassword?: Uint8Array;
   isAnnouncementsOnly?: boolean;
   isTerminated?: boolean;
+  // `GroupSendEndorsementsResponse` for full members; see `saveGroupSendEndorsements`
+  sendEndorsementsResponse?: Uint8Array;
 };
 
 type GroupCredentialsResponse = {
@@ -56,7 +58,7 @@ const textDecoder = new TextDecoder();
 let serverPublicParams: wasm.ServerPublicParams | undefined;
 let cachedCredentials: { day: number; response: GroupCredentialsResponse } | undefined;
 
-/** Fetches and decrypts the current state of a group v2 from its master key */
+/** Fetches and decrypts the current state of a group v2 from its master key, with its send endorsements */
 export async function fetchGroup(
   account: AccountRecord, connection: ChatConnection, masterKey: Uint8Array,
 ): Promise<GroupState> {
@@ -71,9 +73,12 @@ export async function fetchGroup(
   });
   if (response.status !== HTTP_OK) throw new Error(`Group request failed with HTTP ${response.status}`);
 
-  const { group } = fromBinary(GroupResponseSchema, response.body);
+  const { group, groupSendEndorsementsResponse } = fromBinary(GroupResponseSchema, response.body);
   if (!group) throw new Error('Group response has no group');
-  return decryptGroupState(secretParams, group);
+  return {
+    ...decryptGroupState(secretParams, group),
+    sendEndorsementsResponse: groupSendEndorsementsResponse.length ? groupSendEndorsementsResponse : undefined,
+  };
 }
 
 /** Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`) */
@@ -159,10 +164,15 @@ export async function downloadGroupAvatar(avatarUrl: string, masterKey: Uint8Arr
  * Builds the storage service group authorization: hex group public params and a zero-knowledge
  * presentation of today's auth credential, separated by a colon and base64-encoded
  */
+export function getServerPublicParams() {
+  serverPublicParams ??= wasm.ServerPublicParams_Deserialize(bufferFromBase64(SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS));
+  return serverPublicParams;
+}
+
 async function getGroupAuthorization(
   account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, publicParams: Uint8Array,
 ) {
-  serverPublicParams ??= wasm.ServerPublicParams_Deserialize(bufferFromBase64(SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS));
+  const params = getServerPublicParams();
   const today = Math.floor(getServerTime() / DAY_SECONDS) * DAY_SECONDS;
   const { credentials } = await getGroupCredentials(connection, today);
   const todayCredential = credentials.find(({ redemptionTime }) => redemptionTime === today);
@@ -174,17 +184,17 @@ async function getGroupAuthorization(
   if (account.pni) {
     const pni = wasm.ServiceId_ParseFromServiceIdString(toPniServiceId(account.pni));
     credential = wasm.ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(
-      serverPublicParams, aci, pni, todayCredential.redemptionTime, response,
+      params, aci, pni, todayCredential.redemptionTime, response,
     );
   } else {
     // Accounts without a phone number
     if (!account.authCredentialSalt) throw new Error('Auth credential salt is missing');
     credential = wasm.ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(
-      serverPublicParams, aci, account.authCredentialSalt, todayCredential.redemptionTime, response,
+      params, aci, account.authCredentialSalt, todayCredential.redemptionTime, response,
     );
   }
   const presentation = wasm.ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(
-    serverPublicParams, getRandomBytes(RANDOMNESS_LENGTH), secretParams, credential,
+    params, getRandomBytes(RANDOMNESS_LENGTH), secretParams, credential,
   );
 
   return bufferToBase64(encodeUtf8(`${bufferToHex(publicParams)}:${bufferToHex(presentation)}`));
