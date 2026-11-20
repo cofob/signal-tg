@@ -128,6 +128,16 @@ export function sendViewedSync(context: SenderContext, views: { senderAci: strin
   }, Date.now());
 }
 
+/** Tells our other devices that a view-once message was opened here, so they erase it too */
+export function sendViewOnceOpenSync(context: SenderContext, view: { senderAci: string; timestamp: number }) {
+  return syncToOtherDevices(context, {
+    content: {
+      case: 'viewOnceOpen',
+      value: { senderAci: view.senderAci, timestamp: BigInt(view.timestamp) },
+    },
+  }, Date.now());
+}
+
 /** A null message starts a new session after the old one was archived */
 export function sendNullMessage(context: SenderContext, destination: string) {
   return sendContent(context, destination, {

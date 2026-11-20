@@ -177,6 +177,23 @@ export default class MessageDb {
     return messages;
   }
 
+  /** Messages of a conversation, oldest first, starting at `fromId` */
+  async getMessagesFrom(conversationId: string, limit: number, fromId: number) {
+    const range = IDBKeyRange.bound([conversationId, fromId], [conversationId, Number.MAX_SAFE_INTEGER]);
+    const messages: MessageRecord[] = [];
+    const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range);
+    await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
+      messages.push(cursor.value as MessageRecord);
+      return messages.length < limit;
+    });
+    return messages;
+  }
+
+  countMessages(conversationId: string) {
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
+    return this.request<number>(MESSAGES, 'readonly', (store) => store.index(BY_CONVERSATION).count(range));
+  }
+
   /** Incoming messages of a conversation not read yet, up to `maxId` */
   async getUnreadMessages(conversationId: string, maxId = Number.MAX_SAFE_INTEGER) {
     const range = IDBKeyRange.bound([conversationId, 0], [conversationId, maxId]);

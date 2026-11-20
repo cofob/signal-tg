@@ -8,6 +8,13 @@ export function uuidToString(bytes: Uint8Array) {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+/** The 16 bytes of a hyphenated UUID string, as in the binary ACI fields of protocol messages */
+export function uuidToBytes(uuid: string) {
+  const hex = uuid.replace(/-/g, '');
+  if (hex.length !== UUID_LENGTH * 2) throw new Error('Invalid UUID');
+  return Uint8Array.from({ length: UUID_LENGTH }, (_, i) => parseInt(hex.slice(i * 2, i * 2 + 2), 16));
+}
+
 /** The service id string of a PNI, as used in protocol addresses and `destinationServiceId` */
 export function toPniServiceId(untaggedPni: string) {
   return `${PNI_PREFIX}${untaggedPni}`;
