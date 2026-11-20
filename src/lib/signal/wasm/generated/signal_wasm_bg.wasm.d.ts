@@ -28,6 +28,12 @@ export const GroupSecretParams_EncryptServiceId: (a: number, b: number, c: numbe
 export const GroupSecretParams_GenerateDeterministic: (a: number, b: number) => [number, number, number, number];
 export const GroupSecretParams_GetMasterKey: (a: number, b: number) => [number, number, number, number];
 export const GroupSecretParams_GetPublicParams: (a: number, b: number) => [number, number, number, number];
+export const GroupSendEndorsement_Combine: (a: number, b: number) => [number, number, number, number];
+export const GroupSendEndorsement_Remove: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const GroupSendEndorsement_ToToken: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const GroupSendEndorsementsResponse_GetExpiration: (a: number, b: number) => [number, number, number];
+export const GroupSendEndorsementsResponse_ReceiveAndCombineWithServiceIds: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number, number, number];
+export const GroupSendToken_ToFullToken: (a: number, b: number, c: number) => [number, number, number, number];
 export const HKDF_DeriveSecrets: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
 export const IdentityKeyPair_Deserialize: (a: number, b: number) => [number, number, number];
 export const IdentityKeyPair_Serialize: (a: number, b: number) => [number, number];
@@ -231,4 +237,5 @@ export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_destroy_closure: (a: number, b: number) => void;
 export const __wbindgen_free: (a: number, b: number, c: number) => void;
 export const __externref_table_dealloc: (a: number) => void;
+export const __externref_drop_slice: (a: number, b: number) => void;
 export const __wbindgen_start: () => void;
