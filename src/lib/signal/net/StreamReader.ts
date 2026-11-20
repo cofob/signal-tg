@@ -23,13 +23,19 @@ export default class StreamReader {
     }
   }
 
-  async readExactly(length: number) {
-    while (this.buffer.length < length) {
+  /** Reads `length` bytes into one buffer, so large bodies are not copied per chunk; `onRead` gets the count so far */
+  async readExactly(length: number, onRead?: (readLength: number) => void) {
+    const result = new Uint8Array(length);
+    let offset = 0;
+    for (;;) {
+      const part = this.buffer.subarray(0, length - offset);
+      result.set(part, offset);
+      offset += part.length;
+      this.buffer = this.buffer.subarray(part.length);
+      onRead?.(offset);
+      if (offset === length) return result;
       if (!await this.fill()) throw new Error('Stream ended early');
     }
-    const result = this.buffer.slice(0, length);
-    this.buffer = this.buffer.subarray(length);
-    return result;
   }
 
   /** Reads until the stream ends */

@@ -4,7 +4,7 @@ import type ChatConnection from '../chat/ChatConnection';
 import type { AccessControl, Group, Member_Role } from '../proto/generated/Groups_pb';
 import type { AccountRecord } from '../store/SignalStore';
 
-import { SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
+import { SIGNAL_CDN_HOSTS, SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
 import { bufferFromBase64, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getServerTime } from '../../../util/serverTime';
 import { encodeUtf8, getRandomBytes } from '../crypto';
@@ -49,6 +49,7 @@ const HTTP_OK = 200;
 const DAY_SECONDS = 24 * 60 * 60;
 const CREDENTIAL_DAYS = 7;
 const RANDOMNESS_LENGTH = 32;
+const AVATAR_CDN_NUMBER = 0;
 
 const textDecoder = new TextDecoder();
 
@@ -133,6 +134,25 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
     isAnnouncementsOnly: group.announcementsOnly,
     isTerminated: group.terminated,
   };
+}
+
+/**
+ * Downloads a group avatar by the key in `GroupState.avatarUrl` and decrypts it with the group's secret params
+ * (Signal Desktop `ts/groups.preload.ts`, `decryptGroupAvatar`)
+ */
+export async function downloadGroupAvatar(avatarUrl: string, masterKey: Uint8Array) {
+  const response = await sendHttpRequest(SIGNAL_CDN_HOSTS[AVATAR_CDN_NUMBER], {
+    method: 'GET',
+    path: `/${encodeURIComponent(avatarUrl)}`,
+  });
+  if (response.status !== HTTP_OK) throw new Error(`Group avatar download failed with HTTP ${response.status}`);
+
+  const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
+  const { content } = fromBinary(
+    GroupAttributeBlobSchema, wasm.GroupSecretParams_DecryptBlobWithPadding(secretParams, response.body),
+  );
+  if (content.case !== 'avatar') throw new Error('Group avatar blob has no avatar');
+  return content.value;
 }
 
 /**

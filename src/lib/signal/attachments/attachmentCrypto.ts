@@ -7,6 +7,7 @@ const AES_KEY_LENGTH = 32;
 const ATTACHMENT_KEY_LENGTH = 64;
 const IV_LENGTH = 16;
 const MAC_LENGTH = 32;
+const AES_BLOCK_SIZE = 16;
 const MIN_PADDED_SIZE = 541;
 const PADDING_GROWTH = 1.05;
 
@@ -52,6 +53,11 @@ export async function decryptAttachment(
     key.slice(0, AES_KEY_LENGTH), blob.slice(IV_LENGTH, blob.length - MAC_LENGTH), blob.slice(0, IV_LENGTH),
   );
   return size && size < plaintext.length ? plaintext.subarray(0, size) : plaintext;
+}
+
+/** The encrypted length of a `size`-byte attachment (Signal Desktop `ts/util/AttachmentCrypto.std.ts`) */
+export function getAttachmentCiphertextLength(size: number) {
+  return IV_LENGTH + (Math.floor(getPaddedSize(size) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE + MAC_LENGTH;
 }
 
 /** Rounds sizes up to powers of 1.05 (Signal Desktop `ts/util/logPadSize.std.ts`) */

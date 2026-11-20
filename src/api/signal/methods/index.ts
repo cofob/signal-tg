@@ -12,6 +12,7 @@ export {
   updateChatNotifySettings,
 } from './chats';
 export { destroy, disconnect } from './client';
+export { downloadMedia } from './media';
 export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers,
 } from './users';
