@@ -3,11 +3,12 @@ import { wasm } from '../wasm';
 
 const DEFAULT_PORT = 443;
 const TUNNEL_PATH = '/tunnel';
+const MAX_MESSAGE_SIZE = 64 * 1024;
 
 let signalCaDer: Uint8Array | undefined;
 
 /**
- * A TLS connection to a Signal host through the WebSocket-to-TCP tunnel (`proxy/tunnel.ts`).
+ * A TLS connection to a Signal host through the WebSocket-to-TCP tunnel (`proxy/`).
  * TLS runs in WebAssembly and trusts only Signal's certificate authority.
  */
 export default class TlsTunnel {
@@ -118,7 +119,10 @@ export default class TlsTunnel {
     if (this.socket.readyState !== WebSocket.OPEN) return;
     // wasm-bindgen copies results into a fresh `ArrayBuffer`, but types them as `ArrayBufferLike`
     const outgoing = this.tls.takeOutgoing() as Uint8Array<ArrayBuffer>;
-    if (outgoing.length) this.socket.send(outgoing);
+    // The tunnel limits message size, and large uploads produce one large TLS output
+    for (let offset = 0; offset < outgoing.length; offset += MAX_MESSAGE_SIZE) {
+      this.socket.send(outgoing.subarray(offset, offset + MAX_MESSAGE_SIZE));
+    }
   }
 
   private fail(error: Error) {
