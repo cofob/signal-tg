@@ -1727,6 +1727,7 @@ export interface ActionPayloads {
     origin: MediaViewerOrigin;
     withDynamicLoading?: boolean;
     timestamp?: number;
+    viewOnceMessage?: { chatId: string; messageId: number };
   } & WithTabId;
   closeMediaViewer: ({
     shouldLandInMediaEditor?: boolean;

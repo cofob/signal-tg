@@ -1532,9 +1532,13 @@ export interface LangPair {
   'ActionExpiredVoice': undefined;
   'ActionExpiredVideo': undefined;
   'MediaUnavailable': undefined;
-  'ActionMessageDeleted': undefined;
+  'ActionMessageDeletedYou': undefined;
   'ActionViewOnceMedia': undefined;
   'ActionViewOnceViewed': undefined;
+  'ActionViewOncePhoto': undefined;
+  'ActionViewOnceVideo': undefined;
+  'ViewOnceViewedToast': undefined;
+  'ViewOnceOutgoingToast': undefined;
   'ActionChannelJoinedYou': undefined;
   'ActionChannelJoinedByRequestChannelYou': undefined;
   'ActionUserLeftYou': undefined;
@@ -3167,6 +3171,12 @@ export interface LangPairWithVariables<V = LangVariable> {
     'from': V;
     'duration': V;
   };
+  'ActionMessageDeleted': {
+    'from': V;
+  };
+  'ActionMessageDeletedByAdmin': {
+    'admin': V;
+  };
   'ActionAddUser': {
     'from': V;
     'user': V;
@@ -4759,6 +4769,7 @@ export interface LangKeyGroups {
       | 'ActionTTLDisabled'
       | 'ActionPinnedNotFound'
       | 'ActionGroupCallStartedGroup'
+      | 'ActionMessageDeleted'
       | 'ActionAddYou'
       | 'ActionUserLeft'
       | 'ActionUserJoined'
@@ -5053,6 +5064,11 @@ export interface LangKeyGroups {
     keys:
       | 'ActionGroupCallFinishedGroup';
     variables: 'duration' | 'from';
+  };
+  'admin': {
+    keys:
+      | 'ActionMessageDeletedByAdmin';
+    variables: 'admin';
   };
   'from,user': {
     keys:

@@ -319,7 +319,9 @@ export default class MessageProcessor {
         }
         found.push({ message, conversation, isAdminDelete });
       }
-      for (const { message } of found) await this.applyDelete(message.authorAci, message.sentAt);
+      for (const { message, isAdminDelete } of found) {
+        await this.applyDelete(message.authorAci, message.sentAt, isAdminDelete ? account.aci : undefined);
+      }
       return found;
     });
 
@@ -808,7 +810,9 @@ export default class MessageProcessor {
       const isAdmin = conversation.adminAcis?.includes(source.authorAci);
       if (isAdmin) {
         await this.applyDelete(
-          uuidToString(message.adminDelete.targetAuthorAciBinary), Number(message.adminDelete.targetSentTimestamp),
+          uuidToString(message.adminDelete.targetAuthorAciBinary),
+          Number(message.adminDelete.targetSentTimestamp),
+          source.authorAci,
         );
       }
       return;
@@ -1097,11 +1101,12 @@ export default class MessageProcessor {
   }
 
   /** Remote deletes are allowed only to the author, or to group admins through `adminDelete` */
-  private async applyDelete(authorAci: string, targetSentAt: number) {
+  private async applyDelete(authorAci: string, targetSentAt: number, adminAci?: string) {
     const target = await this.db.findMessage(authorAci, targetSentAt);
     if (!target || target.deletedAt) return;
     await this.putMessage({
       ...target,
+      deletedByAdminAci: adminAci !== authorAci ? adminAci : undefined,
       dataMessage: undefined,
       revisions: undefined,
       body: undefined,

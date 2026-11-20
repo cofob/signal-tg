@@ -65,6 +65,8 @@ export type MessageRecord = {
   revisions?: { dataMessage: Uint8Array; editedAt: number }[];
   editedAt?: number;
   deletedAt?: number;
+  // The group admin who deleted another member's message for everyone
+  deletedByAdminAci?: string;
   // Text of the latest version, for previews and search
   body?: string;
   reactions?: { emoji: string; authorAci: string; sentAt: number }[];

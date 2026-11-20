@@ -1,5 +1,7 @@
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
-import type { ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem } from './messages';
+import type {
+  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem, ApiVideo,
+} from './messages';
 import type { ApiWallpaper } from './misc';
 import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiBirthday } from './users';
@@ -290,12 +292,16 @@ export interface ApiMessageActionUnsupported extends ActionMediaType {
 // Signal: the placeholder of a message its author or a group admin deleted for everyone
 export interface ApiMessageActionDeleted extends ActionMediaType {
   type: 'deleted';
+  // The group admin who deleted another member's message
+  adminId?: string;
 }
 
-// Signal: view-once media, which the app cannot open yet; `isViewed` once it was opened on any of our devices
+// Signal: view-once media, `isViewed` once it was opened on any of our devices. `media` is the photo or video of
+// an incoming message not opened yet, which opens once in the media viewer.
 export interface ApiMessageActionViewOnce extends ActionMediaType {
   type: 'viewOnce';
   isViewed?: true;
+  media?: ApiPhoto | ApiVideo;
 }
 
 export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
