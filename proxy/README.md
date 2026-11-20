@@ -71,7 +71,7 @@ Environment variables; `0` turns off the limits marked optional, and other numbe
 | `PORT` | `8787` | Listening port |
 | `HOST` | `127.0.0.1` | Listening IP address |
 | `ALLOW_PUBLIC_BIND` | `0` | `1` allows a non-loopback `HOST` |
-| `ALLOWED_ORIGINS` | loopback | Comma-separated exact origins, such as `https://signal.example.com`. Unset allows `http://localhost`, `http://127.0.0.1` and `http://[::1]` with any port |
+| `ALLOWED_ORIGINS` | loopback | Comma-separated exact origins, such as `https://signal.example.com`. Unset allows `http://localhost`, `http://127.0.0.1` and `http://[::1]` with any port. The desktop app (`tauri/`) connects from `tauri://localhost`, and from `http://tauri.localhost` on Windows |
 | `ALLOW_NO_ORIGIN` | `0` | `1` accepts requests without `Origin`, such as Node scripts |
 | `UPSTREAM_PROXY` | none | `http://[user:password@]host:port` HTTP `CONNECT` proxy for upstream connections; percent-encode special characters in the credentials |
 | `TRUST_PROXY` | `0` | `1` takes the client address from the rightmost `X-Forwarded-For` entry |
