@@ -29,6 +29,9 @@ export enum ContentHint {
   Implicit = 2,
 }
 
+/** A `Content` to encrypt, or a `PlaintextContent` that goes unencrypted inside the envelope */
+export type SendPayload = MessageInitShape<typeof ContentSchema> | wasm.PlaintextContent;
+
 type SendOptions = {
   timestamp: number;
   isOnline?: boolean;
@@ -71,8 +74,12 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const HTTP_GONE = 410;
-// `CiphertextMessageType.PreKey` in libsignal
-const MESSAGE_TYPE_PREKEY = 3;
+// `CiphertextMessageType` in libsignal
+const ENVELOPE_TYPE_BY_MESSAGE_TYPE: Partial<Record<number, Envelope_Type>> = {
+  2: Envelope_Type.DOUBLE_RATCHET,
+  3: Envelope_Type.PREKEY_MESSAGE,
+  8: Envelope_Type.PLAINTEXT_CONTENT,
+};
 
 export class UnregisteredUserError extends Error {
   constructor(readonly serviceId: string) {
@@ -87,7 +94,7 @@ export class UnregisteredUserError extends Error {
  * When `destination` is our ACI, the content goes identified to our other devices only.
  */
 export async function sendContent(
-  context: SenderContext, destination: string, content: MessageInitShape<typeof ContentSchema>, options: SendOptions,
+  context: SenderContext, destination: string, payload: SendPayload, options: SendOptions,
 ): Promise<SendResult> {
   const { store, account } = context;
   const keyPair = await store.getItem('aciIdentityKeyPair');
@@ -101,9 +108,11 @@ export async function sendContent(
     destination,
     accessKey: isToSelf ? undefined : await getAccessKey(store, destination),
   };
-  const plaintext = padMessage(toBinary(ContentSchema, create(ContentSchema, content)));
+  const plaintext = payload instanceof wasm.PlaintextContent
+    ? payload
+    : padMessage(toBinary(ContentSchema, create(ContentSchema, payload)));
 
-  let deviceIds = await getDeviceIds(store, destination, account, isToSelf);
+  let deviceIds = await getDeviceIds(state, isToSelf);
   if (!deviceIds.length && !isToSelf) {
     deviceIds = await fetchSessions(state, '*');
   }
@@ -149,7 +158,7 @@ export async function sendContent(
       throw new Error(`Sending to ${destination} failed with HTTP ${status}`);
     }
 
-    deviceIds = await getDeviceIds(store, destination, account, isToSelf);
+    deviceIds = await getDeviceIds(state, isToSelf);
     deviceListAttempts++;
   }
 
@@ -157,44 +166,56 @@ export async function sendContent(
 }
 
 async function encryptForDevices(
-  state: SendState, plaintext: Uint8Array, deviceIds: number[], options: SendOptions,
+  state: SendState, plaintext: Uint8Array | wasm.PlaintextContent, deviceIds: number[], options: SendOptions,
 ) {
-  const { context: { store, connection }, stores, localAddress, destination } = state;
+  const { context: { store, connection } } = state;
   const certificate = state.accessKey ? await getSenderCertificate(store, connection) : undefined;
 
-  const messages = [];
-  for (const deviceId of deviceIds) {
-    const address = wasm.ProtocolAddress_New(destination, deviceId);
-    const ciphertext = await wasm.SessionCipher_EncryptMessage(
+  return store.runExclusive(async () => {
+    const messages = [];
+    for (const deviceId of deviceIds) {
+      messages.push(await encryptForDevice(state, plaintext, deviceId, options, certificate));
+    }
+    return messages;
+  });
+}
+
+async function encryptForDevice(
+  state: SendState,
+  plaintext: Uint8Array | wasm.PlaintextContent,
+  deviceId: number,
+  options: SendOptions,
+  certificate?: wasm.SenderCertificate,
+) {
+  const { context: { store }, stores, localAddress, destination } = state;
+  const address = wasm.ProtocolAddress_New(destination, deviceId);
+  const ciphertext = plaintext instanceof wasm.PlaintextContent
+    ? wasm.CiphertextMessage_FromPlaintextContent(plaintext)
+    : await wasm.SessionCipher_EncryptMessage(
       plaintext, address, localAddress, stores.session, stores.identity, Date.now(),
     ) as wasm.CiphertextMessage;
-    const session = wasm.SessionRecord_Deserialize((await store.getSession(`${destination}.${deviceId}`))!);
-    const destinationRegistrationId = wasm.SessionRecord_GetRemoteRegistrationId(session);
+  const session = wasm.SessionRecord_Deserialize((await store.getSession(`${destination}.${deviceId}`))!);
+  const destinationRegistrationId = wasm.SessionRecord_GetRemoteRegistrationId(session);
 
-    if (certificate) {
-      const usmc = wasm.UnidentifiedSenderMessageContent_New(
-        ciphertext, certificate, options.contentHint ?? ContentHint.Default, options.groupId,
-      );
-      const sealed = await wasm.SealedSender_Encrypt(address, usmc, stores.identity) as Uint8Array;
-      messages.push({
-        type: Envelope_Type.UNIDENTIFIED_SENDER,
-        destinationDeviceId: deviceId,
-        destinationRegistrationId,
-        content: bufferToBase64(sealed),
-      });
-      continue;
-    }
-
-    messages.push({
-      type: wasm.CiphertextMessage_Type(ciphertext) === MESSAGE_TYPE_PREKEY
-        ? Envelope_Type.PREKEY_MESSAGE
-        : Envelope_Type.DOUBLE_RATCHET,
+  if (certificate) {
+    const usmc = wasm.UnidentifiedSenderMessageContent_New(
+      ciphertext, certificate, options.contentHint ?? ContentHint.Default, options.groupId,
+    );
+    const sealed = await wasm.SealedSender_Encrypt(address, usmc, stores.identity) as Uint8Array;
+    return {
+      type: Envelope_Type.UNIDENTIFIED_SENDER,
       destinationDeviceId: deviceId,
       destinationRegistrationId,
-      content: bufferToBase64(wasm.CiphertextMessage_Serialize(ciphertext)),
-    });
+      content: bufferToBase64(sealed),
+    };
   }
-  return messages;
+
+  return {
+    type: ENVELOPE_TYPE_BY_MESSAGE_TYPE[wasm.CiphertextMessage_Type(ciphertext)] ?? Envelope_Type.DOUBLE_RATCHET,
+    destinationDeviceId: deviceId,
+    destinationRegistrationId,
+    content: bufferToBase64(wasm.CiphertextMessage_Serialize(ciphertext)),
+  };
 }
 
 /** The recipient does not accept our access key: send identified from now on */
@@ -203,9 +224,22 @@ async function rejectAccessKey(state: SendState) {
   await state.context.store.updateRecipient(state.destination, { sealedSender: 'disabled' });
 }
 
-async function getDeviceIds(store: SignalStore, destination: string, account: AccountRecord, isToSelf: boolean) {
-  const deviceIds = await store.getSessionDeviceIds(destination);
-  return isToSelf ? deviceIds.filter((deviceId) => deviceId !== account.deviceId) : deviceIds;
+/**
+ * Device ids with a session. Devices whose session was archived (after a retry request) get a new one
+ * from their prekeys first.
+ */
+async function getDeviceIds(state: SendState, isToSelf: boolean) {
+  const { context: { store, account }, destination } = state;
+  const deviceIds = (await store.getSessionDeviceIds(destination))
+    .filter((deviceId) => !isToSelf || deviceId !== account.deviceId);
+
+  for (const deviceId of deviceIds) {
+    const record = wasm.SessionRecord_Deserialize((await store.getSession(`${destination}.${deviceId}`))!);
+    if (!wasm.SessionRecord_HasUsableSenderChain(record, Date.now())) {
+      await fetchSessions(state, String(deviceId));
+    }
+  }
+  return deviceIds;
 }
 
 /**
@@ -213,7 +247,7 @@ async function getDeviceIds(store: SignalStore, destination: string, account: Ac
  * With an access key the request goes unauthenticated, so the server does not learn who asks.
  */
 async function fetchSessions(state: SendState, deviceSpecifier: string) {
-  const { context: { connection, unauthenticatedChat }, stores, localAddress, destination } = state;
+  const { context: { connection, unauthenticatedChat }, destination } = state;
   const path = `/v2/keys/${destination}/${deviceSpecifier}`;
 
   let response = state.accessKey
@@ -230,6 +264,10 @@ async function fetchSessions(state: SendState, deviceSpecifier: string) {
   if (status === HTTP_NOT_FOUND) throw new UnregisteredUserError(destination);
   if (status !== HTTP_OK || !json) throw new Error(`Fetching prekeys of ${destination} failed with HTTP ${status}`);
 
+  return state.context.store.runExclusive(() => startSessions(state, json));
+}
+
+async function startSessions({ stores, localAddress, destination }: SendState, json: PreKeyResponse) {
   const identityKey = wasm.PublicKey_Deserialize(bufferFromBase64(json.identityKey));
   const deviceIds: number[] = [];
   for (const device of json.devices) {

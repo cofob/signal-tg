@@ -1,11 +1,9 @@
 import type { SenderContext } from './sendContent';
 
-import { getRandomBytes } from '../crypto';
+import { getRandomPadding } from '../crypto';
 import { sendContent } from './sendContent';
 
 import { SyncMessage_Request_Type } from '../proto/generated/SignalService_pb';
-
-const MAX_PADDING_LENGTH = 512;
 
 /**
  * Asks the primary device for contacts, configuration and the blocked list after linking
@@ -28,10 +26,4 @@ export async function sendInitialSyncRequests(context: SenderContext) {
       },
     }, { timestamp: Date.now(), isUrgent: false });
   }
-}
-
-/** Sync messages carry random padding so their size does not reveal their kind */
-function getRandomPadding() {
-  const [length] = crypto.getRandomValues(new Uint16Array(1));
-  return getRandomBytes((length % MAX_PADDING_LENGTH) + 1);
 }

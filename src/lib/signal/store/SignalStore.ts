@@ -66,6 +66,27 @@ export type UnprocessedEnvelope = {
   id: string;
   envelope: Uint8Array;
   receivedAt: number;
+  // Saved once decrypted: the ratchet has moved on, so the envelope cannot be decrypted again
+  decrypted?: {
+    senderServiceId: string;
+    senderDeviceId: number;
+    destinationServiceId: string;
+    // Serialized `Content`
+    content: Uint8Array;
+    isSealedSender: boolean;
+  };
+};
+
+/** Content we sent, kept so a recipient that failed to decrypt it can ask for it again */
+export type SentProtoRecord = {
+  timestamp: number;
+  // Serialized `Content`
+  content: Uint8Array;
+  contentHint: number;
+  recipients: string[];
+  groupId?: Uint8Array;
+  isUrgent: boolean;
+  savedAt: number;
 };
 
 const DB_NAME = 'ts-signal';
@@ -77,6 +98,18 @@ const DB_NAME = 'ts-signal';
  */
 export default class SignalStore {
   private db = new IdbStore(DB_NAME);
+
+  private exclusive = Promise.resolve();
+
+  /**
+   * Runs protocol operations one at a time. Session, sender key and prekey records are read and written
+   * back across awaits, so a concurrent encryption and decryption would overwrite each other's ratchet state.
+   */
+  runExclusive<T>(callback: () => Promise<T>): Promise<T> {
+    const result = this.exclusive.then(callback);
+    this.exclusive = result.then(() => undefined, () => undefined);
+    return result;
+  }
 
   getItem<K extends keyof Items>(key: K) {
     return this.db.get<Items[K]>(`item:${key}`);
@@ -165,6 +198,24 @@ export default class SignalStore {
 
   setSenderKey(key: string, record: Uint8Array) {
     return this.db.set(`senderKey:${key}`, record);
+  }
+
+  addSentProto(record: SentProtoRecord) {
+    return this.db.set(`sentProto:${record.timestamp}`, record);
+  }
+
+  getSentProto(timestamp: number) {
+    return this.db.get<SentProtoRecord>(`sentProto:${timestamp}`);
+  }
+
+  async removeSentProtosBefore(time: number) {
+    const entries = await this.db.entries();
+    const keys = entries
+      .filter(([key, value]) => (
+        typeof key === 'string' && key.startsWith('sentProto:') && (value as SentProtoRecord).savedAt < time
+      ))
+      .map(([key]) => key as string);
+    await this.db.delMany(keys);
   }
 
   addUnprocessed(envelope: UnprocessedEnvelope) {

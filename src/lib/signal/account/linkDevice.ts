@@ -12,6 +12,7 @@ import {
 import { sendJsonRequest } from '../net/rest';
 import { toPniServiceId, uuidToString } from '../serviceId';
 import { wasm } from '../wasm';
+import { getDeviceCapabilities } from './capabilities';
 import { generateKyberPreKeys, generateSignedPreKey, uploadOneTimePreKeys } from './preKeys';
 
 import { DeviceNameSchema } from '../proto/generated/DeviceName_pb';
@@ -75,14 +76,7 @@ export async function linkDevice(store: SignalStore, message: ProvisionMessage, 
         name: await encryptDeviceName(deviceName, aciIdentityKeyPair.publicKey),
         registrationId,
         pniRegistrationId: hasPni ? pniRegistrationId : undefined,
-        capabilities: {
-          // The server only uses the primary device's value
-          attachmentBackfill: false,
-          spqr: true,
-          usernameChangeSyncMessage: true,
-          optionalPhoneNumber: !hasPni,
-          storage: false,
-        },
+        capabilities: getDeviceCapabilities(hasPni),
       },
       aciSignedPreKey,
       aciPqLastResortPreKey,

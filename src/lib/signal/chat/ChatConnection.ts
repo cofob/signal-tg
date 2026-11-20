@@ -1,9 +1,9 @@
-import { fromBinary } from '@bufbuild/protobuf';
+import { fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type { Envelope } from '../proto/generated/SignalService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type SignalStore from '../store/SignalStore';
-import type { AccountRecord } from '../store/SignalStore';
+import type { AccountRecord, UnprocessedEnvelope } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST } from '../config';
 import { getAccountCredentials } from '../account/linkDevice';
@@ -11,14 +11,16 @@ import { getBasicAuthorization } from '../net/rest';
 import { decryptEnvelope } from '../receiver/decryptEnvelope';
 
 import ResourceSocket from '../net/ResourceSocket';
-import { Envelope_Type, EnvelopeSchema } from '../proto/generated/SignalService_pb';
+import { ContentSchema, Envelope_Type, EnvelopeSchema } from '../proto/generated/SignalService_pb';
 
 type ChatConnectionHandlers = {
-  onEnvelope(decrypted: DecryptedEnvelope): void;
-  onDeliveryReceipt(envelope: Envelope): void;
-  onDecryptionError(envelope: Envelope, error: Error): void;
+  onEnvelope(decrypted: DecryptedEnvelope): Promise<void> | void;
+  onDeliveryReceipt(envelope: Envelope): Promise<void> | void;
+  onDecryptionError(envelope: Envelope, error: Error): Promise<void> | void;
   onQueueEmpty(): void;
   onClose(code: number, reason: string): void;
+  // A handler failed; the envelope is dropped and processing continues
+  onError(error: Error): void;
 };
 
 const CHAT_PATH = '/v1/websocket/';
@@ -28,8 +30,9 @@ const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
 
 /**
- * The authenticated chat socket of the linked device. Each envelope is stored before it is acknowledged
- * and processed in arrival order, so a closed tab does not lose messages.
+ * The authenticated chat socket of the linked device. Each envelope is stored before it is acknowledged,
+ * stored again with its plaintext once decrypted, and removed after its handler finishes. Envelopes are
+ * processed in arrival order, so a closed tab does not lose messages.
  */
 export default class ChatConnection {
   private queue = Promise.resolve();
@@ -42,17 +45,16 @@ export default class ChatConnection {
   ) {
     socket.onRequest = (request) => {
       if (request.verb === 'PUT' && request.path === MESSAGE_PATH && request.body) {
-        const body = request.body;
-        const id = crypto.randomUUID();
-        void this.store.addUnprocessed({ id, envelope: body, receivedAt: Date.now() }).then(() => {
+        const entry = { id: crypto.randomUUID(), envelope: request.body, receivedAt: Date.now() };
+        void this.store.addUnprocessed(entry).then(() => {
           request.respond(HTTP_OK, 'OK');
-          this.enqueue(id, body);
+          this.enqueue(entry);
         });
         return;
       }
       if (request.verb === 'PUT' && request.path === QUEUE_EMPTY_PATH) {
         request.respond(HTTP_OK, 'OK');
-        this.queue = this.queue.then(() => this.handlers.onQueueEmpty());
+        this.run(() => this.handlers.onQueueEmpty());
         return;
       }
       request.respond(HTTP_NOT_FOUND, 'Not found');
@@ -68,8 +70,8 @@ export default class ChatConnection {
     const connection = new ChatConnection(socket, store, account, handlers);
 
     // Envelopes acknowledged before the previous session ended
-    for (const { id, envelope } of await store.getAllUnprocessed()) {
-      connection.enqueue(id, envelope);
+    for (const entry of await store.getAllUnprocessed()) {
+      connection.enqueue(entry);
     }
     return connection;
   }
@@ -83,23 +85,57 @@ export default class ChatConnection {
     return this.socket.sendJsonRequest<T>(verb, path, json);
   }
 
-  private enqueue(id: string, body: Uint8Array) {
-    this.queue = this.queue
-      .then(() => this.processEnvelope(body))
-      .finally(() => this.store.removeUnprocessed(id));
+  private enqueue(entry: UnprocessedEnvelope) {
+    this.run(async () => {
+      try {
+        await this.processEnvelope(entry);
+      } finally {
+        await this.store.removeUnprocessed(entry.id);
+      }
+    });
   }
 
-  private async processEnvelope(body: Uint8Array) {
-    const envelope = fromBinary(EnvelopeSchema, body);
+  private run(task: () => Promise<void> | void) {
+    this.queue = this.queue.then(task).catch((err: Error) => this.handlers.onError(err));
+  }
+
+  private async processEnvelope(entry: UnprocessedEnvelope) {
+    const envelope = fromBinary(EnvelopeSchema, entry.envelope);
     if (envelope.type === Envelope_Type.SERVER_DELIVERY_RECEIPT) {
-      this.handlers.onDeliveryReceipt(envelope);
+      await this.handlers.onDeliveryReceipt(envelope);
       return;
     }
 
-    try {
-      this.handlers.onEnvelope(await decryptEnvelope(this.store, this.account, envelope));
-    } catch (err) {
-      this.handlers.onDecryptionError(envelope, err as Error);
+    if (entry.decrypted) {
+      await this.handlers.onEnvelope({
+        ...entry.decrypted,
+        envelope,
+        content: fromBinary(ContentSchema, entry.decrypted.content),
+      });
+      return;
     }
+
+    let decrypted: DecryptedEnvelope;
+    try {
+      decrypted = await decryptEnvelope(this.store, this.account, envelope);
+    } catch (err) {
+      await this.handlers.onDecryptionError(envelope, err as Error);
+      return;
+    }
+
+    const {
+      senderServiceId, senderDeviceId, destinationServiceId, content, isSealedSender,
+    } = decrypted;
+    await this.store.addUnprocessed({
+      ...entry,
+      decrypted: {
+        senderServiceId,
+        senderDeviceId,
+        destinationServiceId,
+        content: toBinary(ContentSchema, content),
+        isSealedSender,
+      },
+    });
+    await this.handlers.onEnvelope(decrypted);
   }
 }

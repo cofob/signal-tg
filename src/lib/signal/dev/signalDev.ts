@@ -9,22 +9,23 @@ import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { saveProfileKey } from '../sender/sealedSender';
-import { ContentHint, sendContent } from '../sender/sendContent';
+import { sendMessage } from '../sender/sendMessage';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
 import { parseContactSync } from '../sync/contactSync';
-import { initSignalWasm } from '../wasm';
+import { initSignalWasm, wasm } from '../wasm';
 
-import ChatConnection from '../chat/ChatConnection';
-import UnauthenticatedChat from '../chat/UnauthenticatedChat';
+import SignalClient from '../SignalClient';
 import SignalStore from '../store/SignalStore';
 
 const QR_SIZE = 300;
 const DEFAULT_DEVICE_NAME = 'TeleSignal';
 
 const store = new SignalStore();
-const unauthenticatedChat = new UnauthenticatedChat();
-let connection: ChatConnection | undefined;
+const client = new SignalClient(store);
+// Master keys of the groups that `signalDev.groups()` listed, by group id
+const groupMasterKeys = new Map<string, Uint8Array>();
+let isConnected = false;
 
 /**
  * Development console API for the Signal engine, until the app UI uses it:
@@ -42,9 +43,7 @@ const signalDev = {
     const account = await linkDevice(store, await session.provisionMessage, deviceName);
     console.log(`[signal] Linked as device ${account.deviceId} of ${account.aci}`);
     await signalDev.listen();
-    await sendInitialSyncRequests({
-      store, account, connection: connection!, unauthenticatedChat,
-    });
+    await sendInitialSyncRequests(client.getSenderContext());
     console.log('[signal] Sent sync requests for contacts, configuration and blocked list');
   },
 
@@ -53,50 +52,61 @@ const signalDev = {
    * first so the recipient's profile key allows a sealed sender send.
    */
   async sendText(destination: string, text: string) {
-    const account = await store.getItem('account');
-    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
-
-    const context = {
-      store, account, connection, unauthenticatedChat,
-    };
+    const context = getContext();
     const timestamp = Date.now();
-    const message = { body: text, timestamp: BigInt(timestamp), profileKey: account.profileKey };
-    const { isSealedSender } = await sendContent(context, destination, {
-      content: { case: 'dataMessage', value: message },
-    }, { timestamp, contentHint: ContentHint.Resendable });
-    const sent = {
-      destinationServiceId: destination,
-      timestamp: BigInt(timestamp),
-      message,
-      unidentifiedStatus: [{ destinationServiceId: destination, unidentified: isSealedSender }],
-    };
-    await sendContent(context, account.aci, {
-      content: { case: 'syncMessage', value: { content: { case: 'sent', value: sent } } },
+    const [result] = await sendMessage(context, [destination], {
+      case: 'dataMessage',
+      value: { body: text, timestamp: BigInt(timestamp), profileKey: context.account.profileKey },
     }, { timestamp });
-    console.log('[signal] Sent', timestamp, isSealedSender ? 'with sealed sender' : 'identified');
+    if (result.error) throw result.error;
+    console.log('[signal] Sent', timestamp, result.isSealedSender ? 'with sealed sender' : 'identified');
+  },
+
+  /** Sends a text message to every member of a group that `signalDev.groups()` listed */
+  async sendGroupText(groupId: string, text: string) {
+    const context = getContext();
+    const masterKey = groupMasterKeys.get(groupId);
+    if (!masterKey) throw new Error('Unknown group: call signalDev.groups() first');
+
+    const group = await fetchGroup(context.account, context.connection, masterKey);
+    const timestamp = Date.now();
+    const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
+    const results = await sendMessage(context, group.members.map(({ aci }) => aci), {
+      case: 'dataMessage',
+      value: {
+        body: text,
+        timestamp: BigInt(timestamp),
+        profileKey: context.account.profileKey,
+        groupV2: { masterKey, revision: group.revision },
+      },
+    }, {
+      timestamp,
+      groupId: wasm.GroupPublicParams_GetGroupIdentifier(wasm.GroupSecretParams_GetPublicParams(secretParams)),
+    });
+    console.table(results.map(({ serviceId, isSealedSender, error }) => ({
+      serviceId, isSealedSender, error: error?.message,
+    })));
   },
 
   async listen() {
-    await initSignalWasm();
-    const account = await store.getItem('account');
-    if (!account) throw new Error('Not linked: call signalDev.link() first');
-
-    connection?.close();
-    connection = await ChatConnection.connect(store, account, {
-      onEnvelope: printEnvelope,
+    await client.connect({
+      onContent: printEnvelope,
       onDeliveryReceipt: (envelope) => console.log('[signal] Delivery receipt', envelope.clientTimestamp),
       onDecryptionError: (envelope, err) => console.warn('[signal] Decryption failed', envelope, err),
       onQueueEmpty: () => console.log('[signal] Queue drained'),
-      onClose: (code, reason) => console.log('[signal] Chat socket closed', code, reason),
+      onClose: (code, reason) => {
+        isConnected = false;
+        console.log('[signal] Chat socket closed', code, reason);
+      },
+      onError: (err) => console.error('[signal]', err),
     });
+    isConnected = true;
     console.log('[signal] Connected to the chat socket');
   },
 
   /** Reads the storage service and prints record counts and contacts */
   async syncStorage() {
-    const account = await store.getItem('account');
-    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
-
+    const { account, connection } = getContext();
     const snapshot = await fetchStorageSnapshot(account, connection);
     if (!snapshot) {
       console.log('[signal] Storage service has no manifest yet');
@@ -125,9 +135,7 @@ const signalDev = {
 
   /** Fetches every group v2 listed in the storage service and prints titles and members */
   async groups() {
-    const account = await store.getItem('account');
-    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
-
+    const { account, connection } = getContext();
     const snapshot = await fetchStorageSnapshot(account, connection);
     const masterKeys = [...snapshot?.records.values() ?? []].flatMap(({ record }) => (
       record.case === 'groupV2' && record.value.masterKey.length ? [record.value.masterKey] : []
@@ -136,6 +144,7 @@ const signalDev = {
     for (const masterKey of masterKeys) {
       try {
         const group = await fetchGroup(account, connection, masterKey);
+        groupMasterKeys.set(group.groupId, masterKey);
         rows.push({
           title: group.title, revision: group.revision, members: group.members.length, groupId: group.groupId,
         });
@@ -148,8 +157,7 @@ const signalDev = {
 
   /** Prints a decrypted profile; defaults to our own */
   async profile(aci?: string, profileKeyBase64?: string) {
-    const account = await store.getItem('account');
-    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
+    const { account, connection } = getContext();
 
     const profileKey = profileKeyBase64 ? bufferFromBase64(profileKeyBase64) : account.profileKey;
     if (!profileKey) throw new Error('No profile key');
@@ -158,9 +166,8 @@ const signalDev = {
   },
 
   async reset() {
-    connection?.close();
-    connection = undefined;
-    unauthenticatedChat.close();
+    client.close();
+    isConnected = false;
     await store.clear();
     console.log('[signal] Local Signal data removed; unlink the device on the phone too');
   },
@@ -171,7 +178,6 @@ function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEn
   const body = content.content;
 
   if (body.case === 'dataMessage') {
-    if (body.value.profileKey.length) void saveProfileKey(store, senderServiceId, body.value.profileKey);
     console.log(`[signal] Message from ${from}:`, body.value.body, body.value);
     return;
   }
@@ -182,16 +188,6 @@ function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEn
 
   const sync = body.value.content;
   switch (sync.case) {
-    case 'keys': {
-      const keys = sync.value;
-      void store.getItem('account').then((account) => account && store.setItem('account', {
-        ...account,
-        accountEntropyPool: keys.accountEntropyPool || account.accountEntropyPool,
-        mediaRootBackupKey: keys.mediaRootBackupKey.length ? keys.mediaRootBackupKey : account.mediaRootBackupKey,
-      }));
-      console.log('[signal] Received account keys from the primary device');
-      break;
-    }
     case 'contacts':
       if (!sync.value.blob) break;
       void downloadAttachment(sync.value.blob).then((data) => {
@@ -207,6 +203,11 @@ function printEnvelope({ senderServiceId, senderDeviceId, content }: DecryptedEn
     default:
       console.log(`[signal] Sync message from ${from}:`, sync);
   }
+}
+
+function getContext() {
+  if (!isConnected) throw new Error('Not connected: call signalDev.listen() first');
+  return client.getSenderContext();
 }
 
 async function printQrCode(url: string) {

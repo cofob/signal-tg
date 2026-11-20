@@ -24,21 +24,61 @@ export type DecryptedEnvelope = {
   isSealedSender: boolean;
 };
 
+type DecryptionErrorDetails = {
+  senderServiceId: string;
+  senderDeviceId: number;
+  timestamp: number;
+  // The ciphertext that failed and its `CiphertextMessageType`
+  ciphertext: Uint8Array;
+  messageType: number;
+  contentHint: number;
+  groupId?: Uint8Array;
+};
+
+/** Decryption failed after the sender was known, so the sender can be asked to resend */
+export class DecryptionError extends Error {
+  constructor(readonly details: DecryptionErrorDetails, cause: unknown) {
+    super(`Decryption of a message from ${details.senderServiceId}.${details.senderDeviceId} failed`, { cause });
+  }
+}
+
 // `CiphertextMessageType` in libsignal
 const MESSAGE_TYPE_WHISPER = 2;
 const MESSAGE_TYPE_PREKEY = 3;
 const MESSAGE_TYPE_SENDER_KEY = 7;
 const MESSAGE_TYPE_PLAINTEXT = 8;
+const MESSAGE_TYPE_BY_ENVELOPE_TYPE: Partial<Record<Envelope_Type, number>> = {
+  [Envelope_Type.DOUBLE_RATCHET]: MESSAGE_TYPE_WHISPER,
+  [Envelope_Type.PREKEY_MESSAGE]: MESSAGE_TYPE_PREKEY,
+  [Envelope_Type.PLAINTEXT_CONTENT]: MESSAGE_TYPE_PLAINTEXT,
+};
+// `ContentHint.Default` in libsignal: identified envelopes carry no hint
+const CONTENT_HINT_DEFAULT = 0;
 
 let trustRoots: wasm.PublicKey[] | undefined;
 
 /**
- * Decrypts an envelope from the chat socket (Signal Desktop `MessageReceiver.#decrypt`).
- * Server delivery receipts carry no content and are not handled here.
+ * Decrypts an envelope from the chat socket and processes the sender key distribution message it carries
+ * (Signal Desktop `MessageReceiver.#decrypt`). Failures after the sender is known throw `DecryptionError`,
+ * except for duplicates. Server delivery receipts carry no content and are not handled here.
  */
-export async function decryptEnvelope(
-  store: SignalStore, account: AccountRecord, envelope: Envelope,
-): Promise<DecryptedEnvelope> {
+export function decryptEnvelope(store: SignalStore, account: AccountRecord, envelope: Envelope) {
+  return store.runExclusive(async () => {
+    const decrypted = await decrypt(store, account, envelope);
+    const distributionMessage = decrypted.content.senderKeyDistributionMessage;
+    if (distributionMessage.length) {
+      const local = await getLocalIdentity(store, account, envelope);
+      await wasm.SenderKeyDistributionMessage_Process(
+        wasm.ProtocolAddress_New(decrypted.senderServiceId, decrypted.senderDeviceId),
+        wasm.SenderKeyDistributionMessage_Deserialize(distributionMessage),
+        createProtocolStores(store, local).senderKey,
+      );
+    }
+    return decrypted;
+  });
+}
+
+async function decrypt(store: SignalStore, account: AccountRecord, envelope: Envelope): Promise<DecryptedEnvelope> {
   const local = await getLocalIdentity(store, account, envelope);
   const stores = createProtocolStores(store, local);
   const localAddress = wasm.ProtocolAddress_New(local.serviceId, account.deviceId);
@@ -63,9 +103,23 @@ export async function decryptEnvelope(
     const messageType = wasm.UnidentifiedSenderMessageContent_GetMsgType(usmc);
     const contents = wasm.UnidentifiedSenderMessageContent_GetContents(usmc);
     const senderAddress = wasm.ProtocolAddress_New(senderServiceId, senderDeviceId);
-    const plaintext = messageType === MESSAGE_TYPE_PLAINTEXT
-      ? wasm.PlaintextContent_GetBody(wasm.PlaintextContent_Deserialize(contents))
-      : unpadMessage(await decryptMessage(messageType, contents, senderAddress, localAddress, stores));
+    let plaintext: Uint8Array;
+    try {
+      // Plaintext content bodies end with the same 0x80 terminator as padded messages
+      plaintext = unpadMessage(messageType === MESSAGE_TYPE_PLAINTEXT
+        ? wasm.PlaintextContent_GetBody(wasm.PlaintextContent_Deserialize(contents))
+        : await decryptMessage(messageType, contents, senderAddress, localAddress, stores));
+    } catch (err) {
+      throw toDecryptionError(err, {
+        senderServiceId,
+        senderDeviceId,
+        timestamp: Number(envelope.clientTimestamp),
+        ciphertext: contents,
+        messageType,
+        contentHint: wasm.UnidentifiedSenderMessageContent_GetContentHint(usmc),
+        groupId: wasm.UnidentifiedSenderMessageContent_GetGroupId(usmc),
+      });
+    }
 
     return {
       envelope,
@@ -84,19 +138,23 @@ export async function decryptEnvelope(
   if (!senderServiceId || !senderDeviceId) throw new Error('Envelope has no source');
   const senderAddress = wasm.ProtocolAddress_New(senderServiceId, senderDeviceId);
 
+  const messageType = MESSAGE_TYPE_BY_ENVELOPE_TYPE[envelope.type];
+  if (!messageType) throw new Error(`Unsupported envelope type ${envelope.type}`);
+
   let plaintext: Uint8Array;
-  switch (envelope.type) {
-    case Envelope_Type.DOUBLE_RATCHET:
-      plaintext = await decryptMessage(MESSAGE_TYPE_WHISPER, ciphertext, senderAddress, localAddress, stores);
-      break;
-    case Envelope_Type.PREKEY_MESSAGE:
-      plaintext = await decryptMessage(MESSAGE_TYPE_PREKEY, ciphertext, senderAddress, localAddress, stores);
-      break;
-    case Envelope_Type.PLAINTEXT_CONTENT:
-      plaintext = wasm.PlaintextContent_GetBody(wasm.PlaintextContent_Deserialize(ciphertext));
-      break;
-    default:
-      throw new Error(`Unsupported envelope type ${envelope.type}`);
+  try {
+    plaintext = messageType === MESSAGE_TYPE_PLAINTEXT
+      ? wasm.PlaintextContent_GetBody(wasm.PlaintextContent_Deserialize(ciphertext))
+      : await decryptMessage(messageType, ciphertext, senderAddress, localAddress, stores);
+  } catch (err) {
+    throw toDecryptionError(err, {
+      senderServiceId,
+      senderDeviceId,
+      timestamp: Number(envelope.clientTimestamp),
+      ciphertext,
+      messageType,
+      contentHint: CONTENT_HINT_DEFAULT,
+    });
   }
 
   return {
@@ -137,6 +195,12 @@ async function decryptMessage(
     default:
       throw new Error(`Unsupported message type ${messageType}`);
   }
+}
+
+/** A duplicate was already processed and needs no resend */
+function toDecryptionError(err: unknown, details: DecryptionErrorDetails) {
+  if ((err as { libsignalName?: string }).libsignalName === 'DuplicatedMessage') return err;
+  return new DecryptionError(details, err);
 }
 
 async function getLocalIdentity(

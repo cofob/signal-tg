@@ -5,11 +5,18 @@ const PADDING_BLOCK = 80;
 const PADDING_TERMINATOR = 0x80;
 const MAX_REGISTRATION_ID = 0x3fff;
 const AES_GCM_NONCE_LENGTH = 12;
+const MAX_RANDOM_PADDING_LENGTH = 512;
 
 const textEncoder = new TextEncoder();
 
 export function getRandomBytes(length: number) {
   return crypto.getRandomValues(new Uint8Array(length));
+}
+
+/** Sync and null messages carry random padding so their size does not reveal their kind */
+export function getRandomPadding() {
+  const [length] = crypto.getRandomValues(new Uint16Array(1));
+  return getRandomBytes((length % MAX_RANDOM_PADDING_LENGTH) + 1);
 }
 
 /** Registration ids are 14-bit and nonzero */
