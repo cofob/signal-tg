@@ -1611,7 +1611,6 @@ export interface LangPair {
   'MonoforumStatus': undefined;
   'MonoforumComposerPlaceholder': undefined;
   'ChannelSendMessage': undefined;
-  'AutomaticTranslation': undefined;
   'ComposerEmbeddedMessageSuggestedPostTitle': undefined;
   'ComposerEmbeddedMessageSuggestedPostDescription': undefined;
   'ActionSuggestedPostOutgoing': undefined;
@@ -1920,7 +1919,6 @@ export interface LangPair {
   'EnterPassword': undefined;
   'EnterPasswordDescription': undefined;
   'Transfer': undefined;
-  'TranslateMenuCocoonLinkText': undefined;
   'TranslationTone': undefined;
   'TranslationToneNeutral': undefined;
   'TranslationToneFormal': undefined;
@@ -1987,7 +1985,6 @@ export interface LangPair {
   'AiTonePreviewAddStyle': undefined;
   'AiTonePreviewRemoveStyle': undefined;
   'AiTonePreviewStyleAdded': undefined;
-  'AiMessageEditorFrom': undefined;
   'AiMessageEditorTo': undefined;
   'ButtonHelp': undefined;
   'PollModalQuestionTitle': undefined;
@@ -2085,7 +2082,6 @@ export interface LangPair {
   'ChatAllowedVideoMessages': undefined;
   'ChatAllowedVoices': undefined;
   'ChatSendNotAllowedText': undefined;
-  'ChatTranslateMenuTo': undefined;
   'ChatVoiceSingleDeleteAndClose': undefined;
   'ChatHistoryHiddenInfo2': undefined;
   'ChatHistoryVisibleInfo': undefined;
@@ -2134,7 +2130,6 @@ export interface LangPair {
   'DeselectAll': undefined;
   'DisableReactionsInfo': undefined;
   'DoNotReply': undefined;
-  'DoNotTranslate': undefined;
   'DownloadSpeedLimited': undefined;
   'EditTopic': undefined;
   'Emoji': undefined;
@@ -2278,7 +2273,6 @@ export interface LangPair {
   'ShareLinkCopied': undefined;
   'ShowOriginalButton': undefined;
   'ShowTranslateButton': undefined;
-  'ShowTranslateChatButton': undefined;
   'SomeReactions': undefined;
   'SortBy': undefined;
   'SortByReactions': undefined;
@@ -3613,9 +3607,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'nextOwner': V;
     'group': V;
   };
-  'TranslateMenuCocoon': {
-    'link': V;
-  };
   'CocoonFeature1Text': {
     'username': V;
   };
@@ -3671,9 +3662,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SettingsLanguageDesc': {
     'language': V;
   };
-  'AddedToDoNotTranslate': {
-    'language': V;
-  };
   'BotRemoveFromMenu': {
     'user': V;
   };
@@ -3703,9 +3691,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'DeleteMessagesOptionAlso': {
     'user': V;
-  };
-  'DoNotTranslateLanguage': {
-    'language': V;
   };
   'DownloadSpeedLimitedMessage': {
     'factor': V;
@@ -3789,9 +3774,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'StoryYouMentionedTitle': {
     'user': V;
-  };
-  'TranslateToButton': {
-    'language': V;
   };
   'TwoStepAuthConfirmEmailDescription': {
     'recoveryEmail': V;
@@ -4765,7 +4747,6 @@ export interface LangKeyGroups {
       | 'GiftInfoChannelHidden'
       | 'SettingsPasskeysFooter'
       | 'BirthdayPrivacySuggestion'
-      | 'TranslateMenuCocoon'
       | 'CocoonFeature3Text'
       | 'CocoonFooterText'
       | 'AiMessageEditorDailyLimitReached'
@@ -5194,10 +5175,7 @@ export interface LangKeyGroups {
   };
   'language': {
     keys:
-      | 'SettingsLanguageDesc'
-      | 'AddedToDoNotTranslate'
-      | 'DoNotTranslateLanguage'
-      | 'TranslateToButton';
+      | 'SettingsLanguageDesc';
     variables: 'language';
   };
   'currentUsername': {

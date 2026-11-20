@@ -388,10 +388,6 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.Stickers });
           return;
 
-        case SettingsScreens.DoNotTranslate:
-          openSettingsScreen({ screen: SettingsScreens.Language });
-          return;
-
         default:
           break;
       }

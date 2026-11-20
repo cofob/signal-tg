@@ -98,8 +98,6 @@ const SettingsHeader = ({
         return <h3>{lang('AutoDeleteMessages')}</h3>;
       case SettingsScreens.Language:
         return <h3>{lang('Language')}</h3>;
-      case SettingsScreens.DoNotTranslate:
-        return <h3>{lang('DoNotTranslate')}</h3>;
       case SettingsScreens.Stickers:
         return <h3>{lang('Stickers')}</h3>;
       case SettingsScreens.Experimental:

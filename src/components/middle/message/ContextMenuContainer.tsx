@@ -107,7 +107,6 @@ export type OwnProps = {
   messageListType: MessageListType;
   threadId: ThreadId;
   noReplies?: boolean;
-  detectedLanguage?: string;
   repliesThreadInfo?: ApiThreadInfo;
   className?: string;
   onClose: NoneToVoidFunction;
@@ -888,7 +887,7 @@ const ContextMenuContainer = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { message, messageListType, detectedLanguage, threadId }): Complete<StateProps> => {
+  (global, { message, messageListType, threadId }): Complete<StateProps> => {
     const { defaultTags, topReactions, availableReactions } = global.reactions;
 
     const activeDownloads = selectActiveDownloads(global);
@@ -997,7 +996,7 @@ export default memo(withGlobal<OwnProps>(
       ? selectMessageTranslations(global, message.chatId, translationCacheKey)[message.id]
       : undefined;
     const hasTranslation = Boolean(messageTranslation?.text || messageTranslation?.richMessage);
-    const canTranslate = !hasTranslation && selectCanTranslateMessage(global, message, detectedLanguage);
+    const canTranslate = !hasTranslation && selectCanTranslateMessage(global, message);
     const isChatTranslated = chatTranslationLanguage;
 
     const isInSavedMessages = selectIsChatWithSelf(global, message.chatId);

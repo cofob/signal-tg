@@ -131,7 +131,6 @@ function buildApiChatFieldsFromPeerEntity(
     botVerificationIconId,
     hasGeo: channel?.hasGeo,
     level: channel?.level,
-    hasAutoTranslation: channel?.autotranslation,
     withForumTabs: channel?.forumTabs,
     withForumSidebar: channel?.forumSidebar,
 

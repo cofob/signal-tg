@@ -1586,18 +1586,16 @@ function сheckMessageSendingDenied(message: ApiMessage, options: IAllowedAttach
 }
 
 export function selectCanTranslateMessage<T extends GlobalState>(
-  global: T, message: ApiMessage, detectedLanguage?: string, ...[tabId = getCurrentTabId()]: TabArgs<T>
+  global: T, message: ApiMessage, ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
-  const { canTranslate: isTranslationEnabled, doNotTranslate } = global.settings.byKey;
-
-  const canTranslateLanguage = !detectedLanguage || !doNotTranslate.includes(detectedLanguage);
+  const { canTranslate: isTranslationEnabled } = global.settings.byKey;
 
   const isTranslatable = isMessageTranslatable(message);
 
   // Separate translations are disabled when chat translation enabled
   const chatRequestedLanguage = selectRequestedChatTranslationLanguage(global, message.chatId, tabId);
 
-  return IS_TRANSLATION_SUPPORTED && isTranslationEnabled && canTranslateLanguage && isTranslatable
+  return IS_TRANSLATION_SUPPORTED && isTranslationEnabled && isTranslatable
     && !chatRequestedLanguage;
 }
 

@@ -171,12 +171,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'Emoji',
     aliasKey: 'StickersListEmojiItem',
   },
-  {
-    screen: SettingsScreens.DoNotTranslate,
-    parent: SettingsScreens.Language,
-    titleKey: 'DoNotTranslate',
-    requires: 'isDoNotTranslateAvailable',
-  },
 
   {
     screen: SettingsScreens.PrivacyBlockedUsers,
@@ -341,7 +335,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.CustomEmoji, ['SuggestAnimatedEmoji'], { requires: 'areCustomEmojiSetsLoaded' }),
 
   ...buildEntries(SettingsScreens.Language, [
-    'ShowTranslateButton', 'ShowTranslateChatButton', 'LocalizationInterfaceLanguage',
+    'ShowTranslateButton', 'LocalizationInterfaceLanguage',
   ]),
 
   ...buildEntries(SettingsScreens.Folders, ['ShowFolderTags']),

@@ -115,7 +115,6 @@ import {
   selectRequestedMessageTranslationLanguage,
   selectSender,
   selectSenderFromHeader,
-  selectShouldDetectChatLanguage,
   selectShouldLoopStickers,
   selectTabState,
   selectTheme,
@@ -160,8 +159,6 @@ import usePeerColor from '../../../hooks/usePeerColor';
 import usePreviousDeprecated from '../../../hooks/usePreviousDeprecated';
 import useShowTransition from '../../../hooks/useShowTransition';
 import useTextHighlight from '../../../hooks/useTextHighlight';
-import useTextLanguage from '../../../hooks/useTextLanguage';
-import useDetectChatLanguage from './hooks/useDetectChatLanguage';
 import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 import useInnerHandlers from './hooks/useInnerHandlers';
 import useMessageReadMetrics from './hooks/useMessageReadMetrics';
@@ -322,7 +319,6 @@ type StateProps = {
   messageTopic?: ApiTopic;
   chatTranslations?: ChatTranslatedMessages;
   areTranslationsEnabled?: boolean;
-  shouldDetectChatLanguage?: boolean;
   requestedTranslationLanguage?: string;
   requestedChatTranslationLanguage?: string;
   requestedTranslationTone?: TranslationTone;
@@ -453,7 +449,6 @@ const Message = ({
   messageTopic,
   chatTranslations,
   areTranslationsEnabled,
-  shouldDetectChatLanguage,
   requestedTranslationLanguage,
   requestedChatTranslationLanguage,
   requestedTranslationTone,
@@ -847,13 +842,6 @@ const Message = ({
   }, [dice, memoFirstUnreadIdRef, messageId, isLocal]);
 
   const textForLanguageDetection = useMemo(() => textMessage && extractMessageText(textMessage)?.text, [textMessage]);
-  const detectedLanguage = useTextLanguage(
-    textForLanguageDetection,
-    !(areTranslationsEnabled && shouldDetectChatLanguage) || isTypingDraft,
-    getIsMessageListReady,
-  );
-  useDetectChatLanguage(message, detectedLanguage, !shouldDetectChatLanguage, getIsMessageListReady);
-
   const shouldTranslate = isMessageTranslatable(message, !requestedChatTranslationLanguage);
 
   const isManualMessageTranslation = !requestedChatTranslationLanguage && requestedTranslationLanguage;
@@ -2062,7 +2050,6 @@ const Message = ({
           onCloseAnimationEnd={handleContextMenuHide}
           repliesThreadInfo={repliesThreadInfo}
           noReplies={noReplies}
-          detectedLanguage={detectedLanguage}
         />
       )}
       {isDeclineDialogOpen && (
@@ -2319,7 +2306,6 @@ export default memo(withGlobal<OwnProps>(
       messageTopic,
       chatTranslations,
       areTranslationsEnabled,
-      shouldDetectChatLanguage: selectShouldDetectChatLanguage(global, chatId),
       requestedTranslationLanguage,
       requestedChatTranslationLanguage,
       requestedTranslationTone,

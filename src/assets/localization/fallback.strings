@@ -2042,7 +2042,6 @@
 "MonoforumStatus" = "Direct messages";
 "MonoforumComposerPlaceholder" = "Choose a message to reply";
 "ChannelSendMessage" = "Direct Messages";
-"AutomaticTranslation" = "Automatic Translation";
 "ComposerEmbeddedMessageSuggestedPostTitle" = "Suggest a Post Below";
 "ComposerEmbeddedMessageSuggestedPostDescription" = "Tap to offer a price for publishing";
 "TitleSuggestedPostAmountForAnyTime" = "{amount} for publishing anytime";
@@ -2471,8 +2470,6 @@
 "EnterPassword" = "Enter Password";
 "EnterPasswordDescription" = "Please enter your Two-Step Verification password to complete this action.";
 "Transfer" = "Transfer";
-"TranslateMenuCocoon" = "Translations are powered by 🥚 **Cocoon**. {link}";
-"TranslateMenuCocoonLinkText" = "How does it work?";
 "TranslationTone" = "Translation Tone";
 "TranslationToneNeutral" = "Neutral";
 "TranslationToneFormal" = "Formal";
@@ -2559,7 +2556,6 @@
 "AiTonePreviewUsedBy2_other" = "Used by {count} people.";
 "AiTonePreviewCreatedBy" = "Created by {author}.";
 "AiTonePreviewUsedByCreatedBy" = "{usedBy} {createdBy}";
-"AiMessageEditorFrom" = "From";
 "AiMessageEditorTo" = "To";
 "ButtonHelp" = "Help";
 "UnofficialSecurityRisk" = "{peer} uses an unofficial Telegram client — messages to this user may be less secure.";
@@ -2620,7 +2616,6 @@
 "AccDescrExpandPanel" = "Expand panel";
 "AccDescrLike" = "Like";
 "AccDescrTopic" = "Topic";
-"AddedToDoNotTranslate" = "**{language}** is added to the Do Not Translate list.";
 "AllReactions" = "All reactions";
 "AllViewers" = "All viewers";
 "AnonymousForward" = "Author Hidden";
@@ -2675,7 +2670,6 @@
 "ChatAllowedVideoMessages" = "video messages";
 "ChatAllowedVoices" = "voice messages";
 "ChatSendNotAllowedText" = "Sending messages is not allowed in this group";
-"ChatTranslateMenuTo" = "Choose Another Language";
 "ChatVoiceSingleDeleteAndClose" = "Delete and Close";
 "ChatHistoryHiddenInfo2" = "New members won't see more than 100 previous messages.";
 "ChatHistoryVisibleInfo" = "New members will see messages that were sent before they joined.";
@@ -2733,8 +2727,6 @@
 "DeselectAll" = "Deselect All";
 "DisableReactionsInfo" = "Members of the group can’t add any reactions to messages.";
 "DoNotReply" = "Do Not Reply";
-"DoNotTranslate" = "Do Not Translate";
-"DoNotTranslateLanguage" = "Don't translate {language}";
 "DownloadSpeedLimited" = "Download speed limited";
 "DownloadSpeedLimitedMessage" = "Subscribe to **Telegram Premium** and increase download speeds {factor} times.";
 "EditTopic" = "Edit topic";
@@ -2924,7 +2916,6 @@
 "ShareLinkCopied" = "Copied to Clipboard";
 "ShowOriginalButton" = "Show Original";
 "ShowTranslateButton" = "Show Translate Button";
-"ShowTranslateChatButton" = "Translate Entire Chat";
 "SomeReactions" = "Some reactions";
 "SortBy" = "Sort By";
 "SortByReactions" = "Reactions First";
@@ -2980,7 +2971,6 @@
 "SupportStatus" = "support";
 "TelegramStars" = "Telegram Stars";
 "TopicClosedByAdmin" = "The topic is closed";
-"TranslateToButton" = "Translate to {language}";
 "TwoStepAuthConfirmEmailDescription" = "Please enter the code we've just emailed at {recoveryEmail}.";
 "Unlock" = "Unlock";
 "UnlockPremiumEmojiHint" = "Subscribe to **Telegram Premium** to unlock this emoji.";

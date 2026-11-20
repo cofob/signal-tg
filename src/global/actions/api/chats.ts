@@ -3192,33 +3192,6 @@ addActionHandler('openDeleteChatFolderModal', async (global, actions, payload): 
   setGlobal(global);
 });
 
-addActionHandler('updateChatDetectedLanguage', (global, actions, payload): ActionReturnType => {
-  const { chatId, detectedLanguage } = payload;
-
-  global = getGlobal();
-  global = updateChat(global, chatId, {
-    detectedLanguage,
-  });
-
-  return global;
-});
-
-addActionHandler('togglePeerTranslations', async (global, actions, payload): Promise<void> => {
-  const { chatId, isEnabled } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('togglePeerTranslations', { chat, isEnabled });
-
-  if (result === undefined) return;
-
-  global = getGlobal();
-  global = updatePeerFullInfo(global, chatId, {
-    isTranslationDisabled: isEnabled ? undefined : true,
-  });
-  setGlobal(global);
-});
-
 addActionHandler('setViewForumAsMessages', (global, actions, payload): ActionReturnType => {
   const { chatId, isEnabled } = payload;
 
@@ -3384,19 +3357,6 @@ addActionHandler('toggleCommunityCollapsed', async (global, actions, payload): P
       setGlobal(global);
     }
   }
-});
-
-addActionHandler('toggleAutoTranslation', async (global, actions, payload): Promise<void> => {
-  const { chatId, isEnabled } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleAutoTranslation', { chat, isEnabled });
-  if (!result) return;
-
-  global = getGlobal();
-  global = updateChat(global, chatId, { hasAutoTranslation: isEnabled || undefined });
-  setGlobal(global);
 });
 
 addActionHandler('setMainProfileTab', async (global, actions, payload): Promise<void> => {

@@ -27,7 +27,6 @@ import SettingsActiveWebsites from './SettingsActiveWebsites';
 import SettingsAutoDeleteMessages from './SettingsAutoDeleteMessages';
 import SettingsCustomEmoji from './SettingsCustomEmoji';
 import SettingsDataStorage from './SettingsDataStorage';
-import SettingsDoNotTranslate from './SettingsDoNotTranslate';
 import SettingsEditProfile from './SettingsEditProfile';
 import SettingsExperimental from './SettingsExperimental';
 import SettingsGeneral from './SettingsGeneral';
@@ -347,13 +346,9 @@ const Settings = ({
       case SettingsScreens.Language:
         return (
           <SettingsLanguage
-            isActive={isScreenActive || activeScreen === SettingsScreens.DoNotTranslate}
+            isActive={isScreenActive}
             onReset={handleReset}
           />
-        );
-      case SettingsScreens.DoNotTranslate:
-        return (
-          <SettingsDoNotTranslate isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.Stickers:
         return (

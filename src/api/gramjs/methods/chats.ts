@@ -670,7 +670,6 @@ async function getFullChatInfo(chatId: string): Promise<FullChatData | undefined
     recentRequesters,
     requestsPending,
     chatPhoto,
-    translationsDisabled,
     reactionsLimit,
     hasScheduled,
     ttlPeriod,
@@ -707,7 +706,6 @@ async function getFullChatInfo(chatId: string): Promise<FullChatData | undefined
       reactionsLimit,
       requestsPending,
       recentRequesterIds: recentRequesters?.map((userId) => buildApiPeerId(userId, 'user')),
-      isTranslationDisabled: translationsDisabled,
       isPreHistoryHidden: true,
       hasScheduledMessages: hasScheduled,
     },
@@ -762,7 +760,6 @@ async function getFullChannelInfo(
     stickerset,
     chatPhoto,
     participantsHidden,
-    translationsDisabled,
     storiesPinnedAvailable,
     viewForumAsMessages,
     emojiset,
@@ -864,7 +861,6 @@ async function getFullChannelInfo(
       stickerSet: stickerset ? buildStickerSet(stickerset) : undefined,
       emojiSet: emojiset ? buildStickerSet(emojiset) : undefined,
       areParticipantsHidden: participantsHidden,
-      isTranslationDisabled: translationsDisabled,
       hasPinnedStories: Boolean(storiesPinnedAvailable),
       botVerification: botVerification && buildApiBotVerification(botVerification),
       hasScheduledMessages: hasScheduled,
@@ -2148,18 +2144,6 @@ export async function fetchChatlistInvites({
   };
 }
 
-export function togglePeerTranslations({
-  chat, isEnabled,
-}: {
-  chat: ApiChat;
-  isEnabled: boolean;
-}) {
-  return invokeRequest(new GramJs.messages.TogglePeerTranslations({
-    disabled: isEnabled ? undefined : true,
-    peer: buildInputPeer(chat.id, chat.accessHash),
-  }));
-}
-
 export function setViewForumAsMessages({ chat, isEnabled }: { chat: ApiChat; isEnabled: boolean }) {
   const { id, accessHash } = chat;
   const channel = buildInputChannel(id, accessHash);
@@ -2188,19 +2172,6 @@ export async function fetchChannelRecommendations({ chat }: { chat?: ApiChat }) 
     similarChannels,
     count: result instanceof GramJs.messages.ChatsSlice ? result.count : similarChannels.length,
   };
-}
-
-export function toggleAutoTranslation({
-  chat, isEnabled,
-}: {
-  chat: ApiChat; isEnabled: boolean;
-}) {
-  return invokeRequest(new GramJs.channels.ToggleAutotranslation({
-    channel: buildInputChannel(chat.id, chat.accessHash),
-    enabled: isEnabled,
-  }), {
-    shouldReturnTrue: true,
-  });
 }
 
 export function setChannelMainProfileTab({ chat, tab }: { chat: ApiChat; tab: ApiProfileTab }) {

@@ -67,7 +67,6 @@ export interface ApiUserFullInfo {
   fallbackPhoto?: ApiPhoto;
   personalPhoto?: ApiPhoto;
   noVoiceMessages?: boolean;
-  isTranslationDisabled?: true;
   hasPinnedStories?: boolean;
   isContactRequirePremium?: boolean;
   birthday?: ApiBirthday;

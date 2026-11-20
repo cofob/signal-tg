@@ -33,7 +33,7 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     fullUser: {
       about, commonChatsCount, pinnedMsgId, botInfo, blocked,
       profilePhoto, voiceMessagesForbidden, hasScheduled,
-      fallbackPhoto, personalPhoto, translationsDisabled, storiesPinnedAvailable,
+      fallbackPhoto, personalPhoto, storiesPinnedAvailable,
       contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, botVerification,
       botCanManageEmojiStatus, settings,
@@ -56,7 +56,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     isBlocked: Boolean(blocked),
     noVoiceMessages: voiceMessagesForbidden,
     hasPinnedStories: Boolean(storiesPinnedAvailable),
-    isTranslationDisabled: translationsDisabled,
     profilePhoto: profilePhoto instanceof GramJs.Photo ? buildApiPhoto(profilePhoto) : undefined,
     fallbackPhoto: fallbackPhoto instanceof GramJs.Photo ? buildApiPhoto(fallbackPhoto) : undefined,
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,

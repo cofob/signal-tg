@@ -69,7 +69,6 @@ export interface ApiChat {
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
   botVerificationIconId?: string;
-  hasAutoTranslation?: true;
   level?: number;
 
   // Calls
@@ -104,7 +103,6 @@ export interface ApiChat {
   maxStoryId?: number;
 
   // Locally determined field
-  detectedLanguage?: string;
 
   ttlPeriod?: number;
 }
@@ -172,7 +170,6 @@ export interface ApiChatFullInfo {
   emojiSet?: ApiStickerSet;
   profilePhoto?: ApiPhoto;
   areParticipantsHidden?: boolean;
-  isTranslationDisabled?: true;
   hasPinnedStories?: boolean;
   hasScheduledMessages?: boolean;
 

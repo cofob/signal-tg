@@ -317,8 +317,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       shouldArchiveAndMuteNewNonContact: false,
       shouldHideReadMarks: false,
       canTranslate: false,
-      canTranslateChats: true,
-      doNotTranslate: [],
       translationTone: 'neutral',
     },
     privacy: {},

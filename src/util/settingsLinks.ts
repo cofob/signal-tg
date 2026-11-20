@@ -116,8 +116,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
 
   ['language', [SettingsScreens.Language]],
   ['language/show-button', [SettingsScreens.Language, 'ShowTranslateButton']],
-  ['language/translate-chats', [SettingsScreens.Language, 'ShowTranslateChatButton']],
-  ['language/do-not-translate', [SettingsScreens.DoNotTranslate]],
 ]);
 
 const SETTINGS_LINK_ALIASES = new Map([

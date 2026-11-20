@@ -1126,10 +1126,6 @@ export interface ActionPayloads {
     chatId: string;
     isEnabled: boolean;
   };
-  toggleAutoTranslation: {
-    chatId: string;
-    isEnabled: boolean;
-  } & WithTabId;
   setMainProfileTab: {
     chatId: string;
     tab: ApiProfileTab;
@@ -1145,10 +1141,6 @@ export interface ActionPayloads {
     about: string;
     photo?: ApiAvatarUpload;
   } & WithTabId;
-  updateChatDetectedLanguage: {
-    chatId: string;
-    detectedLanguage?: string;
-  };
   toggleSignatures: {
     chatId: string;
     areSignaturesEnabled: boolean;
@@ -1298,16 +1290,6 @@ export interface ActionPayloads {
   requestChatTranslation: {
     chatId: string;
     toLanguageCode?: string;
-  } & WithTabId;
-
-  togglePeerTranslations: {
-    chatId: string;
-    isEnabled: boolean;
-  };
-
-  setChatTranslationTone: {
-    chatId: string;
-    tone: TranslationTone;
   } & WithTabId;
 
   setMessageTranslationTone: {

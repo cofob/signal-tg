@@ -35,7 +35,6 @@ import {
   selectActionMessageBg,
   selectBot,
   selectCanAnimateInterface,
-  selectCanTranslateChat,
   selectChat,
   selectChatAnchoredMessages,
   selectChatEphemeralMessages,
@@ -56,7 +55,6 @@ import {
   selectTabState,
   selectTheme,
   selectTopic,
-  selectTranslationLanguage,
   selectUser,
   selectUserFullInfo,
 } from '../../global/selectors';
@@ -170,9 +168,6 @@ type StateProps = {
   isAccountFrozen?: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
   isChatProtected?: boolean;
-  canTranslate?: boolean;
-  translationLanguage?: string;
-  shouldAutoTranslate?: boolean;
   isActive?: boolean;
   canManageBotForumTopics?: boolean;
   shouldScrollToBottom?: boolean;
@@ -291,9 +286,6 @@ const MessageList = ({
   channelJoinInfo,
   isChatProtected,
   isAccountFrozen,
-  canTranslate,
-  translationLanguage,
-  shouldAutoTranslate,
   reactionPollingPause,
   serverThemeSettings,
   actionMessageBg,
@@ -306,7 +298,7 @@ const MessageList = ({
 }: OwnProps & StateProps) => {
   const {
     loadViewportMessages, setScrollOffset, loadMessageReactions, copyMessagesByIds,
-    loadMessageViews, loadPeerStoriesByIds, loadFactChecks, requestChatTranslation,
+    loadMessageViews, loadPeerStoriesByIds, loadFactChecks,
   } = getActions();
   const lang = useLang();
 
@@ -516,12 +508,6 @@ const MessageList = ({
   useSyncEffect(() => {
     memoFocusingIdRef.current = focusingId;
   }, [focusingId]);
-
-  // Enable auto translation for the chat if it's available
-  useEffect(() => {
-    if (!shouldAutoTranslate || !canTranslate) return;
-    requestChatTranslation({ chatId, toLanguageCode: translationLanguage });
-  }, [shouldAutoTranslate, canTranslate, translationLanguage, chatId]);
 
   useNativeCopySelectedMessages(isActive, chatId, threadId, type, copyMessagesByIds);
 
@@ -1535,10 +1521,6 @@ export default memo(withGlobal<OwnProps>(
 
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
-    const canTranslate = selectCanTranslateChat(global, chatId) && !chatFullInfo?.isTranslationDisabled;
-    const shouldAutoTranslate = chat?.hasAutoTranslation;
-    const translationLanguage = selectTranslationLanguage(global);
-
     const currentMessageList = selectCurrentMessageList(global);
     const isActive = currentMessageList && currentMessageList.chatId === chatId
       && currentMessageList.threadId === threadId && currentMessageList.type === type;
@@ -1589,9 +1571,6 @@ export default memo(withGlobal<OwnProps>(
       isChatProtected: selectIsChatProtected(global, chatId),
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
-      canTranslate,
-      translationLanguage,
-      shouldAutoTranslate,
       canManageBotForumTopics: chat.isBotForum && user?.canManageBotForumTopics,
       shouldScrollToBottom,
       reactionPollingPause: global.reactionPollingPause,

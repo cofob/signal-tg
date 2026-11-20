@@ -178,9 +178,7 @@ export interface AccountSettings {
   defaultHistoryTtl?: number;
   shouldHideReadMarks?: boolean;
   canTranslate: boolean;
-  canTranslateChats: boolean;
   translationLanguage?: string;
-  doNotTranslate: string[];
   translationTone?: TranslationTone;
 }
 
@@ -291,7 +289,6 @@ export enum SettingsScreens {
   Stickers,
   QuickReaction,
   CustomEmoji,
-  DoNotTranslate,
   FoldersShare,
   Passkeys,
   KeyboardShortcuts,
