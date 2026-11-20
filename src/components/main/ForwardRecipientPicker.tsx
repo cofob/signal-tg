@@ -141,7 +141,7 @@ const ForwardRecipientPicker = ({
     forwardToSavedMessages({});
     showNotification({
       message: {
-        key: 'FwdMessagesToSaved',
+        key: 'FwdMessagesToNoteToSelf',
         options: {
           withNodes: true,
           withMarkdown: true,

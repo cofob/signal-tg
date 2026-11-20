@@ -75,6 +75,8 @@ export type MessageRecord = {
   readAt?: number;
   viewedAt?: number;
   isViewOnceOpened?: boolean;
+  // Indexes in `DataMessage.attachments` that the CDN no longer has
+  unavailableAttachmentIndexes?: number[];
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   isSealedSender?: boolean;

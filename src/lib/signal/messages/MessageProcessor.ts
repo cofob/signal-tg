@@ -10,7 +10,7 @@ import type {
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
-import type { RecipientResult } from '../sender/sendContent';
+import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
 import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
@@ -135,6 +135,9 @@ export default class MessageProcessor {
 
   private lastTimestamp = 0;
 
+  // Receipts and syncs for local changes made without a connection, sent after the next one
+  private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -149,6 +152,7 @@ export default class MessageProcessor {
   /** Starts the disappearing messages timer for messages stored earlier */
   start() {
     void this.runSerial(() => this.deleteExpiredMessages());
+    void this.flushPendingSends();
   }
 
   stop() {
@@ -371,6 +375,17 @@ export default class MessageProcessor {
     }, sentAt);
   }
 
+  /** Remembers that the CDN no longer has an attachment, so it is not downloaded again */
+  async markAttachmentUnavailable(messageId: number, index: number) {
+    await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      if (!message || message.unavailableAttachmentIndexes?.includes(index)) return;
+      await this.putMessage({
+        ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], index],
+      });
+    });
+  }
+
   /** Ends our own poll */
   async endPoll(messageId: number) {
     const account = await this.getAccount();
@@ -415,18 +430,19 @@ export default class MessageProcessor {
     });
     if (!viewed.length) return;
 
-    const context = this.client.getSenderContext();
-    if (context.account.isReadReceiptsEnabled) {
-      const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
-      for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
-        await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
+    await this.sendWhenConnected(async (context) => {
+      if (context.account.isReadReceiptsEnabled) {
+        const receipted = viewed.filter(({ conversation }) => conversation.isAccepted).map(({ message }) => message);
+        for (const [authorAci, timestamps] of groupTimestampsByAuthor(receipted)) {
+          await sendReceipts(context, authorAci, ReceiptMessage_Type.VIEWED, timestamps);
+        }
       }
-    }
-    const views = viewed.map(({ message }) => ({ senderAci: message.authorAci, timestamp: message.sentAt }));
-    await sendViewedSync(context, views);
-    for (const [index, { isViewOnce }] of viewed.entries()) {
-      if (isViewOnce) await sendViewOnceOpenSync(context, views[index]);
-    }
+      const views = viewed.map(({ message }) => ({ senderAci: message.authorAci, timestamp: message.sentAt }));
+      await sendViewedSync(context, views);
+      for (const [index, { isViewOnce }] of viewed.entries()) {
+        if (isViewOnce) await sendViewOnceOpenSync(context, views[index]);
+      }
+    });
   }
 
   /**
@@ -466,13 +482,15 @@ export default class MessageProcessor {
     this.flush();
     if (!conversation || !messages.length) return;
 
-    const context = this.client.getSenderContext();
-    if (context.account.isReadReceiptsEnabled && conversation.isAccepted) {
-      for (const [authorAci, timestamps] of groupTimestampsByAuthor(messages)) {
-        await sendReceipts(context, authorAci, ReceiptMessage_Type.READ, timestamps);
+    await this.sendWhenConnected(async (context) => {
+      if (context.account.isReadReceiptsEnabled && conversation.isAccepted) {
+        for (const [authorAci, timestamps] of groupTimestampsByAuthor(messages)) {
+          await sendReceipts(context, authorAci, ReceiptMessage_Type.READ, timestamps);
+        }
       }
-    }
-    await sendReadSync(context, messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt })));
+      const reads = messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt }));
+      await sendReadSync(context, reads);
+    });
   }
 
   /**
@@ -555,13 +573,16 @@ export default class MessageProcessor {
     });
   }
 
-  /** Fetches the profile behind a private conversation and stores its decrypted fields */
+  /**
+   * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
+   * is in the account, other profile keys are in their recipients.
+   */
   async refreshProfile(aci: string) {
-    const { store, connection } = this.client.getSenderContext();
-    const recipient = await store.getRecipient(aci);
-    if (!recipient?.profileKey) return;
+    const { store, connection, account } = this.client.getSenderContext();
+    const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
+    if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, recipient.profileKey);
+    const profile = await fetchProfile(connection, aci, profileKey);
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
@@ -622,6 +643,29 @@ export default class MessageProcessor {
       if (added.some((message) => message?.expiresAt)) this.scheduleExpiration();
       return added.filter(Boolean).length;
     });
+  }
+
+  /**
+   * Sends receipts or syncs for a local change now, or after the next connection while there is none.
+   * A send that fails because the connection closed meanwhile waits for the next one as well.
+   */
+  private async sendWhenConnected(send: (context: SenderContext) => Promise<void>) {
+    if (!this.client.isConnected) {
+      this.pendingSends.push(send);
+      return;
+    }
+    try {
+      await send(this.client.getSenderContext());
+    } catch (err) {
+      if (this.client.isConnected) throw err;
+      this.pendingSends.push(send);
+    }
+  }
+
+  private async flushPendingSends() {
+    for (const send of this.pendingSends.splice(0)) {
+      await this.sendWhenConnected(send).catch(this.events.onError);
+    }
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */

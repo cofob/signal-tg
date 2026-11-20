@@ -1,6 +1,8 @@
 import { memo, useEffect, useRef } from '../../../../lib/teact/teact';
 
-import type { ApiReaction, ApiReactionCustomEmoji, ApiReactionPaid } from '../../../../api/types';
+import type {
+  ApiReaction, ApiReactionCustomEmoji, ApiReactionEmoji, ApiReactionPaid,
+} from '../../../../api/types';
 
 import buildClassName from '../../../../util/buildClassName';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
@@ -12,13 +14,15 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 import AnimatedIcon from '../../../common/AnimatedIcon';
 import CustomEmoji from '../../../common/CustomEmoji';
 import Icon from '../../../common/icons/Icon';
+import ReactionStaticEmoji from '../../../common/reactions/ReactionStaticEmoji';
 
 import styles from './ReactionSelectorReaction.module.scss';
 
 const REACTION_SIZE = 2 * REM;
 
 type OwnProps = {
-  reaction: ApiReactionCustomEmoji | ApiReactionPaid;
+  // Emoji reactions without catalog animations, as Signal allows any emoji
+  reaction: ApiReactionCustomEmoji | ApiReactionEmoji | ApiReactionPaid;
   chosen?: boolean;
   isReady?: boolean;
   noAppearAnimation?: boolean;
@@ -82,13 +86,15 @@ const ReactionSelectorCustomReaction = ({
       onMouseDown={handleBeforeContextMenu}
       onContextMenu={handleContextMenu}
     >
-      {reaction.type === 'paid' ? (
+      {reaction.type === 'paid' && (
         <AnimatedIcon
           tgsUrl={LOCAL_TGS_URLS.StarReaction}
           size={REACTION_SIZE}
           noLoop={false}
         />
-      ) : (
+      )}
+      {reaction.type === 'emoji' && <ReactionStaticEmoji reaction={reaction} size={REACTION_SIZE} />}
+      {reaction.type === 'custom' && (
         <CustomEmoji
           documentId={reaction.documentId}
           size={REACTION_SIZE}

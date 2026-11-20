@@ -3631,7 +3631,7 @@ addActionHandler('forwardAudio', async (global, actions, payload): Promise<void>
 
   actions.showNotification({
     message: toChatId === global.currentUserId ? {
-      key: 'AudioForwardedToSaved',
+      key: 'AudioForwardedToNoteToSelf',
       options: { withNodes: true, withMarkdown: true },
     } : { key: 'AudioForwardedToChat' },
     tabId,
@@ -3658,7 +3658,7 @@ addActionHandler('sendAudioToSavedMessages', (global, actions, payload): ActionR
   });
 
   actions.showNotification({
-    message: { key: 'AudioForwardedToSaved', options: { withNodes: true, withMarkdown: true } },
+    message: { key: 'AudioForwardedToNoteToSelf', options: { withNodes: true, withMarkdown: true } },
     tabId,
   });
 });

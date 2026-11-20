@@ -24,6 +24,7 @@ export {
   forwardApiMessages,
   forwardMessages,
   forwardMessagesLocal,
+  loadPollOptionResults,
   markMessageListRead,
   markMessagesRead,
   sendMessage,
@@ -32,6 +33,7 @@ export {
   sendPollVote,
   sendReaction,
 } from './messages';
+export { fetchConfig, fetchPeerColors } from './settings';
 export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers,
 } from './users';

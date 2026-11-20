@@ -1,9 +1,18 @@
 import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
-import type { ApiPeerSettings, ApiUser, ApiUserFullInfo } from '../../types';
+import type { ApiPeerColor, ApiPeerSettings, ApiUser, ApiUserFullInfo } from '../../types';
 
+import { sha256Sync } from '../../../lib/signal/crypto';
+import { uuidToBytes } from '../../../lib/signal/serviceId';
+import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { getPeerId } from '../peers';
 
 const HASH_MULTIPLIER = 31;
+// Signal avatar colors in `AvatarColors` order: the foreground colors of `AxoTokens.Avatar`
+// (Signal Desktop `ts/axo/AxoTokens.std.ts`)
+export const AVATAR_COLORS = [
+  '#3838f5', '#1251d3', '#086da0', '#067906', '#661aff', '#9f00f0',
+  '#b8057c', '#be0404', '#836b01', '#7d6f40', '#4f4f6d', '#5c5c5c',
+];
 
 /** Builds the user of a private conversation; `selfAci` marks our own user (Note to Self) */
 export function buildApiUser(conversation: ConversationRecord, selfAci: string): ApiUser {
@@ -20,7 +29,17 @@ export function buildApiUser(conversation: ConversationRecord, selfAci: string):
     usernames: conversation.username ? [{ username: conversation.username, isActive: true }] : undefined,
     hasUsername: Boolean(conversation.username),
     avatarPhotoId: getAvatarPhotoId(conversation),
+    color: buildAvatarColor(conversation),
   };
+}
+
+/**
+ * The avatar color of a user or group: the first SHA-256 byte of the ACI or group id picks one of
+ * `AVATAR_COLORS` (Signal Desktop `generateAvatarColor` in `ts/Crypto.node.ts`)
+ */
+export function buildAvatarColor(conversation: ConversationRecord): ApiPeerColor {
+  const identifier = conversation.type === 'private' ? uuidToBytes(conversation.id) : bufferFromBase64(conversation.id);
+  return { type: 'regular', color: sha256Sync(identifier)[0] % AVATAR_COLORS.length };
 }
 
 export function buildApiUserFullInfo(conversation: ConversationRecord): ApiUserFullInfo {
