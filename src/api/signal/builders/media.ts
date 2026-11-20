@@ -91,6 +91,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
         date: Math.floor(message.sentAt / MS_PER_SECOND),
         thumbnail: buildThumbnail(pointer),
         sizes: width && height ? [{ type: 'x', width, height }] : [],
+        isUnavailable: message.unavailableAttachmentIndexes?.includes(index) || undefined,
       },
     };
   }

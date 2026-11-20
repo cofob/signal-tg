@@ -158,6 +158,29 @@
   }
 }
 
+.unavailable {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+
+  padding: 1rem;
+
+  font-size: 0.875rem;
+  color: var(--message-media-text);
+  text-align: center;
+
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.unavailableIcon {
+  font-size: 2rem;
+}
+
 .downloadButton {
   font-size: 1.5rem;
 

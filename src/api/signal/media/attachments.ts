@@ -34,12 +34,16 @@ const downloads = new Map<string, Download>();
 // Serves the parts of a streamed file while it is being saved, or when the cache is unavailable
 let lastDownloaded: { key: string; blob: Blob } | undefined;
 
-/** The attachment pointer that a media id from `buildMessageMedia` refers to */
+/**
+ * The attachment pointer that a media id from `buildMessageMedia` refers to, unless the CDN no longer has
+ * the attachment
+ */
 export async function getAttachmentPointer(mediaId: string) {
   const parsed = parseAttachmentMediaId(mediaId);
   if (!parsed) return undefined;
   const message = await db.getMessage(parsed.messageId);
   if (!message?.dataMessage) return undefined;
+  if (parsed.slot !== STICKER_SLOT && message.unavailableAttachmentIndexes?.includes(parsed.slot)) return undefined;
 
   const { attachments, sticker } = fromBinary(DataMessageSchema, message.dataMessage);
   return parsed.slot === STICKER_SLOT ? sticker?.data : attachments[parsed.slot];

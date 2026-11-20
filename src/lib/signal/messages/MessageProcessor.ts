@@ -363,6 +363,17 @@ export default class MessageProcessor {
     }, sentAt);
   }
 
+  /** Remembers that the CDN no longer has an attachment, so it is not downloaded again */
+  async markAttachmentUnavailable(messageId: number, index: number) {
+    await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      if (!message || message.unavailableAttachmentIndexes?.includes(index)) return;
+      await this.putMessage({
+        ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], index],
+      });
+    });
+  }
+
   /** Ends our own poll */
   async endPoll(messageId: number) {
     const account = await this.getAccount();

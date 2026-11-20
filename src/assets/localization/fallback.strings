@@ -1878,6 +1878,7 @@
 "ActionGroupCallFinishedGroup" = "{from} ended the video chat ({duration})";
 "ActionExpiredVoice" = "Expired voice message";
 "ActionExpiredVideo" = "Expired video message";
+"MediaUnavailable" = "This media is no longer available";
 "ActionMessageDeleted" = "This message was deleted";
 "ActionViewOnceMedia" = "View-once media";
 "ActionViewOnceViewed" = "Viewed";

@@ -1527,6 +1527,7 @@ export interface LangPair {
   'ActionGroupCallStartedChannel': undefined;
   'ActionExpiredVoice': undefined;
   'ActionExpiredVideo': undefined;
+  'MediaUnavailable': undefined;
   'ActionMessageDeleted': undefined;
   'ActionViewOnceMedia': undefined;
   'ActionViewOnceViewed': undefined;

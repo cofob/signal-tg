@@ -53,6 +53,8 @@ export interface ApiPhoto {
   videoSizes?: ApiVideoSize[];
   blobUrl?: string;
   isSpoiler?: boolean;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiSticker {
