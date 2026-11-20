@@ -1,13 +1,21 @@
 import { SIGNAL_USER_AGENT } from '../config';
+import { pause } from '../../../util/schedulers';
 
 import StreamReader from './StreamReader';
 import TlsTunnel from './TlsTunnel';
+
+type OnBodyProgress = (transferredLength: number, totalLength: number) => void;
 
 export type HttpRequest = {
   method: string;
   path: string;
   headers?: Record<string, string>;
   body?: Uint8Array;
+  // Aborting closes the connection, and the request fails with the abort reason
+  signal?: AbortSignal;
+  // Progress of the request body, and of a response body with `Content-Length`
+  onSendProgress?: OnBodyProgress;
+  onReceiveProgress?: OnBodyProgress;
 };
 
 export type HttpResponse = {
@@ -26,6 +34,9 @@ const HEADERS_END = new Uint8Array([13, 10, 13, 10]);
 const HTTP_NO_CONTENT = 204;
 const HTTP_NOT_MODIFIED = 304;
 const CHUNK_SIZE_RADIX = 16;
+const BODY_WRITE_SIZE = 64 * 1024;
+const MAX_BUFFERED_AMOUNT = 1024 * 1024;
+const DRAIN_CHECK_INTERVAL_MS = 20;
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -40,8 +51,9 @@ export async function sendHttpRequest(host: string, request: HttpRequest): Promi
   if (idle?.tunnel.isOpen) {
     try {
       return await sendOnConnection(host, idle, request);
-    } catch {
+    } catch (err) {
       // The server may have closed the idle connection; retry once on a fresh one
+      if (request.signal?.aborted) throw err;
     }
   }
 
@@ -51,6 +63,26 @@ export async function sendHttpRequest(host: string, request: HttpRequest): Promi
 }
 
 async function sendOnConnection(host: string, connection: HttpConnection, request: HttpRequest) {
+  const { tunnel } = connection;
+  const { signal } = request;
+  const close = () => tunnel.close();
+  signal?.addEventListener('abort', close);
+  try {
+    signal?.throwIfAborted();
+    const response = await exchange(host, connection, request);
+    // Chunks that arrived before the abort can still complete the response
+    signal?.throwIfAborted();
+    return response;
+  } catch (err) {
+    // A partly read response leaves the connection unusable
+    tunnel.close();
+    throw signal?.aborted ? signal.reason : err;
+  } finally {
+    signal?.removeEventListener('abort', close);
+  }
+}
+
+async function exchange(host: string, connection: HttpConnection, request: HttpRequest) {
   const { tunnel, reader } = connection;
   const headers: Record<string, string> = {
     Host: host,
@@ -69,9 +101,9 @@ async function sendOnConnection(host: string, connection: HttpConnection, reques
     '',
   ].join('\r\n');
   tunnel.write(textEncoder.encode(head));
-  if (request.body?.length) tunnel.write(request.body);
+  if (request.body?.length) await writeBody(tunnel, request.body, request.onSendProgress);
 
-  const response = await readResponse(reader, request.method);
+  const response = await readResponse(reader, request.method, request.onReceiveProgress);
   const shouldClose = response.headers.get('connection')?.toLowerCase() === 'close';
   if (shouldClose || !tunnel.isOpen) {
     tunnel.close();
@@ -82,7 +114,20 @@ async function sendOnConnection(host: string, connection: HttpConnection, reques
   return response;
 }
 
-async function readResponse(reader: StreamReader, method: string): Promise<HttpResponse> {
+/** Writes the body in parts as the socket drains, so memory stays flat and progress follows the network */
+async function writeBody(tunnel: TlsTunnel, body: Uint8Array, onProgress?: OnBodyProgress) {
+  for (let offset = 0; offset < body.length; offset += BODY_WRITE_SIZE) {
+    tunnel.write(body.subarray(offset, offset + BODY_WRITE_SIZE));
+    while (tunnel.isOpen && tunnel.bufferedAmount > MAX_BUFFERED_AMOUNT) {
+      await pause(DRAIN_CHECK_INTERVAL_MS);
+    }
+    onProgress?.(Math.min(offset + BODY_WRITE_SIZE, body.length), body.length);
+  }
+}
+
+async function readResponse(
+  reader: StreamReader, method: string, onProgress?: OnBodyProgress,
+): Promise<HttpResponse> {
   const head = textDecoder.decode(await reader.readUntil(HEADERS_END)).split('\r\n');
   const status = Number(head[0].split(' ')[1]);
   const headers = new Map<string, string>();
@@ -99,7 +144,8 @@ async function readResponse(reader: StreamReader, method: string): Promise<HttpR
   } else if (headers.get('transfer-encoding')?.toLowerCase().includes('chunked')) {
     body = await readChunkedBody(reader);
   } else if (headers.has('content-length')) {
-    body = await reader.readExactly(Number(headers.get('content-length')));
+    const length = Number(headers.get('content-length'));
+    body = await reader.readExactly(length, onProgress && ((readLength) => onProgress(readLength, length)));
   } else {
     headers.set('connection', 'close');
     body = await reader.readToEnd();

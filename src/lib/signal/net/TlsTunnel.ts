@@ -72,6 +72,11 @@ export default class TlsTunnel {
     return !this.isClosed;
   }
 
+  /** Bytes written to the tunnel but not sent to the network yet */
+  get bufferedAmount() {
+    return this.socket.bufferedAmount;
+  }
+
   write(data: Uint8Array) {
     if (this.isClosed) throw this.closeError ?? new Error(`Tunnel to ${this.host} is closed`);
     this.tls.send(data);
