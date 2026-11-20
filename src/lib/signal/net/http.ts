@@ -1,6 +1,7 @@
 import { SIGNAL_USER_AGENT } from '../config';
 import { pause } from '../../../util/schedulers';
 
+import Http2Connection, { Http2Error } from './Http2Connection';
 import StreamReader from './StreamReader';
 import TlsTunnel from './TlsTunnel';
 
@@ -11,7 +12,7 @@ export type HttpRequest = {
   path: string;
   headers?: Record<string, string>;
   body?: Uint8Array;
-  // Aborting closes the connection, and the request fails with the abort reason
+  // Aborting closes the HTTP/1.1 connection or resets the HTTP/2 stream; the request fails with the abort reason
   signal?: AbortSignal;
   // Progress of the request body, and of a response body with `Content-Length`
   onSendProgress?: OnBodyProgress;
@@ -48,13 +49,75 @@ type HostPool = {
   waiters: ((connection: HttpConnection | undefined) => void)[];
 };
 
-// Parallel requests share a few keep-alive connections per host instead of opening a tunnel each
+// Parallel requests share one HTTP/2 connection per host, or a few HTTP/1.1 keep-alive connections on hosts
+// without HTTP/2, instead of opening a tunnel each
 const MAX_CONNECTIONS_PER_HOST = 4;
 const IDLE_TIMEOUT_MS = 60 * 1000;
+const HTTP_ALPN_PROTOCOLS = ['h2', 'http/1.1'];
+const HTTP2_ALPN_PROTOCOL = 'h2';
 
 const pools = new Map<string, HostPool>();
+const http2Connections = new Map<string, Http2Connection>();
+const http2Opens = new Map<string, Promise<Http2Connection | undefined>>();
+// Hosts that did not negotiate HTTP/2
+const http1Hosts = new Set<string>();
 
 export async function sendHttpRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
+  if (!http1Hosts.has(host)) {
+    const response = await sendHttp2Request(host, request);
+    if (response) return response;
+  }
+  return sendHttp1Request(host, request);
+}
+
+/** Sends the request as a stream of the host's HTTP/2 connection; resolves with `undefined` if it has none */
+async function sendHttp2Request(host: string, request: HttpRequest): Promise<HttpResponse | undefined> {
+  let canRetry = true;
+  for (;;) {
+    const existing = http2Connections.get(host);
+    const isReused = Boolean(existing?.canOpenStreams);
+    const connection = isReused ? existing : await openHttp2Connection(host);
+    if (!connection) return undefined;
+    try {
+      return await connection.request(request);
+    } catch (err) {
+      // Streams the server did not process can be retried on a new connection, and so can requests other than
+      // POST on a reused connection that closed, like on HTTP/1.1
+      const isRetryable = err instanceof Http2Error
+        && (err.isUnprocessed || (isReused && !connection.isOpen && request.method !== 'POST'));
+      if (!canRetry || !isRetryable || request.signal?.aborted) throw err;
+      canRetry = false;
+    }
+  }
+}
+
+/** Opens one connection per host at a time; a host without HTTP/2 gets the tunnel as an idle HTTP/1.1 connection */
+function openHttp2Connection(host: string) {
+  let opening = http2Opens.get(host);
+  if (opening) return opening;
+
+  opening = TlsTunnel.open(host, HTTP_ALPN_PROTOCOLS).then((tunnel) => {
+    if (tunnel.alpnProtocol !== HTTP2_ALPN_PROTOCOL) {
+      http1Hosts.add(host);
+      const pool = getPool(host);
+      pool.activeCount++;
+      releaseConnection(pool, { tunnel, reader: new StreamReader(() => tunnel.read()) });
+      return undefined;
+    }
+    const connection = new Http2Connection(tunnel, host, IDLE_TIMEOUT_MS);
+    connection.onClose = () => {
+      if (http2Connections.get(host) === connection) http2Connections.delete(host);
+    };
+    http2Connections.set(host, connection);
+    return connection;
+  }).finally(() => {
+    http2Opens.delete(host);
+  });
+  http2Opens.set(host, opening);
+  return opening;
+}
+
+async function sendHttp1Request(host: string, request: HttpRequest): Promise<HttpResponse> {
   const pool = getPool(host);
   let connection = await acquireConnection(pool);
   const isReused = Boolean(connection);
@@ -141,6 +204,7 @@ function releaseConnection(pool: HostPool, connection: HttpConnection | undefine
 
 /** Closes the idle keep-alive connections, so the next requests open new ones through the current tunnel */
 export function closeIdleHttpConnections() {
+  for (const connection of http2Connections.values()) connection.closeIfIdle();
   for (const pool of pools.values()) {
     for (const { connection, timer } of pool.idle) {
       clearTimeout(timer);

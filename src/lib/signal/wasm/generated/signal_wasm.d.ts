@@ -569,20 +569,25 @@ export class TlsClient {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * The protocol the server chose from `alpn_protocols`, once the handshake completes
+     */
+    alpnProtocol(): string | undefined;
+    /**
      * Queues `close_notify`; call `takeOutgoing` afterwards
      */
     close(): void;
     isHandshaking(): boolean;
     /**
-     * `trust_anchors` are DER certificates; only chains to them are accepted.
+     * `trust_anchors` are DER certificates; only chains to them are accepted. `alpn_protocols` are
+     * offered in order of preference.
      */
-    constructor(server_name: string, trust_anchors: Uint8Array[]);
+    constructor(server_name: string, trust_anchors: Uint8Array[], alpn_protocols: string[]);
     /**
      * Processes bytes from the peer and returns the decrypted application data
      */
     receive(data: Uint8Array): Uint8Array;
     /**
-     * Queues application data; it is sent after the handshake completes
+     * Queues application data of any length; it is sent after the handshake completes
      */
     send(data: Uint8Array): void;
     /**
@@ -826,11 +831,12 @@ export interface InitOutput {
     readonly servercertificate_cloneHandle: (a: number) => number;
     readonly sessionrecord_cloneHandle: (a: number) => number;
     readonly signalmessage_cloneHandle: (a: number) => number;
+    readonly tlsclient_alpnProtocol: (a: number) => [number, number];
     readonly tlsclient_close: (a: number) => void;
     readonly tlsclient_isHandshaking: (a: number) => number;
-    readonly tlsclient_new: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly tlsclient_new: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly tlsclient_receive: (a: number, b: number, c: number) => [number, number, number, number];
-    readonly tlsclient_send: (a: number, b: number, c: number) => [number, number];
+    readonly tlsclient_send: (a: number, b: number, c: number) => void;
     readonly tlsclient_takeOutgoing: (a: number) => [number, number, number, number];
     readonly ring_core_0_17_14__bn_mul_mont: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
     readonly __wbg_kybersecretkey_free: (a: number, b: number) => void;
