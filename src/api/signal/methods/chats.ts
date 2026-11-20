@@ -1,1 +1,331 @@
-// Methods with the names and signatures of `src/api/gramjs/methods`
+import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
+import type { ThreadReadState } from '../../../types';
+import type {
+  ApiChat,
+  ApiMessage,
+  ApiPeer,
+  ApiPeerNotifySettings,
+  ApiThreadInfo,
+  ApiUser,
+} from '../../types';
+import { MAIN_THREAD_ID } from '../../types';
+
+import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
+import { buildCollectionByKey } from '../../../util/iteratees';
+import { GLOBAL_SEARCH_CONTACTS_LIMIT } from '../../../limits';
+import {
+  buildApiChat,
+  buildGroupFullInfo,
+  buildNotifySettings,
+  buildThreadInfo,
+  buildThreadReadState,
+  getIsChatListed,
+  getPinnedConversations,
+} from '../builders/chats';
+import { buildApiMessage } from '../builders/messages';
+import { buildApiUser, buildPeerSettings, getIsContact } from '../builders/users';
+import { getCurrentAccount } from '../client';
+import { db, processor } from '../engine';
+import { getConversationByPeerId, getPeerId } from '../peers';
+import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
+import { sendApiUpdate } from '../updates';
+
+// The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
+const MAX_PINNED_CHATS = 4;
+
+type ChatSummary = {
+  chat: ApiChat;
+  user?: ApiUser;
+  lastMessage?: ApiMessage;
+  threadInfo: ApiThreadInfo;
+  readState: ThreadReadState;
+  notifySettings: ApiPeerNotifySettings;
+};
+
+/**
+ * The chat list from the local database. Pinned chats lead the first page in pin order; the rest follow by the
+ * date of their last message, and later pages continue after the offset chat.
+ */
+export async function fetchChats({
+  limit, offsetDate, offsetPeer, archived, withPinned,
+}: {
+  limit: number;
+  offsetDate?: number;
+  offsetPeer?: ApiPeer;
+  archived?: boolean;
+  withPinned?: boolean;
+}) {
+  const selfAci = getCurrentAccount()?.aci;
+  if (!selfAci) return undefined;
+
+  const listed = (await db.getConversations()).filter((conversation) => (
+    getIsChatListed(conversation, selfAci) && Boolean(conversation.isArchived) === Boolean(archived)
+  ));
+  const pinned = getPinnedConversations(listed);
+  const offsetLocalId = offsetPeer ? Math.abs(Number(offsetPeer.id)) : undefined;
+  const isFirstPage = offsetDate === undefined && offsetLocalId === undefined;
+  const remaining = listed
+    .filter(({ pinIndex }) => pinIndex === undefined)
+    .sort(compareChatOrder)
+    .filter((conversation) => isFirstPage || isAfterOffset(conversation, offsetDate ?? 0, offsetLocalId ?? 0));
+  const page = remaining.slice(0, limit);
+  const conversations = isFirstPage ? [...pinned, ...page] : page;
+  const summaries = await Promise.all(conversations.map((conversation) => buildChatSummary(conversation, selfAci)));
+
+  const chatIds = summaries.map(({ chat }) => chat.id);
+  const messages = summaries.map(({ lastMessage }) => lastMessage).filter(Boolean);
+  const users = summaries.map(({ user }) => user).filter(Boolean);
+  const senderUsers = await buildMissingUsers(messages.map(({ senderId }) => senderId), users, selfAci);
+  const lastConversation = page[page.length - 1];
+
+  return {
+    chatIds,
+    chats: summaries.map(({ chat }) => chat),
+    users: [...users, ...senderUsers],
+    userStatusesById: {},
+    draftsById: {},
+    threadReadStatesById: Object.fromEntries(summaries.map(({ chat, readState }) => [chat.id, readState])),
+    threadInfos: summaries.map(({ threadInfo }) => threadInfo),
+    orderedPinnedIds: withPinned ? pinned.map(getPeerId) : undefined,
+    totalChatCount: listed.length,
+    messages,
+    notifyExceptionById: Object.fromEntries(summaries
+      .filter(({ notifySettings }) => notifySettings.mutedUntil)
+      .map(({ chat, notifySettings }) => [chat.id, notifySettings])),
+    lastMessageByChatId: Object.fromEntries(summaries
+      .filter(({ lastMessage }) => lastMessage)
+      .map(({ chat, lastMessage }) => [chat.id, lastMessage!.id])),
+    nextOffsetId: lastConversation?.lastMessageId,
+    nextOffsetPeerId: lastConversation && getPeerId(lastConversation),
+    nextOffsetDate: lastConversation && getChatDate(lastConversation),
+    isFullyLoaded: remaining.length <= limit ? true as const : undefined,
+  };
+}
+
+export async function fetchChat({
+  type, user, shouldRequestUpdate,
+}: {
+  type: 'user' | 'self' | 'support'; user?: ApiUser; shouldRequestUpdate?: boolean;
+}) {
+  const selfAci = getCurrentAccount()?.aci;
+  if (!selfAci || type === 'support') return undefined;
+
+  const conversation = type === 'self' ? await db.getConversation(selfAci) : await getConversationByPeerId(user!.id);
+  if (!conversation) return undefined;
+
+  if (shouldRequestUpdate) {
+    await sendChatSummary(conversation, selfAci);
+  } else {
+    sendChat(buildApiChat(conversation, selfAci));
+  }
+  return { chatId: getPeerId(conversation) };
+}
+
+/** Sends the chat with its last message, read state and mute state */
+export async function requestChatUpdate({ chat }: { chat: ApiChat }) {
+  const selfAci = getCurrentAccount()?.aci;
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!selfAci || !conversation) return;
+
+  await sendChatSummary(conversation, selfAci);
+}
+
+/** Chat folders from the storage service are not stored yet, so only the list of all chats exists */
+export function fetchChatFolders() {
+  return Promise.resolve({
+    byId: {},
+    orderedIds: [ALL_FOLDER_ID],
+    areTagsEnabled: undefined,
+  });
+}
+
+/** Group details and members; private chats use `fetchFullUser` */
+export async function fetchFullChat(chat: ApiChat) {
+  const selfAci = getCurrentAccount()?.aci;
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!selfAci || conversation?.type !== 'group') return undefined;
+
+  const { fullInfo, users } = await buildGroupFullInfo(conversation, selfAci);
+  sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(users, 'id') });
+  return {
+    fullInfo,
+    chats: [],
+    userStatusesById: {},
+    membersCount: conversation.memberAcis?.length,
+  };
+}
+
+export async function fetchPeerSettings(peer: ApiPeer) {
+  const conversation = await getConversationByPeerId(peer.id);
+  return conversation && { settings: buildPeerSettings(conversation) };
+}
+
+/**
+ * Searches listed chats and contacts by name, username and phone number, like the conversation search of
+ * Signal Desktop. Finding users by username on the server is not supported yet.
+ */
+export async function searchChats({ query }: { query: string }) {
+  const selfAci = getCurrentAccount()?.aci;
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!selfAci || !normalizedQuery) return undefined;
+
+  const found = (await db.getConversations())
+    .filter((conversation) => (
+      (getIsChatListed(conversation, selfAci) || getIsContact(conversation, selfAci))
+      && getSearchTexts(conversation).some((text) => text.toLowerCase().includes(normalizedQuery))
+    ))
+    .sort(compareChatOrder)
+    .slice(0, GLOBAL_SEARCH_CONTACTS_LIMIT);
+
+  const users = found
+    .filter(({ type }) => type === 'private')
+    .map((conversation) => buildApiUser(conversation, selfAci));
+  const chats = found.map((conversation) => buildApiChat(conversation, selfAci));
+  sendApiUpdate({
+    '@type': 'updateEntities',
+    users: buildCollectionByKey(users, 'id'),
+    chats: buildCollectionByKey(chats, 'id'),
+  });
+
+  return {
+    accountResultIds: chats.map(({ id }) => id),
+    globalResultIds: [],
+  };
+}
+
+/**
+ * Pins append to the end and bring the chat out of the archive, as in Signal Desktop
+ * (`ts/models/conversations.preload.ts`, `pin`). Other devices learn about pins once storage service writes exist.
+ */
+export async function toggleChatPinned({ chat, shouldBePinned }: { chat: ApiChat; shouldBePinned: boolean }) {
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!conversation || (conversation.pinIndex !== undefined) === shouldBePinned) return;
+
+  if (!shouldBePinned) {
+    await processor.updateConversationState(conversation.id, { pinIndex: undefined });
+    return;
+  }
+
+  const pinned = getPinnedConversations(await db.getConversations());
+  if (pinned.length >= MAX_PINNED_CHATS) return;
+  await processor.updateConversationState(conversation.id, {
+    pinIndex: pinned.length ? pinned[pinned.length - 1].pinIndex! + 1 : 0,
+    isArchived: false,
+  });
+}
+
+/** Archiving unpins the chat, as in Signal Desktop (`ts/models/conversations.preload.ts`, `setArchived`) */
+export async function toggleChatArchived({ chat, folderId }: { chat: ApiChat; folderId: number }) {
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!conversation) return undefined;
+
+  const isArchived = folderId === ARCHIVED_FOLDER_ID;
+  await processor.updateConversationState(conversation.id, {
+    isArchived,
+    pinIndex: isArchived ? undefined : conversation.pinIndex,
+  });
+  return true as const;
+}
+
+/** Only the mute time exists in Signal; other notification settings stay on this device */
+export async function updateChatNotifySettings({
+  chat, settings,
+}: {
+  chat: ApiChat; settings: Partial<ApiPeerNotifySettings>;
+}) {
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!conversation || !('mutedUntil' in settings)) return;
+
+  await processor.updateConversationState(conversation.id, { mutedUntil: getMutedUntilMs(settings.mutedUntil) });
+}
+
+export async function toggleDialogUnread({ chat, hasUnreadMark }: { chat: ApiChat; hasUnreadMark?: true }) {
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!conversation) return;
+
+  await processor.updateConversationState(conversation.id, { isMarkedUnread: Boolean(hasUnreadMark) });
+}
+
+async function sendChatSummary(conversation: ConversationRecord, selfAci: string) {
+  const {
+    chat, user, lastMessage, threadInfo, readState, notifySettings,
+  } = await buildChatSummary(conversation, selfAci);
+
+  if (user) sendApiUpdate({ '@type': 'updateUser', id: user.id, user });
+  sendApiUpdate({ '@type': 'updateThreadInfo', threadInfo });
+  sendApiUpdate({
+    '@type': 'updateThreadReadState', chatId: chat.id, threadId: MAIN_THREAD_ID, readState,
+  });
+  sendChat(chat);
+  if (lastMessage) sendApiUpdate({ '@type': 'updateChatLastMessage', id: chat.id, lastMessage });
+  sendApiUpdate({ '@type': 'updateChatNotifySettings', chatId: chat.id, settings: notifySettings });
+}
+
+function sendChat(chat: ApiChat) {
+  sendApiUpdate({
+    '@type': 'updateChat', id: chat.id, chat, noTopChatsRequest: !chat.isListed,
+  });
+}
+
+/** Builds what the chat list shows of a conversation and remembers it for later updates */
+async function buildChatSummary(conversation: ConversationRecord, selfAci: string): Promise<ChatSummary> {
+  const chat = buildApiChat(conversation, selfAci);
+  const [lastMessageRecord] = await db.getMessages(conversation.id, 1);
+  const lastMessage = lastMessageRecord && await buildApiMessage(lastMessageRecord, conversation);
+  const readState = await buildThreadReadState(conversation);
+
+  rememberConversation(conversation);
+  rememberReadOutbox(chat.id, readState.lastReadOutboxMessageId);
+
+  return {
+    chat,
+    user: conversation.type === 'private' ? buildApiUser(conversation, selfAci) : undefined,
+    lastMessage,
+    threadInfo: buildThreadInfo(chat.id, lastMessage?.id),
+    readState,
+    notifySettings: buildNotifySettings(conversation),
+  };
+}
+
+/** Users the chat list refers to without listing their chats, such as authors of group messages */
+async function buildMissingUsers(userIds: (string | undefined)[], users: ApiUser[], selfAci: string) {
+  const knownIds = new Set(users.map(({ id }) => id));
+  const missing: ApiUser[] = [];
+  for (const userId of new Set(userIds)) {
+    if (!userId || knownIds.has(userId)) continue;
+    const conversation = await getConversationByPeerId(userId);
+    if (conversation) missing.push(buildApiUser(conversation, selfAci));
+  }
+  return missing;
+}
+
+/** Newest first by the date of the last message, then by creation */
+function compareChatOrder(a: ConversationRecord, b: ConversationRecord) {
+  return getChatDate(b) - getChatDate(a) || b.localId - a.localId;
+}
+
+function isAfterOffset(conversation: ConversationRecord, offsetDate: number, offsetLocalId: number) {
+  const date = getChatDate(conversation);
+  return date < offsetDate || (date === offsetDate && conversation.localId < offsetLocalId);
+}
+
+function getChatDate(conversation: ConversationRecord) {
+  return Math.floor((conversation.lastMessageAt ?? 0) / 1000);
+}
+
+function getSearchTexts(conversation: ConversationRecord) {
+  return [
+    conversation.title,
+    conversation.nickname,
+    conversation.systemName,
+    [conversation.profileName, conversation.profileFamilyName].filter(Boolean).join(' '),
+    conversation.username,
+    conversation.e164,
+  ].filter(Boolean);
+}
+
+/** Signal mutes forever with `Number.MAX_SAFE_INTEGER` (Signal Desktop `packages/types/src/service/MuteExpiration.std.ts`) */
+function getMutedUntilMs(mutedUntil?: number) {
+  if (!mutedUntil) return undefined;
+  return mutedUntil >= MUTE_INDEFINITE_TIMESTAMP ? Number.MAX_SAFE_INTEGER : mutedUntil * 1000;
+}
