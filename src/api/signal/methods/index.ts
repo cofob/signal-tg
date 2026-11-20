@@ -24,6 +24,7 @@ export {
   forwardApiMessages,
   forwardMessages,
   forwardMessagesLocal,
+  loadPollOptionResults,
   markMessageListRead,
   markMessagesRead,
   sendMessage,

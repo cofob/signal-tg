@@ -287,6 +287,25 @@ export async function sendPollVote({
   await processor.sendPollVote(messageId, options.map(Number)).catch(logError);
 }
 
+/** Voters of a poll option from the stored votes; Signal votes carry no date, and all voters come at once */
+export async function loadPollOptionResults({
+  chat, messageId, option,
+}: {
+  chat: ApiChat; messageId: number; option?: string; offset?: string; limit?: number; shouldResetVoters?: boolean;
+}) {
+  const conversation = await getConversationByPeerId(chat.id);
+  const record = await db.getMessage(messageId);
+  if (!conversation || record?.conversationId !== conversation.id) return undefined;
+
+  const optionIndex = Number(option);
+  const voters = (record.pollVotes ?? []).filter(({ optionIndexes }) => optionIndexes.includes(optionIndex));
+  // Without a date the voter list shows no vote time
+  const votes = await Promise.all(voters.map(async ({ authorAci }) => ({
+    peerId: await getUserPeerId(authorAci), date: 0,
+  })));
+  return { count: votes.length, votes, nextOffset: undefined, shouldResetVoters: undefined };
+}
+
 export async function closePoll({ messageId }: { chat: ApiChat; messageId: number; poll: ApiMessagePoll }) {
   await processor.endPoll(messageId).catch(logError);
 }
