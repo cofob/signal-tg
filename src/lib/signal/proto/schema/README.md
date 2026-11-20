@@ -8,6 +8,7 @@ Copied without changes from [signalapp/Signal-Android](https://github.com/signal
 | `SignalService.proto`, `Provisioning.proto`, `Groups.proto`, `DecryptedGroups.proto`, `StorageService.proto`, `StickerResources.proto` | `lib/libsignal-service/src/main/protowire/` |
 | `WebSocketResources.proto` | `core/network/src/main/protowire/` |
 | `DeviceName.proto` | `core/util-jvm/src/main/protowire/` |
+| `Backup.proto` | `lib/archive/src/main/protowire/` |
 
 `ProvisionEnvelope.proto` is `rust/provisioning/src/proto/provisioning.proto` from
 [signalapp/libsignal](https://github.com/signalapp/libsignal) `v0.108.3`, licensed under AGPL-3.0.
