@@ -5,8 +5,10 @@ import type MessageDb from '../db/MessageDb';
 import type {
   ConversationRecord, MessageRecord, NewMessageRecord, SendStatus,
 } from '../db/MessageDb';
+import type { GroupState } from '../groups/fetchGroup';
+import type { DecryptedGroupChange } from '../groups/groupChange';
 import type {
-  DataMessage, EditMessage, ReceiptMessage, SyncMessage, SyncMessage_Sent, TypingMessage,
+  DataMessage, EditMessage, GroupContextV2, ReceiptMessage, SyncMessage, SyncMessage_Sent, TypingMessage,
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
@@ -19,7 +21,11 @@ import type { AccountRecord } from '../store/SignalStore';
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { fetchGroup } from '../groups/fetchGroup';
+import {
+  applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
+} from '../groups/groupChange';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
+import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
@@ -29,7 +35,7 @@ import { uuidToBytes, uuidToString } from '../serviceId';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 
-import { Member_Role } from '../proto/generated/Groups_pb';
+import { GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
   BodyRangeSchema,
@@ -118,7 +124,7 @@ export default class MessageProcessor {
 
   private expirationTimer?: ReturnType<typeof setTimeout>;
 
-  private groupRefreshes = new Map<string, Promise<void>>();
+  private groupRefreshes = new Map<string, Promise<ConversationRecord | undefined>>();
 
   // Profiles of new conversations are fetched one at a time to stay within the server's rate limit
   private profileQueue = Promise.resolve();
@@ -648,7 +654,9 @@ export default class MessageProcessor {
     return {
       id: bufferFromBase64(id),
       secretParams: wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-      refresh: () => this.refreshGroup(id, masterKey),
+      refresh: async () => {
+        await this.refreshGroup(id, masterKey);
+      },
     };
   }
 
@@ -865,10 +873,7 @@ export default class MessageProcessor {
   }
 
   private async getConversationForMessage(source: MessageSource, message: DataMessage) {
-    const masterKey = message.groupV2?.masterKey;
-    if (masterKey?.length) {
-      return this.getOrCreateGroupConversation(masterKey, message.groupV2!.revision);
-    }
+    if (message.groupV2?.masterKey.length) return this.getGroupConversationForMessage(source, message.groupV2);
     const aci = source.isOutgoing ? source.destinationAci : source.authorAci;
     if (!aci) return undefined;
     const conversation = await this.ensurePrivateConversation(aci);
@@ -904,49 +909,173 @@ export default class MessageProcessor {
   }
 
   /**
-   * Fetches the group state outside the envelope queue, with its send endorsements; group changes are not
-   * applied one by one yet. Concurrent refreshes of a group share one fetch.
+   * A group message at the next revision with its signed change applies the change and adds its notices
+   * (Signal Desktop `updateGroupViaSingleChange`); other new revisions fetch the whole state
    */
-  private refreshGroup(id: string, masterKey: Uint8Array) {
+  private async getGroupConversationForMessage(source: MessageSource, context: GroupContextV2) {
+    const { masterKey, revision, groupChange } = context;
+    const existing = await this.db.getConversation(getGroupId(masterKey));
+    const state = existing?.groupState;
+    if (!existing || !state || !groupChange.length || revision !== state.revision + 1) {
+      return this.getOrCreateGroupConversation(masterKey, revision);
+    }
+
+    const change = this.readGroupChange(existing, groupChange);
+    if (change?.revision !== revision) return this.getOrCreateGroupConversation(masterKey, revision);
+    const { aci: selfAci } = await this.getAccount();
+    const next = applyGroupChange(state, change);
+    const updated = await this.storeGroupState(existing, next, {
+      change, isOutgoing: source.isOutgoing, sentAt: source.sentAt,
+    });
+    // A state we kept while not a member, as when we asked to join, lacks the members
+    const isMember = (group: GroupState) => group.members.some(({ aci }) => aci === selfAci);
+    if (!isMember(state) && isMember(next)) void this.refreshGroup(existing.id, masterKey);
+    return updated;
+  }
+
+  /** The decrypted change of a group message, or `undefined` when it is invalid or of a later change epoch */
+  private readGroupChange(conversation: ConversationRecord, groupChange: Uint8Array) {
+    try {
+      const actions = verifyGroupChange(fromBinary(GroupChangeSchema, groupChange), conversation.id);
+      const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(conversation.masterKey!);
+      return actions && decryptGroupChange(secretParams, actions);
+    } catch (err) {
+      this.events.onError(err as Error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Stores a group state that this device led to: after our change, whose notices are ours, or of a group we
+   * created (`isCreated` adds its notice) or joined, whose conversation starts here
+   */
+  applyGroupState(
+    masterKey: Uint8Array,
+    state: GroupState,
+    { change, isCreated }: { change?: DecryptedGroupChange; isCreated?: boolean },
+  ) {
+    return this.runSerial(async () => {
+      const id = getGroupId(masterKey);
+      const existing = await this.db.getConversation(id);
+      const conversation = existing ?? await this.putConversation({
+        id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0, isAccepted: true,
+      });
+      const sentAt = this.allocateTimestamp();
+      const updated = await this.storeGroupState(conversation, state, change && { change, isOutgoing: true, sentAt });
+      if (!isCreated) return updated;
+
+      const { conversation: withNotice } = await this.addMessage(updated, {
+        conversationId: id,
+        kind: 'groupUpdate',
+        authorAci: '',
+        actorAci: (await this.getAccount()).aci,
+        groupUpdate: { type: 'create' },
+        sentAt,
+        receivedAt: sentAt,
+        isOutgoing: true,
+        readAt: sentAt,
+      });
+      return withNotice;
+    });
+  }
+
+  /**
+   * Tells the members, and invited users with an ACI, about a new revision. `groupChange` is the signed change
+   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group
+   * (Signal Desktop `ts/jobs/helpers/sendGroupUpdate.preload.ts`).
+   */
+  async sendGroupUpdate(id: string, groupChange?: Uint8Array, extraRecipients: string[] = []) {
+    const account = await this.getAccount();
+    const conversation = await this.db.getConversation(id);
+    const state = conversation?.groupState;
+    if (!conversation || !state) throw new Error(`Unknown group ${id}`);
+
+    const recipients = new Set([
+      ...state.members.map(({ aci }) => aci),
+      ...state.pendingMembers.map(({ serviceId }) => serviceId).filter((serviceId) => ACI_PATTERN.test(serviceId)),
+      ...extraRecipients,
+    ]);
+    recipients.delete(account.aci);
+    const timestamp = this.allocateTimestamp();
+    const message = createOutgoingDataMessage(account, conversation, {}, timestamp, false);
+    if (groupChange) message.groupV2!.groupChange = groupChange;
+    return this.sendContentTo(conversation, [...recipients], { case: 'dataMessage', value: message }, { timestamp });
+  }
+
+  /**
+   * Fetches the group state outside the envelope queue, with its send endorsements, for revisions that one
+   * change does not reach. Concurrent refreshes of a group share one fetch.
+   */
+  refreshGroup(id: string, masterKey: Uint8Array) {
     const running = this.groupRefreshes.get(id);
     if (running) return running;
 
     const refresh = (async () => {
       const { account, connection, store } = this.client.getSenderContext();
-      const group = await fetchGroup(account, connection, masterKey);
-      for (const member of group.members) {
-        if (member.profileKey && member.aci !== account.aci) await saveProfileKey(store, member.aci, member.profileKey);
-      }
-      await this.runSerial(async () => {
+      const { state, sendEndorsementsResponse } = await fetchGroup(account, connection, masterKey);
+      const updated = await this.runSerial(async () => {
         const conversation = await this.db.getConversation(id);
-        if (!conversation) return;
-        await this.putConversation({
-          ...conversation,
-          revision: group.revision,
-          title: group.title,
-          description: group.description,
-          memberAcis: group.members.map(({ aci }) => aci),
-          adminAcis: group.members.filter(({ role }) => role === Member_Role.ADMINISTRATOR).map(({ aci }) => aci),
-          expireTimer: group.expireTimer || undefined,
-          isAnnouncementsOnly: group.isAnnouncementsOnly,
-          avatarPath: group.avatarUrl,
-          isAccepted: conversation.isAccepted || group.members.some(({ aci }) => aci === account.aci),
-        });
+        return conversation && this.storeGroupState(conversation, state);
       });
-      this.flush();
       await saveGroupSendEndorsements(
         store,
         account.aci,
         id,
         wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-        group.members.map(({ aci }) => aci),
-        group.sendEndorsementsResponse,
+        state.members.map(({ aci }) => aci),
+        sendEndorsementsResponse,
       );
+      return updated;
     })();
 
     this.groupRefreshes.set(id, refresh);
     refresh.catch(this.events.onError).finally(() => this.groupRefreshes.delete(id));
     return refresh;
+  }
+
+  /** Stores a group state and the profile keys it brings; a change adds its notices */
+  private async storeGroupState(
+    conversation: ConversationRecord,
+    state: GroupState,
+    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number },
+  ) {
+    const { aci: selfAci } = await this.getAccount();
+    const profileKeys = applied ? getChangeProfileKeys(applied.change) : state.members;
+    for (const { aci, profileKey } of profileKeys) {
+      if (profileKey && aci !== selfAci) await saveProfileKey(this.client.store, aci, profileKey);
+    }
+
+    let updated = await this.putConversation({
+      ...conversation,
+      revision: state.revision,
+      title: state.title,
+      description: state.description,
+      memberAcis: state.members.map(({ aci }) => aci),
+      adminAcis: state.members.filter(({ role }) => role === Member_Role.ADMINISTRATOR).map(({ aci }) => aci),
+      expireTimer: state.expireTimer || undefined,
+      isAnnouncementsOnly: state.isAnnouncementsOnly,
+      avatarPath: state.avatarUrl,
+      isAccepted: conversation.isAccepted || state.members.some(({ aci }) => aci === selfAci),
+      groupState: state,
+    });
+    if (!applied) return updated;
+
+    const { change, isOutgoing, sentAt } = applied;
+    const now = Date.now();
+    const base = {
+      conversationId: updated.id, authorAci: '', sentAt, receivedAt: now, isOutgoing, readAt: now,
+    };
+    for (const { actorAci, update } of buildGroupNotices(change)) {
+      ({ conversation: updated } = await this.addMessage(updated, {
+        ...base, kind: 'groupUpdate', actorAci, groupUpdate: update,
+      }));
+    }
+    if (change.expireTimer) {
+      ({ conversation: updated } = await this.addMessage(updated, {
+        ...base, kind: 'timerUpdate', actorAci: change.sourceServiceId, expireTimer: change.expireTimer.value,
+      }));
+    }
+    return updated;
   }
 
   /**

@@ -1,3 +1,6 @@
+import type { GroupState } from '../groups/fetchGroup';
+import type { GroupUpdate } from '../groups/groupUpdates';
+
 export type ConversationType = 'private' | 'group';
 
 export type ConversationRecord = {
@@ -24,6 +27,8 @@ export type ConversationRecord = {
   memberAcis?: string[];
   adminAcis?: string[];
   isAnnouncementsOnly?: boolean;
+  // The decrypted state at `revision`; the fields above are read from it
+  groupState?: GroupState;
   // Both
   expireTimer?: number;
   expireTimerVersion?: number;
@@ -53,6 +58,8 @@ export type MessageRecord = {
   authorAci: string;
   // Who caused a notice, such as a timer change
   actorAci?: string;
+  // What a `groupUpdate` notice says
+  groupUpdate?: GroupUpdate;
   authorDeviceId?: number;
   // The Signal timestamp: with `authorAci` it identifies the message across devices
   sentAt: number;

@@ -41,6 +41,8 @@ export type RecipientRecord = {
   number?: string;
   profileKey?: Uint8Array;
   sealedSender?: SealedSenderAccess;
+  // Expiring profile key credential for adding the recipient to groups, valid for `profileKey` only
+  profileKeyCredential?: { credential: Uint8Array; profileKey: Uint8Array; expiresAt: number };
 };
 
 export type SenderCertificateRecord = {
