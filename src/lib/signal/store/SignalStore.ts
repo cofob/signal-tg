@@ -25,6 +25,8 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // The sync requests to the primary device after linking went out
+  isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
   isDemo?: boolean;
 };

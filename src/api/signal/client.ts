@@ -29,6 +29,7 @@ let reconnectDelay = RECONNECT_MIN_DELAY_MS;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
+let hasSyncedThisSession = false;
 
 /**
  * Starts the linked device: shows the link QR code until the phone scans it, or connects the stored account.
@@ -41,7 +42,7 @@ export async function startClient(initialArgs: ApiInitialArgs) {
 
   const account = await store.getItem('account');
   if (account) {
-    await startSession(account, false);
+    await startSession(account);
     return;
   }
   void runDeviceLink(initialArgs.platform).catch(logError);
@@ -94,12 +95,12 @@ async function runDeviceLink(platform?: string) {
 
     const deviceName = platform ? `${DEVICE_NAME} (${platform})` : DEVICE_NAME;
     const account = await linkDevice(store, message, deviceName);
-    await startSession(account, true);
+    await startSession(account);
     return;
   }
 }
 
-async function startSession(account: AccountRecord, isNewLink: boolean) {
+async function startSession(account: AccountRecord) {
   currentAccount = account;
   const self = await processor.getOrCreatePrivateConversation(account.aci);
   sendApiUpdate({
@@ -114,13 +115,26 @@ async function startSession(account: AccountRecord, isNewLink: boolean) {
     return;
   }
 
+  hasSyncedThisSession = false;
   await connect();
-  if (isNewLink && currentAccount) {
-    const context = client.getSenderContext();
+}
+
+/**
+ * Runs once per session after the first connection: the sync requests to the primary device until they
+ * succeed once for the account, then our profile and the storage service records
+ */
+async function syncAfterConnect() {
+  if (hasSyncedThisSession) return;
+  hasSyncedThisSession = true;
+
+  const context = client.getSenderContext();
+  if (!context.account.isInitialSyncDone) {
     await sendInitialSyncRequests(context);
-    const snapshot = await fetchStorageSnapshot(context.account, context.connection).catch(logError);
-    if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
+    await client.updateAccount({ isInitialSyncDone: true });
   }
+  void processor.refreshProfile(context.account.aci).catch(logError);
+  const snapshot = await fetchStorageSnapshot(context.account, context.connection);
+  if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
 }
 
 async function connect() {
@@ -146,6 +160,7 @@ async function connect() {
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
+  syncAfterConnect().catch(logError);
 }
 
 function scheduleReconnect() {
