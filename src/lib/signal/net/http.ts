@@ -41,25 +41,113 @@ const DRAIN_CHECK_INTERVAL_MS = 20;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-// One idle keep-alive connection per host; requests that find it busy open another
-const idleConnections = new Map<string, HttpConnection>();
+type HostPool = {
+  idle: { connection: HttpConnection; timer: ReturnType<typeof setTimeout> }[];
+  // Connections in use plus connections being opened
+  activeCount: number;
+  waiters: ((connection: HttpConnection | undefined) => void)[];
+};
+
+// Parallel requests share a few keep-alive connections per host instead of opening a tunnel each
+const MAX_CONNECTIONS_PER_HOST = 4;
+const IDLE_TIMEOUT_MS = 60 * 1000;
+
+const pools = new Map<string, HostPool>();
 
 export async function sendHttpRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
-  const idle = idleConnections.get(host);
-  idleConnections.delete(host);
+  const pool = getPool(host);
+  let connection = await acquireConnection(pool);
+  const isReused = Boolean(connection);
 
-  if (idle?.tunnel.isOpen) {
+  // The server may close a keep-alive connection while it is idle: a request on a reused connection gets one
+  // more try on a fresh one, unless it is a POST that the server may have received
+  let canRetry = isReused && request.method !== 'POST';
+  for (;;) {
+    connection ??= await openConnection(pool, host);
     try {
-      return await sendOnConnection(host, idle, request);
+      const { response, isReusable } = await sendOnConnection(host, connection, request);
+      releaseConnection(pool, isReusable ? connection : undefined);
+      return response;
     } catch (err) {
-      // The server may have closed the idle connection; retry once on a fresh one
-      if (request.signal?.aborted) throw err;
+      if (!canRetry || request.signal?.aborted) {
+        releaseConnection(pool, undefined);
+        throw err;
+      }
+      // The slot stays reserved for the fresh connection
+      canRetry = false;
+      connection = undefined;
     }
   }
+}
 
-  const tunnel = await TlsTunnel.open(host);
-  const connection = { tunnel, reader: new StreamReader(() => tunnel.read()) };
-  return sendOnConnection(host, connection, request);
+function getPool(host: string) {
+  let pool = pools.get(host);
+  if (!pool) {
+    pool = { idle: [], activeCount: 0, waiters: [] };
+    pools.set(host, pool);
+  }
+  return pool;
+}
+
+/** Takes an idle connection, or reserves a slot for a new one (`undefined`), waiting when the host is at its limit */
+function acquireConnection(pool: HostPool): Promise<HttpConnection | undefined> {
+  while (pool.idle.length) {
+    const { connection, timer } = pool.idle.pop()!;
+    clearTimeout(timer);
+    if (connection.tunnel.isOpen) {
+      pool.activeCount++;
+      return Promise.resolve(connection);
+    }
+  }
+  if (pool.activeCount < MAX_CONNECTIONS_PER_HOST) {
+    pool.activeCount++;
+    return Promise.resolve(undefined);
+  }
+  return new Promise((resolve) => {
+    pool.waiters.push(resolve);
+  });
+}
+
+async function openConnection(pool: HostPool, host: string): Promise<HttpConnection> {
+  try {
+    const tunnel = await TlsTunnel.open(host);
+    return { tunnel, reader: new StreamReader(() => tunnel.read()) };
+  } catch (err) {
+    releaseConnection(pool, undefined);
+    throw err;
+  }
+}
+
+/** Returns a slot: a reusable connection goes to the next waiter or the idle list; otherwise the slot frees up */
+function releaseConnection(pool: HostPool, connection: HttpConnection | undefined) {
+  const waiter = pool.waiters.shift();
+  if (waiter) {
+    // The slot moves to the waiter; without a connection it opens a new one
+    waiter(connection?.tunnel.isOpen ? connection : undefined);
+    return;
+  }
+
+  pool.activeCount--;
+  if (!connection?.tunnel.isOpen) return;
+  const entry = {
+    connection,
+    timer: setTimeout(() => {
+      pool.idle = pool.idle.filter((idle) => idle !== entry);
+      connection.tunnel.close();
+    }, IDLE_TIMEOUT_MS),
+  };
+  pool.idle.push(entry);
+}
+
+/** Closes idle connections, for example after the tunnel address changed */
+export function closeIdleConnections() {
+  for (const pool of pools.values()) {
+    for (const { connection, timer } of pool.idle) {
+      clearTimeout(timer);
+      connection.tunnel.close();
+    }
+    pool.idle = [];
+  }
 }
 
 async function sendOnConnection(host: string, connection: HttpConnection, request: HttpRequest) {
@@ -69,10 +157,10 @@ async function sendOnConnection(host: string, connection: HttpConnection, reques
   signal?.addEventListener('abort', close);
   try {
     signal?.throwIfAborted();
-    const response = await exchange(host, connection, request);
+    const result = await exchange(host, connection, request);
     // Chunks that arrived before the abort can still complete the response
     signal?.throwIfAborted();
-    return response;
+    return result;
   } catch (err) {
     // A partly read response leaves the connection unusable
     tunnel.close();
@@ -105,13 +193,8 @@ async function exchange(host: string, connection: HttpConnection, request: HttpR
 
   const response = await readResponse(reader, request.method, request.onReceiveProgress);
   const shouldClose = response.headers.get('connection')?.toLowerCase() === 'close';
-  if (shouldClose || !tunnel.isOpen) {
-    tunnel.close();
-  } else {
-    idleConnections.get(host)?.tunnel.close();
-    idleConnections.set(host, connection);
-  }
-  return response;
+  if (shouldClose) tunnel.close();
+  return { response, isReusable: !shouldClose && tunnel.isOpen };
 }
 
 /** Writes the body in parts as the socket drains, so memory stays flat and progress follows the network */
