@@ -6,6 +6,7 @@ import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { fetchGroup } from '../groups/fetchGroup';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { sendContent } from '../sender/sendContent';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
@@ -97,6 +98,29 @@ const signalDev = {
         .filter(Boolean).join(' '),
       archived: contact.archived,
     }] : [])));
+  },
+
+  /** Fetches every group v2 listed in the storage service and prints titles and members */
+  async groups() {
+    const account = await store.getItem('account');
+    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
+
+    const snapshot = await fetchStorageSnapshot(account, connection);
+    const masterKeys = [...snapshot?.records.values() ?? []].flatMap(({ groupV2 }) => (
+      groupV2?.masterKey ? [groupV2.masterKey] : []
+    ));
+    const rows = [];
+    for (const masterKey of masterKeys) {
+      try {
+        const group = await fetchGroup(account, connection, masterKey);
+        rows.push({
+          title: group.title, revision: group.revision, members: group.members.length, groupId: group.groupId,
+        });
+      } catch (err) {
+        rows.push({ title: `Failed: ${(err as Error).message}` });
+      }
+    }
+    console.table(rows);
   },
 
   /** Prints a decrypted profile; defaults to our own */
