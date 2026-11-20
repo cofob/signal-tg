@@ -132,7 +132,7 @@ export default class MessageProcessor {
     } = await this.runSerial(async () => {
       // An ACI that has no conversation yet starts one
       const found = await this.db.getConversation(conversationId)
-        ?? (ACI_PATTERN.test(conversationId) ? await this.getOrCreatePrivateConversation(conversationId) : undefined);
+        ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
       if (!found) throw new Error(`Unknown conversation ${conversationId}`);
       const recipientAcis = found.type === 'group'
         ? (found.memberAcis ?? []).filter((aci) => aci !== account.aci)
@@ -233,7 +233,7 @@ export default class MessageProcessor {
           if (!aci || aci === account.aci) continue;
           if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
 
-          const conversation = await this.getOrCreatePrivateConversation(aci);
+          const conversation = await this.ensurePrivateConversation(aci);
           await this.putConversation({
             ...conversation,
             e164: contact.e164 || conversation.e164,
@@ -297,7 +297,7 @@ export default class MessageProcessor {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
     await this.runSerial(async () => {
-      const conversation = await this.getOrCreatePrivateConversation(aci);
+      const conversation = await this.ensurePrivateConversation(aci);
       await this.putConversation({
         ...conversation,
         profileName: profile.givenName,
@@ -527,17 +527,24 @@ export default class MessageProcessor {
     }
     const aci = source.isOutgoing ? source.destinationAci : source.authorAci;
     if (!aci) return undefined;
-    const conversation = await this.getOrCreatePrivateConversation(aci);
+    const conversation = await this.ensurePrivateConversation(aci);
     // Writing first accepts the message request
     return source.isOutgoing && !conversation.isAccepted
       ? this.putConversation({ ...conversation, isAccepted: true })
       : conversation;
   }
 
-  private async getOrCreatePrivateConversation(aci: string) {
+  /** Returns the private conversation with `aci`, creating it (and fetching the profile) when absent */
+  getOrCreatePrivateConversation(aci: string) {
+    return this.runSerial(() => this.ensurePrivateConversation(aci));
+  }
+
+  private async ensurePrivateConversation(aci: string) {
     const existing = await this.db.getConversation(aci);
     if (existing) return existing;
-    const created = await this.putConversation({ id: aci, type: 'private', unreadCount: 0 });
+    const created = await this.putConversation({
+      id: aci, localId: await this.db.allocateLocalId(), type: 'private', unreadCount: 0,
+    });
     this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
     return created;
   }
@@ -546,7 +553,7 @@ export default class MessageProcessor {
     const id = getGroupId(masterKey);
     const existing = await this.db.getConversation(id);
     const conversation = existing ?? await this.putConversation({
-      id, type: 'group', masterKey, unreadCount: 0,
+      id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
     });
     if (!existing || (existing.revision ?? -1) < revision) this.refreshGroup(id, masterKey);
     return conversation;
@@ -707,7 +714,7 @@ export default class MessageProcessor {
   private async applyContactSync(data: Uint8Array) {
     for (const contact of parseContactSync(data)) {
       if (!contact.aci) continue;
-      const conversation = await this.getOrCreatePrivateConversation(contact.aci);
+      const conversation = await this.ensurePrivateConversation(contact.aci);
       await this.putConversation({
         ...conversation,
         e164: contact.number ?? conversation.e164,
@@ -732,7 +739,7 @@ export default class MessageProcessor {
     // Unknown groups need their master key, so only private conversations are created here
     for (const id of blockedIds) {
       if (!ACI_PATTERN.test(id)) continue;
-      const conversation = await this.getOrCreatePrivateConversation(id);
+      const conversation = await this.ensurePrivateConversation(id);
       await this.putConversation({ ...conversation, isBlocked: true });
     }
   }

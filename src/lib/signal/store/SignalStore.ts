@@ -25,6 +25,8 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
+  isDemo?: boolean;
 };
 
 // Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it

@@ -11,6 +11,7 @@ import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
 import { lookupUsername, resolveUsernameLink } from '../usernames/lookupUsername';
 import { initSignalWasm } from '../wasm';
+import { seedDemo } from './seedDemo';
 
 import MessageDb from '../db/MessageDb';
 import MessageProcessor from '../messages/MessageProcessor';
@@ -150,6 +151,13 @@ const signalDev = {
     const profileKey = aci ? (await store.getRecipient(aci))?.profileKey : account.profileKey;
     if (!profileKey) throw new Error('No profile key');
     console.log('[signal] Profile', await fetchProfile(connection, aci ?? account.aci, profileKey));
+  },
+
+  /** Replaces local data with a demo account, contacts, a group and messages; reload the page afterwards */
+  async seedDemo() {
+    await initSignalWasm();
+    await seedDemo(store, db);
+    console.log('[signal] Demo data stored; reload the page');
   },
 
   async reset() {

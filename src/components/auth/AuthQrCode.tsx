@@ -34,6 +34,7 @@ type StateProps = {
 };
 
 const DATA_PREFIX = 'tg://login?token=';
+const SIGNAL_LINK_PREFIX = 'sgnl://';
 const QR_SIZE = 280;
 const QR_PLANE_SIZE = 54;
 const QR_IMAGE_SIZE_RATIO = 0.4;
@@ -83,7 +84,9 @@ const AuthCode = ({
     }
 
     const container = qrCodeRef.current!;
-    const data = `${DATA_PREFIX}${authQrCode.token}`;
+    // Signal link codes arrive as complete `sgnl://linkdevice` URLs
+    const { token } = authQrCode;
+    const data = token.startsWith(SIGNAL_LINK_PREFIX) ? token : `${DATA_PREFIX}${token}`;
 
     if (STRICTERDOM_ENABLED) {
       disableStrict();

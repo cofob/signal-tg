@@ -3,6 +3,8 @@ export type ConversationType = 'private' | 'group';
 export type ConversationRecord = {
   // The ACI of a private conversation, or the base64 group identifier of a group
   id: string;
+  // A positive number for the app's peer ids, assigned in creation order
+  localId: number;
   type: ConversationType;
   // Private conversations
   e164?: string;
@@ -81,12 +83,13 @@ export type MessageRecord = {
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;
 
 const DB_NAME = 'ts-signal-messages';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
 const BY_CONVERSATION = 'byConversation';
 const BY_AUTHOR_SENT_AT = 'byAuthorSentAt';
 const BY_EXPIRES_AT = 'byExpiresAt';
+const BY_LOCAL_ID = 'byLocalId';
 
 /**
  * Conversations and messages of the linked device in IndexedDB. Message ids grow in arrival order,
@@ -97,6 +100,23 @@ export default class MessageDb {
 
   getConversation(id: string) {
     return this.request<ConversationRecord | undefined>(CONVERSATIONS, 'readonly', (store) => store.get(id));
+  }
+
+  getConversationByLocalId(localId: number) {
+    return this.request<ConversationRecord | undefined>(
+      CONVERSATIONS, 'readonly', (store) => store.index(BY_LOCAL_ID).get(localId),
+    );
+  }
+
+  /** The next free `localId` */
+  async allocateLocalId() {
+    let maxLocalId = 0;
+    const openCursor = (store: IDBObjectStore) => store.index(BY_LOCAL_ID).openKeyCursor(undefined, 'prev');
+    await this.iterate(CONVERSATIONS, 'readonly', openCursor, (cursor) => {
+      maxLocalId = cursor.key as number;
+      return false;
+    });
+    return maxLocalId + 1;
   }
 
   getConversations() {
@@ -192,13 +212,27 @@ export default class MessageDb {
   private open() {
     this.db ??= new Promise((resolve, reject) => {
       const openRequest = indexedDB.open(DB_NAME, DB_VERSION);
-      openRequest.onupgradeneeded = () => {
+      openRequest.onupgradeneeded = ({ oldVersion }) => {
         const db = openRequest.result;
-        db.createObjectStore(CONVERSATIONS, { keyPath: 'id' });
-        const messages = db.createObjectStore(MESSAGES, { keyPath: 'id', autoIncrement: true });
-        messages.createIndex(BY_CONVERSATION, ['conversationId', 'id']);
-        messages.createIndex(BY_AUTHOR_SENT_AT, ['authorAci', 'sentAt']);
-        messages.createIndex(BY_EXPIRES_AT, 'expiresAt');
+        if (oldVersion < 1) {
+          db.createObjectStore(CONVERSATIONS, { keyPath: 'id' });
+          const messages = db.createObjectStore(MESSAGES, { keyPath: 'id', autoIncrement: true });
+          messages.createIndex(BY_CONVERSATION, ['conversationId', 'id']);
+          messages.createIndex(BY_AUTHOR_SENT_AT, ['authorAci', 'sentAt']);
+          messages.createIndex(BY_EXPIRES_AT, 'expiresAt');
+        }
+        if (oldVersion < 2) {
+          const conversations = openRequest.transaction!.objectStore(CONVERSATIONS);
+          conversations.createIndex(BY_LOCAL_ID, 'localId', { unique: true });
+          // Conversations stored before local ids get them in creation order of the cursor
+          let nextLocalId = 1;
+          conversations.openCursor().onsuccess = ({ target }) => {
+            const cursor = (target as IDBRequest<IDBCursorWithValue | undefined>).result;
+            if (!cursor) return;
+            cursor.update({ ...cursor.value, localId: nextLocalId++ });
+            cursor.continue();
+          };
+        }
       };
       openRequest.onsuccess = () => resolve(openRequest.result);
       openRequest.onerror = () => reject(openRequest.error);
@@ -221,14 +255,15 @@ export default class MessageDb {
   private async iterate(
     storeName: string,
     mode: IDBTransactionMode,
-    build: (store: IDBObjectStore) => IDBRequest<IDBCursorWithValue | null>,
+    // Key cursors work too when `callback` reads only `key`
+    build: (store: IDBObjectStore) => IDBRequest,
     callback: (cursor: IDBCursorWithValue) => boolean,
   ) {
     const db = await this.open();
     return new Promise<void>((resolve, reject) => {
       const request = build(db.transaction(storeName, mode).objectStore(storeName));
       request.onsuccess = () => {
-        const cursor = request.result;
+        const cursor = request.result as IDBCursorWithValue | undefined;
         if (!cursor || !callback(cursor)) {
           resolve();
           return;
