@@ -72,6 +72,8 @@ export interface ApiSticker {
   hasEffect?: boolean;
   isFree?: boolean;
   shouldUseTextColor?: boolean;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiStickerSet {
@@ -144,6 +146,8 @@ export interface ApiVideo {
   altVideos?: ApiVideo[];
   storyboardInfo?: StoryboardInfo;
   cover?: ApiPhoto;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiAudio {
@@ -156,6 +160,8 @@ export interface ApiAudio {
   performer?: string;
   title?: string;
   thumbnailSizes?: ApiPhotoSize[];
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiVoice {
@@ -164,6 +170,8 @@ export interface ApiVoice {
   duration: number;
   waveform?: number[];
   size: number;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiDocument {
@@ -178,6 +186,8 @@ export interface ApiDocument {
   previewBlobUrl?: string;
   innerMediaType?: 'photo' | 'video';
   mediaSize?: ApiDimensions & { fromDocumentAttribute?: boolean; fromPreload?: true };
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiContact {

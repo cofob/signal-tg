@@ -89,7 +89,9 @@ const Document = ({
   const [isFileIpDialogOpen, openFileIpDialog, closeFileIpDialog] = useFlag();
   const [shouldNotWarnAboutFiles, setShouldNotWarnAboutFiles] = useState(false);
 
-  const { fileName, size, mimeType } = document;
+  const {
+    fileName, size, mimeType, isUnavailable,
+  } = document;
   const extension = getDocumentExtension(document) || '';
 
   const isIntersecting = useIsIntersecting(ref, observeIntersection);
@@ -105,7 +107,7 @@ const Document = ({
     canAutoLoad && (!autoLoadFileMaxSizeMb || size <= autoLoadFileMaxSizeMb * BYTES_PER_MB),
   );
 
-  const shouldDownload = Boolean(isDownloading || (isLoadAllowed && wasIntersected));
+  const shouldDownload = !isUnavailable && Boolean(isDownloading || (isLoadAllowed && wasIntersected));
 
   const documentHash = getDocumentMediaHash(document, 'download');
   const { loadProgress: downloadProgress, mediaData } = useMediaWithLoadProgress(
@@ -215,9 +217,11 @@ const Document = ({
       sender={sender}
       isSelectable={isSelectable}
       isSelected={isSelected}
+      isUnavailable={isUnavailable}
       actionIcon={withMediaViewer ? (isDocumentVideo(document) ? 'play' : 'eye') : 'download'}
       contextActions={contextActions}
-      onClick={!noDownload || withMediaViewer || (isUploading && onCancelUpload) ? handleClick : undefined}
+      onClick={!isUnavailable && (!noDownload || withMediaViewer || (isUploading && onCancelUpload))
+        ? handleClick : undefined}
       onDateClick={onDateClick ? handleDateClick : undefined}
     >
       <ConfirmDialog

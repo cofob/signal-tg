@@ -377,13 +377,21 @@ export default class MessageProcessor {
     }, sentAt);
   }
 
-  /** Remembers that the CDN no longer has an attachment, so it is not downloaded again */
-  async markAttachmentUnavailable(messageId: number, index: number) {
+  /**
+   * Remembers that the CDN no longer has an attachment, an index in `DataMessage.attachments` or the sticker,
+   * so it is not downloaded again
+   */
+  async markAttachmentUnavailable(messageId: number, attachment: number | 'sticker') {
     await this.runSerial(async () => {
       const message = await this.db.getMessage(messageId);
-      if (!message || message.unavailableAttachmentIndexes?.includes(index)) return;
+      if (!message) return;
+      if (attachment === 'sticker') {
+        if (!message.isStickerUnavailable) await this.putMessage({ ...message, isStickerUnavailable: true });
+        return;
+      }
+      if (message.unavailableAttachmentIndexes?.includes(attachment)) return;
       await this.putMessage({
-        ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], index],
+        ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], attachment],
       });
     });
   }

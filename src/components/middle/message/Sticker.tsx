@@ -22,6 +22,7 @@ import MediaSpoiler from '../../common/MediaSpoiler';
 import SensitiveContentConfirmModal from '../../common/SensitiveContentConfirmModal';
 import StickerView from '../../common/StickerView';
 import Portal from '../../ui/Portal';
+import MediaUnavailable from './MediaUnavailable';
 
 import styles from './Sticker.module.scss';
 
@@ -63,7 +64,9 @@ const Sticker = ({
   const effectRef = useRef<HTMLDivElement>();
 
   const sticker = message.content.sticker!;
-  const { stickerSetInfo, isVideo, hasEffect } = sticker;
+  const {
+    stickerSetInfo, isVideo, hasEffect, isUnavailable,
+  } = sticker;
   const isMirrored = !message.isOutgoing;
 
   const [isNsfwModalOpen, openNsfwModal, closeNsfwModal] = useFlag();
@@ -189,10 +192,11 @@ const Sticker = ({
         fullMediaClassName="full-media"
         size={width}
         shouldLoop={shouldLoop}
-        noLoad={!canLoad}
+        noLoad={!canLoad || isUnavailable}
         noPlay={!canPlay}
         withSharedAnimation
       />
+      {isUnavailable && <MediaUnavailable />}
       <MediaSpoiler
         isVisible={isSpoilerShown}
         withAnimation
