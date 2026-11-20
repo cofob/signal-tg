@@ -14,7 +14,8 @@ import { createWidgetSandbox } from './src/lib/widget-sandbox/vite.ts';
 import packageJson from './package.json' with { type: 'json' };
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
-const PRODUCTION_URL = 'https://web.telegram.org/a';
+// The public address of the deployment, for the page's canonical and social metadata; set `BASE_URL` in production
+const DEFAULT_BASE_URL = 'http://localhost:1234/';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
@@ -80,7 +81,7 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   } = env;
   const appEnv = env.APP_ENV || (mode === 'development' ? 'development' : 'production');
   const defaultAppTitle = `Telegram${appEnv !== 'production' ? ' Beta' : ''}`;
-  const baseUrl = env.BASE_URL || PRODUCTION_URL;
+  const baseUrl = env.BASE_URL || DEFAULT_BASE_URL;
   const appTitle = env.APP_TITLE || defaultAppTitle;
   const isProductionApp = appEnv === 'production';
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';

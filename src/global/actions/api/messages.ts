@@ -39,7 +39,6 @@ import {
   MAX_MEDIA_FILES_FOR_ALBUM,
   MESSAGE_ID_REQUIRED_ERROR,
   MESSAGE_LIST_SLICE,
-  RE_TELEGRAM_LINK,
   SERVICE_NOTIFICATIONS_USER_ID,
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
@@ -3338,7 +3337,7 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
 
   const isWhitelisted = appConfig.whitelistedDomains.includes(parsedUrl.hostname);
 
-  const shouldDisplayModal = !urlWithProtocol.match(RE_TELEGRAM_LINK) && !shouldSkipModal && !isWhitelisted;
+  const shouldDisplayModal = !shouldSkipModal && !isWhitelisted;
 
   if (shouldDisplayModal) {
     actions.toggleSafeLinkModal({ url: urlWithProtocol, tabId });

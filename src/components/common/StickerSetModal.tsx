@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../global';
 import type { ApiSticker, ApiStickerSet } from '../../api/types';
 import type { MessageList } from '../../types';
 
-import { EMOJI_SIZE_MODAL, STICKER_SIZE_MODAL, TME_LINK_PREFIX } from '../../config';
+import { EMOJI_SIZE_MODAL, STICKER_SIZE_MODAL } from '../../config';
 import { getAllowedAttachmentOptions, getCanPostInChat, getIsStickerSetInstalled } from '../../global/helpers';
 import {
   selectBot,
@@ -150,7 +150,7 @@ const StickerSetModal = ({
     if (!renderingStickerSet) return;
     const { shortName } = renderingStickerSet;
     const suffix = isEmoji ? 'addemoji' : 'addstickers';
-    const url = `${TME_LINK_PREFIX}${suffix}/${shortName}`;
+    const url = `tg://${suffix}?set=${encodeURIComponent(shortName)}`;
     copyTextToClipboard(url);
     showNotification({
       message: lang('LinkCopied'),

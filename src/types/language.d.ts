@@ -387,7 +387,6 @@ export interface LangPair {
   'LastName': undefined;
   'SettingsAboutBio': undefined;
   'UsernameHelp': undefined;
-  'UsernameLink': undefined;
   'SettingsExperimentalAbout': undefined;
   'EmptyChatAppearanceLight': undefined;
   'EmptyChatAppearanceDark': undefined;
@@ -698,9 +697,8 @@ export interface LangPair {
   'VoipGroupPersonalAccount': undefined;
   'MenuStickers': undefined;
   'MenuAnimations': undefined;
-  'MenuTelegramFaq': undefined;
+  'MenuSignalSupport': undefined;
   'MenuPrivacyPolicy': undefined;
-  'MenuAskText': undefined;
   'SettingsPerformanceSliderTitle': undefined;
   'SettingsPerformanceSliderSubtitle': undefined;
   'SettingsPerformanceSliderLow': undefined;
@@ -1440,7 +1438,6 @@ export interface LangPair {
   'RemoveEffect': undefined;
   'ReplyInPrivateMessage': undefined;
   'ProfileOpenAppTerms': undefined;
-  'ProfileBotOpenAppInfoLink': undefined;
   'ProfileBirthday': undefined;
   'ProfileBirthdayToday': undefined;
   'ProfileMenuSetMainTab': undefined;
@@ -1453,7 +1450,6 @@ export interface LangPair {
   'GiftInfoSavedShow': undefined;
   'GiftInfoValueLinkMore': undefined;
   'StarsReactionLinkText': undefined;
-  'StarsReactionLink': undefined;
   'OpenMapWith': undefined;
   'OpenApp': undefined;
   'PopularApps': undefined;
@@ -2025,14 +2021,11 @@ export interface LangPair {
   'CocoonDescription': undefined;
   'CocoonFeature1Title': undefined;
   'CocoonFeature1Username': undefined;
-  'CocoonFeature1UsernameLink': undefined;
   'CocoonFeature2Title': undefined;
   'CocoonFeature2Text': undefined;
   'CocoonFeature3Title': undefined;
   'CocoonFeature3LinkText': undefined;
-  'CocoonFeature3Link': undefined;
   'CocoonFooterLinkText': undefined;
-  'CocoonFooterLink': undefined;
   'BotAuthSuccessTitle': undefined;
   'RankModalEdit': undefined;
   'RankModalEditMy': undefined;
@@ -2210,7 +2203,6 @@ export interface LangPair {
   'BoostsMaxLevelReached': undefined;
   'BotStop': undefined;
   'BotChangeSettings': undefined;
-  'BotDefaultPrivacyPolicy': undefined;
   'BotEditCommands': undefined;
   'BotEditIntro': undefined;
   'BotManageInfo': undefined;
@@ -2359,7 +2351,6 @@ export interface LangPair {
   'July': undefined;
   'June': undefined;
   'KickFromSupergroup': undefined;
-  'LearnMoreArrow': undefined;
   'LocalizationInterfaceLanguage': undefined;
   'Map': undefined;
   'March': undefined;
@@ -2454,7 +2445,6 @@ export interface LangPair {
   'PrivacyVoiceMessagesTitle': undefined;
   'ProfileChannel': undefined;
   'ProfilePhotoSetMainPhoto': undefined;
-  'PromoteUrl': undefined;
   'QuotePrivate': undefined;
   'ReactionsAll': undefined;
   'ReactionsOff': undefined;
@@ -2469,7 +2459,6 @@ export interface LangPair {
   'Report2Comment': undefined;
   'Report2CommentOptional': undefined;
   'ReportAd': undefined;
-  'ReportAdHelpURL': undefined;
   'ReportSend': undefined;
   'ReportSpamTitle': undefined;
   'ReportStory': undefined;

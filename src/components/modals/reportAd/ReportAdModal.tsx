@@ -11,7 +11,6 @@ import buildClassName from '../../../util/buildClassName';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import SafeLink from '../../common/SafeLink';
 import Button from '../../ui/Button';
 import ListItem from '../../ui/ListItem';
 import Modal from '../../ui/Modal';
@@ -59,7 +58,7 @@ const ReportAdModal = ({
   const bottomText = useMemo(() => {
     if (!modal) return undefined;
     return lang('ReportSponsoredReportedLearn', {
-      link: <SafeLink text={lang('ReportSponsoredReportedLink')} url={lang('ReportAdHelpURL')} />,
+      link: lang('ReportSponsoredReportedLink'),
     }, { withNodes: true });
   }, [lang, modal]);
 

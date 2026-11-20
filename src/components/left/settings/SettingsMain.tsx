@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import { SettingsScreens } from '../../../types';
 
 import {
-  FAQ_URL, PRIVACY_URL,
+  PRIVACY_URL, SUPPORT_URL,
 } from '../../../config';
 import {
   selectIsPremiumPurchaseBlocked,
@@ -46,7 +46,6 @@ const SettingsMain = ({
     openPremiumModal,
     openUrl,
     openSettingsScreen,
-    openSettingsConfirmation,
   } = getActions();
 
   const lang = useLang();
@@ -231,20 +230,12 @@ const SettingsMain = ({
 
         <Island>
           <ListItem
-            icon="support-filled"
-            iconBg="red"
-            narrow
-            onClick={() => openSettingsConfirmation({ confirmation: 'askQuestion' })}
-          >
-            {lang('AskAQuestion')}
-          </ListItem>
-          <ListItem
             icon="help-filled"
             iconBg="blue"
             narrow
-            onClick={() => openUrl({ url: FAQ_URL })}
+            onClick={() => openUrl({ url: SUPPORT_URL })}
           >
-            {lang('MenuTelegramFaq')}
+            {lang('MenuSignalSupport')}
           </ListItem>
           <ListItem
             icon="privacy-policy-filled"

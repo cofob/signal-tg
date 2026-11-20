@@ -25,16 +25,14 @@ import {
   CHAT_LIST_LOAD_SLICE,
   DEBUG,
   GLOBAL_SUGGESTED_CHANNELS_ID,
-  RE_TG_LINK,
   SAVED_FOLDER_ID,
   SERVICE_NOTIFICATIONS_USER_ID,
-  TME_WEB_DOMAINS,
   TMP_CHAT_ID,
   TOP_CHAT_MESSAGES_PRELOAD_LIMIT,
   TOPICS_SLICE,
   TOPICS_SLICE_SECOND_LOAD,
 } from '../../../config';
-import { formatShareText, processDeepLink } from '../../../util/deeplink';
+import { processDeepLink } from '../../../util/deeplink';
 import { isDeepLink } from '../../../util/deepLinkParser';
 import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
@@ -135,7 +133,6 @@ import {
   selectPeerFullInfo,
   selectSimilarChannelIds,
   selectStickerSet,
-  selectSupportChat,
   selectTabState,
   selectTopic,
   selectTopics,
@@ -548,22 +545,6 @@ addActionHandler('openLinkedChat', async (global, actions, payload): Promise<voi
 
   if (chatFullInfo?.fullInfo?.linkedChatId) {
     actions.openChat({ id: chatFullInfo.fullInfo.linkedChatId, tabId });
-  }
-});
-
-addActionHandler('openSupportChat', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const chat = selectSupportChat(global);
-  if (chat) {
-    actions.openChat({ id: chat.id, shouldReplaceHistory: true, tabId });
-    return;
-  }
-
-  actions.openChat({ id: TMP_CHAT_ID, shouldReplaceHistory: true, tabId });
-
-  const result = await callApi('fetchChat', { type: 'support' });
-  if (result) {
-    actions.openChat({ id: result.chatId, shouldReplaceHistory: true, tabId });
   }
 });
 
@@ -1745,141 +1726,11 @@ addActionHandler('openChatByContactToken', async (global, actions, payload): Pro
   actions.openChat({ id: result.id, tabId });
 });
 
-addActionHandler('openTelegramLink', async (global, actions, payload): Promise<void> => {
-  const {
-    url,
-    shouldIgnoreCache,
-    linkContext,
-    tabId = getCurrentTabId(),
-  } = payload;
+// Only `tg:` links open inside the app; links to Telegram websites are not followed
+addActionHandler('openTelegramLink', (global, actions, payload): ActionReturnType => {
+  const { url, linkContext } = payload;
 
-  const {
-    openChatByPhoneNumber,
-    checkChatInvite,
-    openStickerSet,
-    openChatWithDraft,
-    checkChatlistInvite,
-    openChatByUsername: openChatByUsernameAction,
-    openStoryViewerByUsername,
-  } = actions;
-
-  if (isDeepLink(url)) {
-    const isProcessed = processDeepLink(url, linkContext);
-    if (isProcessed || url.match(RE_TG_LINK)) {
-      return;
-    }
-  }
-
-  const uri = new URL(url.toLowerCase().startsWith('http') ? url : `https://${url}`);
-  if (TME_WEB_DOMAINS.has(uri.hostname) && uri.pathname === '/') {
-    window.open(uri.toString(), '_blank', 'noopener');
-    return;
-  }
-
-  const hostname = TME_WEB_DOMAINS.has(uri.hostname) ? 't.me' : uri.hostname;
-  const hostParts = hostname.split('.');
-  if (hostParts.length > 3) return;
-
-  const adaptedPathname = uri.pathname.replace(/^\/?s\//, '');
-  const pathname = hostParts.length === 3 ? `${hostParts[0]}/${adaptedPathname}` : adaptedPathname;
-  const [part1, part2, part3] = pathname.split('/').filter(Boolean).map((part) => decodeURI(part));
-  const params = Object.fromEntries(uri.searchParams);
-
-  let hash: string | undefined;
-  if (part1 === 'joinchat') {
-    hash = part2;
-  }
-
-  const storyId = part2 === 's' && (Number(part3) || undefined);
-
-  if (part1.match(/^\+([0-9]+)(\?|$)/)) {
-    openChatByPhoneNumber({
-      phoneNumber: part1.substr(1, part1.length - 1),
-      startAttach: params.startattach,
-      attach: params.attach,
-      text: params.text,
-      noPaidMessagesToken: params.free || undefined,
-      tabId,
-    });
-    return;
-  }
-
-  if (storyId) {
-    openStoryViewerByUsername({
-      username: part1,
-      storyId,
-      tabId,
-    });
-
-    return;
-  }
-
-  if (part1.startsWith(' ') || part1.startsWith('+')) {
-    hash = part1.substr(1, part1.length - 1);
-  }
-
-  if (hash) {
-    checkChatInvite({ hash, tabId });
-    return;
-  }
-
-  if (part1 === 'addstickers' || part1 === 'addemoji') {
-    openStickerSet({
-      stickerSetInfo: {
-        shortName: part2,
-      },
-      shouldIgnoreCache,
-      tabId,
-    });
-    return;
-  }
-
-  if (part1 === 'addstyle') {
-    if (!part2) return;
-    actions.openAiTonePreview({ slug: part2, tabId });
-    return;
-  }
-
-  if (part1 === 'share') {
-    const text = formatShareText(params.url, params.text);
-    openChatWithDraft({ text, tabId });
-    return;
-  }
-
-  if (part1 === 'addlist') {
-    const slug = part2;
-    checkChatlistInvite({ slug, tabId });
-    return;
-  }
-
-  const chatOrChannelPostId = part2 || undefined;
-  const messageId = part3 ? Number(part3) : undefined;
-  const commentId = params.comment ? Number(params.comment) : undefined;
-
-  const isWebApp = await checkWebAppExists(global, part1, part2);
-
-  const shouldTryOpenChat = (part1 && !part2) || Number.isInteger(Number(part2)) || isWebApp;
-
-  if (shouldTryOpenChat) {
-    openChatByUsernameAction({
-      username: part1,
-      messageId: messageId || Number(chatOrChannelPostId),
-      threadId: messageId ? Number(chatOrChannelPostId) : undefined,
-      commentId,
-      startParam: params.start,
-      startAttach: params.startattach,
-      attach: params.attach,
-      startApp: params.startapp,
-      mode: params.mode,
-      originalParts: [part1, part2, part3],
-      noPaidMessagesToken: params.free || undefined,
-      tabId,
-    });
-  } else {
-    actions.openUrl({
-      url, shouldSkipModal: true, tabId, ignoreDeepLinks: true,
-    });
-  }
+  if (isDeepLink(url)) processDeepLink(url, linkContext);
 });
 
 addActionHandler('processBoostParameters', async (global, actions, payload): Promise<void> => {
@@ -3972,21 +3823,6 @@ export async function fetchChatByUsername<T extends GlobalState>(
   setGlobal(global);
 
   return chat;
-}
-
-export async function checkWebAppExists<T extends GlobalState>(
-  global: T, botName: string, appName: string,
-) {
-  if (!botName || !appName) return false;
-  global = getGlobal();
-  const chatByUsername = await fetchChatByUsername(global, botName);
-  global = getGlobal();
-  const bot = chatByUsername && selectUser(global, chatByUsername.id);
-  const botApp = bot && await callApi('fetchBotApp', {
-    bot,
-    appName,
-  });
-  return Boolean(botApp);
 }
 
 export async function fetchChatByPhoneNumber<T extends GlobalState>(global: T, phoneNumber: string) {

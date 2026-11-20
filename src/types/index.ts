@@ -201,9 +201,9 @@ export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
-export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
+export type SettingsConfirmation = 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openSupport'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 

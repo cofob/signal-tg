@@ -6,7 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type { ApiChat, ApiUser } from '../../../api/types';
 import { ManagementProgress } from '../../../types';
 
-import { PURCHASE_USERNAME, TME_LINK_PREFIX, USERNAME_PURCHASE_ERROR } from '../../../config';
+import { PURCHASE_USERNAME, USERNAME_LINK_PREFIX, USERNAME_PURCHASE_ERROR } from '../../../config';
 import { getMainUsername, isChatChannel, isChatPublic } from '../../../global/helpers';
 import {
   selectChat, selectChatFullInfo,
@@ -217,7 +217,7 @@ const ManageChatPrivacyType = ({
 
   const guardBotUsername = guardBot && getMainUsername(guardBot);
   const guardBotLink = guardBotUsername
-    ? <SafeLink url={`${TME_LINK_PREFIX}${guardBotUsername}`} text={`@${guardBotUsername}`} />
+    ? <SafeLink url={`${USERNAME_LINK_PREFIX}${guardBotUsername}`} text={`@${guardBotUsername}`} />
     : guardBot?.firstName;
   const approvalInfo = lang(getApprovalInfoKey(isChannel, Boolean(isPublic)));
 
@@ -246,7 +246,7 @@ const ManageChatPrivacyType = ({
   const shouldRenderUsernamesManage = privacyType === 'public' && chat.usernames && chat.usernames.length > 0;
 
   function renderPurchaseLink() {
-    const purchaseInfoLink = `${TME_LINK_PREFIX}${PURCHASE_USERNAME}`;
+    const purchaseInfoLink = `${USERNAME_LINK_PREFIX}${PURCHASE_USERNAME}`;
 
     return (
       <IslandDescription dir="auto">

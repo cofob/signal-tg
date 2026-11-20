@@ -68,7 +68,6 @@ import CompactMapPreview from '../CompactMapPreview';
 import CustomEmoji from '../CustomEmoji';
 import Icon from '../icons/Icon';
 import QrIcon from '../icons/QrIcon';
-import SafeLink from '../SafeLink';
 import BusinessHours from './BusinessHours';
 import UserBirthday from './UserBirthday';
 
@@ -340,14 +339,7 @@ const ChatExtra = ({
     });
   });
 
-  const appTermsInfo = lang('ProfileOpenAppAbout', {
-    terms: (
-      <SafeLink
-        text={lang('ProfileOpenAppTerms')}
-        url={lang('ProfileBotOpenAppInfoLink')}
-      />
-    ),
-  }, { withNodes: true });
+  const appTermsInfo = lang('ProfileOpenAppAbout', { terms: lang('ProfileOpenAppTerms') }, { withNodes: true });
 
   const isRestricted = chatId ? selectIsChatRestricted(getGlobal(), chatId) : false;
   if (isRestricted || (isSelf && !isOwnProfile && !isInSettings)) {

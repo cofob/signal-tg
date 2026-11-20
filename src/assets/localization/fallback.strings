@@ -476,7 +476,6 @@
 "LastName" = "Last name";
 "SettingsAboutBio" = "Any details such as age, occupation or city.\nExample: 23 y.o. designer from San Francisco";
 "UsernameHelp" = "You can choose a username on **Telegram**. If you do, people will be able to find you by this username and contact you without knowing your phone number.\n\nYou can use **a–z**, **0–9** and underscores.\nMinimum length is **5** characters.";
-"UsernameLink" = "This link opens a chat with you:";
 "SettingsExperimentalAbout" = "Warning! These are experimental settings. Some may not work. Others may break the app. Any of them may disappear in the next version without a trace. Use at your own risk.";
 "EmptyChatAppearanceLight" = "Light";
 "EmptyChatAppearanceDark" = "Dark";
@@ -835,9 +834,8 @@
 "VoipGroupPersonalAccount" = "personal account";
 "MenuStickers" = "Stickers and Emoji";
 "MenuAnimations" = "Animations and Performance";
-"MenuTelegramFaq" = "Telegram FAQ";
+"MenuSignalSupport" = "Signal Support";
 "MenuPrivacyPolicy" = "Privacy Policy";
-"MenuAskText" = "Please note that Telegram Support is done by volunteers. We try to respond as quickly as possible, but it may take a while.\n\nPlease take a look at the Telegram FAQ: it has important troubleshooting tips and answers to most questions.";
 "SettingsPerformanceSliderTitle" = "Animation Level";
 "SettingsPerformanceSliderSubtitle" = "Choose the desired animations amount.";
 "SettingsPerformanceSliderLow" = "Power Saving";
@@ -1036,7 +1034,7 @@
 "EmptyGroupInfoSubtitle" = "Groups can have:";
 "EmptyGroupInfoLine1" = "• Up to {count} members";
 "EmptyGroupInfoLine2" = "• Persistent chat history";
-"EmptyGroupInfoLine3" = "• Public links such as t.me/title";
+"EmptyGroupInfoLine3" = "• Public links";
 "EmptyGroupInfoLine4" = "• Admins with different rights";
 "Reactions" = "Reactions";
 "DeleteReactionTitle_one" = "Delete {count} Reaction?";
@@ -1414,7 +1412,7 @@
 "ChatPerFolderLimitTitle" = "Chats per Folder";
 "GroupsAndChannelsLimitSubtitle" = "Join up to {count} channels and large groups";
 "PinChatsLimitSubtitle" = "Pin up to {count} chats in your main chat list";
-"PublicLinksLimitSubtitle" = "Reserve up to {count} t.me/username links";
+"PublicLinksLimitSubtitle" = "Reserve up to {count} public links";
 "SavedGifsLimitSubtitle" = "Save up to {count} GIFs in your Favorite GIFs";
 "FavoriteStickersLimitSubtitle" = "Save up to {count} stickers in your Favorite stickers";
 "BioLimitSubtitle" = "Add more characters and use links in your bio";
@@ -1756,7 +1754,6 @@
 "ReplyInPrivateMessage" = "Reply In Private Message";
 "ProfileOpenAppAbout" = "By launching this mini app, you agree to the {terms}.";
 "ProfileOpenAppTerms" = "Terms of Service for Mini Apps";
-"ProfileBotOpenAppInfoLink" = "https://telegram.org/tos/mini-apps";
 "ProfileBirthday" = "Birthday";
 "ProfileBirthdayToday" = "Birthday today";
 "ProfileBirthdayValue" = "{date}";
@@ -1789,7 +1786,6 @@
 "SendPaidReaction" = "Send ⭐️{amount}";
 "StarsReactionTerms" = "By sending Stars you agree to the {link}";
 "StarsReactionLinkText" = "Terms of Service";
-"StarsReactionLink" = "https://telegram.org/tos/stars";
 "AriaMiniApp" = "{bot} Mini App";
 "BrowserMoreTabs_one" = "{title} & {count} Other";
 "BrowserMoreTabs_other" = "{title} & {count} Others";
@@ -2655,16 +2651,13 @@
 "CocoonFeature1Title" = "Private";
 "CocoonFeature1Text" = "No third party can access any data, such as translations, inside **{username}**.";
 "CocoonFeature1Username" = "@cocoon";
-"CocoonFeature1UsernameLink" = "https://t.me/cocoon";
 "CocoonFeature2Title" = "Efficient";
 "CocoonFeature2Text" = "Cocoon has allowed Telegram to reduce translation cost by 6x.";
 "CocoonFeature3Title" = "For Everyone";
 "CocoonFeature3Text" = "Any developer can use Cocoon for AI features. Learn more at **{link}**.";
 "CocoonFeature3LinkText" = "cocoon.org";
-"CocoonFeature3Link" = "https://cocoon.org";
 "CocoonFooterText" = "Want to integrate Cocoon into your projects?\nReach out **{link}**";
 "CocoonFooterLinkText" = "directly to @cocoon";
-"CocoonFooterLink" = "https://t.me/cocoon?direct";
 "BotAuthSuccessTitle" = "Login Successful";
 "BotAuthSuccessText" = "You've successfully logged into **{url}**";
 "BotAuthSuccessTextNoPhone" = "You're now logged in to **{url}**, but you didn't grant access to your phone number.";
@@ -2916,7 +2909,6 @@
 "BoostsMaxLevelReached" = "Maximum Level Reached";
 "BotStop" = "Block bot";
 "BotChangeSettings" = "Change Bot Settings";
-"BotDefaultPrivacyPolicy" = "https://telegram.org/privacy-tpa";
 "BotEditCommands" = "Edit Commands";
 "BotEditIntro" = "Edit Intro";
 "BotManageInfo" = "Use @BotFather to manage this bot.";
@@ -3129,7 +3121,6 @@
 "KickFromSupergroup" = "Restrict user";
 "Languages_one" = "{count} Language";
 "Languages_other" = "{count} Languages";
-"LearnMoreArrow" = "Learn More >";
 "LimitReachedFolderLinks" = "You can only create {limit} invite links.\nUpgrade to **Telegram Premium** to increase this limit to **{limit2}**.";
 "LimitReachedFolderLinksLocked" = "You can only create {limit} invite links. We are working to let you increase this limit in the future.";
 "LimitReachedFolderLinksPremium" = "You can only create {limit} invite links. Try deleting some folder invite links.";
@@ -3259,7 +3250,6 @@
 "PrivacyVoiceMessagesTitle" = "Who can send me voice or video messages?";
 "ProfileChannel" = "Channel";
 "ProfilePhotoSetMainPhoto" = "Set as Main Photo";
-"PromoteUrl" = "https://ads.telegram.org";
 "PushReactText" = "{emoji} to your \"{summary}\"";
 "QuotePrivate" = "This quote is from a private chat.";
 "ReactionsAll" = "All";
@@ -3276,7 +3266,6 @@
 "Report2Comment" = "Add Comment";
 "Report2CommentOptional" = "Add Comment (Optional)";
 "ReportAd" = "Report Ad";
-"ReportAdHelpURL" = "https://ads.telegram.org/guidelines";
 "ReportSend" = "Send Report";
 "ReportSpamTitle" = "Report spam";
 "ReportStory" = "Report story";

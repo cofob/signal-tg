@@ -472,7 +472,6 @@ export interface ActionPayloads {
   toggleDialogFilterTags: {
     isEnabled: boolean;
   };
-  openSupportChat: WithTabId | undefined;
   openChatByPhoneNumber: {
     phoneNumber: string;
     startAttach?: string | boolean;
@@ -777,7 +776,6 @@ export interface ActionPayloads {
   };
   openTelegramLink: {
     url: string;
-    shouldIgnoreCache?: boolean;
     linkContext?: LinkContext;
   } & WithTabId;
   resolveBusinessChatLink: {

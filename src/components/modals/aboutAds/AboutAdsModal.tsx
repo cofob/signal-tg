@@ -12,7 +12,6 @@ import useCurrentOrPrev from '../../../hooks/useCurrentOrPrev';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import SafeLink from '../../common/SafeLink';
 import SponsoredMessageContextMenuContainer from '../../middle/message/SponsoredContextMenuContainer';
 import Button from '../../ui/Button';
 import Modal from '../../ui/Modal';
@@ -52,12 +51,6 @@ const AboutAdsModal = ({ modal, minLevelToRestrictAds }: OwnProps & StateProps) 
         <p>{renderText(lang('SponsoredMessageInfoDescription1'), ['br'])}</p>
         <p>{renderText(lang('SponsoredMessageInfoDescription2'), ['br'])}</p>
         <p>{renderText(lang('SponsoredMessageInfoDescription3'), ['br'])}</p>
-        <p>
-          <SafeLink
-            url={lang('PromoteUrl')}
-            text={lang('PromoteUrl')}
-          />
-        </p>
         <p>{renderText(lang('SponsoredMessageInfoDescription4'), ['br'])}</p>
       </>
     );
@@ -109,10 +102,6 @@ const AboutAdsModal = ({ modal, minLevelToRestrictAds }: OwnProps & StateProps) 
         <h3 className={styles.title}>{renderText(lang('RevenueSharingAdsInfo4Title'), ['simple_markdown'])}</h3>
         <p className={styles.description}>
           {renderText(lang('RevenueSharingAdsInfo4Subtitle2', { details: '' }), ['simple_markdown'])}
-          <SafeLink
-            url={lang('PromoteUrl')}
-            text={lang('LearnMoreArrow')}
-          />
         </p>
       </>
     );
