@@ -9,10 +9,16 @@ import { handleMessageChanges, handleTyping } from './updaters/messages';
 export const store = new SignalStore();
 export const db = new MessageDb();
 export const client = new SignalClient(store);
+// Change batches reach the app in order, and each batch's messages before its chats: the app counts unread
+// messages from `newMessage` updates, so a read state must not overtake the messages it covers
+let updateChain = Promise.resolve();
+
 export const processor = new MessageProcessor(db, client, {
   onChanges: (changes) => {
-    void handleChatChanges(changes).catch(logError);
-    void handleMessageChanges(changes).catch(logError);
+    updateChain = updateChain
+      .then(() => handleMessageChanges(changes))
+      .then(() => handleChatChanges(changes))
+      .catch(logError);
   },
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
