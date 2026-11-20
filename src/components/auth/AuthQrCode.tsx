@@ -11,7 +11,6 @@ import { selectSharedSettings } from '../../global/selectors/sharedState';
 import buildClassName from '../../util/buildClassName';
 import { loadAndChangeLanguage } from '../../util/localization';
 import { createStyledQrCode } from '../../util/qrCode/buildStyledQrCode';
-import { LOCAL_TGS_URLS } from '../common/helpers/animatedAssets';
 import { navigateBack } from './helpers/backNavigation';
 import { getSuggestedLanguage } from './helpers/getSuggestedLanguage';
 
@@ -23,7 +22,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 import useMediaTransitionDeprecated from '../../hooks/useMediaTransitionDeprecated';
 import useMultiaccountInfo from '../../hooks/useMultiaccountInfo';
 
-import AnimatedIcon from '../common/AnimatedIcon';
 import Button from '../ui/Button';
 import Loading from '../ui/Loading';
 
@@ -33,11 +31,7 @@ type StateProps = {
   language?: string;
 };
 
-const DATA_PREFIX = 'tg://login?token=';
-const SIGNAL_LINK_PREFIX = 'sgnl://';
 const QR_SIZE = 280;
-const QR_PLANE_SIZE = 54;
-const QR_IMAGE_SIZE_RATIO = 0.4;
 const QR_CODE_MUTATION_DURATION = 50; // The library is asynchronous and we need to wait for its mutation code
 
 const AuthCode = ({
@@ -45,13 +39,9 @@ const AuthCode = ({
   auth,
   language,
 }: StateProps) => {
-  const {
-    returnToAuthPhoneNumber,
-    setSharedSettingOption,
-    loginWithPasskey,
-  } = getActions();
+  const { setSharedSettingOption } = getActions();
 
-  const { state, qrCode: authQrCode, passkeyOption } = auth;
+  const { qrCode: authQrCode } = auth;
 
   const suggestedLanguage = getSuggestedLanguage();
   const lang = useLang();
@@ -65,10 +55,8 @@ const AuthCode = ({
   const accountsInfo = useMultiaccountInfo();
   const hasActiveAccount = Object.values(accountsInfo).length > 0;
 
-  const { result: qrCode } = useAsync(() => createStyledQrCode({
-    size: QR_SIZE,
-    imageSize: QR_IMAGE_SIZE_RATIO,
-  }), []);
+  // No image in the middle: the code stays plain for Signal's scanner
+  const { result: qrCode } = useAsync(() => createStyledQrCode({ size: QR_SIZE, image: '' }), []);
 
   const transitionClassNames = useMediaTransitionDeprecated(isQrMounted);
 
@@ -84,9 +72,8 @@ const AuthCode = ({
     }
 
     const container = qrCodeRef.current!;
-    // Signal link codes arrive as complete `sgnl://linkdevice` URLs
-    const { token } = authQrCode;
-    const data = token.startsWith(SIGNAL_LINK_PREFIX) ? token : `${DATA_PREFIX}${token}`;
+    // The token is the complete `sgnl://linkdevice` URL from the provisioning socket
+    const data = authQrCode.token;
 
     if (STRICTERDOM_ENABLED) {
       disableStrict();
@@ -126,16 +113,6 @@ const AuthCode = ({
     }
   });
 
-  const handleReturnToAuthPhoneNumber = useLastCallback(() => {
-    returnToAuthPhoneNumber();
-  });
-
-  const handleLoginWithPasskey = useLastCallback(() => {
-    loginWithPasskey();
-  });
-
-  const isAuthReady = state === 'authorizationStateWaitQrCode';
-
   return (
     <div id="auth-qr-form" className="custom-scroll">
       {hasActiveAccount && (
@@ -160,32 +137,15 @@ const AuthCode = ({
               ref={qrCodeRef}
               style={`width: ${QR_SIZE}px; height: ${QR_SIZE}px`}
             />
-            <AnimatedIcon
-              tgsUrl={LOCAL_TGS_URLS.QrPlane}
-              size={QR_PLANE_SIZE}
-              className="qr-plane"
-              nonInteractive
-              noLoop={false}
-            />
           </div>
           {!isQrMounted && <div className="qr-loading"><Loading /></div>}
         </div>
-        <h1>{lang('LoginQRTitle')}</h1>
+        <h1>{lang('SignalLinkTitle')}</h1>
         <ol>
-          <li><span>{lang('LoginQRHelp1')}</span></li>
-          <li><span>{lang('LoginQRHelp2', undefined, { withNodes: true, withMarkdown: true })}</span></li>
-          <li><span>{lang('LoginQRHelp3')}</span></li>
+          <li><span>{lang('SignalLinkHelp1')}</span></li>
+          <li><span>{lang('SignalLinkHelp2', undefined, { withNodes: true, withMarkdown: true })}</span></li>
+          <li><span>{lang('SignalLinkHelp3')}</span></li>
         </ol>
-        {isAuthReady && (
-          <Button className="auth-button" isText onClick={handleReturnToAuthPhoneNumber}>
-            {lang('LoginQRCancel')}
-          </Button>
-        )}
-        {passkeyOption && (
-          <Button className="auth-button" isText onClick={handleLoginWithPasskey}>
-            {lang('LoginPasskey')}
-          </Button>
-        )}
         {suggestedLanguage && suggestedLanguage !== language && continueText && (
           <Button className="auth-button" isText isLoading={isLoading} onClick={handleLangChange}>
             {continueText}

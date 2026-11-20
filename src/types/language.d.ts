@@ -142,11 +142,10 @@ export interface LangPair {
   'LoginPhonePlaceholder': undefined;
   'LoginNext': undefined;
   'LoginQRLogin': undefined;
-  'LoginQRTitle': undefined;
-  'LoginQRHelp1': undefined;
-  'LoginQRHelp2': undefined;
-  'LoginQRHelp3': undefined;
-  'LoginQRCancel': undefined;
+  'SignalLinkTitle': undefined;
+  'SignalLinkHelp1': undefined;
+  'SignalLinkHelp2': undefined;
+  'SignalLinkHelp3': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;

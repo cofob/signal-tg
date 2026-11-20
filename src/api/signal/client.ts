@@ -8,6 +8,7 @@ import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
 import { initSignalWasm } from '../../lib/signal/wasm';
+import { pause } from '../../util/schedulers';
 import { buildApiUser } from './builders/users';
 import {
   client, db, logError, processor, store,
@@ -16,6 +17,7 @@ import { sendApiUpdate } from './updates';
 
 const DEVICE_NAME = 'TeleSignal';
 const LINK_QR_LIFETIME_S = 60 * 60;
+const LINK_RETRY_DELAY_MS = 3000;
 const RECONNECT_MIN_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 60 * 1000;
 const HTTP_UNAUTHORIZED = 401;
@@ -66,7 +68,14 @@ async function runDeviceLink(platform?: string) {
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
 
   while (!isDestroyed) {
-    linkSession = await startDeviceLink();
+    try {
+      linkSession = await startDeviceLink();
+    } catch (err) {
+      logError(err);
+      await pause(LINK_RETRY_DELAY_MS);
+      continue;
+    }
+
     sendApiUpdate({
       '@type': 'updateAuthorizationState',
       authorizationState: 'authorizationStateWaitQrCode',
