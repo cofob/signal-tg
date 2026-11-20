@@ -8,6 +8,7 @@ import * as cacheApi from '../../../util/cacheApi';
 import { getCurrentAccount } from '../client';
 import { store } from '../engine';
 import { fetchAttachmentBlob, getAttachmentPointer } from '../media/attachments';
+import { renderBlurHash } from '../media/blurHash';
 import { getConversationByPeerId } from '../peers';
 
 // Hashes from `src/global/helpers/messageMedia.ts` and `getChatAvatarHash`: `photo<mediaId>?size=x`,
@@ -17,6 +18,9 @@ const MEDIA_HASH_REGEX = /^(photo|document|avatar|profile)(-?\d+(?:_\w+)?)(?:\?(
 const STREAM_URL_PREFIX_REGEX = /^.*\/(?:progressive|download)\//;
 // Signal clients encode avatars as JPEG; image decoders also sniff the actual format
 const AVATAR_MIME_TYPE = 'image/jpeg';
+const BLURHASH_MIME_TYPE = 'image/bmp';
+// Previews from a BlurHash are not stored in app state, so they can be larger than thumbnails
+const BLURHASH_PREVIEW_PIXEL_COUNT = 64 * 64;
 
 /** Downloads message attachments and avatars, decrypted, in the format the media loader asks for */
 export async function downloadMedia(
@@ -52,11 +56,15 @@ export async function downloadMedia(
 async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgress?: ApiOnProgress) {
   const pointer = await getAttachmentPointer(mediaId);
   if (!pointer) throw new Error(`Attachment ${mediaId} is not found`);
-  // Signal attachments have no thumbnails: images serve their own sizes, other media show their BlurHash
-  if (isThumbnail && !pointer.contentType.startsWith('image/')) {
-    throw new Error(`Attachment ${mediaId} has no thumbnail`);
-  }
-  return fetchAttachmentBlob(pointer, onProgress);
+  if (!isThumbnail || pointer.contentType.startsWith('image/')) return fetchAttachmentBlob(pointer, onProgress);
+
+  // Signal attachments have no thumbnails: images serve their own sizes, other media their BlurHash
+  const { blurHash, width, height } = pointer;
+  const bitmap = blurHash
+    ? renderBlurHash(blurHash, width || undefined, height || undefined, BLURHASH_PREVIEW_PIXEL_COUNT)
+    : undefined;
+  if (!bitmap) throw new Error(`Attachment ${mediaId} has no thumbnail`);
+  return new Blob([bitmap], { type: BLURHASH_MIME_TYPE });
 }
 
 /** Avatars of users are encrypted with their profile key, those of groups with the group's secret params */

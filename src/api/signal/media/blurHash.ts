@@ -28,11 +28,12 @@ const DC_LENGTH = 4;
 const AC_LENGTH = 2;
 const RGBA_LENGTH = 4;
 
-// A tiny bitmap is enough: the app blurs and stretches thumbnails. Signal Desktop
+// Thumbnails in app state stay tiny, since the app blurs and stretches them. Signal Desktop
 // `ts/util/computeBlurHashUrl.std.ts` draws the same 24-bit top-down BMP at 32 × 32 pixels.
 const THUMBNAIL_PIXEL_COUNT = 16 * 16;
-const MIN_THUMBNAIL_SIDE = 4;
-const MAX_ASPECT_RATIO = THUMBNAIL_PIXEL_COUNT / MIN_THUMBNAIL_SIDE ** 2;
+const MIN_BITMAP_SIDE = 4;
+// Panoramas get a bitmap of this aspect ratio, so neither side grows past the pixel count
+const MAX_ASPECT_RATIO = 16;
 // BMP rows are padded to 4 bytes; 24-bit rows of a width divisible by 4 need no padding
 const BMP_WIDTH_STEP = 4;
 const BMP_HEADER = new Uint8Array([
@@ -49,17 +50,23 @@ const BMP_HEIGHT_OFFSET = 0x16;
 const BMP_IMAGE_SIZE_OFFSET = 0x22;
 const BGR_LENGTH = 3;
 
+/** A small BMP data URI of a BlurHash for `ApiThumbnail`; `undefined` for an invalid hash */
+export function getBlurHashDataUri(blurHash: string, width?: number, height?: number) {
+  const bitmap = renderBlurHash(blurHash, width, height, THUMBNAIL_PIXEL_COUNT);
+  return bitmap && `data:image/bmp;base64,${bufferToBase64(bitmap)}`;
+}
+
 /**
- * Renders a BlurHash as a small BMP data URI with the aspect ratio of `width` × `height`.
+ * Renders a BlurHash as a BMP of about `pixelCount` pixels with the aspect ratio of `width` × `height`.
  * Returns `undefined` for an invalid hash.
  */
-export function getBlurHashDataUri(blurHash: string, width = 1, height = 1) {
+export function renderBlurHash(blurHash: string, width = 1, height = 1, pixelCount: number) {
   const aspectRatio = Math.min(MAX_ASPECT_RATIO, Math.max(1 / MAX_ASPECT_RATIO, width / height));
-  const thumbnailWidth = Math.max(
-    MIN_THUMBNAIL_SIDE,
-    Math.floor(Math.sqrt(THUMBNAIL_PIXEL_COUNT * aspectRatio) / BMP_WIDTH_STEP) * BMP_WIDTH_STEP,
+  const bitmapWidth = Math.max(
+    MIN_BITMAP_SIDE,
+    Math.floor(Math.sqrt(pixelCount * aspectRatio) / BMP_WIDTH_STEP) * BMP_WIDTH_STEP,
   );
-  const thumbnailHeight = Math.max(MIN_THUMBNAIL_SIDE, Math.round(thumbnailWidth / aspectRatio));
+  const bitmapHeight = Math.max(MIN_BITMAP_SIDE, Math.round(bitmapWidth / aspectRatio));
 
   let colors: number[][];
   try {
@@ -68,26 +75,26 @@ export function getBlurHashDataUri(blurHash: string, width = 1, height = 1) {
     return undefined;
   }
 
-  const imageSize = thumbnailWidth * thumbnailHeight * BGR_LENGTH;
+  const imageSize = bitmapWidth * bitmapHeight * BGR_LENGTH;
   const bitmap = new Uint8Array(BMP_HEADER.length + imageSize);
   bitmap.set(BMP_HEADER);
   const view = new DataView(bitmap.buffer);
   view.setUint32(BMP_FILE_SIZE_OFFSET, bitmap.length, true);
-  view.setInt32(BMP_WIDTH_OFFSET, thumbnailWidth, true);
+  view.setInt32(BMP_WIDTH_OFFSET, bitmapWidth, true);
   // A negative height stores rows top-down
-  view.setInt32(BMP_HEIGHT_OFFSET, -thumbnailHeight, true);
+  view.setInt32(BMP_HEIGHT_OFFSET, -bitmapHeight, true);
   view.setUint32(BMP_IMAGE_SIZE_OFFSET, imageSize, true);
 
   const componentsX = getComponentsX(blurHash);
   let offset = BMP_HEADER.length;
-  for (let y = 0; y < thumbnailHeight; y++) {
-    for (let x = 0; x < thumbnailWidth; x++) {
+  for (let y = 0; y < bitmapHeight; y++) {
+    for (let x = 0; x < bitmapWidth; x++) {
       let r = 0;
       let g = 0;
       let b = 0;
       colors.forEach(([red, green, blue], index) => {
-        const basis = Math.cos((Math.PI * x * (index % componentsX)) / thumbnailWidth)
-          * Math.cos((Math.PI * y * Math.floor(index / componentsX)) / thumbnailHeight);
+        const basis = Math.cos((Math.PI * x * (index % componentsX)) / bitmapWidth)
+          * Math.cos((Math.PI * y * Math.floor(index / componentsX)) / bitmapHeight);
         r += red * basis;
         g += green * basis;
         b += blue * basis;
@@ -98,7 +105,7 @@ export function getBlurHashDataUri(blurHash: string, width = 1, height = 1) {
     }
   }
 
-  return `data:image/bmp;base64,${bufferToBase64(bitmap)}`;
+  return bitmap;
 }
 
 /** Encodes RGBA pixels, such as `ImageData.data`, with 4 × 3 components */
