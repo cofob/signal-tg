@@ -1898,9 +1898,15 @@
 "ActionExpiredVoice" = "Expired voice message";
 "ActionExpiredVideo" = "Expired video message";
 "MediaUnavailable" = "This media is no longer available";
-"ActionMessageDeleted" = "This message was deleted";
+"ActionMessageDeleted" = "{from} deleted this message";
+"ActionMessageDeletedYou" = "You deleted this message";
+"ActionMessageDeletedByAdmin" = "Admin {admin} deleted this message";
 "ActionViewOnceMedia" = "View-once media";
 "ActionViewOnceViewed" = "Viewed";
+"ActionViewOncePhoto" = "View-once photo";
+"ActionViewOnceVideo" = "View-once video";
+"ViewOnceViewedToast" = "You already viewed this message.";
+"ViewOnceOutgoingToast" = "View-once media is deleted after sending";
 "ActionAddUser" = "{from} added {user}";
 "ActionAddUserYou" = "You added {user}";
 "ActionAddUsersMany" = "{from} added {users}";

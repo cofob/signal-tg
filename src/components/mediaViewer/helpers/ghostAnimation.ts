@@ -684,6 +684,9 @@ function getNodes(origin: MediaViewerOrigin, message?: ApiMessage, index?: numbe
   }
 
   switch (origin) {
+    case MediaViewerOrigin.ViewOnce:
+      return { container: undefined, mediaEl: undefined };
+
     case MediaViewerOrigin.RichPageBlock:
     case MediaViewerOrigin.IVPageBlock:
       return getPageBlockNodes(sourceId ? document.getElementById(sourceId) || undefined : undefined);

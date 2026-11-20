@@ -213,8 +213,9 @@ function convertItem(
         reactions: buildReactions(content.value.reactions, context),
       };
     case 'remoteDeletedMessage':
-    case 'adminDeletedMessage':
       return { ...base, deletedAt: context.now };
+    case 'adminDeletedMessage':
+      return { ...base, deletedAt: context.now, deletedByAdminAci: context.recipientAcis.get(content.value.adminId) };
     case 'updateMessage': {
       const { update } = content.value;
       if (update.case === 'expirationTimerChange') {

@@ -545,11 +545,25 @@ const ActionMessageText = ({
       case 'historyClear':
         return lang('ActionHistoryCleared');
 
-      case 'deleted':
-        return lang('ActionMessageDeleted');
+      // Signal Desktop `getMessageStatusContents` in `ts/components/conversation/Message.dom.tsx`
+      case 'deleted': {
+        const { adminId } = action;
+        if (adminId && adminId !== currentUserId) {
+          const admin = selectPeer(global, adminId);
+          const adminTitle = (admin && getPeerTitle(lang, admin)) || userFallbackText;
+          const adminLink = renderPeerLink(adminId, adminTitle, asPreview);
+          return lang('ActionMessageDeletedByAdmin', { admin: adminLink }, { withNodes: true });
+        }
+        return translateWithYou(lang, 'ActionMessageDeleted', isOutgoing || Boolean(adminId), { from: senderLink });
+      }
 
+      // Signal Desktop `ts/components/conversation/Message.dom.tsx` (`#renderTapToViewText`)
       case 'viewOnce':
-        return lang(action.isViewed ? 'ActionViewOnceViewed' : 'ActionViewOnceMedia');
+        if (action.isViewed) return lang('ActionViewOnceViewed');
+        if (action.media) {
+          return lang(action.media.mediaType === 'video' ? 'ActionViewOnceVideo' : 'ActionViewOncePhoto');
+        }
+        return lang('ActionViewOnceMedia');
 
       case 'setMessagesTtl': {
         const { period, autoSettingFromId } = action;

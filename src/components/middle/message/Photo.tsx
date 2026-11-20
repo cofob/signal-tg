@@ -16,7 +16,6 @@ import getCustomAppendixBg from './helpers/getCustomAppendixBg';
 
 import useFlag from '../../../hooks/useFlag';
 import { useIsIntersecting } from '../../../hooks/useIntersectionObserver';
-import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useLayoutEffectWithPrevDeps from '../../../hooks/useLayoutEffectWithPrevDeps';
 import useMediaTransition from '../../../hooks/useMediaTransition';
@@ -31,6 +30,7 @@ import MediaSpoiler from '../../common/MediaSpoiler';
 import SensitiveContentConfirmModal from '../../common/SensitiveContentConfirmModal';
 import ProgressSpinner from '../../ui/ProgressSpinner';
 import MediaBadge from './MediaBadge';
+import MediaUnavailable from './MediaUnavailable';
 
 import styles from './media.module.scss';
 
@@ -86,7 +86,6 @@ const Photo = <T,>({
   onCancelUpload,
   needsAgeVerification,
 }: OwnProps<T> & StateProps) => {
-  const lang = useLang();
   const ref = useRef<HTMLDivElement>();
   const isPaidPreview = photo.mediaType === 'extendedMediaPreview';
   const isUnavailable = !isPaidPreview && photo.isUnavailable;
@@ -280,12 +279,7 @@ const Photo = <T,>({
         <canvas ref={thumbRef} className="thumbnail" />
       )}
       {isProtected && <span className="protector" />}
-      {isUnavailable && (
-        <div className={styles.unavailable} title={lang('MediaUnavailable')}>
-          <Icon name="link-broken" className={styles.unavailableIcon} />
-          {lang('MediaUnavailable')}
-        </div>
-      )}
+      {isUnavailable && <MediaUnavailable />}
       {shouldRenderSpinner && !shouldRenderDownloadButton && (
         <div ref={spinnerRef} className={buildClassName('media-loading', styles.loading)}>
           <ProgressSpinner progress={transferProgress} onClick={isUploading ? handleClick : undefined} />

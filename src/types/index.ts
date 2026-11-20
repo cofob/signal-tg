@@ -376,6 +376,8 @@ export enum MediaViewerOrigin {
   PollPreview,
   RichPageBlock,
   IVPageBlock,
+  // Signal: view-once media, which opens from a placeholder without the media
+  ViewOnce,
 }
 
 export enum StoryViewerOrigin {

@@ -32,6 +32,7 @@ import EditedVideoPreview from '../../ui/mediaEditor/EditedVideoPreview.async';
 import OptimizedVideo from '../../ui/OptimizedVideo';
 import ProgressSpinner from '../../ui/ProgressSpinner';
 import MediaBadge from './MediaBadge';
+import MediaUnavailable from './MediaUnavailable';
 
 import mediaStyles from './media.module.scss';
 import styles from './Video.module.scss';
@@ -89,6 +90,7 @@ const Video = <T,>({
   const [shouldAlwaysShowNsfw, setShouldAlwaysShowNsfw] = useState(false);
 
   const isPaidPreview = video.mediaType === 'extendedMediaPreview';
+  const isUnavailable = !isPaidPreview && video.isUnavailable;
   const { width, height } = getMediaDimensions(video);
 
   const localBlobUrl = !isPaidPreview ? video.blobUrl : undefined;
@@ -125,7 +127,7 @@ const Video = <T,>({
   }
 
   const [isLoadAllowed, setIsLoadAllowed] = useState(canAutoLoad);
-  const shouldLoad = Boolean(isLoadAllowed && isIntersectingForLoading && !isPaidPreview);
+  const shouldLoad = Boolean(isLoadAllowed && isIntersectingForLoading && !isPaidPreview && !isUnavailable);
   const cover = video.mediaType === 'video' ? video.cover : undefined;
   const hasCover = Boolean(cover);
   const [isPlayAllowed, setIsPlayAllowed] = useState(Boolean(canAutoPlay && !isSpoilerShown));
@@ -194,7 +196,7 @@ const Video = <T,>({
   const {
     ref: playButtonRef,
   } = useShowTransition({
-    isOpen: Boolean((isLoadAllowed || fullMediaData) && !canPlay && !shouldRenderSpinner),
+    isOpen: Boolean((isLoadAllowed || fullMediaData) && !canPlay && !shouldRenderSpinner && !isUnavailable),
   });
   const {
     ref: transferProgressRef,
@@ -218,6 +220,8 @@ const Video = <T,>({
       onCancelUpload?.(clickArg!);
       return;
     }
+
+    if (isUnavailable) return;
 
     if (isSpoilerShown && noSpoilerReveal) {
       onClick?.(clickArg!, e);
@@ -271,7 +275,7 @@ const Video = <T,>({
     'media-inner dark',
     mediaStyles.frame,
     mediaStyles[layout],
-    !isUploading && 'interactive',
+    !isUploading && !isUnavailable && 'interactive',
     isSpoilerShown && mediaStyles.withSpoiler,
     className,
   );
@@ -356,7 +360,8 @@ const Video = <T,>({
           />
         </div>
       )}
-      {!isLoadAllowed && !fullMediaData && (
+      {isUnavailable && <MediaUnavailable />}
+      {!isLoadAllowed && !fullMediaData && !isUnavailable && (
         <Icon name="download" className={buildClassName(mediaStyles.controlButton, mediaStyles.downloadButton)} />
       )}
       {shouldRenderTransferProgress ? (

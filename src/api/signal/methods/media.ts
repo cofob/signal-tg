@@ -81,8 +81,8 @@ async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgre
     return fetchAttachmentBlob(pointer, onProgress).catch(async (err: unknown) => {
       // The message then shows the media as unavailable and stops asking for it
       const { messageId, slot } = parseAttachmentMediaId(mediaId)!;
-      if (err instanceof AttachmentUnavailableError && slot !== STICKER_SLOT) {
-        await processor.markAttachmentUnavailable(messageId, slot);
+      if (err instanceof AttachmentUnavailableError) {
+        await processor.markAttachmentUnavailable(messageId, slot === STICKER_SLOT ? 'sticker' : slot);
       }
       throw err;
     });

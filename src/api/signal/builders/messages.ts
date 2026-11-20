@@ -67,7 +67,8 @@ export async function buildApiMessageWithPoll(
     return { message: { ...base, content: { action: { mediaType: 'action', type: 'unsupported' } } } };
   }
   if (message.deletedAt) {
-    return { message: { ...base, content: { action: { mediaType: 'action', type: 'deleted' } } } };
+    const adminId = message.deletedByAdminAci ? await users.getUserId(message.deletedByAdminAci) : undefined;
+    return { message: { ...base, content: { action: { mediaType: 'action', type: 'deleted', adminId } } } };
   }
   if (message.isViewOnceOpened) {
     return {
@@ -78,11 +79,15 @@ export async function buildApiMessageWithPoll(
   if (!message.dataMessage) return { message: { ...base, content: {} } };
 
   const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
-  // The app has no flow to open view-once media, which must not stay visible in the chat
-  if (dataMessage.isViewOnce) {
-    return { message: { ...base, content: { action: { mediaType: 'action', type: 'viewOnce' } } } };
-  }
   const media = buildMessageMedia(message, dataMessage);
+  // View-once media stays out of the chat and opens once in the media viewer; outgoing media cannot be opened,
+  // as in Signal Desktop
+  if (dataMessage.isViewOnce) {
+    const viewOnceMedia = message.isOutgoing ? undefined : media.photo ?? media.video;
+    return {
+      message: { ...base, content: { action: { mediaType: 'action', type: 'viewOnce', media: viewOnceMedia } } },
+    };
+  }
   const mentionedUsers = await resolveMentionedUsers(dataMessage.bodyRanges, users);
   const poll = dataMessage.pollCreate
     ? await buildApiPoll(message, dataMessage.pollCreate, selfAci, users)
