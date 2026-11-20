@@ -63,6 +63,23 @@ pub fn ServerPublicParams_Deserialize(data: &[u8]) -> JsResult<ServerPublicParam
     decode(data, "ServerPublicParams_Deserialize").map(ServerPublicParams)
 }
 
+/// Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+#[wasm_bindgen]
+pub fn ServerPublicParams_VerifySignature(
+    params: &ServerPublicParams,
+    message: &[u8],
+    notary_signature: &[u8],
+) -> JsResult<()> {
+    let operation = "ServerPublicParams_VerifySignature";
+    let signature = notary_signature
+        .try_into()
+        .map_err(|_| generic_error("invalid notary signature length", operation))?;
+    params
+        .0
+        .verify_signature(message, signature)
+        .map_err(verification_failure(operation))
+}
+
 #[wasm_bindgen]
 pub fn ProfileKey_GetCommitment(profile_key: &[u8], user_id: &[u8]) -> JsResult<Vec<u8>> {
     let operation = "ProfileKey_GetCommitment";

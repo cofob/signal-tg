@@ -500,6 +500,11 @@ export function ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params: Se
  */
 export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params: ServerPublicParams, request_context: Uint8Array, response: Uint8Array, current_time: number): Uint8Array;
 
+/**
+ * Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+ */
+export function ServerPublicParams_VerifySignature(params: ServerPublicParams, message: Uint8Array, notary_signature: Uint8Array): void;
+
 export function ServiceId_ParseFromServiceIdBinary(input: Uint8Array): Uint8Array;
 
 export function ServiceId_ParseFromServiceIdString(input: string): Uint8Array;
@@ -782,6 +787,7 @@ export interface InitOutput {
     readonly ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly ServerPublicParams_VerifySignature: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];

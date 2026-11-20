@@ -2593,6 +2593,24 @@ export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params, r
 }
 
 /**
+ * Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} message
+ * @param {Uint8Array} notary_signature
+ */
+export function ServerPublicParams_VerifySignature(params, message, notary_signature) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(notary_signature, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_VerifySignature(params.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
  * @param {Uint8Array} input
  * @returns {Uint8Array}
  */

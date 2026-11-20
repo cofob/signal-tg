@@ -134,6 +134,7 @@ export const ServerPublicParams_Deserialize: (a: number, b: number) => [number, 
 export const ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const ServerPublicParams_VerifySignature: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
 export const ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
 export const ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];
