@@ -1,7 +1,6 @@
 import type {
   ApiMediaExtendedPreview, ApiMessage, ApiReactions,
   ApiWebPage,
-  MediaContent,
 } from '../../../api/types';
 import type { ActiveEmojiInteraction, ThreadId } from '../../../types';
 import type { RequiredGlobalActions } from '../../index';
@@ -1197,31 +1196,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       const chat = selectChat(global, update.chatId);
 
       if (!chat || !message) return;
-
-      if (message.content.invoice) {
-        const media = extendedMedia[0];
-        if ('mediaType' in media && media.mediaType === 'extendedMediaPreview') {
-          if (!message.content.invoice) return;
-          global = updateChatMessage(global, chatId, id, {
-            content: {
-              ...message.content,
-              invoice: {
-                ...message.content.invoice,
-                extendedMedia: media,
-              },
-            },
-          });
-          setGlobal(global);
-        } else {
-          const content = media as MediaContent;
-          global = updateChatMessage(global, chatId, id, {
-            content: {
-              ...content,
-            },
-          });
-          setGlobal(global);
-        }
-      }
 
       if (message.content.paidMedia) {
         const paidMediaUpdate = isBought ? { isBought, extendedMedia }

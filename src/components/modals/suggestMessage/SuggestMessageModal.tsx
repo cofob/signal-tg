@@ -75,7 +75,7 @@ const SuggestMessageModal = ({
   futureMax,
   isMonoforumAdmin,
 }: OwnProps & StateProps) => {
-  const { closeSuggestMessageModal, updateDraftSuggestedPostInfo, openStarsBalanceModal } = getActions();
+  const { closeSuggestMessageModal, updateDraftSuggestedPostInfo } = getActions();
   const [isCalendarOpened, openCalendar, closeCalendar] = useFlag();
 
   const currentSuggestedPostInfo = currentDraft?.suggestedPostInfo;
@@ -142,29 +142,6 @@ const SuggestMessageModal = ({
   const handleOffer = useLastCallback(() => {
     if (isBelowMin) {
       return;
-    }
-
-    if (!isMonoforumAdmin) {
-      if (isCurrencyStars) {
-        const currentBalance = starBalance?.amount || 0;
-
-        if (starsAmount > currentBalance) {
-          openStarsBalanceModal({
-            topup: {
-              balanceNeeded: starsAmount,
-            },
-          });
-          return;
-        }
-      } else {
-        const currentTonBalance = tonBalance || 0n;
-        if (tonAmount > currentTonBalance) {
-          openStarsBalanceModal({
-            currency: TON_CURRENCY_CODE,
-          });
-          return;
-        }
-      }
     }
 
     updateDraftSuggestedPostInfo({

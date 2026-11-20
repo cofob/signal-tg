@@ -1,5 +1,3 @@
-@use "../../../styles/mixins";
-
 .Chat {
   --background-color: var(--color-background);
   --thumbs-background: var(--background-color);
@@ -202,12 +200,6 @@
     right: 0.0625rem;
     bottom: 0.0625rem;
     flex-shrink: 0;
-  }
-
-  .avatar-subscription {
-    font-size: 0.875rem;
-
-    @include mixins.filter-outline(1px, var(--_color-outline));
   }
 
   .avatar-online {

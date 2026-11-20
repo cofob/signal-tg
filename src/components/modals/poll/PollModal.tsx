@@ -115,8 +115,6 @@ type StateProps = {
   countryList: ApiCountry[];
   paidMessagesStars?: number;
   paymentMessageConfirmDialogKey?: string;
-  starsBalance: number;
-  isStarsBalanceModalOpen: boolean;
   isSilentPosting?: boolean;
 };
 
@@ -156,8 +154,6 @@ const PollModal = ({
   countryList,
   paidMessagesStars,
   paymentMessageConfirmDialogKey,
-  starsBalance,
-  isStarsBalanceModalOpen,
   isSilentPosting,
 }: OwnProps & StateProps) => {
   const {
@@ -218,8 +214,6 @@ const PollModal = ({
   } = usePaidMessageConfirmation(
     PAYMENT_DIALOG_KEY,
     paidMessagesStars || 0,
-    isStarsBalanceModalOpen,
-    starsBalance,
     true,
   );
 
@@ -1043,8 +1037,6 @@ export default memo(withGlobal<OwnProps>(
       countryList: global.countryList.general,
       paidMessagesStars: selectPeerPaidMessagesStars(global, chatId),
       paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
-      starsBalance: global.stars?.balance.amount || 0,
-      isStarsBalanceModalOpen: Boolean(tabState.starsBalanceModal),
       isSilentPosting: chat ? getChatNotifySettings(
         chat,
         selectNotifyDefaults(global),

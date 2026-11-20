@@ -344,7 +344,6 @@ export function isApiRichText(value: unknown): value is ApiRichText {
     case 'autoEmail':
     case 'autoPhone':
     case 'bankCard':
-    case 'tonAddress':
       return isApiRichText(text.text);
     default:
       return false;

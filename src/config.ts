@@ -2,8 +2,6 @@ import type {
   ApiLimitTypeForPromo, ApiPremiumSection, ApiReactionEmoji,
 } from './api/types';
 import type {
-  GiftProfileFilterOptions,
-  ResaleGiftsFilterOptions,
 } from './types';
 
 export const APP_CODE_NAME = 'A';
@@ -20,8 +18,6 @@ export const VAPID_SERVER_KEY = import.meta.env.TG_VAPID_KEY;
 export const IS_TEST = APP_ENV === 'test';
 export const IS_PERF = APP_ENV === 'perf';
 export const IS_BETA = APP_ENV === 'staging';
-
-export const PAID_MESSAGES_PURPOSE = 'paid_messages';
 
 export const DEBUG = APP_ENV !== 'production';
 export const DEBUG_MORE = false;
@@ -164,7 +160,6 @@ export const INSTANT_VIEW_FONT_SIZE_ADJUST_MAX = 1.5;
 export const INSTANT_VIEW_FONT_SIZE_ADJUST_STEP = 0.1;
 
 export const NBSP = '\u00A0';
-export const NNBSP = '\u202F';
 
 export const FOLDERS_POSITION_TOP = 'top';
 export const FOLDERS_POSITION_LEFT = 'left';
@@ -375,34 +370,6 @@ export const RE_TME_LINK = /^(https?:\/\/)?(?:([-a-zA-Z0-9@:%_+~#=]{1,32}\.)?t\.
 export const RE_TELEGRAM_LINK = /^(https?:\/\/)?telegram\.org\//i;
 export const TME_LINK_PREFIX = 'https://t.me/';
 export const BOT_FATHER_USERNAME = 'botfather';
-// Gram Wallet
-export const WALLET_BOT_USERNAME = 'walt';
-export const DEFAULT_OLD_WALLET_BOT_USERNAME = 'wallet';
-export const WALLET_SEND_LINK_DOMAIN = 'sendgrams';
-// An address or `transaction/<hash>` is appended as is
-export const DEFAULT_TON_EXPLORER_URL = 'https://tonviewer.com/';
-export const USD_CURRENCY_CODE = 'USD';
-// The Android client's limit on an encrypted comment, in UTF-8 bytes
-export const WALLET_COMMENT_MAX_BYTES = 960;
-// The most `wallet.sendTransfer` takes in one data field: Android and tdesktop hardcode the same limit
-export const WALLET_TRANSFER_DATA_MAX_BYTES = 16 * 1024;
-// Nanotons, used until the fee estimate arrives
-export const GRAM_TRANSFER_FEE_RESERVE = 15_000_000n;
-export const WALLET_FIRST_TRANSFER_SUGGESTION = 'WALLET_FIRST_INCOMING_TRANSFER';
-// The item contract takes its fees from the attached amount, forwards the second one and returns the rest
-export const NFT_TRANSFER_ATTACHED_NANOS = 100_000_000n;
-export const NFT_TRANSFER_FORWARD_NANOS = 10_000_000n;
-// 0.01 Gram
-export const MIN_SHOWN_WALLET_NANOS = 10_000_000n;
-// The most a server-built gift deposit may attach; the item contract returns the unspent part
-export const GIFT_DEPOSIT_MAX_NANOS = 1_000_000_000n;
-// Errors with which the server refuses the password of a gift move, typed or temporary
-export const GIFT_PASSWORD_ERRORS = new Set(['TMP_PASSWORD_INVALID', 'PASSWORD_HASH_INVALID', 'SRP_PASSWORD_CHANGED']);
-export const TON_CONNECT_BAD_REQUEST_ERROR_CODE = 1;
-export const TON_CONNECT_MANIFEST_CONTENT_ERROR_CODE = 3;
-export const TON_CONNECT_UNKNOWN_APP_ERROR_CODE = 100;
-export const TON_CONNECT_USER_DECLINED_ERROR_CODE = 300;
-export const TON_CONNECT_UNSUPPORTED_METHOD_ERROR_CODE = 400;
 export const USERNAME_PURCHASE_ERROR = 'USERNAME_PURCHASE_AVAILABLE';
 export const MESSAGE_ID_REQUIRED_ERROR = 'MESSAGE_ID_REQUIRED';
 export const PURCHASE_USERNAME = 'auction';
@@ -453,8 +420,6 @@ export const GIVEAWAY_BOOST_PER_PREMIUM = 4;
 export const GIVEAWAY_MAX_ADDITIONAL_CHANNELS = 10;
 export const GIVEAWAY_MAX_ADDITIONAL_USERS = 10;
 export const GIVEAWAY_MAX_ADDITIONAL_COUNTRIES = 10;
-export const FRAGMENT_PHONE_CODE = '888';
-export const FRAGMENT_PHONE_LENGTH = 11;
 export const BOT_VERIFICATION_PEERS_LIMIT = 20;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];
@@ -532,20 +497,6 @@ export const PREMIUM_LIMITS_ORDER: ApiLimitTypeForPromo[] = [
   'moreAccounts',
   'recommendedChannels',
 ];
-
-export const DEFAULT_GIFT_PROFILE_FILTER_OPTIONS: GiftProfileFilterOptions = {
-  sortType: 'byDate',
-  shouldIncludeUnlimited: true,
-  shouldIncludeLimited: true,
-  shouldIncludeUnique: true,
-  shouldIncludeDisplayed: true,
-  shouldIncludeHidden: true,
-  shouldIncludeUpgradable: true,
-} as const;
-
-export const DEFAULT_RESALE_GIFTS_FILTER_OPTIONS: ResaleGiftsFilterOptions = {
-  sortType: 'byDate',
-};
 
 export const ACCOUNT_TTL_OPTIONS = [1, 3, 6, 12, 18, 24];
 

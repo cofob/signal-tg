@@ -152,9 +152,6 @@ type OwnProps = {
   onSendPaidReaction?: NoneToVoidFunction;
   onShowPaidReactionModal?: NoneToVoidFunction;
   onReactionPickerOpen?: (position: IAnchorPosition) => void;
-  userFullName?: string;
-  canGift?: boolean;
-  canSendGram?: boolean;
   noForwardsNotice?: string;
 };
 
@@ -258,14 +255,10 @@ const MessageContextMenu = ({
   onTranslateWithTone,
   onShowOriginal,
   onSelectLanguage,
-  userFullName,
-  canGift,
-  canSendGram,
   noForwardsNotice,
 }: OwnProps) => {
   const {
-    showNotification, openStickerSet, openCustomEmojiSets, loadStickers, openGiftModal,
-    openWalletTransferLink,
+    showNotification, openStickerSet, openCustomEmojiSets, loadStickers,
   } = getActions();
   const menuRef = useRef<HTMLDivElement>();
   const scrollableRef = useRef<HTMLDivElement>();
@@ -277,12 +270,6 @@ const MessageContextMenu = ({
   const withReactions = (canShowReactionList && !noReactions) || areReactionsPossible;
   const isEdited = ('isEdited' in message) && message.isEdited;
   const seenByDates = message.seenByDates;
-  const isPremiumGift = message.content.action?.type === 'giftPremium';
-  const isGiftCode = message.content.action?.type === 'giftCode';
-  const isStarGift = message.content.action?.type === 'starGift';
-  const isStarGiftUnique = message.content.action?.type === 'starGiftUnique';
-  const shouldShowGiftButton = isUserId(message.chatId)
-    && canGift && (isPremiumGift || isGiftCode || isStarGift || isStarGiftUnique);
   const pollCountryRestrictionMessage = useMemo(
     () => getPollCountryRestrictionMessage(lang, poll?.summary.allowedCountryCodes),
     [lang, poll?.summary.allowedCountryCodes],
@@ -317,16 +304,6 @@ const MessageContextMenu = ({
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
       },
     });
-    onClose();
-  });
-
-  const handleGiftClick = useLastCallback(() => {
-    openGiftModal({ forUserId: message.chatId });
-    onClose();
-  });
-
-  const handleSendGramClick = useLastCallback(() => {
-    openWalletTransferLink({ userId: message.chatId, shouldCloseAfterSend: true });
     onClose();
   });
 
@@ -461,18 +438,6 @@ const MessageContextMenu = ({
         )}
         dir={lang.isRtl ? 'rtl' : undefined}
       >
-        {shouldShowGiftButton
-          && (
-            <MenuItem icon="gift" onClick={handleGiftClick}>
-              {message?.isOutgoing ? lang('SendAnotherGift')
-                : lang('ConversationContextMenuSendGiftTo', { user: userFullName })}
-            </MenuItem>
-          )}
-        {canSendGram && (
-          <MenuItem icon="gram-outline" onClick={handleSendGramClick}>
-            {lang('WalletSendMoney')}
-          </MenuItem>
-        )}
         {canSendNow && <MenuItem icon="send-outline" onClick={onSend}>{lang('MessageScheduleSend')}</MenuItem>}
         {canReschedule && (
           <MenuItem icon="schedule" onClick={onReschedule}>{lang('MessageScheduleEditTime')}</MenuItem>

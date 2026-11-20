@@ -118,8 +118,6 @@ const SettingsHeader = ({
         return <h3>{lang('PrivacyBio')}</h3>;
       case SettingsScreens.PrivacyBirthday:
         return <h3>{lang('PrivacyBirthday')}</h3>;
-      case SettingsScreens.PrivacyGifts:
-        return <h3>{lang('PrivacyGifts')}</h3>;
       case SettingsScreens.PrivacySavedMusic:
         return <h3>{lang('PrivacyMusic')}</h3>;
       case SettingsScreens.PrivacyForwarding:
@@ -149,7 +147,6 @@ const SettingsHeader = ({
 
       case SettingsScreens.PrivacyPhoneNumberAllowedContacts:
       case SettingsScreens.PrivacyBirthdayAllowedContacts:
-      case SettingsScreens.PrivacyGiftsAllowedContacts:
       case SettingsScreens.PrivacyForwardingAllowedContacts:
       case SettingsScreens.PrivacyVoiceMessagesAllowedContacts:
       case SettingsScreens.PrivacyPhoneCallAllowedContacts:
@@ -158,7 +155,6 @@ const SettingsHeader = ({
 
       case SettingsScreens.PrivacyPhoneNumberDeniedContacts:
       case SettingsScreens.PrivacyBirthdayDeniedContacts:
-      case SettingsScreens.PrivacyGiftsDeniedContacts:
       case SettingsScreens.PrivacyForwardingDeniedContacts:
       case SettingsScreens.PrivacyVoiceMessagesDeniedContacts:
       case SettingsScreens.PrivacyPhoneCallDeniedContacts:

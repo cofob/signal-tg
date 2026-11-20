@@ -20,7 +20,7 @@ import {
   ACCOUNT_SLOT, getAccountsInfo, getAccountSlotUrl, getFirstLoggedInAccountSlot,
 } from '../../../util/multiaccount';
 import {
-  clearPasscodeStore, removeGlobalsVaultForSlot, removeWalletVaultSecrets, requestPasscodeStateLock,
+  clearPasscodeStore, removeGlobalsVaultForSlot, requestPasscodeStateLock,
 } from '../../../util/passcode';
 import { broadcastPasscodeReset } from '../../../util/passcode/channel';
 import { unregisterPushAccount } from '../../../util/pushNotifications';
@@ -308,7 +308,6 @@ function resetStorage() {
   resetStoragePromise = Promise.all([
     clearSessionPromise,
     clearGlobalsVaultPromise,
-    removeWalletVaultSecrets(ACCOUNT_SLOT),
     removeGlobalFromCache(),
   ]).then(async () => {
     const hasAccounts = Boolean(Object.values(getAccountsInfo()).length);

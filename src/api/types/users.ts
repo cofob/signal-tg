@@ -12,8 +12,7 @@ import type {
   ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
-import type { ApiSavedStarGift, ApiStarsRating } from './stars';
-import type { ApiWalletCard } from './wallet';
+import type { ApiStarsRating } from './stars';
 
 export interface ApiUser {
   id: string;
@@ -74,8 +73,6 @@ export interface ApiUserFullInfo {
   areAdsEnabled?: boolean;
   hasPinnedStories?: boolean;
   isContactRequirePremium?: boolean;
-  shouldDisplayGiftsButton?: boolean;
-  disallowedGifts?: ApiDisallowedGifts;
   birthday?: ApiBirthday;
   personalChannelId?: string;
   personalChannelMessageId?: number;
@@ -83,7 +80,6 @@ export interface ApiUserFullInfo {
   businessLocation?: ApiBusinessLocation;
   businessWorkHours?: ApiBusinessWorkHours;
   businessIntro?: ApiBusinessIntro;
-  starGiftCount?: number;
   starsRating?: ApiStarsRating;
   starsMyPendingRating?: ApiStarsRating;
   starsMyPendingRatingDate?: number;
@@ -100,7 +96,6 @@ export interface ApiUserFullInfo {
   noForwardsPeerEnabled?: boolean;
   isUnofficialSecurityRisk?: boolean;
   botManagerId?: string;
-  walletCard?: ApiWalletCard;
   shareTheme?: ApiShareTheme;
 }
 
@@ -130,11 +125,6 @@ export interface ApiUserSavedMusic {
   isFullyLoaded: boolean;
   isLoading?: boolean;
   isLoaded?: boolean;
-}
-
-export interface ApiSavedGifts {
-  gifts: ApiSavedStarGift[];
-  nextOffset?: string;
 }
 
 export interface ApiUsername {
@@ -174,11 +164,4 @@ export interface ApiBirthday {
   day: number;
   month: number;
   year?: number;
-}
-
-export interface ApiDisallowedGifts {
-  shouldDisallowUnlimitedStarGifts?: boolean;
-  shouldDisallowLimitedStarGifts?: boolean;
-  shouldDisallowUniqueStarGifts?: boolean;
-  shouldDisallowPremiumGifts?: boolean;
 }

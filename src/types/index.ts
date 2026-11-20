@@ -10,7 +10,6 @@ import type {
   ApiChat,
   ApiChatInviteImporter,
   ApiContact,
-  ApiDisallowedGiftsSettings,
   ApiDocument,
   ApiDraft,
   ApiExportedInvite,
@@ -19,7 +18,6 @@ import type {
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputSuggestedPostInfo,
-  ApiLabeledPrice,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -33,11 +31,6 @@ import type {
   ApiReactionWithPaid,
   ApiRichMessage,
   ApiSessionData,
-  ApiStarGiftAttributeIdBackdrop,
-  ApiStarGiftAttributeIdPattern,
-  ApiStarGiftRegular,
-  ApiStarsSubscription,
-  ApiStarsTransaction,
   ApiSticker,
   ApiStickerSet,
   ApiStory,
@@ -49,7 +42,6 @@ import type {
   ApiVideo,
   ApiVoice,
   MediaContent,
-  StarGiftAttributeIdModel,
 } from '../api/types';
 import type { DC_IDS } from '../config';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
@@ -190,8 +182,6 @@ export interface AccountSettings {
   defaultHistoryTtl?: number;
   nonContactPeersPaidStars?: number;
   permanentFreeMessagesLink?: string;
-  shouldDisplayGiftsButton?: boolean;
-  disallowedGifts?: ApiDisallowedGiftsSettings;
   shouldHideReadMarks?: boolean;
   canTranslate: boolean;
   canTranslateChats: boolean;
@@ -208,22 +198,15 @@ export type IAnchorPosition = {
   height?: number;
 };
 
-export interface ShippingOption {
-  id: string;
-  title: string;
-  amount: number;
-  prices: ApiLabeledPrice[];
-}
-
 export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
 export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openStars' | 'openTon' | 'sendGift' | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openPremium' | 'openFaq'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
-  | 'setAccountTtl' | 'openWallet';
+  | 'setAccountTtl';
 
 export enum SettingsScreens {
   Main,
@@ -244,7 +227,6 @@ export enum SettingsScreens {
   PrivacyProfilePhoto,
   PrivacyBio,
   PrivacyBirthday,
-  PrivacyGifts,
   PrivacySavedMusic,
   PrivacyPhoneCall,
   PrivacyPhoneP2P,
@@ -262,8 +244,6 @@ export enum SettingsScreens {
   PrivacyBioDeniedContacts,
   PrivacyBirthdayAllowedContacts,
   PrivacyBirthdayDeniedContacts,
-  PrivacyGiftsAllowedContacts,
-  PrivacyGiftsDeniedContacts,
   PrivacySavedMusicAllowedContacts,
   PrivacySavedMusicDeniedContacts,
   PrivacyPhoneCallAllowedContacts,
@@ -358,15 +338,10 @@ export enum GlobalSearchContent {
 export enum RightColumnContent {
   ChatInfo,
   Management,
-  Statistics,
-  BoostStatistics,
-  MessageStatistics,
-  StoryStatistics,
   PollResults,
   AddingMembers,
   CreateTopic,
   EditTopic,
-  MonetizationStatistics,
   NewGroup,
 }
 
@@ -395,7 +370,6 @@ export enum MediaViewerOrigin {
   SearchResult,
   ChannelAvatar,
   SuggestedAvatar,
-  StarsTransaction,
   PreviewMedia,
   SponsoredMessage,
   PollPreview,
@@ -514,7 +488,6 @@ export type ProfileTabType =
   | 'similarChannels'
   | 'similarBots'
   | 'dialogs'
-  | 'gifts'
   | 'polls';
 export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif' | 'polls';
 export type MiddleSearchType = 'chat' | 'myChats' | 'channels';
@@ -560,19 +533,8 @@ export enum ProfileState {
   Profile,
   SharedMedia,
   MemberList,
-  GiftList,
   StoryList,
   SavedDialogs,
-}
-
-export enum PaymentStep {
-  Checkout,
-  SavedPayments,
-  ConfirmPassword,
-  PaymentInfo,
-  ShippingInfo,
-  Shipping,
-  ConfirmPayment,
 }
 
 export const UPLOADING_WALLPAPER_SLUG = 'UPLOADING_WALLPAPER_SLUG';
@@ -687,26 +649,7 @@ export type IDimensions = {
   height: number;
 };
 
-export type StarsTransactionType = 'all' | 'inbound' | 'outbound';
-export type StarsTransactionHistory = Record<StarsTransactionType, {
-  transactions: ApiStarsTransaction[];
-  nextOffset?: string;
-} | undefined>;
-export type StarsSubscriptions = {
-  list: ApiStarsSubscription[];
-  nextOffset?: string;
-  isLoading?: boolean;
-};
-
 export type ConfettiStyle = 'poppers' | 'top-down';
-
-export type StarGiftInfo = {
-  peerId: string;
-  gift: ApiStarGiftRegular;
-  shouldHideName?: boolean;
-  message?: ApiFormattedText;
-  shouldUpgrade?: boolean;
-};
 
 export type TypingDraft = {
   senderId: string;
@@ -847,8 +790,6 @@ export type WebPageMediaSize = 'large' | 'small';
 
 export type AttachmentCompression = 'compress' | 'original';
 
-export type StarGiftCategory = 'all' | 'myUnique' | 'collectible';
-
 export type CallSound = (
   'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
 );
@@ -857,24 +798,6 @@ export type BotAppPermissions = {
   geolocation?: boolean;
   camera?: boolean;
   microphone?: boolean;
-};
-
-export type GiftProfileFilterOptions = {
-  sortType: 'byDate' | 'byValue';
-  shouldIncludeUnlimited: boolean;
-  shouldIncludeLimited: boolean;
-  shouldIncludeUpgradable: boolean;
-  shouldIncludeUnique: boolean;
-  shouldIncludeDisplayed: boolean;
-  shouldIncludeHidden: boolean;
-};
-export type ResaleGiftsSortType = 'byDate' | 'byPrice' | 'byNumber';
-export type ResaleGiftsFilterOptions = {
-  sortType: ResaleGiftsSortType;
-  modelAttributes?: StarGiftAttributeIdModel[];
-  patternAttributes?: ApiStarGiftAttributeIdPattern[];
-  backdropAttributes?: ApiStarGiftAttributeIdBackdrop[];
-  starsOnly?: boolean;
 };
 
 export type SendMessageParams = {

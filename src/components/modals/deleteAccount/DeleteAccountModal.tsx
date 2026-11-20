@@ -30,7 +30,7 @@ const DeleteAccountModal = ({
   selfDestructAccountDays,
 }: OwnProps & StateProps) => {
   const {
-    closeGiftCodeModal, closeDeleteAccountModal, setAccountTTL,
+    closeDeleteAccountModal, setAccountTTL,
   } = getActions();
   const lang = useLang();
   const isOpen = Boolean(modal);
@@ -76,7 +76,7 @@ const DeleteAccountModal = ({
     <Modal
       isOpen={isOpen}
       title={lang('SelfDestructTitle')}
-      onClose={closeGiftCodeModal}
+      onClose={closeDeleteAccountModal}
       className={styles.root}
     >
       <p>{lang('SelfDestructSessionsDescription')}</p>

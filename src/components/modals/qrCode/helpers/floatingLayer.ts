@@ -83,26 +83,7 @@ const EMOJI_SWAY_ANGLE = 4;
 const EMOJI_SWAY_SPEED = 0.3;
 const EMOJI_BOB_SPEED = 0.45;
 
-const GIFT_MODEL_SIZE = 78;
-const GIFT_MODEL_SKIP_X = 150;
-const GIFT_MODEL_SKIP_Y = 132;
-const GIFT_MODEL_OFFSET = 16;
-const GIFT_MODEL_SCALE_MIN = 0.93;
-const GIFT_MODEL_SCALE_MAX = 1.07;
-const GIFT_MODEL_TILT = 11;
-const GIFT_SYMBOL_SIZE = 20;
-const GIFT_SYMBOL_SKIP_X = 39;
-const GIFT_SYMBOL_SKIP_Y = 33;
-const GIFT_SYMBOL_JITTER_X = 17;
-const GIFT_SYMBOL_JITTER_Y = 14;
-const GIFT_SYMBOL_SCALE_MIN = 0.75;
-const GIFT_SYMBOL_SCALE_RANGE = 0.5;
-const GIFT_SYMBOL_EMPTY_SHARE = 0.39;
-const GIFT_CLEARANCE = 0.8;
-
 export const MAX_EMOJI_ITEM_SIZE = EMOJI_SIZE * EMOJI_BIG_TIER * EMOJI_SCALE_MAX;
-export const MAX_GIFT_MODEL_SIZE = GIFT_MODEL_SIZE * GIFT_MODEL_SCALE_MAX;
-export const MAX_GIFT_SYMBOL_SIZE = GIFT_SYMBOL_SIZE * (GIFT_SYMBOL_SCALE_MIN + GIFT_SYMBOL_SCALE_RANGE);
 
 const UINT32_RANGE = 4294967296;
 
@@ -115,16 +96,6 @@ enum Salt {
   EmojiSway,
   EmojiBob,
   EmojiDelay,
-  ModelRadius = 101,
-  ModelAngle,
-  ModelScale,
-  ModelTilt,
-  ModelDelay,
-  SymbolEmpty,
-  SymbolX,
-  SymbolY,
-  SymbolHeight,
-  SymbolDelay,
 }
 
 const INTEGRALS = buildIntegralTable();
@@ -334,76 +305,6 @@ export function enumerateEmojiItems(area: LayerRect, origin: Point, count: numbe
   return items;
 }
 
-export function enumerateGiftModels(area: LayerRect, origin: Point) {
-  const items: LayerItem[] = [];
-  const reach = getReach(area, GIFT_MODEL_OFFSET + MAX_GIFT_MODEL_SIZE / Math.SQRT2);
-  const rowFrom = Math.ceil((reach.top - origin.y) / GIFT_MODEL_SKIP_Y);
-  const rowTill = Math.floor((reach.top + reach.height - origin.y) / GIFT_MODEL_SKIP_Y);
-  for (let row = rowFrom; row <= rowTill; row++) {
-    const shift = (row & 1) ? 0.5 : 0;
-    const columnFrom = Math.ceil((reach.left - origin.x) / GIFT_MODEL_SKIP_X - shift);
-    const columnTill = Math.floor((reach.left + reach.width - origin.x) / GIFT_MODEL_SKIP_X - shift);
-    for (let column = columnFrom; column <= columnTill; column++) {
-      const { flat, size } = getModelFlat(row, column, origin);
-      const place = placeItem(area, flat, size);
-      if (!place) continue;
-
-      items.push({
-        key: `${row}:${column}`,
-        row,
-        column,
-        x: place.x,
-        y: place.y,
-        size: size * place.scale,
-        rotation: GIFT_MODEL_TILT * (2 * getNodeRandom(row, column, Salt.ModelTilt) - 1),
-        delay: getNodeRandom(row, column, Salt.ModelDelay),
-        pick: 0,
-      });
-    }
-  }
-
-  return items;
-}
-
-export function enumerateGiftSymbols(area: LayerRect, origin: Point) {
-  const items: LayerItem[] = [];
-  const reach = getReach(area, Math.max(GIFT_SYMBOL_JITTER_X, GIFT_SYMBOL_JITTER_Y) + MAX_GIFT_SYMBOL_SIZE / 2);
-  const rowFrom = Math.ceil((reach.top - origin.y) / GIFT_SYMBOL_SKIP_Y);
-  const rowTill = Math.floor((reach.top + reach.height - origin.y) / GIFT_SYMBOL_SKIP_Y);
-  for (let row = rowFrom; row <= rowTill; row++) {
-    const shift = (row & 1) ? 0.5 : 0;
-    const columnFrom = Math.ceil((reach.left - origin.x) / GIFT_SYMBOL_SKIP_X - shift);
-    const columnTill = Math.floor((reach.left + reach.width - origin.x) / GIFT_SYMBOL_SKIP_X - shift);
-    for (let column = columnFrom; column <= columnTill; column++) {
-      const random = (salt: Salt) => getNodeRandom(row, column, salt);
-      if (random(Salt.SymbolEmpty) < GIFT_SYMBOL_EMPTY_SHARE) continue;
-
-      const flat = {
-        x: origin.x + (column + shift) * GIFT_SYMBOL_SKIP_X + GIFT_SYMBOL_JITTER_X * (2 * random(Salt.SymbolX) - 1),
-        y: origin.y + row * GIFT_SYMBOL_SKIP_Y + GIFT_SYMBOL_JITTER_Y * (2 * random(Salt.SymbolY) - 1),
-      };
-      const height = random(Salt.SymbolHeight);
-      const size = GIFT_SYMBOL_SIZE * (GIFT_SYMBOL_SCALE_MIN + GIFT_SYMBOL_SCALE_RANGE * height * height);
-      const place = placeItem(area, flat, size);
-      if (!place || getIsNearModel(flat, size, origin)) continue;
-
-      items.push({
-        key: `${row}:${column}`,
-        row,
-        column,
-        x: place.x,
-        y: place.y,
-        size: size * place.scale,
-        rotation: 0,
-        delay: random(Salt.SymbolDelay),
-        pick: 0,
-      });
-    }
-  }
-
-  return items;
-}
-
 // The card's corner radius is unknown here, so an item inside the ellipse inscribed in the card counts as covered
 export function getIsCoveredByCard(card: LayerRect, x: number, y: number, size: number) {
   const width = card.width * (1 - CARD_SHRINK);
@@ -414,37 +315,6 @@ export function getIsCoveredByCard(card: LayerRect, x: number, y: number, size: 
   const ratioX = (Math.abs(x - (card.left + card.width / 2)) + radius) / (width / 2);
   const ratioY = (Math.abs(y - (card.top + card.height / 2)) + radius) / (height / 2);
   return ratioX * ratioX + ratioY * ratioY <= 1;
-}
-
-function getModelFlat(row: number, column: number, origin: Point) {
-  const random = (salt: Salt) => getNodeRandom(row, column, salt);
-  const shift = (row & 1) ? 0.5 : 0;
-  const radius = GIFT_MODEL_OFFSET * random(Salt.ModelRadius);
-  const angle = 2 * Math.PI * random(Salt.ModelAngle);
-
-  return {
-    flat: {
-      x: origin.x + (column + shift) * GIFT_MODEL_SKIP_X + radius * Math.cos(angle),
-      y: origin.y + row * GIFT_MODEL_SKIP_Y + radius * Math.sin(angle),
-    },
-    size: GIFT_MODEL_SIZE
-      * (GIFT_MODEL_SCALE_MIN + (GIFT_MODEL_SCALE_MAX - GIFT_MODEL_SCALE_MIN) * random(Salt.ModelScale)),
-  };
-}
-
-function getIsNearModel(flat: Point, size: number, origin: Point) {
-  const rowNear = Math.round((flat.y - origin.y) / GIFT_MODEL_SKIP_Y);
-  for (let row = rowNear - 1; row <= rowNear + 1; row++) {
-    const shift = (row & 1) ? 0.5 : 0;
-    const columnNear = Math.round((flat.x - origin.x) / GIFT_MODEL_SKIP_X - shift);
-    for (let column = columnNear - 1; column <= columnNear + 1; column++) {
-      const model = getModelFlat(row, column, origin);
-      const clearance = (GIFT_CLEARANCE * (model.size + size)) / 2;
-      if (Math.hypot(flat.x - model.flat.x, flat.y - model.flat.y) < clearance) return true;
-    }
-  }
-
-  return false;
 }
 
 export function getPickIndex(row: number, column: number, count: number) {

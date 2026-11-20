@@ -32,7 +32,6 @@ import {
 import { buildApiPeerId } from '../apiBuilders/peers';
 import { buildApiStory } from '../apiBuilders/stories';
 import { buildApiUser, buildApiUserFullInfo } from '../apiBuilders/users';
-import { resetGiftTmpPassword } from '../giftTmpPassword';
 import {
   buildInputChannelFromLocalDb,
   buildInputPeerFromLocalDb,
@@ -76,8 +75,6 @@ import {
   onWebAuthTokenFailed,
 } from './auth';
 import downloadMediaWithClient, { parseMediaUrl } from './media';
-import { clearTonConnectKeys } from './tonConnect';
-import { clearPreviousSigningKeys } from './wallet';
 
 import { ChatAbortController } from '../ChatAbortController';
 
@@ -216,11 +213,8 @@ export async function destroy(noLogOut = false, noClearLocalDb = false) {
   if (!noClearLocalDb) {
     clearLocalDb();
     resetUpdatesManager();
-    clearTonConnectKeys();
-    clearPreviousSigningKeys();
   }
 
-  resetGiftTmpPassword();
   client.destroy();
 }
 
@@ -280,10 +274,6 @@ export async function invokeWithAccount<T extends GramJs.AnyRequest>(
 
 export function disconnect() {
   client.disconnect();
-}
-
-export function getClient() {
-  return client;
 }
 
 function onSessionUpdate(sessionData?: ApiSessionData) {
@@ -478,10 +468,6 @@ export async function uploadAvatar({ file, video, videoStartTs }: ApiAvatarUploa
 
 export function updateTwoFaSettings(params: TwoFaParams) {
   return client.updateTwoFaSettings(params);
-}
-
-export function getTmpPassword(currentPassword: string, ttl?: number) {
-  return client.getTmpPassword(currentPassword, ttl);
 }
 
 export function getCurrentPassword(currentPassword?: string) {

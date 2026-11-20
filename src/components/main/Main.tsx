@@ -8,7 +8,7 @@ import {
 import { addExtraClass, setExtraStyles } from '../../lib/teact/teact-dom';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
-import type { ApiChatFolder, ApiLimitTypeWithModal, ApiStarGiftAuctionState, ApiUser } from '../../api/types';
+import type { ApiChatFolder, ApiLimitTypeWithModal, ApiUser } from '../../api/types';
 import type { TabState } from '../../global/types';
 
 import { BASE_EMOJI_KEYWORD_LANG, DEBUG, FOLDERS_POSITION_LEFT } from '../../config';
@@ -27,7 +27,6 @@ import {
   selectIsRightColumnShown,
   selectIsStoryViewerOpen,
   selectPerformanceSettingsValue,
-  selectTabSelectedGiftAuction,
   selectTabState,
   selectUser,
 } from '../../global/selectors';
@@ -75,8 +74,6 @@ import MiddleColumn from '../middle/MiddleColumn';
 import AudioPlayer from '../middle/panes/AudioPlayer';
 import FloatingRoundVideo from '../middle/panes/FloatingRoundVideo';
 import ModalContainer from '../modals/ModalContainer';
-import PaymentModal from '../payment/PaymentModal.async';
-import ReceiptModal from '../payment/ReceiptModal.async';
 import RightColumn from '../right/RightColumn';
 import StoryViewer from '../story/StoryViewer.async';
 import AttachBotRecipientPicker from './AttachBotRecipientPicker.async';
@@ -93,7 +90,6 @@ import NewContactModal from './NewContactModal.async';
 import PremiumLimitReachedModal from './premium/common/PremiumLimitReachedModal.async';
 import GiveawayModal from './premium/GiveawayModal.async';
 import PremiumMainModal from './premium/PremiumMainModal.async';
-import StarsGiftingPickerModal from './premium/StarsGiftingPickerModal.async';
 import ConfettiContainer from './visualEffects/ConfettiContainer';
 import WaveContainer from './visualEffects/WaveContainer';
 
@@ -137,12 +133,9 @@ type StateProps = {
   requestedDraft?: TabState['requestedDraft'];
   limitReached?: ApiLimitTypeWithModal;
   deleteFolderDialog?: ApiChatFolder;
-  isPaymentModalOpen?: boolean;
-  isReceiptModalOpen?: boolean;
   isReactionPickerOpen: boolean;
   isGiveawayModalOpen?: boolean;
   isDeleteMessageModalOpen?: boolean;
-  isStarsGiftingPickerModal?: boolean;
   isCurrentUserPremium?: boolean;
   noRightColumnAnimation?: boolean;
   withInterfaceAnimations?: boolean;
@@ -151,7 +144,6 @@ type StateProps = {
   isAppConfigLoaded?: boolean;
   isFoldersSidebarShown: boolean;
   diceEmojies?: string[];
-  selectedGiftAuction?: ApiStarGiftAuctionState;
 };
 
 const APP_OUTDATED_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
@@ -193,9 +185,6 @@ const Main = ({
   isPremiumModalOpen,
   isGiveawayModalOpen,
   isDeleteMessageModalOpen,
-  isStarsGiftingPickerModal,
-  isPaymentModalOpen,
-  isReceiptModalOpen,
   isReactionPickerOpen,
   isCurrentUserPremium,
   deleteFolderDialog,
@@ -208,7 +197,6 @@ const Main = ({
   isAppConfigLoaded,
   isFoldersSidebarShown,
   diceEmojies,
-  selectedGiftAuction,
 }: OwnProps & StateProps) => {
   const {
     initMain,
@@ -225,10 +213,6 @@ const Main = ({
     loadAvailableReactions,
     loadStickerSets,
     loadDiceStickers,
-    loadPremiumGifts,
-    loadTonGifts,
-    loadStarGifts,
-    loadMyUniqueGifts,
     loadDefaultTopicIcons,
     loadAddedStickers,
     loadFavoriteStickers,
@@ -239,12 +223,9 @@ const Main = ({
     loadConfig,
     loadAppConfig,
     loadAttachBots,
-    loadWalletState,
     loadContactList,
     loadCustomEmojis,
     loadGenericEmojiEffects,
-    closePaymentModal,
-    clearReceipt,
     checkAppVersion,
     openThread,
     toggleLeftColumn,
@@ -262,6 +243,7 @@ const Main = ({
     loadAiComposeTones,
     loadQuickReplies,
     loadStarStatus,
+    loadPremiumGifts,
     loadAvailableEffects,
     loadPaidReactionPrivacy,
     loadPasswordInfo,
@@ -270,9 +252,7 @@ const Main = ({
     loadAllStories,
     loadAllHiddenStories,
     loadContentSettings,
-    loadGiftAuction,
     loadPromoData,
-    loadActiveGiftAuctions,
   } = getActions();
 
   if (DEBUG && !DEBUG_isLogged) {
@@ -342,11 +322,6 @@ const Main = ({
       loadDefaultTagReactions();
       loadAttachBots();
 
-      // `wallet.getState` creates the wallet on first call, so it is only made where the wallet is rolled out
-      if (getGlobal().appConfig.isWalletAvailable) {
-        loadWalletState();
-      }
-
       loadNotificationSettings();
       loadNotificationExceptions();
       loadTopPeers({ category: 'botsInline' });
@@ -364,16 +339,12 @@ const Main = ({
       loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
       loadPremiumGifts();
-      loadTonGifts();
-      loadStarGifts();
-      loadMyUniqueGifts();
       loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
       loadQuickReplies();
       loadTimezones();
       loadAiComposeTones();
-      loadActiveGiftAuctions();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 
@@ -482,15 +453,6 @@ const Main = ({
       type: parsedLocationHash.type,
     });
   }, [currentUserId]);
-
-  // Refresh gift auction subscription
-  const auctionTimeout = selectedGiftAuction?.state.type === 'active' ? selectedGiftAuction?.timeout : undefined;
-  const auctionGiftId = selectedGiftAuction?.gift.id;
-  useInterval(() => {
-    if (auctionGiftId) {
-      loadGiftAuction({ giftId: auctionGiftId });
-    }
-  }, auctionTimeout ? auctionTimeout * 1000 : undefined);
 
   // Restore Transition slide class after async rendering
   useLayoutEffect(() => {
@@ -694,10 +656,7 @@ const Main = ({
       <MessageListHistoryHandler />
       <PremiumMainModal isOpen={isPremiumModalOpen} />
       <GiveawayModal isOpen={isGiveawayModalOpen} />
-      <StarsGiftingPickerModal isOpen={isStarsGiftingPickerModal} />
       <PremiumLimitReachedModal limit={limitReached} />
-      <PaymentModal isOpen={isPaymentModalOpen} onClose={closePaymentModal} />
-      <ReceiptModal isOpen={isReceiptModalOpen} onClose={clearReceipt} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
       <DeleteMessageModal isOpen={isDeleteMessageModalOpen} />
@@ -727,14 +686,10 @@ export default memo(withGlobal<OwnProps>(
       premiumModal,
       giveawayModal,
       deleteMessageModal,
-      starsGiftingPickerModal,
       isMasterTab,
-      payment,
       limitReachedModal,
       deleteFolderDialogModal,
     } = selectTabState(global);
-
-    const selectedGiftAuction = selectTabSelectedGiftAuction(global);
 
     const { wasTimeFormatSetManually, foldersPosition } = selectSharedSettings(global);
 
@@ -781,10 +736,7 @@ export default memo(withGlobal<OwnProps>(
       isPremiumModalOpen: premiumModal?.isOpen,
       isGiveawayModalOpen: giveawayModal?.isOpen,
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
-      isStarsGiftingPickerModal: starsGiftingPickerModal?.isOpen,
       limitReached: limitReachedModal?.limit,
-      isPaymentModalOpen: payment.isPaymentModalOpen,
-      isReceiptModalOpen: Boolean(payment.receipt),
       deleteFolderDialog,
       isMasterTab,
       requestedDraft,
@@ -794,7 +746,6 @@ export default memo(withGlobal<OwnProps>(
       isAppConfigLoaded: global.isAppConfigLoaded,
       isFoldersSidebarShown: foldersPosition === FOLDERS_POSITION_LEFT && !isMobile && selectAreFoldersPresent(global),
       diceEmojies: global.appConfig?.diceEmojies,
-      selectedGiftAuction,
     };
   },
 )(Main));

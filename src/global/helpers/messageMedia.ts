@@ -149,10 +149,6 @@ export function getMessageTodo(message: MediaContainer) {
   return message.content.todo;
 }
 
-export function getMessageInvoice(message: MediaContainer) {
-  return message.content.invoice;
-}
-
 export function getMessageLocation(message: MediaContainer) {
   return message.content.location;
 }
@@ -212,8 +208,7 @@ export function getMessageIsSpoiler(message: MediaContainer) {
   const media = getMessagePhoto(message)
     || getMessageVideo(message);
 
-  const invoiceMedia = getMessageInvoice(message)?.extendedMedia;
-  return Boolean(invoiceMedia || media?.isSpoiler);
+  return Boolean(media?.isSpoiler);
 }
 
 export function buildStaticMapHash(

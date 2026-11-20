@@ -6,8 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type {
   ApiChat, ApiMessage, ApiPaidReactionPrivacyType,
   ApiPeer,
-  ApiSendAsPeerId,
-  ApiStarsAmount, ApiUser,
+  ApiSendAsPeerId, ApiUser,
 } from '../../../api/types';
 import type { TabState } from '../../../global/types';
 import type { CustomPeer } from '../../../types';
@@ -37,7 +36,6 @@ import DropdownMenu from '../../ui/DropdownMenu';
 import MenuItem from '../../ui/MenuItem';
 import Modal from '../../ui/Modal';
 import Separator from '../../ui/Separator';
-import BalanceBlock from '../stars/BalanceBlock';
 import StarSlider from './StarSlider';
 
 import styles from './PaidReactionModal.module.scss';
@@ -50,7 +48,6 @@ type StateProps = {
   message?: ApiMessage;
   chat?: ApiChat;
   maxAmount: number;
-  starBalance?: ApiStarsAmount;
   defaultPrivacy?: ApiPaidReactionPrivacyType;
   sendPaidReactionsAsPeerIds?: ApiSendAsPeerId[];
   currentUserId: string;
@@ -80,7 +77,6 @@ const PaidReactionModal = ({
   chat,
   message,
   maxAmount,
-  starBalance,
   defaultPrivacy,
   sendPaidReactionsAsPeerIds,
   currentUserId,
@@ -300,10 +296,6 @@ const PaidReactionModal = ({
       <div className={styles.sendAsPeersMenuContainer}>
         {sendAsPeersMenu}
       </div>
-      <div className={styles.headerControlPanel}>
-        <BalanceBlock balance={starBalance} className={styles.modalBalance} withAddButton />
-      </div>
-
       <StarSlider
         className={styles.slider}
         defaultValue={DEFAULT_STARS_AMOUNT}
@@ -372,7 +364,6 @@ export default memo(withGlobal<OwnProps>(
   (global, { modal }): Complete<StateProps> => {
     const chat = modal && selectChat(global, modal.chatId);
     const message = modal && selectChatMessage(global, modal.chatId, modal.messageId);
-    const starBalance = global.stars?.balance;
     const maxAmount = global.appConfig.paidReactionMaxAmount || MAX_REACTION_AMOUNT;
     const defaultPrivacy = global.settings.paidReactionPrivacy;
     const sendPaidReactionsAsPeerIds = chat?.sendPaidReactionsAsPeerIds;
@@ -382,7 +373,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       chat,
       message,
-      starBalance,
       maxAmount,
       defaultPrivacy,
       sendPaidReactionsAsPeerIds,

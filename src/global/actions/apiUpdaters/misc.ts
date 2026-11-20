@@ -1,9 +1,7 @@
 import type { ActionReturnType } from '../../types';
 
-import { SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
-import { applyLangPackDifference, getTranslationFn, requestLangPackDifference } from '../../../util/localization';
+import { applyLangPackDifference, requestLangPackDifference } from '../../../util/localization';
 import { isChatChannel, selectTabBrowserState } from '../../helpers';
-import { getPeerTitle } from '../../helpers/peers';
 import { addActionHandler, setGlobal } from '../../index';
 import {
   addBlockedUser,
@@ -20,14 +18,11 @@ import {
   updatePoll,
   updateStealthMode,
 } from '../../reducers';
-import { updateTabState } from '../../reducers/tabs';
 import { updateThreadInfo } from '../../reducers/threads';
 import {
   selectChat,
-  selectPeer,
   selectPeerStories,
   selectPeerStory,
-  selectTabState,
 } from '../../selectors';
 
 addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
@@ -287,117 +282,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateLangPack': {
       applyLangPackDifference(update);
       break;
-    }
-
-    case 'newMessage': {
-      const action = update.message.content?.action;
-
-      if (action?.type === 'starGift' && update.message.isOutgoing) {
-        const { gift } = action;
-        if (!gift.isAuction || update.message.chatId === SERVICE_NOTIFICATIONS_USER_ID) return undefined;
-
-        const { chatId, id } = update.message;
-
-        if (!chatId || !id) return;
-
-        Object.values(global.byTabId).forEach(({ id: tabId }) => {
-          actions.focusMessage({
-            chatId,
-            messageId: id,
-            tabId,
-          });
-          actions.closeGiftAuctionBidModal({ tabId });
-          actions.closeGiftModal({ tabId });
-
-          actions.showNotification({
-            icon: 'auction-filled',
-            message: {
-              key: 'GiftAuctionWonNotification',
-              variables: {
-                gift: gift.title,
-              },
-            },
-            tabId,
-          });
-
-          actions.requestConfetti({ withStars: true, tabId });
-        });
-        return undefined;
-      }
-
-      if (!update.message.isOutgoing && update.message.chatId !== SERVICE_NOTIFICATIONS_USER_ID) return undefined;
-      if (action?.type !== 'starGiftUnique') return undefined;
-      const actionStarGift = action.gift;
-
-      Object.values(global.byTabId).forEach(({ id: tabId }) => {
-        const tabState = selectTabState(global, tabId);
-        if (tabState.isWaitingForStarGiftUpgrade) {
-          actions.openUniqueGiftBySlug({
-            slug: actionStarGift.slug,
-            tabId,
-          });
-
-          actions.showNotification({
-            title: { key: 'GiftUpgradedTitle' },
-            message: { key: 'GiftUpgradedDescription' },
-            tabId,
-          });
-
-          actions.requestConfetti({ withStars: true, tabId });
-
-          global = updateTabState(global, {
-            isWaitingForStarGiftUpgrade: undefined,
-          }, tabId);
-        }
-
-        if (tabState.isWaitingForStarGiftTransfer) {
-          const chatId = update.message.chatId;
-          const receiver = chatId ? selectPeer(global, chatId) : undefined;
-          if (receiver) {
-            actions.focusMessage({
-              chatId: receiver.id,
-              messageId: update.message.id,
-              tabId,
-            });
-
-            actions.showNotification({
-              message: {
-                key: 'GiftTransferSuccessMessage',
-                variables: {
-                  gift: {
-                    key: 'GiftUnique',
-                    variables: {
-                      title: actionStarGift.title,
-                      number: actionStarGift.number,
-                    },
-                  },
-                  peer: getPeerTitle(getTranslationFn(), receiver),
-                },
-              },
-              tabId,
-            });
-          }
-
-          actions.requestConfetti({ withStars: true, tabId });
-
-          global = updateTabState(global, {
-            isWaitingForStarGiftTransfer: undefined,
-          }, tabId);
-
-          actions.reloadPeerSavedGifts({ peerId: global.currentUserId! });
-        }
-
-        if (tabState.giftCraftModal && actionStarGift.isCrafted) {
-          global = updateTabState(global, {
-            giftCraftModal: {
-              ...tabState.giftCraftModal,
-              craftResult: { success: true, gift: actionStarGift },
-            },
-          }, tabId);
-        }
-      });
-
-      setGlobal(global);
     }
   }
 

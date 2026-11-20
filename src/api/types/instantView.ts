@@ -73,7 +73,6 @@ export type ApiRichText =
   | { type: 'autoEmail'; text: ApiRichText }
   | { type: 'autoPhone'; text: ApiRichText }
   | { type: 'bankCard'; text: ApiRichText }
-  | { type: 'tonAddress'; text: ApiRichText }
   | { type: 'mentionName'; text: ApiRichText; userId: string }
   | ApiRichTextDate
   | ({ type: 'button' } & ApiRichButton);

@@ -39,15 +39,11 @@ export * from './calls';
 
 export * from './reactions';
 
-export * from './statistics';
-
 export * from './phoneCallState';
 
 export * from './stories';
 
 export * from './payments';
-
-export * from './fragment';
 
 export * from './stars';
 
@@ -56,6 +52,3 @@ export * from './forum';
 export * from './communities';
 
 export * from './misc';
-
-export * from './wallet';
-export * from './tonConnect';

@@ -1,17 +1,15 @@
 import { memo, useMemo, useRef } from '../../../../lib/teact/teact';
 import { withGlobal } from '../../../../global';
 
-import type { ApiChat, ApiPeer, ApiSticker } from '../../../../api/types';
-import type { ApiMessageActionGiftCode, ApiMessageActionPrizeStars } from '../../../../api/types/messageActions';
+import type { ApiChat, ApiSticker } from '../../../../api/types';
+import type { ApiMessageActionPrizeStars } from '../../../../api/types/messageActions';
 
 import { getPeerTitle } from '../../../../global/helpers/peers';
 import {
   selectCanPlayAnimatedEmojis,
   selectChat,
-  selectGiftStickerForDuration,
   selectGiftStickerForStars,
 } from '../../../../global/selectors';
-import { formatCountdownDays } from '../../../../util/dates/duration';
 import { renderPeerLink } from '../helpers/messageActions';
 
 import { type ObserveFn } from '../../../../hooks/useIntersectionObserver';
@@ -23,15 +21,13 @@ import StickerView from '../../../common/StickerView';
 import styles from '../ActionMessage.module.scss';
 
 type OwnProps = {
-  action: ApiMessageActionGiftCode | ApiMessageActionPrizeStars;
-  sender?: ApiPeer;
+  action: ApiMessageActionPrizeStars;
   observeIntersectionForLoading?: ObserveFn;
   observeIntersectionForPlaying?: ObserveFn;
   onClick?: NoneToVoidFunction;
 };
 
 type StateProps = {
-  currentUserId: string;
   channel?: ApiChat;
   sticker?: ApiSticker;
   canPlayAnimatedEmojis: boolean;
@@ -40,9 +36,7 @@ type StateProps = {
 const STICKER_SIZE = 150;
 
 const GiveawayPrizeAction = ({
-  currentUserId,
   action,
-  sender,
   sticker,
   canPlayAnimatedEmojis,
   channel,
@@ -59,14 +53,6 @@ const GiveawayPrizeAction = ({
 
     return renderPeerLink(channel?.id, channelTitle || channelFallbackText);
   }, [channel, lang]);
-
-  const peerLink = useMemo(() => {
-    const peer = channel || sender;
-    const peerTitle = peer && getPeerTitle(lang, peer);
-    const peerFallbackText = lang('ActionFallbackChat');
-
-    return renderPeerLink(peer?.id, peerTitle || peerFallbackText);
-  }, [channel, sender, lang]);
 
   return (
     <div className={styles.contentBox} tabIndex={0} role="button" onClick={onClick}>
@@ -88,46 +74,24 @@ const GiveawayPrizeAction = ({
       </div>
       <div>
         <h3 className={styles.title}>
-          {lang(action.type !== 'giftCode' || action.isViaGiveaway
-            ? 'ActionGiveawayResultTitle' : 'GiftInfoTitle')}
+          {lang('ActionGiveawayResultTitle')}
         </h3>
         <div>
-          {action.type === 'giftCode' && (
-            action.isViaGiveaway ? lang(
-              'ActionGiveawayResultPremiumDuration',
-              { channel: channelLink, duration: formatCountdownDays(lang, action.days) },
-              {
-                withNodes: true,
-                withMarkdown: true,
-                renderTextFilters: ['br'],
-              })
-              : lang(
-                sender?.id === currentUserId
-                  ? 'ActionGiftCodeSubscriptionDurationYou'
-                  : 'ActionGiftCodeSubscriptionDuration',
-                { peer: peerLink, duration: formatCountdownDays(lang, action.days) },
-                {
-                  withNodes: true,
-                  renderTextFilters: ['br'],
-                })
-          )}
-          {action.type === 'prizeStars' && (
-            lang(
-              'ActionGiveawayResultStarsText',
-              { amount: action.stars, channel: channelLink },
-              {
-                withNodes: true,
-                withMarkdown: true,
-                pluralValue: action.stars,
-                renderTextFilters: ['br'],
-              },
-            )
+          {lang(
+            'ActionGiveawayResultStarsText',
+            { amount: action.stars, channel: channelLink },
+            {
+              withNodes: true,
+              withMarkdown: true,
+              pluralValue: action.stars,
+              renderTextFilters: ['br'],
+            },
           )}
         </div>
       </div>
       <div className={styles.actionButton}>
         <Sparkles preset="button" />
-        {lang(action.type === 'giftCode' ? 'ActionOpenGiftButton' : 'ActionViewButton')}
+        {lang('ActionViewButton')}
       </div>
     </div>
   );
@@ -135,16 +99,12 @@ const GiveawayPrizeAction = ({
 
 export default memo(withGlobal<OwnProps>(
   (global, { action }): Complete<StateProps> => {
-    const currentUserId = global.currentUserId!;
-    const sticker = action.type === 'giftCode'
-      ? selectGiftStickerForDuration(global, action.days)
-      : selectGiftStickerForStars(global, action.stars);
+    const sticker = selectGiftStickerForStars(global, action.stars);
     const canPlayAnimatedEmojis = selectCanPlayAnimatedEmojis(global);
 
     const channel = action.boostPeerId ? selectChat(global, action.boostPeerId) : undefined;
 
     return {
-      currentUserId,
       sticker,
       canPlayAnimatedEmojis,
       channel,

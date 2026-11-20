@@ -3,18 +3,14 @@ import type { MediaEditDocument } from '../../types/mediaEditor';
 import type {
   ApiBotInlineMediaResult,
   ApiBotInlineResult,
-  ApiWebDocument,
 } from './bots';
 import type { ApiChatAdminRights } from './chats';
 import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
-import type {
-  ApiLabeledPrice,
-} from './payments';
 import type { ApiTypePeerColor } from './peers';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiStarGiftRegular, ApiStarGiftUnique, ApiTypeCurrencyAmount } from './stars';
+import type { ApiTypeCurrencyAmount } from './stars';
 import type {
   ApiMessageStoryData, ApiStory, ApiWebPageStickerData, ApiWebPageStoryData,
 } from './stories';
@@ -255,50 +251,12 @@ export interface ApiMessagePoll {
   attachedMedia?: MediaContent;
 }
 
-export interface ApiInvoice {
-  prices: ApiLabeledPrice[];
-  totalAmount: number;
-  // Set for an invoice in Stars or TON. TON is counted in nanotons, which `totalAmount` cannot hold exactly.
-  totalPrice?: ApiTypeCurrencyAmount;
-  currency: string;
-  isTest?: boolean;
-  isRecurring?: boolean;
-  subscriptionPeriod?: number;
-  termsUrl?: string;
-  maxTipAmount?: number;
-  suggestedTipAmounts?: number[];
-  isNameRequested?: boolean;
-  isPhoneRequested?: boolean;
-  isEmailRequested?: boolean;
-  isShippingAddressRequested?: boolean;
-  isFlexible?: boolean;
-  isPhoneSentToProvider?: boolean;
-  isEmailSentToProvider?: boolean;
-}
-
-export interface ApiMediaInvoice {
-  mediaType: 'invoice';
-  title: string;
-  description: string;
-  photo?: ApiWebDocument;
-  isTest?: boolean;
-  receiptMessageId?: number;
-  currency: string;
-  amount: number;
-  extendedMedia?: ApiMediaExtendedPreview;
-}
-
 export interface ApiMediaExtendedPreview {
   mediaType: 'extendedMediaPreview';
   width?: number;
   height?: number;
   thumbnail?: ApiThumbnail;
   duration?: number;
-}
-
-export interface ApiPaymentCredentials {
-  id: string;
-  title: string;
 }
 
 export interface ApiGeoPoint {
@@ -461,19 +419,12 @@ export interface ApiWebPageFull {
   document?: ApiDocument;
   video?: ApiVideo;
   story?: ApiWebPageStoryData;
-  gift?: ApiStarGiftUnique;
-  auction?: ApiWebPageAuctionData;
   stickers?: ApiWebPageStickerData;
   cachedPage?: ApiInstantViewPage;
   cachedPageAudioById?: Record<string, ApiAudio>;
   aiComposeToneEmojiId?: string;
   hasLargeMedia?: boolean;
 }
-
-export type ApiWebPageAuctionData = {
-  gift: ApiStarGiftRegular;
-  endDate: number;
-};
 
 export type ApiWebPage = ApiWebPagePending | ApiWebPageEmpty | ApiWebPageFull;
 
@@ -696,7 +647,6 @@ export enum ApiMessageEntityTypes {
   DiffInsert = 'MessageEntityDiffInsert',
   DiffReplace = 'MessageEntityDiffReplace',
   DiffDelete = 'MessageEntityDiffDelete',
-  TonAddress = 'MessageEntityTonAddress',
 }
 
 export interface ApiFormattedText {
@@ -769,7 +719,6 @@ export type MediaContent = {
   webPage?: ApiMessageWebPage;
   audio?: ApiAudio;
   voice?: ApiVoice;
-  invoice?: ApiMediaInvoice;
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;
@@ -1097,7 +1046,6 @@ export type ApiInlineButtonAction =
 export type ApiLocalButtonAction =
   { type: 'suggestedMessage'; buttonType: 'approve' | 'decline' | 'suggestChanges'; disabled?: boolean }
   | { type: 'openThread' }
-  | { type: 'giftOffer'; buttonType: 'accept' | 'reject' }
   | { type: 'noForwardsRequest'; buttonType: 'accept' | 'reject' };
 
 export type ApiKeyboardButton = {
@@ -1108,9 +1056,6 @@ export type ApiKeyboardButton = {
 
 export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'suggestedMessage' }>;
-};
-export type KeyboardButtonGiftOffer = ApiKeyboardButton & {
-  action: Extract<ApiLocalButtonAction, { type: 'giftOffer' }>;
 };
 export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'noForwardsRequest' }>;

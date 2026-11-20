@@ -1,4 +1,3 @@
-import type { TabState } from '../../global/types';
 import type {
   GroupCallConnectionData,
   GroupCallConnectionState,
@@ -49,12 +48,11 @@ import type {
 import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
-import type { ApiStarGiftAuctionUserState, ApiTypeCurrencyAmount, ApiTypeStarGiftAuctionState } from './stars';
+import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
 } from './users';
-import type { ApiTonConnectSession, ApiWalletGaslessInfo, ApiWalletStateResult, ApiWalletTransaction } from './wallet';
 
 export type ApiUpdateReady = {
   '@type': 'updateApiReady';
@@ -690,18 +688,6 @@ export type ApiUpdatePeerBlocked = {
   isBlockedFromStories?: boolean;
 };
 
-export type ApiUpdatePaymentStateCompleted = {
-  '@type': 'updatePaymentStateCompleted';
-  paymentState: TabState['payment'];
-  tabId: number;
-};
-
-export type ApiUpdateStarPaymentStateCompleted = {
-  '@type': 'updateStarPaymentStateCompleted';
-  paymentState: TabState['starsPayment'];
-  tabId: number;
-};
-
 export type ApiUpdatePrivacy = {
   '@type': 'updatePrivacy';
   key: ApiPrivacyKey;
@@ -964,55 +950,6 @@ export type ApiUpdateStarsBalance = {
   balance: ApiTypeCurrencyAmount;
 };
 
-export type ApiUpdateWalletState = {
-  '@type': 'updateWalletState';
-  wallet: ApiWalletStateResult;
-};
-
-export type ApiUpdateWalletTonConnectSession = {
-  '@type': 'updateWalletTonConnectSession';
-  session: ApiTonConnectSession;
-};
-
-export type ApiUpdateWalletTonConnectPendingDisconnect = {
-  '@type': 'updateWalletTonConnectPendingDisconnect';
-  sessionIds: string[];
-};
-
-// Reported by the chain activity stream
-export type ApiUpdateWalletActivity = {
-  '@type': 'updateWalletActivity';
-};
-
-// `transaction` is present once the transfer is on the chain
-export type ApiUpdateWalletSentTransaction = {
-  '@type': 'updateWalletSentTransaction';
-  msgHash: string;
-  isGasless?: boolean;
-  transaction?: ApiWalletTransaction;
-};
-
-export type ApiUpdateWalletGaslessInfo = {
-  '@type': 'updateWalletGaslessInfo';
-  gaslessInfo: ApiWalletGaslessInfo;
-};
-
-export type ApiUpdateStarGiftAuctionState = {
-  '@type': 'updateStarGiftAuctionState';
-  giftId: string;
-  state: ApiTypeStarGiftAuctionState;
-};
-
-export type ApiUpdateStarGiftAuctionUserState = {
-  '@type': 'updateStarGiftAuctionUserState';
-  giftId: string;
-  userState: ApiStarGiftAuctionUserState;
-};
-
-export type ApiUpdateStarGiftCraftFail = {
-  '@type': 'updateStarGiftCraftFail';
-};
-
 export type ApiUpdateDeleteProfilePhoto = {
   '@type': 'updateDeleteProfilePhoto';
   peerId: string;
@@ -1086,7 +1023,7 @@ export type ApiUpdate = (
   ApiUpdateError | ApiUpdateResetContacts | ApiUpdateStartEmojiInteraction | ApiUpdateThreadReadState |
   ApiUpdateFavoriteStickers | ApiUpdateStickerSet | ApiUpdateStickerSets | ApiUpdateStickerSetsOrder |
   ApiUpdateRecentStickers | ApiUpdateSavedGifs | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
-  ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage | ApiUpdateStarPaymentStateCompleted |
+  ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage |
   ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
   ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
@@ -1096,7 +1033,7 @@ export type ApiUpdate = (
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
   ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
-  ApiUpdatePendingJoinRequests | ApiUpdatePaymentStateCompleted |
+  ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
   ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
   ApiUpdateMessageExtendedMedia | ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
@@ -1105,15 +1042,12 @@ export type ApiUpdate = (
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
   ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateStarGiftAuctionState
-  | ApiUpdateStarGiftAuctionUserState | ApiUpdateStarGiftCraftFail | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateBotCommands
   | ApiUpdateQuickReplyMessage | ApiUpdateQuickReplies
   | ApiDeleteQuickReply | ApiUpdateDeleteQuickReplyMessages | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
-  | ApiUpdateAiComposeTones | ApiUpdateWalletState | ApiUpdateWalletActivity
-  | ApiUpdateWalletSentTransaction | ApiUpdateWalletGaslessInfo
-  | ApiUpdateWalletTonConnectSession | ApiUpdateWalletTonConnectPendingDisconnect
+  | ApiUpdateAiComposeTones
 );
 
 export type OnApiUpdate = (update: ApiUpdate) => void;

@@ -59,7 +59,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
   premium_purchase_blocked: boolean;
-  giveaway_gifts_purchase_available: boolean;
   giveaway_add_peers_max: number;
   premium_bot_username: string;
   premium_invoice_slug: string;
@@ -88,8 +87,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   upload_premium_speedup_download?: number;
   upload_premium_speedup_upload?: number;
   stars_gifts_enabled?: boolean;
-  stargifts_message_length_max?: number;
-  stargifts_convert_period_max?: number;
   starref_start_param_prefixes?: string[];
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
@@ -97,18 +94,10 @@ export interface GramJsAppConfig extends LimitsConfig {
   stars_usd_sell_rate_x1000?: number;
   stars_paid_message_commission_permille?: number;
   stars_paid_message_amount_max?: number;
-  stargifts_pinned_to_top_limit?: number;
   freeze_since_date?: number;
   freeze_until_date?: number;
   freeze_appeal_url?: string;
   channel_autotranslation_level_min?: number;
-  stars_stargift_resale_amount_max?: number;
-  stars_stargift_resale_amount_min?: number;
-  stars_stargift_resale_commission_permille?: number;
-  stargifts_craft_attribute_permilles?: number[];
-  ton_stargift_resale_amount_min?: number;
-  ton_stargift_resale_amount_max?: number;
-  ton_stargift_resale_commission_permille?: number;
   stars_suggested_post_amount_max?: number;
   stars_suggested_post_amount_min?: number;
   stars_suggested_post_commission_permille?: number;
@@ -121,11 +110,6 @@ export interface GramJsAppConfig extends LimitsConfig {
   ton_suggested_post_amount_min?: number;
   ton_usd_rate?: number;
   ton_topup_url?: string;
-  wallet_available?: boolean;
-  wallet_transfer_min_nanos?: number;
-  wallet_gasless_daily_transfers?: number;
-  wallet_card_bg_gifts?: string[];
-  old_wallet_bot_username?: string;
   poll_answers_max?: number;
   poll_close_period_max?: number;
   poll_countries_max?: number;
@@ -212,10 +196,8 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     premiumBotUsername: appConfig.premium_bot_username,
-    premiumInvoiceSlug: appConfig.premium_invoice_slug,
     premiumPromoOrder: appConfig.premium_promo_order as ApiPremiumSection[],
     isPremiumPurchaseBlocked: appConfig.premium_purchase_blocked,
-    isGiveawayGiftsPurchaseAvailable: appConfig.giveaway_gifts_purchase_available,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
@@ -271,21 +253,11 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     paidReactionMaxAmount: appConfig.stars_paid_reaction_amount_max,
     isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,
     isStarsGiftEnabled: appConfig.stars_gifts_enabled,
-    starGiftMaxMessageLength: appConfig.stargifts_message_length_max,
-    starGiftMaxConvertPeriod: appConfig.stargifts_convert_period_max,
     starRefStartPrefixes: appConfig.starref_start_param_prefixes,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
-    savedGiftPinLimit: appConfig.stargifts_pinned_to_top_limit,
     freezeSinceDate: appConfig.freeze_since_date,
     freezeUntilDate: appConfig.freeze_until_date,
     freezeAppealUrl: appConfig.freeze_appeal_url,
-    starsStargiftResaleAmountMin: appConfig.stars_stargift_resale_amount_min,
-    starsStargiftResaleAmountMax: appConfig.stars_stargift_resale_amount_max,
-    starsStargiftResaleCommissionPermille: appConfig.stars_stargift_resale_commission_permille,
-    stargiftsCraftAttributePermilles: appConfig.stargifts_craft_attribute_permilles,
-    tonStargiftResaleAmountMin: buildNanotons(appConfig.ton_stargift_resale_amount_min),
-    tonStargiftResaleAmountMax: buildNanotons(appConfig.ton_stargift_resale_amount_max),
-    tonStargiftResaleCommissionPermille: appConfig.ton_stargift_resale_commission_permille,
     starsSuggestedPostAmountMax: appConfig.stars_suggested_post_amount_max,
     starsSuggestedPostAmountMin: appConfig.stars_suggested_post_amount_min,
     starsSuggestedPostCommissionPermille: appConfig.stars_suggested_post_commission_permille,
@@ -298,11 +270,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     tonSuggestedPostAmountMin: buildNanotons(appConfig.ton_suggested_post_amount_min),
     tonUsdRate: appConfig.ton_usd_rate,
     tonTopupUrl: appConfig.ton_topup_url,
-    isWalletAvailable: appConfig.wallet_available,
-    walletTransferMinNanos: buildNanotons(appConfig.wallet_transfer_min_nanos),
-    walletGaslessDailyTransfers: appConfig.wallet_gasless_daily_transfers,
-    walletCardBackgroundCollections: appConfig.wallet_card_bg_gifts,
-    oldWalletBotUsername: appConfig.old_wallet_bot_username,
     pollMaxAnswers: appConfig.poll_answers_max,
     pollClosePeriodMax: appConfig.poll_close_period_max,
     pollCountriesMax: appConfig.poll_countries_max,

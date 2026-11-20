@@ -169,41 +169,6 @@
   }
 }
 
-.gifts {
-  scrollbar-gutter: stable;
-
-  overflow-y: auto;
-  display: grid;
-  grid-auto-rows: max-content;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5625rem;
-  align-content: start;
-
-  height: 100%;
-  padding: 0.6875rem;
-
-  @include mixins.adapt-padding-to-scrollbar(0.6875rem);
-}
-
-.gift {
-  cursor: var(--custom-cursor, pointer);
-
-  position: relative;
-
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  aspect-ratio: 1;
-  padding: 0;
-  border: none;
-  border-radius: 0.875rem;
-
-  background: none;
-  outline: none;
-}
-
 .giftSelected::after {
   pointer-events: none;
   content: "";
@@ -214,46 +179,6 @@
   border-radius: inherit;
 
   box-shadow: inset 0 0 0 0.1875rem var(--color-primary);
-}
-
-.giftBackground {
-  position: absolute;
-  inset: 0;
-}
-
-.giftSticker {
-  position: relative;
-  width: 3.5rem;
-  height: 3.5rem;
-}
-
-.giftsEmpty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  height: 100%;
-  padding: 0.5rem 1rem 0.75rem;
-
-  text-align: center;
-}
-
-.giftsEmptyTitle {
-  font-size: 1rem;
-  font-weight: var(--font-weight-semibold);
-}
-
-.giftsEmptyText {
-  max-width: 15rem;
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-.giftsBrowse {
-  width: auto;
-  margin-top: 0.75rem;
 }
 
 @keyframes panel-appear {

@@ -50,7 +50,7 @@ export function buildContentClassName(
   const content = getMessageContent(message);
   const {
     photo = paidMediaPhoto, video = paidMediaVideo,
-    audio, voice, document, contact, location, invoice, storyData,
+    audio, voice, document, contact, location, storyData,
     giveaway, giveawayResults, richMessage, widget,
   } = content;
   const hasRichMessageAudio = Boolean(richMessage && getRichMessageAudios(richMessage).ids.length);
@@ -63,7 +63,7 @@ export function buildContentClassName(
 
   const classNames = [MESSAGE_CONTENT_CLASS_NAME];
   const pollMedia = poll?.attachedMedia;
-  const isMedia = storyData || photo || video || location || invoice?.extendedMedia || paidMedia
+  const isMedia = storyData || photo || video || location || paidMedia
     || pollMedia?.photo || pollMedia?.video || pollMedia?.location;
   const hasText = text || location?.mediaType === 'venue' || isGeoLiveActive || hasFactCheck || poll;
   const isMediaWithNoText = isMedia && !hasText;
@@ -145,14 +145,6 @@ export function buildContentClassName(
     if (webPage.document) {
       classNames.push('document');
     }
-
-    if (webPage.gift) {
-      classNames.push('gift');
-    }
-
-    if (webPage.auction) {
-      classNames.push('auction');
-    }
   }
 
   if (poll) {
@@ -161,14 +153,6 @@ export function buildContentClassName(
 
   if (widget) {
     classNames.push('has-widget');
-  }
-
-  if (invoice && !invoice.extendedMedia) {
-    classNames.push('invoice');
-  }
-
-  if (invoice && invoice.photo) {
-    classNames.push('has-photo');
   }
 
   if (storyData) {

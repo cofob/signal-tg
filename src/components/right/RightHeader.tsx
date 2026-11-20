@@ -1,10 +1,10 @@
 import {
-  useEffect, useMemo, useState,
+  useEffect, useState,
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiExportedInvite } from '../../api/types';
-import type { GiftProfileFilterOptions, ThreadId } from '../../types';
+import type { ThreadId } from '../../types';
 import { MAIN_THREAD_ID } from '../../api/types';
 import { ManagementScreens, ProfileState, SettingsScreens } from '../../types';
 
@@ -14,10 +14,7 @@ import {
 } from '../../global/helpers';
 import {
   selectCanManage,
-  selectCanUseGiftProfileAdminFilter,
-  selectCanUseGiftProfileFilter,
   selectChat,
-  selectChatFullInfo,
   selectIsChatWithSelf,
   selectTabState,
   selectTopic,
@@ -37,9 +34,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import DropdownMenu from '../ui/DropdownMenu';
-import MenuItem from '../ui/MenuItem';
-import MenuSeparator from '../ui/MenuSeparator';
 import Transition from '../ui/Transition';
 
 import './RightHeader.scss';
@@ -50,11 +44,6 @@ type OwnProps = {
   isColumnOpen?: boolean;
   isProfile?: boolean;
   isManagement?: boolean;
-  isStatistics?: boolean;
-  isBoostStatistics?: boolean;
-  isMessageStatistics?: boolean;
-  isMonetizationStatistics?: boolean;
-  isStoryStatistics?: boolean;
   isPollResults?: boolean;
   isCreatingTopic?: boolean;
   isEditingTopic?: boolean;
@@ -69,7 +58,6 @@ type OwnProps = {
 type StateProps = {
   canAddContact?: boolean;
   canManage?: boolean;
-  canViewStatistics?: boolean;
   isChannel?: boolean;
   userId?: string;
   isSelf?: boolean;
@@ -78,9 +66,6 @@ type StateProps = {
   shouldSkipHistoryAnimations?: boolean;
   isBot?: boolean;
   canEditBot?: boolean;
-  giftProfileFilter: GiftProfileFilterOptions;
-  canUseGiftFilter?: boolean;
-  canUseGiftAdminFilter?: boolean;
   isInsideTopic?: boolean;
   canEditTopic?: boolean;
   isSavedMessages?: boolean;
@@ -92,15 +77,9 @@ const COLUMN_ANIMATION_DURATION = 450 + ANIMATION_END_DELAY;
 enum HeaderContent {
   Profile,
   MemberList,
-  GiftList,
   SharedMedia,
   StoryList,
   Search,
-  Statistics,
-  MessageStatistics,
-  StoryStatistics,
-  BoostStatistics,
-  MonetizationStatistics,
   Management,
   ManageInitial,
   ManageChannelSubscribers,
@@ -136,11 +115,6 @@ const RightHeader = ({
   isColumnOpen,
   isProfile,
   isManagement,
-  isStatistics,
-  isMessageStatistics,
-  isStoryStatistics,
-  isMonetizationStatistics,
-  isBoostStatistics,
   isPollResults,
   isCreatingTopic,
   isEditingTopic,
@@ -154,7 +128,6 @@ const RightHeader = ({
   canManage,
   isChannel,
   isEditingInvite,
-  canViewStatistics,
   currentInviteInfo,
   shouldSkipHistoryAnimations,
   isBot,
@@ -162,9 +135,6 @@ const RightHeader = ({
   canEditTopic,
   isSavedMessages,
   canEditBot,
-  giftProfileFilter,
-  canUseGiftFilter,
-  canUseGiftAdminFilter,
   isOwnProfile,
   onClose,
   onScreenSelect,
@@ -172,26 +142,14 @@ const RightHeader = ({
   const {
     toggleManagement,
     openAddContactDialog,
-    toggleStatistics,
     setEditingExportedInvite,
     deleteExportedChatInvite,
     openEditTopicPanel,
-    updateGiftProfileFilter,
     openSettingsScreen,
   } = getActions();
 
   const [isDeleteDialogOpen, openDeleteDialog, closeDeleteDialog] = useFlag();
   const { isMobile } = useAppLayout();
-
-  const {
-    sortType: giftsSortType,
-    shouldIncludeUnlimited: shouldIncludeUnlimitedGifts,
-    shouldIncludeLimited: shouldIncludeLimitedGifts,
-    shouldIncludeUpgradable: shouldIncludeUpgradableGifts,
-    shouldIncludeUnique: shouldIncludeUniqueGifts,
-    shouldIncludeDisplayed: shouldIncludeDisplayedGifts,
-    shouldIncludeHidden: shouldIncludeHiddenGifts,
-  } = giftProfileFilter;
 
   const foldersChatCount = useFolderManagerForChatsCount();
   const savedDialogsCount = foldersChatCount[SAVED_FOLDER_ID] ?? 0;
@@ -220,10 +178,6 @@ const RightHeader = ({
     toggleManagement();
   });
 
-  const handleToggleStatistics = useLastCallback(() => {
-    toggleStatistics();
-  });
-
   const handleEditProfile = useLastCallback(() => {
     openSettingsScreen({ screen: SettingsScreens.EditProfile });
   });
@@ -250,8 +204,6 @@ const RightHeader = ({
       HeaderContent.SharedMedia
     ) : profileState === ProfileState.MemberList ? (
       HeaderContent.MemberList
-    ) : profileState === ProfileState.GiftList ? (
-      HeaderContent.GiftList
     ) : profileState === ProfileState.StoryList ? (
       HeaderContent.StoryList
     ) : profileState === ProfileState.SavedDialogs ? (
@@ -305,20 +257,10 @@ const RightHeader = ({
     ) : managementScreen === ManagementScreens.NewDiscussionGroup ? (
       HeaderContent.NewDiscussionGroup
     ) : undefined // Never reached
-  ) : isStatistics ? (
-    HeaderContent.Statistics
-  ) : isMessageStatistics ? (
-    HeaderContent.MessageStatistics
-  ) : isStoryStatistics ? (
-    HeaderContent.StoryStatistics
-  ) : isBoostStatistics ? (
-    HeaderContent.BoostStatistics
   ) : isCreatingTopic ? (
     HeaderContent.CreateTopic
   ) : isEditingTopic ? (
     HeaderContent.EditTopic
-  ) : isMonetizationStatistics ? (
-    HeaderContent.MonetizationStatistics
   ) : undefined; // When column is closed
 
   const renderingContentKey = useCurrentOrPrev(contentKey, true) ?? -1;
@@ -346,21 +288,6 @@ const RightHeader = ({
 
     return lang('GroupInfoTitle');
   }
-
-  const PrimaryLinkMenuButton = useMemo(() => {
-    return ({ onTrigger, isOpen }: { onTrigger: () => void; isOpen?: boolean }) => (
-      <Button
-        round
-        ripple={!isMobile}
-        size="smaller"
-        color="translucent"
-        className={isOpen ? 'active' : ''}
-        onClick={onTrigger}
-        ariaLabel={lang('AriaLabelOpenMenu')}
-        iconName="more"
-      />
-    );
-  }, [isMobile, lang]);
 
   const primaryEditButton = canEditTopic ? (
     <Button
@@ -463,16 +390,6 @@ const RightHeader = ({
         return <h3 className="title">{isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}</h3>;
       case HeaderContent.ManageGroupAddAdmins:
         return <h3 className="title">{lang('ChannelManagementAddModerator')}</h3>;
-      case HeaderContent.Statistics:
-        return <h3 className="title">{lang(isChannel ? 'ChannelStatsTitle' : 'GroupStatsTitle')}</h3>;
-      case HeaderContent.MessageStatistics:
-        return <h3 className="title">{lang('StatsMessageTitle')}</h3>;
-      case HeaderContent.StoryStatistics:
-        return <h3 className="title">{lang('StatsStoryTitle')}</h3>;
-      case HeaderContent.BoostStatistics:
-        return <h3 className="title">{lang('Boosts')}</h3>;
-      case HeaderContent.MonetizationStatistics:
-        return <h3 className="title">{lang('ChannelEarnTitle')}</h3>;
       case HeaderContent.SharedMedia:
         return <h3 className="title">{lang('SharedMedia')}</h3>;
       case HeaderContent.ManageChannelSubscribers:
@@ -499,102 +416,6 @@ const RightHeader = ({
         return <h3 className="title">{lang('NewTopic')}</h3>;
       case HeaderContent.EditTopic:
         return <h3 className="title">{lang('EditTopic')}</h3>;
-      case HeaderContent.GiftList:
-        return (
-          <>
-            <h3 className="title">{lang('ProfileTabGifts')}</h3>
-            {canUseGiftFilter && chatId && (
-              <section className="tools">
-                <DropdownMenu
-                  trigger={PrimaryLinkMenuButton}
-                  positionX="right"
-                  autoClose={false}
-                >
-                  <MenuItem
-                    icon={giftsSortType === 'byDate' ? 'cash-circle' : 'calendar'}
-
-                    onClick={() => updateGiftProfileFilter(
-                      { peerId: chatId, filter: { sortType: giftsSortType === 'byDate' ? 'byValue' : 'byDate' } },
-                    )}
-                  >
-                    {lang(giftsSortType === 'byDate' ? 'GiftSortByValue' : 'GiftSortByDate')}
-                  </MenuItem>
-
-                  <MenuSeparator />
-
-                  <MenuItem
-                    icon={shouldIncludeUnlimitedGifts ? 'check' : 'placeholder'}
-
-                    onClick={() => updateGiftProfileFilter(
-                      { peerId: chatId, filter: { shouldIncludeUnlimited: !shouldIncludeUnlimitedGifts } },
-                    )}
-                  >
-                    {lang('GiftFilterUnlimited')}
-                  </MenuItem>
-
-                  <MenuItem
-                    icon={shouldIncludeLimitedGifts ? 'check' : 'placeholder'}
-
-                    onClick={() => updateGiftProfileFilter(
-                      { peerId: chatId, filter: {
-                        shouldIncludeLimited: !shouldIncludeLimitedGifts,
-                      } },
-                    )}
-                  >
-                    {lang('GiftFilterLimited')}
-                  </MenuItem>
-
-                  <MenuItem
-                    icon={shouldIncludeUpgradableGifts ? 'check' : 'placeholder'}
-
-                    onClick={() => updateGiftProfileFilter(
-                      { peerId: chatId, filter: {
-                        shouldIncludeUpgradable: !shouldIncludeUpgradableGifts,
-                      } },
-                    )}
-                  >
-                    {lang('GiftFilterUpgradable')}
-                  </MenuItem>
-
-                  <MenuItem
-                    icon={shouldIncludeUniqueGifts ? 'check' : 'placeholder'}
-
-                    onClick={() => updateGiftProfileFilter(
-                      { peerId: chatId, filter: { shouldIncludeUnique: !shouldIncludeUniqueGifts } },
-                    )}
-                  >
-                    {lang('GiftFilterUnique')}
-                  </MenuItem>
-
-                  {canUseGiftAdminFilter && (
-                    <>
-                      <MenuSeparator />
-                      <MenuItem
-                        icon={shouldIncludeDisplayedGifts ? 'check' : 'placeholder'}
-
-                        onClick={() => updateGiftProfileFilter(
-                          { peerId: chatId, filter: { shouldIncludeDisplayed: !shouldIncludeDisplayedGifts } },
-                        )}
-                      >
-                        {lang('GiftFilterDisplayed')}
-                      </MenuItem>
-
-                      <MenuItem
-                        icon={shouldIncludeHiddenGifts ? 'check' : 'placeholder'}
-
-                        onClick={() => updateGiftProfileFilter(
-                          { peerId: chatId, filter: { shouldIncludeHidden: !shouldIncludeHiddenGifts } },
-                        )}
-                      >
-                        {lang('GiftFilterHidden')}
-                      </MenuItem>
-                    </>
-                  )}
-                </DropdownMenu>
-              </section>
-            )}
-          </>
-        );
       case HeaderContent.NewDiscussionGroup:
         return <h3 className="title">{lang('NewGroup')}</h3>;
       default:
@@ -615,16 +436,6 @@ const RightHeader = ({
                 />
               )}
               {primaryEditButton}
-              {canViewStatistics && (
-                <Button
-                  round
-                  color="translucent"
-                  size="smaller"
-                  ariaLabel={lang('Statistics')}
-                  onClick={handleToggleStatistics}
-                  iconName="stats"
-                />
-              )}
               {isOwnProfile && (
                 <Button
                   round
@@ -644,12 +455,9 @@ const RightHeader = ({
   const isBackButton = isMobile || (
     !isSavedMessages && (
       contentKey === HeaderContent.SharedMedia
-      || contentKey === HeaderContent.GiftList
       || contentKey === HeaderContent.MemberList
       || contentKey === HeaderContent.StoryList
       || contentKey === HeaderContent.AddingMembers
-      || contentKey === HeaderContent.MessageStatistics
-      || contentKey === HeaderContent.StoryStatistics
       || isManagement
     )
   );
@@ -705,20 +513,12 @@ export default withGlobal<OwnProps>(
     const canManage = Boolean(!isManagement && isProfile && chatId && selectCanManage(global, chatId));
 
     const isEditingInvite = Boolean(chatId && tabState.management.byChatId[chatId]?.editingInvite);
-    const canViewStatistics = !isInsideTopic && chatId
-      ? selectChatFullInfo(global, chatId)?.canViewStatistics
-      : undefined;
     const currentInviteInfo = chatId
       ? tabState.management.byChatId[chatId]?.inviteInfo?.invite : undefined;
-
-    const giftProfileFilter = tabState.savedGifts.filter;
-    const canUseGiftFilter = chatId ? selectCanUseGiftProfileFilter(global, chatId) : false;
-    const canUseGiftAdminFilter = chatId ? selectCanUseGiftProfileAdminFilter(global, chatId) : false;
 
     return {
       canManage,
       canAddContact,
-      canViewStatistics,
       isChannel,
       isBot,
       isInsideTopic,
@@ -730,9 +530,6 @@ export default withGlobal<OwnProps>(
       isSavedMessages,
       shouldSkipHistoryAnimations: tabState.shouldSkipHistoryAnimations,
       canEditBot,
-      giftProfileFilter,
-      canUseGiftFilter,
-      canUseGiftAdminFilter,
       isOwnProfile,
     };
   },

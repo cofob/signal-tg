@@ -6,7 +6,6 @@ import { getActions, withGlobal } from '../../../global';
 import type {
   ApiAvailableReaction,
   ApiPeer,
-  ApiSavedStarGift,
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiStickerSet,
@@ -18,7 +17,7 @@ import type { QrThemePanel } from './QrCodeThemeEditor';
 
 import { requestMeasure, requestMutation } from '../../../lib/fasterdom/fasterdom';
 import {
-  getHasAdminRight, getReactionKey, getStickerMediaHash, isChatChannel, isChatSuperGroup,
+  getHasAdminRight, getReactionKey, isChatChannel, isChatSuperGroup,
 } from '../../../global/helpers';
 import { getMainUsername } from '../../../global/helpers/users';
 import {
@@ -37,7 +36,6 @@ import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { computeQrThemeColors } from '../../../util/qrCode/shareThemeColors';
 import { LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
 import formatUsername from '../../common/helpers/formatUsername';
-import { getGiftAttributes } from '../../common/helpers/gifts';
 import { REM } from '../../common/helpers/mediaDimensions';
 import { LayerMotion } from './helpers/floatingLayer';
 import { getEmojiPresets, getIsSameShareTheme, getShareThemeBackdrop } from './helpers/shareTheme';
@@ -53,7 +51,6 @@ import useAsync from '../../../hooks/useAsync';
 import useFlag from '../../../hooks/useFlag';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
-import useMedia from '../../../hooks/useMedia';
 import useResizeObserver from '../../../hooks/useResizeObserver';
 import useSyncEffect from '../../../hooks/useSyncEffect';
 import useFreeMessagesCode from './hooks/useFreeMessagesCode';
@@ -78,7 +75,6 @@ type StateProps = {
   username?: string;
   shareTheme?: ApiShareTheme;
   backdrops?: ApiShareThemeBackdrop[];
-  uniqueGifts?: ApiSavedStarGift[];
   availableReactions?: ApiAvailableReaction[];
   restrictedEmoji?: ApiStickerSet;
   isCurrentUserPremium?: boolean;
@@ -105,7 +101,6 @@ const QrCodeModal = ({
   username,
   shareTheme,
   backdrops,
-  uniqueGifts,
   availableReactions,
   restrictedEmoji,
   isCurrentUserPremium,
@@ -122,9 +117,7 @@ const QrCodeModal = ({
     loadShareThemeBackdrops,
     loadFullUser,
     loadFullChat,
-    loadQrCodeUniqueGifts,
     setPeerShareTheme,
-    openGiftModal,
     loadGlobalPrivacySettings,
   } = getActions();
 
@@ -163,16 +156,12 @@ const QrCodeModal = ({
     computeQrThemeColors(backdrop.centerColor, backdrop.edgeColor)
   ), [backdrop.centerColor, backdrop.edgeColor]);
 
-  const gift = draftTheme?.type === 'gift' ? draftTheme.gift : undefined;
   const emojis = draftTheme?.type === 'emojiBackdrop' && draftTheme.emojis.length ? draftTheme.emojis : undefined;
-  const giftAttributes = gift && getGiftAttributes(gift);
-  const patternSticker = giftAttributes?.pattern?.sticker;
-  const patternUrl = useMedia(patternSticker && getStickerMediaHash(patternSticker, 'preview'));
   const emojiPresets = useMemo(() => getEmojiPresets(restrictedEmoji), [restrictedEmoji]);
 
-  // Backdrop and gift changes reveal the new scene with a wave, while emoji changes animate within the layer
+  // Backdrop changes reveal the new scene with a wave, while emoji changes animate within the layer
   const backgroundKey = useTransitionActiveKey(
-    [backdrop.centerColor, backdrop.edgeColor, gift?.id],
+    [backdrop.centerColor, backdrop.edgeColor],
     !activePanel || !canAnimate,
   );
   const waveStartedAt = useMemo(() => (backgroundKey ? performance.now() : undefined), [backgroundKey]);
@@ -234,12 +223,6 @@ const QrCodeModal = ({
   useEffect(() => {
     if (isOpen && isSelf) loadGlobalPrivacySettings();
   }, [isOpen, isSelf, loadGlobalPrivacySettings]);
-
-  useEffect(() => {
-    if (activePanel === 'gifts' && !uniqueGifts) {
-      loadQrCodeUniqueGifts();
-    }
-  }, [activePanel, uniqueGifts]);
 
   const { holdQrCode, presentQrCode, releaseQrCode } = useQrCodeSwap({
     isOpen,
@@ -349,11 +332,10 @@ const QrCodeModal = ({
 
     isDraftDirtyRef.current = false;
     if (!peer || !canEditTheme || getIsSameShareTheme(draftTheme, shareTheme)) return;
-    if (draftTheme?.type === 'gift' && !draftTheme.inputGift) return;
 
     setPeerShareTheme({
       peerId: peer.id,
-      theme: draftTheme?.type === 'gift' ? { ...draftTheme, inputGift: draftTheme.inputGift! } : draftTheme,
+      theme: draftTheme,
     });
   });
 
@@ -386,15 +368,6 @@ const QrCodeModal = ({
     }
   });
 
-  const handleLoadMoreGifts = useLastCallback(() => {
-    loadQrCodeUniqueGifts();
-  });
-
-  const handleBrowseGifts = useLastCallback(() => {
-    closeModal();
-    openGiftModal({ forUserId: peer!.id });
-  });
-
   const handleCopyQr = useLastCallback(() => {
     if (!link) return;
 
@@ -412,7 +385,7 @@ const QrCodeModal = ({
       // The previous slide stays mounted while a wave reveals the new one
       const slide = surfaceRef.current?.querySelector<HTMLElement>(`[data-wave-key="${backgroundKey}"]`) || undefined;
       const snapshot = buildQrPreviewSnapshot(
-        buildLayerSnapshot(slide, emojis?.length || 0, patternUrl, giftAttributes?.backdrop?.patternColor),
+        buildLayerSnapshot(slide, emojis?.length || 0),
         usernameRef.current,
       );
       const blobPromise = generateQrCodeCard({
@@ -469,7 +442,6 @@ const QrCodeModal = ({
           <div className={styles.backgroundSlide} style={backgroundStyle}>
             <QrFloatingLayer
               emojis={emojis}
-              gift={gift}
               availableReactions={availableReactions}
               foregroundColor={colors.foreground}
               cardRef={cardRef}
@@ -527,15 +499,11 @@ const QrCodeModal = ({
             activePanel={activePanel}
             panelRef={panelRef}
             backdrops={backdrops}
-            uniqueGifts={uniqueGifts}
             availableReactions={availableReactions}
             emojiPresets={emojiPresets}
             isCurrentUserPremium={isCurrentUserPremium}
-            isSelf={isSelf}
             onPanelChange={handlePanelChange}
             onThemeChange={handleThemeChange}
-            onLoadMoreGifts={handleLoadMoreGifts}
-            onBrowseGifts={handleBrowseGifts}
           />
         )}
         <button
@@ -566,7 +534,6 @@ export default memo(withGlobal<OwnProps>(
       username,
       shareTheme: peerId ? selectPeerFullInfo(global, peerId)?.shareTheme : undefined,
       backdrops: global.shareThemeBackdrops?.list,
-      uniqueGifts: modal?.uniqueGifts,
       availableReactions: global.reactions.availableReactions,
       restrictedEmoji: global.restrictedEmoji,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
@@ -580,22 +547,14 @@ export default memo(withGlobal<OwnProps>(
   },
 )(QrCodeModal));
 
-function buildLayerSnapshot(
-  slide: HTMLElement | undefined, emojiCount: number, patternUrl?: string, patternColor?: string,
-): QrLayerSnapshot {
+function buildLayerSnapshot(slide: HTMLElement | undefined, emojiCount: number): QrLayerSnapshot {
   const emojiSources = new Array<QrEmojiSource | undefined>(emojiCount).fill(undefined);
   slide?.querySelectorAll<HTMLElement>('[data-kind="emoji"]').forEach((tile) => {
     const pick = Number(tile.dataset.pick);
     emojiSources[pick] ||= getEmojiSource(tile);
   });
 
-  const modelTiles = slide ? Array.from(slide.querySelectorAll<HTMLElement>('[data-kind="model"]')) : [];
-
-  return {
-    emojiSources,
-    modelSource: modelTiles.map(getTileSource).find(Boolean),
-    symbol: patternUrl && patternColor ? { url: patternUrl, color: patternColor } : undefined,
-  };
+  return { emojiSources };
 }
 
 function getEmojiSource(tile: HTMLElement): QrEmojiSource | undefined {

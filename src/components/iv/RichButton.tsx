@@ -13,7 +13,6 @@ import buildClassName from '../../util/buildClassName';
 import { hasSharedCanvasContent } from '../../util/text/richText';
 
 import { useSharedCanvas } from '../../hooks/useCoordsInSharedCanvas';
-import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
 import Icon from '../common/icons/Icon';
@@ -28,7 +27,6 @@ type OwnProps = {
 } & Omit<RichTextProps, 'text'>;
 
 type StateProps = {
-  isReceipt?: boolean;
   isEphemeral?: boolean;
 };
 
@@ -43,10 +41,9 @@ export const RICH_BUTTON_ICONS: Partial<Record<ApiRichButton['action']['type'], 
 };
 
 const RichButton = ({
-  button, isInline, isReceipt, isEphemeral, ...context
+  button, isInline, isEphemeral, ...context
 }: OwnProps & StateProps) => {
   const { clickBotInlineButton } = getActions();
-  const lang = useLang();
   const { chatId, messageId, threadId } = context;
   const { text } = button;
   const isLink = isInline && button.action.type === 'callback' && button.style?.isLink;
@@ -67,9 +64,8 @@ const RichButton = ({
     e.preventDefault();
   });
 
-  const isReceiptLabel = button.action.type === 'buy' && isReceipt;
   const sharedCanvas = useSharedCanvas();
-  const withNestedCanvas = sharedCanvas && !isReceiptLabel && hasSharedCanvasContent(text);
+  const withNestedCanvas = sharedCanvas && hasSharedCanvasContent(text);
 
   return (
     <button
@@ -90,7 +86,7 @@ const RichButton = ({
       onMouseDown={handleMouseDown}
     >
       <span className={buildClassName(styles.buttonLabel, withNestedCanvas && 'shared-canvas-container')}>
-        {isReceiptLabel ? lang('PaymentReceipt') : withNestedCanvas ? (
+        {withNestedCanvas ? (
           <SharedCanvas isGpu={sharedCanvas.isGpu} contentKey={text}>
             <RichText text={text} {...context} isButtonLabel />
           </SharedCanvas>
@@ -112,7 +108,6 @@ export default memo(withGlobal<OwnProps>((global, { chatId, messageId }): Comple
   const message = chatId && messageId !== undefined
     ? selectChatMessageOrEphemeral(global, chatId, messageId) : undefined;
   return {
-    isReceipt: Boolean(message?.content.invoice?.receiptMessageId),
     isEphemeral: message?.isEphemeral,
   };
 })(RichButton));

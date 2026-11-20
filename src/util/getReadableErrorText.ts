@@ -1,4 +1,4 @@
-import type { ApiError, ApiFieldError } from '../api/types';
+import type { ApiError } from '../api/types';
 import type { RegularLangKey } from '../types/language';
 import type { LangFn } from './localization';
 
@@ -79,50 +79,6 @@ if (DEBUG) {
   READABLE_ERROR_KEYS.CHAT_ADMIN_REQUIRED = 'ErrorChatAdminRequired';
 }
 
-export const SHIPPING_ERRORS: Record<string, ApiFieldError> = {
-  ADDRESS_STREET_LINE1_INVALID: {
-    field: 'streetLine1',
-    messageKey: { key: 'PaymentIncorrectStreet' },
-  },
-  ADDRESS_STREET_LINE2_INVALID: {
-    field: 'streetLine2',
-    messageKey: { key: 'PaymentIncorrectStreet' },
-  },
-  ADDRESS_CITY_INVALID: {
-    field: 'city',
-    messageKey: { key: 'PaymentIncorrectCity' },
-  },
-  ADDRESS_COUNTRY_INVALID: {
-    field: 'countryIso2',
-    messageKey: { key: 'PaymentIncorrectCountry' },
-  },
-  ADDRESS_POSTCODE_INVALID: {
-    field: 'postCode',
-    messageKey: { key: 'PaymentIncorrectPostCode' },
-  },
-  ADDRESS_STATE_INVALID: {
-    field: 'state',
-    messageKey: { key: 'PaymentIncorrectState' },
-  },
-  REQ_INFO_NAME_INVALID: {
-    field: 'fullName',
-    messageKey: { key: 'PaymentIncorrectName' },
-  },
-  REQ_INFO_PHONE_INVALID: {
-    field: 'phone',
-    messageKey: { key: 'PaymentIncorrectPhone' },
-  },
-  REQ_INFO_EMAIL_INVALID: {
-    field: 'email',
-    messageKey: { key: 'PaymentIncorrectEmail' },
-  },
-};
-
-const FINAL_PAYMENT_ERRORS = new Set([
-  'BOT_PRECHECKOUT_FAILED',
-  'PAYMENT_FAILED',
-]);
-
 const ERROR_CODES_WITHOUT_DIALOG = new Set([
   406,
 ]);
@@ -142,14 +98,6 @@ export default function getReadableErrorText(lang: LangFn, error: ApiError) {
   }
   const key = READABLE_ERROR_KEYS[message];
   return key ? lang(key) : undefined;
-}
-
-export function getShippingError(error: ApiError): ApiFieldError | undefined {
-  return SHIPPING_ERRORS[error.message];
-}
-
-export function shouldClosePaymentModal(error: ApiError): boolean {
-  return FINAL_PAYMENT_ERRORS.has(error.message);
 }
 
 export function shouldShowErrorDialog(error: ApiError): boolean {

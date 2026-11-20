@@ -20,7 +20,6 @@ import {
   type ApiSendAsPeerId,
   type ApiSponsoredMessageReportResult,
   type ApiSponsoredPeer,
-  type ApiStarsSubscriptionPricing,
   type ApiThreadInfo,
   type ApiTypingStatus,
   MAIN_THREAD_ID,
@@ -137,7 +136,6 @@ function buildApiChatFieldsFromPeerEntity(
     boostLevel: channel?.level,
     botVerificationIconId,
     hasGeo: channel?.hasGeo,
-    subscriptionUntil: channel?.subscriptionUntilDate,
     paidMessagesStars: toJSNumber(paidMessagesStars),
     level: channel?.level,
     hasAutoTranslation: channel?.autotranslation,
@@ -681,7 +679,7 @@ export function buildApiSponsoredMessageReportResult(
 export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInviteInfo {
   const {
     color, participants, participantsCount, photo, title, about, scam, fake, verified, megagroup, channel, broadcast,
-    requestNeeded, subscriptionFormId, subscriptionPricing, canRefulfillSubscription, botVerification,
+    requestNeeded, botVerification,
   } = invite;
 
   let apiPhoto;
@@ -706,20 +704,8 @@ export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInvite
     isBroadcast: broadcast,
     isRequestNeeded: requestNeeded,
     photo: apiPhoto,
-    subscriptionFormId: subscriptionFormId?.toString(),
-    subscriptionPricing: subscriptionPricing && buildApiStarsSubscriptionPricing(subscriptionPricing),
-    canRefulfillSubscription,
     participantIds: participants?.map((participant) => buildApiPeerId(participant.id, 'user')).filter(Boolean),
     botVerification: botVerification && buildApiBotVerification(botVerification),
-  };
-}
-
-export function buildApiStarsSubscriptionPricing(
-  pricing: GramJs.StarsSubscriptionPricing,
-): ApiStarsSubscriptionPricing {
-  return {
-    period: pricing.period,
-    amount: toJSNumber(pricing.amount),
   };
 }
 

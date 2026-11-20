@@ -92,8 +92,6 @@ type StateProps = {
   attachBot?: ApiAttachBot;
   theme?: ThemeKey;
   themePalette: ThemePalette;
-  isPaymentModalOpen?: boolean;
-  paymentStatus?: TabState['payment']['status'];
   modalState?: BrowserModalStateType;
   botAppPermissions?: BotAppPermissions;
   isMediaAccessModalOpen?: boolean;
@@ -128,8 +126,6 @@ const WebAppTab = ({
   bot,
   theme,
   themePalette,
-  isPaymentModalOpen,
-  paymentStatus,
   isActive,
   isTransforming,
   modalState,
@@ -149,11 +145,9 @@ const WebAppTab = ({
     sendWebViewData,
     toggleAttachBot,
     openTelegramLink,
-    setWebAppPaymentSlug,
     switchBotInline,
     sharePhoneWithBot,
     updateWebApp,
-    resetPaymentStatus,
     openChatWithInfo,
     showNotification,
     openEmojiStatusAccessModal,
@@ -461,24 +455,6 @@ const WebAppTab = ({
       visibilityChangedCallBack(true);
     }
   }, [modalState]);
-
-  useSyncEffect(([prevIsPaymentModalOpen]) => {
-    if (isPaymentModalOpen === prevIsPaymentModalOpen) return;
-    if (webApp?.slug && webAppKey && !isPaymentModalOpen && paymentStatus) {
-      sendEvent({
-        eventType: 'invoice_closed',
-        eventData: {
-          slug: webApp.slug,
-          status: paymentStatus,
-        },
-      });
-      setWebAppPaymentSlug({
-        key: webAppKey,
-        slug: undefined,
-      });
-      resetPaymentStatus();
-    }
-  }, [isPaymentModalOpen, paymentStatus, sendEvent, webApp?.slug, webAppKey]);
 
   const handleRemoveAttachBot = useLastCallback(() => {
     toggleAttachBot({
@@ -1505,12 +1481,8 @@ export default memo(withGlobal<OwnProps>(
     const currentUser = global.currentUserId ? selectUser(global, global.currentUserId) : undefined;
     const theme = selectTheme(global);
     const tabState = selectTabState(global);
-    const { isPaymentModalOpen, status: regularPaymentStatus } = tabState.payment;
-    const { status: starsPaymentStatus, inputInvoice: starsInputInvoice } = tabState.starsPayment;
     const botAppPermissions = botId ? selectBotAppPermissions(global, botId) : undefined;
     const isMediaAccessModalOpen = Boolean(webApp) && tabState.mediaAccessModal?.webAppKey === getWebAppKey(webApp);
-
-    const paymentStatus = starsPaymentStatus || regularPaymentStatus;
 
     return {
       attachBot,
@@ -1518,8 +1490,6 @@ export default memo(withGlobal<OwnProps>(
       currentUser,
       theme,
       themePalette: selectChatThemePalette(global),
-      isPaymentModalOpen: isPaymentModalOpen || Boolean(starsInputInvoice),
-      paymentStatus,
       modalState,
       botAppPermissions,
       isMediaAccessModalOpen,

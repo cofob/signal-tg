@@ -27,7 +27,6 @@ type OwnProps = {
   isChannelMuteBar?: boolean;
   isMuted?: boolean;
   linkedMonoforumId?: string;
-  areGiftsAvailable?: boolean;
   canUnpinAll?: boolean;
   pinnedMessagesCount?: number;
   canOpenSavedChat?: boolean;
@@ -56,7 +55,6 @@ const FooterActionBar = ({
   isChannelMuteBar,
   isMuted,
   linkedMonoforumId,
-  areGiftsAvailable,
   canUnpinAll,
   pinnedMessagesCount,
   canOpenSavedChat,
@@ -71,7 +69,6 @@ const FooterActionBar = ({
     unblockUser,
     updateChatMutedState,
     openChat,
-    openGiftModal,
   } = getActions();
 
   const lang = useLang();
@@ -102,10 +99,6 @@ const FooterActionBar = ({
 
   const handleOpenDirect = useLastCallback(() => {
     openChat({ id: linkedMonoforumId });
-  });
-
-  const handleOpenGift = useLastCallback(() => {
-    openGiftModal({ forUserId: chatId });
   });
 
   const handleOpenSavedChat = useLastCallback(() => {
@@ -171,17 +164,14 @@ const FooterActionBar = ({
 
   const withChannelSideActions = !canUnpinAll && !canOpenSavedChat;
   const withDirect = Boolean(withChannelSideActions && isChannel && linkedMonoforumId);
-  const withGift = Boolean(withChannelSideActions && isChannel && areGiftsAvailable);
 
   const hadDirectOnMountRef = useRef(withDirect);
-  const hadGiftOnMountRef = useRef(withGift);
 
   if (!mainButton) {
     return undefined;
   }
 
   const directClassName = buildClassName(styles.sideButton, !hadDirectOnMountRef.current && styles.appearing);
-  const giftClassName = buildClassName(styles.sideButton, !hadGiftOnMountRef.current && styles.appearing);
 
   return (
     <div className={styles.root} data-footer-action-bar dir={lang.isRtl ? 'rtl' : undefined}>
@@ -211,18 +201,6 @@ const FooterActionBar = ({
         >
           {mainButton.label}
         </Button>
-        {withGift && (
-          <div className={styles.sideSlot}>
-            <Button
-              round
-              color="translucent"
-              className={giftClassName}
-              ariaLabel={lang('ProfileSendAGift')}
-              iconName="gift"
-              onClick={handleOpenGift}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

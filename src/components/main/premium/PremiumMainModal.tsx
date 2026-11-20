@@ -5,7 +5,6 @@ import type {
   ApiPremiumPromo,
   ApiPremiumSection,
   ApiPremiumSubscriptionOption,
-  ApiStarGift,
   ApiSticker,
   ApiStickerSet,
   ApiUser,
@@ -25,7 +24,6 @@ import { selectPremiumLimit } from '../../../global/selectors/limits';
 import buildClassName from '../../../util/buildClassName';
 import { formatCountdownDays } from '../../../util/dates/duration';
 import { formatCurrency } from '../../../util/formatCurrency';
-import { getStickerFromGift } from '../../common/helpers/gifts';
 import { REM } from '../../common/helpers/mediaDimensions';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
@@ -113,13 +111,11 @@ type StateProps = {
   isSuccess?: boolean;
   isGift?: boolean;
   daysAmount?: number;
-  gift?: ApiStarGift;
   limitChannels: number;
   limitPins: number;
   limitLinks: number;
   limitFolders: number;
   limits?: NonNullable<GlobalState['appConfig']>['limits'];
-  premiumSlug?: string;
   premiumBotUsername?: string;
   premiumPromoOrder?: ApiPremiumSection[];
 };
@@ -138,17 +134,15 @@ const PremiumMainModal = ({
   limitFolders,
   limitPins,
   limits,
-  premiumSlug,
   premiumBotUsername,
   isSuccess,
   isGift,
   toUser,
   daysAmount,
   premiumPromoOrder,
-  gift,
 }: OwnProps & StateProps) => {
   const {
-    closePremiumModal, openInvoice, requestConfetti, openChatByUsername, loadStickers, openStickerSet,
+    closePremiumModal, requestConfetti, openChatByUsername, loadStickers, openStickerSet,
   } = getActions();
 
   const lang = useLang();
@@ -184,12 +178,7 @@ const PremiumMainModal = ({
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    if (premiumSlug) {
-      openInvoice({
-        type: 'slug',
-        slug: premiumSlug,
-      });
-    } else if (premiumBotUsername) {
+    if (premiumBotUsername) {
       openChatByUsername({
         username: premiumBotUsername,
         startParam: startParam || 'promo',
@@ -290,10 +279,6 @@ const PremiumMainModal = ({
   if (!promo || (fromUserStatusEmoji && !fromUserStatusSet)) return undefined;
 
   function getHeaderText() {
-    if (gift) {
-      return lang('PremiumGiftHeader');
-    }
-
     if (isGift) {
       const formattedDuration = daysAmount ? formatCountdownDays(lang, daysAmount) : '';
       return renderText(
@@ -328,12 +313,6 @@ const PremiumMainModal = ({
   }
 
   function getHeaderDescription() {
-    if (gift && gift.type !== 'starGiftUnique' && gift.perUserTotal) {
-      return lang('DescriptionGiftPremiumRequired2', { count: gift.perUserTotal }, {
-        pluralValue: gift.perUserTotal,
-      });
-    }
-
     if (isGift) {
       return fromUser?.id === currentUserId
         ? lang('TelegramPremiumUserGiftedPremiumOutboundDialogSubtitle', { user: getUserFullName(lang, toUser) })
@@ -350,20 +329,6 @@ const PremiumMainModal = ({
   }
 
   function renderHeader() {
-    if (gift) {
-      const giftSticker = getStickerFromGift(gift);
-      return (
-        <ParticlesHeader
-          model="sticker"
-          sticker={giftSticker}
-          color="purple"
-          title={getHeaderText()}
-          description={renderText(getHeaderDescription(), ['simple_markdown', 'emoji'])}
-          className={styles.giftParticlesHeader}
-        />
-      );
-    }
-
     if (!fromUserStatusEmoji) {
       return (
         <ParticlesHeader
@@ -525,7 +490,6 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     isSuccess: premiumModal?.isSuccess,
     isGift: premiumModal?.isGift,
     daysAmount: premiumModal?.daysAmount,
-    gift: premiumModal?.gift,
     fromUser,
     fromUserStatusEmoji,
     fromUserStatusSet,
@@ -537,7 +501,6 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     limitPins: selectPremiumLimit(global, 'dialogFolderPinned'),
     limitLinks: selectPremiumLimit(global, 'channelsPublic'),
     limits: global.appConfig.limits,
-    premiumSlug: global.appConfig.premiumInvoiceSlug,
     premiumBotUsername: global.appConfig.premiumBotUsername,
     premiumPromoOrder: global.appConfig.premiumPromoOrder,
   };

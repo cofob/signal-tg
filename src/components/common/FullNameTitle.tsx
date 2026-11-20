@@ -29,7 +29,6 @@ import Marquee from '../ui/Marquee';
 import Transition from '../ui/Transition';
 import CustomEmoji from './CustomEmoji';
 import FakeIcon from './FakeIcon';
-import GiftEffectWrapper from './gift/GiftEffectWrapper';
 import StarIcon from './icons/StarIcon';
 import VerifiedIcon from './VerifiedIcon';
 
@@ -165,21 +164,14 @@ const FullNameTitle = ({
               direction={-1}
               shouldCleanup
             >
-              <GiftEffectWrapper
-                withSparkles={emojiStatus.type === 'collectible'}
-                sparklesClassName="statusSparkles"
-                sparklesColor={emojiStatus.type === 'collectible' && !withStatusTextColor
-                  ? emojiStatus.textColor : undefined}
-              >
-                <CustomEmoji
-                  className={buildClassName('no-selection', !withStatusTextColor && styles.statusPrimaryColor)}
-                  documentId={emojiStatus.documentId}
-                  size={emojiStatusSize}
-                  loopLimit={!noLoopLimit ? EMOJI_STATUS_LOOP_LIMIT : undefined}
-                  observeIntersectionForLoading={observeIntersection}
-                  onClick={onEmojiStatusClick}
-                />
-              </GiftEffectWrapper>
+              <CustomEmoji
+                className={buildClassName('no-selection', !withStatusTextColor && styles.statusPrimaryColor)}
+                documentId={emojiStatus.documentId}
+                size={emojiStatusSize}
+                loopLimit={!noLoopLimit ? EMOJI_STATUS_LOOP_LIMIT : undefined}
+                observeIntersectionForLoading={observeIntersection}
+                onClick={onEmojiStatusClick}
+              />
             </Transition>
           )}
           {canShowEmojiStatus && !emojiStatus && isPremium && <StarIcon />}

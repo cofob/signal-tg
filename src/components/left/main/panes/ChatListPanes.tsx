@@ -21,7 +21,6 @@ import {
 
 import AudioPlayer from '../../../middle/panes/AudioPlayer';
 import FrozenAccountPane from './FrozenAccountPane';
-import GiftAuctionPane from './GiftAuctionPane';
 import SuggestionPane from './SuggestionPane';
 import UnconfirmedSessionPane from './UnconfirmedSessionPane';
 
@@ -55,7 +54,6 @@ const ChatListPanes = ({
   const [getPlayerState, setPlayerState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getFrozenAccountState, setFrozenAccountState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getUnconfirmedSessionState, setUnconfirmedSessionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getGiftAuctionState, setGiftAuctionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getSuggestionState, setSuggestionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
   const ref = useRef<HTMLDivElement>();
@@ -81,7 +79,6 @@ const ChatListPanes = ({
 
   const canShowUnconfirmedSession = !isAccountFrozen && !isForumPanelOpen && unconfirmedSession;
   const canShowSuggestions = !isAccountFrozen && !isForumPanelOpen && !unconfirmedSession && promoData;
-  const canShowGiftAuctions = !isAccountFrozen && !isForumPanelOpen;
 
   useSignalEffect(() => {
     // Keep in sync with the order of the panes in the DOM
@@ -89,7 +86,6 @@ const ChatListPanes = ({
       getPlayerState(),
       getFrozenAccountState(),
       getUnconfirmedSessionState(),
-      getGiftAuctionState(),
       getSuggestionState(),
     ];
 
@@ -118,7 +114,7 @@ const ChatListPanes = ({
       }
     });
   }, [
-    getPlayerState, getFrozenAccountState, getUnconfirmedSessionState, getGiftAuctionState, getSuggestionState,
+    getPlayerState, getFrozenAccountState, getUnconfirmedSessionState, getSuggestionState,
   ]);
 
   return (
@@ -148,10 +144,6 @@ const ChatListPanes = ({
           <UnconfirmedSessionPane
             unconfirmedSession={canShowUnconfirmedSession ? unconfirmedSession : undefined}
             onPaneStateChange={setUnconfirmedSessionState}
-          />
-          <GiftAuctionPane
-            canShow={canShowGiftAuctions}
-            onPaneStateChange={setGiftAuctionState}
           />
           <SuggestionPane
             promoData={canShowSuggestions ? promoData : undefined}

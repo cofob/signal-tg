@@ -11,7 +11,6 @@ import type {
   ApiGiveawayResults,
   ApiLocation,
   ApiMediaExtendedPreview,
-  ApiMediaInvoice,
   ApiMediaTodo,
   ApiMessagePoll,
   ApiMessageStoryData,
@@ -22,14 +21,12 @@ import type {
   ApiPollAnswer,
   ApiPollResults,
   ApiRichMessage,
-  ApiStarGiftUnique,
   ApiSticker,
   ApiTodoItem,
   ApiVideo,
   ApiVoice,
   ApiWebDocument,
   ApiWebPage,
-  ApiWebPageAuctionData,
   ApiWebPageStickerData,
   ApiWebPageStoryData,
   ApiWidget,
@@ -52,7 +49,6 @@ import {
   buildApiPhoto,
   buildApiThumbnailFromStripped,
 } from './common';
-import { buildApiStarGift } from './gifts';
 import {
   buildApiInstantViewPage,
   buildApiPageBlock,
@@ -213,9 +209,6 @@ export function buildMessageMediaContent(
 
   const webPage = buildMessageWebPageFromMedia(media);
   if (webPage) return { webPage };
-
-  const invoice = buildInvoiceFromMedia(media);
-  if (invoice) return { invoice };
 
   const location = buildLocationFromMedia(media);
   if (location) return { location };
@@ -447,14 +440,6 @@ function buildTodoFromMedia(media: GramJs.TypeMessageMedia): ApiMediaTodo | unde
   }
 
   return buildTodo(media.todo, media.completions);
-}
-
-function buildInvoiceFromMedia(media: GramJs.TypeMessageMedia): ApiMediaInvoice | undefined {
-  if (!(media instanceof GramJs.MessageMediaInvoice)) {
-    return undefined;
-  }
-
-  return buildMediaInvoice(media);
 }
 
 function buildLocationFromMedia(media: GramJs.TypeMessageMedia): ApiLocation | undefined {
@@ -745,27 +730,6 @@ export function buildTodo(todo: GramJs.TodoList, completions?: GramJs.TodoComple
   };
 }
 
-export function buildMediaInvoice(media: GramJs.MessageMediaInvoice): ApiMediaInvoice {
-  const {
-    description, title, photo, test, totalAmount, currency, receiptMsgId, extendedMedia,
-  } = media;
-
-  const preview = extendedMedia instanceof GramJs.MessageExtendedMediaPreview
-    ? buildApiMessageExtendedMediaPreview(extendedMedia) : undefined;
-
-  return {
-    mediaType: 'invoice',
-    title,
-    description,
-    photo: buildApiWebDocument(photo),
-    receiptMessageId: receiptMsgId,
-    amount: toJSNumber(totalAmount),
-    currency,
-    isTest: test,
-    extendedMedia: preview,
-  };
-}
-
 export function buildPollResults(pollResults: GramJs.PollResults): ApiPollResults {
   const {
     results: rawResults, totalVoters, recentVoters, solution, solutionEntities: entities, min, solutionMedia,
@@ -853,17 +817,9 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
     const audio = document instanceof GramJs.Document ? buildAudioFromDocument(document) : undefined;
 
     let story: ApiWebPageStoryData | undefined;
-    let gift: ApiStarGiftUnique | undefined;
-    let auction: ApiWebPageAuctionData | undefined;
     let stickers: ApiWebPageStickerData | undefined;
     const attributeStory = attributes
       ?.find((a): a is GramJs.WebPageAttributeStory => a instanceof GramJs.WebPageAttributeStory);
-    const attributeGift = attributes
-      ?.find((a): a is GramJs.WebPageAttributeUniqueStarGift => a instanceof GramJs.WebPageAttributeUniqueStarGift);
-    const attributeAuction = attributes
-      ?.find((a): a is GramJs.WebPageAttributeStarGiftAuction => (
-        a instanceof GramJs.WebPageAttributeStarGiftAuction
-      ));
     if (attributeStory) {
       const peerId = getApiChatIdFromMtpPeer(attributeStory.peer);
       story = {
@@ -873,19 +829,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
 
       if (attributeStory.story instanceof GramJs.StoryItem) {
         addStoryToLocalDb(attributeStory.story, peerId);
-      }
-    }
-    if (attributeGift) {
-      const starGift = buildApiStarGift(attributeGift.gift);
-      gift = starGift.type === 'starGiftUnique' ? starGift : undefined;
-    }
-    if (attributeAuction) {
-      const starGift = buildApiStarGift(attributeAuction.gift);
-      if (starGift.type === 'starGift') {
-        auction = {
-          gift: starGift,
-          endDate: attributeAuction.endDate,
-        };
       }
     }
     const attributeStickers = attributes?.find((a): a is GramJs.WebPageAttributeStickerSet => (
@@ -926,8 +869,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       video,
       audio,
       story,
-      gift,
-      auction,
       stickers,
       cachedPage: builtCachedPage,
       cachedPageAudioById: builtCachedPage ? buildPageAudioById(builtCachedPage) : undefined,

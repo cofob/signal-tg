@@ -120,7 +120,6 @@ const MiddleHeader = ({
     openPremiumModal,
     openStickerSet,
     updateMiddleSearch,
-    openUniqueGiftBySlug,
   } = getActions();
 
   const lang = useLang();
@@ -165,18 +164,10 @@ const MiddleHeader = ({
   });
 
   const handleUserStatusClick = useLastCallback(() => {
-    if (emojiStatusSlug) {
-      openUniqueGiftBySlug({ slug: emojiStatusSlug });
-      return;
-    }
     openPremiumModal({ fromUserId: chatId });
   });
 
   const handleChannelStatusClick = useLastCallback(() => {
-    if (emojiStatusSlug) {
-      openUniqueGiftBySlug({ slug: emojiStatusSlug });
-      return;
-    }
     openStickerSet({
       stickerSetInfo: emojiStatusSticker!.stickerSetInfo,
     });

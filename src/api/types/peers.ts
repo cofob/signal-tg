@@ -1,5 +1,4 @@
 import type { ApiPhoto, ApiReaction } from './messages';
-import type { ApiRequestInputSavedStarGift, ApiStarGiftUnique } from './stars';
 
 export interface ApiPeerPhotos {
   fallbackPhoto?: ApiPhoto;
@@ -63,18 +62,7 @@ export interface ApiPeerColor {
   backgroundEmojiId?: string;
 }
 
-export interface ApiPeerColorCollectible {
-  type: 'collectible';
-  collectibleId: string;
-  giftEmojiId: string;
-  backgroundEmojiId: string;
-  accentColor: string;
-  colors: string[];
-  darkAccentColor?: string;
-  darkColors?: string[];
-}
-
-export type ApiTypePeerColor = ApiPeerColor | ApiPeerColorCollectible;
+export type ApiTypePeerColor = ApiPeerColor;
 
 export type ApiPeerColorSet = string[];
 export type ApiPeerProfileColorSet = {
@@ -96,7 +84,7 @@ export interface ApiPeerColors {
   profileHash?: number;
 }
 
-export type ApiProfileTab = 'stories' | 'gifts' | 'media' | 'documents' | 'audio' | 'voice' | 'links' | 'gif';
+export type ApiProfileTab = 'stories' | 'media' | 'documents' | 'audio' | 'voice' | 'links' | 'gif';
 
 export interface ApiShareThemeEmojiBackdrop {
   type: 'emojiBackdrop';
@@ -104,17 +92,9 @@ export interface ApiShareThemeEmojiBackdrop {
   emojis: ApiReaction[];
 }
 
-export interface ApiShareThemeGift {
-  type: 'gift';
-  gift: ApiStarGiftUnique;
-}
+export type ApiShareTheme = ApiShareThemeEmojiBackdrop;
 
-export type ApiShareTheme = ApiShareThemeEmojiBackdrop | ApiShareThemeGift;
-
-export type ApiRequestInputShareTheme = ApiShareThemeEmojiBackdrop | {
-  type: 'gift';
-  inputGift: ApiRequestInputSavedStarGift;
-};
+export type ApiRequestInputShareTheme = ApiShareThemeEmojiBackdrop;
 
 export interface ApiShareThemeBackdrop {
   backdropId: number;

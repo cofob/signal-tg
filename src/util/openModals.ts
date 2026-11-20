@@ -1,6 +1,6 @@
 import { createSignal } from './signals';
 
-// Counted by both modal implementations; the 3D diamond stops drawing while anything covers it
+// Counted by both modal implementations; a widget drops its actions while any modal is open
 const [getOpenModalCount, setOpenModalCount] = createSignal(0);
 
 export { getOpenModalCount };

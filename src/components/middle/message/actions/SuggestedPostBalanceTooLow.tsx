@@ -1,5 +1,5 @@
 import { memo } from '../../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../../global';
+import { withGlobal } from '../../../../global';
 
 import type { ApiMessage, ApiPeer } from '../../../../api/types';
 import type { ApiMessageActionSuggestedPostApproval } from '../../../../api/types/messageActions';
@@ -11,9 +11,6 @@ import buildClassName from '../../../../util/buildClassName';
 import { renderPeerLink } from '../helpers/messageActions';
 
 import useLang from '../../../../hooks/useLang';
-import useLastCallback from '../../../../hooks/useLastCallback';
-
-import Sparkles from '../../../common/Sparkles';
 
 import styles from '../ActionMessage.module.scss';
 
@@ -36,14 +33,7 @@ const SuggestedPostBalanceTooLow = ({
   replyMessageSender,
   replyMessage,
 }: OwnProps & StateProps) => {
-  const { openStarsBalanceModal } = getActions();
   const lang = useLang();
-
-  const handleGetMoreStars = useLastCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openStarsBalanceModal({});
-  });
 
   const targetPeer = replyMessageSender || sender;
   const peerTitle = targetPeer && getPeerFullTitle(lang, targetPeer);
@@ -51,7 +41,6 @@ const SuggestedPostBalanceTooLow = ({
 
   const currency = replyMessage?.suggestedPostInfo?.price?.currency || STARS_CURRENCY_CODE;
   const currencyName = currency === TON_CURRENCY_CODE ? lang('CurrencyGram') : lang('CurrencyStars');
-  const buyButtonText = currency === TON_CURRENCY_CODE ? lang('ButtonTopUpViaFragment') : lang('ButtonBuyStars');
 
   return (
     <div
@@ -64,13 +53,6 @@ const SuggestedPostBalanceTooLow = ({
           currency: currencyName,
         }, { withNodes: true, withMarkdown: true })}
       </div>
-
-      {!message.isOutgoing && (
-        <div className={styles.actionButton} onClick={handleGetMoreStars}>
-          <Sparkles preset="button" />
-          {buyButtonText}
-        </div>
-      )}
     </div>
   );
 };

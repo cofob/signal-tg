@@ -44,11 +44,4 @@
 
 .statusPrimaryColor {
   color: var(--color-primary);
-
-  :global(.statusSparkles) {
-    color: var(--accent-color);
-    :global(.selected) & {
-      color: white;
-    }
-  }
 }

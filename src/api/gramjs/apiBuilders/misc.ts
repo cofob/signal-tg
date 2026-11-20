@@ -4,7 +4,6 @@ import type {
   ApiBaseTheme,
   ApiChatLink,
   ApiChatTheme,
-  ApiCollectibleInfo,
   ApiConfig,
   ApiCountry,
   ApiLanguage,
@@ -15,6 +14,8 @@ import type {
   ApiPromoData,
   ApiRestrictionReason,
   ApiSession,
+  ApiShareTheme,
+  ApiShareThemeBackdrop,
   ApiThemeSettings,
   ApiTimezone,
   ApiUrlAuthResult,
@@ -26,7 +27,6 @@ import type {
 
 import int2hex from '../../../util/int2hex';
 import { omitUndefined, pick } from '../../../util/iteratees';
-import { toJSNumber } from '../../../util/numbers';
 import { addDocumentToLocalDb, addUserToLocalDb } from '../helpers/localDb';
 import { buildApiFormattedText } from './common';
 import { buildApiDocument, buildMessageTextContent } from './messageContent';
@@ -121,12 +121,9 @@ export function buildApiChatTheme(theme: GramJs.Theme): ApiChatTheme | undefined
 }
 
 export function buildApiPeerTheme(theme: GramJs.TypeChatTheme): ApiPeerTheme | undefined {
-  if (theme instanceof GramJs.ChatTheme) {
-    return theme.emoticon ? { type: 'emoticon', emoticon: theme.emoticon } : undefined;
-  }
+  if (!(theme instanceof GramJs.ChatTheme) || !theme.emoticon) return undefined;
 
-  const settings = theme.themeSettings.map(buildApiThemeSettings).filter(Boolean);
-  return settings.length ? { type: 'gift', settings } : undefined;
+  return { type: 'emoticon', emoticon: theme.emoticon };
 }
 
 function buildApiThemeSettings(settings: GramJs.TypeThemeSettings): ApiThemeSettings | undefined {
@@ -199,8 +196,6 @@ export function buildPrivacyKey(key: GramJs.TypePrivacyKey): ApiPrivacyKey | und
       return 'bio';
     case 'PrivacyKeyBirthday':
       return 'birthday';
-    case 'PrivacyKeyStarGiftsAutoSave':
-      return 'gifts';
     case 'PrivacyKeyNoPaidMessages':
       return 'noPaidMessages';
     case 'PrivacyKeySavedMusic':
@@ -267,7 +262,7 @@ export function buildApiUrlAuthResult(result: GramJs.TypeUrlAuthResult): ApiUrlA
   if (result instanceof GramJs.UrlAuthResultRequest) {
     const {
       bot, domain, requestWriteAccess, requestPhoneNumber, browser, platform, ip, region, matchCodes,
-      matchCodesFirst, userIdHint, isApp, verifiedAppName, requestWallet, tcSessionId, tcClientId,
+      matchCodesFirst, userIdHint, isApp, verifiedAppName,
     } = result;
     const user = buildApiUser(bot);
     if (!user) return undefined;
@@ -289,10 +284,6 @@ export function buildApiUrlAuthResult(result: GramJs.TypeUrlAuthResult): ApiUrlA
       matchCodesFirst,
       userIdHint: userIdHint?.toString(),
       verifiedAppName,
-      // Without the session and the key the login goes on as a plain one
-      walletRequest: requestWallet && tcSessionId !== undefined && tcClientId
-        ? { sessionId: tcSessionId.toString(), clientId: tcClientId }
-        : undefined,
     };
   }
 
@@ -423,26 +414,6 @@ export function buildApiChatLink(data: GramJs.account.ResolvedBusinessChatLinks)
   };
 }
 
-export function buildApiCollectibleInfo(info: GramJs.fragment.TypeCollectibleInfo): ApiCollectibleInfo {
-  const {
-    amount,
-    currency,
-    cryptoAmount,
-    cryptoCurrency,
-    purchaseDate,
-    url,
-  } = info;
-
-  return {
-    amount: toJSNumber(amount),
-    currency,
-    cryptoAmount,
-    cryptoCurrency,
-    purchaseDate,
-    url,
-  };
-}
-
 export function buildApiRestrictionReasons(
   restrictionReasons?: GramJs.RestrictionReason[],
 ): ApiRestrictionReason[] | undefined {
@@ -463,5 +434,30 @@ export function buildApiPasskey(passkey: GramJs.TypePasskey): ApiPasskey {
     date,
     softwareEmojiId: softwareEmojiId?.toString(),
     lastUsageDate,
+  };
+}
+
+export function buildApiShareTheme(shareTheme: GramJs.TypeShareTheme): ApiShareTheme | undefined {
+  if (!(shareTheme instanceof GramJs.ShareThemeEmojiBackdrop)) return undefined;
+
+  return {
+    type: 'emojiBackdrop',
+    backdropId: shareTheme.backdropId,
+    emojis: shareTheme.emojis?.map((reaction) => buildApiReaction(reaction)).filter(Boolean) || [],
+  };
+}
+
+export function buildApiShareThemeBackdrop(backdrop: GramJs.ShareThemeBackdropOption): ApiShareThemeBackdrop {
+  const {
+    backdropId, name, centerColor, edgeColor, patternColor, textColor,
+  } = backdrop;
+
+  return {
+    backdropId,
+    name,
+    centerColor: int2hex(centerColor),
+    edgeColor: int2hex(edgeColor),
+    patternColor: int2hex(patternColor),
+    textColor: int2hex(textColor),
   };
 }

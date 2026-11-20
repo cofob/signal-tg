@@ -7,7 +7,6 @@ import type {
   ApiPeerPhotos,
   ApiPeerProfileColorSet,
   ApiPhoto,
-  ApiSavedGifts,
   ApiSticker,
   ApiTopic,
   ApiUser,
@@ -18,7 +17,7 @@ import type { IconName } from '../../../types/icons/index';
 import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
-import { MIN_SHOWN_WALLET_NANOS, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config.ts';
+import { SERVICE_NOTIFICATIONS_USER_ID } from '../../../config.ts';
 import {
   getUserStatus, isAnonymousForwardsChat, isChatChannel, isSystemBot, isUserOnline,
 } from '../../../global/helpers/index';
@@ -32,7 +31,6 @@ import {
   selectPeerHasProfileBackground,
   selectPeerPhotos,
   selectPeerProfileColor,
-  selectPeerSavedGifts,
   selectTabState,
   selectTheme,
   selectTopic,
@@ -46,7 +44,6 @@ import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import buildStyle from '../../../util/buildStyle';
 import { captureEvents, SwipeDirection } from '../../../util/captureEvents';
-import { formatTonParts } from '../../../util/localization/format';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { resolveTransitionName } from '../../../util/resolveTransitionName';
 import { REM } from '../helpers/mediaDimensions.ts';
@@ -63,12 +60,10 @@ import usePhotosPreload from '../hooks/usePhotosPreload';
 import Transition from '../../ui/Transition.tsx';
 import Avatar from '../Avatar.tsx';
 import FullNameTitle from '../FullNameTitle.tsx';
-import GramIcon from '../icons/GramIcon';
 import Icon from '../icons/Icon.tsx';
 import TopicIcon from '../TopicIcon.tsx';
 import ProfileMusicStrip from './ProfileMusicStrip';
 import ProfilePhoto from './ProfilePhoto';
-import ProfilePinnedGifts from './ProfilePinnedGifts.tsx';
 import RadialPatternBackground from './RadialPatternBackground.tsx';
 
 import './ProfileInfo.scss';
@@ -77,7 +72,6 @@ import styles from './ProfileInfo.module.scss';
 type OwnProps = {
   isExpanded?: boolean;
   isActive?: boolean;
-  isOwnProfile?: boolean;
   peerId: string;
   isForSettings?: boolean;
   canPlayVideo: boolean;
@@ -103,7 +97,6 @@ type StateProps = {
   profileColorOption?: ApiPeerColorOption<ApiPeerProfileColorSet>;
   theme: ThemeKey;
   isPlain?: boolean;
-  savedGifts?: ApiSavedGifts;
   hasAvatar?: boolean;
   isSystemAccount?: boolean;
 };
@@ -121,7 +114,6 @@ const PATTERN_Y_SHIFT = 8 * REM;
 const ProfileInfo = ({
   isExpanded,
   isActive,
-  isOwnProfile,
   isForSettings,
   canPlayVideo,
   user,
@@ -143,7 +135,6 @@ const ProfileInfo = ({
   profileColorOption,
   theme,
   isPlain,
-  savedGifts,
   hasAvatar,
   isSystemAccount,
   onExpand,
@@ -154,17 +145,10 @@ const ProfileInfo = ({
     openStickerSet,
     openPrivacySettingsNoticeModal,
     loadMoreProfilePhotos,
-    openUniqueGiftBySlug,
     openProfileRatingModal,
-    loadPeerSavedGifts,
-    openWalletCardModal,
   } = getActions();
 
   const savedMusic = userFullInfo?.savedMusic;
-  const walletBalance = userFullInfo?.walletCard?.balance;
-  // Not in Saved Messages or the settings, which also show the current user
-  const hasWalletBalance = Boolean(user && (!user.isSelf || isOwnProfile) && walletBalance !== undefined
-    && walletBalance >= MIN_SHOWN_WALLET_NANOS);
 
   const lang = useLang();
 
@@ -212,25 +196,11 @@ const ProfileInfo = ({
 
   const hasPatternBackground = profileColorSet?.bgColors || backgroundEmoji;
 
-  const pinnedGifts = useMemo(() => {
-    return savedGifts?.gifts.filter((gift) => {
-      if (gift.gift.type === 'starGiftUnique') {
-        return gift.isPinned && gift.gift.slug !== collectibleEmojiStatus?.slug;
-      }
-
-      return gift.isPinned;
-    });
-  }, [savedGifts, collectibleEmojiStatus?.slug]);
-
   useEffect(() => {
     if (photos.length - currentPhotoIndex <= LOAD_MORE_THRESHOLD) {
       loadMoreProfilePhotos({ peerId });
     }
   }, [currentPhotoIndex, peerId, photos.length]);
-
-  useEffect(() => {
-    loadPeerSavedGifts({ peerId });
-  }, [peerId]);
 
   // Set the current avatar photo to the last selected photo in Media Viewer after it is closed
   useEffect(() => {
@@ -266,15 +236,7 @@ const ProfileInfo = ({
     });
   });
 
-  const handleWalletBalanceClick = useLastCallback(() => {
-    openWalletCardModal({ userId: user!.id });
-  });
-
   const handleStatusClick = useLastCallback(() => {
-    if (emojiStatusSlug) {
-      openUniqueGiftBySlug({ slug: emojiStatusSlug });
-      return;
-    }
     if (!peerId) {
       openStickerSet({
         stickerSetInfo: emojiStatusSticker!.stickerSetInfo,
@@ -448,35 +410,6 @@ const ProfileInfo = ({
     );
   }
 
-  function renderWalletBalance() {
-    const [whole, fraction] = formatTonParts(lang, walletBalance!, true);
-
-    return (
-      <button
-        type="button"
-        className={styles.walletBalance}
-        style={createVtnStyle('walletBalance', true)}
-        data-wallet-card-origin={user!.id}
-        onClick={handleWalletBalanceClick}
-      >
-        <span className={styles.walletLabel}>
-          {lang('WalletSendBalance', {
-            amount: (
-              <span className={styles.walletAmount}>
-                <GramIcon isMono withWhiteStar={!isExpanded} className={styles.walletIcon} />
-                <span>
-                  {whole}
-                  {fraction && <span className={styles.walletFraction}>{fraction}</span>}
-                </span>
-              </span>
-            ),
-          }, { withNodes: true })}
-        </span>
-        <Icon name="next" className={styles.walletChevron} />
-      </button>
-    );
-  }
-
   function renderStatus() {
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
     const isSystemBotChat = isSystemBot(peerId);
@@ -548,7 +481,6 @@ const ProfileInfo = ({
         !isExpanded && styles.minimized,
         isPlain && styles.plain,
         hasPatternBackground && styles.withBackground,
-        hasWalletBalance && styles.hasWalletBalance,
         savedMusic && styles.hasMusic,
       )}
       style={buildStyle(
@@ -567,15 +499,6 @@ const ProfileInfo = ({
           withLinearGradient={!collectibleEmojiStatus}
           className={styles.radialPatternBackground}
           yPosition={PATTERN_Y_SHIFT}
-        />
-      )}
-      {Boolean(pinnedGifts?.length) && (
-        <ProfilePinnedGifts
-          peerId={peerId}
-          gifts={pinnedGifts}
-          isExpanded={isExpanded}
-          className={styles.pinnedGifts}
-          withGlow={!isPlain}
         />
       )}
       {isExpanded && (
@@ -675,7 +598,6 @@ const ProfileInfo = ({
           />
         )}
         {renderStatus()}
-        {hasWalletBalance && renderWalletBalance()}
       </div>
       {savedMusic && (
         <ProfileMusicStrip
@@ -713,7 +635,6 @@ export default memo(withGlobal<OwnProps>(
     const theme = selectTheme(global);
 
     const hasBackground = selectPeerHasProfileBackground(global, peerId);
-    const savedGifts = selectPeerSavedGifts(global, peerId);
     const hasAvatar = Boolean(peer?.avatarPhotoId);
 
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
@@ -737,7 +658,6 @@ export default memo(withGlobal<OwnProps>(
       profileColorOption: profileColor,
       theme,
       isPlain: !hasBackground,
-      savedGifts,
       hasAvatar,
       isSystemAccount,
     };

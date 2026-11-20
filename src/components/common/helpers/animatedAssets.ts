@@ -1,7 +1,5 @@
-import BrokenGiftPreview from '../../../assets/broken-gift.svg';
 import QrPlane from '../../../assets/tgs/auth/QrPlane.tgs';
 import BannedDuck from '../../../assets/tgs/BannedDuck.tgs';
-import BrokenGift from '../../../assets/tgs/BrokenGift.tgs';
 import CameraFlip from '../../../assets/tgs/calls/CameraFlip.tgs';
 import HandFilled from '../../../assets/tgs/calls/HandFilled.tgs';
 import HandOutline from '../../../assets/tgs/calls/HandOutline.tgs';
@@ -10,10 +8,8 @@ import VoiceAllowTalk from '../../../assets/tgs/calls/VoiceAllowTalk.tgs';
 import VoiceMini from '../../../assets/tgs/calls/VoiceMini.tgs';
 import VoiceMuted from '../../../assets/tgs/calls/VoiceMuted.tgs';
 import VoiceOutlined from '../../../assets/tgs/calls/VoiceOutlined.tgs';
-import CraftProgress from '../../../assets/tgs/CraftProgress.tgs';
 import DuckNothingFound from '../../../assets/tgs/DuckNothingFound.tgs';
 import Flame from '../../../assets/tgs/general/Flame.tgs';
-import Fragment from '../../../assets/tgs/general/Fragment.tgs';
 import Mention from '../../../assets/tgs/general/Mention.tgs';
 import PartyPopper from '../../../assets/tgs/general/PartyPopper.tgs';
 import PlayPause from '../../../assets/tgs/general/PlayPause.tgs';
@@ -30,7 +26,6 @@ import MonkeyTracking from '../../../assets/tgs/monkeys/TwoFactorSetupMonkeyTrac
 import ReadTime from '../../../assets/tgs/ReadTime.tgs';
 import Report from '../../../assets/tgs/Report.tgs';
 import Search from '../../../assets/tgs/Search.tgs';
-import SearchingDuck from '../../../assets/tgs/SearchingDuck.tgs';
 import Congratulations from '../../../assets/tgs/settings/Congratulations.tgs';
 import DiscussionGroups from '../../../assets/tgs/settings/DiscussionGroupsDucks.tgs';
 import DuckCake from '../../../assets/tgs/settings/DuckCake.tgs';
@@ -46,7 +41,6 @@ import StarReaction from '../../../assets/tgs/stars/StarReaction.tgs';
 import StarReactionEffect from '../../../assets/tgs/stars/StarReactionEffect.tgs';
 import Unlock from '../../../assets/tgs/Unlock.tgs';
 import BlueDiamond from '../../../assets/tgs/wallet/BlueDiamond.tgs';
-import Gram from '../../../assets/tgs/wallet/Gram.tgs';
 import DuckNothingFoundPreview from '../../../assets/tgs-previews/DuckNothingFound.svg';
 import WritingPreview from '../../../assets/tgs-previews/message/Writing.svg';
 import PausePreview from '../../../assets/tgs-previews/Pause.svg';
@@ -56,32 +50,20 @@ import HandStopPreview from '../../../assets/tgs-previews/settings/HandStop.avif
 import LockPreview from '../../../assets/tgs-previews/settings/Lock.avif';
 import PasskeysPreview from '../../../assets/tgs-previews/settings/Passkeys.svg';
 import BlueDiamondPreview from '../../../assets/tgs-previews/wallet/BlueDiamond.svg';
-import BlueDiamond3dPreview from '../../../assets/tgs-previews/wallet/BlueDiamond3d.webp';
-import GramPreview from '../../../assets/tgs-previews/wallet/Gram.svg';
-import Gram3dPreview from '../../../assets/tgs-previews/wallet/Gram3d.webp';
-import WhiteDiamond3dPreview from '../../../assets/tgs-previews/wallet/WhiteDiamond3d.webp';
 
 export const LOCAL_TGS_PREVIEW_URLS = {
   HandStop: HandStopPreview,
   Lock: LockPreview,
   PlayPause: PlayPreview,
   PlayPausePaused: PausePreview,
-  BrokenGift: BrokenGiftPreview,
   DuckNothingFound: DuckNothingFoundPreview,
   Search: SearchPreview,
   Passkeys: PasskeysPreview,
   Writing: WritingPreview,
   BlueDiamond: BlueDiamondPreview,
-  // The 3D model's first frame sits differently from the sticker's
-  BlueDiamond3d: BlueDiamond3dPreview,
-  Gram: GramPreview,
-  Gram3d: Gram3dPreview,
-  // The first frame of the white 3D diamond on the wallet card
-  WhiteDiamond3d: WhiteDiamond3dPreview,
 };
 
 export const LOCAL_TGS_URLS = {
-  Gram,
   BlueDiamond,
   MonkeyIdle,
   MonkeyTracking,
@@ -112,14 +94,10 @@ export const LOCAL_TGS_URLS = {
   Unlock,
   LastSeen,
   Mention,
-  Fragment,
   StarReactionEffect,
   StarReaction,
   Report,
-  SearchingDuck,
   BannedDuck,
-  BrokenGift,
-  CraftProgress,
   Search,
   DuckNothingFound,
   Passkeys,

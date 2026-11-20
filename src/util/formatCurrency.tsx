@@ -14,7 +14,6 @@ const LEADING_NUMBER_REGEX = /^\+?(\d*)(?:\.(\d*))?(?:e([+-]?\d+))?/i;
 // A pasted `1e999999` must not build a huge number, and 1e30 TON is already past `MAX_COINS`
 const MAX_EXPONENT = 30;
 const SUBSCRIPT_DIGITS = '\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089';
-const SHORT_FRACTION_DIGITS = 2;
 const PRECISE_SIGNIFICANT_DIGITS = 3;
 const MAX_FRACTION_DIGITS = 20;
 
@@ -22,22 +21,9 @@ export function convertCurrencyFromBaseUnit(amount: number, currency: string) {
   return amount / 10 ** getCurrencyExp(currency);
 }
 
-function convertCurrencyToBaseUnit(amount: number, currency: string) {
-  return amount * 10 ** getCurrencyExp(currency);
-}
-
 // The only way from nanotons to a float, which is only fit for display, plurals and fiat
 export function convertTonFromNanos(nanos: bigint): number {
   return convertCurrencyFromBaseUnit(Number(nanos), TON_CURRENCY_CODE);
-}
-
-// The decimal point is shifted in the digit string. Parsing through a float would lose nanotons on large amounts.
-export function parseTonToNanos(value: string): bigint {
-  const exp = getCurrencyExp(TON_CURRENCY_CODE);
-  const [whole = '', fraction = '', ...rest] = value.split('.');
-  const digits = `${whole}${fraction.slice(0, exp).padEnd(exp, '0')}`;
-
-  return !rest.length && /^\d+$/.test(digits) ? BigInt(digits) : 0n;
 }
 
 // Takes the number at the start and ignores the rest, as `parseFloat` does, e.g. `1.2.3` gives 1.2 and `1e3` gives 1000
@@ -60,16 +46,6 @@ export function formatTonFromNanos(nanos: bigint, shouldCollapseZeros?: boolean)
   const plain = fraction ? `${whole}.${fraction}` : String(whole);
 
   return shouldCollapseZeros ? collapseFractionZeros(plain) : plain;
-}
-
-// Two decimals for whole grams and two significant digits below one, e.g. `12.34` and `0.0012`
-export function formatTonShortFromNanos(nanos: bigint): string {
-  const exp = getCurrencyExp(TON_CURRENCY_CODE);
-  const abs = getBigIntAbs(nanos);
-  const leadingZeros = abs < 10 ** exp ? exp - String(abs).length : 0;
-  const unit = 10n ** BigInt(Math.max(exp - leadingZeros - SHORT_FRACTION_DIGITS, 0));
-
-  return formatTonFromNanos((abs / unit) * unit, true);
 }
 
 // Collapses leading fractional zeros into a subscript count, e.g. `0.00000056` becomes `0.0\u20866`
@@ -98,38 +74,6 @@ export function formatCurrency(
   }
 
   return formatCurrencyAsString(totalPrice, currency, lang.code, options);
-}
-
-export function convertTonToUsd(nanos: bigint, usdRate: number): number {
-  return convertTonFromNanos(nanos) * usdRate * 100;
-}
-
-// Through USD, as `payments.getCurrencyRates` does
-function convertTonToCurrency(nanos: bigint, tonUsdRate: number, currency: string, currencyRate: number): number {
-  return convertCurrencyToBaseUnit(convertTonFromNanos(nanos) * tonUsdRate * currencyRate, currency);
-}
-
-export function formatTonInFiat(
-  nanos: bigint,
-  tonUsdRate: number | undefined,
-  currency: string,
-  currencyRate: number | undefined,
-  locale?: string,
-  options?: {
-    shouldOmitFractions?: boolean;
-    isPrecise?: boolean;
-  },
-): string | undefined {
-  if (tonUsdRate === undefined || currencyRate === undefined) {
-    return undefined;
-  }
-
-  return formatCurrencyAsString(
-    convertTonToCurrency(nanos, tonUsdRate, currency, currencyRate),
-    currency,
-    locale,
-    { shouldOmitFractions: options?.shouldOmitFractions, isPrecise: options?.isPrecise },
-  );
 }
 
 export function formatCurrencyAsString(
@@ -178,7 +122,7 @@ function getPreciseFractionDigits(price: number, currency: string) {
   return Math.min(Math.max(exp, digits), MAX_FRACTION_DIGITS);
 }
 
-export function getCurrencyExp(currency: string) {
+function getCurrencyExp(currency: string) {
   if (currency === TON_CURRENCY_CODE) {
     return 9;
   }

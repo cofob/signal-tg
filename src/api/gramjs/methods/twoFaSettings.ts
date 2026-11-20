@@ -3,7 +3,7 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import { checkErrorType, wrapError } from '../helpers/misc';
 import { sendApiUpdate } from '../updates/apiUpdateEmitter';
 import {
-  getCurrentPassword, getTmpPassword, invokeRequest, updateTwoFaSettings,
+  getCurrentPassword, invokeRequest, updateTwoFaSettings,
 } from './client';
 
 const emailCodeController: {
@@ -32,16 +32,6 @@ function onRequestEmailCode(length: number) {
     emailCodeController.resolve = resolve;
     emailCodeController.reject = reject;
   });
-}
-
-export function getTemporaryPaymentPassword(password: string, ttl?: number) {
-  try {
-    return getTmpPassword(password, ttl);
-  } catch (err: unknown) {
-    if (!checkErrorType(err)) return undefined;
-
-    return Promise.resolve(wrapError(err));
-  }
 }
 
 export function getPassword(password: string) {

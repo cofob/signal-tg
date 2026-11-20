@@ -1,10 +1,10 @@
 import {
   memo, useEffect, useMemo, useRef, useState,
 } from '../../lib/teact/teact';
-import { getActions, withGlobal } from '../../global';
+import { getActions } from '../../global';
 
 import type {
-  ApiAvailableReaction, ApiEmojiStatusType, ApiReactionWithPaid, ApiSticker,
+  ApiAvailableReaction, ApiReactionWithPaid, ApiSticker,
 } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
@@ -36,7 +36,6 @@ import useWindowSize from '../../hooks/window/useWindowSize';
 
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import GiftEffectWrapper from './gift/GiftEffectWrapper';
 import Icon from './icons/Icon';
 import ReactionEmoji from './reactions/ReactionEmoji';
 import SharedCanvas from './SharedCanvas';
@@ -80,10 +79,6 @@ type OwnProps = {
   onDismiss?: NoneToVoidFunction;
 };
 
-type StateProps = {
-  collectibleStatuses?: ApiEmojiStatusType[];
-};
-
 const ITEMS_PER_ROW_FALLBACK = 8;
 const ITEMS_MOBILE_PER_ROW_FALLBACK = 7;
 const ITEMS_MINI_MOBILE_PER_ROW_FALLBACK = 6;
@@ -114,7 +109,6 @@ const StickerSet = ({
   noContextMenus,
   noAddButton,
   forcePlayback,
-  collectibleStatuses,
   observeIntersection,
   observeIntersectionForPlayingItems,
   observeIntersectionForShowingItems,
@@ -125,7 +119,7 @@ const StickerSet = ({
   onStickerFave,
   onStickerRemoveRecent,
   onDismiss,
-}: OwnProps & StateProps) => {
+}: OwnProps) => {
   const {
     clearRecentStickers,
     clearRecentCustomEmoji,
@@ -261,9 +255,6 @@ const StickerSet = ({
   const favoriteStickerIdsSet = useMemo(() => (
     favoriteStickers ? new Set(favoriteStickers.map(({ id }) => id)) : undefined
   ), [favoriteStickers]);
-  const collectibleEmojiIdsSet = useMemo(() => (
-    collectibleStatuses ? new Set(collectibleStatuses.map(({ documentId }) => documentId)) : undefined
-  ), [collectibleStatuses]);
   const withAddSetButton = !noAddButton && !shouldHideHeader && !isRecent && !isStatusCollectible
     && isEmoji && !isPopular && !isChatEmojiSet
     && (!isInstalled || (!isCurrentUserPremium && !isSavedMessages));
@@ -372,9 +363,6 @@ const StickerSet = ({
                 : sticker.emoji && getReactionKey({ type: 'emoji', emoticon: sticker.emoji });
               const selectionIndex = reactionId ? selectedReactionIds?.indexOf(reactionId) ?? -1 : -1;
 
-              const withSparkles = stickerSet.id === COLLECTIBLE_STATUS_SET_ID
-                || collectibleEmojiIdsSet?.has(sticker.id);
-
               const component = (
                 <StickerButton
                   key={sticker.id}
@@ -407,14 +395,6 @@ const StickerSet = ({
                 />
               );
 
-              if (withSparkles) {
-                return (
-                  <GiftEffectWrapper className="gift-effect-wrapper" withSparkles>
-                    {component}
-                  </GiftEffectWrapper>
-                );
-              }
-
               return component;
             })}
           {isCut && totalItemsCount > itemsBeforeCutout && (
@@ -445,13 +425,7 @@ const StickerSet = ({
   );
 };
 
-export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    const collectibleStatuses = global.collectibleEmojiStatuses?.statuses;
-
-    return { collectibleStatuses };
-  },
-)(StickerSet));
+export default memo(StickerSet);
 
 function getItemsPerRowFallback(windowWidth: number): number {
   return windowWidth > MOBILE_WIDTH_THRESHOLD_PX

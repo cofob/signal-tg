@@ -118,7 +118,7 @@ const GiveawayModal = ({
   starsGiftOptions,
 }: OwnProps & StateProps) => {
   const {
-    closeGiveawayModal, openInvoice, openPremiumModal,
+    closeGiveawayModal, openPremiumModal,
     launchPrepaidGiveaway, launchPrepaidStarsGiveaway, showNotification,
   } = getActions();
 
@@ -287,52 +287,6 @@ const GiveawayModal = ({
     setSelectedMonthOption(undefined);
     setSelectedRandomUserCount(DEFAULT_BOOST_COUNT);
     closeGiveawayModal();
-  });
-
-  const handleClick = useLastCallback(() => {
-    if (isPremiumGiveaway) {
-      if (selectedUserIds?.length) {
-        openInvoice({
-          type: 'giftcode',
-          boostChannelId: chatId!,
-          userIds: selectedUserIds,
-          currency: selectedGift!.currency,
-          amount: selectedGift!.amount,
-          option: selectedGift!,
-        });
-      } else {
-        openInvoice({
-          type: 'giveaway',
-          chatId: chatId!,
-          additionalChannelIds: selectedChannelIds,
-          isOnlyForNewSubscribers: selectedSubscriberOption === 'new',
-          countries: selectedCountryIds,
-          areWinnersVisible: shouldShowWinners,
-          prizeDescription,
-          untilDate: customExpireDate / 1000,
-          currency: selectedGift!.currency,
-          amount: selectedGift!.amount,
-          option: selectedGift!,
-        });
-      }
-    } else {
-      openInvoice({
-        type: 'starsgiveaway',
-        chatId: chatId!,
-        additionalChannelIds: selectedChannelIds,
-        isOnlyForNewSubscribers: selectedSubscriberOption === 'new',
-        countries: selectedCountryIds,
-        areWinnersVisible: shouldShowWinners,
-        prizeDescription,
-        untilDate: customExpireDate / 1000,
-        currency: selectedStarOption!.currency,
-        amount: selectedStarOption!.amount,
-        stars: selectedStarOption!.stars,
-        users: selectedRandomUserCount,
-      });
-    }
-
-    handleClose();
   });
 
   const confirmLaunchPrepaidGiveaway = useLastCallback(() => {
@@ -688,7 +642,7 @@ const GiveawayModal = ({
       onClose={handleClose}
       isOpen={isOpen}
       dialogRef={dialogRef}
-      onEnter={(dataPrepaidGiveaway || dataStarsPrepaidGiveaway) ? openConfirmModal : handleClick}
+      onEnter={(dataPrepaidGiveaway || dataStarsPrepaidGiveaway) ? openConfirmModal : undefined}
       hasAbsoluteCloseButton
     >
       <div className={buildClassName(styles.main, 'custom-scroll')} onScroll={handleScroll}>
@@ -844,11 +798,11 @@ const GiveawayModal = ({
           </>
         )}
 
-        {selectedGiveawayOption && (
+        {selectedGiveawayOption && (dataPrepaidGiveaway || dataStarsPrepaidGiveaway) && (
           <div className={styles.footer}>
             <Button
               className={styles.button}
-              onClick={(dataPrepaidGiveaway || dataStarsPrepaidGiveaway) ? openConfirmModal : handleClick}
+              onClick={openConfirmModal}
             >
               {lang('BoostingStartGiveaway')}
             </Button>

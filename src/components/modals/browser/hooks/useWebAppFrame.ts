@@ -47,8 +47,6 @@ function useWebAppFrame(
 ) {
   const {
     showNotification,
-    setWebAppPaymentSlug,
-    openInvoice,
     closeBrowserTab,
     openSuggestedStatusModal,
     updateWebApp,
@@ -234,20 +232,6 @@ function useWebAppFrame(
       if (eventType === 'web_app_open_scan_qr_popup') {
         showNotification({
           message: { key: 'MiniAppQrScanUnsupported' },
-        });
-      }
-
-      if (eventType === 'web_app_open_invoice') {
-        if (!webApp) return;
-
-        const key = getWebAppKey(webApp);
-        setWebAppPaymentSlug({
-          key,
-          slug: eventData.slug,
-        });
-        openInvoice({
-          type: 'slug',
-          slug: eventData.slug,
         });
       }
 

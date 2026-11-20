@@ -13,7 +13,6 @@ import type {
   ApiBotMenuButton,
   ApiChat,
   ApiChatFullInfo,
-  ApiDisallowedGifts,
   ApiDraft,
   ApiFormattedText,
   ApiInputRichMessage,
@@ -89,7 +88,6 @@ import {
   selectCanManageAutoDelete,
   selectCanPlayAnimatedEmojis,
   selectCanScheduleUntilOnline,
-  selectCanSendMoneyToUser,
   selectChat,
   selectChatFullInfo,
   selectChatHistoryTtl,
@@ -276,13 +274,11 @@ type StateProps = {
   currentMessageList?: MessageList;
   isChatWithBot?: boolean;
   isChatWithSelf?: boolean;
-  canSendMoney?: boolean;
   isChannel?: boolean;
   isForCurrentMessageList: boolean;
   isRightColumnShown?: boolean;
   isSelectModeActive?: boolean;
   isReactionPickerOpen?: boolean;
-  shouldDisplayGiftsButton?: boolean;
   isForwarding?: boolean;
   isReplying?: boolean;
   hasSuggestedPost?: boolean;
@@ -356,9 +352,6 @@ type StateProps = {
   shouldPaidMessageAutoApprove?: boolean;
   isSilentPosting?: boolean;
   paymentMessageConfirmDialogKey?: string;
-  starsBalance: number;
-  isStarsBalanceModalOpen: boolean;
-  disallowedGifts?: ApiDisallowedGifts;
   isAccountFrozen?: boolean;
   isAppConfigLoaded?: boolean;
   insertingPeerIdMention?: string;
@@ -424,13 +417,11 @@ const Composer = ({
   canSendVoiceByPrivacy,
   isChatWithBot,
   isChatWithSelf,
-  canSendMoney,
   isChannel,
   fileSizeLimit,
   isRightColumnShown,
   isSelectModeActive,
   isReactionPickerOpen,
-  shouldDisplayGiftsButton,
   isForwarding,
   isReplying,
   hasSuggestedPost,
@@ -503,9 +494,6 @@ const Composer = ({
   richMessageMaxTableColumns,
   isSilentPosting,
   paymentMessageConfirmDialogKey,
-  starsBalance,
-  isStarsBalanceModalOpen,
-  disallowedGifts,
   isAccountFrozen,
   isAppConfigLoaded,
   insertingPeerIdMention,
@@ -536,7 +524,6 @@ const Composer = ({
     showNotification,
     showAllowedMessageTypesNotification,
     openStoryReactionPicker,
-    openGiftModal,
     openAutoDeleteTimerModal,
     closeReactionPicker,
     sendStoryReaction,
@@ -863,7 +850,7 @@ const Composer = ({
     shouldAutoApprove: shouldPaidMessageAutoApprove,
     setAutoApprove: setShouldPaidMessageAutoApprove,
     handleWithConfirmation: handleActionWithPaymentConfirmation,
-  } = usePaidMessageConfirmation(paymentDialogKey, starsForAllMessages, isStarsBalanceModalOpen, starsBalance);
+  } = usePaidMessageConfirmation(paymentDialogKey, starsForAllMessages);
 
   const isPaidSendDeferred = starsForAllMessages > 0 && !shouldPaidMessageAutoApprove;
 
@@ -1268,14 +1255,6 @@ const Composer = ({
     };
   }, [chatId, threadId, resetComposerRef, cancelRecordingVoiceRef]);
 
-  const areAllGiftsDisallowed = useMemo(() => {
-    if (!disallowedGifts) {
-      return undefined;
-    }
-    return Object.values(disallowedGifts).every(Boolean);
-  }, [disallowedGifts]);
-
-  const shouldShowGiftButton = Boolean(!isChatWithSelf && shouldDisplayGiftsButton && !areAllGiftsDisallowed);
   const shouldShowSuggestedPostButton = isMonoforum && !editingMessage
     && !isForwarding && !isReplying && !draft?.suggestedPostInfo;
 
@@ -1386,7 +1365,6 @@ const Composer = ({
 
   const { className: peerColorClass, style: peerColorStyle } = usePeerColor({
     peer: sendAsPeer || currentUser,
-    theme,
   });
 
   const hasGifFromPicker = attachments.some((a) => a.gif);
@@ -2363,10 +2341,6 @@ const Composer = ({
     });
   });
 
-  const handleGiftClick = useLastCallback(() => {
-    openGiftModal({ forUserId: chatId });
-  });
-
   const handleAutoDeleteClick = useLastCallback(() => {
     openAutoDeleteTimerModal({ chatId });
   });
@@ -3048,7 +3022,6 @@ const Composer = ({
               onTodoListCreate={handleTodoListCreate}
               isScheduled={isInScheduledList}
               attachBots={isInMessageList ? attachBots : undefined}
-              canSendMoney={isInMessageList ? canSendMoney : undefined}
               peerType={attachMenuPeerType}
               shouldCollectDebugLogs={shouldCollectDebugLogs}
               theme={theme}
@@ -3201,15 +3174,6 @@ const Composer = ({
                       >
                         <AutoDeleteOutlinedIcon period={autoDeletePeriod} />
                       </Button>
-                    )}
-                    {shouldShowGiftButton && (
-                      <Button
-                        round
-                        className="composer-action-button"
-                        color="translucent"
-                        onClick={handleGiftClick}
-                        iconName="gift"
-                      />
                     )}
                     {shouldShowSuggestedPostButton && (
                       <Button
@@ -3560,8 +3524,6 @@ export default memo(withGlobal<OwnProps>(
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
     const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
-    const starsBalance = global.stars?.balance.amount || 0;
-    const isStarsBalanceModalOpen = Boolean(tabState.starsBalanceModal);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const isAppConfigLoaded = global.isAppConfigLoaded;
     const insertingPeerIdMention = tabState.insertingPeerIdMention;
@@ -3583,7 +3545,6 @@ export default memo(withGlobal<OwnProps>(
       user,
       isChatWithBot,
       isChatWithSelf,
-      canSendMoney: selectCanSendMoneyToUser(global, chatId),
       isForCurrentMessageList,
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, chatId),
       isChannel: chat ? isChatChannel(chat) : undefined,
@@ -3666,10 +3627,6 @@ export default memo(withGlobal<OwnProps>(
       shouldPaidMessageAutoApprove,
       isSilentPosting,
       paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
-      starsBalance,
-      isStarsBalanceModalOpen,
-      shouldDisplayGiftsButton: userFullInfo?.shouldDisplayGiftsButton,
-      disallowedGifts: userFullInfo?.disallowedGifts,
       isAccountFrozen,
       isAppConfigLoaded,
       insertingPeerIdMention,

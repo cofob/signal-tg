@@ -151,7 +151,6 @@ function getSummaryDescription(
     document,
     sticker,
     contact,
-    invoice,
     location,
     game,
     storyData,
@@ -225,10 +224,6 @@ function getSummaryDescription(
       entities: poll.summary.question.entities,
       asPreview: true,
     });
-  }
-
-  if (invoice) {
-    summary = invoice.extendedMedia ? invoice.title : lang('AttachInvoice', { description: invoice.description });
   }
 
   if (text) {

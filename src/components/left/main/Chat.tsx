@@ -71,7 +71,6 @@ import DeleteChatModal from '../../common/DeleteChatModal';
 import FullNameTitle from '../../common/FullNameTitle';
 import AutoDeleteIcon from '../../common/icons/AutoDeleteIcon';
 import Icon from '../../common/icons/Icon';
-import StarIcon from '../../common/icons/StarIcon';
 import LastMessageMeta from '../../common/LastMessageMeta';
 import ListItem from '../../ui/ListItem';
 import ChatFolderModal from '../ChatFolderModal.async';
@@ -443,13 +442,12 @@ const Chat = ({
   const autoDeleteInfoText = historyTtlText
     ? lang('AutoDeleteSetInfo', { time: historyTtlText })
     : undefined;
-  const shouldShowAutoDeleteBadge = !isAvatarOnlineShown && !chat.subscriptionUntil && Boolean(autoDeleteInfoText);
+  const shouldShowAutoDeleteBadge = !isAvatarOnlineShown && Boolean(autoDeleteInfoText);
   const avatarColorClassName = shouldShowAutoDeleteBadge
     ? getPeerColorClass(getPeerColorKey(avatarPeer, true)!)
     : undefined;
   const hasActiveCall = Boolean(chat.isCallActive && chat.isCallNotEmpty);
-  const hasAvatarCornerBadge = isAvatarOnlineShown || Boolean(chat.subscriptionUntil)
-    || shouldShowAutoDeleteBadge || hasActiveCall;
+  const hasAvatarCornerBadge = isAvatarOnlineShown || shouldShowAutoDeleteBadge || hasActiveCall;
 
   const chatClassName = buildClassName(
     'Chat chat-item-clickable',
@@ -484,7 +482,7 @@ const Chat = ({
             size={isPreview ? 'medium' : 'large'}
             asMessageBubble={isMonoforum}
             withStory={!user?.isSelf && !isMonoforum}
-            withStoryGap={isAvatarOnlineShown || Boolean(chat.subscriptionUntil) || shouldShowAutoDeleteBadge}
+            withStoryGap={isAvatarOnlineShown || shouldShowAutoDeleteBadge}
             storyGapPercent={shouldShowAutoDeleteBadge ? AUTO_DELETE_STORY_GAP_PERCENT : undefined}
             storyViewerOrigin={StoryViewerOrigin.ChatList}
             storyViewerMode="single-peer"
@@ -493,9 +491,6 @@ const Chat = ({
             <div
               className={buildClassName('avatar-online', 'avatar-badge', isAvatarOnlineShown && 'avatar-online-shown')}
             />
-            {!isAvatarOnlineShown && Boolean(chat.subscriptionUntil) && (
-              <StarIcon type="gold" className="avatar-badge avatar-subscription" size="adaptive" />
-            )}
             {shouldShowAutoDeleteBadge && (
               <AutoDeleteIcon
                 period={chat.ttlPeriod!}

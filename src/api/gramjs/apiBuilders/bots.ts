@@ -26,7 +26,6 @@ import type {
 
 import int2hex from '../../../util/int2hex';
 import { pick } from '../../../util/iteratees';
-import { toJSNumber } from '../../../util/numbers';
 import { addDocumentToLocalDb } from '../helpers/localDb';
 import { buildApiInlineButtonAction, buildApiReplyButtonAction } from './buttons';
 import { buildApiMessageEntity, buildApiPhoto } from './common';
@@ -140,16 +139,6 @@ export function buildBotInlineMessage(
       firstName: sendMessage.firstName,
       lastName: sendMessage.lastName,
       userId: '0',
-    };
-  } else if (sendMessage instanceof GramJs.BotInlineMessageMediaInvoice) {
-    content.invoice = {
-      mediaType: 'invoice',
-      isTest: sendMessage.test,
-      title: sendMessage.title,
-      description: sendMessage.description,
-      photo: buildApiWebDocument(sendMessage.photo),
-      currency: sendMessage.currency,
-      amount: toJSNumber(sendMessage.totalAmount),
     };
   } else if (sendMessage instanceof GramJs.BotInlineMessageRichMessage) {
     content.richMessage = buildApiRichMessage(sendMessage.richMessage);

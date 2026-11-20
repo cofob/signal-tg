@@ -397,8 +397,6 @@ export function buildMtpRichText(text: ApiRichText): GramJs.TypeRichText | undef
       return buildNestedRichText(text.text, GramJs.TextAutoPhone);
     case 'bankCard':
       return buildNestedRichText(text.text, GramJs.TextBankCard);
-    case 'tonAddress':
-      return buildNestedRichText(text.text, GramJs.TextTonAddress);
     case 'phone': {
       const mtpText = buildMtpRichText(text.text);
       return mtpText ? new GramJs.TextPhone({ text: mtpText, phone: text.phone }) : undefined;

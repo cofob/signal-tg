@@ -1,14 +1,12 @@
 import type { ElementRef } from '../../../lib/teact/teact';
-import { memo, useMemo, useRef } from '../../../lib/teact/teact';
+import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions } from '../../../global';
 
 import type {
   ApiAvailableReaction,
   ApiReaction,
   ApiReactionWithPaid,
-  ApiSavedStarGift,
   ApiShareThemeBackdrop,
-  ApiStarGiftUnique,
   ApiSticker,
 } from '../../../api/types';
 import type { IconName } from '../../../types/icons';
@@ -17,7 +15,6 @@ import type { ShareThemeBackdropOption, ShareThemeDraft } from './helpers/shareT
 import { getReactionKey, isSameReaction } from '../../../global/helpers';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
-import { getGiftAttributes } from '../../common/helpers/gifts';
 import {
   buildBackdropOptions,
   buildEmojiBackdropTheme,
@@ -31,57 +28,42 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import CustomEmoji from '../../common/CustomEmoji';
 import CustomEmojiPicker from '../../common/CustomEmojiPicker';
 import Icon from '../../common/icons/Icon';
-import RadialPatternBackground from '../../common/profile/RadialPatternBackground';
 import ReactionStaticEmoji from '../../common/reactions/ReactionStaticEmoji';
-import StickerView from '../../common/StickerView';
-import Button from '../../ui/Button';
-import InfiniteScroll from '../../ui/InfiniteScroll';
 
 import styles from './QrCodeThemeEditor.module.scss';
 
-export type QrThemePanel = 'colors' | 'emoji' | 'gifts';
+export type QrThemePanel = 'colors' | 'emoji';
 
 type OwnProps = {
   theme: ShareThemeDraft;
   activePanel?: QrThemePanel;
   panelRef: ElementRef<HTMLDivElement>;
   backdrops?: ApiShareThemeBackdrop[];
-  uniqueGifts?: ApiSavedStarGift[];
   availableReactions?: ApiAvailableReaction[];
   emojiPresets?: ApiSticker[];
   isCurrentUserPremium?: boolean;
-  isSelf?: boolean;
   onPanelChange: (panel?: QrThemePanel) => void;
   onThemeChange: (theme: ShareThemeDraft) => void;
-  onLoadMoreGifts: NoneToVoidFunction;
-  onBrowseGifts: NoneToVoidFunction;
 };
 
-const PANELS: { key: QrThemePanel; icon: IconName; titleKey: 'QrCodeColors' | 'QrCodeEmoji' | 'QrCodeGifts' }[] = [
+const PANELS: { key: QrThemePanel; icon: IconName; titleKey: 'QrCodeColors' | 'QrCodeEmoji' }[] = [
   { key: 'colors', icon: 'colorize', titleKey: 'QrCodeColors' },
   { key: 'emoji', icon: 'smile', titleKey: 'QrCodeEmoji' },
-  { key: 'gifts', icon: 'gift', titleKey: 'QrCodeGifts' },
 ];
 
 const NO_EMOJIS: ApiReaction[] = [];
-const GIFT_STICKER_SIZE = 56;
 const PICK_EMOJI_SIZE = 28;
-const GIFT_PATTERN_SIZE = 12;
 
 const QrCodeThemeEditor = ({
   theme,
   activePanel,
   panelRef,
   backdrops,
-  uniqueGifts,
   availableReactions,
   emojiPresets,
   isCurrentUserPremium,
-  isSelf,
   onPanelChange,
   onThemeChange,
-  onLoadMoreGifts,
-  onBrowseGifts,
 }: OwnProps) => {
   const { showNotification } = getActions();
 
@@ -92,7 +74,6 @@ const QrCodeThemeEditor = ({
   const selectedBackdrop = getShareThemeBackdrop(theme, backdrops);
   const selectedReactionIds = useMemo(() => emojis.map(getReactionKey), [emojis]);
   const presetIds = useMemo(() => new Set(emojiPresets?.map(({ id }) => id)), [emojiPresets]);
-  const selectedGiftId = theme?.type === 'gift' ? theme.gift.id : undefined;
 
   const handleBackdropClick = useLastCallback((option: ShareThemeBackdropOption) => {
     onThemeChange(buildEmojiBackdropTheme(option.backdropId, emojis));
@@ -113,19 +94,6 @@ const QrCodeThemeEditor = ({
 
   const handleCustomEmojiSelect = useLastCallback((sticker: ApiSticker) => {
     handleReactionSelect({ type: 'custom', documentId: sticker.id });
-  });
-
-  const handleGiftClick = useLastCallback((savedGift: ApiSavedStarGift) => {
-    if (savedGift.gift.id === selectedGiftId) {
-      onThemeChange(undefined);
-      return;
-    }
-
-    onThemeChange({
-      type: 'gift',
-      gift: savedGift.gift as ApiStarGiftUnique,
-      inputGift: savedGift.inputGift,
-    });
   });
 
   function renderColors() {
@@ -187,42 +155,6 @@ const QrCodeThemeEditor = ({
     );
   }
 
-  function renderGifts() {
-    if (uniqueGifts && !uniqueGifts.length) {
-      return (
-        <div className={styles.giftsEmpty}>
-          <div className={styles.giftsEmptyTitle}>{lang('QrCodeGiftsEmptyTitle')}</div>
-          <div className={styles.giftsEmptyText}>
-            {lang(isSelf ? 'QrCodeGiftsEmptyAbout' : 'QrCodeGiftsEmptyAboutChat')}
-          </div>
-          {isSelf && (
-            <Button className={styles.giftsBrowse} size="smaller" onClick={onBrowseGifts}>
-              {lang('QrCodeGiftsBrowse')}
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <InfiniteScroll
-        className={buildClassName(styles.gifts, IS_TOUCH_ENV ? 'no-scrollbar' : 'custom-scroll')}
-        items={uniqueGifts}
-        itemSelector={`.${styles.gift}`}
-        onLoadMore={onLoadMoreGifts}
-      >
-        {uniqueGifts?.map((savedGift) => (
-          <QrCodeGiftTile
-            key={savedGift.gift.id}
-            savedGift={savedGift}
-            isSelected={savedGift.gift.id === selectedGiftId}
-            onClick={handleGiftClick}
-          />
-        ))}
-      </InfiniteScroll>
-    );
-  }
-
   return (
     <>
       <div className={styles.island} inert={Boolean(activePanel)}>
@@ -242,53 +174,11 @@ const QrCodeThemeEditor = ({
         <div ref={panelRef} className={styles.panel}>
           {activePanel === 'colors' && renderColors()}
           {activePanel === 'emoji' && renderEmoji()}
-          {activePanel === 'gifts' && renderGifts()}
         </div>
       )}
     </>
   );
 };
-
-const QrCodeGiftTile = memo(({
-  savedGift,
-  isSelected,
-  onClick,
-}: {
-  savedGift: ApiSavedStarGift;
-  isSelected?: boolean;
-  onClick: (savedGift: ApiSavedStarGift) => void;
-}) => {
-  const stickerRef = useRef<HTMLDivElement>();
-  const { model, pattern, backdrop } = getGiftAttributes(savedGift.gift) || {};
-
-  const backgroundColors = useMemo(() => (
-    backdrop ? [backdrop.centerColor, backdrop.edgeColor] : undefined
-  ), [backdrop]);
-
-  return (
-    <button
-      type="button"
-      className={buildClassName(styles.gift, isSelected && styles.giftSelected)}
-      onClick={() => onClick(savedGift)}
-    >
-      {backgroundColors && (
-        <RadialPatternBackground
-          className={styles.giftBackground}
-          backgroundColors={backgroundColors}
-          patternIcon={pattern?.sticker}
-          patternSize={GIFT_PATTERN_SIZE}
-          ringsCount={1}
-          ovalFactor={1}
-        />
-      )}
-      {model && (
-        <div ref={stickerRef} className={styles.giftSticker}>
-          <StickerView containerRef={stickerRef} sticker={model.sticker} size={GIFT_STICKER_SIZE} />
-        </div>
-      )}
-    </button>
-  );
-});
 
 export default memo(QrCodeThemeEditor);
 

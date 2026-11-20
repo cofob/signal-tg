@@ -54,7 +54,6 @@
   .WebPage--content {
     position: relative;
 
-    &.is-gift,
     &.is-story {
       display: flex;
       flex-direction: column-reverse;
@@ -80,12 +79,6 @@
       margin-inline-end: 0.25rem;
       font-size: 1em !important;
     }
-  }
-
-  .with-gift &--quick-button {
-    margin-top: 0.0625rem;
-    margin-bottom: -0.125rem;
-    border-top: inherit;
   }
 
   &-text {

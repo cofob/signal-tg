@@ -5,10 +5,6 @@ import { MULTIACCOUNT_MAX_SLOTS } from './config';
 export const GROUP_CALL_PARTICIPANTS_LIMIT = 100;
 export const STORY_LIST_LIMIT = 100;
 export const API_GENERAL_ID_LIMIT = 100;
-export const RESALE_GIFTS_LIMIT = 50;
-export const WALLET_TRANSACTIONS_LIMIT = 50;
-export const WALLET_COLLECTIBLES_LIMIT = 20;
-export const WALLET_CARD_STICKERS_LIMIT = 10;
 export const PINNED_MESSAGES_LIMIT = 50;
 export const BLOCKED_LIST_LIMIT = 100;
 export const GLOBAL_SEARCH_CONTACTS_LIMIT = 20;
@@ -92,7 +88,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   giveawayAddPeersMax: 10,
   giveawayBoostsPerPremium: 4,
   giveawayCountriesMax: 10,
-  isGiveawayGiftsPurchaseAvailable: false,
   groupTranscribeLevelMin: 6,
   hiddenMembersMinCount: 100,
   ignoreRestrictionReasons: [],
@@ -129,8 +124,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   ],
   isPremiumPurchaseBlocked: false,
   maxUniqueReactions: 11,
-  starGiftMaxConvertPeriod: 7776000,
-  starGiftMaxMessageLength: 255,
   starRefStartPrefixes: [
     '_tgr_',
   ],

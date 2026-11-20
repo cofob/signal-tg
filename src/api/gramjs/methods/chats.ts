@@ -56,9 +56,8 @@ import {
   getPeerKey,
 } from '../apiBuilders/chats';
 import { buildApiPhoto } from '../apiBuilders/common';
-import { buildApiShareTheme } from '../apiBuilders/gifts';
 import { buildApiMessage, buildMessageDraft } from '../apiBuilders/messages';
-import { buildApiWallpaper } from '../apiBuilders/misc';
+import { buildApiShareTheme, buildApiWallpaper } from '../apiBuilders/misc';
 import {
   buildApiBotVerification,
   buildApiPeerId,
@@ -751,7 +750,6 @@ async function getFullChannelInfo(
     migratedFromChatId,
     migratedFromMaxId,
     canViewParticipants,
-    canViewStats,
     linkedChatId,
     hiddenPrehistory,
     call,
@@ -761,7 +759,6 @@ async function getFullChannelInfo(
     defaultSendAs,
     requestsPending,
     recentRequesters,
-    statsDc,
     participantsCount,
     stickerset,
     chatPhoto,
@@ -773,11 +770,8 @@ async function getFullChannelInfo(
     boostsApplied,
     boostsUnrestrict,
     botVerification,
-    canViewRevenue: canViewMonetization,
     paidReactionsAvailable,
     hasScheduled,
-    stargiftsCount,
-    stargiftsAvailable,
     paidMessagesAvailable,
     mainTab,
     guardBotId,
@@ -858,8 +852,6 @@ async function getFullChannelInfo(
         maxMessageId: migratedFromMaxId,
       } : undefined,
       canViewMembers: canLoadParticipants,
-      canViewStatistics: canViewStats,
-      canViewMonetization,
       isPreHistoryHidden: hiddenPrehistory,
       joinInfo,
       members,
@@ -874,7 +866,6 @@ async function getFullChannelInfo(
       sendAsId: defaultSendAs ? getApiChatIdFromMtpPeer(defaultSendAs) : undefined,
       requestsPending,
       recentRequesterIds: recentRequesters?.map((userId) => buildApiPeerId(userId, 'user')),
-      statisticsDcId: statsDc,
       stickerSet: stickerset ? buildStickerSet(stickerset) : undefined,
       emojiSet: emojiset ? buildStickerSet(emojiset) : undefined,
       areParticipantsHidden: participantsHidden,
@@ -885,8 +876,6 @@ async function getFullChannelInfo(
       botVerification: botVerification && buildApiBotVerification(botVerification),
       isPaidReactionAvailable: paidReactionsAvailable,
       hasScheduledMessages: hasScheduled,
-      starGiftCount: stargiftsCount,
-      areStarGiftsAvailable: Boolean(stargiftsAvailable),
       arePaidMessagesAvailable: paidMessagesAvailable,
       mainTab: mainTab && buildApiProfileTab(mainTab),
       guardBotId: guardBotId ? buildApiPeerId(guardBotId, 'user') : undefined,

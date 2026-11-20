@@ -98,14 +98,14 @@ export function getMessageTranscription(message: ApiMessage) {
 export function hasMessageText(message: MediaContainer) {
   const {
     action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
-    webPage, contact, invoice, location, game, storyData, giveaway, giveawayResults, paidMedia, widget,
+    webPage, contact, location, game, storyData, giveaway, giveawayResults, paidMedia, widget,
   } = message.content;
 
   if (pollId) return false;
 
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
-    || invoice || location || game || storyData || giveaway || giveawayResults || dice
+    || location || game || storyData || giveaway || giveawayResults || dice
     || paidMedia || widget || action?.type === 'phoneCall'
   );
 }
@@ -216,7 +216,7 @@ export function getMessageCustomShape(message: ApiMessage): boolean {
   const {
     text, sticker, photo, video, audio, voice,
     document, pollId, webPage, contact, action,
-    game, invoice, location, storyData, dice, widget,
+    game, location, storyData, dice, widget,
   } = message.content;
 
   if (sticker || (video?.isRound) || dice) {
@@ -224,7 +224,7 @@ export function getMessageCustomShape(message: ApiMessage): boolean {
   }
 
   if (!text || photo || video || audio || voice || document || pollId || webPage || contact || action || game
-    || invoice || location || storyData || widget) {
+    || location || storyData || widget) {
     return false;
   }
 

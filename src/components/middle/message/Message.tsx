@@ -202,8 +202,6 @@ import FactCheck from './FactCheck';
 import Game from './Game';
 import Giveaway from './Giveaway';
 import InlineButtons from './InlineButtons';
-import Invoice from './Invoice';
-import InvoiceMediaPreview from './InvoiceMediaPreview';
 import Location from './Location';
 import MessageAppendix from './MessageAppendix';
 import MessageEffect from './MessageEffect';
@@ -618,7 +616,7 @@ const Message = ({
   const {
     photo = paidMediaPhoto, video = paidMediaVideo, audio,
     voice, document, sticker, contact,
-    invoice, location,
+    location,
     action, game, storyData, giveaway,
     giveawayResults, todo, dice, widget,
   } = getMessageContent(message);
@@ -959,11 +957,10 @@ const Message = ({
     peer: messageColorPeer,
     noUserColors,
     shouldReset: true,
-    theme,
   });
 
   const hasWideMedia = Boolean(
-    (photo || video || isAlbum || invoice?.extendedMedia || invoice?.photo)
+    (photo || video || isAlbum)
     && ((text?.text.length || 0) > MIN_MESSAGE_LENGTH_FOR_WIDE_MEDIA || isMediaWithCommentButton),
   );
   const hasWidgetTimeOverlay = Boolean(widget && (!hasText || isInvertedMedia) && !hasReactions);
@@ -1525,13 +1522,6 @@ const Message = ({
             onEffectPlayed={hideDiceEffect}
           />
         )}
-        {invoice?.extendedMedia && (
-          <InvoiceMediaPreview
-            message={message}
-            isConnected={isConnected}
-          />
-        )}
-
         {withVoiceTranscription && (
           <p
             className={buildClassName(
@@ -1572,15 +1562,6 @@ const Message = ({
           </>
         )}
 
-        {invoice && !invoice.extendedMedia && (
-          <Invoice
-            message={message}
-            shouldAffectAppendix={hasCustomAppendix && !hasReactions}
-            isInSelectMode={isInSelectMode}
-            isSelected={isSelected}
-            theme={theme}
-          />
-        )}
         {location && (
           <Location
             message={message}
@@ -1734,7 +1715,7 @@ const Message = ({
 
     if (paidMedia) {
       return (
-        <PaidMediaOverlay chatId={chatId} messageId={messageId} paidMedia={paidMedia} isOutgoing={isOwn}>
+        <PaidMediaOverlay paidMedia={paidMedia} isOutgoing={isOwn}>
           {content}
         </PaidMediaOverlay>
       );
@@ -2108,7 +2089,6 @@ const Message = ({
         {message.inlineButtons && (
           <InlineButtons
             inlineButtons={message.inlineButtons}
-            isReceipt={Boolean(invoice?.receiptMessageId)}
             isEphemeral={message.isEphemeral}
             onClick={handleInlineButtonClick}
           />

@@ -1,23 +1,19 @@
 import type { ThreadId } from '../types';
 
 import {
-  RE_TG_LINK, RE_TME_LINK, TME_WEB_DOMAINS, WALLET_SEND_LINK_DOMAIN,
+  RE_TG_LINK, RE_TME_LINK, TME_WEB_DOMAINS,
 } from '../config';
-import { MAX_COINS } from '../lib/ton/cell';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { ensureProtocol } from './browser/url';
 import { parseTimestampDuration } from './dates/timestamp';
 import { isBase64Url } from './encoding/base64';
 import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
-import { parseTonToNanos } from './formatCurrency';
-import { parseTransferComment } from './tonAddress';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'invoice' | 'addlist' | 'boost' | 'giftcode' | 'message' | 'premium_offer' |
-  'premium_multigift' | 'stars_topup' | 'nft' | 'stars' | 'ton' | 'stargift_auction' | 'premium' | 'oauth' |
-  'newbot' | 'contact' | typeof WALLET_SEND_LINK_DOMAIN;
+  'msg' | 'msg_url' | 'addlist' | 'boost' | 'message' | 'premium_offer' | 'premium' | 'oauth' |
+  'newbot' | 'contact';
 
 interface PublicMessageLink {
   type: 'publicMessageLink';
@@ -120,40 +116,6 @@ interface PremiumReferrerLink {
   ref?: string;
 }
 
-interface PremiumMultigiftLink {
-  type: 'premiumMultigiftLink';
-  referrer: string;
-}
-
-interface GiftUniqueLink {
-  type: 'giftUniqueLink';
-  slug: string;
-}
-
-interface GiftAuctionLink {
-  type: 'giftAuctionLink';
-  slug: string;
-}
-
-interface StarsModalLink {
-  type: 'stars';
-}
-
-interface TonModalLink {
-  type: 'ton';
-}
-
-interface SendGramsLink {
-  type: 'sendGramsLink';
-  // A wallet address or a `@username`
-  to?: string;
-  // Nanotons
-  amount?: bigint;
-  comment?: string;
-  isCommentEncrypted?: boolean;
-  startApp?: string;
-}
-
 interface SettingsScreenLink {
   type: 'settings';
   path?: string;
@@ -185,13 +147,7 @@ type DeepLink =
   BusinessChatLink |
   ContactLink |
   PremiumReferrerLink |
-  PremiumMultigiftLink |
   ChatBoostLink |
-  GiftUniqueLink |
-  GiftAuctionLink |
-  StarsModalLink |
-  TonModalLink |
-  SendGramsLink |
   SettingsScreenLink |
   OAuthLink |
   NewBotLink;
@@ -212,11 +168,6 @@ type PublicUsernameOrBotLinkBuilderParams = Omit<BuilderParams<PublicUsernameOrB
   direct?: string;
 };
 
-type SendGramsLinkBuilderParams = Omit<BuilderParams<SendGramsLink>, 'isCommentEncrypted'> & {
-  text?: string;
-  encrypted?: string;
-};
-
 type OAuthLinkBuilderParams = Omit<BuilderParams<OAuthLink>, 'url'> & {
   url: string;
 };
@@ -227,13 +178,9 @@ const RE_TG_SLASHES_PROTOCOL = /^tg:\/\//i;
 const TME_SUBDOMAIN_SUFFIX = '.t.me';
 const SUBDOMAIN_LINK_TYPES = new Set<DeepLinkType>(['publicUsernameOrBotLink', 'publicMessageLink', 'groupCallLink']);
 const MAX_BOT_START_PARAMETER_LENGTH = 64;
-// Up to nine decimals: a finer amount would round into one the link does not name
-const RE_GRAMS_AMOUNT = /^\d+(\.\d{1,9})?$/;
-export const RE_TON_TRANSFER_LINK = /^ton:\/\/transfer(?:[/?#]|$)/i;
 
-// A `tc:` link is only followed as a platform deep link, never from message content
 export function isDeepLink(link: string): boolean {
-  return Boolean(link.match(RE_TME_LINK) || link.match(RE_TG_LINK) || link.match(RE_TON_TRANSFER_LINK));
+  return Boolean(link.match(RE_TME_LINK) || link.match(RE_TG_LINK));
 }
 
 export function tryParseDeepLink(link: string): DeepLink | undefined {
@@ -353,27 +300,8 @@ function parseTgLink(url: URL) {
       return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
     case 'premiumReferrerLink':
       return buildPremiumReferrerLink({ ref: queryParams.ref });
-    case 'premiumMultigiftLink':
-      return buildPremiumMultigiftLink({ referrer: queryParams.ref });
     case 'chatBoostLink':
       return buildChatBoostLink({ username: queryParams.domain, id: queryParams.channel });
-    case 'giftUniqueLink':
-      return buildGiftUniqueLink({ slug: queryParams.slug });
-    case 'giftAuctionLink':
-      return buildGiftAuctionLink({ slug: queryParams.slug });
-    case 'stars':
-      return { type: 'stars' } satisfies StarsModalLink;
-    case 'ton':
-      return { type: 'ton' } satisfies TonModalLink;
-    case 'sendGramsLink':
-      return buildSendGramsLink({
-        to: queryParams.to,
-        amount: queryParams.amount,
-        text: queryParams.text,
-        comment: queryParams.comment,
-        encrypted: queryParams.encrypted,
-        startApp: queryParams.startapp,
-      });
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
     case 'oauth':
@@ -503,26 +431,6 @@ function parseHttpLink(url: URL): DeepLink | undefined {
         id: isPrivateChannel ? pathParams[1] : undefined,
       });
     }
-    case 'giftUniqueLink': {
-      const slug = pathParams.slice(1).join('/');
-      return buildGiftUniqueLink({
-        slug,
-      });
-    }
-    case 'giftAuctionLink': {
-      return buildGiftAuctionLink({
-        slug: pathParams[1],
-      });
-    }
-    case 'sendGramsLink':
-      return buildSendGramsLink({
-        to: queryParams.to,
-        amount: queryParams.amount,
-        text: queryParams.text,
-        comment: queryParams.comment,
-        encrypted: queryParams.encrypted,
-        startApp: queryParams.startapp,
-      });
     case 'newBotLink':
       return buildNewBotLink({
         managerUsername: pathParams[1],
@@ -546,8 +454,6 @@ function getHttpDeepLinkType(
   if (len === 1) {
     if (method === 'share') return 'shareLink';
 
-    if (method === WALLET_SEND_LINK_DOMAIN) return 'sendGramsLink';
-
     if (method === 'boost' || queryParams.boost !== undefined) return 'chatBoostLink';
 
     if (isUsernameValid(method)) {
@@ -559,8 +465,6 @@ function getHttpDeepLinkType(
     if (method === 'm') return 'businessChatLink';
     if (method === 'contact') return 'contactLink';
     if (method === 'boost') return 'chatBoostLink';
-    if (method === 'nft') return 'giftUniqueLink';
-    if (method === 'auction') return 'giftAuctionLink';
     if (method === 'c') {
       if (queryParams.boost !== undefined) return 'chatBoostLink';
       return 'privateChannelLink';
@@ -577,7 +481,6 @@ function getHttpDeepLinkType(
     if (isUsernameValid(pathParams[0]) && pathParams.slice(1).every(isNumber)) {
       return hasGroupCall ? 'groupCallLink' : 'publicMessageLink';
     }
-    if (method === 'nft') return 'giftUniqueLink';
     if (method === 'newbot') return 'newBotLink';
   } else if (len === 4) {
     if (method === 'c' && pathParams.slice(1).every(isNumber)) {
@@ -604,11 +507,6 @@ function getTgDeepLinkType(
       }
       if (domain === 'oauth' && startapp) {
         return 'oauth';
-      }
-
-      // `t.me/sendgrams` reaches the web app as `tg://resolve?domain=sendgrams` in `tgaddr`
-      if (domain === WALLET_SEND_LINK_DOMAIN) {
-        return 'sendGramsLink';
       }
 
       if (domain && isUsernameValid(domain)) {
@@ -640,20 +538,8 @@ function getTgDeepLinkType(
     case 'premium_offer':
     case 'premium':
       return 'premiumReferrerLink';
-    case 'premium_multigift':
-      return 'premiumMultigiftLink';
     case 'boost':
       return 'chatBoostLink';
-    case 'nft':
-      return 'giftUniqueLink';
-    case 'stargift_auction':
-      return 'giftAuctionLink';
-    case 'stars':
-      return 'stars';
-    case 'ton':
-      return 'ton';
-    case WALLET_SEND_LINK_DOMAIN:
-      return 'sendGramsLink';
     case 'settings': {
       return 'settings';
     }
@@ -915,60 +801,6 @@ function buildBusinessChatLink(params: BuilderParams<BusinessChatLink>): Builder
   };
 }
 
-function buildGiftUniqueLink(params: BuilderParams<GiftUniqueLink>): BuilderReturnType<GiftUniqueLink> {
-  const {
-    slug,
-  } = params;
-
-  if (!slug) {
-    return undefined;
-  }
-
-  return {
-    type: 'giftUniqueLink',
-    slug,
-  };
-}
-
-function buildGiftAuctionLink(params: BuilderParams<GiftAuctionLink>): BuilderReturnType<GiftAuctionLink> {
-  const {
-    slug,
-  } = params;
-
-  if (!slug) {
-    return undefined;
-  }
-
-  return {
-    type: 'giftAuctionLink',
-    slug,
-  };
-}
-
-function buildSendGramsLink(params: SendGramsLinkBuilderParams): BuilderReturnType<SendGramsLink> {
-  const {
-    to, amount, text, comment, encrypted, startApp,
-  } = params;
-
-  if (amount !== undefined && (!to || !RE_GRAMS_AMOUNT.test(amount))) {
-    return undefined;
-  }
-
-  const nanos = amount === undefined ? undefined : parseTonToNanos(amount);
-
-  if (nanos !== undefined && nanos >= MAX_COINS) {
-    return undefined;
-  }
-
-  return {
-    type: 'sendGramsLink',
-    to: to || undefined,
-    amount: nanos || undefined,
-    ...parseTransferComment(text, comment, encrypted),
-    startApp: startApp || undefined,
-  };
-}
-
 function buildOAuthLink(params: OAuthLinkBuilderParams): BuilderReturnType<OAuthLink> {
   const {
     url,
@@ -1006,23 +838,6 @@ function buildPremiumReferrerLink(params: BuilderParams<PremiumReferrerLink>): B
   return {
     type: 'premiumReferrerLink',
     ref,
-  };
-}
-
-function buildPremiumMultigiftLink(
-  params: BuilderParams<PremiumMultigiftLink>,
-): BuilderReturnType<PremiumMultigiftLink> {
-  const {
-    referrer,
-  } = params;
-
-  if (!referrer) {
-    return undefined;
-  }
-
-  return {
-    type: 'premiumMultigiftLink',
-    referrer,
   };
 }
 

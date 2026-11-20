@@ -1,30 +1,22 @@
 import type { ElementRef } from '../../../lib/teact/teact';
 import {
-  memo, useLayoutEffect, useMemo, useRef, useState, useUnmountCleanup,
+  memo, useLayoutEffect, useRef, useState, useUnmountCleanup,
 } from '../../../lib/teact/teact';
 
 import type {
-  ApiAvailableReaction, ApiReaction, ApiStarGiftUnique, ApiSticker,
+  ApiAvailableReaction, ApiReaction,
 } from '../../../api/types';
 import type { LayerItem, LayerMotion, LayerRect, Point } from './helpers/floatingLayer';
 import type { WaveFrame } from './helpers/themeWave';
 
 import { requestMeasure, requestMutation } from '../../../lib/fasterdom/fasterdom';
-import { getDocumentMediaHash, getReactionKey, getStickerMediaHash, isSameReaction } from '../../../global/helpers';
+import { getDocumentMediaHash, getReactionKey, isSameReaction } from '../../../global/helpers';
 import { animate } from '../../../util/animation';
-import buildClassName from '../../../util/buildClassName';
-import buildStyle from '../../../util/buildStyle';
-import { clamp } from '../../../util/math';
-import { getGiftAttributes } from '../../common/helpers/gifts';
 import {
   enumerateEmojiItems,
-  enumerateGiftModels,
-  enumerateGiftSymbols,
   getIsCoveredByCard,
   getPickIndex,
   MAX_EMOJI_ITEM_SIZE,
-  MAX_GIFT_MODEL_SIZE,
-  MAX_GIFT_SYMBOL_SIZE,
 } from './helpers/floatingLayer';
 import { getWaveMaxRadius, getWavePush, WAVE_PUSH_DURATION } from './helpers/themeWave';
 
@@ -35,13 +27,11 @@ import { useStateRef } from '../../../hooks/useStateRef';
 
 import AnimatedSticker from '../../common/AnimatedSticker';
 import CustomEmoji from '../../common/CustomEmoji';
-import StickerView from '../../common/StickerView';
 
 import styles from './QrFloatingLayer.module.scss';
 
 type OwnProps = {
   emojis?: ApiReaction[];
-  gift?: ApiStarGiftUnique;
   availableReactions?: ApiAvailableReaction[];
   foregroundColor: string;
   cardRef: ElementRef<HTMLDivElement>;
@@ -54,19 +44,16 @@ type OwnProps = {
   onClick?: NoneToVoidFunction;
 };
 
-type LayerKind = 'emoji' | 'model' | 'symbol';
+type LayerKind = 'emoji';
 
 type RenderedTiles = {
   signature: string;
   emoji: LayerItem[];
-  model: LayerItem[];
-  symbol: LayerItem[];
 };
 
 type EntryAnimation = {
   duration: number;
   stagger: number;
-  isFade?: boolean;
 };
 
 type TileFrame = {
@@ -77,37 +64,26 @@ type TileFrame = {
 };
 
 const EMOJI_RENDER_SIZE = Math.ceil(MAX_EMOJI_ITEM_SIZE);
-const MODEL_RENDER_SIZE = Math.ceil(MAX_GIFT_MODEL_SIZE);
-const SYMBOL_RENDER_SIZE = Math.ceil(MAX_GIFT_SYMBOL_SIZE);
 // Custom emoji take their size from the variable and would stay text-sized in a tile
 const CUSTOM_EMOJI_STYLE = `--custom-emoji-size: ${EMOJI_RENDER_SIZE}px`;
-const SYMBOL_OPACITY = 0.37;
 // Covers the card wrapper's transform, which lands after the layer measures the card
 const CARD_SETTLE_DURATION = 300;
 const BACK_OVERSHOOT = 1.70158;
 
 const RENDER_SIZE_BY_KIND: Record<LayerKind, number> = {
   emoji: EMOJI_RENDER_SIZE,
-  model: MODEL_RENDER_SIZE,
-  symbol: SYMBOL_RENDER_SIZE,
 };
 
 const TILE_STYLE_BY_KIND: Record<LayerKind, string> = {
   emoji: buildTileStyle(EMOJI_RENDER_SIZE),
-  model: buildTileStyle(MODEL_RENDER_SIZE),
-  symbol: buildTileStyle(SYMBOL_RENDER_SIZE),
 };
 
 const ENTRY_BY_KIND: Record<LayerKind, EntryAnimation> = {
   emoji: { duration: 315, stagger: 300 },
-  model: { duration: 380, stagger: 300 },
-  symbol: { duration: 300, stagger: 300, isFade: true },
 };
 
 const PUSH_MASS_SIZE_BY_KIND: Record<LayerKind, number> = {
   emoji: 24,
-  model: 40,
-  symbol: 15,
 };
 
 // Emoji tiles stay mounted when their pick changes, so only the changed ones pop in
@@ -116,12 +92,11 @@ const emojiTileStates = new WeakMap<HTMLElement, { reaction?: string; appearAt: 
 const NO_TILES: LayerItem[] = [];
 
 const EMPTY_TILES: RenderedTiles = {
-  signature: '', emoji: [], model: [], symbol: [],
+  signature: '', emoji: [],
 };
 
 const QrFloatingLayer = ({
   emojis,
-  gift,
   availableReactions,
   foregroundColor,
   cardRef,
@@ -140,15 +115,12 @@ const QrFloatingLayer = ({
   const [tiles, setTiles] = useState<RenderedTiles>(EMPTY_TILES);
   const tilesRef = useStateRef(tiles);
   const emojisRef = useStateRef(emojis);
-  const giftRef = useStateRef(gift);
   const noAnimationRef = useStateRef(noAnimation);
   const waveStartedAtRef = useStateRef(waveStartedAt);
 
-  const { model, pattern, backdrop } = (gift && getGiftAttributes(gift)) || {};
-  const patternUrl = useMedia(pattern && getStickerMediaHash(pattern.sticker, 'preview'));
-  const contentKey = gift ? gift.id : emojis?.map(getReactionKey).join(',');
+  const contentKey = emojis?.map(getReactionKey).join(',');
   const contentKeyRef = useStateRef(contentKey);
-  // A layer revealed by a wave shows its initial emojis and symbols at once, like the native apps
+  // A layer revealed by a wave shows its initial emojis at once, like the native apps
   const waveContentKeyRef = useRef(waveStartedAt ? contentKey : undefined);
 
   const tick = useLastCallback(() => {
@@ -187,12 +159,9 @@ const QrFloatingLayer = ({
     };
     const seconds = isStatic ? 0 : elapsed / 1000;
     const emojiCount = emojisRef.current?.length || 0;
-    const hasGift = Boolean(giftRef.current);
 
     const nextTiles: Omit<RenderedTiles, 'signature'> = {
       emoji: emojiCount ? enumerateEmojiItems(area, origin, emojiCount, seconds) : [],
-      model: hasGift ? enumerateGiftModels(area, origin) : [],
-      symbol: hasGift ? enumerateGiftSymbols(area, origin) : [],
     };
     const signature = buildTilesSignature(nextTiles);
     if (signature !== tilesRef.current.signature) {
@@ -212,13 +181,13 @@ const QrFloatingLayer = ({
         applyTiles(root, kind, nextTiles[kind], {
           card,
           now,
-          entryAt: isWaveContent && kind !== 'model' ? 0 : entryAt,
+          entryAt: isWaveContent ? 0 : entryAt,
           wave,
         });
       });
     });
 
-    const hasContent = Boolean(emojiCount) || hasGift;
+    const hasContent = Boolean(emojiCount);
     const isSettling = now < settleUntilRef.current;
     const shouldContinue = hasContent && (!isStatic || isSettling || motion.getIsAnimating());
     isLoopActiveRef.current = shouldContinue;
@@ -240,10 +209,9 @@ const QrFloatingLayer = ({
     entryAtRef.current = performance.now();
   }, [contentKey]);
 
-  // Symbol tiles mount once the pattern loads, which a static layer must still place
   useLayoutEffect(() => {
     startLoop();
-  }, [tiles, contentKey, noAnimation, patternUrl, startLoop]);
+  }, [tiles, contentKey, noAnimation, startLoop]);
 
   // A static layer keeps following the card until its new transform lands
   useLayoutEffect(() => {
@@ -282,15 +250,6 @@ const QrFloatingLayer = ({
     startLoop();
   });
 
-  const patternColor = backdrop?.patternColor;
-  const symbolStyle = useMemo(() => (
-    patternUrl && buildStyle(
-      TILE_STYLE_BY_KIND.symbol,
-      `mask-image: url(${patternUrl})`,
-      `background-color: ${patternColor}`,
-    )
-  ), [patternColor, patternUrl]);
-
   return (
     <div
       ref={rootRef}
@@ -302,30 +261,6 @@ const QrFloatingLayer = ({
       onPointerCancel={handlePointerCancel}
     >
       {/* Keyed lists keep tiles mounted while others enter and leave, so animations are not restarted */}
-      <div className={styles.group} teactFastList>
-        {(symbolStyle ? tiles.symbol : NO_TILES).map((item) => (
-          <div
-            key={item.key}
-            className={buildClassName(styles.tile, styles.symbol)}
-            data-kind="symbol"
-            data-key={item.key}
-            style={symbolStyle}
-          />
-        ))}
-      </div>
-      <div className={styles.group} teactFastList>
-        {(model ? tiles.model : NO_TILES).map((item) => (
-          <div
-            key={item.key}
-            className={styles.tile}
-            style={TILE_STYLE_BY_KIND.model}
-            data-kind="model"
-            data-key={item.key}
-          >
-            <ModelTile sticker={model!.sticker} />
-          </div>
-        ))}
-      </div>
       <div className={styles.group} teactFastList>
         {(emojis?.length ? tiles.emoji : NO_TILES).map((item) => {
           // Tiles may come from a frame with another emoji count, so the pick follows the current one.
@@ -393,23 +328,6 @@ const EmojiTile = memo(({
   );
 });
 
-const ModelTile = memo(({ sticker }: { sticker: ApiSticker }) => {
-  const ref = useRef<HTMLDivElement>();
-
-  return (
-    <div ref={ref} className={styles.sticker}>
-      <StickerView
-        containerRef={ref}
-        sticker={sticker}
-        size={MODEL_RENDER_SIZE}
-        shouldLoop
-        withSharedAnimation
-        forceAlways
-      />
-    </div>
-  );
-});
-
 export default memo(QrFloatingLayer);
 
 function buildTileStyle(size: number) {
@@ -419,8 +337,6 @@ function buildTileStyle(size: number) {
 function buildTilesSignature(tiles: Omit<RenderedTiles, 'signature'>) {
   return [
     tiles.emoji.map(({ key, pick }) => `${key}/${pick}`).join(','),
-    tiles.model.map(({ key }) => key).join(','),
-    tiles.symbol.map(({ key }) => key).join(','),
   ].join('|');
 }
 
@@ -439,11 +355,11 @@ function applyTiles(root: HTMLElement, kind: LayerKind, items: LayerItem[], fram
     const element = elementsByKey.get(item.key);
     if (!element) return;
 
-    const appearAt = kind === 'emoji' ? getEmojiAppearAt(element, entryAt, now) : entryAt;
+    const appearAt = getEmojiAppearAt(element, entryAt, now);
     const progress = appearAt ? (now - appearAt - item.delay * entry.stagger) / entry.duration : 1;
-    const entryValue = entry.isFade ? clamp(progress, 0, 1) : getPopScale(progress);
+    const entryValue = getPopScale(progress);
     const push = wave && getWavePush(item, wave, PUSH_MASS_SIZE_BY_KIND[kind]);
-    const scale = (item.size / renderSize) * (entry.isFade ? 1 : entryValue) * (push?.scale ?? 1);
+    const scale = (item.size / renderSize) * entryValue * (push?.scale ?? 1);
     const isHidden = scale <= 0 || entryValue <= 0 || (card && getIsCoveredByCard(card, item.x, item.y, item.size));
     const x = item.x + (push?.x ?? 0) - renderSize / 2;
     const y = item.y + (push?.y ?? 0) - renderSize / 2;
@@ -451,9 +367,6 @@ function applyTiles(root: HTMLElement, kind: LayerKind, items: LayerItem[], fram
     element.style.transform = `translate(${x}px, ${y}px) rotate(${item.rotation + (push?.rotation ?? 0)}deg) `
       + `scale(${scale})`;
     element.style.visibility = isHidden ? 'hidden' : 'visible';
-    if (entry.isFade) {
-      element.style.opacity = String(SYMBOL_OPACITY * entryValue);
-    }
   });
 }
 

@@ -36,11 +36,6 @@ import Management from './management/Management.async';
 import PollResults from './PollResults.async';
 import Profile from './Profile';
 import RightHeader from './RightHeader';
-import BoostStatistics from './statistics/BoostStatistics';
-import MessageStatistics from './statistics/MessageStatistics.async';
-import MonetizationStatistics from './statistics/MonetizationStatistics';
-import Statistics from './statistics/Statistics.async';
-import StoryStatistics from './statistics/StoryStatistics.async';
 
 import './RightColumn.scss';
 
@@ -88,16 +83,11 @@ const RightColumn: FC<OwnProps & StateProps> = ({
     addChatMembers,
     setNewChatMembersDialogState,
     setEditingExportedInvite,
-    toggleStatistics,
-    toggleMessageStatistics,
-    toggleStoryStatistics,
     setOpenedInviteInfo,
     requestNextManagementScreen,
     closeCreateTopicPanel,
     closeEditTopicPanel,
-    closeBoostStatistics,
     setShouldCloseRightColumn,
-    closeMonetizationStatistics,
   } = getActions();
 
   const containerRef = useRef<HTMLDivElement>();
@@ -115,11 +105,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
   const isOpen = contentKey !== undefined;
   const isProfile = contentKey === RightColumnContent.ChatInfo;
   const isManagement = contentKey === RightColumnContent.Management;
-  const isStatistics = contentKey === RightColumnContent.Statistics;
-  const isMessageStatistics = contentKey === RightColumnContent.MessageStatistics;
-  const isStoryStatistics = contentKey === RightColumnContent.StoryStatistics;
-  const isBoostStatistics = contentKey === RightColumnContent.BoostStatistics;
-  const isMonetizationStatistics = contentKey === RightColumnContent.MonetizationStatistics;
   const isPollResults = contentKey === RightColumnContent.PollResults;
   const isAddingChatMembers = contentKey === RightColumnContent.AddingMembers;
   const isCreatingTopic = contentKey === RightColumnContent.CreateTopic;
@@ -240,21 +225,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
 
         break;
       }
-      case RightColumnContent.MessageStatistics:
-        toggleMessageStatistics();
-        break;
-      case RightColumnContent.StoryStatistics:
-        toggleStoryStatistics();
-        break;
-      case RightColumnContent.Statistics:
-        toggleStatistics();
-        break;
-      case RightColumnContent.BoostStatistics:
-        closeBoostStatistics();
-        break;
-      case RightColumnContent.MonetizationStatistics:
-        closeMonetizationStatistics();
-        break;
       case RightColumnContent.PollResults:
         closePollResults();
         break;
@@ -364,16 +334,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           />
         );
 
-      case RightColumnContent.Statistics:
-        return <Statistics chatId={chatId!} />;
-      case RightColumnContent.BoostStatistics:
-        return <BoostStatistics />;
-      case RightColumnContent.MonetizationStatistics:
-        return <MonetizationStatistics />;
-      case RightColumnContent.MessageStatistics:
-        return <MessageStatistics chatId={chatId!} isActive={isOpen && isActive} />;
-      case RightColumnContent.StoryStatistics:
-        return <StoryStatistics chatId={chatId!} isActive={isOpen && isActive} />;
       case RightColumnContent.PollResults:
         return <PollResults onClose={close} isActive={isOpen && isActive} />;
       case RightColumnContent.CreateTopic:
@@ -401,11 +361,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           isProfile={isProfile}
           headerBackground={headerBackground}
           isManagement={isManagement}
-          isStatistics={isStatistics}
-          isBoostStatistics={isBoostStatistics}
-          isMonetizationStatistics={isMonetizationStatistics}
-          isMessageStatistics={isMessageStatistics}
-          isStoryStatistics={isStoryStatistics}
           isPollResults={isPollResults}
           isCreatingTopic={isCreatingTopic}
           isEditingTopic={isEditingTopic}
@@ -425,11 +380,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           shouldCleanup
           onStart={startAnimating}
           onStop={stopAnimating}
-          cleanupExceptionKey={
-            (renderingContentKey === RightColumnContent.MessageStatistics
-              || renderingContentKey === RightColumnContent.StoryStatistics)
-              ? RightColumnContent.Statistics : undefined
-          }
         >
           {renderContent}
         </Transition>

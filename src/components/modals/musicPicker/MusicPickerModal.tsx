@@ -76,8 +76,6 @@ type StateProps = {
   isAppConfigLoaded?: boolean;
   paidMessagesStars?: number;
   paymentMessageConfirmDialogKey?: string;
-  starsBalance: number;
-  isStarsBalanceModalOpen: boolean;
   isSilentPosting?: boolean;
   fileSizeLimit: number;
 };
@@ -118,8 +116,6 @@ const MusicPickerModal = ({
   isAppConfigLoaded,
   paidMessagesStars,
   paymentMessageConfirmDialogKey,
-  starsBalance,
-  isStarsBalanceModalOpen,
   isSilentPosting,
   fileSizeLimit,
 }: OwnProps & StateProps) => {
@@ -142,8 +138,6 @@ const MusicPickerModal = ({
   } = usePaidMessageConfirmation(
     PAYMENT_DIALOG_KEY,
     paidMessagesStars || 0,
-    isStarsBalanceModalOpen,
-    starsBalance,
     true,
   );
 
@@ -554,8 +548,6 @@ export default memo(withGlobal<OwnProps>(
       isAppConfigLoaded: global.isAppConfigLoaded,
       paidMessagesStars: selectPeerPaidMessagesStars(global, modal.chatId),
       paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
-      starsBalance: global.stars?.balance.amount || 0,
-      isStarsBalanceModalOpen: Boolean(tabState.starsBalanceModal),
       fileSizeLimit: selectCurrentLimit(global, 'uploadMaxFileparts') * MAX_UPLOAD_FILEPART_SIZE,
       isSilentPosting: chat ? getChatNotifySettings(
         chat,

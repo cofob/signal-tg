@@ -3,14 +3,10 @@ import { memo } from '../../lib/teact/teact';
 
 import type { ApiPeer, ApiTypePeerColor } from '../../api/types';
 
-import { selectTheme } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
-import { REM } from './helpers/mediaDimensions';
 
-import useSelector from '../../hooks/data/useSelector';
 import usePeerColor from '../../hooks/usePeerColor';
 
-import CustomEmoji from './CustomEmoji';
 import EmojiIconBackground from './embedded/EmojiIconBackground';
 
 import styles from './PeerColorWrapper.module.scss';
@@ -28,8 +24,6 @@ interface OwnProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-const GIFT_EMOJI_SIZE = 1.25 * REM;
-
 function PeerColorWrapper({
   ref,
   peer,
@@ -44,15 +38,12 @@ function PeerColorWrapper({
   ...otherProps
 }: OwnProps) {
   const color = peerColor || peer?.color;
-  const theme = useSelector(selectTheme);
 
   const {
     style,
     className: peerColorClassName,
     backgroundEmojiId,
-    giftEmojiId,
-  } = usePeerColor({ peer, color, noUserColors, shouldReset, theme });
-  const hasGiftEmoji = isReply && Boolean(giftEmojiId);
+  } = usePeerColor({ peer, color, noUserColors, shouldReset });
 
   return (
     <div
@@ -60,7 +51,6 @@ function PeerColorWrapper({
       className={buildClassName(
         styles.root,
         peerColorClassName,
-        hasGiftEmoji && styles.hasGiftEmoji,
         !noBar && styles.withBar,
         className,
       )}
@@ -71,15 +61,6 @@ function PeerColorWrapper({
         <EmojiIconBackground
           className={emojiIconClassName}
           emojiDocumentId={backgroundEmojiId}
-          withEmojiSpace={hasGiftEmoji}
-        />
-      )}
-      {hasGiftEmoji && (
-        <CustomEmoji
-          className={styles.giftEmoji}
-          documentId={giftEmojiId}
-          size={GIFT_EMOJI_SIZE}
-          noPlay
         />
       )}
       {children}

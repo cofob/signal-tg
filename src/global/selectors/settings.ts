@@ -9,10 +9,8 @@ import { selectSharedSettings } from './sharedState';
 import {
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
-  selectIsGiveawayGiftsPurchaseAvailable,
   selectIsPremiumPurchaseBlocked,
 } from './users';
-import { selectIsWalletAvailable } from './wallet';
 
 const getReferencedWallpaperBackgroundsMemo = memoized(getReferencedWallpaperBackgrounds);
 const getGlobalWallpaperBackgroundsMemo = memoized(getGlobalWallpaperBackgrounds);
@@ -82,8 +80,6 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
 
   return {
     canBuyPremium: !selectIsPremiumPurchaseBlocked(global),
-    isGiveawayAvailable: selectIsGiveawayGiftsPurchaseAvailable(global),
-    isWalletAvailable: selectIsWalletAvailable(global),
     isPasswordStateKnown: hasPassword !== undefined,
     hasPassword,
     hasPasscode,
@@ -170,13 +166,8 @@ function getReferencedWallpaperBackgrounds(
       if (wallpaper?.document) backgrounds.add(wallpaper.slug);
     });
   });
-  [...Object.values(userFullInfos), ...Object.values(chatFullInfos)].forEach(({ wallpaper, peerTheme }) => {
+  [...Object.values(userFullInfos), ...Object.values(chatFullInfos)].forEach(({ wallpaper }) => {
     if (wallpaper?.document) backgrounds.add(wallpaper.slug);
-    if (peerTheme?.type === 'gift') {
-      peerTheme.settings.forEach((settings) => {
-        if (settings.wallpaper?.document) backgrounds.add(settings.wallpaper.slug);
-      });
-    }
   });
   return [...backgrounds];
 }

@@ -106,8 +106,6 @@ export interface ApiChat {
   hasUnreadStories?: boolean;
   maxStoryId?: number;
 
-  subscriptionUntil?: number;
-
   // Locally determined field
   detectedLanguage?: string;
 
@@ -172,11 +170,8 @@ export interface ApiChatFullInfo {
   enabledReactions?: ApiChatReactions;
   reactionsLimit?: number;
   sendAsId?: string;
-  canViewStatistics?: boolean;
-  canViewMonetization?: boolean;
   recentRequesterIds?: string[];
   requestsPending?: number;
-  statisticsDcId?: number;
   stickerSet?: ApiStickerSet;
   emojiSet?: ApiStickerSet;
   profilePhoto?: ApiPhoto;
@@ -185,8 +180,6 @@ export interface ApiChatFullInfo {
   hasPinnedStories?: boolean;
   isPaidReactionAvailable?: boolean;
   hasScheduledMessages?: boolean;
-  starGiftCount?: number;
-  areStarGiftsAvailable?: boolean;
   arePaidMessagesAvailable?: true;
 
   boostsApplied?: number;

@@ -1,20 +1,9 @@
 import { memo } from '../../lib/teact/teact';
 
-import type { GlobalState } from '../../global/types';
-
-import { selectTabState } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import buildStyle from '../../util/buildStyle';
 
-import useSelector from '../../hooks/data/useSelector';
-import useShowTransition from '../../hooks/useShowTransition';
-
 import styles from './Sparkles.module.scss';
-
-function selectIsHeavyModalOpen(global: GlobalState) {
-  const tabState = selectTabState(global);
-  return Boolean(tabState.giftCraftModal || tabState.giftCraftSelectModal);
-}
 
 type ButtonParameters = {
   preset: 'button';
@@ -100,20 +89,9 @@ const Sparkles = ({
   noAnimation,
   ...presetSettings
 }: OwnProps) => {
-  const isHeavyModalOpen = useSelector(selectIsHeavyModalOpen);
-
-  const { ref, shouldRender } = useShowTransition<HTMLDivElement>({
-    isOpen: !isHeavyModalOpen,
-    withShouldRender: true,
-    noMountTransition: true,
-  });
-
-  if (!shouldRender) return undefined;
-
   if (presetSettings.preset === 'button') {
     return (
       <div
-        ref={ref}
         className={buildClassName(styles.root, styles.button, className, noAnimation && styles.noAnimation)}
         style={style}
       >
@@ -144,7 +122,6 @@ const Sparkles = ({
   if (presetSettings.preset === 'progress') {
     return (
       <div
-        ref={ref}
         className={buildClassName(styles.root, styles.progress, className)}
         style={style}
       >

@@ -22,7 +22,6 @@ export default function useProfileViewportIds({
   searchMessages,
   loadStories,
   loadStoriesArchive,
-  loadMoreGifts,
   tabType,
   mediaSearchType,
   groupChatMembers,
@@ -34,7 +33,6 @@ export default function useProfileViewportIds({
   foundIds,
   threadId,
   storyIds,
-  giftIds,
   pinnedStoryIds,
   archiveStoryIds,
   similarChannels,
@@ -46,7 +44,6 @@ export default function useProfileViewportIds({
   searchMessages: AnyToVoidFunction;
   loadStories: AnyToVoidFunction;
   loadStoriesArchive: AnyToVoidFunction;
-  loadMoreGifts: AnyToVoidFunction;
   tabType: ProfileTabType;
   mediaSearchType?: SharedMediaType;
   groupChatMembers?: ApiChatMember[];
@@ -58,7 +55,6 @@ export default function useProfileViewportIds({
   foundIds?: number[];
   threadId?: ThreadId;
   storyIds?: number[];
-  giftIds?: string[];
   pinnedStoryIds?: number[];
   archiveStoryIds?: number[];
   similarChannels?: string[];
@@ -201,10 +197,6 @@ export default function useProfileViewportIds({
       break;
     case 'similarBots':
       viewportIds = similarBots;
-      break;
-    case 'gifts':
-      viewportIds = giftIds;
-      getMore = loadMoreGifts;
       break;
   }
 

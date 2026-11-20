@@ -21,7 +21,6 @@ export { default as PremiumLimitReachedModal } from '../components/main/premium/
 export { default as StatusPickerMenu } from '../components/left/main/StatusPickerMenu';
 export { default as SuggestedStatusModal } from '../components/modals/suggestedStatus/SuggestedStatusModal';
 export { default as BoostModal } from '../components/modals/boost/BoostModal';
-export { default as GiftCodeModal } from '../components/modals/giftcode/GiftCodeModal';
 export { default as DeleteAccountModal } from '../components/modals/deleteAccount/DeleteAccountModal';
 export { default as AgeVerificationModal } from '../components/modals/ageVerification/AgeVerificationModal';
 export { default as ChatlistModal } from '../components/modals/chatlist/ChatlistModal';
@@ -30,8 +29,6 @@ export { default as PasskeyModal } from '../components/modals/passkey/PasskeyMod
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 
 export { default as AboutAdsModal } from '../components/modals/aboutAds/AboutAdsModal';
-export { default as AboutMonetizationModal } from '../components/common/AboutMonetizationModal';
-export { default as VerificationMonetizationModal } from '../components/common/VerificationMonetizationModal';
 export { default as EmojiStatusAccessModal } from '../components/modals/emojiStatusAccess/EmojiStatusAccessModal';
 export { default as LocationAccessModal } from '../components/modals/locationAccess/LocationAccessModal';
 export { default as MediaAccessModal } from '../components/modals/mediaAccess/MediaAccessModal';
@@ -55,7 +52,6 @@ export { default as CountryPickerModal } from '../components/common/CountryPicke
 export { default as ReactorListModal } from '../components/middle/ReactorListModal';
 export { default as EmojiInteractionAnimation } from '../components/middle/EmojiInteractionAnimation';
 export { default as ChatLanguageModal } from '../components/middle/ChatLanguageModal';
-export { default as CollectibleInfoModal } from '../components/modals/collectible/CollectibleInfoModal';
 export { default as QrCodeModal } from '../components/modals/qrCode/QrCodeModal';
 
 export { default as LeftSearch } from '../components/left/search/LeftSearch';
@@ -100,17 +96,12 @@ export { default as EmojiTooltip } from '../components/common/tooltips/EmojiTool
 export { default as InlineBotTooltip } from '../components/common/tooltips/InlineBotTooltip';
 export { default as SendAsMenu } from '../components/middle/composer/SendAsMenu';
 
-export { default as Statistics } from '../components/right/statistics/Statistics';
-export { default as MessageStatistics } from '../components/right/statistics/MessageStatistics';
-export { default as StoryStatistics } from '../components/right/statistics/StoryStatistics';
 export { default as PollResults } from '../components/right/PollResults';
 export { default as CreateTopic } from '../components/right/CreateTopic';
 export { default as EditTopic } from '../components/right/EditTopic';
 
 export { default as Management } from '../components/right/management/Management';
 
-export { default as PaymentModal } from '../components/payment/PaymentModal';
-export { default as ReceiptModal } from '../components/payment/ReceiptModal';
 export { default as InviteViaLinkModal } from '../components/modals/inviteViaLink/InviteViaLinkModal';
 export { default as AudioPlaylistModal } from '../components/modals/audioPlaylist/AudioPlaylistModal';
 export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/OneTimeMediaModal';

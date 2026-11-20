@@ -9,7 +9,6 @@ import { pick } from '../../util/iteratees';
 import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useShowTransition from '../../hooks/useShowTransition';
 
-import VerificationMonetizationModal from '../common/VerificationMonetizationModal.async';
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
@@ -26,39 +25,11 @@ import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
 import ChatlistModal from './chatlist/ChatlistModal.async';
 import CocoonModal from './cocoon/CocoonModal.async';
-import CollectibleInfoModal from './collectible/CollectibleInfoModal.async';
 import DeleteAccountModal from './deleteAccount/DeleteAccountModal.async';
 import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
 import EmojiStatusAccessModal from './emojiStatusAccess/EmojiStatusAccessModal.async';
 import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
-import AboutStarGiftModal from './gift/AboutStarGiftModal.async';
-import ActiveGiftAuctionsModal from './gift/auction/ActiveGiftAuctionsModal.async';
-import GiftAuctionAcquiredModal from './gift/auction/GiftAuctionAcquiredModal.async';
-import GiftAuctionBidModal from './gift/auction/GiftAuctionBidModal.async';
-import GiftAuctionChangeRecipientModal from './gift/auction/GiftAuctionChangeRecipientModal.async';
-import GiftAuctionInfoModal from './gift/auction/GiftAuctionInfoModal.async';
-import GiftAuctionModal from './gift/auction/GiftAuctionModal.async';
-import GiftCraftInfoModal from './gift/craft/GiftCraftInfoModal.async';
-import GiftCraftModal from './gift/craft/GiftCraftModal.async';
-import GiftCraftSelectModal from './gift/craft/GiftCraftSelectModal.async';
-import PremiumGiftModal from './gift/GiftModal.async';
-import GiftInfoModal from './gift/info/GiftInfoModal.async';
-import GiftLockedModal from './gift/locked/GiftLockedModal.async';
-import GiftDescriptionRemoveModal from './gift/message/GiftDescriptionRemoveModal.async';
-import GiftOfferAcceptModal from './gift/offer/GiftOfferAcceptModal.async';
-import GiftPreviewModal from './gift/preview/GiftPreviewModal.async';
-import GiftRecipientPicker from './gift/recipient/GiftRecipientPicker.async';
-import GiftResalePriceComposerModal from './gift/resale/GiftResalePriceComposerModal.async';
-import StarGiftPriceDecreaseInfoModal from './gift/StarGiftPriceDecreaseInfoModal.async';
-import GiftStatusInfoModal from './gift/status/GiftStatusInfoModal.async';
-import GiftMoveToWalletModal from './gift/transfer/GiftMoveToWalletModal.async';
-import GiftTransferConfirmModal from './gift/transfer/GiftTransferConfirmModal.async';
-import GiftTransferModal from './gift/transfer/GiftTransferModal.async';
-import GiftUpgradeModal from './gift/upgrade/GiftUpgradeModal.async';
-import GiftInfoValueModal from './gift/value/GiftInfoValueModal.async';
-import GiftWithdrawModal from './gift/withdraw/GiftWithdrawModal.async';
-import GiftCodeModal from './giftcode/GiftCodeModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
 import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
@@ -72,7 +43,6 @@ import PaidReactionModal from './paidReaction/PaidReactionModal.async';
 import PasskeyModal from './passkey/PasskeyModal.async';
 import PollModal from './poll/PollModal.async';
 import PreparedMessageModal from './preparedMessage/PreparedMessageModal.async';
-import PriceConfirmModal from './priceConfirm/PriceConfirmModal.async';
 import ProfileRatingModal from './profileRating/ProfileRatingModal.async';
 import QrCodeModal from './qrCode/QrCodeModal.async';
 import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
@@ -84,25 +54,16 @@ import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
-import ChatRefundModal from './stars/chatRefund/ChatRefundModal.async';
-import StarsGiftModal from './stars/gift/StarsGiftModal.async';
-import StarsBalanceModal from './stars/StarsBalanceModal.async';
-import StarsPaymentModal from './stars/StarsPaymentModal.async';
-import StarsSubscriptionModal from './stars/subscription/StarsSubscriptionModal.async';
-import StarsTransactionInfoModal from './stars/transaction/StarsTransactionModal.async';
 import StealthModeModal from './storyStealthMode/StealthModeModal.async';
 import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
 import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
-import WalletCardModal from './wallet/WalletCardModal.async';
-import WalletModal from './wallet/WalletModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
   'aiMessageEditorModal' |
-  'giftCodeModal' |
   'boostModal' |
   'chatlistModal' |
   'urlAuth' |
@@ -111,14 +72,8 @@ type ModalKey = keyof Pick<TabState,
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
   'requestedAttachBotInstall' |
-  'collectibleInfoModal' |
   'reportAdModal' |
   'reportModal' |
-  'starsBalanceModal' |
-  'walletModal' |
-  'walletCardModal' |
-  'starsPayment' |
-  'starsTransactionModal' |
   'paidReactionModal' |
   'pollModal' |
   'musicPicker' |
@@ -126,46 +81,15 @@ type ModalKey = keyof Pick<TabState,
   'suggestedPostApprovalModal' |
   'browser' |
   'chatInviteModal' |
-  'starsSubscriptionModal' |
-  'starsGiftModal' |
-  'giftModal' |
-  'isGiftRecipientPickerOpen' |
   'isBrowserCloseConfirmationModalOpen' |
-  'giftInfoModal' |
-  'giftInfoValueModal' |
-  'lockedGiftModal' |
-  'giftResalePriceComposerModal' |
   'suggestedStatusModal' |
   'emojiStatusAccessModal' |
   'locationAccessModal' |
   'aboutAdsModal' |
-  'giftPreviewModal' |
-  'giftUpgradeModal' |
-  'giftCraftModal' |
-  'giftCraftSelectModal' |
-  'giftCraftInfoModal' |
-  'giftAuctionModal' |
-  'giftAuctionBidModal' |
-  'giftAuctionInfoModal' |
-  'giftAuctionChangeRecipientModal' |
-  'giftAuctionAcquiredModal' |
-  'activeGiftAuctionsModal' |
-  'starGiftPriceDecreaseInfoModal' |
-  'aboutStarGiftModal' |
-  'monetizationVerificationModal' |
-  'giftWithdrawModal' |
   'preparedMessageModal' |
   'sharePreparedMessageModal' |
   'requestPeerModal' |
-  'giftStatusInfoModal' |
-  'giftTransferModal' |
-  'giftTransferConfirmModal' |
-  'giftMoveToWalletModal' |
-  'giftDescriptionRemoveModal' |
-  'giftOfferAcceptModal' |
-  'chatRefundModal' |
   'disableSharingAboutModal' |
-  'priceConfirmModal' |
   'isFrozenAccountModalOpen' |
   'deleteAccountModal' |
   'deleteMemberModal' |
@@ -250,7 +174,6 @@ const WrappedModalBoundary = <T,>({
 
 const LEGACY_MODALS: LegacyModalRegistry = {
   aiMessageEditorModal: AiMessageEditorModal,
-  giftCodeModal: GiftCodeModal,
   boostModal: BoostModal,
   chatlistModal: ChatlistModal,
   urlAuth: UrlAuthModal,
@@ -260,56 +183,19 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   reportAdModal: ReportAdModal,
   reportModal: ReportModal,
   browser: BrowserModal,
-  collectibleInfoModal: CollectibleInfoModal,
-  starsPayment: StarsPaymentModal,
-  starsBalanceModal: StarsBalanceModal,
-  walletModal: WalletModal,
-  walletCardModal: WalletCardModal,
-  starsTransactionModal: StarsTransactionInfoModal,
   chatInviteModal: ChatInviteModal,
   paidReactionModal: PaidReactionModal,
   suggestMessageModal: SuggestMessageModal,
   suggestedPostApprovalModal: SuggestedPostApprovalModal,
-  starsSubscriptionModal: StarsSubscriptionModal,
-  starsGiftModal: StarsGiftModal,
-  giftModal: PremiumGiftModal,
-  isGiftRecipientPickerOpen: GiftRecipientPicker,
   isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,
-  giftInfoModal: GiftInfoModal,
-  giftInfoValueModal: GiftInfoValueModal,
-  lockedGiftModal: GiftLockedModal,
-  giftResalePriceComposerModal: GiftResalePriceComposerModal,
   suggestedStatusModal: SuggestedStatusModal,
   emojiStatusAccessModal: EmojiStatusAccessModal,
   locationAccessModal: LocationAccessModal,
   aboutAdsModal: AboutAdsModal,
-  giftPreviewModal: GiftPreviewModal,
-  giftUpgradeModal: GiftUpgradeModal,
-  giftCraftModal: GiftCraftModal,
-  giftCraftSelectModal: GiftCraftSelectModal,
-  giftCraftInfoModal: GiftCraftInfoModal,
-  giftAuctionModal: GiftAuctionModal,
-  giftAuctionBidModal: GiftAuctionBidModal,
-  giftAuctionInfoModal: GiftAuctionInfoModal,
-  giftAuctionChangeRecipientModal: GiftAuctionChangeRecipientModal,
-  giftAuctionAcquiredModal: GiftAuctionAcquiredModal,
-  activeGiftAuctionsModal: ActiveGiftAuctionsModal,
-  starGiftPriceDecreaseInfoModal: StarGiftPriceDecreaseInfoModal,
-  aboutStarGiftModal: AboutStarGiftModal,
-  monetizationVerificationModal: VerificationMonetizationModal,
-  giftWithdrawModal: GiftWithdrawModal,
-  giftStatusInfoModal: GiftStatusInfoModal,
   preparedMessageModal: PreparedMessageModal,
   sharePreparedMessageModal: SharePreparedMessageModal,
   requestPeerModal: RequestPeerModal,
-  giftTransferModal: GiftTransferModal,
-  giftTransferConfirmModal: GiftTransferConfirmModal,
-  giftMoveToWalletModal: GiftMoveToWalletModal,
-  giftDescriptionRemoveModal: GiftDescriptionRemoveModal,
-  giftOfferAcceptModal: GiftOfferAcceptModal,
-  chatRefundModal: ChatRefundModal,
   disableSharingAboutModal: DisableSharingAboutModal,
-  priceConfirmModal: PriceConfirmModal,
   isFrozenAccountModalOpen: FrozenAccountModal,
   deleteAccountModal: DeleteAccountModal,
   deleteMemberModal: DeleteMemberModal,

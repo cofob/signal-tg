@@ -13,7 +13,6 @@ export type WebApp = {
   isSameOrigin?: true;
   isJoinChat?: boolean;
   isJoinChatBroadcast?: boolean;
-  slug?: string;
   replyInfo?: ApiInputMessageReplyInfo;
   canSendMessages?: boolean;
   isRemoveModalOpen?: boolean;

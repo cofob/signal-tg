@@ -34,7 +34,6 @@ import {
   TOPICS_SLICE,
   TOPICS_SLICE_SECOND_LOAD,
 } from '../../../config';
-import { copyTextToClipboard } from '../../../util/clipboard';
 import { formatShareText, processDeepLink } from '../../../util/deeplink';
 import { isDeepLink } from '../../../util/deepLinkParser';
 import { isUserId } from '../../../util/entities/ids';
@@ -60,7 +59,6 @@ import {
   isChatSuperGroup,
   isUserBot,
 } from '../../helpers';
-import { getRequestInputSavedStarGift } from '../../helpers/payments';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
 } from '../../index';
@@ -1675,21 +1673,6 @@ addActionHandler('checkChatInvite', async (global, actions, payload): Promise<vo
     return;
   }
 
-  if (result.invite.subscriptionFormId) {
-    global = updateTabState(global, {
-      starsPayment: {
-        inputInvoice: {
-          type: 'chatInviteSubscription',
-          hash,
-        },
-        subscriptionInfo: result.invite,
-        status: 'pending',
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
   global = updateTabState(global, {
     chatInviteModal: {
       hash,
@@ -1775,11 +1758,9 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
     checkChatInvite,
     openStickerSet,
     openChatWithDraft,
-    openInvoice,
     checkChatlistInvite,
     openChatByUsername: openChatByUsernameAction,
     openStoryViewerByUsername,
-    checkGiftCode,
   } = actions;
 
   if (isDeepLink(url)) {
@@ -1871,12 +1852,6 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
     return;
   }
 
-  if (part1 === 'giftcode') {
-    const slug = part2;
-    checkGiftCode({ slug, tabId });
-    return;
-  }
-
   const chatOrChannelPostId = part2 || undefined;
   const messageId = part3 ? Number(part3) : undefined;
   const commentId = params.comment ? Number(params.comment) : undefined;
@@ -1885,19 +1860,7 @@ addActionHandler('openTelegramLink', async (global, actions, payload): Promise<v
 
   const shouldTryOpenChat = (part1 && !part2) || Number.isInteger(Number(part2)) || isWebApp;
 
-  if (part1.startsWith('$')) {
-    openInvoice({
-      type: 'slug',
-      slug: part1.substring(1),
-      tabId,
-    });
-  } else if (part1 === 'invoice') {
-    openInvoice({
-      type: 'slug',
-      slug: part2,
-      tabId,
-    });
-  } else if (shouldTryOpenChat) {
+  if (shouldTryOpenChat) {
     openChatByUsernameAction({
       username: part1,
       messageId: messageId || Number(chatOrChannelPostId),
@@ -3684,18 +3647,15 @@ addActionHandler('setPeerShareTheme', async (global, actions, payload): Promise<
   const peer = selectPeer(global, peerId);
   if (!peer) return;
 
-  const inputGift = theme?.type === 'gift' ? getRequestInputSavedStarGift(global, theme.inputGift) : undefined;
-  if (theme?.type === 'gift' && !inputGift) return;
-
   const oldShareTheme = selectPeerFullInfo(global, peerId)?.shareTheme;
-  const shareTheme = theme?.type === 'gift' ? { type: 'gift' as const, gift: theme.gift } : theme;
+  const shareTheme = theme;
 
   global = updatePeerFullInfo(global, peerId, { shareTheme });
   setGlobal(global);
 
   const result = await callApi('setShareTheme', {
     peer,
-    theme: inputGift ? { type: 'gift', inputGift } : shareTheme?.type === 'emojiBackdrop' ? shareTheme : undefined,
+    theme: shareTheme,
   });
 
   global = getGlobal();
@@ -3727,38 +3687,6 @@ addActionHandler('resolveBusinessChatLink', async (global, actions, payload): Pr
     text: chatLink.text,
     tabId,
   });
-});
-
-addActionHandler('requestCollectibleInfo', async (global, actions, payload): Promise<void> => {
-  const {
-    type, collectible, peerId, tabId = getCurrentTabId(),
-  } = payload;
-
-  let inputCollectible;
-  if (type === 'phone') {
-    inputCollectible = { phone: collectible };
-  }
-  if (type === 'username') {
-    inputCollectible = { username: collectible };
-  }
-  if (!inputCollectible) return;
-
-  const result = await callApi('fetchCollectionInfo', inputCollectible);
-  if (!result) {
-    copyTextToClipboard(collectible);
-    return;
-  }
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    collectibleInfoModal: {
-      ...result,
-      type,
-      collectible,
-      peerId,
-    },
-  }, tabId);
-  setGlobal(global);
 });
 
 addActionHandler('loadDiscussion', async (global, actions, payload): Promise<void> => {

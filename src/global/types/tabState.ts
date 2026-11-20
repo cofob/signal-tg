@@ -4,23 +4,15 @@ import type {
   ApiAttachBot,
   ApiAudio,
   ApiBirthday,
-  ApiBoost,
   ApiBoostsStatus,
-  ApiChannelMonetizationStatistics,
-  ApiChannelStatistics,
   ApiChatInviteInfo,
   ApiChatlistInvite,
   ApiChatType,
-  ApiCheckedGiftCode,
-  ApiCollectibleInfo,
   ApiDialog,
-  ApiEmojiStatusCollectible,
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
-  ApiGroupStatistics,
   ApiInputAiComposeTone,
-  ApiInputInvoice,
   ApiInputRichMessage,
   ApiLanguage,
   ApiLimitTypeWithModal,
@@ -30,55 +22,23 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
-  ApiPaymentFormRegular,
-  ApiPaymentFormStars,
-  ApiPaymentStatus,
   ApiPhoneCall,
-  ApiPostStatistics,
   ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
   ApiPremiumSection,
   ApiPreparedInlineMessage,
   ApiReactionWithPaid,
-  ApiReceiptRegular,
   ApiRequestPeerType,
   ApiRichText,
-  ApiSavedGifts,
-  ApiSavedStarGift,
   ApiSearchPostsFlood,
   ApiSponsoredPeer,
-  ApiStarGift,
-  ApiStarGiftAttribute,
-  ApiStarGiftAttributeCounter,
-  ApiStarGiftAttributeOriginalDetails,
-  ApiStarGiftAuctionAcquiredGift,
-  ApiStarGiftUnique,
-  ApiStarGiftUpgradePrice,
   ApiStarGiveawayOption,
-  ApiStarsSubscription,
-  ApiStarsTransaction,
-  ApiStarTopupOption,
   ApiSticker,
-  ApiThumbnail,
-  ApiTonConnectConnectRequest,
-  ApiTonConnectError,
-  ApiTonConnectRequest,
-  ApiTonConnectRequestPreview,
-  ApiTonConnectSession,
-  ApiTypeCurrencyAmount,
   ApiTypePrepaidGiveaway,
   ApiTypeStoryView,
-  ApiUniqueStarGiftValueInfo,
   ApiUrlAuthResultRequest,
   ApiUser,
   ApiVideo,
-  ApiWalletGiftDeposit,
-  ApiWidgetWalletCall,
-  DecryptWalletCommentError,
-  ExportSecretPhraseError,
-  ReplaceWalletError,
-  SendTonTransferError,
-  WalletBackupError,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
@@ -91,7 +51,6 @@ import type {
   ChatRequestedTranslations,
   ConfettiStyle,
   FocusDirection,
-  GiftProfileFilterOptions,
   GlobalSearchContent,
   IAnchorPosition,
   InlineBotSettings,
@@ -105,21 +64,17 @@ import type {
   MessageListType,
   MiddleSearchParams,
   NewChatMembersProgress,
-  PaymentStep,
   PlaybackItemRef,
   PlaybackSource,
   ProfileEditProgress,
   ProfileTabType,
-  ResaleGiftsFilterOptions,
   RoundVideoMode,
   ScrollTargetPosition,
   SettingsConfirmation,
   SettingsHighlight,
   SettingsScreens,
   SharedMediaType,
-  ShippingOption,
   ShuffleState,
-  StarGiftInfo,
   StoryViewerOrigin,
   TabThread,
   ThreadId,
@@ -128,8 +83,6 @@ import type { BrowserState } from '../../types/browser';
 import type { RegularLangKey } from '../../types/language';
 import type { WebAppMediaKind } from '../../types/webapp';
 import type { SearchResultKey } from '../../util/keys/searchResultKey';
-import type { RegularLangFnParameters } from '../../util/localization';
-import type { ProfileCollectionKey } from '../selectors/payments';
 import type { CallbackAction } from './actions';
 
 export type PollVote = {
@@ -224,7 +177,6 @@ export type TabState = {
   richMediaUploadBlockingCount?: number;
   inviteHash?: string;
   canInstall?: boolean;
-  isStatisticsShown?: boolean;
   isLeftColumnShown: boolean;
   newChatMembersProgress?: NewChatMembersProgress;
   uiReadyState: 0 | 1 | 2;
@@ -333,26 +285,6 @@ export type TabState = {
   inlineBots: {
     isLoading: boolean;
     byUsername: Record<string, false | InlineBotSettings>;
-  };
-
-  savedGifts: {
-    collectionsByPeerId: Record<string, Record<ProfileCollectionKey, ApiSavedGifts>>;
-    activeCollectionByPeerId: Record<string, number | undefined>;
-    filter: GiftProfileFilterOptions;
-  };
-
-  resaleGifts: {
-    giftId?: string;
-    gifts: ApiStarGift[];
-    count: number;
-    attributes?: ApiStarGiftAttribute[];
-    counters?: ApiStarGiftAttributeCounter[];
-    nextOffset?: string;
-    attributesHash?: string;
-    isLoading?: boolean;
-    isAllLoaded?: boolean;
-    filter: ResaleGiftsFilterOptions;
-    updateIteration: number;
   };
 
   leftColumn: {
@@ -533,55 +465,6 @@ export type TabState = {
     offsets?: Record<string, string>;
   };
 
-  isPaymentFormLoading?: boolean;
-  payment: {
-    inputInvoice?: ApiInputInvoice;
-    step?: PaymentStep;
-    status?: ApiPaymentStatus;
-    shippingOptions?: ShippingOption[];
-    requestId?: string;
-    form?: ApiPaymentFormRegular;
-    stripeCredentials?: {
-      type: string;
-      id: string;
-    };
-    smartGlocalCredentials?: {
-      type: string;
-      token: string;
-    };
-    webFormCredentials?: AnyLiteral;
-    receipt?: ApiReceiptRegular;
-    error?: {
-      field?: string;
-      messageKey?: RegularLangFnParameters;
-      descriptionKey?: RegularLangFnParameters;
-      description?: string;
-    };
-    isPaymentModalOpen?: boolean;
-    isExtendedMedia?: boolean;
-    confirmPaymentUrl?: string;
-    temporaryPassword?: {
-      value: string;
-      validUntil: number;
-    };
-    botId?: string;
-  };
-  starsPayment: {
-    form?: ApiPaymentFormStars;
-    subscriptionInfo?: ApiChatInviteInfo;
-    inputInvoice?: ApiInputInvoice;
-    status?: ApiPaymentStatus;
-  };
-
-  priceConfirmModal?: {
-    originalAmount: ApiTypeCurrencyAmount;
-    newAmount: ApiTypeCurrencyAmount;
-    directInfo?: {
-      formId: string;
-      inputInvoice: ApiInputInvoice;
-    };
-  };
-
   chatCreation?: {
     progress: ChatCreationProgress;
     error?: RegularLangKey;
@@ -630,15 +513,6 @@ export type TabState = {
   };
 
   activeDownloads: ActiveDownloads;
-
-  statistics: {
-    byChatId: Record<string, ApiChannelStatistics | ApiGroupStatistics>;
-    currentMessage?: ApiPostStatistics;
-    currentMessageId?: number;
-    currentStory?: ApiPostStatistics;
-    currentStoryId?: number;
-    monetization?: ApiChannelMonetizationStatistics;
-  };
 
   newContact?: {
     userId?: string;
@@ -788,7 +662,6 @@ export type TabState = {
     };
     matchCode?: string;
     request?: Omit<ApiUrlAuthResultRequest, 'type' | 'bot'> & { botId: string };
-    isWalletConnected?: boolean;
     url: string;
   };
 
@@ -801,7 +674,6 @@ export type TabState = {
     isGift?: boolean;
     daysAmount?: number;
     isSuccess?: boolean;
-    gift?: ApiStarGift;
   };
 
   aiMessageEditorModal?: {
@@ -892,40 +764,9 @@ export type TabState = {
 
   isBrowserCloseConfirmationModalOpen?: boolean;
 
-  isGiftRecipientPickerOpen?: boolean;
-
   isQuickChatPickerOpen?: boolean;
 
   isFrozenAccountModalOpen?: boolean;
-
-  starsGiftingPickerModal?: {
-    isOpen?: boolean;
-  };
-
-  starsGiftModal?: {
-    isCompleted?: boolean;
-    isOpen?: boolean;
-    forUserId?: string;
-    starsGiftOptions?: ApiStarTopupOption[];
-  };
-
-  starsTransactionModal?: {
-    transaction: ApiStarsTransaction;
-  };
-  starsSubscriptionModal?: {
-    subscription: ApiStarsSubscription;
-  };
-
-  giftModal?: {
-    forPeerId: string;
-    gifts?: ApiPremiumGiftCodeOption[];
-    selectedResaleGift?: ApiStarGift;
-    selectedGift?: ApiPremiumGiftCodeOption | ApiStarGift;
-  };
-  chatRefundModal?: {
-    userId: string;
-    starsToRefund: number;
-  };
 
   disableSharingAboutModal?: {
     userId: string;
@@ -971,34 +812,6 @@ export type TabState = {
     myBoosts?: ApiMyBoost[];
   };
 
-  boostStatistics?: {
-    chatId: string;
-    boostStatus?: ApiBoostsStatus;
-    isLoadingBoosters?: boolean;
-    nextOffset?: string;
-    boosts?: {
-      count: number;
-      list: ApiBoost[];
-    };
-    giftedBoosts?: {
-      count: number;
-      list: ApiBoost[];
-    };
-  };
-
-  monetizationStatistics?: {
-    chatId: string;
-  };
-
-  giftCodeModal?: {
-    slug: string;
-    message?: {
-      chatId: string;
-      messageId: number;
-    };
-    info: ApiCheckedGiftCode;
-  };
-
   deleteAccountModal?: {
     selfDestructAccountDays: number;
   };
@@ -1035,323 +848,8 @@ export type TabState = {
     message: ApiMessage;
   };
 
-  collectibleInfoModal?: ApiCollectibleInfo & {
-    peerId: string;
-    type: 'phone' | 'username';
-    collectible: string;
-  };
-
   qrCodeModal?: {
     peerId: string;
-    uniqueGifts?: ApiSavedStarGift[];
-    uniqueGiftsNextOffset?: string;
-  };
-
-  loadingWalletTransactionId?: string;
-
-  walletModal?: {
-    shouldOpenTonConnect?: boolean;
-    initialRecipient?: string;
-    initialAmount?: bigint;
-    initialComment?: string;
-    isInitialCommentEncrypted?: boolean;
-    shouldCloseAfterSend?: boolean;
-    // Leaving the form for the main screen closes the wallet instead
-    shouldCloseOnBack?: boolean;
-    initialTransactionId?: string;
-    shouldShowIntro?: boolean;
-    isBuyPending?: boolean;
-    // Moves the phrase out of the app passcode's keeping before that passcode goes
-    shouldReleaseKey?: boolean;
-    shouldOpenCollectibles?: boolean;
-    shouldOpenReceive?: boolean;
-  };
-
-  walletCardModal?: {
-    userId: string;
-  };
-
-  // The form's request until the transfer is queued; its record in the history follows it from then on
-  walletTransfer?: {
-    status: 'pending' | 'queued' | 'error';
-    error?: SendTonTransferError;
-  };
-
-  // Decrypted requests only live in the open tab, never in the persistent wallet cache
-  walletTonConnect?: {
-    status: 'pending' | 'ready' | 'done' | 'error';
-    ownAddress?: string;
-    session?: ApiTonConnectSession;
-    connectRequest?: ApiTonConnectConnectRequest;
-    // Goes back to the server with the connect result
-    traceId?: string;
-    isDeclining?: boolean;
-    // A login through Telegram that also connects the wallet, see `urlAuth`
-    oauth?: {
-      botId: string;
-      domain: string;
-      sessionId: string;
-      clientId: string;
-    };
-    request?: ApiTonConnectRequest;
-    preview?: ApiTonConnectRequestPreview;
-    error?: ApiTonConnectError;
-    // A widget's call to pay or sign: the window names its bot, and the outcome goes to the bot, see `widgetWalletCalls`
-    widget?: {
-      callId: string;
-      botId: string;
-      chatId: string;
-      messageId: number;
-      call: ApiWidgetWalletCall;
-    };
-  };
-
-  walletTransferFee?: {
-    // See `buildWalletTransferFeeKey`
-    key?: string;
-    // Nanotons
-    fee?: bigint;
-    canEncryptComment?: boolean;
-    canUseRelayer?: boolean;
-    isLoading?: boolean;
-    isFailed?: boolean;
-  };
-
-  // The transfer prepared to move a gift NFT from the wallet to the account
-  walletGiftDeposit?: {
-    collectibleAddress: string;
-    deposit?: ApiWalletGiftDeposit;
-    error?: SendTonTransferError;
-    errorKey?: RegularLangFnParameters;
-    isLoading?: boolean;
-  };
-
-  // The `.ton` domain typed as the recipient in this tab. `false` records a domain with no wallet.
-  walletDomainLookup?: {
-    domain: string;
-    address?: string | false;
-    isFailed?: boolean;
-  };
-
-  // Users the chat search found for the typed recipient name, among the own chats and elsewhere
-  walletRecipientSearch?: {
-    query: string;
-    localUserIds: string[];
-    globalUserIds: string[];
-  };
-
-  walletMnemonic?: {
-    status: 'pending' | 'ready' | 'error';
-    words?: string[];
-    error?: ExportSecretPhraseError;
-  };
-
-  walletBackup?: {
-    status: 'pending' | 'done' | 'error';
-    error?: WalletBackupError;
-  };
-
-  // A key rotation that is prepared to turn the backup off. The user sees and confirms its phrase before anything is
-  // sent to the blockchain. Like all tab state, it is never saved to the cache.
-  walletKeyRotation?: {
-    fromAddress: string;
-    words: string[];
-  };
-
-  // The removal of a phrase that the device keeps for another wallet. It requires the passcode.
-  walletSavedRemoval?: {
-    status: 'pending' | 'done' | 'error';
-    error?: 'PASSCODE_INVALID' | 'PASSCODE_LOCKED';
-  };
-
-  walletReplace?: {
-    status: 'pending' | 'done' | 'error';
-    error?: ReplaceWalletError;
-  };
-
-  walletCommentDecryption?: {
-    transactionId: string;
-    status: 'pending' | 'error';
-    error?: DecryptWalletCommentError;
-  };
-
-  starsBalanceModal?: {
-    originStarsPayment?: TabState['starsPayment'];
-    originGift?: StarGiftInfo;
-    originReaction?: {
-      chatId: string;
-      messageId: number;
-      amount: number;
-    };
-    topup?: {
-      balanceNeeded: number;
-      purpose?: string;
-    };
-    currency?: ApiTypeCurrencyAmount['currency'];
-    shouldReturnToWallet?: boolean;
-  };
-
-  giftInfoModal?: {
-    peerId?: string;
-    recipientId?: string;
-    gift: ApiSavedStarGift | ApiStarGift;
-    craftSlotIndex?: number;
-    isFromMessage?: boolean;
-  };
-
-  giftInfoValueModal?: {
-    valueInfo: ApiUniqueStarGiftValueInfo;
-    gift: ApiStarGiftUnique;
-  };
-
-  lockedGiftModal?: {
-    untilDate?: number;
-    reason?: ApiFormattedText;
-  };
-
-  giftResalePriceComposerModal?: {
-    peerId?: string;
-    gift: ApiSavedStarGift | ApiStarGift;
-  };
-
-  giftTransferModal?: {
-    gift: ApiSavedStarGift;
-  };
-
-  giftTransferConfirmModal?: {
-    gift: ApiSavedStarGift;
-    recipientId: string;
-  };
-
-  giftDescriptionRemoveModal?: {
-    gift: ApiSavedStarGift;
-    price: number;
-    details: ApiStarGiftAttributeOriginalDetails;
-  };
-
-  giftOfferAcceptModal?: {
-    peerId: string;
-    messageId: number;
-    gift: ApiStarGiftUnique;
-    price: ApiTypeCurrencyAmount;
-  };
-
-  giftUpgradeModal?: {
-    sampleAttributes: ApiStarGiftAttribute[];
-    recipientId?: string;
-    gift?: ApiSavedStarGift;
-    prices?: ApiStarGiftUpgradePrice[];
-    nextPrices?: ApiStarGiftUpgradePrice[];
-    currentUpgradeStars?: number;
-    minPrice?: number;
-    maxPrice?: number;
-  };
-
-  giftCraftModal?: {
-    regularGiftId?: string;
-    regularGiftTitle?: string;
-    gift1?: ApiSavedStarGift;
-    gift2?: ApiSavedStarGift;
-    gift3?: ApiSavedStarGift;
-    gift4?: ApiSavedStarGift;
-    previewAttributes?: ApiStarGiftAttribute[];
-    myCraftableGifts?: ApiSavedStarGift[];
-    myCraftableGiftsNextOffset?: string;
-    shouldRefreshMyCraftableGifts?: boolean;
-    marketCraftableGifts?: ApiStarGiftUnique[];
-    marketCraftableGiftsNextOffset?: string;
-    marketCraftableGiftsCount?: number;
-    isMarketLoading?: boolean;
-    marketFilter: ResaleGiftsFilterOptions;
-    marketAttributes?: ApiStarGiftAttribute[];
-    marketCounters?: ApiStarGiftAttributeCounter[];
-    marketAttributesHash?: string;
-    marketUpdateIteration: number;
-    craftResult?: {
-      success: true;
-      gift: ApiStarGiftUnique;
-    } | {
-      success: false;
-      isError?: true;
-    };
-  };
-
-  giftCraftSelectModal?: {
-    slotIndex: number;
-    isLoading?: boolean;
-  };
-
-  giftCraftInfoModal?: {
-    gift: ApiStarGiftUnique;
-  };
-
-  giftWithdrawModal?: {
-    gift: ApiSavedStarGift;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
-  };
-
-  giftMoveToWalletModal?: {
-    gift: ApiSavedStarGift;
-    isPasswordStep?: boolean;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
-    passwordErrorKey?: RegularLangFnParameters;
-  };
-
-  giftStatusInfoModal?: {
-    emojiStatus: ApiEmojiStatusCollectible;
-  };
-
-  giftPreviewModal?: {
-    attributes: ApiStarGiftAttribute[];
-    originGift: ApiStarGift;
-    shouldShowCraftableOnStart?: boolean;
-  };
-
-  giftAuctionModal?: {
-    auctionGiftId: string;
-    sampleAttributes?: ApiStarGiftAttribute[];
-  };
-
-  giftAuctionBidModal?: {
-    auctionGiftId: string;
-    peerId?: string;
-    message?: string;
-    shouldHideName?: boolean;
-  };
-
-  giftAuctionInfoModal?: {
-    auctionGiftId: string;
-  };
-
-  aboutStarGiftModal?: {
-    videoId?: string;
-    videoThumbnail?: ApiThumbnail;
-  };
-
-  giftAuctionChangeRecipientModal?: {
-    auctionGiftId: string;
-    oldPeerId?: string;
-    newPeerId?: string;
-    message?: string;
-    shouldHideName?: boolean;
-  };
-
-  giftAuctionAcquiredModal?: {
-    giftId?: string;
-    giftTitle?: string;
-    giftSticker?: ApiSticker;
-    acquiredGifts?: ApiStarGiftAuctionAcquiredGift[];
-  };
-
-  activeGiftAuctionsModal?: true;
-
-  starGiftPriceDecreaseInfoModal?: {
-    prices: ApiStarGiftUpgradePrice[];
-    currentPrice: number;
-    minPrice: number;
-    maxPrice: number;
   };
 
   suggestedStatusModal?: {
@@ -1364,12 +862,6 @@ export type TabState = {
   profileRatingModal?: {
     userId: string;
     level: number;
-  };
-
-  monetizationVerificationModal?: {
-    chatId: string;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
   };
 
   quickPreview?: {
@@ -1392,8 +884,6 @@ export type TabState = {
 
   isTwoFaCheckModalOpen?: true;
 
-  isWaitingForStarGiftUpgrade?: true;
-  isWaitingForStarGiftTransfer?: true;
   insertingPeerIdMention?: string;
   shouldSaveAttachmentsCompression?: boolean;
 

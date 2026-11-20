@@ -14,7 +14,6 @@ import type {
 } from './messages';
 import type { ApiPremiumSection } from './payments';
 import type { ApiBotVerification } from './peers';
-import type { ApiStarsSubscriptionPricing } from './stars';
 import type { ApiUser } from './users';
 
 export interface ApiInitialArgs {
@@ -160,9 +159,6 @@ export interface ApiChatTheme {
 export type ApiPeerTheme = {
   type: 'emoticon';
   emoticon: string;
-} | {
-  type: 'gift';
-  settings: ApiThemeSettings[];
 };
 
 export interface ApiSession {
@@ -264,11 +260,6 @@ export type ApiError = {
   textParams?: Record<string, string>;
 };
 
-export type ApiFieldError = {
-  field: string;
-  messageKey: RegularLangFnParameters;
-};
-
 export type ApiExportedInvite = {
   isRevoked?: boolean;
   isPermanent?: boolean;
@@ -299,9 +290,6 @@ export type ApiChatInviteInfo = {
   color: number;
   isBroadcast?: boolean;
   isRequestNeeded?: boolean;
-  subscriptionFormId?: string;
-  canRefulfillSubscription?: boolean;
-  subscriptionPricing?: ApiStarsSubscriptionPricing;
   botVerification?: ApiBotVerification;
 };
 
@@ -337,10 +325,8 @@ export interface ApiAppConfig {
   whitelistedDomains: string[];
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
-  premiumInvoiceSlug?: string;
   premiumBotUsername: string;
   isPremiumPurchaseBlocked: boolean;
-  isGiveawayGiftsPurchaseAvailable: boolean;
   giveawayAddPeersMax: number;
   giveawayBoostsPerPremium: number;
   giveawayCountriesMax: number;
@@ -376,18 +362,11 @@ export interface ApiAppConfig {
   paidReactionMaxAmount?: number;
   isChannelRevenueWithdrawalEnabled?: boolean;
   isStarsGiftEnabled?: boolean;
-  starGiftMaxMessageLength?: number;
-  starGiftMaxConvertPeriod?: number;
   starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
-  savedGiftPinLimit?: number;
   freezeSinceDate?: number;
   freezeUntilDate?: number;
   freezeAppealUrl?: string;
-  starsStargiftResaleAmountMin?: number;
-  starsStargiftResaleAmountMax?: number;
-  starsStargiftResaleCommissionPermille?: number;
-  stargiftsCraftAttributePermilles?: number[];
   starsSuggestedPostAmountMax: number;
   starsSuggestedPostAmountMin: number;
   starsSuggestedPostCommissionPermille: number;
@@ -398,18 +377,8 @@ export interface ApiAppConfig {
   tonSuggestedPostCommissionPermille: number;
   tonSuggestedPostAmountMax: bigint;
   tonSuggestedPostAmountMin: bigint;
-  tonStargiftResaleAmountMax?: bigint;
-  tonStargiftResaleAmountMin?: bigint;
-  tonStargiftResaleCommissionPermille?: number;
   tonUsdRate?: number;
   tonTopupUrl: string;
-  isWalletAvailable?: boolean;
-  // Transfers below this are hidden from the wallet history
-  walletTransferMinNanos?: bigint;
-  walletGaslessDailyTransfers?: number;
-  // Collection slugs, such as `PlushPepe`, whose gifts can color the wallet card
-  walletCardBackgroundCollections?: string[];
-  oldWalletBotUsername?: string;
   pollMaxAnswers: number;
   pollClosePeriodMax: number;
   pollCountriesMax: number;
@@ -518,13 +487,6 @@ export type ApiUrlAuthResultRequest = {
   matchCodesFirst?: boolean;
   userIdHint?: string;
   verifiedAppName?: string;
-  walletRequest?: ApiUrlAuthWalletRequest;
-};
-
-export type ApiUrlAuthWalletRequest = {
-  sessionId: string;
-  // The dApp key the connection event is encrypted to
-  clientId: string;
 };
 
 type ApiUrlAuthResultAccepted = {
@@ -545,15 +507,6 @@ export type ApiUrlAuthResult =
   | ApiUrlAuthResultAccepted
   | ApiUrlAuthResultExpired
   | ApiUrlAuthResultDefault;
-
-export interface ApiCollectibleInfo {
-  amount: number;
-  currency: string;
-  cryptoAmount: bigint;
-  cryptoCurrency: string;
-  purchaseDate: number;
-  url: string;
-}
 
 export type ApiLimitType =
   | 'uploadMaxFileparts'

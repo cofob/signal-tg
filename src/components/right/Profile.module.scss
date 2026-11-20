@@ -99,38 +99,6 @@
   }
 }
 
-.nothingFoundGifts {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  padding-top: 5rem;
-
-  .description {
-    unicode-bidi: plaintext;
-
-    margin-block: 1rem;
-
-    font-size: 1rem;
-    font-weight: var(--font-weight-medium);
-    color: var(--color-text-secondary);
-    text-align: center;
-  }
-
-  :global(.Link) {
-    font-weight: var(--font-weight-medium);
-    color: var(--color-links);
-    transition: opacity 0.15s ease-in;
-
-    &:active,
-    &:hover {
-      text-decoration: none;
-      opacity: 0.85;
-    }
-  }
-}
-
 .sharedMedia {
   isolation: isolate;
   position: relative;
@@ -201,8 +169,7 @@
   &.storiesList,
   &.mediaList,
   &.gifList,
-  &.previewMediaList,
-  &.giftsList {
+  &.previewMediaList {
     display: grid;
     grid-auto-rows: 1fr;
     grid-template-columns: repeat(3, 1fr);
@@ -216,13 +183,6 @@
   &.previewMediaList {
     overflow: hidden;
     margin-inline-start: var(--scrollbar-width);
-  }
-
-  &.giftsList {
-    gap: 0.625rem;
-    margin-inline-start: var(--scrollbar-width);
-
-    @include mixins.adapt-padding-to-scrollbar(0.5rem);
   }
 
   &.documentsList {
@@ -271,8 +231,7 @@
   &.similarChannelsList,
   &.similarBotsList,
   &.commonChatsList,
-  &.membersList,
-  &.giftsList {
+  &.membersList {
     padding: 0.5rem;
 
     @media (max-width: 600px) {
@@ -322,8 +281,4 @@
   &.noTransition {
     transition: none;
   }
-}
-
-.savedGift {
-  @include mixins.with-vt-type('profileGifts');
 }

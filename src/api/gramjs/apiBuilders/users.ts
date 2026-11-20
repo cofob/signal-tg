@@ -17,10 +17,9 @@ import { buildApiBusinessIntro, buildApiBusinessLocation, buildApiBusinessWorkHo
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
 } from './common';
-import { buildApiDisallowedGiftsSettings, buildApiShareTheme } from './gifts';
 import { omitVirtualClassFields } from './helpers';
 import { buildApiAudioFromDocument } from './media';
-import { buildApiPeerTheme, buildApiWallpaper } from './misc';
+import { buildApiPeerTheme, buildApiShareTheme, buildApiWallpaper } from './misc';
 import {
   buildApiBotVerification,
   buildApiEmojiStatus,
@@ -29,7 +28,6 @@ import {
   buildApiProfileTab,
   buildAvatarPhotoId,
 } from './peers';
-import { buildApiWalletCard } from './wallet';
 
 export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUserFullInfo {
   const {
@@ -38,11 +36,11 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, translationsDisabled, storiesPinnedAvailable,
       contactRequirePremium, businessWorkHours, businessLocation, businessIntro,
-      birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, stargiftsCount, botVerification,
-      botCanManageEmojiStatus, settings, sendPaidMessagesStars, displayGiftsButton, disallowedGifts,
+      birthday, personalChannelId, personalChannelMessage, sponsoredEnabled, botVerification,
+      botCanManageEmojiStatus, settings, sendPaidMessagesStars,
       starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
-      ttlPeriod, theme, wallpaper, botManagerId, walletCard, shareTheme,
+      ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
     },
     users,
   } = mtpUserFull;
@@ -65,8 +63,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,
     botInfo: botInfo && buildApiBotInfo(botInfo, userId),
     isContactRequirePremium: contactRequirePremium,
-    shouldDisplayGiftsButton: displayGiftsButton,
-    disallowedGifts: disallowedGifts && buildApiDisallowedGiftsSettings(disallowedGifts),
     birthday: birthday && buildApiBirthday(birthday),
     businessLocation: businessLocation && buildApiBusinessLocation(businessLocation),
     businessWorkHours: businessWorkHours && buildApiBusinessWorkHours(businessWorkHours),
@@ -77,7 +73,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     privateForwardName,
     botVerification: botVerification && buildApiBotVerification(botVerification),
     areAdsEnabled: sponsoredEnabled,
-    starGiftCount: stargiftsCount,
     starsRating: starsRating && buildApiStarsRating(starsRating),
     starsMyPendingRating: starsMyPendingRating && buildApiStarsRating(starsMyPendingRating),
     starsMyPendingRatingDate,
@@ -92,7 +87,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     noForwardsPeerEnabled: noforwardsPeerEnabled,
     isUnofficialSecurityRisk: unofficialSecurityRisk,
     botManagerId: botManagerId !== undefined ? buildApiPeerId(botManagerId, 'user') : undefined,
-    walletCard: walletCard && buildApiWalletCard(walletCard),
     shareTheme: shareTheme && buildApiShareTheme(shareTheme),
   };
 }
