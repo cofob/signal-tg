@@ -107,6 +107,8 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'chatEditPhoto',
   'chatDeletePhoto',
   'unsupported',
+  'deleted',
+  'viewOnce',
 ]);
 const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>([
   'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest',

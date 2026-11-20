@@ -43,9 +43,6 @@ const BYTE_MASK = 0xFF;
  * Media ids encode the message id and attachment index, so `downloadMedia` can find the attachment pointer.
  */
 export function buildMessageMedia(message: MessageRecord, dataMessage: DataMessage): MediaContent {
-  // View-once media must not stay visible in the chat, and the app has no view-once flow for it yet
-  if (dataMessage.isViewOnce) return {};
-
   const { sticker, attachments, contact } = dataMessage;
   if (sticker?.data) return { sticker: buildSticker(message, sticker, sticker.data) };
 

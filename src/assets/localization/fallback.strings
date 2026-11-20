@@ -1879,6 +1879,9 @@
 "ActionGroupCallFinishedGroup" = "{from} ended the video chat ({duration})";
 "ActionExpiredVoice" = "Expired voice message";
 "ActionExpiredVideo" = "Expired video message";
+"ActionMessageDeleted" = "This message was deleted";
+"ActionViewOnceMedia" = "View-once media";
+"ActionViewOnceViewed" = "Viewed";
 "ActionAddUser" = "{from} added {user}";
 "ActionAddUserYou" = "You added {user}";
 "ActionAddUsersMany" = "{from} added {users}";
