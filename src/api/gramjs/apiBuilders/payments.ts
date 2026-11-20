@@ -5,11 +5,8 @@ import type {
   ApiCheckedGiftCode,
   ApiGiveawayInfo,
   ApiInvoice,
-  ApiLabeledPrice,
   ApiMyBoost,
-  ApiPaymentCredentials,
   ApiPaymentForm,
-  ApiPaymentSavedInfo,
   ApiPremiumGiftCodeOption,
   ApiPremiumPromo,
   ApiPremiumSection,
@@ -24,142 +21,40 @@ import type {
 
 import { STARS_CURRENCY_CODE, TON_CURRENCY_CODE } from '../../../config';
 import { toJSNumber } from '../../../util/numbers';
-import { addWebDocumentToLocalDb } from '../helpers/localDb';
 import { buildApiMessageEntity } from './common';
-import { omitVirtualClassFields } from './helpers';
-import { buildApiDocument, buildApiWebDocument } from './messageContent';
+import { buildApiDocument } from './messageContent';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 
-export function buildApiPaymentForm(form: GramJs.payments.TypePaymentForm): ApiPaymentForm {
+export function buildApiPaymentForm(form: GramJs.payments.TypePaymentForm): ApiPaymentForm | undefined {
   if (form instanceof GramJs.payments.PaymentFormStarGift) {
-    const { formId } = form;
     return {
       type: 'stargift',
-      formId: String(formId),
+      formId: String(form.formId),
       invoice: buildApiInvoice(form.invoice),
     };
   }
 
   if (form instanceof GramJs.payments.PaymentFormStars) {
-    const {
-      botId, formId, title, description, photo,
-    } = form;
-
-    if (photo) {
-      addWebDocumentToLocalDb(photo);
-    }
-
     return {
       type: 'stars',
-      botId: buildApiPeerId(botId, 'user'),
-      formId: String(formId),
-      title,
-      description,
-      photo: buildApiWebDocument(photo),
+      formId: String(form.formId),
       invoice: buildApiInvoice(form.invoice),
     };
   }
 
-  const {
-    formId,
-    canSaveCredentials,
-    passwordMissing: isPasswordMissing,
-    providerId,
-    nativeProvider,
-    nativeParams,
-    savedInfo,
-    invoice,
-    savedCredentials,
-    url,
-    botId,
-    description,
-    title,
-    photo,
-  } = form;
-
-  if (photo) {
-    addWebDocumentToLocalDb(photo);
-  }
-  const { shippingAddress } = savedInfo || {};
-  const cleanedInfo: ApiPaymentSavedInfo | undefined = savedInfo ? omitVirtualClassFields(savedInfo) : undefined;
-  if (cleanedInfo && shippingAddress) {
-    cleanedInfo.shippingAddress = omitVirtualClassFields(shippingAddress);
-  }
-
-  const nativeData = nativeParams ? JSON.parse(nativeParams.data) : {};
-
-  return {
-    type: 'regular',
-    title,
-    description,
-    photo: buildApiWebDocument(photo),
-    url,
-    botId: buildApiPeerId(botId, 'user'),
-    canSaveCredentials,
-    isPasswordMissing,
-    formId: String(formId),
-    providerId: String(providerId),
-    nativeProvider,
-    savedInfo: cleanedInfo,
-    invoice: buildApiInvoice(invoice),
-    nativeParams: {
-      needCardholderName: Boolean(nativeData?.need_cardholder_name),
-      needCountry: Boolean(nativeData?.need_country),
-      needZip: Boolean(nativeData?.need_zip),
-      publishableKey: nativeData?.publishable_key,
-      publicToken: nativeData?.public_token,
-      tokenizeUrl: nativeData?.tokenize_url,
-    },
-    savedCredentials: savedCredentials && buildApiPaymentCredentials(savedCredentials),
-  };
+  return undefined;
 }
 
-export function buildApiInvoice(invoice: GramJs.Invoice): ApiInvoice {
-  const {
-    test,
-    currency,
-    prices,
-    recurring,
-    termsUrl,
-    maxTipAmount,
-    suggestedTipAmounts,
-    emailRequested,
-    emailToProvider,
-    nameRequested,
-    phoneRequested,
-    phoneToProvider,
-    shippingAddressRequested,
-    flexible,
-  } = invoice;
-
-  const mappedPrices: ApiLabeledPrice[] = prices.map(({ label, amount }) => ({
-    label,
-    amount: toJSNumber(amount),
-  }));
-
-  const totalAmount = prices.reduce((acc, cur) => acc + toJSNumber(cur.amount), 0);
+function buildApiInvoice({ currency, prices }: GramJs.Invoice): ApiInvoice {
   const totalPrice: ApiTypeCurrencyAmount | undefined = currency === TON_CURRENCY_CODE
     ? { currency: TON_CURRENCY_CODE, amount: prices.reduce((acc, cur) => acc + cur.amount, 0n) }
-    : currency === STARS_CURRENCY_CODE ? { currency: STARS_CURRENCY_CODE, amount: totalAmount, nanos: 0 } : undefined;
+    : currency === STARS_CURRENCY_CODE ? {
+      currency: STARS_CURRENCY_CODE,
+      amount: prices.reduce((acc, cur) => acc + toJSNumber(cur.amount), 0),
+      nanos: 0,
+    } : undefined;
 
-  return {
-    totalAmount,
-    totalPrice,
-    currency,
-    isTest: test,
-    isRecurring: recurring,
-    termsUrl,
-    prices: mappedPrices,
-    maxTipAmount: toJSNumber(maxTipAmount),
-    suggestedTipAmounts: suggestedTipAmounts?.map((tip) => toJSNumber(tip)),
-    isEmailRequested: emailRequested,
-    isEmailSentToProvider: emailToProvider,
-    isNameRequested: nameRequested,
-    isPhoneRequested: phoneRequested,
-    isPhoneSentToProvider: phoneToProvider,
-    isShippingAddressRequested: shippingAddressRequested,
-    isFlexible: flexible,
-  };
+  return { totalPrice };
 }
 
 export function buildApiPremiumPromo(promo: GramJs.help.PremiumPromo): ApiPremiumPromo {
@@ -189,10 +84,6 @@ function buildApiPremiumSubscriptionOption(option: GramJs.PremiumSubscriptionOpt
     botUrl,
     months,
   };
-}
-
-export function buildApiPaymentCredentials(credentials: GramJs.PaymentSavedCredentialsCard[]): ApiPaymentCredentials[] {
-  return credentials.map(({ id, title }) => ({ id, title }));
 }
 
 export function buildPrepaidGiveaway(

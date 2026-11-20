@@ -8,9 +8,6 @@ import type { ApiChatAdminRights } from './chats';
 import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
-import type {
-  ApiLabeledPrice,
-} from './payments';
 import type { ApiTypePeerColor } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiStarGiftRegular, ApiStarGiftUnique, ApiTypeCurrencyAmount } from './stars';
@@ -255,23 +252,8 @@ export interface ApiMessagePoll {
 }
 
 export interface ApiInvoice {
-  prices: ApiLabeledPrice[];
-  totalAmount: number;
-  // Set for an invoice in Stars or TON. TON is counted in nanotons, which `totalAmount` cannot hold exactly.
+  // Set for an invoice in Stars or TON
   totalPrice?: ApiTypeCurrencyAmount;
-  currency: string;
-  isTest?: boolean;
-  isRecurring?: boolean;
-  termsUrl?: string;
-  maxTipAmount?: number;
-  suggestedTipAmounts?: number[];
-  isNameRequested?: boolean;
-  isPhoneRequested?: boolean;
-  isEmailRequested?: boolean;
-  isShippingAddressRequested?: boolean;
-  isFlexible?: boolean;
-  isPhoneSentToProvider?: boolean;
-  isEmailSentToProvider?: boolean;
 }
 
 export interface ApiMediaExtendedPreview {
@@ -280,11 +262,6 @@ export interface ApiMediaExtendedPreview {
   height?: number;
   thumbnail?: ApiThumbnail;
   duration?: number;
-}
-
-export interface ApiPaymentCredentials {
-  id: string;
-  title: string;
 }
 
 export interface ApiGeoPoint {

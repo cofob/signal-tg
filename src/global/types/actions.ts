@@ -3267,10 +3267,6 @@ export interface ActionPayloads {
   } & WithTabId;
 
   // Payment
-  validatePaymentPassword: {
-    password: string;
-  } & WithTabId;
-
   openPaymentMessageConfirmDialogOpen: { dialogKey: string } & WithTabId;
   closePaymentMessageConfirmDialogOpen: WithTabId | undefined;
   openPriceConfirmModal: {

@@ -1,59 +1,19 @@
 import type { PREMIUM_FEATURE_SECTIONS, STARS_CURRENCY_CODE, TON_CURRENCY_CODE } from '../../config';
-import type { ApiWebDocument } from './bots';
 import type { ApiChat, ApiPeer } from './chats';
 import type {
   ApiDocument,
   ApiFormattedText,
   ApiInvoice,
   ApiMessageEntity,
-  ApiPaymentCredentials,
 } from './messages';
 import type {
   ApiInputSavedStarGift, ApiRequestInputSavedStarGift, ApiStarsGiveawayWinnerOption,
 } from './stars';
 import type { ApiUser } from './users';
 
-export interface ApiShippingAddress {
-  streetLine1: string;
-  streetLine2: string;
-  city: string;
-  state: string;
-  countryIso2: string;
-  postCode: string;
-}
-
-export interface ApiPaymentSavedInfo {
-  name?: string;
-  phone?: string;
-  email?: string;
-  shippingAddress?: ApiShippingAddress;
-}
-
-export interface ApiPaymentFormRegular {
-  type: 'regular';
-  url: string;
-  botId: string;
-  canSaveCredentials?: boolean;
-  isPasswordMissing?: boolean;
-  formId: string;
-  providerId: string;
-  nativeProvider?: string;
-  nativeParams: ApiPaymentFormNativeParams;
-  savedInfo?: ApiPaymentSavedInfo;
-  savedCredentials?: ApiPaymentCredentials[];
-  invoice: ApiInvoice;
-  title: string;
-  description: string;
-  photo?: ApiWebDocument;
-}
-
 export interface ApiPaymentFormStars {
   type: 'stars';
   formId: string;
-  botId: string;
-  title: string;
-  description: string;
-  photo?: ApiWebDocument;
   invoice: ApiInvoice;
 }
 
@@ -63,21 +23,7 @@ export interface ApiPaymentFormStarGift {
   invoice: ApiInvoice;
 }
 
-export type ApiPaymentForm = ApiPaymentFormRegular | ApiPaymentFormStars | ApiPaymentFormStarGift;
-
-export interface ApiPaymentFormNativeParams {
-  needCardholderName?: boolean;
-  needCountry?: boolean;
-  needZip?: boolean;
-  publishableKey?: string;
-  publicToken?: string;
-  tokenizeUrl?: string;
-}
-
-export interface ApiLabeledPrice {
-  label: string;
-  amount: number;
-}
+export type ApiPaymentForm = ApiPaymentFormStars | ApiPaymentFormStarGift;
 
 export type ApiPremiumSection = typeof PREMIUM_FEATURE_SECTIONS[number];
 
