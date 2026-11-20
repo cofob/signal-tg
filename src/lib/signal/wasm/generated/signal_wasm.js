@@ -3010,6 +3010,19 @@ export class TlsClient {
         wasm.__wbg_tlsclient_free(ptr, 0);
     }
     /**
+     * The protocol the server chose from `alpn_protocols`, once the handshake completes
+     * @returns {string | undefined}
+     */
+    alpnProtocol() {
+        const ret = wasm.tlsclient_alpnProtocol(this.__wbg_ptr);
+        let v1;
+        if (ret[0] !== 0) {
+            v1 = getStringFromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        }
+        return v1;
+    }
+    /**
      * Queues `close_notify`; call `takeOutgoing` afterwards
      */
     close() {
@@ -3023,16 +3036,20 @@ export class TlsClient {
         return ret !== 0;
     }
     /**
-     * `trust_anchors` are DER certificates; only chains to them are accepted.
+     * `trust_anchors` are DER certificates; only chains to them are accepted. `alpn_protocols` are
+     * offered in order of preference.
      * @param {string} server_name
      * @param {Uint8Array[]} trust_anchors
+     * @param {string[]} alpn_protocols
      */
-    constructor(server_name, trust_anchors) {
+    constructor(server_name, trust_anchors, alpn_protocols) {
         const ptr0 = passStringToWasm0(server_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ptr1 = passArrayJsValueToWasm0(trust_anchors, wasm.__wbindgen_malloc);
         const len1 = WASM_VECTOR_LEN;
-        const ret = wasm.tlsclient_new(ptr0, len0, ptr1, len1);
+        const ptr2 = passArrayJsValueToWasm0(alpn_protocols, wasm.__wbindgen_malloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.tlsclient_new(ptr0, len0, ptr1, len1, ptr2, len2);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -3057,16 +3074,13 @@ export class TlsClient {
         return v2;
     }
     /**
-     * Queues application data; it is sent after the handshake completes
+     * Queues application data of any length; it is sent after the handshake completes
      * @param {Uint8Array} data
      */
     send(data) {
         const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.tlsclient_send(this.__wbg_ptr, ptr0, len0);
-        if (ret[1]) {
-            throw takeFromExternrefTable0(ret[0]);
-        }
+        wasm.tlsclient_send(this.__wbg_ptr, ptr0, len0);
     }
     /**
      * Returns TLS records to write to the tunnel

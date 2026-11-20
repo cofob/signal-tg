@@ -3,6 +3,7 @@ import { wasm } from '../wasm';
 
 const DEFAULT_PORT = 443;
 const TUNNEL_PATH = '/tunnel';
+const DEFAULT_ALPN_PROTOCOLS = ['http/1.1'];
 
 let signalCaDer: Uint8Array | undefined;
 
@@ -12,6 +13,9 @@ let signalCaDer: Uint8Array | undefined;
  */
 export default class TlsTunnel {
   readonly host: string;
+
+  /** The ALPN protocol the server chose, once the handshake completes */
+  alpnProtocol?: string;
 
   private socket: WebSocket;
 
@@ -25,20 +29,21 @@ export default class TlsTunnel {
 
   private closeError?: Error;
 
-  private constructor(host: string, socket: WebSocket) {
+  private constructor(host: string, socket: WebSocket, alpnProtocols: string[]) {
     this.host = host;
     this.socket = socket;
-    this.tls = new wasm.TlsClient(host, [getSignalCaDer()]);
+    this.tls = new wasm.TlsClient(host, [getSignalCaDer()], alpnProtocols);
   }
 
-  static open(host: string, port = DEFAULT_PORT): Promise<TlsTunnel> {
+  /** `alpnProtocols` are offered in order of preference */
+  static open(host: string, alpnProtocols = DEFAULT_ALPN_PROTOCOLS, port = DEFAULT_PORT): Promise<TlsTunnel> {
     const url = new URL(SIGNAL_TUNNEL_URL ?? getDefaultTunnelUrl());
     url.searchParams.set('host', host);
     url.searchParams.set('port', String(port));
 
     const socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
-    const tunnel = new TlsTunnel(host, socket);
+    const tunnel = new TlsTunnel(host, socket, alpnProtocols);
 
     return new Promise((resolve, reject) => {
       socket.onopen = () => {
@@ -56,6 +61,7 @@ export default class TlsTunnel {
           return;
         }
         if (wasHandshaking && !tunnel.tls.isHandshaking()) {
+          tunnel.alpnProtocol = tunnel.tls.alpnProtocol();
           resolve(tunnel);
         }
       };
