@@ -1,10 +1,12 @@
 /* eslint-disable no-console */
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 
+import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { fetchProfile } from '../profiles/fetchProfile';
 import { sendContent } from '../sender/sendContent';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
@@ -95,6 +97,17 @@ const signalDev = {
         .filter(Boolean).join(' '),
       archived: contact.archived,
     }] : [])));
+  },
+
+  /** Prints a decrypted profile; defaults to our own */
+  async profile(aci?: string, profileKeyBase64?: string) {
+    const account = await store.getItem('account');
+    if (!account || !connection) throw new Error('Not connected: call signalDev.listen() first');
+
+    const profileKey = profileKeyBase64 ? bufferFromBase64(profileKeyBase64) : account.profileKey;
+    if (!profileKey) throw new Error('No profile key');
+    const profile = await fetchProfile(connection, aci ?? account.aci, profileKey);
+    console.log('[signal] Profile', profile);
   },
 
   async reset() {
