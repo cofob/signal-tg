@@ -9,6 +9,7 @@ import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { pause, throttle } from '../../../util/schedulers';
 import { callApi } from '../../../api/gramjs';
+import { LIMITS } from '../../../limits';
 import { getIsStickerSetInstalled } from '../../helpers';
 import {
   addActionHandler,
@@ -26,9 +27,8 @@ import {
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import {
-  selectIsCurrentUserFrozen, selectIsCurrentUserPremium, selectStickerSet, selectTabState,
+  selectIsCurrentUserFrozen, selectStickerSet, selectTabState,
 } from '../../selectors';
-import { selectCurrentLimit, selectPremiumLimit } from '../../selectors/limits';
 
 const ADDED_SETS_THROTTLE = 200;
 const ADDED_SETS_THROTTLE_CHUNK = 10;
@@ -422,9 +422,7 @@ addActionHandler('saveGif', async (global, actions, payload): Promise<void> => {
   } = payload;
   const length = global.gifs.saved.gifs?.length;
 
-  const limit = selectCurrentLimit(global, 'savedGifs');
-  const premiumLimit = selectPremiumLimit(global, 'savedGifs');
-  const isPremium = selectIsCurrentUserPremium(global);
+  const limit = LIMITS.savedGifs;
 
   if (!shouldUnsave && length && length >= limit) {
     actions.showNotification({
@@ -435,17 +433,10 @@ addActionHandler('saveGif', async (global, actions, payload): Promise<void> => {
         },
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
       },
-      message: isPremium ? {
+      message: {
         key: 'LimitReachedFavoriteGifsSubtitlePremium',
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      }
-        : {
-          key: 'LimitReachedFavoriteGifsSubtitle',
-          variables: {
-            count: premiumLimit.toString(),
-          },
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        },
+      },
       className: 'bold-link',
       tabId,
     });
@@ -476,9 +467,7 @@ addActionHandler('saveGif', async (global, actions, payload): Promise<void> => {
 addActionHandler('faveSticker', (global, actions, payload): ActionReturnType => {
   const { sticker, tabId = getCurrentTabId() } = payload;
   const current = global.stickers.favorite.stickers.length;
-  const limit = selectCurrentLimit(global, 'stickersFaved');
-  const premiumLimit = selectPremiumLimit(global, 'stickersFaved');
-  const isPremium = selectIsCurrentUserPremium(global);
+  const limit = LIMITS.stickersFaved;
 
   if (current >= limit) {
     actions.showNotification({
@@ -489,17 +478,10 @@ addActionHandler('faveSticker', (global, actions, payload): ActionReturnType => 
         },
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
       },
-      message: isPremium ? {
+      message: {
         key: 'LimitReachedFavoriteStickersSubtitlePremium',
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      }
-        : {
-          key: 'LimitReachedFavoriteStickersSubtitle',
-          variables: {
-            count: premiumLimit.toString(),
-          },
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        },
+      },
       className: 'bold-link',
       tabId,
     });

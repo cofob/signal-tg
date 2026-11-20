@@ -8,7 +8,6 @@ import type { AnimationLevel } from '../../../types';
 
 import { ALL_FOLDER_ID } from '../../../config';
 import { selectTabState } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
@@ -43,9 +42,6 @@ type StateProps = {
   activeChatFolder: number;
   animationLevel: AnimationLevel;
   shouldSkipHistoryAnimations?: boolean;
-  maxFolders: number;
-  maxChatLists: number;
-  maxFolderInvites: number;
   hasArchivedChats?: boolean;
   hasArchivedStories?: boolean;
   archiveSettings: GlobalState['archiveSettings'];
@@ -62,10 +58,7 @@ const ChatFolders = ({
   isForumPanelOpen,
   animationLevel,
   shouldSkipHistoryAnimations,
-  maxFolders,
-  maxChatLists,
   folderInvitesById,
-  maxFolderInvites,
   hasArchivedChats,
   hasArchivedStories,
   archiveSettings,
@@ -116,10 +109,7 @@ const ChatFolders = ({
     noEmoticons: true,
     orderedFolderIds,
     chatFoldersById,
-    maxFolders,
-    maxChatLists,
     folderInvitesById,
-    maxFolderInvites,
   });
 
   const allChatsFolderIndex = displayedFolders?.findIndex((folder) => folder.id === ALL_FOLDER_ID);
@@ -307,9 +297,6 @@ export default memo(withGlobal<OwnProps>(
       shouldSkipHistoryAnimations,
       hasArchivedChats: Boolean(archived?.length),
       hasArchivedStories: Boolean(archivedStories?.length),
-      maxFolders: selectCurrentLimit(global, 'dialogFilters'),
-      maxFolderInvites: selectCurrentLimit(global, 'chatlistInvites'),
-      maxChatLists: selectCurrentLimit(global, 'chatlistJoined'),
       archiveSettings,
       isStoryRibbonShown,
     };

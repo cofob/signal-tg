@@ -329,7 +329,6 @@ export interface ApiAppConfig {
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
   hiddenMembersMinCount: number;
-  limits: Record<ApiLimitType, readonly [number, number]>;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -513,7 +512,6 @@ export type ApiLimitType =
   | 'aboutLength'
   | 'chatlistInvites'
   | 'chatlistJoined'
-  | 'recommendedChannels'
   | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts'
@@ -521,7 +519,7 @@ export type ApiLimitType =
   | 'botsCreate';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
-  'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs' | 'recommendedChannels'
+  'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
   | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
 )>;

@@ -16,6 +16,7 @@ import { getMessageKey } from '../../../util/keys/messageKey';
 import * as mediaLoader from '../../../util/mediaLoader';
 import requestActionTimeout from '../../../util/requestActionTimeout';
 import { callApi } from '../../../api/gramjs';
+import { LIMITS } from '../../../limits';
 import {
   addPaidReaction,
   getDocumentMediaHash,
@@ -48,7 +49,6 @@ import {
   selectDefaultReaction,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectMaxUserReactions,
   selectMessageIdsByGroupId,
   selectPeer,
   selectPerformanceSettingsValue,
@@ -235,7 +235,7 @@ addActionHandler('toggleReaction', async (global, actions, payload): Promise<voi
   const newUserReactions = hasReaction
     ? userReactions.filter((userReaction) => !isSameReaction(userReaction, reaction)) : [...userReactions, reaction];
 
-  const limit = selectMaxUserReactions(global);
+  const limit = LIMITS.maxReactions;
   const [paidReactions, regularReactions] = partition(newUserReactions, (r) => r.type === 'paid');
   const trimmedRegularReactions = regularReactions.slice(-limit) as ApiReaction[];
   const localReactions = [...paidReactions, ...trimmedRegularReactions];

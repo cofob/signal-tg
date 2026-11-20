@@ -29,16 +29,12 @@ export interface LangPair {
   'UsernameInUse': undefined;
   'CreateGroupError': undefined;
   'PasscodeControllerErrorCurrent': undefined;
-  'LimitReachedPublicLinksLocked': undefined;
   'LimitReachedPublicLinksPremium': undefined;
   'PremiumPreviewReactionsDescription': undefined;
   'PremiumPreviewStickersDescription': undefined;
   'PremiumPreviewNoAdsDescription': undefined;
   'PremiumPreviewAdvancedChatManagementDescription': undefined;
   'PremiumPreviewAnimatedProfilesDescription': undefined;
-  'PremiumLimitAccountsTitle': undefined;
-  'PremiumLimitAccountsNoPremium': undefined;
-  'PremiumLimitAccounts': undefined;
   'SendMessage': undefined;
   'MessageUnsupported': undefined;
   'Widget': undefined;
@@ -2036,7 +2032,6 @@ export interface LangPair {
   'AiTonePreviewAddStyle': undefined;
   'AiTonePreviewRemoveStyle': undefined;
   'AiTonePreviewStyleAdded': undefined;
-  'AiToneLimitReached': undefined;
   'AiMessageEditorFrom': undefined;
   'AiMessageEditorTo': undefined;
   'ButtonHelp': undefined;
@@ -2657,21 +2652,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'limit': V;
     'limit2': V;
   };
-  'LimitReachedChatInFoldersLocked': {
-    'limit': V;
-  };
-  'LimitReachedFileSizeLocked': {
-    'limit': V;
-  };
-  'LimitReachedFoldersLocked': {
-    'limit': V;
-  };
-  'LimitReachedPinDialogsLocked': {
-    'limit': V;
-  };
-  'LimitReachedCommunitiesLocked': {
-    'limit': V;
-  };
   'LimitReachedChatInFoldersPremium': {
     'limit': V;
   };
@@ -2742,10 +2722,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'CreateBotUnsupported': {
     'bot': V;
-  };
-  'CreateBotLimitTextPremium': {
-    'premiumLimit': V;
-    'limit': V;
   };
   'ConversationScheduleMessageSendToday': {
     'time': V;
@@ -3032,13 +3008,7 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedFavoriteGifs': {
     'count': V;
   };
-  'LimitReachedFavoriteGifsSubtitle': {
-    'count': V;
-  };
   'LimitReachedFavoriteStickers': {
-    'count': V;
-  };
-  'LimitReachedFavoriteStickersSubtitle': {
     'count': V;
   };
   'VoipPeerIncompatible': {
@@ -3922,16 +3892,10 @@ export interface LangPairWithVariables<V = LangVariable> {
   'FactCheckFooter': {
     'country': V;
   };
-  'LimitReachedFolderLinksLocked': {
-    'limit': V;
-  };
   'LimitReachedFolderLinksPremium': {
     'limit': V;
   };
   'LimitReachedPinnedTopics': {
-    'limit': V;
-  };
-  'LimitReachedSharedFoldersLocked': {
     'limit': V;
   };
   'LimitReachedSharedFoldersPremium': {
@@ -3948,9 +3912,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'MessageLockedPremium': {
     'peer': V;
-  };
-  'MoreSimilarText': {
-    'limit': V;
   };
   'NoResultFoundFor': {
     'query': V;
@@ -4316,9 +4277,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'FolderLinkNotificationUpdatedSubtitle': {
     'count': V;
   };
-  'MoreSimilarBotsDescription': {
-    'count': V;
-  };
   'ActionGameScore': {
     'from': V;
     'count': V;
@@ -4642,11 +4600,6 @@ export interface LangKeyGroups {
   };
   'limit': {
     keys:
-      | 'LimitReachedChatInFoldersLocked'
-      | 'LimitReachedFileSizeLocked'
-      | 'LimitReachedFoldersLocked'
-      | 'LimitReachedPinDialogsLocked'
-      | 'LimitReachedCommunitiesLocked'
       | 'LimitReachedChatInFoldersPremium'
       | 'LimitReachedFileSizePremium'
       | 'LimitReachedFoldersPremium'
@@ -4654,12 +4607,9 @@ export interface LangKeyGroups {
       | 'LimitReachedCommunitiesPremium'
       | 'AutodownloadSizeLimitUpTo'
       | 'AiToneLimitReachedPremium'
-      | 'LimitReachedFolderLinksLocked'
       | 'LimitReachedFolderLinksPremium'
       | 'LimitReachedPinnedTopics'
-      | 'LimitReachedSharedFoldersLocked'
-      | 'LimitReachedSharedFoldersPremium'
-      | 'MoreSimilarText';
+      | 'LimitReachedSharedFoldersPremium';
     variables: 'limit';
   };
   'volume': {
@@ -4735,11 +4685,6 @@ export interface LangKeyGroups {
       | 'ContextMenuNoForwardsPeer'
       | 'RatingReflectsActivity';
     variables: 'name';
-  };
-  'limit,premiumLimit': {
-    keys:
-      | 'CreateBotLimitTextPremium';
-    variables: 'limit' | 'premiumLimit';
   };
   'time': {
     keys:
@@ -4924,9 +4869,7 @@ export interface LangKeyGroups {
       | 'ErrorRichMessageTableTooWide'
       | 'EmptyGroupInfoLine1'
       | 'LimitReachedFavoriteGifs'
-      | 'LimitReachedFavoriteGifsSubtitle'
       | 'LimitReachedFavoriteStickers'
-      | 'LimitReachedFavoriteStickersSubtitle'
       | 'MessageTimerShortHours'
       | 'MessageTimerShortDays'
       | 'MediaViewDownloading';
@@ -5645,7 +5588,6 @@ export interface LangPluralKeyGroups {
       | 'FolderLinkNotificationDeletedSubtitle'
       | 'FolderLinkNotificationAddedSubtitle'
       | 'FolderLinkNotificationUpdatedSubtitle'
-      | 'MoreSimilarBotsDescription'
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'

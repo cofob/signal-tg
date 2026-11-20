@@ -238,19 +238,6 @@
       padding: 0;
     }
   }
-
-  &.similarBotsList,
-  &.similarChannelsList {
-    :global(.ListItem.blured) {
-      filter: opacity(0.8);
-    }
-
-    .moreSimilar {
-      margin-top: 1rem;
-      font-size: 0.8125rem;
-      text-align: center;
-    }
-  }
 }
 
 .contentCategoriesPanel {

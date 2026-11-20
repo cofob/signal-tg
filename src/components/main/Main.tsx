@@ -86,8 +86,8 @@ import FoldersSidebar from './FoldersSidebar';
 import ForwardRecipientPicker from './ForwardRecipientPicker.async';
 import GameModal from './GameModal';
 import HistoryCalendar from './HistoryCalendar.async';
+import LimitReachedModal from './LimitReachedModal.async';
 import NewContactModal from './NewContactModal.async';
-import PremiumLimitReachedModal from './premium/common/PremiumLimitReachedModal.async';
 import ConfettiContainer from './visualEffects/ConfettiContainer';
 import WaveContainer from './visualEffects/WaveContainer';
 
@@ -646,7 +646,7 @@ const Main = ({
         requestedBotStartGroup={requestedBotStartGroup}
       />
       <MessageListHistoryHandler />
-      <PremiumLimitReachedModal limit={limitReached} />
+      <LimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
       <ReactionPicker isOpen={isReactionPickerOpen} />
       <DeleteMessageModal isOpen={isDeleteMessageModalOpen} />

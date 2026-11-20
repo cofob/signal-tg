@@ -17,12 +17,12 @@ import {
 
 import { FOLDER_TITLE_MAX_LENGTH, STICKER_SIZE_FOLDER_SETTINGS } from '../../../../config';
 import { selectCanShareFolder, selectCustomEmoji, selectIsCurrentUserPremium } from '../../../../global/selectors';
-import { selectCurrentLimit } from '../../../../global/selectors/limits';
 import buildClassName from '../../../../util/buildClassName';
 import { isUserId } from '../../../../util/entities/ids';
 import { findIntersectionWithSet } from '../../../../util/iteratees';
 import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { CUSTOM_PEER_EXCLUDED_CHAT_TYPES, CUSTOM_PEER_INCLUDED_CHAT_TYPES } from '../../../../util/objects/customPeer';
+import { LIMITS } from '../../../../limits';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
 import { renderTextWithEntities } from '../../../common/helpers/renderTextWithEntities';
 
@@ -64,8 +64,6 @@ type StateProps = {
   loadedArchivedChatIds?: string[];
   invites?: ApiChatlistExportedInvite[];
   isRemoved?: boolean;
-  maxInviteLinks: number;
-  maxChatLists: number;
   chatListCount: number;
   isCurrentUserPremium: boolean;
 };
@@ -96,8 +94,6 @@ const SettingsFoldersEdit = ({
   isOnlyInvites,
   loadedArchivedChatIds,
   invites,
-  maxInviteLinks,
-  maxChatLists,
   chatListCount,
   onSaveFolder,
   isCurrentUserPremium,
@@ -256,14 +252,14 @@ const SettingsFoldersEdit = ({
       return;
     }
 
-    if (chatListCount >= maxChatLists && !state.folder.isChatList) {
+    if (chatListCount >= LIMITS.chatlistJoined && !state.folder.isChatList) {
       openLimitReachedModal({
         limit: 'chatlistJoined',
       });
       return;
     }
 
-    if (invites.length < maxInviteLinks) {
+    if (invites.length < LIMITS.chatlistInvites) {
       if (state.isTouched) {
         onSaveFolder(onShareFolder);
       } else {
@@ -276,8 +272,8 @@ const SettingsFoldersEdit = ({
       limit: 'chatlistInvites',
     });
   }, [
-    invites, state.folderId, state.isTouched, chatListCount, maxInviteLinks, isCreating, onSaveFolder,
-    onShareFolder, lang, maxChatLists, state.folder.isChatList,
+    invites, state.folderId, state.isTouched, chatListCount, isCreating, onSaveFolder,
+    onShareFolder, lang, state.folder.isChatList,
   ]);
 
   const handleEditInviteClick = useCallback((e: React.MouseEvent<HTMLElement>, url: string) => {
@@ -586,8 +582,6 @@ export default memo(withGlobal<OwnProps>(
       loadedArchivedChatIds: listIds.archived,
       invites: state.folderId ? (invites[state.folderId] || MEMO_EMPTY_ARRAY) : undefined,
       isRemoved: state.folderId !== undefined && !byId[state.folderId],
-      maxInviteLinks: selectCurrentLimit(global, 'chatlistInvites'),
-      maxChatLists: selectCurrentLimit(global, 'chatlistJoined'),
       chatListCount,
       isCurrentUserPremium,
     };

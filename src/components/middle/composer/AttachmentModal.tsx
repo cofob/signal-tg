@@ -21,7 +21,6 @@ import { getAttachmentMediaType } from '../../../global/helpers';
 import {
   selectCanSetVideoCover, selectChatFullInfo, selectIsChatWithSelf, selectIsCurrentUserPremium, selectTabState,
 } from '../../../global/selectors';
-import { selectCurrentLimit } from '../../../global/selectors/limits';
 import { selectLanguageCode } from '../../../global/selectors/settings';
 import buildClassName from '../../../util/buildClassName';
 import captureEscKeyListener from '../../../util/captureEscKeyListener';
@@ -30,6 +29,7 @@ import { validateFiles } from '../../../util/files';
 import { formatStarsAsIcon } from '../../../util/localization/format';
 import { removeAllSelections } from '../../../util/selection';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
+import { LIMITS } from '../../../limits';
 import { getAttachedStickers } from '../../ui/mediaEditor/editDocument';
 import { checkCanEncodeVideo } from '../../ui/mediaEditor/export/videoCapabilities';
 import { fetchVideoProbe } from '../../ui/mediaEditor/export/videoProbe';
@@ -101,7 +101,6 @@ type StateProps = {
   emojiKeywords?: Record<string, string[]>;
   shouldSuggestCustomEmoji?: boolean;
   topGuestBotIds?: string[];
-  captionLimit: number;
   attachmentSettings: GlobalState['attachmentSettings'];
   shouldSaveAttachmentsCompression?: boolean;
   shouldOpenMessageMediaEditor?: boolean;
@@ -123,7 +122,6 @@ const AttachmentModal = ({
   attachments,
   editingMessage,
   canShowCustomSendMenu,
-  captionLimit,
   isReady,
   isChatWithSelf,
   currentUserId,
@@ -943,7 +941,7 @@ const AttachmentModal = ({
               placeholder={lang('AttachmentCaptionPlaceholder')}
               onSend={handleSendClick}
               canAutoFocus={Boolean(isReady && isForCurrentMessageList && attachments.length)}
-              maxLength={captionLimit}
+              maxLength={LIMITS.captionLength}
               shouldSuppressFocus={isMobile && isSymbolMenuOpen}
               onSuppressedFocus={closeSymbolMenu}
             />
@@ -1028,7 +1026,6 @@ export default memo(withGlobal<OwnProps>(
       emojiKeywords: emojiKeywords?.keywords,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldSuggestCustomEmoji,
-      captionLimit: selectCurrentLimit(global, 'captionLength'),
       attachmentSettings,
       shouldSaveAttachmentsCompression,
       shouldOpenMessageMediaEditor: messageMediaEditorRequest?.chatId === chatId,

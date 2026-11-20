@@ -84,7 +84,6 @@ import {
   selectRequestedChatTranslationLanguage,
   selectRequestedChatTranslationTone,
 } from './chats';
-import { selectCurrentLimit } from './limits';
 import { selectMessageDownloadableMedia } from './media';
 import { selectPeer, selectPeerPaidMessagesStars } from './peers';
 import { selectPeerStory } from './stories';
@@ -1420,10 +1419,6 @@ export function selectDefaultReaction<T extends GlobalState>(global: T, chatId: 
   }
 
   return defaultReaction;
-}
-
-export function selectMaxUserReactions<T extends GlobalState>(global: T): number {
-  return selectCurrentLimit(global, 'maxReactions');
 }
 
 // Slow, not to be used in `withGlobal`

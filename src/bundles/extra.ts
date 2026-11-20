@@ -15,7 +15,7 @@ export { default as MinimizedBrowserModal } from '../components/modals/browser/M
 export { default as BotTrustModal } from '../components/main/BotTrustModal';
 export { default as AttachBotInstallModal } from '../components/modals/attachBotInstall/AttachBotInstallModal';
 export { default as DeleteFolderDialog } from '../components/main/DeleteFolderDialog';
-export { default as PremiumLimitReachedModal } from '../components/main/premium/common/PremiumLimitReachedModal';
+export { default as LimitReachedModal } from '../components/main/LimitReachedModal';
 export { default as StatusPickerMenu } from '../components/left/main/StatusPickerMenu';
 export { default as SuggestedStatusModal } from '../components/modals/suggestedStatus/SuggestedStatusModal';
 export { default as DeleteAccountModal } from '../components/modals/deleteAccount/DeleteAccountModal';

@@ -22,7 +22,6 @@ import {
   filterChatIdsByType, selectCanInviteToChat, selectChat, selectChatFullInfo,
   selectIsMonoforumAdmin, selectTopic, selectUser,
 } from '../../global/selectors';
-import { selectCurrentLimit } from '../../global/selectors/limits';
 import { unique } from '../../util/iteratees';
 import {
   areChatSelectionKeysEqual,
@@ -77,7 +76,6 @@ type StateProps = {
   topPeerIds?: string[];
   chatFoldersById: Record<number, ApiChatFolder>;
   orderedFolderIds?: number[];
-  maxFolders: number;
 };
 
 const RECENT_CONTACTS_LIMIT = 15;
@@ -101,7 +99,6 @@ const RecipientPicker = ({
   isForwarding,
   shouldFilterInviteable,
   isMultiSelect,
-  maxFolders,
   withFolders,
   footer,
   viewportFooter,
@@ -128,7 +125,6 @@ const RecipientPicker = ({
     sidebarMode: false,
     orderedFolderIds,
     chatFoldersById,
-    maxFolders,
     noEmoticons: true,
     isReadOnly: true,
   });
@@ -405,7 +401,6 @@ export default memo(withGlobal<OwnProps>(
       currentUserId,
       chatFoldersById,
       orderedFolderIds,
-      maxFolders: selectCurrentLimit(global, 'dialogFilters'),
     };
   },
 )(RecipientPicker));

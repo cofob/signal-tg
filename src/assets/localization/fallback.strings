@@ -45,12 +45,6 @@
 "CreateGroupError" = "Sorry, you can't create a group with these users because of their privacy settings.";
 "PasscodeControllerErrorCurrent" = "invalid passcode";
 "LimitReachedChatInFolders" = "Sorry, you can't add more than **{limit}** chats to a folder. You can increase this limit to **{limit2}** by subscribing to **Telegram Premium**.";
-"LimitReachedChatInFoldersLocked" = "Sorry, you can't add more than **{limit}** chats to a folder. Please create a new one. We are working to let you increase this limit in the future.";
-"LimitReachedFileSizeLocked" = "The document can’t be sent, because it is larger than **{limit}**. We are working to let you increase this limit in the future.";
-"LimitReachedFoldersLocked" = "You have reached the limit of **{limit}** folders for this account. We are working to let you increase this limit in the future.";
-"LimitReachedPinDialogsLocked" = "Sorry, you can't pin more than {limit} chats to the top. Unpin some that are currently pinned. We are working to let you increase this limit in the future.";
-"LimitReachedPublicLinksLocked" = "You have reserved too many public links. Try revoking the link from an older group or channel. We are working to let you increase this limit in the future.";
-"LimitReachedCommunitiesLocked" = "You are a member of **{limit}** groups and channels. Please leave some before joining a new one. We are working to let you increase this limit in the future.";
 "LimitReachedChatInFoldersPremium" = "Sorry, you can't add more than **{limit}** chats to a folder. Please create a new one.";
 "LimitReachedFileSizePremium" = "The document can't be sent, because it is larger than **{limit}**.";
 "LimitReachedFoldersPremium" = "You have reached the limit of **{limit}** folders for this account.";
@@ -62,9 +56,6 @@
 "PremiumPreviewNoAdsDescription" = "No more ads in public channels where Telegram sometimes shows ads.";
 "PremiumPreviewAdvancedChatManagementDescription" = "Tools to set the default folder, auto-archive and hide new chats from non-contacts.";
 "PremiumPreviewAnimatedProfilesDescription" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
-"PremiumLimitAccountsTitle" = "Limit Reached";
-"PremiumLimitAccountsNoPremium" = "You have reached your current limit of connected accounts. You can free one more place by subscribing to Telegram Premium.";
-"PremiumLimitAccounts" = "You have reached your current limit of connected accounts. You can free one more place by subscribing to Telegram Premium with one of these connected accounts.";
 "SendMessage" = "Send Message";
 "MessageUnsupported" = "This message is not supported on the web version of Telegram";
 "Widget" = "Widget";
@@ -263,7 +254,6 @@
 "CreateBotLimitTitle" = "Bot Limit Exceeded";
 "CreateBotLimitText_one" = "You can create up to {count} bot, or delete your current ones via @BotFather";
 "CreateBotLimitText_other" = "You can create up to {count} bots, or delete your current ones via @BotFather";
-"CreateBotLimitTextPremium" = "Subscribe to **Premium** to create up to {premiumLimit} bots, or delete one of your {limit} bots via @BotFather";
 "SponsoredMessageInfo" = "What are sponsored\nmessages?";
 "SponsoredMessageInfoDescription1" = "Unlike other apps, Telegram never uses your private data to target ads. Sponsored messages on Telegram are based solely on the topic of the public channels in which they are shown. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored messages.";
 "SponsoredMessageInfoDescription2" = "Unlike other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can’t spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.";
@@ -1281,10 +1271,8 @@
 "WebAppAddToAttachmentUnavailableError" = "This bot can't be added to the attachment menu.";
 "LimitReachedFavoriteGifs" = "Limit of {count} GIFs Reached";
 "LimitReachedFavoriteGifsSubtitlePremium" = "An older GIF was replaced with this one.";
-"LimitReachedFavoriteGifsSubtitle" = "An older GIF was replaced with this one. You can **increase the limit** to {count} GIFs.";
 "LimitReachedFavoriteStickers" = "Limit of {count} Stickers Reached";
 "LimitReachedFavoriteStickersSubtitlePremium" = "An older sticker was replaced with this one.";
-"LimitReachedFavoriteStickersSubtitle" = "An older sticker was replaced with this one. You can **increase the limit** to {count} stickers.";
 "StickerPackErrorNotFound" = "Sorry, this sticker set doesn't seem to exist.";
 "ContactsPhoneNumberNotRegistred" = "The person with this phone number is not registered on Telegram yet.";
 "VoipPeerIncompatible" = "**{user}**'s app is using an incompatible protocol. They need to update their app before you can call them.";
@@ -1848,8 +1836,6 @@
 "WebAppCameraAccessRevoked" = "Camera access is turned off, the app was restarted.";
 "WebAppMicrophoneAccessRevoked" = "Microphone access is turned off, the app was restarted.";
 "WebAppMediaAccessRevoked" = "Camera and microphone access is turned off, the app was restarted.";
-"MoreSimilarBotsDescription_one" = "Subscribe to **Telegram Premium** to unlock up to {count} similar bot.";
-"MoreSimilarBotsDescription_other" = "Subscribe to **Telegram Premium** to unlock up to {count} similar bots.";
 "ViewButtonRequestJoin" = "REQUEST TO JOIN";
 "ViewButtonMessage" = "VIEW MESSAGE";
 "ViewButtonBot" = "VIEW BOT";
@@ -2647,7 +2633,6 @@
 "AiTonePreviewAddStyle" = "Add Style";
 "AiTonePreviewRemoveStyle" = "Remove Style";
 "AiTonePreviewStyleAdded" = "Style added";
-"AiToneLimitReached" = "You have reached the limit of custom styles.";
 "AiToneLimitReachedPremium" = "You have reached the limit of **{limit}** custom styles.";
 "AiTonePreviewUsedBy2_one" = "Used by {count} person.";
 "AiTonePreviewUsedBy2_other" = "Used by {count} people.";
@@ -2914,10 +2899,8 @@
 "Languages_one" = "{count} Language";
 "Languages_other" = "{count} Languages";
 "LearnMoreArrow" = "Learn More >";
-"LimitReachedFolderLinksLocked" = "You can only create {limit} invite links. We are working to let you increase this limit in the future.";
 "LimitReachedFolderLinksPremium" = "You can only create {limit} invite links. Try deleting some folder invite links.";
 "LimitReachedPinnedTopics" = "Sorry, you can't pin more than {limit} topics to the top.";
-"LimitReachedSharedFoldersLocked" = "You can only have {limit} shareable folders. We are working to let you increase this limit in the future.";
 "LimitReachedSharedFoldersPremium" = "You can only have {limit} shareable folders. Try deleting some shareable folder.";
 "LiveLocationUpdatedAtDate" = "updated {date}";
 "LiveLocationUpdatedHoursAgo_one" = "updated {count} hour ago";
@@ -2936,7 +2919,6 @@
 "MessageLockedPremium" = "Subscribe to **Premium** to message **{peer}**.";
 "MessageNotFound" = "Message doesn't exist.";
 "MoreSimilar" = "More Channels";
-"MoreSimilarText" = "Subscribe to **Telegram Premium**\nto unlock up to {limit} similar channels.";
 "MuteForDays_one" = "Mute for 1 day";
 "MuteForDays_other" = "Mute for {count} days";
 "MuteForForever" = "Mute Forever";

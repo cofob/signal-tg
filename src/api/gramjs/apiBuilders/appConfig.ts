@@ -1,40 +1,13 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
-import type { ApiAppConfig, ApiLimitType } from '../../types';
+import type { ApiAppConfig } from '../../types';
 
 import { omitUndefined } from '../../../util/iteratees';
-import {
-  DEFAULT_APP_CONFIG,
-  DEFAULT_LIMITS,
-} from '../../../limits';
+import { DEFAULT_APP_CONFIG } from '../../../limits';
 import localDb from '../localDb';
 import { buildJson } from './misc';
 
-type LimitType = 'default' | 'premium';
-type Limit =
-  | 'upload_max_fileparts'
-  | 'stickers_faved_limit'
-  | 'saved_gifs_limit'
-  | 'dialog_filters_chats_limit'
-  | 'dialog_filters_limit'
-  | 'dialogs_folder_pinned_limit'
-  | 'dialogs_pinned_limit'
-  | 'message_length_limit'
-  | 'caption_length_limit'
-  | 'channels_limit'
-  | 'channels_public_limit'
-  | 'about_length_limit'
-  | 'chatlist_invites_limit'
-  | 'chatlist_joined_limit'
-  | 'recommended_channels_limit'
-  | 'saved_dialogs_pinned_limit'
-  | 'reactions_user_max'
-  | 'aicompose_tone_saved_limit'
-  | 'bots_create_limit';
-type LimitKey = `${Limit}_${LimitType}`;
-type LimitsConfig = Record<LimitKey, number>;
-
-export interface GramJsAppConfig extends LimitsConfig {
+export interface GramJsAppConfig {
   emojies_sounds: Record<string, {
     id: string;
     access_hash: string;
@@ -163,12 +136,6 @@ function buildDiceEmojiesSuccess(appConfig: GramJsAppConfig) {
   }, {} as ApiAppConfig['diceEmojiesSuccess']) : {};
 }
 
-function getLimit(appConfig: GramJsAppConfig, key: Limit, fallbackKey: ApiLimitType) {
-  const defaultLimit = appConfig[`${key}_default`] || DEFAULT_LIMITS[fallbackKey][0];
-  const premiumLimit = appConfig[`${key}_premium`] || DEFAULT_LIMITS[fallbackKey][1];
-  return [defaultLimit, premiumLimit] as const;
-}
-
 // The config is JSON, so nanotons arrive as doubles and only whole values are taken
 function buildNanotons(value?: number) {
   return value !== undefined && Number.isInteger(value) ? BigInt(value) : undefined;
@@ -193,27 +160,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
     canDisplayAutoarchiveSetting: appConfig.autoarchive_setting_available,
-    limits: {
-      uploadMaxFileparts: getLimit(appConfig, 'upload_max_fileparts', 'uploadMaxFileparts'),
-      stickersFaved: getLimit(appConfig, 'stickers_faved_limit', 'stickersFaved'),
-      savedGifs: getLimit(appConfig, 'saved_gifs_limit', 'savedGifs'),
-      dialogFiltersChats: getLimit(appConfig, 'dialog_filters_chats_limit', 'dialogFiltersChats'),
-      dialogFilters: getLimit(appConfig, 'dialog_filters_limit', 'dialogFilters'),
-      dialogFolderPinned: getLimit(appConfig, 'dialogs_pinned_limit', 'dialogFolderPinned'),
-      messageLength: getLimit(appConfig, 'message_length_limit', 'messageLength'),
-      captionLength: getLimit(appConfig, 'caption_length_limit', 'captionLength'),
-      channels: getLimit(appConfig, 'channels_limit', 'channels'),
-      channelsPublic: getLimit(appConfig, 'channels_public_limit', 'channelsPublic'),
-      aboutLength: getLimit(appConfig, 'about_length_limit', 'aboutLength'),
-      chatlistInvites: getLimit(appConfig, 'chatlist_invites_limit', 'chatlistInvites'),
-      chatlistJoined: getLimit(appConfig, 'chatlist_joined_limit', 'chatlistJoined'),
-      recommendedChannels: getLimit(appConfig, 'recommended_channels_limit', 'recommendedChannels'),
-      savedDialogsPinned: getLimit(appConfig, 'saved_dialogs_pinned_limit', 'savedDialogsPinned'),
-      maxReactions: getLimit(appConfig, 'reactions_user_max', 'maxReactions'),
-      moreAccounts: DEFAULT_LIMITS.moreAccounts,
-      aiComposeToneSaved: getLimit(appConfig, 'aicompose_tone_saved_limit', 'aiComposeToneSaved'),
-      botsCreate: getLimit(appConfig, 'bots_create_limit', 'botsCreate'),
-    },
     richMessageLengthLimit: appConfig.rich_message_length_limit ?? DEFAULT_APP_CONFIG.richMessageLengthLimit,
     richMessageMaxBlocks: appConfig.rich_message_max_blocks ?? DEFAULT_APP_CONFIG.richMessageMaxBlocks,
     richMessageMaxDepth: appConfig.rich_message_max_depth ?? DEFAULT_APP_CONFIG.richMessageMaxDepth,

@@ -1,8 +1,9 @@
 import { getActions, getGlobal } from '../global';
 
-import { getCurrentMaxAccountCount, getCurrentProdAccountCount } from '../global/helpers/misc';
+import { getCurrentProdAccountCount } from '../global/helpers/misc';
 import { selectTabState } from '../global/selectors';
 import { callApi } from '../api/gramjs';
+import { LIMITS } from '../limits';
 import { IS_MULTIACCOUNT_SUPPORTED } from './browser/globalEnvironment';
 import { processDeepLink } from './deeplink';
 import { getCurrentTabId } from './establishMultitabRole';
@@ -27,7 +28,7 @@ export async function resolveWebLogin() {
   ))?.[0];
   let slot = matchingSlot ? Number(matchingSlot) : 1;
   if (!matchingSlot) {
-    if (!request.isTest && getCurrentProdAccountCount() >= getCurrentMaxAccountCount()) {
+    if (!request.isTest && getCurrentProdAccountCount() >= LIMITS.moreAccounts) {
       rejectWebLogin();
       return true;
     }

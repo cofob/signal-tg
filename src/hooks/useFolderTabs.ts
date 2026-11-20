@@ -16,6 +16,7 @@ import { ALL_FOLDER_ID } from '../config';
 import { selectCanShareFolder } from '../global/selectors';
 import { MEMO_EMPTY_ARRAY } from '../util/memo';
 import { renderTextWithEntities } from '../components/common/helpers/renderTextWithEntities';
+import { LIMITS, MAX_FOLDERS } from '../limits';
 import useAppLayout from './useAppLayout';
 import { useFolderManagerForUnreadChatsByFolder, useFolderManagerForUnreadCounters } from './useFolderManager';
 import useLang from './useLang';
@@ -32,13 +33,10 @@ type Params = {
   sidebarMode: boolean;
   orderedFolderIds?: number[];
   chatFoldersById: Record<number, ApiChatFolder>;
-  maxFolders: number;
   noEmoticons?: boolean;
 } & ({
   isReadOnly?: false;
-  maxChatLists: number;
   folderInvitesById: Record<number, ApiChatlistExportedInvite[]>;
-  maxFolderInvites: number;
 } | {
   isReadOnly: true;
 });
@@ -48,16 +46,11 @@ const useFolderTabs = (params: Params) => {
     sidebarMode,
     orderedFolderIds,
     chatFoldersById,
-    maxFolders,
     noEmoticons,
     isReadOnly,
   } = params;
 
-  const {
-    maxChatLists,
-    folderInvitesById,
-    maxFolderInvites,
-  } = !isReadOnly ? params : {};
+  const { folderInvitesById } = !isReadOnly ? params : {};
 
   const lang = useLang();
   const { isMobile } = useAppLayout();
@@ -112,7 +105,7 @@ const useFolderTabs = (params: Params) => {
 
     return displayedFolders.map((folder, i) => {
       const { id, title } = folder;
-      const isBlocked = id !== ALL_FOLDER_ID && i > maxFolders - 1;
+      const isBlocked = id !== ALL_FOLDER_ID && i > MAX_FOLDERS - 1;
       const canShareFolder = selectCanShareFolder(getGlobal(), id);
       const contextActions: MenuItemContextAction[] = [];
 
@@ -124,7 +117,7 @@ const useFolderTabs = (params: Params) => {
             handler: () => {
               const chatListCount = Object.values(chatFoldersById)
                 .reduce((acc, el) => acc + (el.isChatList ? 1 : 0), 0);
-              if (chatListCount >= maxChatLists! && !folder.isChatList) {
+              if (chatListCount >= LIMITS.chatlistJoined && !folder.isChatList) {
                 openLimitReachedModal({
                   limit: 'chatlistJoined',
                 });
@@ -132,7 +125,7 @@ const useFolderTabs = (params: Params) => {
               }
 
               // Greater amount can be after premium downgrade
-              if (folderInvitesById![id]?.length >= maxFolderInvites!) {
+              if (folderInvitesById![id]?.length >= LIMITS.chatlistInvites) {
                 openLimitReachedModal({
                   limit: 'chatlistInvites',
                 });
@@ -243,8 +236,8 @@ const useFolderTabs = (params: Params) => {
       } satisfies TabWithProperties;
     });
   }, [
-    displayedFolders, maxFolders, folderCountersById, lang, chatFoldersById, maxChatLists, folderInvitesById,
-    maxFolderInvites, folderUnreadChatsCountersById, isReadOnly, sidebarMode, isMobile, noEmoticons,
+    displayedFolders, folderCountersById, lang, chatFoldersById, folderInvitesById,
+    folderUnreadChatsCountersById, isReadOnly, sidebarMode, isMobile, noEmoticons,
   ]);
 
   return {

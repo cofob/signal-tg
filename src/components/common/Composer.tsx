@@ -47,7 +47,6 @@ import { ApiMediaFormat, ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../api
 import {
   BASE_EMOJI_KEYWORD_LANG,
   HEART_REACTION,
-  MAX_UPLOAD_FILEPART_SIZE,
   MIN_ROUND_VIDEO_RECORDING_TIME,
   ONE_TIME_MEDIA_TTL_SECONDS,
   ROUND_VIDEO_RECORDING_SIZE,
@@ -123,7 +122,6 @@ import {
   selectUserFullInfo,
   selectWebPagePreview,
 } from '../../global/selectors';
-import { selectCurrentLimit } from '../../global/selectors/limits';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
 import {
   selectDraft,
@@ -153,6 +151,7 @@ import stopEvent from '../../util/stopEvent';
 import { getUtf8Length } from '../../util/text/textFormat';
 import { EMPTY_RICH_MEDIA_CAPTION } from '../../util/tiptap/richMedia';
 import windowSize from '../../util/windowSize';
+import { LIMITS } from '../../limits';
 import applyIosAutoCapitalizationFix from '../middle/composer/helpers/applyIosAutoCapitalizationFix';
 import buildAttachment, {
   buildAttachmentWithVideoCover,
@@ -315,8 +314,6 @@ type StateProps = {
   attachBots: GlobalState['attachMenu']['bots'];
   attachMenuPeerType?: ApiAttachMenuPeerType;
   theme: ThemeKey;
-  fileSizeLimit: number;
-  captionLimit: number;
   isCurrentUserPremium?: boolean;
   canSendVoiceByPrivacy?: boolean;
   attachmentSettings: GlobalState['attachmentSettings'];
@@ -341,7 +338,6 @@ type StateProps = {
   areEffectsSupported?: boolean;
   canPlayEffect?: boolean;
   shouldPlayEffect?: boolean;
-  maxMessageLength: number;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -416,7 +412,6 @@ const Composer = ({
   isChatWithBot,
   isChatWithSelf,
   isChannel,
-  fileSizeLimit,
   isRightColumnShown,
   isSelectModeActive,
   isReactionPickerOpen,
@@ -437,7 +432,6 @@ const Composer = ({
   topGuestBotIds,
   currentUserId,
   currentUser,
-  captionLimit,
   contentToBeScheduled,
   shouldSuggestStickers,
   shouldSuggestCustomEmoji,
@@ -483,7 +477,6 @@ const Composer = ({
   areEffectsSupported,
   canPlayEffect,
   shouldPlayEffect,
-  maxMessageLength,
   richMessageLengthLimit,
   richMessageMaxBlocks,
   richMessageMaxDepth,
@@ -673,7 +666,6 @@ const Composer = ({
     chat,
     chatId,
     threadId,
-    fileSizeLimit,
     canSendPhotos: canSendPhotos && !isEditingMedia,
     canSendVideos: canSendVideos && !isEditingMedia,
     canSendDocuments: canSendDocuments && !isEditingMedia,
@@ -697,7 +689,7 @@ const Composer = ({
   const hasInputContent = richEditor.isReady ? !richEditor.isEmpty() : false;
   const isOverRegularMessageLimit = Boolean(
     richMessageAsFormatted
-    && getUtf8Length(richMessageAsFormatted.text) > maxMessageLength,
+    && getUtf8Length(richMessageAsFormatted.text) > LIMITS.messageLength,
   );
   const hasRichOnlyContent = Boolean(
     hasInputContent
@@ -892,7 +884,6 @@ const Composer = ({
   } = useAttachmentModal({
     attachments,
     setAttachments,
-    fileSizeLimit,
     chatId,
     canAttachFiles: !hasRichOnlyContent,
     canSendAudios,
@@ -1136,7 +1127,7 @@ const Composer = ({
   });
 
   const validateTextLength = useLastCallback((text: string, isAttachmentModal?: boolean) => {
-    const maxLength = isAttachmentModal ? captionLimit : maxMessageLength;
+    const maxLength = isAttachmentModal ? LIMITS.captionLength : LIMITS.messageLength;
     const textLength = getUtf8Length(text);
     if (textLength > maxLength) {
       const extraLength = textLength - maxLength;
@@ -3098,7 +3089,7 @@ const Composer = ({
             isNeedPremium={isNeedPremium}
             messageListType={messageListType}
             isRichOnlyContent={hasRichOnlyContent}
-            maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : maxMessageLength}
+            maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : LIMITS.messageLength}
           />
           {isInMessageList && !isRichInputExpansionActive && (
             <>
@@ -3497,7 +3488,6 @@ export default memo(withGlobal<OwnProps>(
     const effect = effectId ? global.availableEffectById[effectId] : undefined;
     const effectReactions = global.reactions.effectReactions;
 
-    const maxMessageLength = selectCurrentLimit(global, 'messageLength');
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
     const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
@@ -3568,8 +3558,6 @@ export default memo(withGlobal<OwnProps>(
       attachBots: global.attachMenu.bots,
       attachMenuPeerType: selectChatType(global, chatId),
       theme: selectTheme(global),
-      fileSizeLimit: selectCurrentLimit(global, 'uploadMaxFileparts') * MAX_UPLOAD_FILEPART_SIZE,
-      captionLimit: selectCurrentLimit(global, 'captionLength'),
       isCurrentUserPremium,
       canSendVoiceByPrivacy,
       attachmentSettings: global.attachmentSettings,
@@ -3593,7 +3581,6 @@ export default memo(withGlobal<OwnProps>(
       areEffectsSupported,
       canPlayEffect,
       shouldPlayEffect,
-      maxMessageLength,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
       richMessageMaxBlocks: global.appConfig.richMessageMaxBlocks,
       richMessageMaxDepth: global.appConfig.richMessageMaxDepth,
