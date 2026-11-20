@@ -28,6 +28,7 @@
     "gramjs:tl": "tsx ./src/lib/gramjs/tl/generateModules.ts",
     "signal:wasm": "bash ./rust/signal-wasm/build.sh",
     "signal:proxy": "node ./proxy/tunnel.ts",
+    "signal:proto": "tsx ./dev/generateProto.ts",
     "lang:ts": "tsx ./dev/generateLangTypes.js",
     "lang:initial": "tsx ./dev/generateInitialLangFallback.js",
     "icons:build": "tsx ./dev/buildIcons.ts",
