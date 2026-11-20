@@ -376,7 +376,7 @@ export function sendMessageLocal(
   const {
     chat, lastMessageId, text, entities, richMessage, replyInfo, suggestedPostInfo,
     attachment, sticker, story, gif, audio, poll, todo,
-    contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, effectId, isPending,
+    contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
     messagePriceInStars, dice,
   } = params;
 
@@ -406,7 +406,6 @@ export function sendMessageLocal(
     sendAs,
     story,
     isInvertedMedia,
-    effectId,
     isPending,
     messagePriceInStars,
     dice,
@@ -434,7 +433,7 @@ export function sendApiMessage(
     attachment, sticker, story, gif, audio, poll, todo, contact, dice,
 
     isSilent, scheduledAt, scheduleRepeatPeriod, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
-    isInvertedMedia, effectId, webPageMediaSize, webPageUrl, messagePriceInStars,
+    isInvertedMedia, webPageMediaSize, webPageUrl, messagePriceInStars,
   } = params;
 
   if (!chat) return undefined;
@@ -610,7 +609,6 @@ export function sendApiMessage(
       sendAs: sendAs && buildInputPeer(sendAs.id, sendAs.accessHash),
       updateStickersetsOrder: shouldUpdateStickerSetOrder || undefined,
       invertMedia: isInvertedMedia || undefined,
-      effect: effectId ? BigInt(effectId) : undefined,
       allowPaidStars: messagePriceInStars ? BigInt(messagePriceInStars) : undefined,
       suggestedPost: suggestedPostInfo && buildInputSuggestedPost(suggestedPostInfo),
     };
@@ -2447,7 +2445,7 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
   const {
     toChat, toThreadId, messages,
     scheduledAt, scheduleRepeatPeriod, sendAs, noAuthors, noCaptions,
-    privateForwardName, isCurrentUserPremium, wasDrafted, lastMessageId, effectId,
+    privateForwardName, isCurrentUserPremium, wasDrafted, lastMessageId,
   } = params;
 
   const messageIds = messages.map(({ id }) => id);
@@ -2466,7 +2464,6 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
       isCurrentUserPremium,
       lastMessageId,
       sendAs,
-      effectId: index === 0 ? effectId : undefined,
     });
     localMessages.push(localMessage);
 
@@ -2485,7 +2482,7 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
   const {
     fromChat, toChat, toThreadId, messages, isSilent,
     scheduledAt, scheduleRepeatPeriod, sendAs, withMyScore, noAuthors, noCaptions,
-    forwardedLocalMessagesSlice, messagePriceInStars, effectId,
+    forwardedLocalMessagesSlice, messagePriceInStars,
   } = params;
 
   if (!forwardedLocalMessagesSlice) return;
@@ -2515,7 +2512,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
       ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
       ...(priceInStars && { allowPaidStars: BigInt(priceInStars) }),
-      effect: effectId ? BigInt(effectId) : undefined,
     }), {
       shouldThrow: true,
       shouldIgnoreUpdates: true,

@@ -5,7 +5,6 @@ import { getActions, getGlobal, withGlobal } from '../../global';
 import type {
   ApiAttachment,
   ApiAttachMenuPeerType,
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiBotCommand,
   ApiBotInlineMediaResult,
@@ -51,7 +50,6 @@ import {
   ROUND_VIDEO_RECORDING_SIZE,
   SCHEDULED_WHEN_ONLINE,
   SEND_MESSAGE_ACTION_INTERVAL,
-  SERVICE_NOTIFICATIONS_USER_ID,
   STARS_CURRENCY_CODE,
   VIDEO_RECORDING_FILENAME,
 } from '../../config';
@@ -110,7 +108,6 @@ import {
   selectPeer,
   selectPeerPaidMessagesStars,
   selectPeerStory,
-  selectPerformanceSettingsValue,
   selectRequestedDraft,
   selectRequestedDraftFiles,
   selectStoppableTypingDraftId,
@@ -167,7 +164,6 @@ import {
   isValidInputRichMessage,
   removeUnsupportedRichBlocks,
 } from '../ui/textInput/richText';
-import renderText from './helpers/renderText';
 import { hasActiveRichEditorTooltip } from './tooltips/helpers';
 
 import useInterval from '../../hooks/schedulers/useInterval';
@@ -217,7 +213,6 @@ import SymbolMenuButton from '../middle/composer/SymbolMenuButton';
 import ToDoListModal from '../middle/composer/ToDoListModal.async';
 import VoiceRecordBar from '../middle/composer/VoiceRecordBar';
 import WebPagePreview from '../middle/composer/WebPagePreview';
-import MessageEffect from '../middle/message/MessageEffect';
 import ReactionSelector from '../middle/message/reactions/ReactionSelector';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -329,11 +324,6 @@ type StateProps = {
   noWebPage?: boolean;
   isContactRequirePremium?: boolean;
   paidMessagesStars?: number;
-  effect?: ApiAvailableEffect;
-  effectReactions?: ApiReaction[];
-  areEffectsSupported?: boolean;
-  canPlayEffect?: boolean;
-  shouldPlayEffect?: boolean;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -465,11 +455,6 @@ const Composer = ({
   noWebPage,
   isContactRequirePremium,
   paidMessagesStars,
-  effect,
-  effectReactions,
-  areEffectsSupported,
-  canPlayEffect,
-  shouldPlayEffect,
   richMessageLengthLimit,
   richMessageMaxBlocks,
   richMessageMaxDepth,
@@ -512,9 +497,6 @@ const Composer = ({
     sendStoryReaction,
     editMessage,
     updateAttachmentSettings,
-    saveEffectInDraft,
-    setReactionEffect,
-    hideEffectInComposer,
     updateChatSilentPosting,
     updateInsertingPeerIdMention,
     updateDraftSuggestedPostInfo,
@@ -1597,9 +1579,6 @@ const Composer = ({
         }
         if (!checkSlowMode()) return;
 
-        const effectId = effect?.id;
-        if (areEffectsSupported) saveEffectInDraft({ chatId, threadId, effectId: undefined });
-
         if (editingMessage) {
           editMessage({
             messageList: currentMessageList,
@@ -1614,7 +1593,6 @@ const Composer = ({
             scheduleRepeatPeriod,
             isSilent,
             shouldUpdateStickerSetOrder,
-            effectId,
           });
         }
 
@@ -1639,15 +1617,11 @@ const Composer = ({
 
       const messageInput = document.querySelector<HTMLDivElement>(editableInputCssSelector);
 
-      const effectId = effect?.id;
-
       if (text || isForwarding) {
         if (!checkSlowMode()) return;
 
         const shouldUseWebPagePreview = hasWebPagePreview && !shouldSkipWebPagePreview;
         const isInvertedMedia = shouldUseWebPagePreview ? attachmentSettings.isInvertedMedia : undefined;
-
-        if (areEffectsSupported) saveEffectInDraft({ chatId, threadId, effectId: undefined });
 
         sendMessage({
           messageList: currentMessageList,
@@ -1658,7 +1632,6 @@ const Composer = ({
           isSilent,
           shouldUpdateStickerSetOrder,
           isInvertedMedia,
-          effectId,
           webPageMediaSize: shouldSkipWebPagePreview ? undefined : attachmentSettings.webPageMediaSize,
           webPageUrl: shouldUseWebPagePreview ? webPagePreview.url : undefined,
         });
@@ -1826,7 +1799,6 @@ const Composer = ({
     scheduledAt: number,
     scheduleRepeatPeriod: number | undefined,
     messageList: MessageList,
-    effectId?: string,
   ) => {
     if (!validateEphemeralReply() || isEphemeralReply) return;
 
@@ -1857,7 +1829,6 @@ const Composer = ({
         messageList,
         scheduledAt,
         scheduleRepeatPeriod,
-        effectId,
       });
     }
   });
@@ -1865,7 +1836,7 @@ const Composer = ({
   useEffectWithPrevDeps(([prevContentToBeScheduled]) => {
     if (currentMessageList && contentToBeScheduled && contentToBeScheduled !== prevContentToBeScheduled) {
       requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        handleMessageSchedule(contentToBeScheduled, scheduledAt, scheduleRepeatPeriod, currentMessageList, undefined);
+        handleMessageSchedule(contentToBeScheduled, scheduledAt, scheduleRepeatPeriod, currentMessageList);
       });
     }
   }, [contentToBeScheduled, currentMessageList, handleMessageSchedule, requestMessageSchedule]);
@@ -2553,7 +2524,7 @@ const Composer = ({
           return;
         }
         requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-          handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList, effect?.id);
+          handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList);
         });
         break;
       default:
@@ -2637,12 +2608,6 @@ const Composer = ({
     closeReactionPicker();
   });
 
-  const handleToggleEffectReaction = useLastCallback((reaction: ApiReaction) => {
-    setReactionEffect({ chatId, threadId, reaction });
-
-    closeReactionPicker();
-  });
-
   const handleReactionPickerOpen = useLastCallback((position: IAnchorPosition) => {
     if (isMobile) {
       document.querySelector<HTMLDivElement>(editableInputCssSelector)?.blur();
@@ -2672,7 +2637,7 @@ const Composer = ({
     }
 
     requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-      handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList!, undefined);
+      handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList!);
     });
   });
 
@@ -2686,7 +2651,7 @@ const Composer = ({
 
   const sendWhenOnline = useLastCallback(() => {
     handleActionWithPaymentConfirmation(
-      handleMessageSchedule, {}, SCHEDULED_WHEN_ONLINE, undefined, currentMessageList!, effect?.id,
+      handleMessageSchedule, {}, SCHEDULED_WHEN_ONLINE, undefined, currentMessageList!,
     );
   });
 
@@ -2733,14 +2698,6 @@ const Composer = ({
     },
   );
 
-  const handleRemoveEffect = useLastCallback(() => {
-    saveEffectInDraft({ chatId, threadId, effectId: undefined });
-  });
-
-  const handleStopEffect = useLastCallback(() => {
-    hideEffectInComposer({});
-  });
-
   const onSend = useMemo(() => {
     switch (mainButtonState) {
       case MainButtonState.Edit:
@@ -2754,8 +2711,6 @@ const Composer = ({
 
   const withBotCommands = isChatWithBot && botMenuButton?.type === 'commands' && !editingMessage
     && botCommands !== false && !activeRecording;
-
-  const effectEmoji = areEffectsSupported && effect?.emoticon;
 
   const canExpandRichInput = isInMessageList && !isRichInputExpansionActive && !isEditingMedia;
   const canOpenRichInput = shouldShowRichInputButton && isInMessageList && !hasAttachments && !isRichInputExpanded
@@ -3291,18 +3246,6 @@ const Composer = ({
           </div>
         )}
       </Button>
-      {effectEmoji && (
-        <span className="effect-icon" onClick={handleRemoveEffect}>
-          {renderText(effectEmoji)}
-        </span>
-      )}
-      {effect && canPlayEffect && (
-        <MessageEffect
-          shouldPlay={shouldPlayEffect}
-          effect={effect}
-          onStop={handleStopEffect}
-        />
-      )}
       {canShowCustomSendMenu && (
         <CustomSendMenu
           isOpen={isCustomSendMenuOpen}
@@ -3311,20 +3254,9 @@ const Composer = ({
           onSendSilent={!isChatWithSelf ? handleSendSilent : undefined}
           onSendSchedule={!isInScheduledList ? handleSendScheduled : undefined}
           onSendWhenOnline={handleSendWhenOnline}
-          onRemoveEffect={handleRemoveEffect}
           onClose={handleContextMenuClose}
           onCloseAnimationEnd={handleContextMenuHide}
           isSavedMessages={isChatWithSelf}
-          chatId={chatId}
-          withEffects={areEffectsSupported}
-          hasCurrentEffect={Boolean(effect)}
-          effectReactions={effectReactions}
-          allAvailableReactions={availableReactions}
-          onToggleReaction={handleToggleEffectReaction}
-          isCurrentUserPremium={isCurrentUserPremium}
-          isInSavedMessages={isChatWithSelf}
-          isInStoryViewer={isInStoryViewer}
-          canPlayAnimatedEmojis={canPlayAnimatedEmojis}
         />
       )}
       {canSwitchRecordMode && (
@@ -3466,14 +3398,6 @@ export default memo(withGlobal<OwnProps>(
       selectNotifyException(global, chatId),
     )?.isSilentPosting;
 
-    const areEffectsSupported = isChatWithUser && !isChatWithBot
-      && !isInScheduledList && !isChatWithSelf && type !== 'story' && chatId !== SERVICE_NOTIFICATIONS_USER_ID;
-    const canPlayEffect = selectPerformanceSettingsValue(global, 'stickerEffects');
-    const shouldPlayEffect = tabState.shouldPlayEffectInComposer;
-    const effectId = areEffectsSupported && draft?.effectId;
-    const effect = effectId ? global.availableEffectById[effectId] : undefined;
-    const effectReactions = global.reactions.effectReactions;
-
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
     const isReplying = Boolean(draft?.replyInfo);
     const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
@@ -3559,11 +3483,6 @@ export default memo(withGlobal<OwnProps>(
       noWebPage,
       webPagePreview,
       isContactRequirePremium: userFullInfo?.isContactRequirePremium,
-      effect,
-      effectReactions,
-      areEffectsSupported,
-      canPlayEffect,
-      shouldPlayEffect,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
       richMessageMaxBlocks: global.appConfig.richMessageMaxBlocks,
       richMessageMaxDepth: global.appConfig.richMessageMaxDepth,

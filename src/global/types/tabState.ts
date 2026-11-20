@@ -260,10 +260,7 @@ export type TabState = {
     storyId?: number;
     position?: IAnchorPosition;
     sendAsMessage?: boolean;
-    isForEffects?: boolean;
   };
-
-  shouldPlayEffectInComposer?: true;
 
   recoveryEmail?: string;
 

@@ -127,7 +127,6 @@ export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
 
-
 export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
 export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
 export const DEFAULT_MAXIMUM_CHARGE_FOR_MESSAGES = 10000;
@@ -283,8 +282,6 @@ export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
 export const COLLECTIBLE_STATUS_SET_ID = 'collectibleStatus';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
-export const EFFECT_STICKERS_SET_ID = 'effectStickers';
-export const EFFECT_EMOJIS_SET_ID = 'effectEmojis';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
 export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
 export const DEFAULT_STATUS_ICON_ID = 'status-default-icon';

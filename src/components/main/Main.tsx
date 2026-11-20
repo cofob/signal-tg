@@ -235,7 +235,6 @@ const Main = ({
     loadSavedReactionTags,
     loadAiComposeTones,
     loadStarStatus,
-    loadAvailableEffects,
     loadPaidReactionPrivacy,
     loadPasswordInfo,
     loadBotFreezeAppeal,
@@ -329,7 +328,6 @@ const Main = ({
       loadAvailableReactions();
       loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
-      loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
       loadAiComposeTones();

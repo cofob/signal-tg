@@ -33,7 +33,6 @@ import {
   selectCurrentMessageList,
   selectIsChatWithBot,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectIsTrustedBot,
   selectPeerPaidMessagesStars,
   selectSender,
@@ -525,22 +524,6 @@ addActionHandler('applyDefaultAttachmentsCompression', (global): ActionReturnTyp
   };
 });
 
-addActionHandler('requestEffectInComposer', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    shouldPlayEffectInComposer: true,
-  }, tabId);
-});
-
-addActionHandler('hideEffectInComposer', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    shouldPlayEffectInComposer: undefined,
-  }, tabId);
-});
-
 addActionHandler('setPaidMessageAutoApprove', (global): ActionReturnType => {
   global = {
     ...global,
@@ -554,29 +537,6 @@ addActionHandler('setPaidMessageAutoApprove', (global): ActionReturnType => {
   };
 
   return global;
-});
-
-addActionHandler('setReactionEffect', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, threadId, reaction, tabId = getCurrentTabId(),
-  } = payload;
-
-  const emoticon = reaction?.type === 'emoji' && reaction.emoticon;
-  if (!emoticon) return;
-
-  const effect = Object.values(global.availableEffectById)
-    .find((currentEffect) => currentEffect.effectAnimationId && currentEffect.emoticon === emoticon);
-
-  const effectId = effect?.id;
-
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (effect?.isPremium && !isCurrentUserPremium) return;
-
-  if (!effectId) return;
-
-  actions.requestEffectInComposer({ tabId });
-
-  actions.saveEffectInDraft({ chatId, threadId, effectId });
 });
 
 addActionHandler('openLimitReachedModal', (global, actions, payload): ActionReturnType => {

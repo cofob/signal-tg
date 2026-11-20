@@ -828,7 +828,6 @@ export type SendMessageParams = {
   shouldUpdateStickerSetOrder?: boolean;
   wasDrafted?: boolean;
   isInvertedMedia?: true;
-  effectId?: string;
   webPageMediaSize?: WebPageMediaSize;
   webPageUrl?: string;
   starsAmount?: number;
@@ -866,5 +865,4 @@ export type ForwardMessagesParams = {
   lastMessageId?: number;
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;
   messagePriceInStars?: number;
-  effectId?: string;
 };

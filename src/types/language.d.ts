@@ -1406,7 +1406,6 @@ export interface LangPair {
   'MenuUIFeaturesSwitch': undefined;
   'MenuTelegramFeatures': undefined;
   'TelegramFeaturesUsername': undefined;
-  'RemoveEffect': undefined;
   'ReplyInPrivateMessage': undefined;
   'ProfileOpenAppTerms': undefined;
   'ProfileBotOpenAppInfoLink': undefined;
@@ -2091,7 +2090,6 @@ export interface LangPair {
   'AccDescrExpandPanel': undefined;
   'AccDescrLike': undefined;
   'AccDescrTopic': undefined;
-  'AddEffectMessageHint': undefined;
   'AllReactions': undefined;
   'AllViewers': undefined;
   'AnonymousForward': undefined;
@@ -2346,7 +2344,6 @@ export interface LangPair {
   'StarsSentTitle': undefined;
   'Start': undefined;
   'StatusHiddenShow': undefined;
-  'StickerEffects': undefined;
   'StickersBotInfo': undefined;
   'StickersListEmojiItem': undefined;
   'StoryContextRemoveFromProfile': undefined;

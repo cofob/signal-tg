@@ -37,10 +37,8 @@ type OwnProps = {
   isPinned?: boolean;
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
-  effectEmoji?: string;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onTranslationClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onEffectClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
   paidMessageStars?: number;
@@ -57,10 +55,8 @@ const MessageMeta = ({
   isTranslated,
   isPinned,
   withFullDate,
-  effectEmoji,
   onClick,
   onTranslationClick,
-  onEffectClick,
   onOpenThread,
   paidMessageStars,
   isMessagePrimaryEditedDateEnabled,
@@ -171,11 +167,6 @@ const MessageMeta = ({
       onClick={onClick}
       data-ignore-on-paste
     >
-      {effectEmoji && (
-        <span className="message-effect-icon" onClick={onEffectClick}>
-          {renderText(effectEmoji)}
-        </span>
-      )}
       {isTranslated && (
         <Icon name="language" className="message-translated" onClick={onTranslationClick} />
       )}

@@ -962,7 +962,6 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
     text: richMessage ? undefined : text,
     richMessage,
     replyInfo: currentDraft?.replyInfo,
-    effectId: currentDraft?.effectId,
     suggestedPostInfo: currentDraft?.suggestedPostInfo,
   };
 
@@ -1148,27 +1147,6 @@ addActionHandler('initDraftFromSuggestedMessage', (global, actions, payload): Ac
     chatId,
     threadId,
     text: message.content.text,
-  });
-});
-
-addActionHandler('saveEffectInDraft', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, threadId, effectId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const currentDraft = selectDraft(global, chatId, threadId);
-  if (chat?.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
-    return; // Monoforum doesn't support drafts outside threads
-  }
-
-  const newDraft = {
-    ...currentDraft,
-    effectId,
-  };
-
-  saveDraft({
-    global, chatId, threadId, draft: newDraft, isLocalOnly: true, noLocalTimeUpdate: true,
   });
 });
 
@@ -2055,9 +2033,7 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
   const {
     fromChatId, messageIds, toChatId, withMyScore, noAuthors, noCaptions, toThreadId = MAIN_THREAD_ID,
   } = forwardMessages;
-  const { messagePriceInStars, isSilent, scheduledAt, scheduleRepeatPeriod, effectId, attachments } = sendParams;
-  const isForwardOnly = !sendParams.text && !sendParams.richMessage && !attachments?.length;
-  const forwardEffectId = isForwardOnly ? effectId : undefined;
+  const { messagePriceInStars, isSilent, scheduledAt, scheduleRepeatPeriod } = sendParams;
 
   const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const isToMainThread = toThreadId === MAIN_THREAD_ID;
@@ -2109,7 +2085,6 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
         wasDrafted: Boolean(draft),
         lastMessageId,
         messagePriceInStars,
-        effectId: forwardEffectId,
       };
 
       if (!messagePriceInStars) {

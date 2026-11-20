@@ -1698,7 +1698,6 @@
 "MenuUIFeaturesSwitch" = "UI Features";
 "MenuTelegramFeatures" = "Telegram Features";
 "TelegramFeaturesUsername" = "TelegramTips";
-"RemoveEffect" = "Remove effect";
 "ReplyInPrivateMessage" = "Reply In Private Message";
 "ProfileOpenAppAbout" = "By launching this mini app, you agree to the {terms}.";
 "ProfileOpenAppTerms" = "Terms of Service for Mini Apps";
@@ -2703,7 +2702,6 @@
 "AccDescrExpandPanel" = "Expand panel";
 "AccDescrLike" = "Like";
 "AccDescrTopic" = "Topic";
-"AddEffectMessageHint" = "Add an animated effect";
 "AddedToDoNotTranslate" = "**{language}** is added to the Do Not Translate list.";
 "AllReactions" = "All reactions";
 "AllViewers" = "All viewers";
@@ -3029,7 +3027,6 @@
 "StarsSentTitle" = "Stars sent!";
 "Start" = "Start";
 "StatusHiddenShow" = "when?";
-"StickerEffects" = "Effects from stickers";
 "StickersBotInfo" = "Artists are welcome to add their own sticker sets using our @stickers bot.";
 "StickersListEmojiItem" = "Custom Emoji";
 "StoryContextRemoveFromProfile" = "Remove from Profile";

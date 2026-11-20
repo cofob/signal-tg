@@ -50,8 +50,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
 
   const tabState = selectTabState(global, tabId);
   if (!selectCanOpenMessageList(global, chatId, threadId, type, tabId)) return;
-  actions.hideEffectInComposer({ tabId });
-
   actions.closeStoryViewer({ tabId });
 
   if (!currentMessageList || (

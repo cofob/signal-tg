@@ -1561,10 +1561,6 @@ export interface ActionPayloads {
     reaction?: ApiReactionWithPaid;
   } & WithTabId;
 
-  openEffectPicker: {
-    chatId: string;
-    position: IAnchorPosition;
-  } & WithTabId;
   openMessageReactionPicker: {
     chatId: string;
     messageId: number;
@@ -2011,8 +2007,6 @@ export interface ActionPayloads {
   loadBirthdayNumbersStickers: undefined;
   loadRestrictedEmojiStickers: undefined;
 
-  loadAvailableEffects: undefined;
-
   addRecentSticker: {
     sticker: ApiSticker;
   };
@@ -2445,20 +2439,6 @@ export interface ActionPayloads {
   updateShouldSaveAttachmentsCompression: { shouldSave: boolean } & WithTabId;
   applyDefaultAttachmentsCompression: undefined;
 
-  saveEffectInDraft: {
-    chatId: string;
-    threadId: ThreadId;
-    effectId?: string;
-  };
-
-  setReactionEffect: {
-    chatId: string;
-    threadId: ThreadId;
-    reaction?: ApiReaction;
-  } & WithTabId;
-
-  requestEffectInComposer: WithTabId;
-  hideEffectInComposer: WithTabId;
   setPaidMessageAutoApprove: undefined;
 
   updateArchiveSettings: {

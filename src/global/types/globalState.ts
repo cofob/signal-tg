@@ -3,7 +3,6 @@ import type {
   ApiAppConfig,
   ApiAttachBot,
   ApiAudio,
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiBotPreviewMedia,
   ApiChat,
@@ -336,7 +335,6 @@ export type GlobalState = {
     topReactions: ApiReaction[];
     recentReactions: ApiReaction[];
     defaultTags: ApiReaction[];
-    effectReactions: ApiReaction[];
     availableReactions?: ApiAvailableReaction[];
     hash: {
       topReactions?: string;
@@ -344,7 +342,6 @@ export type GlobalState = {
       defaultTags?: string;
     };
   };
-  availableEffectById: Record<string, ApiAvailableEffect>;
 
   stickers: {
     setsById: Record<string, ApiStickerSet>;
@@ -378,10 +375,6 @@ export type GlobalState = {
       emoji?: string;
       stickers?: ApiSticker[];
       hash?: string;
-    };
-    effect: {
-      stickers: ApiSticker[];
-      emojis: ApiSticker[];
     };
     diceSetIdByEmoji?: Record<string, string>;
   };

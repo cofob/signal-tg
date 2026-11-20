@@ -778,7 +778,6 @@ export interface ApiMessage {
   readDate?: number;
   savedPeerId?: string;
   factCheck?: ApiFactCheck;
-  effectId?: string;
   isInvertedMedia?: true;
   isVideoProcessingPending?: true;
   areReactionsPossible?: true;
@@ -845,15 +844,6 @@ export interface ApiAvailableReaction {
   isInactive?: boolean;
   isPremium?: boolean;
   isLocalCache?: true;
-}
-
-export interface ApiAvailableEffect {
-  id: string;
-  emoticon: string;
-  staticIconId?: string;
-  effectAnimationId?: string;
-  effectStickerId: string;
-  isPremium?: boolean;
 }
 
 type ApiChatReactionsAll = {

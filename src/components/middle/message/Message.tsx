@@ -11,7 +11,6 @@ import {
 import { getActions, withGlobal } from '../../../global';
 
 import type {
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiChat,
   ApiChatMember,
@@ -203,7 +202,6 @@ import Game from './Game';
 import InlineButtons from './InlineButtons';
 import Location from './Location';
 import MessageAppendix from './MessageAppendix';
-import MessageEffect from './MessageEffect';
 import MessageMeta from './MessageMeta';
 import MessagePhoneCall from './MessagePhoneCall';
 import PaidMediaOverlay from './PaidMediaOverlay';
@@ -339,7 +337,6 @@ type StateProps = {
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   canTranscribeVoice?: boolean;
   guestFromSender?: ApiPeer;
-  effect?: ApiAvailableEffect;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
   maxTimestamp?: number;
@@ -473,7 +470,6 @@ const Message = ({
   tags,
   canTranscribeVoice,
   guestFromSender,
-  effect,
   poll,
   maxTimestamp,
   lastPlaybackTimestamp,
@@ -767,12 +763,6 @@ const Message = ({
     }
   }, [hasSummary, chatId, messageId, requestedTranslationLanguage, isShowingSummary, summary, hideSummary]);
 
-  const handleEffectClick = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-
-    requestEffect();
-  });
-
   const handleFocusSelf = useLastCallback(() => {
     focusMessage({
       chatId,
@@ -850,12 +840,12 @@ const Message = ({
   const { peerId: storyReplyPeerId, storyId: storyReplyId } = storyReplyInfo || {};
 
   useEffect(() => {
-    if ((sticker?.hasEffect || effect) && ((
+    if (sticker?.hasEffect && ((
       memoFirstUnreadIdRef?.current && messageId >= memoFirstUnreadIdRef.current
     ) || isLocal)) {
       requestEffect();
     }
-  }, [effect, isLocal, memoFirstUnreadIdRef, messageId, sticker?.hasEffect]);
+  }, [isLocal, memoFirstUnreadIdRef, messageId, sticker?.hasEffect]);
 
   useEffect(() => {
     if (dice && ((
@@ -1232,9 +1222,7 @@ const Message = ({
         }
         availableReactions={availableReactions}
         isTranslated={Boolean(requestedTranslationLanguage && (currentTranslatedText || currentTranslatedRichMessage))}
-        effectEmoji={effect?.emoticon}
         onClick={handleMetaClick}
-        onEffectClick={handleEffectClick}
         onTranslationClick={handleTranslationClick}
         onOpenThread={handleOpenThread}
         paidMessageStars={paidMessageStarsInMeta}
@@ -1369,7 +1357,7 @@ const Message = ({
         {hasAnimatedEmoji && animatedCustomEmoji && (
           <AnimatedCustomEmoji
             customEmojiId={animatedCustomEmoji}
-            withEffects={withAnimatedEffects && isChatWithUser && !effect}
+            withEffects={withAnimatedEffects && isChatWithUser}
             isOwn={isOwn}
             observeIntersection={observeIntersectionForLoading}
             forceLoadPreview={isLocal}
@@ -1381,24 +1369,13 @@ const Message = ({
         {hasAnimatedEmoji && animatedEmoji && (
           <AnimatedEmoji
             emoji={animatedEmoji}
-            withEffects={withAnimatedEffects && isChatWithUser && !effect}
+            withEffects={withAnimatedEffects && isChatWithUser}
             isOwn={isOwn}
             observeIntersection={observeIntersectionForLoading}
             forceLoadPreview={isLocal}
             messageId={messageId}
             chatId={chatId}
             activeEmojiInteractions={activeEmojiInteractions}
-          />
-        )}
-        {withAnimatedEffects && effect && !isLocal && (
-          <MessageEffect
-            shouldPlay={shouldPlayEffect}
-            messageId={message.id}
-            isMirrored={!message.isOutgoing}
-            effect={effect}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onStop={hideEffect}
           />
         )}
         {phoneCall && (
@@ -2148,7 +2125,7 @@ export default memo(withGlobal<OwnProps>(
     } = ownProps;
     const {
       id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
-      effectId, paidMessageStars,
+      paidMessageStars,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2282,8 +2259,6 @@ export default memo(withGlobal<OwnProps>(
     const canTranscribeVoice = !message.isEphemeral
       && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
 
-    const effect = effectId ? global.availableEffectById[effectId] : undefined;
-
     const poll = selectPollFromMessage(global, message);
 
     const maxTimestamp = selectMessageTimestampableDuration(global, message);
@@ -2397,7 +2372,6 @@ export default memo(withGlobal<OwnProps>(
       tags: global.savedReactionTags?.byKey,
       canTranscribeVoice,
       minFutureTime,
-      effect,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,

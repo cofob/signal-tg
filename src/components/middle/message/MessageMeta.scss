@@ -25,8 +25,7 @@
   .message-views,
   .message-replies,
   .message-translated,
-  .message-pinned,
-  .message-effect-icon {
+  .message-pinned {
     font-size: 0.75rem;
     white-space: nowrap;
   }
@@ -52,15 +51,6 @@
 
   .message-translated {
     margin-inline-end: 0.25rem;
-  }
-
-  .message-effect-icon {
-    margin-inline-end: 0.25rem;
-    color: inherit;
-    & > .emoji {
-      width: 1rem !important;
-      height: 1rem !important;
-    }
   }
 
   .message-pinned {

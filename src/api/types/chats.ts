@@ -312,6 +312,5 @@ export type ApiDraft = {
   replyInfo?: ApiInputDraftReplyInfo;
   suggestedPostInfo?: ApiInputSuggestedPostInfo;
   date?: number;
-  effectId?: string;
   isLocal?: boolean;
 };

@@ -28,33 +28,6 @@
     --border-width: 0;
   }
 
-  .effect-icon {
-    cursor: var(--custom-cursor, pointer);
-
-    position: absolute;
-    right: -0.25rem;
-    bottom: -0.25rem;
-
-    display: grid;
-    place-items: center;
-
-    width: 1.5rem;
-    height: 1.5rem;
-    border: 1px solid var(--color-borders);
-    border-radius: 50%;
-
-    font-size: 1rem;
-    line-height: 1;
-    color: var(--color-text);
-
-    background-color: var(--color-background);
-
-    & > .emoji {
-      width: 1rem !important;
-      height: 1rem !important;
-    }
-  }
-
   @keyframes show-send-as-button {
     from {
       transform: scale(0);

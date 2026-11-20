@@ -13,8 +13,6 @@ import {
   COLLECTIBLE_STATUS_SET_ID,
   DEFAULT_STATUS_ICON_ID,
   DEFAULT_TOPIC_ICON_STICKER_ID,
-  EFFECT_EMOJIS_SET_ID,
-  EFFECT_STICKERS_SET_ID,
   EMOJI_SIZE_PICKER,
   FAVORITE_SYMBOL_SET_ID,
   POPULAR_SYMBOL_SET_ID,
@@ -235,8 +233,7 @@ const StickerSet = ({
   const isInstalled = getIsStickerSetInstalled(stickerSet) && !stickerSet.isArchived;
 
   const canCut = !isInstalled && stickerSet.id !== RECENT_SYMBOL_SET_ID
-    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && stickerSet.id !== EFFECT_EMOJIS_SET_ID
-    && stickerSet.id !== EFFECT_STICKERS_SET_ID && !isChatEmojiSet && !isChatStickerSet;
+    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && !isChatEmojiSet && !isChatStickerSet;
 
   const [isCut, , expand] = useFlag(canCut);
   const itemsBeforeCutout = itemsPerRow * 3 - 1;
@@ -308,7 +305,6 @@ const StickerSet = ({
         className={buildClassName(
           'symbol-set-container shared-canvas-container',
           transitionClassNames,
-          stickerSet.id === EFFECT_EMOJIS_SET_ID && 'effect-emojis',
         )}
         style={`${withInstantThumbs ? 'min-height' : 'height'}: ${height}px;`}
       >
@@ -384,9 +380,6 @@ const StickerSet = ({
                   onRemoveRecentClick={isRecent ? onStickerRemoveRecent : undefined}
                   onDismiss={onDismiss}
                   forcePlayback={forcePlayback}
-                  isEffectEmoji={stickerSet.id === EFFECT_EMOJIS_SET_ID}
-                  noShowPremium={isCurrentUserPremium
-                    && (stickerSet.id === EFFECT_STICKERS_SET_ID || stickerSet.id === EFFECT_EMOJIS_SET_ID)}
                 />
               );
 

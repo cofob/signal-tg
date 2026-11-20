@@ -3,14 +3,13 @@ import {
   ApiMediaFormat,
   type ApiMessage,
   type ApiReaction,
-  type ApiReactionEmoji,
   MAIN_THREAD_ID,
 } from '../../../api/types';
 
 import { GENERAL_REFETCH_INTERVAL } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import {
-  buildCollectionByCallback, buildCollectionByKey, omit, omitUndefined, partition,
+  buildCollectionByCallback, omit, omitUndefined, partition,
 } from '../../../util/iteratees';
 import { getMessageKey } from '../../../util/keys/messageKey';
 import * as mediaLoader from '../../../util/mediaLoader';
@@ -96,46 +95,6 @@ addActionHandler('loadAvailableReactions', async (global): Promise<void> => {
     action: 'loadAvailableReactions',
     payload: undefined,
   }, GENERAL_REFETCH_INTERVAL);
-});
-
-addActionHandler('loadAvailableEffects', async (global): Promise<void> => {
-  const result = await callApi('fetchAvailableEffects');
-  if (!result) {
-    return;
-  }
-
-  const { effects, emojis, stickers } = result;
-  const reactions: ApiReactionEmoji[] = [];
-
-  const effectById = buildCollectionByKey(effects, 'id');
-
-  for (const effect of effects) {
-    if (effect.effectAnimationId) {
-      const reaction: ApiReactionEmoji = {
-        type: 'emoji',
-        emoticon: effect.emoticon,
-      };
-      reactions.push(reaction);
-    }
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    availableEffectById: effectById,
-    stickers: {
-      ...global.stickers,
-      effect: {
-        stickers,
-        emojis,
-      },
-    },
-    reactions: {
-      ...global.reactions,
-      effectReactions: reactions,
-    },
-  };
-  setGlobal(global);
 });
 
 addActionHandler('interactWithAnimatedEmoji', (global, actions, payload): ActionReturnType => {

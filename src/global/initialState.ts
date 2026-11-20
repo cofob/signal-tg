@@ -236,10 +236,8 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     defaultTags: [],
     topReactions: [],
     recentReactions: [],
-    effectReactions: [],
     hash: {},
   },
-  availableEffectById: {},
 
   stickers: {
     setsById: {},
@@ -258,10 +256,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     },
     featured: {
       setIds: [],
-    },
-    effect: {
-      stickers: [],
-      emojis: [],
     },
     forEmoji: {},
   },

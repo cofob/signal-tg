@@ -31,7 +31,6 @@ type OwnProps = {
   isPrivate?: boolean;
   topReactions?: ApiReaction[];
   defaultTagReactions?: ApiReaction[];
-  effectReactions?: ApiReaction[];
   allAvailableReactions?: ApiAvailableReaction[];
   currentReactions?: ApiReactionCount[];
   reactionsLimit?: number;
@@ -41,7 +40,6 @@ type OwnProps = {
   className?: string;
   isInSavedMessages?: boolean;
   isInStoryViewer?: boolean;
-  isForEffects?: boolean;
   isWithPaidReaction?: boolean;
   onToggleReaction: (reaction: ApiReaction) => void;
   onSendPaidReaction?: NoneToVoidFunction;
@@ -67,8 +65,6 @@ const ReactionSelector = ({
   isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
-  isForEffects,
-  effectReactions,
   isWithPaidReaction,
   onToggleReaction,
   onSendPaidReaction,
@@ -86,7 +82,6 @@ const ReactionSelector = ({
   const availableReactions = useMemo(() => {
     const reactions = (() => {
       if (shouldUseCurrentReactions) return currentReactions?.map((reaction) => reaction.reaction);
-      if (isForEffects) return effectReactions;
       if (isInSavedMessages) return defaultTagReactions;
       if (enabledReactions?.type === 'some') return enabledReactions.allowed;
       return allAvailableReactions?.map((reaction) => reaction.reaction);
@@ -95,8 +90,6 @@ const ReactionSelector = ({
     const filteredReactions: RenderableReactions = reactions?.map((reaction) => {
       const isCustomReaction = reaction.type === 'custom';
       const availableReaction = allAvailableReactions?.find((r) => isSameReaction(r.reaction, reaction));
-
-      if (isForEffects) return availableReaction;
 
       if ((!isCustomReaction && !availableReaction) || availableReaction?.isInactive) return undefined;
 
@@ -115,7 +108,7 @@ const ReactionSelector = ({
     return sortedReactions;
   }, [
     allAvailableReactions, currentReactions, defaultTagReactions, enabledReactions, isInSavedMessages, isPrivate,
-    topReactions, isForEffects, effectReactions, shouldUseCurrentReactions, isWithPaidReaction,
+    topReactions, shouldUseCurrentReactions, isWithPaidReaction,
   ]);
 
   const reactionsToRender = useMemo(() => {
@@ -154,12 +147,8 @@ const ReactionSelector = ({
       return lang('StoryReactionsHint');
     }
 
-    if (isForEffects) {
-      return lang('AddEffectMessageHint');
-    }
-
     return undefined;
-  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang, isForEffects]);
+  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang]);
 
   if (!reactionsToRender.length) return undefined;
 
