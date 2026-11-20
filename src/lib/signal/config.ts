@@ -1,5 +1,7 @@
 // Production Signal service parameters, from Signal Desktop `config/default.json` and `config/production.json`
 
+import { hasNativeTransport } from './net/NativeTransport';
+
 export const SIGNAL_CHAT_HOST = 'chat.signal.org';
 export const SIGNAL_STORAGE_HOST = 'storage.signal.org';
 export const SIGNAL_CDSI_HOST = 'cdsi.signal.org';
@@ -15,9 +17,12 @@ export const SIGNAL_USER_AGENT = `TeleSignal/${APP_VERSION}`;
 
 let signalProxyUrl: string | undefined;
 
-/** The tunnel for new connections: the proxy server setting or `SIGNAL_TUNNEL_URL`; `undefined` is the app's origin */
+/**
+ * The tunnel for new connections: the proxy server setting, else `SIGNAL_TUNNEL_URL` outside the desktop app.
+ * `undefined` is the desktop app's native transport, or the tunnel on the app's origin.
+ */
 export function getSignalTunnelUrl() {
-  return signalProxyUrl ?? SIGNAL_TUNNEL_URL;
+  return signalProxyUrl ?? (hasNativeTransport() ? undefined : SIGNAL_TUNNEL_URL);
 }
 
 /** Sets the proxy server from settings; `undefined` restores the default tunnel */

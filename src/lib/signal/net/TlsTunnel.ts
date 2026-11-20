@@ -1,20 +1,37 @@
 import { getSignalTunnelUrl, SIGNAL_CA_PEM } from '../config';
 import { wasm } from '../wasm';
 
-const DEFAULT_PORT = 443;
+import NativeTransport, { hasNativeTransport } from './NativeTransport';
+
+const PORT = 443;
 const TUNNEL_PATH = '/tunnel';
 const MAX_MESSAGE_SIZE = 64 * 1024;
+
+/** Carries a TLS connection's bytes to a Signal host */
+export interface TunnelTransport {
+  /** Bytes accepted but not sent to the network yet */
+  readonly bufferedAmount: number;
+  send(data: Uint8Array<ArrayBuffer>): void;
+  close(): void;
+}
+
+export type TunnelTransportHandlers = {
+  onOpen: NoneToVoidFunction;
+  onData: (data: Uint8Array) => void;
+  /** Called once, also when opening fails, unless `close` was called first */
+  onClose: (reason?: string) => void;
+};
 
 let signalCaDer: Uint8Array | undefined;
 
 /**
- * A TLS connection to a Signal host through the WebSocket-to-TCP tunnel (`proxy/`).
- * TLS runs in WebAssembly and trusts only Signal's certificate authority.
+ * A TLS connection to a Signal host through the WebSocket-to-TCP tunnel (`proxy/`) or, in the desktop app, its native
+ * transport. TLS runs in WebAssembly and trusts only Signal's certificate authority.
  */
 export default class TlsTunnel {
   readonly host: string;
 
-  private socket: WebSocket;
+  private transport!: TunnelTransport;
 
   private tls: wasm.TlsClient;
 
@@ -22,52 +39,47 @@ export default class TlsTunnel {
 
   private pendingRead?: (chunk: Uint8Array | undefined) => void;
 
+  private isTransportOpen = false;
+
   private isClosed = false;
 
   private closeError?: Error;
 
-  private constructor(host: string, socket: WebSocket) {
+  private constructor(host: string) {
     this.host = host;
-    this.socket = socket;
     this.tls = new wasm.TlsClient(host, [getSignalCaDer()]);
   }
 
-  static open(host: string, port = DEFAULT_PORT): Promise<TlsTunnel> {
-    const url = new URL(getSignalTunnelUrl() ?? getDefaultTunnelUrl());
-    url.searchParams.set('host', host);
-    url.searchParams.set('port', String(port));
-
-    const socket = new WebSocket(url);
-    socket.binaryType = 'arraybuffer';
-    const tunnel = new TlsTunnel(host, socket);
+  static open(host: string): Promise<TlsTunnel> {
+    const tunnel = new TlsTunnel(host);
 
     return new Promise((resolve, reject) => {
-      socket.onopen = () => {
-        tunnel.flush();
-      };
-      socket.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-        // Data can still arrive after `close` or a failure freed the TLS state
-        if (!tunnel.isOpen) return;
-        const wasHandshaking = tunnel.tls.isHandshaking();
-        try {
-          tunnel.receive(new Uint8Array(e.data));
-        } catch (err) {
-          tunnel.fail(err as Error);
-          reject(err);
-          return;
-        }
-        if (wasHandshaking && !tunnel.tls.isHandshaking()) {
-          resolve(tunnel);
-        }
-      };
-      socket.onclose = () => {
-        const error = new Error(`Tunnel to ${host} closed`);
-        tunnel.fail(error);
-        reject(error);
-      };
-      socket.onerror = () => {
-        // `onclose` follows with the details available to scripts
-      };
+      tunnel.transport = openTransport(host, {
+        onOpen: () => {
+          tunnel.isTransportOpen = true;
+          tunnel.flush();
+        },
+        onData: (data) => {
+          // Data can still arrive after `close` or a failure freed the TLS state
+          if (!tunnel.isOpen) return;
+          const wasHandshaking = tunnel.tls.isHandshaking();
+          try {
+            tunnel.receive(data);
+          } catch (err) {
+            tunnel.fail(err as Error);
+            reject(err);
+            return;
+          }
+          if (wasHandshaking && !tunnel.tls.isHandshaking()) {
+            resolve(tunnel);
+          }
+        },
+        onClose: (reason) => {
+          const error = new Error(`Tunnel to ${host} closed${reason ? `: ${reason}` : ''}`);
+          tunnel.fail(error);
+          reject(error);
+        },
+      });
     });
   }
 
@@ -77,7 +89,7 @@ export default class TlsTunnel {
 
   /** Bytes written to the tunnel but not sent to the network yet */
   get bufferedAmount() {
-    return this.socket.bufferedAmount;
+    return this.transport.bufferedAmount;
   }
 
   write(data: Uint8Array) {
@@ -100,12 +112,11 @@ export default class TlsTunnel {
     if (this.isClosed) return;
     try {
       this.tls.close();
-      const outgoing = this.tls.takeOutgoing() as Uint8Array<ArrayBuffer>;
-      if (outgoing.length && this.socket.readyState === WebSocket.OPEN) this.socket.send(outgoing);
+      this.flush();
     } catch {
       // The connection may already be unusable
     }
-    this.socket.close();
+    this.transport.close();
     this.fail(new Error(`Tunnel to ${this.host} is closed`));
   }
 
@@ -124,13 +135,10 @@ export default class TlsTunnel {
   }
 
   private flush() {
-    if (this.isClosed || this.socket.readyState !== WebSocket.OPEN) return;
+    if (this.isClosed || !this.isTransportOpen) return;
     // wasm-bindgen copies results into a fresh `ArrayBuffer`, but types them as `ArrayBufferLike`
     const outgoing = this.tls.takeOutgoing() as Uint8Array<ArrayBuffer>;
-    // The tunnel limits message size, and large uploads produce one large TLS output
-    for (let offset = 0; offset < outgoing.length; offset += MAX_MESSAGE_SIZE) {
-      this.socket.send(outgoing.subarray(offset, offset + MAX_MESSAGE_SIZE));
-    }
+    if (outgoing.length) this.transport.send(outgoing);
   }
 
   private fail(error: Error) {
@@ -143,6 +151,52 @@ export default class TlsTunnel {
       this.pendingRead = undefined;
       resolve(undefined);
     }
+  }
+}
+
+/** The proxy server setting picks a WebSocket tunnel; without one the desktop app connects natively */
+function openTransport(host: string, handlers: TunnelTransportHandlers): TunnelTransport {
+  const tunnelUrl = getSignalTunnelUrl();
+  if (!tunnelUrl && hasNativeTransport()) return new NativeTransport(host, handlers);
+
+  const url = new URL(tunnelUrl ?? getDefaultTunnelUrl());
+  url.searchParams.set('host', host);
+  url.searchParams.set('port', String(PORT));
+  return new WebSocketTransport(url, handlers);
+}
+
+class WebSocketTransport implements TunnelTransport {
+  private socket: WebSocket;
+
+  constructor(url: URL, handlers: TunnelTransportHandlers) {
+    this.socket = new WebSocket(url);
+    this.socket.binaryType = 'arraybuffer';
+    this.socket.onopen = handlers.onOpen;
+    this.socket.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+      handlers.onData(new Uint8Array(e.data));
+    };
+    this.socket.onclose = () => {
+      handlers.onClose();
+    };
+    this.socket.onerror = () => {
+      // `onclose` follows with the details available to scripts
+    };
+  }
+
+  get bufferedAmount() {
+    return this.socket.bufferedAmount;
+  }
+
+  send(data: Uint8Array<ArrayBuffer>) {
+    if (this.socket.readyState !== WebSocket.OPEN) return;
+    // The tunnel limits message size, and large uploads produce one large TLS output
+    for (let offset = 0; offset < data.length; offset += MAX_MESSAGE_SIZE) {
+      this.socket.send(data.subarray(offset, offset + MAX_MESSAGE_SIZE));
+    }
+  }
+
+  close() {
+    this.socket.close();
   }
 }
 

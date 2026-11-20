@@ -306,16 +306,15 @@ function setViteEnv(env: Record<string, string>) {
 // (`SharedSettings.signalProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
 // client terminates with Signal's certificate authority, so a wrong host cannot read traffic, but the policy no longer
 // stops scripts from reaching other `wss:` servers. A local tunnel stays usable through `ws:` on `localhost` and
-// `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `http://ipc.localhost` and, in
-// development, `ipc:` carry Tauri's in-process IPC.
+// `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `ipc:` and, on Windows,
+// `http://ipc.localhost` carry the desktop app's in-process IPC, including the native transport's bytes.
 function buildCsp(appEnv: string, tunnelUrl?: string) {
   const isDevelopment = appEnv === 'development';
   const tunnelOrigin = tunnelUrl ? new URL(tunnelUrl).origin : '';
 
   return `
   default-src 'self';
-  connect-src 'self' ${tunnelOrigin} wss: ws://localhost:* ws://127.0.0.1:* blob: data: http://ipc.localhost${
-    isDevelopment ? ' ipc:' : ''};
+  connect-src 'self' ${tunnelOrigin} wss: ws://localhost:* ws://127.0.0.1:* blob: data: ipc: http://ipc.localhost;
   script-src 'self' 'wasm-unsafe-eval';
   worker-src 'self'${isDevelopment ? ' blob:' : ''};
   style-src 'self' 'unsafe-inline';
