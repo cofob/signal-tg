@@ -47,7 +47,6 @@ import {
   getMessageAudio,
   getMessageDocument,
   getMessageLink,
-  getMessagePaidMedia,
   getMessagePhoto,
   getMessageVideo,
   getMessageVoice,
@@ -1322,7 +1321,6 @@ export function selectLastServiceNotification<T extends GlobalState>(global: T) 
 export function selectIsMessageProtected<T extends GlobalState>(global: T, message?: ApiMessage) {
   return Boolean(message && (
     message.isProtected || selectIsChatProtected(global, message.chatId) || hasMessageTtl(message)
-    || getMessagePaidMedia(message)
   ));
 }
 

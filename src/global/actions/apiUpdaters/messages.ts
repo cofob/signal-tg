@@ -1,5 +1,5 @@
 import type {
-  ApiMediaExtendedPreview, ApiMessage, ApiReactions,
+  ApiMessage, ApiReactions,
   ApiWebPage,
 } from '../../../api/types';
 import type { ActiveEmojiInteraction, ThreadId } from '../../../types';
@@ -1137,34 +1137,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
         chatId, id, threadId, reactions,
       });
       setGlobal(global);
-      break;
-    }
-
-    case 'updateMessageExtendedMedia': {
-      const {
-        chatId, id, extendedMedia, isBought,
-      } = update;
-      const message = selectChatMessage(global, chatId, id);
-      const chat = selectChat(global, update.chatId);
-
-      if (!chat || !message) return;
-
-      if (message.content.paidMedia) {
-        const paidMediaUpdate = isBought ? { isBought, extendedMedia }
-          : { extendedMedia: extendedMedia as ApiMediaExtendedPreview[], isBought: undefined };
-
-        global = updateChatMessage(global, chatId, id, {
-          content: {
-            ...message.content,
-            paidMedia: {
-              ...message.content.paidMedia,
-              ...paidMediaUpdate,
-            },
-          },
-        });
-        setGlobal(global);
-      }
-
       break;
     }
 

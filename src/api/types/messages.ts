@@ -188,17 +188,6 @@ export interface ApiContact {
   userId: string;
 }
 
-export type ApiPaidMedia = {
-  mediaType: 'paidMedia';
-  starsAmount: number;
-} & ({
-  isBought?: true;
-  extendedMedia: BoughtPaidMedia[];
-} | {
-  isBought?: undefined;
-  extendedMedia: ApiMediaExtendedPreview[];
-});
-
 export interface ApiPollAnswer {
   text: ApiFormattedText;
   option: string;
@@ -250,14 +239,6 @@ export interface ApiMessagePoll {
   summary: ApiPoll;
   results: ApiPollResults;
   attachedMedia?: MediaContent;
-}
-
-export interface ApiMediaExtendedPreview {
-  mediaType: 'extendedMediaPreview';
-  width?: number;
-  height?: number;
-  thumbnail?: ApiThumbnail;
-  duration?: number;
 }
 
 export interface ApiGeoPoint {
@@ -695,7 +676,6 @@ export type MediaContent = {
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;
-  paidMedia?: ApiPaidMedia;
   dice?: ApiDice;
   ttlSeconds?: number;
 };
@@ -716,8 +696,6 @@ export type SizeTarget =
   | 'preview'
   | 'full'
   | 'download';
-
-export type BoughtPaidMedia = Pick<MediaContent, 'photo' | 'video'>;
 
 export interface ApiMessage {
   id: number;

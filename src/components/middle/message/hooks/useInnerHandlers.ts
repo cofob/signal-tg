@@ -59,7 +59,7 @@ export default function useInnerHandlers({
   } = getActions();
 
   const {
-    id: messageId, forwardInfo, groupedId, content: { paidMedia, video },
+    id: messageId, forwardInfo, groupedId, content: { video },
   } = message;
 
   const {
@@ -156,7 +156,6 @@ export default function useInnerHandlers({
   });
 
   const openMediaViewerWithPhotoOrVideo = useLastCallback((withDynamicLoading: boolean): void => {
-    if (paidMedia && !paidMedia.isBought) return;
     if (withDynamicLoading && !message.isEphemeral) {
       searchChatMediaMessages({
         chatId, threadId, currentMediaMessageId: messageId, mediaType: video?.isGif ? 'gif' : 'media',
@@ -180,11 +179,11 @@ export default function useInnerHandlers({
     });
   });
   const handlePhotoMediaClick = useLastCallback((): void => {
-    const withDynamicLoading = !message.isEphemeral && !isScheduled && !paidMedia;
+    const withDynamicLoading = !message.isEphemeral && !isScheduled;
     openMediaViewerWithPhotoOrVideo(withDynamicLoading);
   });
   const handleVideoMediaClick = useLastCallback(() => {
-    const withDynamicLoading = !message.isEphemeral && !isScheduled && !paidMedia;
+    const withDynamicLoading = !message.isEphemeral && !isScheduled;
     openMediaViewerWithPhotoOrVideo(withDynamicLoading);
   });
 
@@ -206,8 +205,6 @@ export default function useInnerHandlers({
   });
 
   const handleAlbumMediaClick = useLastCallback((albumMessageId: number, albumIndex?: number): void => {
-    if (paidMedia && !paidMedia.isBought) return;
-
     searchChatMediaMessages({ chatId, threadId, currentMediaMessageId: messageId });
     openMediaViewer({
       chatId,
@@ -215,7 +212,7 @@ export default function useInnerHandlers({
       messageId: albumMessageId,
       mediaIndex: albumIndex,
       origin: isScheduled ? MediaViewerOrigin.ScheduledAlbum : MediaViewerOrigin.Album,
-      withDynamicLoading: !paidMedia,
+      withDynamicLoading: true,
     });
   });
 

@@ -8,12 +8,10 @@ import type {
   ApiFormattedText,
   ApiGame,
   ApiLocation,
-  ApiMediaExtendedPreview,
   ApiMediaTodo,
   ApiMessagePoll,
   ApiMessageStoryData,
   ApiMessageWebPage,
-  ApiPaidMedia,
   ApiPhoto,
   ApiPoll,
   ApiPollAnswer,
@@ -28,7 +26,6 @@ import type {
   ApiWebPageStickerData,
   ApiWebPageStoryData,
   ApiWidget,
-  BoughtPaidMedia,
   MediaContent,
 } from '../../types';
 import type { UniversalMessage } from './messages';
@@ -36,7 +33,6 @@ import type { UniversalMessage } from './messages';
 import { buildPageAudioById } from '../../../global/helpers/buildPageAudioById';
 import { addTimestampEntities } from '../../../util/dates/timestamp';
 import { buildCollectionByKey, pick } from '../../../util/iteratees';
-import { toJSNumber } from '../../../util/numbers';
 import {
   addMediaToLocalDb, addStoryToLocalDb, addWebPageMediaToLocalDb, type MediaRepairContext,
 } from '../helpers/localDb';
@@ -45,7 +41,6 @@ import {
   buildApiFormattedText,
   buildApiMessageEntity,
   buildApiPhoto,
-  buildApiThumbnailFromStripped,
 } from './common';
 import {
   buildApiInstantViewPage,
@@ -219,9 +214,6 @@ export function buildMessageMediaContent(
 
   const storyData = buildMessageStoryData(media);
   if (storyData) return { storyData };
-
-  const paidMedia = buildPaidMedia(media);
-  if (paidMedia) return { paidMedia };
 
   return undefined;
 }
@@ -811,51 +803,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
   return undefined;
 }
 
-function buildPaidMedia(media: GramJs.TypeMessageMedia): ApiPaidMedia | undefined {
-  if (!(media instanceof GramJs.MessageMediaPaidMedia)) {
-    return undefined;
-  }
-
-  const { starsAmount, extendedMedia } = media;
-
-  const isBought = extendedMedia[0] instanceof GramJs.MessageExtendedMedia;
-
-  if (isBought) {
-    return {
-      mediaType: 'paidMedia',
-      starsAmount: toJSNumber(starsAmount),
-      isBought,
-      extendedMedia: buildBoughtMediaContent(extendedMedia)!,
-    };
-  }
-
-  return {
-    mediaType: 'paidMedia',
-    starsAmount: toJSNumber(starsAmount),
-    extendedMedia: extendedMedia
-      .filter((paidMedia): paidMedia is GramJs.MessageExtendedMediaPreview => (
-        paidMedia instanceof GramJs.MessageExtendedMediaPreview
-      ))
-      .map((paidMedia) => buildApiMessageExtendedMediaPreview(paidMedia)),
-  };
-}
-
-export function buildApiMessageExtendedMediaPreview(
-  preview: GramJs.MessageExtendedMediaPreview,
-): ApiMediaExtendedPreview {
-  const {
-    w, h, thumb, videoDuration,
-  } = preview;
-
-  return {
-    mediaType: 'extendedMediaPreview',
-    width: w,
-    height: h,
-    duration: videoDuration,
-    thumbnail: thumb ? buildApiThumbnailFromStripped([thumb]) : undefined,
-  };
-}
-
 export function buildApiWebDocument(document?: GramJs.TypeWebDocument): ApiWebDocument | undefined {
   if (!document) return undefined;
 
@@ -876,19 +823,4 @@ export function buildApiWebDocument(document?: GramJs.TypeWebDocument): ApiWebDo
     mimeType,
     dimensions,
   };
-}
-
-export function buildBoughtMediaContent(
-  media: GramJs.TypeMessageExtendedMedia[],
-): BoughtPaidMedia[] | undefined {
-  const boughtMedia = media
-    .filter((m): m is GramJs.MessageExtendedMedia => m instanceof GramJs.MessageExtendedMedia)
-    .map((m) => buildMessageMediaContent(m.media))
-    .filter(Boolean);
-
-  if (!boughtMedia.length) {
-    return undefined;
-  }
-
-  return boughtMedia;
 }

@@ -92,7 +92,6 @@ export type ScrollTargetPosition = ScrollLogicalPosition | 'centerOrTop';
 export interface IAlbum {
   albumId: string;
   messages: ApiMessage[];
-  isPaidMedia?: boolean;
   mainMessage: ApiMessage;
   captionMessage?: ApiMessage;
   hasMultipleCaptions: boolean;

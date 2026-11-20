@@ -5,7 +5,6 @@ import type {
   ApiDocument,
   ApiGame,
   ApiLocation,
-  ApiMediaExtendedPreview,
   ApiMessage,
   ApiMessageSearchType,
   ApiPhoto,
@@ -38,7 +37,7 @@ import { getPageBlocksAudios, getPageBlocksWithMedia, type PageBlockWithMedia } 
 import { getAttachmentMediaType, matchLinkInMessageText } from './messages';
 import { WINDOWED_MEDIA_SEARCH_TYPES } from './middleSearch';
 
-export type MediaWithThumbs = ApiPhoto | ApiVideo | ApiDocument | ApiSticker | ApiMediaExtendedPreview;
+export type MediaWithThumbs = ApiPhoto | ApiVideo | ApiDocument | ApiSticker;
 export type DownloadableMedia = ApiPhoto | ApiVideo | ApiDocument | ApiSticker | ApiAudio | ApiVoice | ApiWebDocument;
 export type SharedMediaKey = number | string;
 
@@ -65,7 +64,6 @@ export function hasMessageMedia(message: MediaContainer) {
     || getMessageAction(message)
     || getMessageAudio(message)
     || getMessageVoice(message)
-    || getMessagePaidMedia(message)
     || message.content.widget
   ));
 }
@@ -155,10 +153,6 @@ export function getMessageLocation(message: MediaContainer) {
 
 export function getMessageWebPage(message: MediaContainer) {
   return message.content.webPage;
-}
-
-export function getMessagePaidMedia(message: MediaContainer) {
-  return message.content.paidMedia;
 }
 
 export function getMessageDocumentPhoto(message: MediaContainer) {
@@ -487,7 +481,7 @@ export function getPhotoFullDimensions(photo: Pick<ApiPhoto, 'sizes' | 'thumbnai
 }
 
 export function getMediaDimensions(
-  media: ApiPhoto | ApiVideo | ApiMediaExtendedPreview | ApiWebDocument,
+  media: ApiPhoto | ApiVideo | ApiWebDocument,
 ): ApiDimensions & { isFallback?: true } {
   let dimensions: ApiDimensions | undefined;
 

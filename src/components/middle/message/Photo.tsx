@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiMediaExtendedPreview, ApiPhoto } from '../../../api/types';
+import type { ApiPhoto } from '../../../api/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 import type { ThemeKey } from '../../../types';
 
@@ -36,7 +36,7 @@ import styles from './media.module.scss';
 
 export type OwnProps<T> = {
   id?: string;
-  photo: ApiPhoto | ApiMediaExtendedPreview;
+  photo: ApiPhoto;
   isOwn?: boolean;
   canAutoLoad?: boolean;
   isInSelectMode?: boolean;
@@ -88,19 +88,18 @@ const Photo = <T,>({
 }: OwnProps<T> & StateProps) => {
   const lang = useLang();
   const ref = useRef<HTMLDivElement>();
-  const isPaidPreview = photo.mediaType === 'extendedMediaPreview';
-  const isUnavailable = !isPaidPreview && photo.isUnavailable;
+  const isUnavailable = photo.isUnavailable;
   const { width, height } = getMediaDimensions(photo);
 
-  const localBlobUrl = !isPaidPreview ? photo.blobUrl : undefined;
+  const localBlobUrl = photo.blobUrl;
 
   const isIntersecting = useIsIntersecting(ref, observeIntersection);
 
   const [isLoadAllowed, setIsLoadAllowed] = useState(canAutoLoad);
-  const shouldLoad = isLoadAllowed && isIntersecting && !isPaidPreview && !isUnavailable;
+  const shouldLoad = isLoadAllowed && isIntersecting && !isUnavailable;
   const {
     mediaData, loadProgress,
-  } = useMediaWithLoadProgress(!isPaidPreview ? getPhotoMediaHash(photo, size) : undefined, !shouldLoad);
+  } = useMediaWithLoadProgress(getPhotoMediaHash(photo, size), !shouldLoad);
   const prevMediaData = usePrevious(mediaData);
   const fullMediaData = localBlobUrl || mediaData;
 
@@ -121,7 +120,7 @@ const Photo = <T,>({
   const [isNsfwModalOpen, openNsfwModal, closeNsfwModal] = useFlag();
   const [shouldAlwaysShowNsfw, setShouldAlwaysShowNsfw] = useState(false);
 
-  const shouldShowSpoiler = isPaidPreview || photo.isSpoiler || isMediaNsfw;
+  const shouldShowSpoiler = photo.isSpoiler || isMediaNsfw;
   const [isSpoilerShown, showSpoiler, hideSpoiler] = useFlag(shouldShowSpoiler);
 
   useEffect(() => {
@@ -144,9 +143,9 @@ const Photo = <T,>({
   const {
     loadProgress: downloadProgress,
   } = useMediaWithLoadProgress(
-    !isPaidPreview ? getPhotoMediaHash(photo, 'download') : undefined,
+    getPhotoMediaHash(photo, 'download'),
     !isDownloading,
-    !isPaidPreview ? getMediaFormat(photo, 'download') : undefined,
+    getMediaFormat(photo, 'download'),
   );
 
   const {

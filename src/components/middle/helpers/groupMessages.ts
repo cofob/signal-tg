@@ -66,14 +66,6 @@ export function groupMessages(
           }
         }
       }
-    } else if ((message.content.paidMedia?.extendedMedia.length || 0) > 1) {
-      currentSenderGroup.push({
-        albumId: `paid-${message.id}`,
-        messages: [message],
-        mainMessage: message,
-        hasMultipleCaptions: false,
-        isPaidMedia: true,
-      } satisfies IAlbum);
     } else if (message.groupedId) {
       if (!currentDocumentGroup) {
         currentDocumentGroup = {

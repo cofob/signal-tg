@@ -2075,7 +2075,6 @@ export interface LangPair {
   'ChatContextViewAsTopics': undefined;
   'ChatEmptyTopicPlaceholderText': undefined;
   'ChatEmptyTopicPlaceholderTitle': undefined;
-  'ChatPaidMediaPurchased': undefined;
   'ChatPlayOnceVoiceMessageTooltip': undefined;
   'ChatAllowedFiles': undefined;
   'ChatAllowedMusic': undefined;
@@ -2473,7 +2472,6 @@ export interface LangPair {
   'ErrorStargiftConvertTooOld': undefined;
   'ErrorSubscriptionAlreadyActive': undefined;
   'ErrorPeersListEmpty': undefined;
-  'ErrorPaidMediaForbidden': undefined;
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;
   'DownloadSizeUnsupported': undefined;

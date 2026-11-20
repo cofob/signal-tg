@@ -2663,7 +2663,6 @@
 "ChatEmptyTopicPlaceholderText" = "Send a message to\nstart this topic.";
 "ChatEmptyTopicPlaceholderTitle" = "Almost done!";
 "ChatMessagingRestrictedPlaceholder" = "Only Premium users can message {user}.";
-"ChatPaidMediaPurchased" = "Purchased";
 "ChatPlayOnceVoiceMessageTooltip" = "This voice message can only be played once.";
 "ChatPrivateMessageEditTimestampDate" = "edited {date}";
 "ChatSendAllowedContentText" = "The admins of this group only allow to send {types}.";
@@ -3157,7 +3156,6 @@
 "ErrorStargiftConvertTooOld" = "This gift no longer can be converted to Stars";
 "ErrorSubscriptionAlreadyActive" = "You are already subscribed";
 "ErrorPeersListEmpty" = "No chats are added to the list";
-"ErrorPaidMediaForbidden" = "You can't send paid media in this chat";
 "ErrorChatWriteForbidden" = "You can't write in this chat";
 "ErrorChatAdminRequired" = "You must be an admin in this chat to do this";
 "DownloadSizeUnsupported" = "Downloading files bigger than 2GB is not supported in your browser.";

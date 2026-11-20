@@ -146,7 +146,6 @@ import { getStickerDimensions, REM } from '../../common/helpers/mediaDimensions'
 import renderText from '../../common/helpers/renderText';
 import { getCustomEmojiSize } from '../composer/helpers/customEmoji';
 import { buildContentClassName } from './helpers/buildContentClassName';
-import getSingularPaidMedia from './helpers/getSingularPaidMedia';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
@@ -204,7 +203,6 @@ import Location from './Location';
 import MessageAppendix from './MessageAppendix';
 import MessageMeta from './MessageMeta';
 import MessagePhoneCall from './MessagePhoneCall';
-import PaidMediaOverlay from './PaidMediaOverlay';
 import Photo from './Photo';
 import Poll from './poll/Poll';
 import Reactions from './reactions/Reactions';
@@ -599,11 +597,8 @@ const Message = ({
     isMessageListActive,
   });
 
-  const { paidMedia } = getMessageContent(message);
-  const { photo: paidMediaPhoto, video: paidMediaVideo } = getSingularPaidMedia(paidMedia);
-
   const {
-    photo = paidMediaPhoto, video = paidMediaVideo, audio,
+    photo, video, audio,
     voice, document, sticker, contact,
     location,
     action, game, storyData, todo, dice, widget,
@@ -630,10 +625,8 @@ const Message = ({
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
   const isAlbum = Boolean(album)
-    && (
-      (album.isPaidMedia && paidMedia!.extendedMedia.length > 1)
-      || album.messages.length > 1
-    ) && !album.messages.some((msg) => Object.keys(msg.content).length === 0);
+    && album.messages.length > 1
+    && !album.messages.some((msg) => Object.keys(msg.content).length === 0);
   const isInDocumentGroupNotFirst = isInDocumentGroup && !isFirstInDocumentGroup;
   const isInDocumentGroupNotLast = isInDocumentGroup && !isLastInDocumentGroup;
   const isContextMenuShown = contextMenuAnchor !== undefined;
@@ -1671,19 +1664,11 @@ const Message = ({
       </>
     );
 
-    if (paidMedia) {
-      return (
-        <PaidMediaOverlay paidMedia={paidMedia} isOutgoing={isOwn}>
-          {content}
-        </PaidMediaOverlay>
-      );
-    }
-
     return content;
   }
 
   function shouldRenderSenderName() {
-    const media = photo || video || location || paidMedia;
+    const media = photo || video || location;
     return !(isCustomShape && !hasViaSender) && (
       (withSenderName && !media) || asForwarded || viaBotId
       || (guestChatViaId && isFirstInGroup) || forceSenderName

@@ -21,7 +21,6 @@ import type {
 } from './chats';
 import type {
   ApiFormattedText,
-  ApiMediaExtendedPreview,
   ApiMessage,
   ApiMessagePoll,
   ApiPhoto,
@@ -31,7 +30,6 @@ import type {
   ApiThreadInfo,
   ApiTopic,
   ApiWebPage,
-  BoughtPaidMedia,
 } from './messages';
 import type {
   ApiEmojiInteraction,
@@ -484,18 +482,6 @@ export type ApiUpdateMessageReactions = {
   threadId?: ThreadId;
   reactions: ApiReactions;
 };
-
-export type ApiUpdateMessageExtendedMedia = {
-  '@type': 'updateMessageExtendedMedia';
-  id: number;
-  chatId: string;
-} & ({
-  isBought?: true;
-  extendedMedia: BoughtPaidMedia[];
-} | {
-  isBought?: undefined;
-  extendedMedia: ApiMediaExtendedPreview[];
-});
 
 export type ApiDeleteContact = {
   '@type': 'deleteContact';
@@ -1007,7 +993,7 @@ export type ApiUpdate = (
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
   ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
-  ApiUpdateMessageExtendedMedia | ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
+  ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
