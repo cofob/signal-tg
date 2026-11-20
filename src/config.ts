@@ -120,7 +120,6 @@ export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
 
-
 export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
 export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
 export const DEFAULT_MAXIMUM_CHARGE_FOR_MESSAGES = 10000;
@@ -355,6 +354,8 @@ export const SUPPORTED_TRANSLATION_LANGUAGES = [
 export const RE_LINK_TEMPLATE = '((ftp|https?):\\/\\/)?((www\\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z][-a-zA-Z0-9]{1,62})\\b([-a-zA-Z0-9()@:%_+.,~#?&/=]*)';
 export const RE_MENTION_TEMPLATE = '(@[\\w\\d_-]+)';
 export const RE_TG_LINK = /^tg:(\/\/)?/i;
+// Signal group links, which open the group's join preview in the app
+export const RE_SIGNAL_GROUP_LINK = /^(?:https|sgnl):\/\/signal\.group\/?#/i;
 // Usernames link through the `tg:` scheme, which only the app itself handles
 export const USERNAME_LINK_PREFIX = 'tg://resolve?domain=';
 export const BOT_FATHER_USERNAME = 'botfather';

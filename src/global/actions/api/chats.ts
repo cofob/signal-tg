@@ -890,11 +890,8 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
     return;
   }
 
-  const { id: channelId, accessHash } = chat;
-
-  if (!(channelId && accessHash)) {
-    return;
-  }
+  // Signal groups have no access hash; joining one accepts our invitation
+  const { id: channelId, accessHash = '' } = chat;
 
   try {
     const theme = extractCurrentThemeParams();
@@ -3723,25 +3720,6 @@ export async function loadFullChat<T extends GlobalState>(
   return result;
 }
 
-export async function migrateChat<T extends GlobalState>(
-  global: T, actions: RequiredGlobalActions, chat: ApiChat,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-): Promise<ApiChat | undefined> {
-  try {
-    const supergroup = await callApi('migrateChat', chat);
-
-    return supergroup;
-  } catch (error) {
-    if ((error as ApiError).message === 'CHANNELS_TOO_MUCH') {
-      actions.openLimitReachedModal({ limit: 'channels', tabId });
-    } else {
-      actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-    }
-
-    return undefined;
-  }
-}
-
 export async function fetchChatByUsername<T extends GlobalState>(
   global: T,
   username: string,
@@ -4099,24 +4077,15 @@ async function openAttachMenuFromLink<T extends GlobalState>(
   });
 }
 
-export async function ensureIsSuperGroup<T extends GlobalState>(
+/**
+ * Signal groups are basic groups that have the admins, bans and join requests of supergroups, and no supergroup
+ * to migrate to, so every group is returned as it is
+ */
+export function ensureIsSuperGroup<T extends GlobalState>(
   global: T,
   actions: RequiredGlobalActions,
   chatId: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
+  ..._args: TabArgs<T>
 ) {
-  const chat = selectChat(global, chatId);
-  if (!chat || !isChatBasicGroup(chat)) {
-    return chat;
-  }
-
-  const newChat = await migrateChat(global, actions, chat, tabId);
-  if (!newChat) {
-    return undefined;
-  }
-
-  actions.loadFullChat({ chatId: newChat.id });
-  actions.openChat({ id: newChat.id, tabId });
-
-  return newChat;
+  return Promise.resolve(selectChat(global, chatId));
 }
