@@ -6,7 +6,6 @@ import type { SettingsConfirmation } from '../../../types';
 
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import AskQuestionDialog from './AskQuestionDialog';
 import SignOutDialog from './SignOutDialog';
 import TerminateAllSessionsDialog from './TerminateAllSessionsDialog';
 import TerminateAllWebSessionsDialog from './TerminateAllWebSessionsDialog';
@@ -17,7 +16,6 @@ export type OwnProps = {
 };
 
 const DIALOGS = {
-  askQuestion: AskQuestionDialog,
   logOut: SignOutDialog,
   terminateAllSessions: TerminateAllSessionsDialog,
   terminateAllWebSessions: TerminateAllWebSessionsDialog,

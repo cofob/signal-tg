@@ -34,7 +34,7 @@ import {
   MediaViewerOrigin, type PlaybackItemRef, type PlaybackSource, type ThemeKey, type ThreadId,
 } from '../../types';
 
-import { DEBUG, TME_LINK_PREFIX } from '../../config';
+import { DEBUG, USERNAME_LINK_PREFIX } from '../../config';
 import { getPageBlocksAudios, getPageBlocksWithMedia } from '../../global/helpers/buildPageAudioById';
 import { getRichTextPlainText, hasRichText } from '../../global/helpers/richMessage';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
@@ -1276,7 +1276,7 @@ const ChannelBlock = ({
 }: ChannelBlockOwnProps) => {
   const { openTelegramLink } = getActions();
   const lang = useLang();
-  const url = `${TME_LINK_PREFIX}${channelUsername}`;
+  const url = `${USERNAME_LINK_PREFIX}${channelUsername}`;
 
   const handleClick = useLastCallback(() => {
     if (onTelegramChannelClick) {

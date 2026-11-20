@@ -5,7 +5,6 @@ import { getActions } from '../../../global';
 
 import type { TabState } from '../../../global/types';
 
-import { MINI_APP_TOS_URL } from '../../../config';
 import renderText from '../../common/helpers/renderText';
 
 import useLang from '../../../hooks/useLang';
@@ -42,11 +41,7 @@ const AttachBotInstallModal = ({
 
   const tosLabel = useMemo(() => {
     return lang('MiniAppsDisclaimerButton', {
-      link: (
-        <a href={MINI_APP_TOS_URL} target="_blank" rel="noopener noreferrer">
-          {lang('MiniAppsDisclaimerLink')}
-        </a>
-      ),
+      link: lang('MiniAppsDisclaimerLink'),
     }, { withNodes: true });
   }, [lang]);
 

@@ -1,5 +1,4 @@
 import type { DiffObject } from '../../util/deepDiff';
-import type { PendingWebLogin } from '../../util/routing';
 import type { SharedState } from '../types';
 
 import { APP_NAME } from '../../config';
@@ -57,17 +56,13 @@ interface PasscodeNavigationDekEvent {
 }
 
 export type WorkerBoundMessageEvent = GetFullStateEvent
-  | { type: 'retainWebLogin'; id: string; slot: number; request: PendingWebLogin }
-  | { type: 'claimWebLogin'; id: string; slot: number }
   | UpdateStateEvent
   | RetainPasscodeNavigationDekEvent
   | RequestPasscodeNavigationDekEvent
   | ClearPasscodeNavigationDekEvent
   | ResetSharedStateEvent;
 
-export type ClientBoundMessageEvent = StateUpdateEvent | FullStateEvent | PasscodeNavigationDekEvent
-  | { type: 'webLoginRetained'; id: string }
-  | { type: 'webLoginClaimed'; id: string; request?: PendingWebLogin };
+export type ClientBoundMessageEvent = StateUpdateEvent | FullStateEvent | PasscodeNavigationDekEvent;
 
 export function createSharedWorker() {
   return new SharedWorker(new URL('./sharedState.worker.ts', import.meta.url), {

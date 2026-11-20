@@ -281,8 +281,7 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
 ];
 
 export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  ...buildEntries(SettingsScreens.Main, ['AskAQuestion'], { icon: 'support-filled', iconBg: 'red' }),
-  ...buildEntries(SettingsScreens.Main, ['MenuTelegramFaq'], { icon: 'help-filled', iconBg: 'blue' }),
+  ...buildEntries(SettingsScreens.Main, ['MenuSignalSupport'], { icon: 'help-filled', iconBg: 'blue' }),
   ...buildEntries(SettingsScreens.Main, ['MenuPrivacyPolicy'], { icon: 'privacy-policy-filled', iconBg: 'green' }),
   ...buildEntries(SettingsScreens.Main, ['LogOutTitle'], {
     keywordsKey: 'SettingsKeywordsLogOut', icon: 'logout', iconBg: 'gray',
@@ -315,7 +314,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ]),
 
   ...buildEntries(SettingsScreens.Notifications, [
-    'NotificationsWeb', 'NotificationsOffline', 'NotificationsForPrivateChats', 'MessagePreview',
+    'NotificationsWeb', 'NotificationsForPrivateChats', 'MessagePreview',
     'NotificationsForGroups', 'NotificationsForChannels', 'ContactJoined', 'PinnedMessagesNotifications',
   ]),
   ...buildEntries(SettingsScreens.Notifications, IS_IOS ? [] : ['NotificationsSound']),

@@ -1,10 +1,7 @@
 import type { ThreadId } from '../types';
 
-import {
-  RE_TG_LINK, RE_TME_LINK, TME_WEB_DOMAINS,
-} from '../config';
+import { RE_TG_LINK } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
-import { ensureProtocol } from './browser/url';
 import { parseTimestampDuration } from './dates/timestamp';
 import { isBase64Url } from './encoding/base64';
 import { toChannelId } from './entities/ids';
@@ -153,15 +150,12 @@ type OAuthLinkBuilderParams = Omit<BuilderParams<OAuthLink>, 'url'> & {
   url: string;
 };
 
-const TME_HOSTNAMES = new Set([...TME_WEB_DOMAINS, 'www.t.me']);
-const RE_HTTP_PROTOCOL = /^https?:/i;
 const RE_TG_SLASHES_PROTOCOL = /^tg:\/\//i;
-const TME_SUBDOMAIN_SUFFIX = '.t.me';
-const SUBDOMAIN_LINK_TYPES = new Set<DeepLinkType>(['publicUsernameOrBotLink', 'publicMessageLink', 'groupCallLink']);
 const MAX_BOT_START_PARAMETER_LENGTH = 64;
 
+// Only `tg:` links are deep links; links to Telegram websites stay ordinary external links
 export function isDeepLink(link: string): boolean {
-  return Boolean(link.match(RE_TME_LINK) || link.match(RE_TG_LINK));
+  return RE_TG_LINK.test(link);
 }
 
 export function tryParseDeepLink(link: string): DeepLink | undefined {
@@ -184,20 +178,8 @@ export function getUsernameFromDeepLink(url: string) {
 }
 
 function parseDeepLink(url: string) {
-  const correctUrl = ensureProtocol(url);
-  if (!correctUrl) {
-    return undefined;
-  }
-  if (RE_HTTP_PROTOCOL.test(correctUrl)) {
-    const urlParsed = new URL(correctUrl);
-    return parseHttpLink(urlParsed);
-  }
-  if (RE_TG_LINK.test(correctUrl)) {
-    const urlToParse = IS_BAD_URL_PARSER ? correctUrl.replace(RE_TG_SLASHES_PROTOCOL, 'https://') : correctUrl;
-    const urlParsed = new URL(urlToParse);
-    return parseTgLink(urlParsed);
-  }
-  return undefined;
+  const urlToParse = IS_BAD_URL_PARSER ? url.replace(RE_TG_SLASHES_PROTOCOL, 'https://') : url;
+  return parseTgLink(new URL(urlToParse));
 }
 
 function parseTgLink(url: URL) {
@@ -291,159 +273,6 @@ function parseTgLink(url: URL) {
       break;
   }
   return undefined;
-}
-
-function parseHttpLink(url: URL): DeepLink | undefined {
-  if (!TME_HOSTNAMES.has(url.hostname)) {
-    const subdomainUsername = getTmeSubdomainUsername(url.hostname);
-    if (!subdomainUsername) {
-      return undefined;
-    }
-    const link = parseHttpLink(new URL(`https://t.me/${subdomainUsername}${url.pathname}${url.search}`));
-    return link && SUBDOMAIN_LINK_TYPES.has(link.type) ? link : undefined;
-  }
-  const queryParams = getQueryParams(url);
-  const pathParams = getPathParams(url);
-
-  const deepLinkType = getHttpDeepLinkType(queryParams, pathParams);
-  switch (deepLinkType) {
-    case 'languageLink':
-      return buildLanguageLink({ langCode: pathParams[1] });
-    case 'publicMessageLink': {
-      const {
-        single, comment, t,
-      } = queryParams;
-      const {
-        username,
-        thread,
-        messageId,
-      } = pathParams.length === 2 ? {
-        username: pathParams[0],
-        thread: queryParams.thread,
-        messageId: pathParams[1],
-      } : {
-        username: pathParams[0],
-        thread: pathParams[1],
-        messageId: pathParams[2],
-      };
-      return buildPublicMessageLink({
-        username,
-        messageId,
-        single,
-        threadId: thread,
-        commentId: comment,
-        timestamp: t,
-      });
-    }
-    case 'privateMessageLink': {
-      const {
-        single, comment, t,
-      } = queryParams;
-      const {
-        channelId,
-        thread,
-        messageId,
-      } = pathParams.length === 3 ? {
-        channelId: pathParams[1],
-        thread: queryParams.thread,
-        messageId: pathParams[2],
-      } : {
-        channelId: pathParams[1],
-        thread: pathParams[2],
-        messageId: pathParams[3],
-      };
-      return buildPrivateMessageLink({
-        channelId,
-        messageId,
-        single,
-        threadId: thread,
-        commentId: comment,
-        timestamp: t,
-      });
-    }
-    case 'shareLink': {
-      return buildShareLink({ text: queryParams.text, url: queryParams.url });
-    }
-    case 'chatFolderLink':
-      return buildChatFolderLink({ slug: pathParams[1] });
-    case 'loginCodeLink':
-      return buildLoginCodeLink({ code: pathParams[1] });
-    case 'publicUsernameOrBotLink':
-      return buildPublicUsernameOrBotLink({
-        username: pathParams[0],
-        start: queryParams.start,
-        startGroup: queryParams.admin !== undefined ? undefined : queryParams.startgroup,
-        text: queryParams.text,
-        startApp: queryParams.startapp,
-        mode: queryParams.mode,
-        appName: undefined,
-        startAttach: queryParams.startattach,
-        attach: queryParams.attach,
-        choose: queryParams.choose,
-        ref: queryParams.ref,
-        direct: queryParams.direct,
-        noPaidMessagesToken: queryParams.free,
-      });
-    case 'groupCallLink':
-      return buildGroupCallLink({
-        username: pathParams[0],
-        inviteHash: getGroupCallInviteHash(queryParams),
-      });
-    case 'privateChannelLink': {
-      return buildPrivateChannelLink({ channelId: pathParams[1] });
-    }
-    case 'contactLink':
-      return buildContactLink({ token: pathParams[1], noPaidMessagesToken: queryParams.free });
-    case 'newBotLink':
-      return buildNewBotLink({
-        managerUsername: pathParams[1],
-        username: pathParams[2],
-        name: queryParams.name,
-      });
-    default:
-      break;
-  }
-  return undefined;
-}
-
-function getHttpDeepLinkType(
-  queryParams: Record<string, string>,
-  pathParams: string[],
-): DeepLinkType {
-  const len = pathParams.length;
-  const method = pathParams[0];
-  const hasGroupCall = getGroupCallInviteHash(queryParams) !== undefined;
-  if (method === 'setlanguage') return len === 2 ? 'languageLink' : 'unknown';
-  if (len === 1) {
-    if (method === 'share') return 'shareLink';
-
-    if (isUsernameValid(method)) {
-      return hasGroupCall ? 'groupCallLink' : 'publicUsernameOrBotLink';
-    }
-  } else if (len === 2) {
-    if (method === 'addlist') return 'chatFolderLink';
-    if (method === 'login') return 'loginCodeLink';
-    if (method === 'contact') return 'contactLink';
-    if (method === 'c') return 'privateChannelLink';
-
-    if (isUsernameValid(pathParams[0]) && isNumber(pathParams[1])) {
-      return hasGroupCall ? 'groupCallLink' : 'publicMessageLink';
-    }
-    if (method === 'newbot') return 'newBotLink';
-  } else if (len === 3) {
-    if (method === 'c' && pathParams.slice(1).every(isNumber)) {
-      return 'privateMessageLink';
-    }
-    if (isUsernameValid(pathParams[0]) && pathParams.slice(1).every(isNumber)) {
-      return hasGroupCall ? 'groupCallLink' : 'publicMessageLink';
-    }
-    if (method === 'newbot') return 'newBotLink';
-  } else if (len === 4) {
-    if (method === 'c' && pathParams.slice(1).every(isNumber)) {
-      return 'privateMessageLink';
-    }
-  }
-  return 'unknown';
 }
 
 function getTgDeepLinkType(
@@ -753,14 +582,6 @@ function isNumber(s: string) {
 
 function getGroupCallInviteHash(queryParams: Record<string, string>) {
   return queryParams.livestream ?? queryParams.videochat ?? queryParams.voicechat;
-}
-
-function getTmeSubdomainUsername(hostname: string) {
-  if (!hostname.endsWith(TME_SUBDOMAIN_SUFFIX)) {
-    return undefined;
-  }
-  const subdomain = hostname.slice(0, -TME_SUBDOMAIN_SUFFIX.length);
-  return isUsernameValid(subdomain) ? subdomain : undefined;
 }
 
 function getPathParams(url: URL) {

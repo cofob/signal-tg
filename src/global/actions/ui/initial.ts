@@ -12,13 +12,12 @@ import {
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import generateUniqueId from '../../../util/generateUniqueId';
 import { setTimeFormat } from '../../../util/localization';
-import { subscribe } from '../../../util/notifications';
+import { ensureNotificationPermission } from '../../../util/notifications';
 import { applyPerformanceSettings } from '../../../util/perfomanceSettings';
 import { hasStoredSession } from '../../../util/sessions';
 import switchTheme from '../../../util/switchTheme';
 import { getSystemTheme, setSystemThemeChangeCallback } from '../../../util/systemTheme';
 import { buildThemeColorOverrides } from '../../../util/theme';
-import { startWebsync, stopWebsync } from '../../../util/websync';
 import { callApi } from '../../../api/gramjs';
 import { clearCaching, setupCaching } from '../../cache';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
@@ -61,7 +60,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
 
   if (!isMasterTab) {
     actions.destroyConnection();
-    stopWebsync();
     destroySharedStatePort();
     clearCaching();
     actions.onSomeTabSwitchedMultitabRole();
@@ -82,7 +80,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
       actions.initApi();
     }
 
-    startWebsync();
     if (IS_MULTIACCOUNT_SUPPORTED) {
       initSharedState(global.sharedState);
     }
@@ -93,10 +90,6 @@ addActionHandler('onSomeTabSwitchedMultitabRole', (): ActionReturnType => {
   callApi('broadcastLocalDbUpdateFull');
 });
 
-addActionHandler('initShared', (): ActionReturnType => {
-  startWebsync();
-});
-
 addActionHandler('initMain', (global, actions): ActionReturnType => {
   actions.cleanupExpiredTtlMessages();
 
@@ -104,14 +97,14 @@ addActionHandler('initMain', (global, actions): ActionReturnType => {
   if (hasWebNotifications) {
     // Most of the browsers only show the notifications permission prompt after the first user gesture.
     const events = ['click', 'keypress'];
-    const subscribeAfterUserGesture = () => {
-      void subscribe();
+    const requestPermissionAfterUserGesture = () => {
+      void ensureNotificationPermission();
       events.forEach((event) => {
-        document.removeEventListener(event, subscribeAfterUserGesture);
+        document.removeEventListener(event, requestPermissionAfterUserGesture);
       });
     };
     events.forEach((event) => {
-      document.addEventListener(event, subscribeAfterUserGesture, { once: true });
+      document.addEventListener(event, requestPermissionAfterUserGesture, { once: true });
     });
   }
 });
@@ -178,8 +171,6 @@ addCallback((global: GlobalState) => {
 
   // Make sure global has the latest theme. Will cause `switchTheme` on change
   global = updateSharedSettings(global, { theme });
-
-  startWebsync();
 
   setGlobal(global);
 });

@@ -3,7 +3,6 @@ import {
 } from '../../lib/teact/teact';
 import { getActions } from '../../global';
 
-import { TME_LINK_PREFIX } from '../../config';
 import {
   isUsernameValid, MAX_USERNAME_LENGTH, MIN_UPDATE_USERNAME_LENGTH, USERNAME_REGEX,
 } from '../../util/entities/username';
@@ -24,8 +23,6 @@ type OwnProps = {
   checkedUsername?: string;
   onChange: (value: string) => void;
 };
-
-const LINK_PREFIX_REGEX = /https:\/\/t\.me\/?/i;
 
 const runDebouncedForCheckUsername = debounce((cb) => cb(), 250, false);
 
@@ -82,16 +79,7 @@ const UsernameInput = ({
   }, [asLink, currentUsername]);
 
   const handleUsernameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.trim();
-    // Prevent prefix editing
-    if (asLink && !value.match(LINK_PREFIX_REGEX)) {
-      if (!value.length) {
-        setUsername('');
-        onChange?.('');
-      }
-      return;
-    }
-    const newUsername = value.replace(LINK_PREFIX_REGEX, '');
+    const newUsername = e.target.value.trim();
 
     setUsername(newUsername);
 
@@ -109,11 +97,11 @@ const UsernameInput = ({
         checkUsername({ username: newUsername });
       }
     });
-  }, [asLink, chatId, checkPublicLink, checkUsername, currentUsername, onChange]);
+  }, [chatId, checkPublicLink, checkUsername, currentUsername, onChange]);
 
   return (
     <InputText
-      value={`${asLink ? TME_LINK_PREFIX : ''}${username}`}
+      value={username}
       onChange={handleUsernameChange}
       label={isChecking ? lang('Checking') : label}
       error={usernameError}

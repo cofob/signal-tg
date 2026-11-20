@@ -1,6 +1,5 @@
 import type { ActionReturnType } from '../../types';
 
-import { applyLangPackDifference, requestLangPackDifference } from '../../../util/localization';
 import { isChatChannel, selectTabBrowserState } from '../../helpers';
 import { addActionHandler, setGlobal } from '../../index';
 import {
@@ -271,16 +270,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
         },
       };
       setGlobal(global);
-      break;
-    }
-
-    case 'updateLangPackTooLong': {
-      requestLangPackDifference(update.langCode);
-      break;
-    }
-
-    case 'updateLangPack': {
-      applyLangPackDifference(update);
       break;
     }
   }

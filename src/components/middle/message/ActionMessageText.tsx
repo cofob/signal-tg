@@ -6,8 +6,8 @@ import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 import {
   GENERAL_TOPIC_ID,
   STARS_CURRENCY_CODE,
-  TME_LINK_PREFIX,
   TON_CURRENCY_CODE,
+  USERNAME_LINK_PREFIX,
 } from '../../../config';
 import {
   getMainUsername,
@@ -447,7 +447,7 @@ const ActionMessageText = ({
         if (isFromRequest) return lang('ActionWebappBotAllowed');
         if (app) {
           const senderUsername = sender && getMainUsername(sender);
-          const link = senderUsername && `${TME_LINK_PREFIX + senderUsername}/${app.shortName}`;
+          const link = senderUsername && `${USERNAME_LINK_PREFIX}${senderUsername}&appname=${app.shortName}`;
           const appLink = link
             ? <Link onClick={() => openTelegramLink({ url: link })}>{app.title}</Link>
             : lang('ActionBotAppPlaceholder');

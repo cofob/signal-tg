@@ -29,7 +29,6 @@ export * from './symbols';
 export * from './management';
 
 export * from './settings';
-export * from './push';
 
 export * from './twoFaSettings';
 

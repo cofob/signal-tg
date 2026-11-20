@@ -1,11 +1,6 @@
 import type { TeactNode } from '../../lib/teact/teact';
 
-import type {
-  ApiLanguage,
-  ApiUpdateLangPack,
-  CachedLangData,
-  LangPack,
-} from '../../api/types';
+import type { ApiLanguage, CachedLangData, LangPack } from '../../api/types';
 import type { TimeFormat } from '../../types';
 import type { LangKey, LangVariable } from '../../types/language';
 import {
@@ -24,17 +19,12 @@ import {
   type RegularLangFnParameters,
 } from './types';
 
-import { FORCE_FALLBACK_LANG, LANG_PACK } from '../../config';
-import { callApi } from '../../api/gramjs';
 import renderText, { type TextFilter } from '../../components/common/helpers/renderText';
 import { IS_INTL_LIST_FORMAT_SUPPORTED } from '../browser/globalEnvironment';
-import { MAIN_IDB_STORE } from '../browser/idb';
 import { getBasicListFormat } from '../browser/intlListFormat';
-import { notifyLangpackUpdate } from '../browser/multitab';
 import { createCallbackManager } from '../callbacks';
 import readFallbackStrings from '../data/readFallbackStrings';
-import { initialEstablishmentPromise, isCurrentTabMaster } from '../establishMultitabRole';
-import { mapValues, omit, unique } from '../iteratees';
+import { mapValues, unique } from '../iteratees';
 import { replaceInStringsWithTeact } from '../replaceWithTeact';
 import { fastRaf } from '../schedulers';
 import { resetDateFormatCache } from './dateFormat';
@@ -45,7 +35,6 @@ import LimitedMap from '../primitives/LimitedMap';
 import initialStrings from '../../assets/localization/initialStrings';
 
 const FALLBACK_LANG_CODE = 'en';
-const LANGPACK_STORE_PREFIX = 'langpack-';
 const FORMATTERS_FALLBACK_LANG = FALLBACK_LANG_CODE;
 const FALLBACK_PLURAL_RULES = new Intl.PluralRules(FALLBACK_LANG_CODE);
 
@@ -55,8 +44,6 @@ const TRANSLATION_CACHE = new LimitedMap<string, string>(STRING_CACHE_LIMIT);
 let language: ApiLanguage | undefined;
 let formatters: LangFormatters;
 
-let langPack: LangPack | undefined;
-let baseLangPack: LangPack | undefined;
 let fallbackLangPack: LangPack | undefined;
 let currentTimeFormat: TimeFormat = '24h';
 let languageRequestId = 0;
@@ -84,40 +71,6 @@ function scheduleCallbacks() {
 
 const localizationReady = new Deferred<void>();
 
-async function loadCachedLangData(langCode: string) {
-  try {
-    return await MAIN_IDB_STORE.get<CachedLangData>(`${LANGPACK_STORE_PREFIX}${langCode}`);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Failed to read language cache:', err);
-    return undefined;
-  }
-}
-
-async function cacheLangData(data: CachedLangData) {
-  let cachedData = data;
-  try {
-    await MAIN_IDB_STORE.update<CachedLangData>(`${LANGPACK_STORE_PREFIX}${data.language.langCode}`, (previousData) => {
-      if (previousData) {
-        cachedData = {
-          language: data.language,
-          langPack: previousData.langPack.version > data.langPack.version ? previousData.langPack : data.langPack,
-          baseLangPack: previousData.baseLangPack && data.baseLangPack
-            && previousData.baseLangPack.langCode === data.baseLangPack.langCode
-            && previousData.baseLangPack.version > data.baseLangPack.version
-            ? previousData.baseLangPack : data.baseLangPack,
-        };
-      }
-      return cachedData;
-    });
-    notifyLangpackUpdate(data.language.langCode);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Failed to cache language:', err);
-  }
-  return cachedData;
-}
-
 let fallbackLoadPromise: Promise<CachedLangData | undefined> | undefined;
 function loadFallbackPack() {
   fallbackLoadPromise ||= readFallbackStrings().then((fallbackData) => {
@@ -139,70 +92,6 @@ function loadFallbackPack() {
     return undefined;
   });
   return fallbackLoadPromise;
-}
-
-async function fetchDifference(langCode = langPack?.langCode) {
-  await initialEstablishmentPromise;
-  if (!isCurrentTabMaster() || !langCode || !language) return;
-
-  const pack = getActiveLangPack(langCode);
-  if (!pack) return;
-  const { version: fromVersion } = pack;
-  const requestId = languageRequestId;
-
-  try {
-    const result = await callApi('fetchLangDifference', {
-      langPack: LANG_PACK,
-      langCode,
-      fromVersion,
-    });
-    const currentPack = getActiveLangPack(langCode);
-    if (!result || result.langCode !== langCode || requestId !== languageRequestId || !currentPack) return;
-    if (currentPack.version !== fromVersion) {
-      if (result.version > currentPack.version) void fetchDifference(langCode);
-      return;
-    }
-
-    applyLangPackDifference(result);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Failed to update language:', err);
-  }
-}
-
-export function applyLangPackDifference({
-  langCode, fromVersion, version, strings, keysToRemove,
-}: Omit<ApiUpdateLangPack, '@type'>) {
-  const pack = getActiveLangPack(langCode);
-  if (!pack || !langPack || !language || version <= pack.version) return;
-
-  if (fromVersion !== pack.version) {
-    void fetchDifference(langCode);
-    return;
-  }
-
-  const newLangPack = {
-    ...pack,
-    version,
-    strings: {
-      ...omit(pack.strings, keysToRemove),
-      ...strings,
-    },
-  };
-  updateLangPack(langCode === langPack.langCode ? newLangPack : langPack,
-    langCode === baseLangPack?.langCode ? newLangPack : baseLangPack);
-
-  void cacheLangData({
-    langPack,
-    baseLangPack,
-    language,
-  });
-}
-
-function getActiveLangPack(langCode: string) {
-  if (langPack?.langCode === langCode) return langPack;
-  if (baseLangPack?.langCode === langCode) return baseLangPack;
-  return undefined;
 }
 
 function updateLanguage(newLang: ApiLanguage) {
@@ -257,79 +146,28 @@ function createFormatters() {
   resetDateFormatCache();
 }
 
-function updateLangPack(newLangPack: LangPack | undefined, newBaseLangPack?: LangPack) {
-  langPack = newLangPack;
-  baseLangPack = newBaseLangPack;
-
-  TRANSLATION_CACHE.clear();
-  translationFn = createTranslationFn();
-
-  scheduleCallbacks();
-}
-
-export function initLocalization(langCode: string, canLoadFromServer?: boolean) {
-  initializationPromise ||= initializeLocalization(langCode, canLoadFromServer);
+export function initLocalization(langCode: string) {
+  initializationPromise ||= initializeLocalization(langCode);
   return initializationPromise;
 }
 
-async function initializeLocalization(langCode: string, canLoadFromServer?: boolean) {
-  const requestId = ++languageRequestId;
-  const cachedDataPromise = loadCachedLangData(langCode);
+async function initializeLocalization(langCode: string) {
   await loadFallbackPack();
   // Initial strings keep startup usable if the full fallback asset is unavailable
   localizationReady.resolve();
 
-  const cachedData = await cachedDataPromise;
-  if (requestId !== languageRequestId) return;
-  if (cachedData && hasRequiredPacks(cachedData)) {
-    activateLanguage(cachedData);
-  } else if (canLoadFromServer) {
-    void loadAndChangeLanguage(langCode);
-  }
+  void loadAndChangeLanguage(langCode);
 }
 
-export async function refreshFromCache(langCode: string) {
-  if (language?.langCode !== langCode) return;
-
-  const requestId = languageRequestId;
-  const cachedData = await loadCachedLangData(langCode);
-  if (!cachedData || requestId !== languageRequestId || language.langCode !== langCode
-    || !hasRequiredPacks(cachedData)) return;
-
-  const newLangPack = langPack && langPack.version >= cachedData.langPack.version ? langPack : cachedData.langPack;
-  const newBaseLangPack = baseLangPack && cachedData.baseLangPack
-    && baseLangPack.langCode === cachedData.baseLangPack.langCode
-    && baseLangPack.version >= cachedData.baseLangPack.version ? baseLangPack : cachedData.baseLangPack;
-  updateLangPack(newLangPack, newBaseLangPack);
-  updateLanguage(cachedData.language);
+// Languages come only from the strings built into the app, so neither the list nor the strings ask a server
+export async function fetchBuiltInLanguages(): Promise<ApiLanguage[]> {
+  const fallbackData = await loadFallbackPack();
+  return fallbackData ? [fallbackData.language] : [];
 }
 
 export function loadAndChangeLanguage(langCode: string): Promise<boolean> {
-  return selectLanguage(langCode);
-}
-
-export function retryLocalization(langCode: string): Promise<boolean> {
-  void loadFallbackPack();
-  if (selectionPromise) return selectionPromise;
-  if (langPack && language?.langCode === langCode) {
-    requestActivePackDifferences();
-    return Promise.resolve(true);
-  }
-  return loadAndChangeLanguage(langCode);
-}
-
-export function requestLangPackDifference(langCode: string) {
-  if (!getActiveLangPack(langCode)) return;
-  void fetchDifference(langCode);
-}
-
-export function changeLanguage(newLanguage: ApiLanguage): Promise<boolean> {
-  return selectLanguage(newLanguage.langCode, newLanguage);
-}
-
-function selectLanguage(langCode: string, newLanguage?: ApiLanguage): Promise<boolean> {
   const requestId = ++languageRequestId;
-  const promise = loadLanguage(langCode, requestId, newLanguage);
+  const promise = loadLanguage(langCode, requestId);
   selectionPromise = promise;
   void promise.finally(() => {
     if (selectionPromise === promise) selectionPromise = undefined;
@@ -337,93 +175,18 @@ function selectLanguage(langCode: string, newLanguage?: ApiLanguage): Promise<bo
   return promise;
 }
 
-async function loadLanguage(langCode: string, requestId: number, newLanguage?: ApiLanguage): Promise<boolean> {
-  if (langPack && language?.langCode === langCode) return true;
-
-  let cachedData = await loadCachedLangData(langCode);
-  if (requestId !== languageRequestId) return false;
-  if (cachedData && newLanguage) cachedData = { ...cachedData, language: newLanguage };
-  if (cachedData && hasRequiredPacks(cachedData)) {
-    if (newLanguage) {
-      cachedData = await cacheLangData(cachedData);
-      if (requestId !== languageRequestId) return false;
-    }
-    activateLanguage(cachedData);
-    return true;
-  }
-
-  await initialEstablishmentPromise;
-  if (requestId !== languageRequestId) return false;
-
-  try {
-    const remoteLanguage = newLanguage || cachedData?.language
-      || await callApi('fetchLanguage', { langPack: LANG_PACK, langCode });
-    if (requestId !== languageRequestId) return false;
-    if (!remoteLanguage || remoteLanguage.langCode !== langCode) return activateFallbackLanguage(langCode, requestId);
-
-    const baseLangCode = getBaseLangCode(remoteLanguage);
-    const [remoteLangPack, remoteBaseLangPack] = await Promise.all([
-      cachedData?.langPack || callApi('fetchLangPack', { langPack: LANG_PACK, langCode }),
-      baseLangCode ? callApi('fetchLangPack', { langPack: LANG_PACK, langCode: baseLangCode }) : undefined,
-    ]);
-    if (requestId !== languageRequestId) return false;
-    if (!remoteLangPack || remoteLangPack.langCode !== langCode) return activateFallbackLanguage(langCode, requestId);
-    if (baseLangCode && remoteBaseLangPack?.langCode !== baseLangCode) return false;
-
-    const data: CachedLangData = {
-      language: remoteLanguage,
-      langPack: {
-        langCode,
-        version: remoteLangPack.version,
-        strings: remoteLangPack.strings,
-      },
-      baseLangPack: remoteBaseLangPack ? {
-        langCode: remoteBaseLangPack.langCode,
-        version: remoteBaseLangPack.version,
-        strings: remoteBaseLangPack.strings,
-      } : undefined,
-    };
-    const cachedRemoteData = await cacheLangData(data);
-    if (requestId !== languageRequestId) return false;
-    if (langPack?.langCode === langCode && langPack.version > cachedRemoteData.langPack.version) return true;
-
-    activateLanguage(cachedRemoteData);
-    return true;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('Failed to change language:', err);
-    return activateFallbackLanguage(langCode, requestId);
-  }
+export function retryLocalization(langCode: string): Promise<boolean> {
+  void loadFallbackPack();
+  return selectionPromise || loadAndChangeLanguage(langCode);
 }
 
-function getBaseLangCode(languageInfo: ApiLanguage) {
-  const { baseLangCode, langCode } = languageInfo;
-  return baseLangCode && baseLangCode !== langCode ? baseLangCode : undefined;
-}
-
-function hasRequiredPacks(data: CachedLangData) {
-  const baseLangCode = getBaseLangCode(data.language);
-  return !baseLangCode || data.baseLangPack?.langCode === baseLangCode;
-}
-
-function activateLanguage(data: CachedLangData) {
-  updateLangPack(data.langPack, data.baseLangPack);
-  updateLanguage(data.language);
-  requestActivePackDifferences();
-}
-
-function requestActivePackDifferences() {
-  void fetchDifference();
-  if (baseLangPack) void fetchDifference(baseLangPack.langCode);
-}
-
-async function activateFallbackLanguage(langCode: string, requestId: number): Promise<boolean> {
+async function loadLanguage(langCode: string, requestId: number): Promise<boolean> {
+  if (language?.langCode === langCode) return true;
   if (langCode !== FALLBACK_LANG_CODE) return false;
+
   const fallbackData = await loadFallbackPack();
-  if (requestId !== languageRequestId) return false;
-  if (language?.langCode === langCode && langPack) return true;
-  if (!fallbackData) return false;
-  updateLangPack(undefined);
+  if (requestId !== languageRequestId || !fallbackData) return false;
+
   updateLanguage(fallbackData.language);
   return true;
 }
@@ -483,23 +246,15 @@ function getIntlLocale(languageInfo = language) {
 }
 
 function getString(langKey: LangKey, count: number) {
-  const shouldForceFallback = FORCE_FALLBACK_LANG && language?.langCode === FALLBACK_LANG_CODE;
-  let langPackStringValue = !shouldForceFallback ? langPack?.strings[langKey] : undefined;
-  if (langPackStringValue && isDeletedLangString(langPackStringValue)) langPackStringValue = undefined;
-  langPackStringValue ??= !shouldForceFallback ? baseLangPack?.strings[langKey] : undefined;
-  if (langPackStringValue && isDeletedLangString(langPackStringValue)) langPackStringValue = undefined;
-  const shouldUseFallback = langPackStringValue === undefined;
-
-  if (shouldUseFallback && !fallbackLangPack) {
+  if (!fallbackLangPack) {
     loadFallbackPack();
   }
 
-  langPackStringValue ??= fallbackLangPack?.strings[langKey];
-  langPackStringValue ??= initialStrings[langKey];
+  const langPackStringValue = fallbackLangPack?.strings[langKey] ?? initialStrings[langKey];
 
   if (langPackStringValue === undefined || isDeletedLangString(langPackStringValue)) return undefined;
 
-  const pluralSuffix = (shouldUseFallback ? FALLBACK_PLURAL_RULES : formatters.pluralRules).select(count);
+  const pluralSuffix = FALLBACK_PLURAL_RULES.select(count);
 
   const string = isPluralLangString(langPackStringValue)
     ? (langPackStringValue[pluralSuffix] ?? langPackStringValue.other)

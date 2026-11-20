@@ -152,7 +152,6 @@ export type TimeFormat = '24h' | '12h';
 
 export interface AccountSettings {
   hasWebNotifications: boolean;
-  hasPushNotifications: boolean;
   shouldShowPushPreviewsWhenLocked: boolean;
   hasContactJoinedNotifications?: boolean;
   shouldNotifyAboutPinnedMessages: boolean;
@@ -202,9 +201,9 @@ export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
-export type SettingsConfirmation = 'askQuestion' | 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
+export type SettingsConfirmation = 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
 
-export type SettingsAction = SettingsConfirmation | 'openFaq'
+export type SettingsAction = SettingsConfirmation | 'openSupport'
   | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
   | 'setAccountTtl';
 

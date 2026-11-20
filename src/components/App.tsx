@@ -18,10 +18,9 @@ import buildClassName from '../util/buildClassName';
 import { setupBeforeInstallPrompt } from '../util/installPrompt';
 import { ACCOUNT_SLOT, getAccountSlotUrl, getFirstLoggedInAccountSlot } from '../util/multiaccount';
 import { hasLegacyEncryptedSession } from '../util/passcode';
-import { getInitialLocationHash, getPendingWebLogin } from '../util/routing';
+import { getInitialLocationHash } from '../util/routing';
 import { checkSessionLocked, hasStoredSession } from '../util/sessions';
 import { getWallpaperBaseColor } from '../util/wallpaper';
-import { handoffWebLogin } from '../util/webLoginHandoff';
 import { updateSizes } from '../util/windowSize';
 
 import useTauriDrag from '../hooks/tauri/useTauriDrag';
@@ -50,7 +49,6 @@ type StateProps = {
   isScreenLocked?: boolean;
   hasPasscode?: boolean;
   inactiveReason?: 'auth' | 'otherClient';
-  hasWebAuthTokenFailed?: boolean;
   isTestServer?: boolean;
   theme: ThemeKey;
   customBackgroundColor?: string;
@@ -72,7 +70,6 @@ const App = ({
   isScreenLocked,
   hasPasscode,
   inactiveReason,
-  hasWebAuthTokenFailed,
   isTestServer,
   theme,
   customBackgroundColor,
@@ -92,7 +89,7 @@ const App = ({
   useEffect(() => {
     const hash = getInitialLocationHash();
     // If there is no stored session on first slot, navigate to any other slot with stored session
-    if (!getPendingWebLogin() && !hasStoredSession() && !ACCOUNT_SLOT && !hash) {
+    if (!hasStoredSession() && !ACCOUNT_SLOT && !hash) {
       const firstLoggedInAccountSlot = getFirstLoggedInAccountSlot();
       if (firstLoggedInAccountSlot) {
         const url = getAccountSlotUrl(firstLoggedInAccountSlot);
@@ -101,10 +98,8 @@ const App = ({
     }
 
     if (checkSessionLocked() && ACCOUNT_SLOT) {
-      void hasLegacyEncryptedSession().then(async (hasLegacySession) => {
-        if (hasLegacySession && !await handoffWebLogin(getAccountSlotUrl(1))) {
-          window.location.replace(getAccountSlotUrl(1));
-        }
+      void hasLegacyEncryptedSession().then((hasLegacySession) => {
+        if (hasLegacySession) window.location.replace(getAccountSlotUrl(1));
       }).catch(() => undefined);
     }
   }, []);
@@ -185,15 +180,6 @@ const App = ({
   } else {
     page = isMobileOs ? 'authPhoneNumber' : 'authQrCode';
     activeKey = AppScreens.auth;
-  }
-
-  if (activeKey !== AppScreens.lock
-    && activeKey !== AppScreens.inactive
-    && activeKey !== AppScreens.main
-    && getPendingWebLogin()
-    && !hasWebAuthTokenFailed) {
-    page = 'main';
-    activeKey = AppScreens.main;
   }
 
   useEffect(() => {
@@ -283,7 +269,7 @@ const App = ({
 
 export default withGlobal(
   (global): Complete<StateProps> => {
-    const { state: authState, hasWebAuthTokenFailed, hasWebAuthTokenPasswordRequired } = global.auth;
+    const { state: authState } = global.auth;
     const theme = selectTheme(global);
     const themeValues = selectChatWallpaperSettings(global);
 
@@ -292,7 +278,6 @@ export default withGlobal(
       isScreenLocked: global.passcode?.isScreenLocked,
       hasPasscode: global.passcode?.hasPasscode,
       inactiveReason: selectTabState(global).inactiveReason,
-      hasWebAuthTokenFailed: hasWebAuthTokenFailed || hasWebAuthTokenPasswordRequired,
       theme,
       customBackgroundColor: getWallpaperBaseColor(theme, themeValues || {}),
       isTestServer: global.config?.isTestServer,

@@ -40,7 +40,7 @@ export interface ApiLanguage {
   pluralCode: string;
   stringsCount: number;
   translatedCount: number;
-  translationsUrl: string;
+  translationsUrl?: string;
 }
 
 export type LangPack = {

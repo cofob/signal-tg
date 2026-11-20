@@ -6,7 +6,6 @@ import readStrings from './readStrings';
 
 const FALLBACK_LANG_CODE = 'en';
 const FALLBACK_VERSION = 0;
-const FALLBACK_TRANSLATE_URL = `https://translations.telegram.org/${FALLBACK_LANG_CODE}/weba`;
 
 export default async function readFallbackStrings(): Promise<CachedLangData> {
   const file = await import('../../assets/localization/fallback.strings?raw');
@@ -40,13 +39,13 @@ export function buildFallbackStrings(fileData: string): CachedLangData {
   const stringsCount = Object.keys(strings).length;
 
   const language: ApiLanguage = {
+    isOfficial: true,
     langCode: FALLBACK_LANG_CODE,
     name: 'English',
     nativeName: 'English',
     pluralCode: FALLBACK_LANG_CODE,
     stringsCount,
     translatedCount: stringsCount,
-    translationsUrl: FALLBACK_TRANSLATE_URL,
   };
 
   return {

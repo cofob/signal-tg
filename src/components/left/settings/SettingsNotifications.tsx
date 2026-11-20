@@ -5,11 +5,7 @@ import type { ApiNotifyPeerType, ApiPeerNotifySettings } from '../../../api/type
 
 import { NOTIFICATION_MAX_VOLUME } from '../../../config';
 import { IS_IOS } from '../../../util/browser/windowEnvironment';
-import {
-  checkIfNotificationsSupported,
-  checkIfPushSupported,
-  playNotifySound,
-} from '../../../util/notifications';
+import { checkIfNotificationsSupported, playNotifySound } from '../../../util/notifications';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
@@ -29,7 +25,6 @@ type StateProps = {
   hasContactJoinedNotifications: boolean;
   shouldNotifyAboutPinnedMessages: boolean;
   hasWebNotifications: boolean;
-  hasPushNotifications: boolean;
   hasPasscode?: boolean;
   shouldShowPushPreviewsWhenLocked: boolean;
   notificationSoundVolume: number;
@@ -41,7 +36,6 @@ const SettingsNotifications = ({
   notifyDefaults,
   hasContactJoinedNotifications,
   shouldNotifyAboutPinnedMessages,
-  hasPushNotifications,
   hasWebNotifications,
   hasPasscode,
   shouldShowPushPreviewsWhenLocked,
@@ -63,8 +57,6 @@ const SettingsNotifications = ({
   const runDebounced = useRunDebounced(500, true);
 
   const areNotificationsSupported = checkIfNotificationsSupported();
-  const areOfflineNotificationsSupported = areNotificationsSupported
-    && checkIfPushSupported();
 
   const areChannelsMuted = Boolean(notifyDefaults?.channels?.mutedUntil);
   const areGroupsMuted = Boolean(notifyDefaults?.groups?.mutedUntil);
@@ -86,17 +78,7 @@ const SettingsNotifications = ({
   }, [notifyDefaults, updateNotificationSettings]);
 
   const handleWebNotificationsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const isEnabled = e.target.checked;
-    updateWebNotificationSettings({
-      hasWebNotifications: isEnabled,
-      hasPushNotifications: isEnabled ? undefined : false,
-    });
-  }, [updateWebNotificationSettings]);
-
-  const handlePushNotificationsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    updateWebNotificationSettings({
-      hasPushNotifications: e.target.checked,
-    });
+    updateWebNotificationSettings({ hasWebNotifications: e.target.checked });
   }, [updateWebNotificationSettings]);
 
   const handlePushPreviewsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,21 +144,12 @@ const SettingsNotifications = ({
           disabled={!areNotificationsSupported}
           onChange={handleWebNotificationsChange}
         />
-        <Checkbox
-          label={lang('NotificationsOffline')}
-          disabled={!hasWebNotifications || !areOfflineNotificationsSupported}
-          subLabel={areOfflineNotificationsSupported
-            ? lang(hasPushNotifications ? 'UserInfoNotificationsEnabled' : 'UserInfoNotificationsDisabled')
-            : lang('SettingsOfflineNotificationUnsupported')}
-          checked={hasPushNotifications}
-          onChange={handlePushNotificationsChange}
-        />
         {hasPasscode && (
           <Checkbox
             label={lang('PushPreviewsWhenLocked')}
             subLabel={lang('PushPreviewsWhenLockedInfo')}
             checked={shouldShowPushPreviewsWhenLocked}
-            disabled={!hasWebNotifications || !hasPushNotifications || !areOfflineNotificationsSupported}
+            disabled={!hasWebNotifications || !areNotificationsSupported}
             onChange={handlePushPreviewsChange}
           />
         )}
@@ -271,7 +244,6 @@ export default memo(withGlobal<OwnProps>(
       hasContactJoinedNotifications: Boolean(global.settings.byKey.hasContactJoinedNotifications),
       shouldNotifyAboutPinnedMessages: global.settings.byKey.shouldNotifyAboutPinnedMessages,
       hasWebNotifications: global.settings.byKey.hasWebNotifications,
-      hasPushNotifications: global.settings.byKey.hasPushNotifications,
       hasPasscode: global.passcode.hasPasscode,
       shouldShowPushPreviewsWhenLocked: global.settings.byKey.shouldShowPushPreviewsWhenLocked,
       notificationSoundVolume: global.settings.byKey.notificationSoundVolume,

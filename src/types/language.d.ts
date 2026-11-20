@@ -376,7 +376,6 @@ export interface LangPair {
   'LastName': undefined;
   'SettingsAboutBio': undefined;
   'UsernameHelp': undefined;
-  'UsernameLink': undefined;
   'SettingsExperimentalAbout': undefined;
   'EmptyChatAppearanceLight': undefined;
   'EmptyChatAppearanceDark': undefined;
@@ -454,7 +453,6 @@ export interface LangPair {
   'KeyboardKeyBackspace': undefined;
   'KeyboardKeyDelete': undefined;
   'KeyboardKeyTab': undefined;
-  'SettingsOfflineNotificationUnsupported': undefined;
   'TextSize': undefined;
   'ChatBackground': undefined;
   'ChatBackgroundColorThemes': undefined;
@@ -682,9 +680,8 @@ export interface LangPair {
   'VoipGroupPersonalAccount': undefined;
   'MenuStickers': undefined;
   'MenuAnimations': undefined;
-  'MenuTelegramFaq': undefined;
+  'MenuSignalSupport': undefined;
   'MenuPrivacyPolicy': undefined;
-  'MenuAskText': undefined;
   'SettingsPerformanceSliderTitle': undefined;
   'SettingsPerformanceSliderSubtitle': undefined;
   'SettingsPerformanceSliderLow': undefined;
@@ -1168,7 +1165,6 @@ export interface LangPair {
   'AriaMoreButton': undefined;
   'RecoveryEmailCode': undefined;
   'NotificationsWeb': undefined;
-  'NotificationsOffline': undefined;
   'NotificationsSound': undefined;
   'SettingsPasswordEqual': undefined;
   'SettingsSaveChanges': undefined;
@@ -1388,10 +1384,6 @@ export interface LangPair {
   'ConversationForwardOptionsHideCaption': undefined;
   'HideCaption': undefined;
   'DragToSortAria': undefined;
-  'MenuReportBug': undefined;
-  'MenuBetaChangelog': undefined;
-  'MenuSwitchToK': undefined;
-  'PasscodeSwitchToKInfo': undefined;
   'MenuInstallApp': undefined;
   'MenuMyProfile': undefined;
   'MenuSavedMessages': undefined;
@@ -1404,12 +1396,9 @@ export interface LangPair {
   'AriaMenuDisableNightMode': undefined;
   'AriaSettingsEditProfilePhoto': undefined;
   'MenuUIFeaturesSwitch': undefined;
-  'MenuTelegramFeatures': undefined;
-  'TelegramFeaturesUsername': undefined;
   'RemoveEffect': undefined;
   'ReplyInPrivateMessage': undefined;
   'ProfileOpenAppTerms': undefined;
-  'ProfileBotOpenAppInfoLink': undefined;
   'ProfileBirthday': undefined;
   'ProfileBirthdayToday': undefined;
   'ProfileMenuSetMainTab': undefined;
@@ -1421,7 +1410,6 @@ export interface LangPair {
   'GiftInfoSavedHide': undefined;
   'GiftInfoSavedShow': undefined;
   'StarsReactionLinkText': undefined;
-  'StarsReactionLink': undefined;
   'OpenMapWith': undefined;
   'OpenApp': undefined;
   'PopularApps': undefined;
@@ -1974,14 +1962,11 @@ export interface LangPair {
   'CocoonDescription': undefined;
   'CocoonFeature1Title': undefined;
   'CocoonFeature1Username': undefined;
-  'CocoonFeature1UsernameLink': undefined;
   'CocoonFeature2Title': undefined;
   'CocoonFeature2Text': undefined;
   'CocoonFeature3Title': undefined;
   'CocoonFeature3LinkText': undefined;
-  'CocoonFeature3Link': undefined;
   'CocoonFooterLinkText': undefined;
-  'CocoonFooterLink': undefined;
   'BotAuthSuccessTitle': undefined;
   'RankModalEdit': undefined;
   'RankModalEditMy': undefined;
@@ -2064,7 +2049,6 @@ export interface LangPair {
   'RichMediaSlideshow': undefined;
   'RichMediaRetry': undefined;
   'RichMediaUploadFailed': undefined;
-  'WebLoginInvalid': undefined;
   'RichButtonInline': undefined;
   'RichButtonRow': undefined;
   'RichButtonEdit': undefined;
@@ -2104,7 +2088,6 @@ export interface LangPair {
   'BlockUser': undefined;
   'BotStop': undefined;
   'BotChangeSettings': undefined;
-  'BotDefaultPrivacyPolicy': undefined;
   'BotEditCommands': undefined;
   'BotEditIntro': undefined;
   'BotManageInfo': undefined;

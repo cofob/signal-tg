@@ -259,7 +259,6 @@ export interface ActionPayloads {
   updateWebNotificationSettings: {
     shouldShowPushPreviewsWhenLocked?: boolean;
     hasWebNotifications?: boolean;
-    hasPushNotifications?: boolean;
     notificationSoundVolume?: number;
   };
   loadLanguages: undefined;
@@ -472,7 +471,6 @@ export interface ActionPayloads {
   toggleDialogFilterTags: {
     isEnabled: boolean;
   };
-  openSupportChat: WithTabId | undefined;
   openChatByPhoneNumber: {
     phoneNumber: string;
     startAttach?: string | boolean;
@@ -751,7 +749,6 @@ export interface ActionPayloads {
   };
   openTelegramLink: {
     url: string;
-    shouldIgnoreCache?: boolean;
     linkContext?: LinkContext;
   } & WithTabId;
   openChatByUsername: {
@@ -2374,9 +2371,6 @@ export interface ActionPayloads {
     size: Size;
   };
   // Misc
-  refreshLangPackFromCache: {
-    langCode: string;
-  };
   openRequestPeerModal: {
     botId: string;
     chatId: string;
