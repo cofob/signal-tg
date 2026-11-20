@@ -162,8 +162,9 @@ async function sendWithRetries(
     const added = devices.filter((device) => !info.memberDevices.some((member) => isSameDevice(member, device)));
     const removed = info.memberDevices.filter((member) => !devices.some((device) => isSameDevice(member, device)));
 
-    // A member left the group: they must not read later messages
-    if (removed.some(({ serviceId }) => !recipients.includes(serviceId))) {
+    // A member left the group: they must not read later messages. A group update also goes to removed members,
+    // whom the endorsements of the new revision leave out.
+    if (removed.some(({ serviceId }) => !recipients.includes(serviceId) || !endorsements.members[serviceId])) {
       await resetSenderKey(context, groupId, info);
       continue;
     }
