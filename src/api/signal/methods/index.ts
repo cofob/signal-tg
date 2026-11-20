@@ -26,6 +26,7 @@ export {
   forwardApiMessages,
   forwardMessages,
   forwardMessagesLocal,
+  loadPollOptionResults,
   markMessageListRead,
   markMessagesRead,
   sendMessage,
@@ -37,7 +38,9 @@ export {
 export {
   blockUser,
   fetchBlockedUsers,
+  fetchConfig,
   fetchNotifyDefaultSettings,
+  fetchPeerColors,
   unblockUser,
   updateNotificationSettings,
 } from './settings';

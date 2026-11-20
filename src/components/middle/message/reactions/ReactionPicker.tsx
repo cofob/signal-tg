@@ -38,6 +38,7 @@ import useTuckFilter from '../../../../hooks/useTuckFilter';
 
 import CustomEmojiPicker from '../../../common/CustomEmojiPicker';
 import Menu from '../../../ui/Menu';
+import EmojiPicker from '../../composer/EmojiPicker';
 import StickerPicker from '../../composer/StickerPicker';
 import ReactionPickerLimited from './ReactionPickerLimited';
 
@@ -57,6 +58,7 @@ interface StateProps {
   sendAsMessage?: boolean;
   chatId?: string;
   isForEffects?: boolean;
+  hasReactionCatalog?: boolean;
   availableEffectById: Record<string, ApiAvailableEffect>;
 }
 
@@ -76,6 +78,7 @@ const ReactionPicker = ({
   sendAsMessage,
   chatId,
   isForEffects,
+  hasReactionCatalog,
   availableEffectById,
 }: OwnProps & StateProps) => {
   const {
@@ -126,6 +129,10 @@ const ReactionPicker = ({
       chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
     });
     closeReactionPicker();
+  });
+
+  const handleEmojiSelect = useLastCallback((emoticon: string) => {
+    handleToggleReaction({ type: 'emoji', emoticon });
   });
 
   const handleToggleReaction = useLastCallback((reaction: ApiReactionWithPaid) => {
@@ -246,7 +253,17 @@ const ReactionPicker = ({
       backdropExcludedSelector=".Modal.confirm"
       onClose={closeReactionPicker}
     >
-      {isForEffects && chatId ? (
+      {!hasReactionCatalog && !renderedStoryId && !isForEffects ? (
+        <EmojiPicker
+          chatId={renderedChatId}
+          idPrefix="message-reaction-emoji-"
+          isHidden={!isOpen}
+          loadAndPlay={isOpen}
+          isTranslucent={isTranslucent}
+          onEmojiSelect={handleEmojiSelect}
+          onCustomEmojiSelect={handleToggleCustomReaction}
+        />
+      ) : isForEffects && chatId ? (
         <StickerPicker
           className=""
           isHidden={!isOpen}
@@ -313,6 +330,8 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
   const areAllReactionsAllowed = chatFullInfo?.enabledReactions?.type === 'all'
     && chatFullInfo?.enabledReactions?.areCustomAllowed;
 
+  // Signal has no reaction catalog: any emoji is a reaction, so the picker shows the full emoji set
+  const hasReactionCatalog = Boolean(global.reactions.availableReactions?.length);
   const currentReactions = message?.reactions?.results;
   const shouldUseCurrentReactions = Boolean(maxUniqueReactions && currentReactions
     && currentReactions.length >= maxUniqueReactions);
@@ -322,12 +341,13 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     story,
     position,
     shouldUseFullPicker: (chat?.isForbidden || areSomeReactionsAllowed || shouldUseCurrentReactions) ? false
-      : (areAllReactionsAllowed || isPrivateChat),
+      : (areAllReactionsAllowed || isPrivateChat || !hasReactionCatalog),
     isTranslucent: selectIsContextMenuTranslucent(global),
     isCurrentUserPremium: selectIsCurrentUserPremium(global),
     sendAsMessage,
     isForEffects,
     chatId,
+    hasReactionCatalog,
     availableEffectById,
   };
 })(ReactionPicker));

@@ -79,6 +79,8 @@ export type MessageRecord = {
   readAt?: number;
   viewedAt?: number;
   isViewOnceOpened?: boolean;
+  // Indexes in `DataMessage.attachments` that the CDN no longer has
+  unavailableAttachmentIndexes?: number[];
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   isSealedSender?: boolean;
@@ -134,6 +136,19 @@ export default class MessageDb {
     return record;
   }
 
+  /** Puts conversations in one transaction */
+  async putConversations(records: ConversationRecord[]) {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(CONVERSATIONS, 'readwrite');
+      const store = transaction.objectStore(CONVERSATIONS);
+      for (const record of records) store.put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
   getMessage(id: number) {
     return this.request<MessageRecord | undefined>(MESSAGES, 'readonly', (store) => store.get(id));
   }
@@ -141,6 +156,50 @@ export default class MessageDb {
   async addMessage(record: NewMessageRecord): Promise<MessageRecord> {
     const id = await this.request<IDBValidKey>(MESSAGES, 'readwrite', (store) => store.add(record));
     return { ...record, id: id as number };
+  }
+
+  /**
+   * Adds messages in order in one transaction, skipping each message whose author and timestamp a stored message
+   * has; notices have no author and are always added. Returns the added records, `undefined` for skipped ones.
+   */
+  async addMessagesIfAbsent(records: NewMessageRecord[]) {
+    const db = await this.open();
+    return new Promise<(MessageRecord | undefined)[]>((resolve, reject) => {
+      const transaction = db.transaction(MESSAGES, 'readwrite');
+      const store = transaction.objectStore(MESSAGES);
+      const results: (MessageRecord | undefined)[] = [];
+
+      // Each step starts in the callback of the previous one, so a duplicate within `records` is found too
+      function addNext() {
+        const record = records[results.length];
+        if (!record) return;
+        const add = () => {
+          const request = store.add(record);
+          request.onsuccess = () => {
+            results.push({ ...record, id: request.result as number });
+            addNext();
+          };
+        };
+        if (!record.authorAci) {
+          add();
+          return;
+        }
+        const lookup = store.index(BY_AUTHOR_SENT_AT).getKey([record.authorAci, record.sentAt]);
+        lookup.onsuccess = () => {
+          if (lookup.result === undefined) {
+            add();
+            return;
+          }
+          results.push(undefined);
+          addNext();
+        };
+      }
+
+      transaction.oncomplete = () => resolve(results);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+      addNext();
+    });
   }
 
   async putMessage(record: MessageRecord) {

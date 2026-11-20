@@ -166,6 +166,16 @@
     .Message.own & {
       color: var(--color-accent-own);
     }
+
+    // Delivered checks are grey; over media they keep the overlay text color
+    .Message.own &.MessageOutgoingStatus--delivered {
+      color: var(--color-icon-secondary);
+    }
+
+    .media.no-footer &.MessageOutgoingStatus--delivered,
+    .message-content.widget-time-overlay &.MessageOutgoingStatus--delivered {
+      color: inherit;
+    }
   }
 
   .message-content.has-replies:not(.custom-shape) & {

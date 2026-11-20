@@ -271,7 +271,7 @@ const RightHeader = ({
     }
 
     if (isSavedMessages) {
-      return lang('SavedMessages');
+      return lang('NoteToSelf');
     }
 
     if (isInsideTopic) {
@@ -402,7 +402,7 @@ const RightHeader = ({
       case HeaderContent.SavedDialogs:
         return (
           <div className="header">
-            <h3 className="title">{lang('SavedMessages')}</h3>
+            <h3 className="title">{lang('NoteToSelf')}</h3>
             <div className="subtitle">
               {lang('ChatsPlural', {
                 count: savedDialogsCount,

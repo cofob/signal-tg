@@ -167,11 +167,13 @@ fn read_origins() -> Result<OriginPolicy, String> {
     Ok(OriginPolicy::Exact(origins))
 }
 
-/// Checks the serialized form browsers send in `Origin`: a scheme and an authority, without a path
+/// Checks the serialized form browsers send in `Origin`: a scheme and an authority, without a path.
+/// The desktop app's page on macOS and Linux has the origin `tauri://localhost`.
 fn is_origin(value: &str) -> bool {
     value
         .strip_prefix("https://")
         .or_else(|| value.strip_prefix("http://"))
+        .or_else(|| value.strip_prefix("tauri://"))
         .is_some_and(|authority| {
             !authority.is_empty()
                 && !authority.contains(['/', '?', '#', '@'])

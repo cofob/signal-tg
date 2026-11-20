@@ -16,6 +16,7 @@ import getCustomAppendixBg from './helpers/getCustomAppendixBg';
 
 import useFlag from '../../../hooks/useFlag';
 import { useIsIntersecting } from '../../../hooks/useIntersectionObserver';
+import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useLayoutEffectWithPrevDeps from '../../../hooks/useLayoutEffectWithPrevDeps';
 import useMediaTransition from '../../../hooks/useMediaTransition';
@@ -85,8 +86,10 @@ const Photo = <T,>({
   onCancelUpload,
   needsAgeVerification,
 }: OwnProps<T> & StateProps) => {
+  const lang = useLang();
   const ref = useRef<HTMLDivElement>();
   const isPaidPreview = photo.mediaType === 'extendedMediaPreview';
+  const isUnavailable = !isPaidPreview && photo.isUnavailable;
   const { width, height } = getMediaDimensions(photo);
 
   const localBlobUrl = !isPaidPreview ? photo.blobUrl : undefined;
@@ -94,7 +97,7 @@ const Photo = <T,>({
   const isIntersecting = useIsIntersecting(ref, observeIntersection);
 
   const [isLoadAllowed, setIsLoadAllowed] = useState(canAutoLoad);
-  const shouldLoad = isLoadAllowed && isIntersecting && !isPaidPreview;
+  const shouldLoad = isLoadAllowed && isIntersecting && !isPaidPreview && !isUnavailable;
   const {
     mediaData, loadProgress,
   } = useMediaWithLoadProgress(!isPaidPreview ? getPhotoMediaHash(photo, size) : undefined, !shouldLoad);
@@ -168,7 +171,7 @@ const Photo = <T,>({
     ref: downloadButtonRef,
     shouldRender: shouldRenderDownloadButton,
   } = useShowTransition({
-    isOpen: !fullMediaData && !isLoadAllowed,
+    isOpen: !fullMediaData && !isLoadAllowed && !isUnavailable,
     withShouldRender: true,
   });
   const {
@@ -204,6 +207,8 @@ const Photo = <T,>({
       hideSpoiler();
       return;
     }
+
+    if (isUnavailable) return;
 
     if (!fullMediaData) {
       setIsLoadAllowed((isAllowed) => !isAllowed);
@@ -275,6 +280,12 @@ const Photo = <T,>({
         <canvas ref={thumbRef} className="thumbnail" />
       )}
       {isProtected && <span className="protector" />}
+      {isUnavailable && (
+        <div className={styles.unavailable} title={lang('MediaUnavailable')}>
+          <Icon name="link-broken" className={styles.unavailableIcon} />
+          {lang('MediaUnavailable')}
+        </div>
+      )}
       {shouldRenderSpinner && !shouldRenderDownloadButton && (
         <div ref={spinnerRef} className={buildClassName('media-loading', styles.loading)}>
           <ProgressSpinner progress={transferProgress} onClick={isUploading ? handleClick : undefined} />

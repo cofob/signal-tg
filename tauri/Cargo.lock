@@ -943,6 +943,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
+
+[[package]]
 name = "dbus"
 version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5364,11 +5370,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "telegram_air"
-version = "2.12.3"
+name = "telesignal"
+version = "0.0.0"
 dependencies = [
  "ab_glyph",
  "cocoa",
+ "futures-util",
  "image",
  "imageproc",
  "log",
@@ -5388,8 +5395,21 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
+ "telesignal-tunnel",
+ "tokio",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "telesignal-tunnel"
+version = "0.1.0"
+dependencies = [
+ "data-encoding",
+ "futures-util",
+ "http",
+ "httparse",
+ "tokio",
 ]
 
 [[package]]
@@ -5527,16 +5547,28 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tokio"
-version = "1.53.2"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e95f91fcc7a621e8b030f6aa23c71fe9838ae2fb4d8118b75602a328f5144044"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
 ]
 
 [[package]]

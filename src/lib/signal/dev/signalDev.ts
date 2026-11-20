@@ -2,10 +2,12 @@
 import type { ConversationRecord } from '../db/MessageDb';
 import type { MessageChanges } from '../messages/MessageProcessor';
 
+import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
 import { uploadAttachment } from '../attachments/uploadAttachment';
+import { importBackupArchive } from '../backups/transferHistory';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { fetchStorageSnapshot } from '../storage/storageService';
@@ -158,6 +160,20 @@ const signalDev = {
     await initSignalWasm();
     await seedDemo(store, db);
     console.log('[signal] Demo data stored; reload the page');
+  },
+
+  /**
+   * Imports a link and sync archive file encrypted for this account with `backupKey` (base64), as the link flow
+   * does with the archive from the primary device; reload the page afterwards
+   */
+  async importHistory(archive: Blob, backupKey: string) {
+    await initSignalWasm();
+    const account = await store.getItem('account');
+    if (!account) throw new Error('No account: link or call signalDev.seedDemo() first');
+    const result = await importBackupArchive(new Uint8Array(await archive.arrayBuffer()), bufferFromBase64(backupKey), {
+      store, processor, account,
+    });
+    console.log('[signal] Imported message history; reload the page', result);
   },
 
   async reset() {

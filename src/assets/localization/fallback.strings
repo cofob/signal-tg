@@ -171,6 +171,12 @@
 "MessageRequestReportTitle" = "Report as spam?";
 "MessageRequestReportText" = "Signal will be notified that this person may be sending spam. Signal can't see the content of any chats.";
 "MessageRequestReportAndBlock" = "Also block this person";
+"SignalHistorySyncTitle" = "Syncing messages";
+"SignalHistorySyncWaiting" = "Preparing to download...";
+"SignalHistorySyncDownloading" = "Downloading {percent}...";
+"SignalHistorySyncImporting" = "Finalizing message transfer {percent}...";
+"SignalHistorySyncNote" = "This may take a few minutes";
+"SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
 "LoginPasskey" = "Log in with Passkey";
 "YourName" = "Your Name";
 "LoginRegisterDesc" = "Enter your name and add a profile photo.";
@@ -329,7 +335,7 @@
 "DialogPin" = "Pin";
 "ConversationPinMessagesFor" = "Pin for me and {user}";
 "ConversationPinMessageAlertPinAndNotifyMembers" = "Pin and notify all members";
-"SavedMessages" = "Saved Messages";
+"NoteToSelf" = "Note to Self";
 "SavedMessagesShort" = "Saved";
 "AccDescrPrevious" = "Previous";
 "ReportReasonSpam" = "Spam";
@@ -1502,7 +1508,7 @@
 "AudioPlayerClose" = "Close";
 "AudioAddToProfile" = "Add to Profile";
 "AudioRemoveFromProfile" = "Remove from Profile";
-"AudioAddToSaved" = "Add to Saved Messages";
+"AudioAddToNoteToSelf" = "Add to Note to Self";
 "AudioOpenPlaylist" = "Playlist";
 "AudioRepeatList" = "Repeat list";
 "AudioRepeatSong" = "Repeat song";
@@ -1690,7 +1696,6 @@
 "DragToSortAria" = "Drag to sort";
 "MenuInstallApp" = "Install App";
 "MenuMyProfile" = "My Profile";
-"MenuSavedMessages" = "Saved Messages";
 "MenuArchivedChats" = "Archived Chats";
 "MenuContacts" = "Contacts";
 "MenuSettings" = "Settings";
@@ -1891,6 +1896,10 @@
 "ActionGroupCallFinishedGroup" = "{from} ended the video chat ({duration})";
 "ActionExpiredVoice" = "Expired voice message";
 "ActionExpiredVideo" = "Expired video message";
+"MediaUnavailable" = "This media is no longer available";
+"ActionMessageDeleted" = "This message was deleted";
+"ActionViewOnceMedia" = "View-once media";
+"ActionViewOnceViewed" = "Viewed";
 "ActionAddUser" = "{from} added {user}";
 "ActionAddUserYou" = "You added {user}";
 "ActionAddUsersMany" = "{from} added {users}";
@@ -2588,10 +2597,10 @@
 "MenuAddCaption" = "Add Caption";
 "FwdMessagesToChats_one" = "Message forwarded to {count} chat";
 "FwdMessagesToChats_other" = "Message forwarded to {count} chats";
-"FwdMessagesToSaved_one" = "Message forwarded to **Saved Messages**";
-"FwdMessagesToSaved_other" = "Messages forwarded to **Saved Messages**";
+"FwdMessagesToNoteToSelf_one" = "Message forwarded to **Note to Self**";
+"FwdMessagesToNoteToSelf_other" = "Messages forwarded to **Note to Self**";
 "AudioForwardedToChat" = "Audio forwarded to a chat";
-"AudioForwardedToSaved" = "Audio forwarded to **Saved Messages**";
+"AudioForwardedToNoteToSelf" = "Audio forwarded to **Note to Self**";
 "MenuCopyDate" = "Copy Date";
 "DateCopiedToast" = "Date copied to clipboard";
 "ReminderSetToast" = "You set up a reminder in **Saved Messages**";

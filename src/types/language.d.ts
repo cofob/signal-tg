@@ -149,6 +149,10 @@ export interface LangPair {
   'MessageRequestReportTitle': undefined;
   'MessageRequestReportText': undefined;
   'MessageRequestReportAndBlock': undefined;
+  'SignalHistorySyncTitle': undefined;
+  'SignalHistorySyncWaiting': undefined;
+  'SignalHistorySyncNote': undefined;
+  'SignalHistorySyncFailed': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -260,7 +264,7 @@ export interface LangPair {
   'PinMessageAlertTitle': undefined;
   'DialogPin': undefined;
   'ConversationPinMessageAlertPinAndNotifyMembers': undefined;
-  'SavedMessages': undefined;
+  'NoteToSelf': undefined;
   'SavedMessagesShort': undefined;
   'AccDescrPrevious': undefined;
   'ReportReasonSpam': undefined;
@@ -1224,7 +1228,7 @@ export interface LangPair {
   'AudioPlayerClose': undefined;
   'AudioAddToProfile': undefined;
   'AudioRemoveFromProfile': undefined;
-  'AudioAddToSaved': undefined;
+  'AudioAddToNoteToSelf': undefined;
   'AudioOpenPlaylist': undefined;
   'AudioRepeatList': undefined;
   'AudioRepeatSong': undefined;
@@ -1397,7 +1401,6 @@ export interface LangPair {
   'DragToSortAria': undefined;
   'MenuInstallApp': undefined;
   'MenuMyProfile': undefined;
-  'MenuSavedMessages': undefined;
   'MenuArchivedChats': undefined;
   'MenuContacts': undefined;
   'MenuSettings': undefined;
@@ -1539,6 +1542,10 @@ export interface LangPair {
   'ActionGroupCallStartedChannel': undefined;
   'ActionExpiredVoice': undefined;
   'ActionExpiredVideo': undefined;
+  'MediaUnavailable': undefined;
+  'ActionMessageDeleted': undefined;
+  'ActionViewOnceMedia': undefined;
+  'ActionViewOnceViewed': undefined;
   'ActionChannelJoinedYou': undefined;
   'ActionChannelJoinedByRequestChannelYou': undefined;
   'ActionUserLeftYou': undefined;
@@ -1991,7 +1998,7 @@ export interface LangPair {
   'RankEditTextOwn': undefined;
   'MenuAddCaption': undefined;
   'AudioForwardedToChat': undefined;
-  'AudioForwardedToSaved': undefined;
+  'AudioForwardedToNoteToSelf': undefined;
   'MenuCopyDate': undefined;
   'DateCopiedToast': undefined;
   'ReminderSetToast': undefined;
@@ -2639,6 +2646,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'MessageRequestBlockTitle': {
     'title': V;
+  };
+  'SignalHistorySyncDownloading': {
+    'percent': V;
+  };
+  'SignalHistorySyncImporting': {
+    'percent': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -3998,7 +4011,7 @@ export interface LangPairPlural {
   'DeleteForEveryoneHint': undefined;
   'ReactionDeleted': undefined;
   'MediaReplaceInvalidError': undefined;
-  'FwdMessagesToSaved': undefined;
+  'FwdMessagesToNoteToSelf': undefined;
   'FolderLinkButtonJoinPlural': undefined;
 }
 
@@ -4583,6 +4596,12 @@ export interface LangKeyGroups {
       | 'ActionCreatedChatYou'
       | 'AiToneCreated';
     variables: 'title';
+  };
+  'percent': {
+    keys:
+      | 'SignalHistorySyncDownloading'
+      | 'SignalHistorySyncImporting';
+    variables: 'percent';
   };
   'volume': {
     keys:

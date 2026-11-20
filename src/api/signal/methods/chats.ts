@@ -31,6 +31,7 @@ import { db, logError, processor } from '../engine';
 import { getConversationByPeerId, getPeerId } from '../peers';
 import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
 import { sendApiUpdate } from '../updates';
+import { collectShownMessages } from './messages';
 
 // The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
 const MAX_PINNED_CHATS = 4;
@@ -308,7 +309,7 @@ function sendChat(chat: ApiChat) {
 /** Builds what the chat list shows of a conversation and remembers it for later updates */
 async function buildChatSummary(conversation: ConversationRecord, selfAci: string): Promise<ChatSummary> {
   const chat = buildApiChat(conversation, selfAci);
-  const [lastMessageRecord] = await db.getMessages(conversation.id, 1);
+  const [lastMessageRecord] = await collectShownMessages(conversation.id, Number.MAX_SAFE_INTEGER, 1, false);
   const lastMessage = lastMessageRecord && await buildApiMessage(lastMessageRecord, conversation);
   const readState = await buildThreadReadState(conversation);
 

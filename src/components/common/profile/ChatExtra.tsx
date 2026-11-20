@@ -548,7 +548,7 @@ const ChatExtra = ({
             onClick={handleOpenSavedDialog}
             style={createVtnStyle('savedMessages')}
           >
-            <span>{lang('MenuSavedMessages')}</span>
+            <span>{lang('NoteToSelf')}</span>
           </ListItem>
         )}
         {userFullInfo && 'isBotAccessEmojiGranted' in userFullInfo && (

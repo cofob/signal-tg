@@ -81,7 +81,11 @@ export const IS_VIDEO_RECORDING_SUPPORTED = Boolean(
 );
 export const IS_EMOJI_SUPPORTED = PLATFORM_ENV && (IS_MAC_OS || IS_IOS) && isLastEmojiVersionSupported();
 
-export const IS_SERVICE_WORKER_SUPPORTED = 'serviceWorker' in navigator;
+// The desktop app serves its bundle from `tauri://localhost` or, on Windows, `http://tauri.localhost`; the system
+// webviews run service workers only for network origins
+const IS_TAURI_BUNDLE = IS_TAURI
+  && (window.location.protocol === 'tauri:' || window.location.hostname === 'tauri.localhost');
+export const IS_SERVICE_WORKER_SUPPORTED = 'serviceWorker' in navigator && !IS_TAURI_BUNDLE;
 
 // TODO Consider failed service worker
 export const IS_PROGRESSIVE_SUPPORTED = IS_SERVICE_WORKER_SUPPORTED;
@@ -91,7 +95,8 @@ export const IS_CANVAS_FILTER_SUPPORTED = (
 );
 export const IS_REQUEST_FULLSCREEN_SUPPORTED = 'requestFullscreen' in document.createElement('div');
 export const IS_DOCUMENT_PICTURE_IN_PICTURE_SUPPORTED = Boolean(window.documentPictureInPicture?.requestWindow);
-export const ARE_CALLS_SUPPORTED = true;
+// TeleSignal has no Signal calls yet
+export const ARE_CALLS_SUPPORTED = false;
 
 export const IS_WAVE_TRANSFORM_SUPPORTED = !IS_MOBILE
   && !IS_FIREFOX // https://bugzilla.mozilla.org/show_bug.cgi?id=1961378

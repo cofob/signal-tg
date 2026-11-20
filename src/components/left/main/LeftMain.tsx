@@ -172,7 +172,8 @@ const LeftMain = ({
   }, [content]);
 
   const checkTauriUpdate = useLastCallback(() => {
-    window.tauri?.checkUpdate()
+    if (!window.tauri?.hasUpdater) return;
+    window.tauri.checkUpdate()
       .then((update) => setTauriUpdate(update ?? undefined))
       .catch((e) => {
         // eslint-disable-next-line no-console

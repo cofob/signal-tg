@@ -106,7 +106,7 @@ const FullNameTitle = ({
     }
 
     if (isSavedMessages) {
-      return lang(isSavedDialog ? 'MyNotes' : 'SavedMessages');
+      return lang(isSavedDialog ? 'MyNotes' : 'NoteToSelf');
     }
 
     if (isAnonymousForwardsChat(realPeer!.id)) {

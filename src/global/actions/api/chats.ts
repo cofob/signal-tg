@@ -595,6 +595,9 @@ addActionHandler('loadAllChats', async (global, actions, payload): Promise<void>
     setGlobal(global);
     global = getGlobal();
   }
+
+  // A list loaded before a reconnect is complete already, and `sync` still waits for its first batch
+  if (!isCallbackFired) await whenFirstBatchDone?.();
 });
 
 addActionHandler('loadPinnedDialogs', async (global, actions, payload): Promise<void> => {

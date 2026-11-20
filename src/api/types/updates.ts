@@ -82,6 +82,14 @@ export type ApiUpdateAuthorizationState = {
   hint?: string;
   noReset?: boolean;
   qrCode?: { token: string; expires: number };
+  // Signal link and sync: the link screen shows the message history transfer instead of the QR code
+  historySync?: ApiHistorySyncProgress;
+};
+
+export type ApiHistorySyncProgress = {
+  step: 'waiting' | 'downloading' | 'importing';
+  // From 0 to 1, while downloading and importing
+  progress?: number;
 };
 
 export type ApiUpdateWebAuthTokenFailed = {

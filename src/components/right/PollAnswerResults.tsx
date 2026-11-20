@@ -144,12 +144,14 @@ const PollAnswerResults = ({
                     noStatusOrTyping
                   />
                 )}
-                <span
-                  className="vote-date"
-                  title={formatDateTime(lang, secondsToDate(date), { date: 'long', time: 'short' })}
-                >
-                  {formatCompactTimestamp(lang, secondsToDate(date), { variant: 'poll', withTime: true })}
-                </span>
+                {Boolean(date) && (
+                  <span
+                    className="vote-date"
+                    title={formatDateTime(lang, secondsToDate(date), { date: 'long', time: 'short' })}
+                  >
+                    {formatCompactTimestamp(lang, secondsToDate(date), { variant: 'poll', withTime: true })}
+                  </span>
+                )}
               </ListItem>
             ))
             : <Loading />}
