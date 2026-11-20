@@ -146,6 +146,10 @@ export interface LangPair {
   'SignalLinkHelp1': undefined;
   'SignalLinkHelp2': undefined;
   'SignalLinkHelp3': undefined;
+  'SignalHistorySyncTitle': undefined;
+  'SignalHistorySyncWaiting': undefined;
+  'SignalHistorySyncNote': undefined;
+  'SignalHistorySyncFailed': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2882,6 +2886,12 @@ export interface LangPairWithVariables<V = LangVariable> {
     'limit4': V;
     'limit5': V;
   };
+  'SignalHistorySyncDownloading': {
+    'percent': V;
+  };
+  'SignalHistorySyncImporting': {
+    'percent': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -5153,6 +5163,13 @@ export interface LangKeyGroups {
       | 'PremiumPreviewLimitsDescription';
     variables: 'limit1' | 'limit2' | 'limit3' | 'limit4' | 'limit5';
   };
+  'percent': {
+    keys:
+      | 'SignalHistorySyncDownloading'
+      | 'SignalHistorySyncImporting'
+      | 'GiftDiscount';
+    variables: 'percent';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -5558,11 +5575,6 @@ export interface LangKeyGroups {
     keys:
       | 'ProfileOpenAppAbout';
     variables: 'terms';
-  };
-  'percent': {
-    keys:
-      | 'GiftDiscount';
-    variables: 'percent';
   };
   'time,user': {
     keys:

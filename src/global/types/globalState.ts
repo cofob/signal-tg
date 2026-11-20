@@ -17,6 +17,7 @@ import type {
   ApiEmojiGroup,
   ApiEmojiStatusType,
   ApiGroupCall,
+  ApiHistorySyncProgress,
   ApiMessage,
   ApiMessagePoll,
   ApiNotifyPeerType,
@@ -196,6 +197,7 @@ export type GlobalState = {
       token: string;
       expires: number;
     };
+    historySync?: ApiHistorySyncProgress;
     passkeyOption?: ApiPasskeyOption;
 
     hasWebAuthTokenFailed?: true;
