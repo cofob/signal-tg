@@ -14,6 +14,12 @@ export type AttachmentMetadata = Omit<
   'attachmentIdentifier' | 'cdnNumber' | 'key' | 'size' | 'digest' | 'uploadTimestamp' | '$typeName'
 >;
 
+type UploadAttachmentOptions = {
+  signal?: AbortSignal;
+  // Follows the encrypted bytes sent
+  onProgress?: (sentLength: number, totalLength: number) => void;
+};
+
 type UploadForm = {
   cdn: number;
   key: string;
@@ -30,7 +36,12 @@ const HTTP_PAYLOAD_TOO_LARGE = 413;
  * Encrypts an attachment, uploads it to CDN 3 with a TUS creation-with-upload request and returns its
  * pointer for a `DataMessage` (Signal Desktop `ts/util/uploadAttachment.preload.ts`)
  */
-export async function uploadAttachment(connection: ChatConnection, data: Uint8Array, metadata: AttachmentMetadata) {
+export async function uploadAttachment(
+  connection: ChatConnection,
+  data: Uint8Array,
+  metadata: AttachmentMetadata,
+  { signal, onProgress }: UploadAttachmentOptions = {},
+) {
   const { encrypted, key, digest } = await encryptAttachment(data);
 
   const { status, json: form } = await connection.sendJsonRequest<UploadForm>(
@@ -56,6 +67,8 @@ export async function uploadAttachment(connection: ChatConnection, data: Uint8Ar
       'Content-Type': 'application/offset+octet-stream',
     },
     body: encrypted,
+    signal,
+    onSendProgress: onProgress,
   });
   if (response.status !== HTTP_CREATED && response.status !== HTTP_OK) {
     throw new Error(`Attachment upload failed with HTTP ${response.status}`);
