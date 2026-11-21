@@ -143,6 +143,20 @@ Proof in the browser (demo account, `proof.mjs` steps below), counting records w
 | unlocked again | same, 10 chats shown, pictures decode | same | same |
 | passcode off | 0 of 7 encrypted, readable again | readable again | 9 readable images |
 
+Proof with two account slots (two demo accounts, slot 2 at `?account=2`, Chrome on its own profile; counts of encrypted
+records):
+
+| Step | slot 1 | slot 2 |
+| --- | --- | --- |
+| both seeded, no passcode, slot 2's tab closed | stores, messages, calls and cached files readable | the same |
+| passcode turned on in slot 1's tab | 9 of 10 `ts-signal` records (the marker is the tenth), 66 of 66 messages, 12 of 12 conversations, 6 of 6 calls and all cached files encrypted | the same: the idle slot was encrypted too |
+| lock, reload, unlock | still encrypted, 10 chats shown | still encrypted |
+| slot 2 opened in another tab (its engine runs), "turn off" | refused, passcode stays, everything still encrypted | its engine ran with the key |
+| slot 2's tab closed, "turn off" | 0 encrypted, readable again | 0 encrypted, readable again; markers removed |
+
+A tab that only navigated away can keep its worker, and so its lock, for a while (the page may be kept for going back),
+and "turn off" refuses until that tab is closed.
+
 Tests: `src/lib/signal/store/atRest.test.ts` (value encoding, key and context binding, `SignalStore`, every `MessageDb`
 query before and after encryption, a moved record, interrupted migration, encrypted files) and
 `atRestSafety.test.ts` (a full round trip of every record type, including `sendRetry`, which an earlier version
