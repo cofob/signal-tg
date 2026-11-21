@@ -53,6 +53,7 @@ import { saveProfileKey } from '../sender/sealedSender';
 import { describeSendError, getSendErrorKind, UnregisteredUserError } from '../sender/sendErrors';
 import {
   sendBlockedSync,
+  sendConfigurationSync,
   sendDeleteForMeSync,
   sendMessage,
   sendMessageRequestResponseSync,
@@ -106,6 +107,7 @@ import {
   StoryMessageSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_Request_Type,
   SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
   Verified_State,
@@ -2277,8 +2279,34 @@ export default class MessageProcessor {
         // Another device changed our username and wrote it to the storage service
         this.scheduleStorageSync();
         break;
+      case 'request':
+        await this.answerSyncRequest(content.value.type);
+        break;
       default:
         break;
+    }
+  }
+
+  /**
+   * A device we linked asks for our message settings and blocked list. Only a primary device answers (Signal
+   * Android `SyncMessageProcessor.handleSynchronizeRequestMessage`); contacts and keys reach the new device through
+   * the storage service and the provisioning message instead.
+   */
+  private async answerSyncRequest(type: SyncMessage_Request_Type) {
+    const account = await this.getAccount();
+    if (account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID) return;
+
+    if (type === SyncMessage_Request_Type.CONFIGURATION) {
+      await this.sendWhenConnected(async (context) => {
+        await sendConfigurationSync(context, {
+          readReceipts: account.isReadReceiptsEnabled,
+          typingIndicators: account.isTypingIndicatorsEnabled,
+          linkPreviews: account.isLinkPreviewsEnabled,
+          unidentifiedDeliveryIndicators: account.isSealedSenderIndicatorsEnabled,
+        });
+      });
+    } else if (type === SyncMessage_Request_Type.BLOCKED) {
+      await this.sendWhenConnected((context) => this.sendBlockedList(context));
     }
   }
 

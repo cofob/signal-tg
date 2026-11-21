@@ -257,6 +257,29 @@ export interface LangPair {
   'SignalCallLinkText': undefined;
   'SignalDeviceLinkTitle': undefined;
   'SignalDeviceLinkText': undefined;
+  'SignalDevices': undefined;
+  'SettingsSignalDevicesDesc': undefined;
+  'SignalDevicesLink': undefined;
+  'SignalDevicesThisDevice': undefined;
+  'SignalDevicesUnnamed': undefined;
+  'SignalDevicesUnlink': undefined;
+  'SignalDevicesUnlinkText': undefined;
+  'SignalDevicesPrimaryAbout': undefined;
+  'SignalDevicesLinkedAbout': undefined;
+  'SignalDeviceLinkPrompt': undefined;
+  'SignalDeviceLinkPromptText': undefined;
+  'SignalDeviceLinkField': undefined;
+  'SignalDeviceLinkScan': undefined;
+  'SignalDeviceLinkStopScan': undefined;
+  'SignalDeviceLinkConfirm': undefined;
+  'SignalDeviceLinked': undefined;
+  'SignalDeviceLinkPending': undefined;
+  'SignalDeviceLinkBadCode': undefined;
+  'SignalDeviceLinkLimit': undefined;
+  'SignalDeviceLinkRejected': undefined;
+  'SignalDeviceLinkRateLimited': undefined;
+  'SignalDeviceLinkNoKey': undefined;
+  'SignalDeviceLinkNetwork': undefined;
   'SignalReRegisterTitle': undefined;
   'SignalReRegisterText': undefined;
   'SignalContactDiscovery': undefined;
@@ -2215,6 +2238,7 @@ export interface LangPair {
   'SettingsKeywordsAutoDelete': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSignalDevices': undefined;
   'SettingsKeywordsSignalPin': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
@@ -2338,6 +2362,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalProxyLinkText': {
     'host': V;
+  };
+  'SignalDevicesLastActive': {
+    'date': V;
+  };
+  'SignalDevicesUnlinkTitle': {
+    'name': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -3715,6 +3745,29 @@ export interface LangKeyGroups {
       | 'SignalProxyLinkText';
     variables: 'host';
   };
+  'date': {
+    keys:
+      | 'SignalDevicesLastActive'
+      | 'MessageScheduledOn'
+      | 'MessageTooltipEditedDate'
+      | 'MessageTooltipForwardedDate'
+      | 'LastSeenAtDate'
+      | 'ChannelPermissionDeniedSendMessagesUntil'
+      | 'ProfileBirthdayValue'
+      | 'ProfileBirthdayTodayValue'
+      | 'ActionGroupCallScheduledChannel'
+      | 'ChatPrivateMessageEditTimestampDate'
+      | 'MessageReadAt';
+    variables: 'date';
+  };
+  'name': {
+    keys:
+      | 'SignalDevicesUnlinkTitle'
+      | 'NewDiscussionChatTitle'
+      | 'ContextMenuNoForwardsPeer'
+      | 'StoriesSettingDeleteListInfo';
+    variables: 'name';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -3879,31 +3932,10 @@ export interface LangKeyGroups {
       | 'PollResultsAnswerTitle';
     variables: 'answer' | 'percent';
   };
-  'date': {
-    keys:
-      | 'MessageScheduledOn'
-      | 'MessageTooltipEditedDate'
-      | 'MessageTooltipForwardedDate'
-      | 'LastSeenAtDate'
-      | 'ChannelPermissionDeniedSendMessagesUntil'
-      | 'ProfileBirthdayValue'
-      | 'ProfileBirthdayTodayValue'
-      | 'ActionGroupCallScheduledChannel'
-      | 'ChatPrivateMessageEditTimestampDate'
-      | 'MessageReadAt';
-    variables: 'date';
-  };
   'group': {
     keys:
       | 'GroupEndGroupTitle';
     variables: 'group';
-  };
-  'name': {
-    keys:
-      | 'NewDiscussionChatTitle'
-      | 'ContextMenuNoForwardsPeer'
-      | 'StoriesSettingDeleteListInfo';
-    variables: 'name';
   };
   'count,total': {
     keys:

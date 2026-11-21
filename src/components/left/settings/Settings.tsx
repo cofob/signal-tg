@@ -39,6 +39,7 @@ import SettingsPrivacyPhoneNumber from './SettingsPrivacyPhoneNumber';
 import SettingsPrivacyVisibility from './SettingsPrivacyVisibility';
 import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityExceptionList';
 import SettingsQuickReaction from './SettingsQuickReaction';
+import SettingsSignalDevices from './SettingsSignalDevices';
 import SettingsSignalPin from './SettingsSignalPin';
 import SettingsSignalPinForm from './SettingsSignalPinForm';
 import SettingsSignalProxy from './SettingsSignalProxy';
@@ -485,6 +486,11 @@ const Settings = ({
             isActive={isScreenActive}
             onReset={handleReset}
           />
+        );
+
+      case SettingsScreens.SignalDevices:
+        return (
+          <SettingsSignalDevices isActive={isScreenActive} onReset={handleReset} />
         );
 
       case SettingsScreens.Performance:

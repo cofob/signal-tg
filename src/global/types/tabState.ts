@@ -549,6 +549,11 @@ export type TabState = {
   };
 
   // Signal: a link to something that this app does not do, which the dialog explains; `host` is the proxy's
+  linkDeviceModal?: {
+    // The link of the device to link, when it came from a `sgnl://linkdevice` link
+    url?: string;
+  };
+
   signalLinkModal?: {
     type: 'proxy' | 'callLink' | 'linkDevice' | 'reRegister';
     host?: string;

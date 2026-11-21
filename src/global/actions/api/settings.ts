@@ -1087,11 +1087,65 @@ addActionHandler('sortChatUsernames', async (global, actions, payload): Promise<
   }
 });
 
+const LINK_DEVICE_ERROR_KEYS = {
+  badCode: 'SignalDeviceLinkBadCode',
+  limitExceeded: 'SignalDeviceLinkLimit',
+  rejected: 'SignalDeviceLinkRejected',
+  rateLimited: 'SignalDeviceLinkRateLimited',
+  noRecoveryKey: 'SignalDeviceLinkNoKey',
+  network: 'SignalDeviceLinkNetwork',
+} as const;
+
 addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
   const signalPin = await callApi('fetchSignalPinSettings');
   global = getGlobal();
   global = replaceSettings(global, { signalPin });
   setGlobal(global);
+});
+
+addActionHandler('loadSignalDevices', async (global): Promise<void> => {
+  const signalDevices = await callApi('fetchSignalDevices');
+  global = getGlobal();
+  global = replaceSettings(global, { signalDevices });
+  setGlobal(global);
+});
+
+addActionHandler('linkSignalDevice', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('linkSignalDevice', url);
+  if (!result) return;
+
+  if ('error' in result && result.error) {
+    actions.showNotification({ message: { key: LINK_DEVICE_ERROR_KEYS[result.error] }, tabId });
+    return;
+  }
+
+  actions.closeLinkDeviceModal({ tabId });
+  actions.showNotification({
+    message: result.device
+      ? { key: 'SignalDeviceLinked' }
+      : { key: 'SignalDeviceLinkPending' },
+    tabId,
+  });
+  actions.loadSignalDevices();
+});
+
+addActionHandler('unlinkSignalDevice', async (global, actions, payload): Promise<void> => {
+  const { deviceId, tabId = getCurrentTabId() } = payload;
+  const isUnlinked = await callApi('unlinkSignalDevice', deviceId);
+  if (!isUnlinked) actions.showNotification({ message: { key: 'ErrorUnexpected' }, tabId });
+  actions.loadSignalDevices();
+});
+
+// A link of a device that wants to be linked: a primary device offers to link it, a linked device cannot
+addActionHandler('openSignalLinkDevice', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+  const signalDevices = await callApi('fetchSignalDevices');
+  if (signalDevices?.isPrimary) {
+    actions.openLinkDeviceModal({ url, tabId });
+  } else {
+    actions.openSignalLinkModal({ type: 'linkDevice', tabId });
+  }
 });
 
 addActionHandler('setSignalPin', async (global, actions, payload): Promise<void> => {

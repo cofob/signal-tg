@@ -101,6 +101,14 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     iconBg: 'blue',
   },
   {
+    screen: SettingsScreens.SignalDevices,
+    parent: SettingsScreens.Main,
+    titleKey: 'SignalDevices',
+    keywordsKey: 'SettingsKeywordsSignalDevices',
+    icon: 'devices-filled',
+    iconBg: 'blue',
+  },
+  {
     screen: SettingsScreens.Performance,
     parent: SettingsScreens.Main,
     titleKey: 'MenuAnimations',

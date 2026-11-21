@@ -11,6 +11,20 @@ export type ApiSignalPinSettings = {
   isRegistrationLockEnabled: boolean;
 };
 
+/** A device of the account; `lastSeen` is in milliseconds, with the precision of a day */
+export type ApiSignalDevice = {
+  id: number;
+  name?: string;
+  lastSeen: number;
+};
+
+/** The devices of the account: a primary device links and unlinks them, a linked device only lists them */
+export type ApiSignalDevices = {
+  isPrimary: boolean;
+  currentDeviceId: number;
+  devices: ApiSignalDevice[];
+};
+
 export interface ApiPrivacySettings {
   visibility: PrivacyVisibility;
   isUnspecified?: boolean;

@@ -232,6 +232,11 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     self, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat, bookClub, oldProject,
   ] = conversations;
   await store.setItem('invitedNumbers', { [demoPni]: '+15550100077' });
+  await store.setItem('demoDevices', [
+    { id: 1, name: 'Pixel 9', lastSeen: now - 2 * 24 * 60 * MINUTE },
+    { id: 2, name: 'TeleSignal (demo)', lastSeen: now },
+    { id: 3, name: 'Signal Desktop', lastSeen: now - 5 * 24 * 60 * MINUTE },
+  ]);
 
   const messages: [ConversationRecord, DemoMessage][] = [
     [aliceChat, {

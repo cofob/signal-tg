@@ -225,6 +225,12 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadSignalPinSettings: undefined;
+  loadSignalDevices: undefined;
+  linkSignalDevice: { url: string } & WithTabId;
+  unlinkSignalDevice: { deviceId: number } & WithTabId;
+  openSignalLinkDevice: { url: string } & WithTabId;
+  openLinkDeviceModal: { url?: string } & WithTabId;
+  closeLinkDeviceModal: WithTabId | undefined;
   setSignalPin: {
     pin: string;
   } & WithTabId;

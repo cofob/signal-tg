@@ -23,6 +23,7 @@ import type {
   ApiPhoto,
   ApiReaction,
   ApiSessionData,
+  ApiSignalDevices,
   ApiSignalPinSettings,
   ApiSticker,
   ApiStickerSet,
@@ -169,6 +170,7 @@ export interface AccountSettings {
   lastRecordMessageMode?: 'voice' | 'video';
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
+  signalDevices?: ApiSignalDevices;
   isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
@@ -242,6 +244,7 @@ export enum SettingsScreens {
   PrivacyGroupChatsDeniedContacts,
   PrivacyBlockedUsers,
   Performance,
+  SignalDevices,
   Folders,
   FoldersCreateFolder,
   FoldersEditFolder,

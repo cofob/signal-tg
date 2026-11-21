@@ -32,6 +32,7 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  isSealedSenderIndicatorsEnabled?: boolean;
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;
@@ -125,6 +126,8 @@ type Items = {
   blockedE164s: string[];
   // The numbers of users invited to groups by PNI, by PNI service id; the group state lists only the PNI
   invitedNumbers: Record<string, string>;
+  // The devices a demo account lists (`signalDev.seedDemo()`)
+  demoDevices: { id: number; name?: string; lastSeen: number }[];
   // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
   notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
