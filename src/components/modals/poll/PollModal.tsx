@@ -45,7 +45,6 @@ import Button from '../../ui/Button';
 import InputText from '../../ui/InputText';
 import Menu from '../../ui/Menu';
 import MenuItem from '../../ui/MenuItem';
-import TextArea from '../../ui/TextArea';
 import Control, {
   ControlAfter,
   ControlDescription,
@@ -63,17 +62,13 @@ import Modal, {
   ModalHeaderAction,
   ModalTitle,
 } from '@gili/modal/Modal';
-import Checkbox from '@gili/primitives/Checkbox';
-import Radio from '@gili/primitives/Radio';
 import Switch from '@gili/primitives/Switch';
 
 import styles from './PollModal.module.scss';
 
 const MAX_OPTION_LENGTH = 100;
 const MAX_QUESTION_LENGTH = 255;
-const MAX_SOLUTION_LENGTH = 200;
 const MIN_OPTIONS_COUNT = 1;
-const MIN_QUIZ_OPTIONS_COUNT = 2;
 
 const CLOSE_PERIOD_OPTIONS = [
   HOUR,
@@ -86,7 +81,6 @@ const CLOSE_PERIOD_OPTIONS = [
 const ICON_COLORS = {
   anonymous: '#0a84ff',
   multiple: '#ffb300',
-  quiz: '#34c759',
   addAnswers: '#2faeff',
   revote: '#6a5cff',
   shuffle: '#b75bff',
@@ -163,9 +157,6 @@ const PollModal = ({
   const [options, setOptions] = useState<PollOption[]>(() => [createPollOption()]);
   const [isPublic, setIsPublic] = useState(true);
   const [isMultipleAnswers, setIsMultipleAnswers] = useState(true);
-  const [isQuizMode, setIsQuizMode] = useState(Boolean(modal.isQuiz));
-  const [correctAnswerIds, setCorrectAnswerIds] = useState<string[]>([]);
-  const [solution, setSolution] = useState('');
   const [canAddAnswers, setCanAddAnswers] = useState(true);
   const [canRevote, setCanRevote] = useState(true);
   const [shouldShuffleAnswers, setShouldShuffleAnswers] = useState(false);
@@ -207,10 +198,10 @@ const PollModal = ({
   }, [isChannel]);
 
   useEffect(() => {
-    if (isQuizMode || !isPublic) {
+    if (!isPublic) {
       setCanAddAnswers(false);
     }
-  }, [isPublic, isQuizMode]);
+  }, [isPublic]);
 
   useEffect(() => {
     if (closePeriod || closeDate) {
@@ -220,30 +211,12 @@ const PollModal = ({
     setShouldHideResultsUntilClose(false);
   }, [closeDate, closePeriod]);
 
-  useEffect(() => {
-    if (!isMultipleAnswers && correctAnswerIds.length > 1) {
-      setCorrectAnswerIds(correctAnswerIds.slice(0, 1));
-    }
-  }, [correctAnswerIds, isMultipleAnswers]);
-
   const filledOptions = useMemo(() => {
     return options.map((option) => ({
       id: option.id,
       text: option.text.trim().substring(0, MAX_OPTION_LENGTH),
     })).filter(({ text }) => Boolean(text));
   }, [options]);
-
-  const correctAnswerPositions = useMemo(() => {
-    return correctAnswerIds.reduce<number[]>((result, id) => {
-      const answerIndex = filledOptions.findIndex((option) => option.id === id);
-
-      if (answerIndex >= 0) {
-        result.push(answerIndex);
-      }
-
-      return result;
-    }, []);
-  }, [correctAnswerIds, filledOptions]);
 
   const reorderableOptionIds = useMemo(() => {
     return filledOptions.map(({ id }) => id);
@@ -252,15 +225,12 @@ const PollModal = ({
   const trimmedQuestion = useMemo(() => question.trim().substring(0, MAX_QUESTION_LENGTH), [question]);
   const isInScheduledList = modal.messageListType === 'scheduled';
   const canSchedule = !chat?.isMonoforum;
-  const isCorrectAnswerInvalid = hasSubmitted && isQuizMode && !correctAnswerPositions.length;
-  const isAddAnswersDisabled = isQuizMode || !isPublic;
-  const minOptionsCount = isQuizMode ? MIN_QUIZ_OPTIONS_COUNT : MIN_OPTIONS_COUNT;
+  const isAddAnswersDisabled = !isPublic;
   const remainingOptionsCount = Math.max(pollMaxAnswers - filledOptions.length, 0);
   const hasCountryLimit = selectedCountryIds !== undefined;
   const selectedCountriesCount = selectedCountryIds?.length || 0;
   const isSendDisabled = !trimmedQuestion
-    || filledOptions.length < minOptionsCount
-    || (isQuizMode && !correctAnswerPositions.length)
+    || filledOptions.length < MIN_OPTIONS_COUNT
     || (hasCountryLimit && !selectedCountriesCount);
 
   const hasLimitedDuration = closePeriod !== undefined || closeDate !== undefined;
@@ -338,20 +308,6 @@ const PollModal = ({
   const handleRemoveOption = useLastCallback((id: string) => {
     const nextOptions = normalizeOptions(options.filter((option) => option.id !== id), pollMaxAnswers);
     setOptions(nextOptions);
-    setCorrectAnswerIds(correctAnswerIds.filter((correctAnswerId) => correctAnswerId !== id));
-  });
-
-  const handleToggleCorrectAnswer = useLastCallback((id: string) => {
-    if (!isMultipleAnswers) {
-      setCorrectAnswerIds([id]);
-      return;
-    }
-
-    setCorrectAnswerIds((prevCorrectAnswers) => (
-      prevCorrectAnswers.includes(id)
-        ? prevCorrectAnswers.filter((currentId) => currentId !== id)
-        : [...prevCorrectAnswers, id]
-    ));
   });
 
   const handleOptionKeyDown = useLastCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -383,14 +339,6 @@ const PollModal = ({
 
   const handleDescriptionChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setDescription(e.currentTarget.value);
-  });
-
-  const handleSolutionChange = useLastCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSolution(e.currentTarget.value);
-  });
-
-  const handleQuizModeChange = useLastCallback((checked: boolean) => {
-    setIsQuizMode(checked);
   });
 
   const handleMultipleAnswersChange = useLastCallback((checked: boolean) => {
@@ -472,11 +420,7 @@ const PollModal = ({
     setOptions(normalizedOptions);
     setHasSubmitted(true);
 
-    if (!trimmedQuestion || filledOptions.length < minOptionsCount) {
-      return undefined;
-    }
-
-    if (isQuizMode && !correctAnswerPositions.length) {
+    if (!trimmedQuestion || filledOptions.length < MIN_OPTIONS_COUNT) {
       return undefined;
     }
 
@@ -499,7 +443,6 @@ const PollModal = ({
         answers,
         isPublic: !isChannel && isPublic ? true : undefined,
         isMultipleChoice: isMultipleAnswers ? true : undefined,
-        isQuiz: isQuizMode ? true : undefined,
         canAddAnswers: !isChannel && isPublic && canAddAnswers ? true : undefined,
         isRevoteDisabled: !canRevote ? true : undefined,
         shouldShuffleAnswers: shouldShuffleAnswers ? true : undefined,
@@ -510,8 +453,6 @@ const PollModal = ({
         closeDate,
         isCreator: true,
       },
-      correctAnswers: isQuizMode ? correctAnswerPositions : undefined,
-      solution: isQuizMode ? solution.trim().substring(0, MAX_SOLUTION_LENGTH) : undefined,
     };
 
     return payload;
@@ -636,7 +577,6 @@ const PollModal = ({
           {options.map((option, index) => {
             const isFilledOption = Boolean(option.text.trim());
             const isAddOptionRow = !isFilledOption && index === options.length - 1;
-            const isCorrectAnswerChecked = correctAnswerIds.includes(option.id);
             const shouldShowRemoveButton = options.length > 1 && !isAddOptionRow;
             const shouldShowOptionError = hasSubmitted && !filledOptions.length && index === 0;
             const rowProps = isFilledOption ? getReorderableRowProps(option.id) : undefined;
@@ -680,28 +620,6 @@ const PollModal = ({
                       className={styles.optionLeadingIconGlyph}
                     />
                   </div>
-                  {isQuizMode && (
-                    <div className={styles.optionSelector}>
-                      {isMultipleAnswers ? (
-                        <Checkbox
-                          checked={isCorrectAnswerChecked}
-                          disabled={isAddOptionRow}
-                          isInvalid={isCorrectAnswerInvalid && !isCorrectAnswerChecked && !isAddOptionRow}
-                          onChange={() => handleToggleCorrectAnswer(option.id)}
-                        />
-                      ) : (
-                        <Radio
-                          value={option.id}
-                          checked={isCorrectAnswerChecked}
-                          disabled={isAddOptionRow}
-                          className={isCorrectAnswerInvalid && !isCorrectAnswerChecked && !isAddOptionRow
-                            ? styles.optionRadioInvalid
-                            : undefined}
-                          onChange={() => handleToggleCorrectAnswer(option.id)}
-                        />
-                      )}
-                    </div>
-                  )}
                   <InputText
                     className={buildClassName(
                       styles.optionInput,
@@ -730,11 +648,6 @@ const PollModal = ({
               </div>
             );
           })}
-          {isCorrectAnswerInvalid && (
-            <IslandDescription key="correct-answer-error" className={styles.errorDescription}>
-              {lang('PollsChooseCorrect')}
-            </IslandDescription>
-          )}
         </Island>
         <IslandDescription>
           {remainingOptionsCount > 0 ? (
@@ -789,14 +702,6 @@ const PollModal = ({
             description={lang('PollRandomOrderDescription')}
             checked={shouldShuffleAnswers}
             onChange={setShouldShuffleAnswers}
-          />
-          <SettingRow
-            iconName="check-filled"
-            iconBackgroundColor={ICON_COLORS.quiz}
-            label={lang('PollQuiz')}
-            description={lang('PollQuizDescription')}
-            checked={isQuizMode}
-            onChange={handleQuizModeChange}
           />
           <SettingRow
             iconName="timer-filled"
@@ -873,22 +778,6 @@ const PollModal = ({
           )}
         </Island>
 
-        {isQuizMode && (
-          <>
-            <IslandTitle>{lang('PollsSolutionTitle')}</IslandTitle>
-            <Island>
-              <TextArea
-                className={styles.textArea}
-                value={solution}
-                label={lang('PollsSolutionTitle')}
-                maxLength={MAX_SOLUTION_LENGTH}
-                noReplaceNewlines
-                onChange={handleSolutionChange}
-              />
-            </Island>
-            <IslandDescription>{lang('CreatePollExplanationInfo')}</IslandDescription>
-          </>
-        )}
       </Modal>
       {calendar}
       <CalendarModal

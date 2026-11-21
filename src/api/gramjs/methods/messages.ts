@@ -516,14 +516,7 @@ export function sendApiMessage(
         const attachedMedia = poll.attachedMedia
           ? await uploadMedia(chat, localMessage, poll.attachedMedia, onProgress!)
           : undefined;
-        const solutionMedia = poll.solutionMedia
-          ? await uploadMedia(chat, localMessage, poll.solutionMedia, onProgress!)
-          : undefined;
-
-        media = buildInputPoll(poll, randomId, {
-          attachedMedia,
-          solutionMedia,
-        });
+        media = buildInputPoll(poll, randomId, attachedMedia);
       } catch (err) {
         if (DEBUG) {
           // eslint-disable-next-line no-console

@@ -208,7 +208,6 @@ export interface ApiPollAnswer {
 
 export interface ApiPollResult {
   isChosen?: true;
-  isCorrect?: true;
   option: string;
   votersCount: number;
   recentVoterIds?: string[];
@@ -220,7 +219,6 @@ export interface ApiPoll {
   isClosed?: true;
   isPublic?: true;
   isMultipleChoice?: true;
-  isQuiz?: true;
   canAddAnswers?: true;
   isRevoteDisabled?: true;
   shouldShuffleAnswers?: true;
@@ -239,9 +237,6 @@ export interface ApiPollResults {
   resultByOption?: Record<string, ApiPollResult>;
   totalVoters?: number;
   recentVoterIds?: string[];
-  solution?: string;
-  solutionEntities?: ApiMessageEntity[];
-  solutionMedia?: MediaContent;
 }
 
 export interface ApiMessagePoll {
@@ -301,11 +296,7 @@ export type ApiDice = {
 
 export type ApiNewPoll = {
   summary: ApiPoll;
-  correctAnswers?: number[];
-  solution?: string;
-  solutionEntities?: ApiMessageEntity[];
   attachedMedia?: ApiAttachment;
-  solutionMedia?: ApiAttachment;
 };
 
 export interface ApiTodoItem {
@@ -888,7 +879,7 @@ export type ApiRequestPeerType = {
 
 export type ApiReplyButtonAction =
   { type: 'command' | 'requestPhone' | 'unsupported' }
-  | { type: 'requestPoll'; isQuiz?: boolean }
+  | { type: 'requestPoll' }
   | { type: 'requestPeer'; buttonId: number; maxQuantity: number; peerType: ApiRequestPeerType }
   | { type: 'simpleWebView'; url: string };
 

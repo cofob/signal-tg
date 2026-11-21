@@ -573,7 +573,7 @@ export function buildPollAnswer(answer: GramJs.TypePollAnswer): ApiPollAnswer | 
 
 export function buildPoll(poll: GramJs.Poll): ApiPoll {
   const {
-    id, closed, publicVoters, multipleChoice, quiz, closePeriod, closeDate, answers, question, creator,
+    id, closed, publicVoters, multipleChoice, closePeriod, closeDate, answers, question, creator,
     hideResultsUntilClose, revotingDisabled, shuffleAnswers, openAnswers, subscribersOnly, countriesIso2, hash,
   } = poll;
   const apiAnswers = answers.map(buildPollAnswer).filter(Boolean);
@@ -583,7 +583,6 @@ export function buildPoll(poll: GramJs.Poll): ApiPoll {
     isClosed: closed,
     isPublic: publicVoters,
     isMultipleChoice: multipleChoice,
-    isQuiz: quiz,
     closePeriod,
     closeDate,
     isCreator: creator,
@@ -611,10 +610,6 @@ function addWebPagesFromPoll(
 
     addWebPageFromMedia(webPages, answer.media);
   });
-
-  if (pollResults?.solutionMedia) {
-    addWebPageFromMedia(webPages, pollResults.solutionMedia);
-  }
 }
 
 function addWebPageFromMedia(webPages: ApiWebPage[], media: GramJs.TypeMessageMedia) {
@@ -656,30 +651,22 @@ export function buildTodo(todo: GramJs.TodoList, completions?: GramJs.TodoComple
 
 export function buildPollResults(pollResults: GramJs.PollResults): ApiPollResults {
   const {
-    results: rawResults, totalVoters, recentVoters, solution, solutionEntities: entities, min, solutionMedia,
+    results: rawResults, totalVoters, recentVoters, min,
   } = pollResults;
   const results = rawResults?.map(({
-    option, chosen, correct, voters, recentVoters: recentAnswerVoters,
+    option, chosen, voters, recentVoters: recentAnswerVoters,
   }) => ({
     isChosen: chosen,
-    isCorrect: correct,
     option: serializeBytes(option),
     votersCount: voters ?? 0,
     recentVoterIds: recentAnswerVoters?.map((peer) => getApiChatIdFromMtpPeer(peer)),
   }));
-
-  if (solutionMedia) {
-    addMediaToLocalDb(solutionMedia);
-  }
 
   return {
     isMin: min,
     totalVoters,
     recentVoterIds: recentVoters?.map((peer) => getApiChatIdFromMtpPeer(peer)),
     resultByOption: results && buildCollectionByKey(results, 'option'),
-    solution,
-    solutionEntities: entities?.map(buildApiMessageEntity),
-    solutionMedia: solutionMedia ? buildMessageMediaContent(solutionMedia) : undefined,
   };
 }
 

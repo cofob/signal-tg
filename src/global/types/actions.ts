@@ -2277,7 +2277,6 @@ export interface ActionPayloads {
     chatId: string;
     threadId?: ThreadId;
     messageListType: MessageListType;
-    isQuiz?: boolean;
   } & WithTabId;
   closePollModal: WithTabId | undefined;
   openMusicPicker: {

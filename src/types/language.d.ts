@@ -76,8 +76,6 @@ export interface LangPair {
   'CallMessageOutgoing': undefined;
   'CallMessageIncoming': undefined;
   'FinalResults': undefined;
-  'QuizPoll': undefined;
-  'AnonymousQuizPoll': undefined;
   'PublicPoll': undefined;
   'AnonymousPoll': undefined;
   'AccDescrReactionMentionDown': undefined;
@@ -666,14 +664,11 @@ export interface LangPair {
   'Create': undefined;
   'OptionHint': undefined;
   'CreatePollAddOption': undefined;
-  'PollsChooseCorrect': undefined;
   'AskAQuestion': undefined;
   'PollAnswersVisible': undefined;
   'PollAnswersVisibleDescription': undefined;
   'PollMultiple': undefined;
   'PollMultipleDescription': undefined;
-  'PollQuiz': undefined;
-  'PollQuizDescription': undefined;
   'PollAllowAddingAnswers': undefined;
   'PollAllowAddingAnswersDescription': undefined;
   'PollAllowVoteChanges': undefined;
@@ -691,8 +686,6 @@ export interface LangPair {
   'PollDuration': undefined;
   'PollHideResultsUntilClose': undefined;
   'PollSelectCloseDate': undefined;
-  'PollsSolutionTitle': undefined;
-  'CreatePollExplanationInfo': undefined;
   'VoipGroupPersonalAccount': undefined;
   'MenuStickers': undefined;
   'MenuAnimations': undefined;
@@ -797,11 +790,8 @@ export interface LangPair {
   'CallAgain': undefined;
   'CallBack': undefined;
   'PollSubmitVotes': undefined;
-  'PollSubmitAnswers': undefined;
   'PollViewResults': undefined;
   'PollBackToVote': undefined;
-  'PollBackToAnswer': undefined;
-  'ChatQuizTotalVotesEmpty': undefined;
   'ChatPollTotalVotesResultEmpty': undefined;
   'PremiumStickerTooltip': undefined;
   'ViewAction': undefined;
@@ -1352,7 +1342,6 @@ export interface LangPair {
   'FormattedDateDate': undefined;
   'FormattedDateTime': undefined;
   'MediaLocaltionImageAlt': undefined;
-  'MediaPollSolutionAria': undefined;
   'GeneralError': undefined;
   'ChatMemberListNoAccess': undefined;
   'NoMembersFound': undefined;
@@ -3854,12 +3843,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PollVoteCountButton': {
     'count': V;
   };
-  'PollAnswerCountButton': {
-    'count': V;
-  };
-  'PollAnsweredCount': {
-    'count': V;
-  };
   'VoteCount': {
     'count': V;
   };
@@ -5191,8 +5174,6 @@ export interface LangPluralKeyGroups {
       | 'ChatContextReactionCount'
       | 'ConversationContextMenuSeen'
       | 'PollVoteCountButton'
-      | 'PollAnswerCountButton'
-      | 'PollAnsweredCount'
       | 'VoteCount'
       | 'VoiceOverChatMessagesSelected'
       | 'ChatPinnedUnpinAll'

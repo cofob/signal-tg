@@ -994,7 +994,6 @@ function mergeMinPollResultByOption(
       ...currentResult,
       ...nextResult,
       isChosen: currentResult.isChosen || nextResult.isChosen,
-      isCorrect: currentResult.isCorrect || nextResult.isCorrect,
     };
   });
 

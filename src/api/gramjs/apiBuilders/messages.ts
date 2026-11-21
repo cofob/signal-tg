@@ -24,7 +24,6 @@ import type {
   ApiNewMediaTodo,
   ApiNewPoll,
   ApiPeer,
-  ApiPollResult,
   ApiPreparedInlineMessage,
   ApiReplyInfo,
   ApiSearchPostsFlood,
@@ -433,29 +432,10 @@ export function buildApiFactCheck(factCheck: GramJs.FactCheck): ApiFactCheck {
 }
 
 function buildNewLocalPoll(poll: ApiNewPoll): ApiMessagePoll {
-  const resultByOption = poll.correctAnswers?.length
-    ? poll.summary.answers.reduce((acc, answer, index) => {
-      const isCorrect = poll.correctAnswers?.includes(index);
-
-      acc[answer.option] = {
-        option: answer.option,
-        votersCount: 0,
-        isCorrect: isCorrect ? true : undefined,
-      };
-
-      return acc;
-    }, {} as Record<string, ApiPollResult>)
-    : undefined;
-
   return {
     mediaType: 'poll',
     summary: poll.summary,
-    results: {
-      resultByOption,
-      solution: poll.solution,
-      solutionEntities: poll.solutionEntities,
-      solutionMedia: poll.solutionMedia ? buildUploadingMedia(poll.solutionMedia) : undefined,
-    },
+    results: {},
     attachedMedia: poll.attachedMedia ? buildUploadingMedia(poll.attachedMedia) : undefined,
   };
 }

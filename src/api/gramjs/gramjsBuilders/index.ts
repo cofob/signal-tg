@@ -196,12 +196,9 @@ export function buildInputMediaDocument(media: ApiAudio | ApiSticker | ApiVideo 
 export function buildInputPoll(
   pollParams: ApiNewPoll,
   randomId: bigint,
-  media?: {
-    attachedMedia?: GramJs.TypeInputMedia;
-    solutionMedia?: GramJs.TypeInputMedia;
-  },
+  attachedMedia?: GramJs.TypeInputMedia,
 ) {
-  const { summary: poll, correctAnswers, solution, solutionEntities } = pollParams;
+  const { summary: poll } = pollParams;
 
   const inputPoll = new GramJs.Poll({
     id: randomId,
@@ -213,7 +210,6 @@ export function buildInputPoll(
         option: deserializeBytes(option),
       });
     }),
-    quiz: poll.isQuiz,
     closeDate: poll.closeDate,
     closePeriod: poll.closePeriod,
     hideResultsUntilClose: poll.shouldHideResultsUntilClose,
@@ -226,15 +222,9 @@ export function buildInputPoll(
     hash: DEFAULT_PRIMITIVES.BIGINT,
   });
 
-  const inputSolutionEntities = solutionEntities?.map(buildMtpMessageEntity) || [];
-
   return new GramJs.InputMediaPoll({
     poll: inputPoll,
-    correctAnswers,
-    attachedMedia: media?.attachedMedia,
-    solution,
-    solutionEntities: solution !== undefined ? inputSolutionEntities : undefined,
-    solutionMedia: media?.solutionMedia,
+    attachedMedia,
   });
 }
 
@@ -250,7 +240,6 @@ export function buildInputPollFromExisting(poll: ApiMessagePoll, shouldClose = f
           option: deserializeBytes(option),
         });
       }),
-      quiz: poll.summary.isQuiz,
       multipleChoice: poll.summary.isMultipleChoice,
       closeDate: poll.summary.closeDate,
       closePeriod: poll.summary.closePeriod,
@@ -264,14 +253,7 @@ export function buildInputPollFromExisting(poll: ApiMessagePoll, shouldClose = f
       openAnswers: poll.summary.canAddAnswers,
       hash: BigInt(poll.summary.hash),
     }),
-    correctAnswers: poll.summary.answers.map((answer, index) => {
-      const result = poll.results.resultByOption?.[answer.option];
-      return result?.isCorrect ? index : -1;
-    }).filter((i) => i !== -1),
     attachedMedia: buildInputMediaFromContent(poll.attachedMedia),
-    solution: poll.results.solution,
-    solutionEntities: poll.results.solutionEntities?.map(buildMtpMessageEntity),
-    solutionMedia: buildInputMediaFromContent(poll.results.solutionMedia),
   });
 }
 

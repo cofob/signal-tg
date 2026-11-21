@@ -481,7 +481,6 @@ export type TabState = {
     chatId: string;
     threadId?: ThreadId;
     messageListType: MessageListType;
-    isQuiz?: boolean;
   };
 
   musicPicker?: {

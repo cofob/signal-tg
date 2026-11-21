@@ -174,7 +174,6 @@ addActionHandler('clickBotInlineButton', (global, actions, payload): ActionRetur
         chatId,
         threadId,
         messageListType: 'thread',
-        isQuiz: button.action.isQuiz,
         tabId,
       });
       break;
