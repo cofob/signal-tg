@@ -147,10 +147,7 @@ pub fn setup_traffic_light_positioner<R: Runtime>(
             .ns_window()
             .expect("NS window should exist on state to handle resize") as id;
 
-          position_traffic_lights(
-            UnsafeWindowHandle(id as *mut c_void),
-            position,
-          );
+          position_traffic_lights(UnsafeWindowHandle(id as *mut c_void), position);
         });
 
         let super_del: id = *this.get_ivar("super_delegate");
@@ -295,10 +292,7 @@ pub fn setup_traffic_light_positioner<R: Runtime>(
           };
 
           let id = state.window.ns_window().expect("Failed to emit event") as id;
-          position_traffic_lights(
-            UnsafeWindowHandle(id as *mut c_void),
-            position,
-          );
+          position_traffic_lights(UnsafeWindowHandle(id as *mut c_void), position);
         });
 
         let super_del: id = *this.get_ivar("super_delegate");

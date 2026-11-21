@@ -4,7 +4,7 @@
 
 | Workflow | Runs on | What it does |
 | --- | --- | --- |
-| `ci.yml` | Pushes to branches, pull requests, manual runs | Web app: `npm run check:ts` (types and ESLint), `npm run check:css`, `npm run check:hosts`, `npm test`, generated localization types and protobuf code match the sources, `npm run build:production` (uploads `dist` as the `telesignal-web` artifact). Rust: `proxy/` (rustfmt, Clippy with and without the server feature, tests), `tauri/` (Clippy, tests), `rust/signal-wasm` (rebuilds the WebAssembly module and compares the bindings). `CI success` is the one check to require on the default branch |
+| `ci.yml` | Pushes to branches, pull requests, manual runs | Web app: `npm run check:ts` (types and ESLint), `npm run check:css`, `npm run check:hosts`, `npm test`, generated localization types and protobuf code match the sources, `npm run build:production` (uploads `dist` as the `telesignal-web` artifact). Rust: `proxy/` (rustfmt, Clippy with and without the server feature, tests), `tauri/` (rustfmt, Clippy, tests), `rust/signal-wasm` (rebuilds the WebAssembly module and compares the bindings). `CI success` is the one check to require on the default branch |
 | `changelog.yml` | Pull requests | Fails a pull request that changes the shipped app (`src/`, `public/`, `proxy/`, `tauri/`, `rust/`) without a `CHANGELOG.md` entry. Waive it with the label `skip changelog`; titles starting with `[CI]`, `[Dev]` or `Docs` and Dependabot need no entry |
 | `security.yml` | Weekly, manual runs, lockfile changes | `npm audit` for the packages in the bundle and `cargo audit` for `proxy/`, `tauri/` and `rust/signal-wasm` |
 | `release.yml` | Tags `v*`, manual runs | Builds and publishes a release, see below |
