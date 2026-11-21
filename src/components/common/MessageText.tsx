@@ -10,7 +10,7 @@ import type { ThreadId } from '../../types';
 import { ApiMessageEntityTypes } from '../../api/types';
 
 import { getIsGpuCanvasAvailable } from '../../lib/gpuCanvas/gpuCanvas';
-import { extractMessageText, stripCustomEmoji } from '../../global/helpers';
+import { extractMessageText } from '../../global/helpers';
 import trimText from '../../util/text/trimText';
 import { renderTextWithEntities } from './helpers/renderTextWithEntities';
 
@@ -27,7 +27,6 @@ interface OwnProps {
   messageOrStory: ApiMessage | ApiStory;
   threadId?: ThreadId;
   forcedText?: ApiFormattedText;
-  isForAnimation?: boolean;
   emojiSize?: number;
   asPreview?: boolean;
   truncateLength?: number;
@@ -52,7 +51,6 @@ const MIN_CUSTOM_EMOJIS_FOR_SHARED_CANVAS = 3;
 function MessageText({
   messageOrStory,
   forcedText,
-  isForAnimation,
   emojiSize,
   asPreview,
   truncateLength,
@@ -77,8 +75,7 @@ function MessageText({
   const lang = useLang();
 
   const formattedText = forcedText || extractMessageText(messageOrStory, inChatList);
-  const adaptedFormattedText = isForAnimation && formattedText ? stripCustomEmoji(formattedText) : formattedText;
-  const { text, entities } = adaptedFormattedText || {};
+  const { text, entities } = formattedText || {};
 
   const containerId = useUniqueId();
 

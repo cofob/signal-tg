@@ -218,7 +218,6 @@ export type ApiNotification = {
   shouldShowTimer?: boolean;
   icon?: IconName;
   customEmojiIconId?: string;
-  shouldUseCustomIcon?: boolean;
   dismissAction?: CallbackAction;
 } & ({
   message: string;
@@ -325,7 +324,6 @@ export interface ApiAppConfig {
   whitelistedDomains: string[];
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
-  premiumBotUsername: string;
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
@@ -339,39 +337,20 @@ export interface ApiAppConfig {
   storyViewersExpirePeriod: number;
   storyChangelogUserId: string;
   maxPinnedStoriesCount: number;
-  groupTranscribeLevelMin: number;
-  canLimitNewMessagesWithoutPremium: boolean;
   starsUsdWithdrawRateX1000: number;
   starsUsdSellRateX1000?: number;
-  bandwidthPremiumNotifyPeriod?: number;
-  bandwidthPremiumUploadSpeedup?: number;
-  bandwidthPremiumDownloadSpeedup?: number;
   channelAutoTranslationLevelMin?: number;
-  isChannelRevenueWithdrawalEnabled?: boolean;
-  starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
   freezeSinceDate?: number;
   freezeUntilDate?: number;
   freezeAppealUrl?: string;
-  starsSuggestedPostAmountMax: number;
-  starsSuggestedPostAmountMin: number;
-  starsSuggestedPostCommissionPermille: number;
-  starsSuggestedPostAgeMin: number;
-  starsSuggestedPostFutureMax: number;
-  starsSuggestedPostFutureMin: number;
   noForwardsRequestExpirePeriod: number;
-  tonSuggestedPostCommissionPermille: number;
-  tonSuggestedPostAmountMax: bigint;
-  tonSuggestedPostAmountMin: bigint;
   tonUsdRate?: number;
   tonTopupUrl?: string;
   pollMaxAnswers: number;
   pollClosePeriodMax: number;
   pollCountriesMax: number;
   phoneCountryIso2?: string;
-  todoItemsMax: number;
-  todoTitleLengthMax: number;
-  todoItemLengthMax: number;
   quoteLengthMax: number;
   ignoreRestrictionReasons?: string[];
   needAgeVideoVerification?: boolean;
@@ -390,9 +369,6 @@ export interface ApiAppConfig {
     value: number;
     frameStart: number;
   }>;
-  aiComposeToneExamplesNum?: number;
-  aiComposeToneTitleLengthMax?: number;
-  aiComposeTonePromptLengthMax?: number;
   botAllowedSuffixes?: string[];
 }
 
@@ -505,13 +481,12 @@ export type ApiLimitType =
   | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts'
-  | 'aiComposeToneSaved'
   | 'botsCreate';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
   'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
-  | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
+  | 'maxReactions' | 'botsCreate'
 )>;
 
 export type ApiPeerNotifySettings = {

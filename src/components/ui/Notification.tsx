@@ -21,7 +21,6 @@ import useShowTransitionDeprecated from '../../hooks/useShowTransitionDeprecated
 
 import CustomEmoji from '../common/CustomEmoji';
 import Icon from '../common/icons/Icon';
-import StarIcon from '../common/icons/StarIcon';
 import Button from './Button';
 import Portal from './Portal';
 import RoundTimer from './RoundTimer';
@@ -56,7 +55,6 @@ const Notification = ({
     dismissAction,
     duration = DEFAULT_DURATION,
     icon,
-    shouldUseCustomIcon,
     customEmojiIconId,
     shouldShowTimer,
     title,
@@ -214,15 +212,8 @@ const Notification = ({
       );
     }
 
-    if (shouldUseCustomIcon) {
-      if (icon === 'star') {
-        return (
-          <StarIcon type="gold" className={buildClassName('notification-icon')} size="adaptive" />
-        );
-      }
-    }
     return <Icon name={icon || 'info-filled'} className="notification-icon" />;
-  }, [customEmojiIconId, icon, shouldUseCustomIcon]);
+  }, [customEmojiIconId, icon]);
 
   return (
     <Portal

@@ -2,30 +2,23 @@ import { Fragment, useCallback, useMemo } from '../../../lib/teact/teact';
 
 import type {
   ApiChat,
-  ApiInputSuggestedPostInfo,
   ApiMessage, ApiPeer, ApiReplyInfo, MediaContainer,
 } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
-import type { ChatTranslatedMessages, TranslationTone } from '../../../types';
 import type { IconName } from '../../../types/icons';
 
-import { TON_CURRENCY_CODE } from '../../../config';
 import {
   getMessageIsSpoiler,
   getMessageRoundVideo,
   isChatChannel,
   isChatGroup,
-  isMessageTranslatable,
 } from '../../../global/helpers';
 import { getMediaContentTypeDescription } from '../../../global/helpers/messageSummary';
 import { getPeerTitle } from '../../../global/helpers/peers';
-import { getRichMessagePreviewText } from '../../../global/helpers/richMessage';
 import { selectReplyOptionText } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { isUserId } from '../../../util/entities/ids';
-import { formatCalendarDate, secondsToDate } from '../../../util/localization/dateFormat';
-import { formatStarsAsIcon, formatTonAsIcon } from '../../../util/localization/format';
 import { normalizeRichQuote } from '../../../util/text/richQuote';
 import renderText from '../helpers/renderText';
 import { renderTextWithEntities } from '../helpers/renderTextWithEntities';
@@ -33,7 +26,6 @@ import { renderTextWithEntities } from '../helpers/renderTextWithEntities';
 import useSelector from '../../../hooks/data/useSelector';
 import useLang from '../../../hooks/useLang';
 import useUniqueId from '../../../hooks/useUniqueId';
-import useMessageTranslation from '../../middle/message/hooks/useMessageTranslation';
 
 import RichText from '../../iv/RichText';
 import RippleEffect from '../../ui/RippleEffect';
@@ -47,7 +39,6 @@ import './EmbeddedMessage.scss';
 type OwnProps = {
   className?: string;
   replyInfo?: ApiReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   message?: ApiMessage;
   sender?: ApiPeer;
   senderChat?: ApiChat;
@@ -58,9 +49,6 @@ type OwnProps = {
   noUserColors?: boolean;
   isProtected?: boolean;
   isInComposer?: boolean;
-  chatTranslations?: ChatTranslatedMessages;
-  requestedChatTranslationLanguage?: string;
-  requestedChatTranslationTone?: TranslationTone;
   isOpen?: boolean;
   isMediaNsfw?: boolean;
   noCaptions?: boolean;
@@ -78,7 +66,6 @@ const EmbeddedMessage = ({
   className,
   message,
   replyInfo,
-  suggestedPostInfo,
   sender,
   senderChat,
   forwardSender,
@@ -88,9 +75,6 @@ const EmbeddedMessage = ({
   isProtected,
   isInComposer,
   noUserColors,
-  chatTranslations,
-  requestedChatTranslationLanguage,
-  requestedChatTranslationTone,
   isMediaNsfw,
   noCaptions,
   pictogramActionIcon,
@@ -118,26 +102,14 @@ const EmbeddedMessage = ({
       ? selectReplyOptionText(global, optionMedia, replyInfo) : undefined
   ), [optionMedia, replyInfo]);
   const replyOptionText = useSelector(selectOptionText);
-  // Poll options always show a check, like in other clients; todo items reflect their completion
-  const isReplyOptionCompleted = replyInfo?.type === 'message' && (
-    replyInfo.pollOption !== undefined
-    || optionMedia?.content.todo?.completions?.some((completion) => completion.itemId === replyInfo.todoItemId)
-  );
+  // Poll options always show a check, like in other clients
+  const isReplyOptionCompleted = replyInfo?.type === 'message' && replyInfo.pollOption !== undefined;
   const hasPictogram = canRenderCompactMediaPreview(containedMedia?.content);
 
   const isRoundVideo = Boolean(containedMedia && getMessageRoundVideo(containedMedia));
   const isSpoiler = Boolean(containedMedia && getMessageIsSpoiler(containedMedia)) || isMediaNsfw;
   const isQuote = Boolean(replyInfo?.type === 'message' && replyInfo.isQuote);
   const replyForwardInfo = replyInfo?.type === 'message' ? replyInfo.replyFrom : undefined;
-
-  const shouldTranslate = message && isMessageTranslatable(message);
-  const { translatedText, translatedRichMessage } = useMessageTranslation(
-    chatTranslations, message?.chatId, shouldTranslate ? message?.id : undefined,
-    requestedChatTranslationLanguage, requestedChatTranslationTone,
-  );
-  const translatedPreview = useMemo(() => translatedRichMessage
-    ? { text: getRichMessagePreviewText(translatedRichMessage) } : translatedText,
-  [translatedRichMessage, translatedText]);
 
   const lang = useLang();
 
@@ -157,45 +129,6 @@ const EmbeddedMessage = ({
   const areSendersSame = sender && sender.id === forwardSender?.id;
 
   function renderTextContent() {
-    const isFree = !(suggestedPostInfo?.price?.amount);
-    if (suggestedPostInfo) {
-      if (isFree && !suggestedPostInfo.scheduleDate) {
-        return lang('ComposerEmbeddedMessageSuggestedPostDescription');
-      }
-      const priceText = suggestedPostInfo.price
-        ? (suggestedPostInfo.price.currency === TON_CURRENCY_CODE
-          ? formatTonAsIcon(lang, suggestedPostInfo.price.amount, {
-            className: 'suggested-price-ton-icon',
-          })
-          : formatStarsAsIcon(lang, suggestedPostInfo.price.amount, {
-            className: 'suggested-price-star-icon',
-          }))
-        : '';
-      const scheduleText = suggestedPostInfo.scheduleDate
-        ? formatCalendarDate(lang, secondsToDate(suggestedPostInfo.scheduleDate), { isShort: true, withTime: true })
-        : '';
-      if (priceText && !scheduleText) {
-        return (
-          <span className="suggested-post-price-wrapper">
-            {
-              lang('TitleSuggestedPostAmountForAnyTime',
-                { amount: priceText },
-                {
-                  withNodes: true,
-                  withMarkdown: true,
-                })
-            }
-          </span>
-        );
-      }
-      return (
-        <span className="suggested-post-price-wrapper">
-          {priceText}
-          {scheduleText ? ` • ${scheduleText}` : ''}
-        </span>
-      );
-    }
-
     if (replyOptionText) {
       return (
         <>
@@ -251,7 +184,6 @@ const EmbeddedMessage = ({
       <MessageSummary
         message={message}
         noEmoji={hasPictogram}
-        forcedText={translatedPreview}
         observeIntersectionForLoading={observeIntersectionForLoading}
         observeIntersectionForPlaying={observeIntersectionForPlaying}
         emojiSize={EMOJI_SIZE}
@@ -279,14 +211,6 @@ const EmbeddedMessage = ({
   function renderSender() {
     if (title) {
       return renderText(title);
-    }
-
-    if (suggestedPostInfo && replyInfo) {
-      return lang('TitleSuggestedChanges');
-    }
-
-    if (suggestedPostInfo) {
-      return lang('ComposerEmbeddedMessageSuggestedPostTitle');
     }
 
     if (!senderTitle && !forwardSendersTitle) {
@@ -362,7 +286,6 @@ const EmbeddedMessage = ({
         hasPictogram && 'with-thumb',
         'no-selection',
         composerForwardSenders && 'is-input-forward',
-        suggestedPostInfo && 'is-suggested-post',
       )}
       dir={lang.isRtl ? 'rtl' : undefined}
       onClick={onClick}

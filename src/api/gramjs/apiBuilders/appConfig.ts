@@ -31,8 +31,6 @@ export interface GramJsAppConfig {
   web_app_allowed_protocols?: string[];
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
-  premium_bot_username: string;
-  premium_invoice_slug: string;
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
@@ -45,14 +43,6 @@ export interface GramJsAppConfig {
   stories_changelog_user_id: number;
   stories_pinned_to_top_count_max: number;
   // Boosts
-  group_transcribe_level_min?: number;
-  new_noncontact_peers_require_premium_without_ownpremium?: boolean;
-  channel_revenue_withdrawal_enabled?: boolean;
-  // Upload premium notifications
-  upload_premium_speedup_notify_period?: number;
-  upload_premium_speedup_download?: number;
-  upload_premium_speedup_upload?: number;
-  starref_start_param_prefixes?: string[];
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
   stars_usd_withdraw_rate_x1000?: number;
@@ -63,25 +53,13 @@ export interface GramJsAppConfig {
   freeze_until_date?: number;
   freeze_appeal_url?: string;
   channel_autotranslation_level_min?: number;
-  stars_suggested_post_amount_max?: number;
-  stars_suggested_post_amount_min?: number;
-  stars_suggested_post_commission_permille?: number;
-  stars_suggested_post_age_min?: number;
-  stars_suggested_post_future_max?: number;
-  stars_suggested_post_future_min?: number;
   no_forwards_request_expire_period?: number;
-  ton_suggested_post_commission_permille?: number;
-  ton_suggested_post_amount_max?: number;
-  ton_suggested_post_amount_min?: number;
   ton_usd_rate?: number;
   ton_topup_url?: string;
   poll_answers_max?: number;
   poll_close_period_max?: number;
   poll_countries_max?: number;
   phone_country_iso2?: string;
-  todo_items_max?: number;
-  todo_title_length_max?: number;
-  todo_item_length_max?: number;
   quote_length_max?: number;
   ignore_restriction_reasons?: string[];
   need_age_video_verification?: boolean;
@@ -100,9 +78,6 @@ export interface GramJsAppConfig {
   whitelisted_bots?: string[];
   settings_display_passkeys?: boolean;
   passkeys_account_passkeys_max?: number;
-  aicompose_tone_examples_num?: number;
-  aicompose_tone_title_length_max?: number;
-  aicompose_tone_prompt_length_max?: number;
   bot_allowed_suffixes?: string[];
 }
 
@@ -135,11 +110,6 @@ function buildDiceEmojiesSuccess(appConfig: GramJsAppConfig) {
   }, {} as ApiAppConfig['diceEmojiesSuccess']) : {};
 }
 
-// The config is JSON, so nanotons arrive as doubles and only whole values are taken
-function buildNanotons(value?: number) {
-  return value !== undefined && Number.isInteger(value) ? BigInt(value) : undefined;
-}
-
 export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiAppConfig {
   const appConfig = buildJson(json) as GramJsAppConfig;
 
@@ -154,7 +124,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     webAppAllowedProtocols: appConfig.web_app_allowed_protocols,
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
-    premiumBotUsername: appConfig.premium_bot_username,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
@@ -170,39 +139,20 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     storyViewersExpirePeriod: appConfig.story_viewers_expire_period,
     storyChangelogUserId: appConfig.stories_changelog_user_id?.toString(),
     maxPinnedStoriesCount: appConfig.stories_pinned_to_top_count_max,
-    groupTranscribeLevelMin: appConfig.group_transcribe_level_min,
-    canLimitNewMessagesWithoutPremium: appConfig.new_noncontact_peers_require_premium_without_ownpremium,
     starsUsdWithdrawRateX1000: appConfig.stars_usd_withdraw_rate_x1000,
     starsUsdSellRateX1000: appConfig.stars_usd_sell_rate_x1000,
-    bandwidthPremiumNotifyPeriod: appConfig.upload_premium_speedup_notify_period,
-    bandwidthPremiumUploadSpeedup: appConfig.upload_premium_speedup_upload,
-    bandwidthPremiumDownloadSpeedup: appConfig.upload_premium_speedup_download,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
-    isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,
-    starRefStartPrefixes: appConfig.starref_start_param_prefixes,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
     freezeSinceDate: appConfig.freeze_since_date,
     freezeUntilDate: appConfig.freeze_until_date,
     freezeAppealUrl: appConfig.freeze_appeal_url,
-    starsSuggestedPostAmountMax: appConfig.stars_suggested_post_amount_max,
-    starsSuggestedPostAmountMin: appConfig.stars_suggested_post_amount_min,
-    starsSuggestedPostCommissionPermille: appConfig.stars_suggested_post_commission_permille,
-    starsSuggestedPostAgeMin: appConfig.stars_suggested_post_age_min,
-    starsSuggestedPostFutureMax: appConfig.stars_suggested_post_future_max,
-    starsSuggestedPostFutureMin: appConfig.stars_suggested_post_future_min,
     noForwardsRequestExpirePeriod: appConfig.no_forwards_request_expire_period,
-    tonSuggestedPostCommissionPermille: appConfig.ton_suggested_post_commission_permille,
-    tonSuggestedPostAmountMax: buildNanotons(appConfig.ton_suggested_post_amount_max),
-    tonSuggestedPostAmountMin: buildNanotons(appConfig.ton_suggested_post_amount_min),
     tonUsdRate: appConfig.ton_usd_rate,
     tonTopupUrl: appConfig.ton_topup_url,
     pollMaxAnswers: appConfig.poll_answers_max,
     pollClosePeriodMax: appConfig.poll_close_period_max,
     pollCountriesMax: appConfig.poll_countries_max,
     phoneCountryIso2: appConfig.phone_country_iso2,
-    todoItemsMax: appConfig.todo_items_max,
-    todoTitleLengthMax: appConfig.todo_title_length_max,
-    todoItemLengthMax: appConfig.todo_item_length_max,
     quoteLengthMax: appConfig.quote_length_max,
     ignoreRestrictionReasons: appConfig.ignore_restriction_reasons,
     needAgeVideoVerification: appConfig.need_age_video_verification,
@@ -217,9 +167,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     passkeysMaxCount: appConfig.passkeys_account_passkeys_max,
     diceEmojies: appConfig.emojies_send_dice,
     diceEmojiesSuccess: buildDiceEmojiesSuccess(appConfig),
-    aiComposeToneExamplesNum: appConfig.aicompose_tone_examples_num,
-    aiComposeToneTitleLengthMax: appConfig.aicompose_tone_title_length_max,
-    aiComposeTonePromptLengthMax: appConfig.aicompose_tone_prompt_length_max,
     botAllowedSuffixes: appConfig.bot_allowed_suffixes,
   };
 

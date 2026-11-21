@@ -21,7 +21,6 @@ type OwnProps = {
   isOpen?: boolean;
   listItemData?: TableAboutData;
   headerIconName?: IconName;
-  headerIconPremiumGradient?: boolean;
   header?: TeactNode;
   footer?: TeactNode;
   buttonText?: TeactNode;
@@ -38,7 +37,6 @@ const TableAboutModal = ({
   isOpen,
   listItemData,
   headerIconName,
-  headerIconPremiumGradient,
   header,
   footer,
   buttonText,
@@ -61,7 +59,7 @@ const TableAboutModal = ({
       onClose={onClose}
     >
       {headerIconName && (
-        <div className={buildClassName(styles.topIcon, headerIconPremiumGradient && styles.premiumGradient)}>
+        <div className={styles.topIcon}>
           <Icon name={headerIconName} />
         </div>
       )}

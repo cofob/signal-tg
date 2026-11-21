@@ -1,34 +1,29 @@
 import { useMemo, useState } from '../lib/teact/teact';
 
-import type { RepeatedMessageMode } from '../util/scheduledMessages';
-
 import { SCHEDULED_WHEN_ONLINE } from '../config';
 import { getDayStartAt } from '../util/dates/dateMath';
-import { getRepeatModeFromSeconds, getRepeatPeriodSeconds } from '../util/scheduledMessages';
 import { getServerTimeOffset } from '../util/serverTime';
 import useLang from './useLang';
 import useLastCallback from './useLastCallback';
 
 import CalendarModal from '../components/common/CalendarModal.async';
 
-type OnScheduledCallback = (scheduledAt: number, repeatPeriod?: number) => void;
+type OnScheduledCallback = (scheduledAt: number) => void;
 
 const useSchedule = (
   canScheduleUntilOnline?: boolean,
   onCancel?: () => void,
   openAt?: number,
-  initialRepeatPeriod?: number,
 ) => {
   const lang = useLang();
   const [onScheduled, setOnScheduled] = useState<OnScheduledCallback | undefined>();
 
-  const handleMessageSchedule = useLastCallback((date: Date, repeatMode?: RepeatedMessageMode) => {
+  const handleMessageSchedule = useLastCallback((date: Date) => {
     // Scheduled time can not be less than 10 seconds in future
     const isWhenOnline = date.getTime() === SCHEDULED_WHEN_ONLINE * 1000;
     const scheduledAt = Math.round(Math.max(date.getTime(), Date.now() + 60 * 1000) / 1000)
       + (isWhenOnline ? 0 : getServerTimeOffset());
-    const repeatPeriod = getRepeatPeriodSeconds(repeatMode);
-    onScheduled?.(scheduledAt, repeatPeriod);
+    onScheduled?.(scheduledAt);
     setOnScheduled(undefined);
   });
 
@@ -58,14 +53,10 @@ const useSchedule = (
     return date;
   }, []);
 
-  const initialRepeatMode = getRepeatModeFromSeconds(initialRepeatPeriod);
-
   const calendar = (
     <CalendarModal
       isOpen={Boolean(onScheduled)}
       withTimePicker
-      withRepeatMode
-      initialRepeatMode={initialRepeatMode}
       selectedAt={scheduledDefaultDate.getTime()}
       maxAt={getDayStartAt(scheduledMaxDate)}
       isFutureMode

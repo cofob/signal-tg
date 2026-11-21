@@ -42,8 +42,6 @@ export function getWebpageButtonLangKey(type: string | undefined, {
       return 'ViewButtonStickerset';
     case 'telegram_emojiset':
       return 'ViewButtonEmojiset';
-    case 'telegram_aicomposetone':
-      return 'ViewButtonAiStyle';
     default:
       return undefined;
   }

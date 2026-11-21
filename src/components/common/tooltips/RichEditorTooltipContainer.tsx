@@ -201,7 +201,6 @@ const RichEditorTooltipContainer = ({
             threadId={context.threadId}
             stickers={stickers}
             isSavedMessages={context.isSavedMessages}
-            isCurrentUserPremium={context.isCurrentUserPremium}
             onStickerSelect={handleStickerSelect}
           />
         ) : undefined}
@@ -210,7 +209,6 @@ const RichEditorTooltipContainer = ({
             isOpen={isCustomEmojiOpen}
             customEmoji={customEmoji}
             isSavedMessages={context.isSavedMessages}
-            isCurrentUserPremium={context.isCurrentUserPremium}
             addRecentCustomEmoji={customEmojiConfig.addRecentCustomEmoji}
             onCustomEmojiSelect={handleStackCustomEmojiSelect}
           />
@@ -247,7 +245,6 @@ const RichEditorTooltipContainer = ({
           switchWebview={inlineBot.switchWebview}
           isSavedMessages={context.isSavedMessages}
           canSendGifs={context.canSendGifs}
-          isCurrentUserPremium={context.isCurrentUserPremium}
           loadMore={handleInlineBotLoadMore}
           onSelectResult={handleInlineBotResultSelect}
         />

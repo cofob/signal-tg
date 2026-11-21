@@ -7,6 +7,8 @@ TeleSignal is based, is in [docs/TELEGRAM_WEB_A_CHANGELOG.md](docs/TELEGRAM_WEB_
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-21
+
 The conversion of Telegram Web A into a Signal client; the plan and its status are in
 [docs/signal/PLAN.md](docs/signal/PLAN.md).
 
@@ -42,4 +44,5 @@ The conversion of Telegram Web A into a Signal client; the plan and its status a
 - Telegram push registration, web login handoff, version switches and links to Telegram hosts; `npm run check:hosts`
   fails on Telegram host names in the shipped app.
 
-[Unreleased]: https://github.com/cofob/signal-tg/commits/master
+[Unreleased]: https://github.com/cofob/signal-tg/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cofob/signal-tg/releases/tag/v0.1.0

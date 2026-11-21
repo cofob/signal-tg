@@ -8,7 +8,6 @@ import type { ApiChat, ApiChatFullInfo } from '../../../api/types';
 import {
   selectChat,
   selectChatFullInfo,
-  selectIsCurrentUserPremium,
   selectSimilarChannelIds,
 } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
@@ -44,7 +43,6 @@ type StateProps = {
   similarChannelIds?: string[];
   isExpanded?: boolean;
   count?: number;
-  isCurrentUserPremium: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
 };
 
@@ -53,7 +51,6 @@ const SimilarChannels = ({
   similarChannelIds,
   isExpanded,
   count,
-  isCurrentUserPremium,
   channelJoinInfo,
 }: StateProps & OwnProps) => {
   const { toggleChannelRecommendations, loadChannelRecommendations } = getActions();
@@ -196,7 +193,6 @@ const SimilarChannels = ({
                     channel={channel}
                     chatId={chatId}
                     channelsCount={count! - SHOW_CHANNELS_NUMBER + 1}
-                    isCurrentUserPremium={isCurrentUserPremium}
                   />
                 ) : (
                   <SimilarChannel channel={channel} />
@@ -233,19 +229,15 @@ function MoreChannels({
   channel,
   chatId,
   channelsCount,
-  isCurrentUserPremium,
 }: {
   channel: ApiChat;
   chatId: string;
   channelsCount: number;
-  isCurrentUserPremium: boolean;
 }) {
   const { openChatWithInfo } = getActions();
   const lang = useLang();
 
   const handleClickMore = () => {
-    if (!isCurrentUserPremium) return;
-
     openChatWithInfo({
       id: chatId, shouldReplaceHistory: true, profileTab: 'similarChannels', forceScrollProfileTab: true,
     });
@@ -265,7 +257,6 @@ function MoreChannels({
       </div>
       <div className={styles.badge}>
         <span className={styles.membersCount}>{`+${channelsCount}`}</span>
-        {!isCurrentUserPremium && <Icon name="lock-filled" className={styles.icon} />}
       </div>
       <span className={styles.channelTitle}>{lang('MoreSimilar')}</span>
     </div>
@@ -275,14 +266,12 @@ function MoreChannels({
 export default memo(
   withGlobal<OwnProps>((global, { chatId }): Complete<StateProps> => {
     const { similarChannelIds, isExpanded, count } = selectSimilarChannelIds(global, chatId) || {};
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
     const chatFullInfo = selectChatFullInfo(global, chatId);
 
     return {
       similarChannelIds,
       isExpanded,
       count,
-      isCurrentUserPremium,
       channelJoinInfo: chatFullInfo?.joinInfo,
     };
   })(SimilarChannels),

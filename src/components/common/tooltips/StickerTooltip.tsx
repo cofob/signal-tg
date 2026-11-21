@@ -22,7 +22,6 @@ export type OwnProps = {
   threadId?: ThreadId;
   stickers?: ApiSticker[];
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   onStickerSelect: (sticker: ApiSticker, isSilent?: boolean, shouldSchedule?: boolean) => void;
 };
 
@@ -35,7 +34,6 @@ const StickerTooltip = ({ isOpen, ...props }: OwnProps) => {
     onStickerSelect,
     stickers,
     isSavedMessages,
-    isCurrentUserPremium,
   } = useFrozenProps(props, !isOpen);
 
   const containerRef = useRef<HTMLDivElement>();
@@ -76,7 +74,6 @@ const StickerTooltip = ({ isOpen, ...props }: OwnProps) => {
             clickArg={sticker}
             isSavedMessages={isSavedMessages}
             canViewSet
-            isCurrentUserPremium={isCurrentUserPremium}
           />
         ))}
       </div>

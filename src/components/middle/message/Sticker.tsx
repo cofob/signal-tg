@@ -55,7 +55,7 @@ const Sticker = ({
   observeIntersectionForPlaying,
   needsAgeVerification,
 }: OwnProps & StateProps) => {
-  const { showNotification, openStickerSet, updateContentSettings, openAgeVerificationModal } = getActions();
+  const { openStickerSet, updateContentSettings, openAgeVerificationModal } = getActions();
 
   const { isMobile } = useAppLayout();
 
@@ -145,26 +145,9 @@ const Sticker = ({
       return;
     }
 
-    if (hasEffect) {
-      if (isPlayingEffect || !withEffect) {
-        showNotification({
-          message: {
-            key: 'PremiumStickerTooltip',
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-          action: {
-            action: 'openStickerSet',
-            payload: {
-              stickerSetInfo: sticker.stickerSetInfo,
-            },
-          },
-          actionText: { key: 'ViewAction' },
-        });
-        return;
-      } else if (withEffect) {
-        startPlayingEffect();
-        return;
-      }
+    if (hasEffect && withEffect && !isPlayingEffect) {
+      startPlayingEffect();
+      return;
     }
     openModal();
   });

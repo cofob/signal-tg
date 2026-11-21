@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../global';
 import type {
   ApiChat,
   ApiMediaAreaChannelPost,
-  ApiPeer, ApiStealthMode, ApiStory, ApiTypeStory,
+  ApiPeer, ApiStory, ApiTypeStory,
 } from '../../api/types';
 import type { IDimensions } from '../../types';
 import type { IconName } from '../../types/icons';
@@ -20,7 +20,6 @@ import { getPeerTitle } from '../../global/helpers/peers';
 import {
   selectChat,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectPeer,
   selectPeerStory,
   selectPerformanceSettingsValue,
@@ -31,7 +30,6 @@ import {
 import { IS_SAFARI } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
 import captureKeyboardListeners from '../../util/captureKeyboardListeners';
-import { formatMediaDuration } from '../../util/dates/duration';
 import download from '../../util/download';
 import { isUserId } from '../../util/entities/ids';
 import { getIsKeyboardShortcut } from '../../util/keyboardShortcuts';
@@ -103,15 +101,12 @@ interface StateProps {
   viewersExpirePeriod: number;
   isChatExist?: boolean;
   arePeerSettingsLoaded?: boolean;
-  isCurrentUserPremium?: boolean;
-  stealthMode: ApiStealthMode;
   withHeaderAnimation?: boolean;
   isAccountFrozen?: boolean;
 }
 
 const VIDEO_MIN_READY_STATE = IS_SAFARI ? 4 : 3;
 
-const STEALTH_MODE_NOTIFICATION_DURATION = 4000;
 const NOTIFICATION_OPTIONS = {
   withNodes: true,
   withMarkdown: true,
@@ -137,8 +132,6 @@ function Story({
   isChatExist,
   arePeerSettingsLoaded,
   getIsAnimating,
-  isCurrentUserPremium,
-  stealthMode,
   withHeaderAnimation,
   isAccountFrozen,
   onDelete,
@@ -160,7 +153,6 @@ function Story({
     loadPeerSettings,
     fetchChat,
     loadStoryViews,
-    openStealthModal,
   } = getActions();
   const serverTime = getServerTime();
 
@@ -191,7 +183,7 @@ function Story({
     hasThumb,
     canDownload,
     downloadMediaData,
-  } = useStoryProps(story, isCurrentUserPremium, isDropdownMenuOpen);
+  } = useStoryProps(story, isDropdownMenuOpen);
 
   const isLoadedStory = story && 'content' in story;
   const isChangelog = peerId === storyChangelogUserId;
@@ -549,24 +541,6 @@ function Story({
     setStoryViewerMuted({ isMuted: !isMuted });
   });
 
-  const handleOpenStealthModal = useLastCallback(() => {
-    if (stealthMode.activeUntil && getServerTime() < stealthMode.activeUntil) {
-      const diff = stealthMode.activeUntil - getServerTime();
-      showNotification({
-        title: { key: 'StealthModeOnTitle' },
-        message: {
-          key: 'StealthModeOnHint',
-          variables: { time: formatMediaDuration(diff) },
-          options: NOTIFICATION_OPTIONS,
-        },
-        duration: STEALTH_MODE_NOTIFICATION_DURATION,
-      });
-      return;
-    }
-
-    openStealthModal({});
-  });
-
   const handleDownload = useLastCallback(() => {
     if (!downloadMediaData) return;
     download(downloadMediaData, `story-${peerId}-${storyId}.${isVideo ? 'mp4' : 'jpg'}`);
@@ -760,11 +734,6 @@ function Story({
             {canDownload && (
               <MenuItem icon="download" disabled={!downloadMediaData} onClick={handleDownload}>
                 {lang('MediaDownload')}
-              </MenuItem>
-            )}
-            {!isOut && isUserStory && (
-              <MenuItem icon="eye-crossed-outline" onClick={handleOpenStealthModal}>
-                {lang('StealthModeTitle')}
               </MenuItem>
             )}
             {!isOut && <MenuItem icon="flag" onClick={handleReportStoryClick}>{lang('ReportStory')}</MenuItem>}
@@ -977,14 +946,12 @@ export default memo(withGlobal<OwnProps>((global, {
     safeLinkModalUrl,
     mapModal,
     reportModal,
-    storyStealthModal,
   } = tabState;
-  const isStealthModalOpen = Boolean(storyStealthModal);
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
     viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
-    || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
+    || isDeleteModalOpen || safeLinkModalUrl || mapModal,
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;
@@ -1004,13 +971,11 @@ export default memo(withGlobal<OwnProps>((global, {
     story,
     orderedIds: storyList?.storyIdsByPeerId[peerId],
     isMuted,
-    isCurrentUserPremium: selectIsCurrentUserPremium(global),
     shouldForcePause,
     storyChangelogUserId: appConfig.storyChangelogUserId,
     viewersExpirePeriod: appConfig.storyViewersExpirePeriod,
     isChatExist: Boolean(chat),
     arePeerSettingsLoaded: Boolean(userFullInfo?.settings),
-    stealthMode: global.stories.stealthMode,
     withHeaderAnimation,
     isAccountFrozen,
   };

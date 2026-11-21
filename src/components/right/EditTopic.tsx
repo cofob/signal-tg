@@ -8,7 +8,7 @@ import type { TabState } from '../../global/types';
 
 import { DEFAULT_TOPIC_ICON_STICKER_ID, GENERAL_TOPIC_ID } from '../../config';
 import {
-  selectChat, selectIsCurrentUserPremium, selectTabState, selectTopic,
+  selectChat, selectTabState, selectTopic,
 } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { REM } from '../common/helpers/mediaDimensions';
@@ -38,7 +38,6 @@ type StateProps = {
   chat?: ApiChat;
   topic?: ApiTopic;
   editTopicPanel?: TabState['editTopicPanel'];
-  isCurrentUserPremium?: boolean;
 };
 
 const EditTopic = ({
@@ -46,7 +45,6 @@ const EditTopic = ({
   chat,
   topic,
   editTopicPanel,
-  isCurrentUserPremium,
   onClose,
 }: OwnProps & StateProps) => {
   const { editTopic } = getActions();
@@ -104,15 +102,13 @@ const EditTopic = ({
   }, [handleEditTopic, isLoading, isTouched]);
 
   const handleCustomEmojiSelect = useCallback((emoji: ApiSticker) => {
-    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) return;
-
     if (emoji.id === DEFAULT_TOPIC_ICON_STICKER_ID) {
       setIconEmojiId(RESET_ICON_ID);
       return;
     }
 
     setIconEmojiId(emoji.id);
-  }, [isCurrentUserPremium]);
+  }, []);
 
   const dummyTopic = useMemo(() => {
     return {
@@ -196,7 +192,6 @@ export default memo(withGlobal(
       chat,
       topic,
       editTopicPanel,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
     };
   },
 )(EditTopic));

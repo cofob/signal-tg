@@ -27,7 +27,6 @@ type OwnProps = {
   noPlay?: boolean;
   noContextMenus?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   isTranslucent?: boolean;
   onStickerSelect?: (sticker: ApiSticker) => void;
 };
@@ -39,7 +38,6 @@ const InlineStickerSetView = ({
   noPlay,
   noContextMenus,
   isSavedMessages,
-  isCurrentUserPremium,
   isTranslucent,
   onStickerSelect,
 }: OwnProps) => {
@@ -59,7 +57,6 @@ const InlineStickerSetView = ({
               noPlay={noPlay}
               noContextMenu={noContextMenus}
               isSavedMessages={isSavedMessages}
-              isCurrentUserPremium={isCurrentUserPremium}
               withTranslucentThumb={isTranslucent}
               onClick={onStickerSelect}
               clickArg={sticker}

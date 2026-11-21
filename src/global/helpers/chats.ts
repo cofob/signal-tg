@@ -189,7 +189,6 @@ export interface IAllowedAttachmentOptions {
   canSendVoices: boolean;
   canSendPlainText: boolean;
   canSendDocuments: boolean;
-  canAttachToDoLists: boolean;
 }
 
 export function getAllowedAttachmentOptions(
@@ -213,7 +212,6 @@ export function getAllowedAttachmentOptions(
       canSendVoices: false,
       canSendPlainText: false,
       canSendDocuments: false,
-      canAttachToDoLists: false,
     };
   }
 
@@ -224,7 +222,6 @@ export function getAllowedAttachmentOptions(
     canAttachPolls: !isEphemeral && !isStoryReply && !chat.isMonoforum
       && (isAdmin || !isUserRightBanned(chat, 'sendPolls'))
       && (!isUserId(chat.id) || isChatWithBot || isSavedMessages),
-    canAttachToDoLists: !isEphemeral && !isStoryReply && !chat.isMonoforum && !isChatChannel(chat),
     canSendStickers: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendStickers'),
     canSendGifs: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendGifs'),
     canAttachEmbedLinks: !isStoryReply && (isAdmin || !isUserRightBanned(chat, 'embedLinks')),

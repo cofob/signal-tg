@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiPhoto, ApiPrivacySettings, BotsPrivacyType } from '../../../api/types';
 import { SettingsScreens } from '../../../types';
 
-import { selectIsCurrentUserPremium, selectUserFullInfo } from '../../../global/selectors';
+import { selectUserFullInfo } from '../../../global/selectors';
 import { getPrivacyKey } from './helpers/privacy';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -14,7 +14,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
 import ListItem from '../../ui/ListItem';
 import RadioGroup from '../../ui/RadioGroup';
-import PrivacyLockedOption from './PrivacyLockedOption';
 import SettingsPrivacyLastSeen from './SettingsPrivacyLastSeen';
 import SettingsPrivacyPublicProfilePhoto from './SettingsPrivacyPublicProfilePhoto';
 
@@ -30,8 +29,6 @@ type StateProps = {
   currentUserFallbackPhoto?: ApiPhoto;
   primaryPrivacy?: ApiPrivacySettings;
   secondaryPrivacy?: ApiPrivacySettings;
-  isPremiumRequired?: boolean;
-  isCurrentUserPremium?: boolean;
 };
 
 const SettingsPrivacyVisibility = ({
@@ -42,9 +39,7 @@ const SettingsPrivacyVisibility = ({
   currentUserId,
   hasCurrentUserFullInfo,
   currentUserFallbackPhoto,
-  isPremiumRequired,
   onReset,
-  isCurrentUserPremium,
 }: OwnProps & StateProps) => {
   useHistoryBack({
     isActive,
@@ -68,7 +63,6 @@ const SettingsPrivacyVisibility = ({
       <PrivacySubsection
         screen={screen}
         privacy={primaryPrivacy}
-        isPremiumRequired={isPremiumRequired}
       />
       {screen === SettingsScreens.PrivacyProfilePhoto && primaryPrivacy?.visibility !== 'everybody' && (
         <SettingsPrivacyPublicProfilePhoto
@@ -93,11 +87,9 @@ const SettingsPrivacyVisibility = ({
 function PrivacySubsection({
   screen,
   privacy,
-  isPremiumRequired,
 }: {
   screen: SettingsScreens;
   privacy?: ApiPrivacySettings;
-  isPremiumRequired?: boolean;
 }) {
   const { setPrivacyVisibility, openSettingsScreen } = getActions();
 
@@ -109,28 +101,18 @@ function PrivacySubsection({
       { value: 'everybody', label: lang('P2PEverybody') },
       {
         value: 'contacts',
-        label: isPremiumRequired ? (
-          <PrivacyLockedOption label={lang('P2PContacts')} />
-        ) : (
-          lang('P2PContacts')
-        ),
-        hidden: isPremiumRequired,
+        label: lang('P2PContacts'),
       },
     ];
 
     if (hasNobody) {
       options.push({
         value: 'nobody',
-        label: isPremiumRequired ? (
-          <PrivacyLockedOption label={lang('P2PNobody')} />
-        ) : (
-          lang('P2PNobody')
-        ),
-        hidden: isPremiumRequired,
+        label: lang('P2PNobody'),
       });
     }
     return options;
-  }, [lang, screen, isPremiumRequired]);
+  }, [lang, screen]);
 
   const primaryExceptionLists = useMemo(() => {
     if (screen === SettingsScreens.PrivacyAddByPhone) {
@@ -196,16 +178,14 @@ function PrivacySubsection({
   }, [lang, screen]);
 
   const prepareSubtitle = useLastCallback(
-    (userIds?: string[], chatIds?: string[], shouldAllowPremium?: boolean, botsPrivacy?: BotsPrivacyType) => {
+    (userIds?: string[], chatIds?: string[], botsPrivacy?: BotsPrivacyType) => {
       const userIdsCount = userIds?.length || 0;
       const chatIdsCount = chatIds?.length || 0;
       const isAllowBots = botsPrivacy === 'allow';
       const hasPeers = userIdsCount || chatIdsCount;
 
       if (!hasPeers && !isAllowBots) {
-        return shouldAllowPremium ? lang('PrivacyPremium') : lang('EditAdminAddUsers');
-      } else if (shouldAllowPremium) {
-        return lang('ContactsAndPremium');
+        return lang('EditAdminAddUsers');
       }
 
       const userCountString = userIdsCount > 0
@@ -224,7 +204,6 @@ function PrivacySubsection({
     return prepareSubtitle(
       privacy?.allowUserIds,
       privacy?.allowChatIds,
-      privacy?.shouldAllowPremium,
       privacy?.botsPrivacy,
     );
   }, [privacy]);
@@ -308,7 +287,7 @@ function PrivacySubsection({
       {descriptionText && (
         <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>{descriptionText}</IslandDescription>
       )}
-      {!isPremiumRequired && (primaryExceptionLists.shouldShowAllowed || primaryExceptionLists.shouldShowDenied) && (
+      {(primaryExceptionLists.shouldShowAllowed || primaryExceptionLists.shouldShowDenied) && (
         <>
           <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
             {lang('PrivacyExceptions')}
@@ -422,8 +401,6 @@ export default memo(withGlobal<OwnProps>(
       currentUserId: currentUserId!,
       hasCurrentUserFullInfo: Boolean(currentUserFullInfo),
       currentUserFallbackPhoto: currentUserFullInfo?.fallbackPhoto,
-      isPremiumRequired: screen === SettingsScreens.PrivacyVoiceMessages && !selectIsCurrentUserPremium(global),
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
     };
   },
 )(SettingsPrivacyVisibility));

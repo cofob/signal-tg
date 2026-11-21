@@ -94,12 +94,6 @@ export const MEMBERS_LOAD_SLICE = 200;
 export const PROFILE_SENSITIVE_AREA = 500;
 export const TOPIC_LIST_SENSITIVE_AREA = 600;
 
-// Public Posts Search defaults
-export const PUBLIC_POSTS_SEARCH_DEFAULT_STARS_AMOUNT = 10;
-export const PUBLIC_POSTS_SEARCH_DEFAULT_TOTAL_DAILY = 2;
-
-// Suggested Posts defaults
-export const TON_CURRENCY_CODE = 'TON';
 export const VERIFY_AGE_MIN_DEFAULT = 18;
 
 export const STORY_VIEWS_MIN_SEARCH = 15;
@@ -203,7 +197,6 @@ export const RESIZE_HANDLE_CLASS_NAME = 'resizeHandle';
 export const RESIZE_HANDLE_SELECTOR = `.${RESIZE_HANDLE_CLASS_NAME}`;
 
 export const STARS_ICON_PLACEHOLDER = '⭐';
-export const STARS_CURRENCY_CODE = 'XTR';
 
 export const MIN_SCREEN_WIDTH_FOR_STATIC_RIGHT_COLUMN = 1275; // px
 export const MIN_SCREEN_WIDTH_FOR_STATIC_LEFT_COLUMN = 925; // px
@@ -269,7 +262,6 @@ export const EMOJI_SIZES = 7;
 export const TOP_SYMBOL_SET_ID = 'top';
 export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
-export const COLLECTIBLE_STATUS_SET_ID = 'collectibleStatus';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
 export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
@@ -324,25 +316,6 @@ export const CONTENT_TYPES_WITH_PREVIEW = new Set([
 
 export const STORYBOARD_MIME = 'application/x-tgstoryboard';
 export const STORYBOARD_MAP_MIME = 'application/x-tgstoryboardmap';
-
-// Taken from https://github.com/telegramdesktop/tdesktop/blob/41d9a9fcbd0c809c60ddbd9350791b1436aff7d9/Telegram/SourceFiles/ui/boxes/choose_language_box.cpp#L28
-export const SUPPORTED_TRANSLATION_LANGUAGES = [
-  // Official
-  'en', 'ar', 'be', 'ca', 'zh', 'nl', 'fr', 'de', 'id',
-  'it', 'ja', 'ko', 'pl', 'pt', 'ru', 'es', 'uk',
-  // Unofficial
-  'af', 'sq', 'am', 'hy', 'az', 'eu', 'bn', 'bs', 'bg',
-  'ceb', 'zh-CN', 'zh-TW', 'co', 'hr', 'cs', 'da', 'eo',
-  'et', 'fi', 'fy', 'gl', 'ka', 'el', 'gu', 'ht', 'ha',
-  'haw', 'he', 'iw', 'hi', 'hmn', 'hu', 'is', 'ig', 'ga',
-  'jv', 'kn', 'kk', 'km', 'rw', 'ku', 'ky', 'lo', 'la',
-  'lv', 'lt', 'lb', 'mk', 'mg', 'ms', 'ml', 'mt', 'mi',
-  'mr', 'mn', 'my', 'ne', 'no', 'ny', 'or', 'ps', 'fa',
-  'pa', 'ro', 'sm', 'gd', 'sr', 'st', 'sn', 'sd', 'si',
-  'sk', 'sl', 'so', 'su', 'sw', 'sv', 'tl', 'tg', 'ta',
-  'tt', 'te', 'th', 'tr', 'tk', 'ur', 'ug', 'uz', 'vi',
-  'cy', 'xh', 'yi', 'yo', 'zu',
-];
 
 // eslint-disable-next-line @stylistic/max-len
 export const RE_LINK_TEMPLATE = '((ftp|https?):\\/\\/)?((www\\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z][-a-zA-Z0-9]{1,62})\\b([-a-zA-Z0-9()@:%_+.,~#?&/=]*)';

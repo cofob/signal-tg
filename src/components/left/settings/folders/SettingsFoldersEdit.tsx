@@ -16,7 +16,7 @@ import {
 } from '../../../../api/types';
 
 import { FOLDER_TITLE_MAX_LENGTH, STICKER_SIZE_FOLDER_SETTINGS } from '../../../../config';
-import { selectCanShareFolder, selectCustomEmoji, selectIsCurrentUserPremium } from '../../../../global/selectors';
+import { selectCanShareFolder, selectCustomEmoji } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { isUserId } from '../../../../util/entities/ids';
 import { findIntersectionWithSet } from '../../../../util/iteratees';
@@ -24,18 +24,15 @@ import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { CUSTOM_PEER_EXCLUDED_CHAT_TYPES, CUSTOM_PEER_INCLUDED_CHAT_TYPES } from '../../../../util/objects/customPeer';
 import { LIMITS } from '../../../../limits';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
-import { renderTextWithEntities } from '../../../common/helpers/renderTextWithEntities';
 
 import { selectChatFilters } from '../../../../hooks/reducers/useFoldersReducer';
 import useHistoryBack from '../../../../hooks/useHistoryBack';
 import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
-import { getPeerColorClass } from '../../../../hooks/usePeerColor';
 
 import AnimatedIconWithPreview from '../../../common/AnimatedIconWithPreview';
 import FolderIcon from '../../../common/FolderIcon';
 import GroupChatInfo from '../../../common/GroupChatInfo';
-import Icon from '../../../common/icons/Icon';
 import PrivateChatInfo from '../../../common/PrivateChatInfo';
 import Island, { IslandDescription, IslandOutside, IslandTitle } from '../../../gili/layout/Island';
 import Surface from '../../../gili/layout/Surface';
@@ -65,14 +62,11 @@ type StateProps = {
   invites?: ApiChatlistExportedInvite[];
   isRemoved?: boolean;
   chatListCount: number;
-  isCurrentUserPremium: boolean;
 };
 
 const SUBMIT_TIMEOUT = 500;
 
 const INITIAL_CHATS_LIMIT = 5;
-
-const FOLDER_COLORS = [0, 1, 2, 3, 4, 5, 6];
 
 export const ERROR_NO_TITLE = 'ChatListFilterErrorTitleEmpty';
 export const ERROR_NO_CHATS = 'ChatListFilterErrorEmpty';
@@ -96,7 +90,6 @@ const SettingsFoldersEdit = ({
   invites,
   chatListCount,
   onSaveFolder,
-  isCurrentUserPremium,
   isMobile,
 }: OwnProps & StateProps) => {
   const {
@@ -462,68 +455,6 @@ const SettingsFoldersEdit = ({
           </>
         )}
 
-        <IslandTitle className="color-picker-header" dir={lang.isRtl ? 'rtl' : undefined}>
-          <span className="color-picker-title-text">{lang('FilterColorTitle')}</span>
-          <div className={buildClassName(
-            'color-picker-title',
-            'color-picker-selected-color',
-            isCurrentUserPremium && state.folder.color !== undefined && state.folder.color !== -1
-              ? getPeerColorClass(state.folder.color)
-              : 'color-picker-item-disabled',
-          )}
-          >
-            {renderTextWithEntities({
-              text: state.folder.title.text,
-              entities: state.folder.title.entities,
-              noCustomEmojiPlayback: state.folder.noTitleAnimations,
-            })}
-          </div>
-        </IslandTitle>
-        <Island>
-          <div className="color-picker custom-scroll-x">
-            {FOLDER_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                onClick={() => {
-                  if (!isCurrentUserPremium) return;
-
-                  dispatch({ type: 'setColor', payload: color });
-                }}
-                className={buildClassName(
-                  'color-picker-item',
-                  getPeerColorClass(color),
-                  !isCurrentUserPremium && 'color-picker-item-hover-disabled',
-                  color === state.folder.color && isCurrentUserPremium && 'color-picker-item-active',
-                )}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                if (!isCurrentUserPremium) return;
-
-                dispatch({ type: 'setColor', payload: undefined });
-              }}
-              className={buildClassName(
-                'color-picker-item',
-                'color-picker-item-none',
-                (state.folder.color === undefined || state.folder.color === -1 || !isCurrentUserPremium)
-                && 'color-picker-item-active',
-              )}
-            >
-              {isCurrentUserPremium ? (
-                <Icon name="close" className="color-picker-item-none-icon" />
-              ) : (
-                <Icon name="lock-filled" className="color-picker-item-none-icon" />
-              )}
-            </button>
-          </div>
-        </Island>
-        <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-          {lang('FilterColorHint')}
-        </IslandDescription>
-
         <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
           {lang('FolderLinkScreenTitle')}
         </IslandTitle>
@@ -575,15 +506,12 @@ export default memo(withGlobal<OwnProps>(
     const { byId, invites } = global.chatFolders;
     const chatListCount = Object.values(byId).reduce((acc, el) => acc + (el.isChatList ? 1 : 0), 0);
 
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-
     return {
       loadedActiveChatIds: listIds.active,
       loadedArchivedChatIds: listIds.archived,
       invites: state.folderId ? (invites[state.folderId] || MEMO_EMPTY_ARRAY) : undefined,
       isRemoved: state.folderId !== undefined && !byId[state.folderId],
       chatListCount,
-      isCurrentUserPremium,
     };
   },
 )(SettingsFoldersEdit));

@@ -10,5 +10,4 @@ export * from './bots';
 export * from './misc';
 export * from './calls';
 export * from './stories';
-export * from './stars';
 export * from './peers';

@@ -15,7 +15,6 @@ import {
   updatePeerStory,
   updatePeersWithStories,
   updatePoll,
-  updateStealthMode,
 } from '../../reducers';
 import { updateThreadInfo } from '../../reducers/threads';
 import {
@@ -76,10 +75,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateConfig':
       actions.loadConfig();
-      break;
-
-    case 'updateAiComposeTones':
-      actions.loadAiComposeTones();
       break;
 
     case 'updateNewAuthorization': {
@@ -245,21 +240,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateStealthMode':
-      global = updateStealthMode(global, update.stealthMode);
       setGlobal(global);
       break;
 
     case 'updateAttachMenuBots':
       actions.loadAttachBots();
       break;
-
-    case 'updatePremiumFloodWait': {
-      actions.processPremiumFloodWait({
-        isUpload: update.isUpload,
-      });
-      break;
-    }
   }
 
   return undefined;

@@ -20,7 +20,6 @@ import {
   updatePeerStoryViews,
   updatePeersWithStories,
   updateSentStoryReaction,
-  updateStealthMode,
   updateStoryViews,
   updateStoryViewsLoading,
 } from '../../reducers';
@@ -68,7 +67,6 @@ addActionHandler('loadAllStories', async (global): Promise<void> => {
     if ('peerStories' in result) {
       global = addStories(global, result.peerStories);
       global = updatePeersWithStories(global, result.peerStories);
-      global = updateStealthMode(global, result.stealthMode);
       global.stories.hasNext = result.hasMore;
     }
 
@@ -111,7 +109,6 @@ addActionHandler('loadAllHiddenStories', async (global): Promise<void> => {
     if ('peerStories' in result) {
       global = addStories(global, result.peerStories);
       global = updatePeersWithStories(global, result.peerStories);
-      global = updateStealthMode(global, result.stealthMode);
       global.stories.hasNextInArchive = result.hasMore;
     }
 
@@ -659,12 +656,6 @@ addActionHandler('sendStoryReaction', async (global, actions, payload): Promise<
     global = updateSentStoryReaction(global, peerId, storyId, previousReaction);
   }
   setGlobal(global);
-});
-
-addActionHandler('activateStealthMode', (global, actions, payload): ActionReturnType => {
-  const { isForPast = true, isForFuture = true } = payload || {};
-
-  callApi('activateStealthMode', { isForPast: isForPast || true, isForFuture: isForFuture || true });
 });
 
 addActionHandler('loadStoryAlbums', async (global, actions, payload): Promise<void> => {

@@ -4,11 +4,8 @@ import {
 import { getActions, getPromiseActions, withGlobal } from '../../../global';
 
 import type { SharedSettings } from '../../../global/types';
-import type { AccountSettings } from '../../../types';
 
-import { selectIsCurrentUserPremium } from '../../../global/selectors';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
-import { IS_TRANSLATION_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import { getTranslationFn } from '../../../util/localization';
 
 import useFlag from '../../../hooks/useFlag';
@@ -18,8 +15,7 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import ItemPicker, { type ItemPickerOption } from '../../common/pickers/ItemPicker';
 import PickerItem from '../../common/pickers/PickerItem';
-import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
-import Checkbox from '../../ui/Checkbox';
+import Island, { IslandTitle } from '../../gili/layout/Island';
 import DropdownMenu from '../../ui/DropdownMenu';
 import Loading from '../../ui/Loading';
 import MenuItem from '../../ui/MenuItem';
@@ -31,23 +27,17 @@ type OwnProps = {
   onReset: () => void;
 };
 
-type StateProps = {
-  isCurrentUserPremium: boolean;
-} & Pick<AccountSettings, 'canTranslate'>
-& Pick<SharedSettings, 'language' | 'languages' | 'customLanguages'>;
+type StateProps = Pick<SharedSettings, 'language' | 'languages' | 'customLanguages'>;
 
 const SettingsLanguage = ({
   isActive,
-  isCurrentUserPremium,
   languages,
   language,
   customLanguages,
-  canTranslate,
   onReset,
 }: OwnProps & StateProps) => {
   const {
     loadLanguages,
-    setSettingOption,
     removeCustomLanguage,
   } = getActions();
 
@@ -101,10 +91,6 @@ const SettingsLanguage = ({
     });
   }, [isLoading, languages, selectedLanguage]);
 
-  const handleShouldTranslateChange = useLastCallback((newValue: boolean) => {
-    setSettingOption({ canTranslate: newValue });
-  });
-
   useHistoryBack({
     isActive,
     onBack: onReset,
@@ -112,21 +98,6 @@ const SettingsLanguage = ({
 
   return (
     <div className="settings-content settings-language custom-scroll">
-      {IS_TRANSLATION_SUPPORTED && (
-        <>
-          <Island>
-            <Checkbox
-              label={lang('ShowTranslateButton')}
-              checked={canTranslate}
-              onCheck={handleShouldTranslateChange}
-            />
-          </Island>
-          <IslandDescription>
-            {lang('TranslateSettingsAbout')}
-          </IslandDescription>
-        </>
-      )}
-
       <IslandTitle>{lang('LocalizationInterfaceLanguage')}</IslandTitle>
       {Boolean(savedLanguages?.length) && (
         <Island>
@@ -181,19 +152,12 @@ const SettingsLanguage = ({
 
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
-    const {
-      canTranslate,
-    } = global.settings.byKey;
     const { language, languages, customLanguages } = selectSharedSettings(global);
 
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-
     return {
-      isCurrentUserPremium,
       languages,
       language,
       customLanguages,
-      canTranslate,
     };
   },
 )(SettingsLanguage));

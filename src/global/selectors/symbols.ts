@@ -3,7 +3,6 @@ import type { GlobalState } from '../types';
 
 import { RESTRICTED_EMOJI_SET_ID } from '../../config';
 import { hasMixedEmojiSkinTones, removeEmojiSkinTone } from '../../util/emoji/skinTone';
-import { selectIsCurrentUserPremium } from './users';
 
 const NORMALIZED_ANIMATED_EMOJI_BY_STICKERS = new WeakMap<ApiSticker[], Map<string, ApiSticker>>();
 
@@ -49,7 +48,6 @@ export function selectStickersForEmoji<T extends GlobalState>(global: T, emoji: 
 }
 
 export function selectCustomEmojiForEmoji<T extends GlobalState>(global: T, emoji: string) {
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const addedCustomSets = global.customEmojis.added.setIds;
   let customEmojiForEmoji: ApiSticker[] = [];
 
@@ -62,12 +60,11 @@ export function selectCustomEmojiForEmoji<T extends GlobalState>(global: T, emoj
 
     customEmojiForEmoji = customEmojiForEmoji.concat(packs[emoji] || [], packs[cleanEmoji(emoji)] || []);
   });
-  return isCurrentUserPremium ? customEmojiForEmoji : customEmojiForEmoji.filter(({ isFree }) => isFree);
+  return customEmojiForEmoji;
 }
 
 // Slow, not to be used in `withGlobal`
 export function selectCustomEmojiForEmojis<T extends GlobalState>(global: T, emojis: string[]) {
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const addedCustomSets = global.customEmojis.added.setIds;
   let customEmojiForEmoji: ApiSticker[] = [];
 
@@ -82,11 +79,7 @@ export function selectCustomEmojiForEmojis<T extends GlobalState>(global: T, emo
     )).flatMap(([, stickers]) => stickers);
     customEmojiForEmoji = customEmojiForEmoji.concat(customEmojis);
   });
-  return isCurrentUserPremium ? customEmojiForEmoji : customEmojiForEmoji.filter(({ isFree }) => isFree);
-}
-
-export function selectIsSetPremium(stickerSet: Pick<ApiStickerSet, 'stickers' | 'isEmoji'>) {
-  return stickerSet.isEmoji && stickerSet.stickers?.some((sticker) => !sticker.isFree);
+  return customEmojiForEmoji;
 }
 
 function cleanEmoji(emoji: string) {
