@@ -16,7 +16,7 @@ the message history, the contact list with numbers, and the decrypted attachment
 | Operator of the tunnel, or the network | Drop, delay and reorder connections; see the host names, times and volumes | TLS runs in the page's WebAssembly and trusts only Signal's CA (`SIGNAL_CA_PEM`), so the tunnel cannot read or forge Signal traffic |
 | Another website | Reach the tunnel through a visitor's browser; post to the app's share target | `Origin` check in the tunnel; the share target only pre-fills a draft |
 | A message sender | Send text, file names, vCards, link previews, stickers, SVG and other attachments, long strings | Rendered as text nodes, attributes are escaped, links keep only allowed schemes, media is shown through `<img>` and `<video>` and streamed with `Content-Security-Policy: sandbox` |
-| Someone with the browser profile or the files of the desktop app, without the passcode | Read IndexedDB, Cache storage, `localStorage`, files | The passcode encrypts Web A's state only; the engine's stores are not encrypted (S-02) |
+| Someone with the browser profile or the files of the desktop app, without the passcode | Read IndexedDB, Cache storage, `localStorage`, files | With a passcode, Web A's state and the engine's stores and cached attachments are encrypted (S-02); what stays readable is listed there. Without a passcode nothing is encrypted |
 | Script running in the page or the worker | Read everything the engine holds in memory and storage | Not defended by design: CSP without `unsafe-eval` and inline scripts, no third-party hosts, `check:hosts` in CI |
 | Someone who gets the unlocked computer | Everything the user can do | Out of scope |
 
@@ -27,10 +27,10 @@ Out of scope: the Signal service, libsignal's cryptography, the browser and oper
 | ID | Severity | Area | Finding | Status |
 | --- | --- | --- | --- | --- |
 | S-01 | High | Logout | Logging out from the passcode lock screen, or before the engine started, left the account, keys, messages and attachments, and the next load signed back in | Fixed |
-| S-02 | High | Data at rest | With a passcode, the engine's stores (keys, account password, conversations, messages, attachments) stay plaintext | Open: design written, key management done |
-| S-03 | Medium | CSP | The production policy is a `<meta>` tag: it does not apply to the engine's Web Worker and cannot carry `frame-ancestors` | Open: needs the response headers of the deployment, documented |
+| S-02 | High | Data at rest | With a passcode, the engine's stores (keys, account password, conversations, messages, attachments) stayed plaintext | Fixed: encrypted at rest, with listed fields left in the clear |
+| S-03 | Medium | CSP | The production policy is a `<meta>` tag: it does not apply to the engine's Web Worker and cannot carry `frame-ancestors`; the desktop app had no policy at all | Fixed for the desktop app; web: the policy printer exists, the headers belong to the deployment |
 | S-04 | Medium | Tauri | `shell:default` and `process:default` gave the page the shell plugin's `open` and the process `exit`; webviews could open new windows | Fixed |
-| S-05 | Medium | Logout | Logging out does not remove the device from the account on the server | Open: decision needed |
+| S-05 | Medium | Logout | Logging out did not remove the device from the account on the server | Fixed (linked devices, best effort) |
 | S-06 | Low | Unlink | After the phone unlinks the browser, conversations and messages stay in plaintext with no way to erase them from the app | Accepted: Signal Desktop does the same; an erase action is recommended |
 | S-07 | Low | Logging | Production error logs carried ACIs, numbers and key-sized values | Fixed |
 | S-08 | Low | Tauri | The record of saved files (paths, attachment keys) survived logout, and log lines named saved files | Fixed |
@@ -57,53 +57,102 @@ signed in again. After the fix the same steps leave 0 records, an empty attachme
 Fix: `clearSignalLocalData()` (`src/lib/signal/clearLocalData.ts`) clears the stores and the attachment cache from the
 page, whether or not the engine runs; both actions call it. Test: `src/lib/signal/clearLocalData.test.ts`.
 
-### S-02 Engine stores are plaintext under a passcode (High, open)
+### S-02 Engine stores are plaintext under a passcode (High, fixed)
 
-Measured with the demo account, passcode set, screen unlocked and locked:
+Measured before the fix, with the demo account, passcode set, screen unlocked and locked: `ts-signal` (7 records:
+`account` with `password`, identity key pairs, sessions, prekeys, profile key), `ts-signal-messages` (12 conversations
+with names and numbers, 56 messages with `body`, 6 stories) and 9 decrypted images in `ts-signal-attachments` were all
+readable; only Web A's own state (`tt-passcode`) was encrypted.
 
-| Storage | Contents | State |
+Now, while a passcode exists, the engine encrypts:
+
+- every value of `ts-signal` (`SecureIdbStore`), and every conversation, message and story of `ts-signal-messages`
+  (`recordCrypto.ts`), as AES-GCM envelopes `{ $enc: 1, iv, data }` with a random IV per write; the context
+  (authenticated data) names the record's place, and for `ts-signal-messages` includes the fields left in the clear, so
+  a record moved to another conversation, or with such a field changed, no longer decrypts;
+- every cached attachment and sticker (`blobEncryption.ts`): chunks of 1 MiB in authenticated frames, the media type
+  inside, so a cut, reordered or damaged file does not decrypt. Existing files are encrypted in place, none is dropped.
+
+The key is `getEngineKey()` (random, in the passcode vault under the data key, wrapped again when the passcode
+changes). The page gives it to the engine at every start and when the passcode is turned on; the engine holds it as a
+non-extractable `CryptoKey` and forgets it when the screen locks (the API closes), when the account is forgotten and
+when the connection is closed. Turning the passcode on encrypts what is stored in place (new records are encrypted from
+the first moment, an interrupted run resumes at the next start); turning it off decrypts everything before the key is
+dropped and rolls back if that fails. A start without the key, while the stores are marked encrypted, stops with an
+error instead of showing the link screen. Design and lifecycle: `docs/signal/PLAN.md`, stage 6. Users without a passcode
+see no change: the same code paths store records as before.
+
+What stays in the clear (everything else above is encrypted):
+
+| Where | In the clear | Why |
 | --- | --- | --- |
-| IndexedDB `ts-signal` (7 records) | `account` with `password`, identity key pairs, sessions, prekeys, profile key | plaintext objects |
-| IndexedDB `ts-signal-messages` | 12 conversations with names and numbers, 56 messages with `body`, 6 stories | plaintext objects |
-| Cache `ts-signal-attachments` | 9 decrypted images | plaintext |
-| IndexedDB `tt-data`, `tt-passcode`, `localStorage` | Web A state | encrypted in `tt-passcode`; `localStorage` holds only the lock flag |
+| `ts-signal` | record keys: `item:<name>`, `session:<aci>.<device>`, `identity:<id>`, `preKey:`, `signedPreKey:` and `kyberPreKey:<our id>:<n>`, `senderKey:`, `senderKeyInfo:<group id>`, `groupSendEndorsements:<group id>`, `recipient:<aci>`, `stickerPackManifest:<id>`, `storageRecord:<id>`, `sentProto:<timestamp>`, `unprocessed:<id>` | the engine lists records by prefix |
+| `ts-signal` | `meta:encryption`: `{ state: 'on' or 'decrypting', isMigrated }` | a start without the key has to tell that the stores are encrypted |
+| `ts-signal-messages` conversations | `id` (the contact's ACI or the group id), `localId` | key and unique index |
+| `ts-signal-messages` messages | `id`, `conversationId`, `authorAci`, `sentAt`, `expiresAt` (when set), `sendRetry.at` (when set) | key and indexes: lookup by conversation, by author and timestamp, expiry and resend queues |
+| `ts-signal-messages` stories | `id`, `authorAci`, `sentAt`, `expiresAt` | key and indexes |
+| Cache `ts-signal-attachments` | request URLs (`attachment/<digest>` or `attachment/<cdn>/<id>`, `sticker/<pack>/<n>`), the last-access header | cache keys |
+| all | the number and size of records and files, and when they were written | observable from the files |
 
-Without a passcode the same data is plaintext too, as in Signal Desktop's default. A passcode therefore protects the UI
-state but not the history or keys.
+So the profile still shows with whom, and when, the user talked (ACIs, timestamps and counts per conversation), but not
+what was said, who the contacts are by name or number, the keys, or the attachments. Not protected: the memory of the
+engine and the page while they run (a script in the page can read what the engine reads), and an attacker who can change
+the app's code. The caches `tt-media*` are not written at all under a passcode (unchanged).
 
-What is done: `getEngineKey()` (`src/util/passcode/index.ts`) keeps a random 32-byte key in the passcode vault under the
-data key, creates it at first use, wraps it again when the passcode changes, and drops it with the vault. Tests:
-`src/util/passcode/engineKey.test.ts`.
+Cost, measured in Chrome with 20,000 messages in 200 conversations and 300 sessions: reading a page of 50 messages 3.5 ms
+against 6.2 ms without encryption (within noise), the conversation list 5.8 ms against 16.4 ms, unread messages of a
+10,000-message chat 555 ms against 708 ms, one message by author and timestamp 0.3 ms against 0.2 ms; storing 1000
+messages 347 ms; turning the passcode on or off with 20,000 messages 7.4 s once.
 
-What is not: encrypting the stores. It does not fit one clean pass: `MessageDb` has indexes and cursors on plaintext
-fields, attachments sit in the Cache API, the engine has to start with the key and migrate existing records, and a
-half-way state (only the keys encrypted) would suggest that the history is protected. The concrete design (record format,
-which fields stay open, migration, lock and multi-tab behaviour, what it does not protect) is in
-`docs/signal/PLAN.md`, stage 6, "Шифрование хранилища движка код-паролем".
+Proof in the browser (demo account, `proof.mjs` steps below), counting records with an envelope and the known secrets
+(`Hi! Are we still on for Saturday?`, `Alice`, `+15550100001`, the password) in the stores:
 
-Two rules for whoever implements it. Disabling the passcode must decrypt the stores before the key is dropped:
-`commitPasscodeDisable` removes the vault generation, and with it the engine key, so a disable that finishes first
-leaves records that nothing can read. And a corrupted key blob must not block a passcode change: while the stores are
-plaintext, `changePasscode` logs the corruption and `getEngineKey()` creates a new key later (tested in
-`engineKey.test.ts`); once the stores are encrypted, a key that cannot be read must fail the change loudly instead, since
-a new key would orphan the records.
+| Step | `ts-signal` | conversations / messages / stories | attachment cache |
+| --- | --- | --- | --- |
+| no passcode | 0 of 7 encrypted, password in the clear | 0 of 12 / 56 / 6, names, numbers and texts readable | 9 readable images |
+| passcode on | 7 of 8 (the marker), no leaks | 12 / 56 / 6 of 12 / 56 / 6, no leaks | 9 of 9 encrypted |
+| locked | same | same | same |
+| reload while locked | same, the engine does not start | same | same |
+| unlocked again | same, 10 chats shown, pictures decode | same | same |
+| passcode off | 0 of 7 encrypted, readable again | readable again | 9 readable images |
 
-### S-03 The CSP does not cover the engine's worker (Medium, open)
+Tests: `src/lib/signal/store/atRest.test.ts` (value encoding, key and context binding, `SignalStore`, every `MessageDb`
+query before and after encryption, a moved record, interrupted migration, encrypted files),
+`src/util/passcode/engineKey.test.ts`. Not done: a second tab turning the passcode on or off was reasoned about
+(`callApi` forwards to the master tab's engine, the key travels over the `BroadcastChannel` that already carries the data
+key) but not run; a crash between the key being set and the marker leaves at most one batch to the next start.
+
+### S-03 The CSP does not cover the engine's worker (Medium, fixed for the desktop app)
 
 A `<meta http-equiv="Content-Security-Policy">` applies to the document. A dedicated worker takes its policy from its own
 response. Test: a page with `connect-src 'self'` in a meta tag could not `fetch` another origin, and a worker from the
 same origin fetched it (`REACHED-OTHER-ORIGIN` in the server log). The Signal engine, with all keys, runs in such a
-worker, so in production the CSP does not limit its network access, and `frame-ancestors` cannot be set at all. The
-development server sends the policy as a header, so it does not show the gap.
+worker, so a policy that arrives only as a meta tag does not limit its network access, and `frame-ancestors` cannot be set
+at all. The development server sends the policy as a header, so it does not show the gap.
 
 The policy itself is sound: `default-src 'self'`, `script-src 'self' 'wasm-unsafe-eval'` (no `unsafe-eval`, no inline
 scripts), `worker-src 'self'` (plus `blob:` only in development), `object-src 'none'`, `base-uri 'none'`,
-`form-action 'none'`, `frame-src 'none'`, `connect-src` limited to the app, the tunnel and the proxy setting (S-11).
+`form-action 'none'`, `frame-src 'none'`, `connect-src` limited to the app, the tunnel and the proxy setting (S-11). Its
+source is `plugins/csp.ts` (`buildCsp`), used by the page's meta tag and the dev server.
 
-Mitigation: `proxy/README.md` ("Headers for the app") gives the nginx and Caddy header blocks that send the same policy,
-`frame-ancestors 'none'`, `nosniff`, `Referrer-Policy` and HSTS on every response. Open: the desktop app sets `csp: null`
-in `tauri/tauri.conf.json`, so its workers get no policy either; a Tauri `csp` equal to `buildCsp` would fix it and needs a
-test on the three platforms. The unit that ships the headers (a file emitted by the build) is not written.
+Desktop app: `app.security.csp` in `tauri/tauri.conf.json` now holds the production policy, so Tauri sends it as a
+header with every file it serves, workers included; `plugins/csp.test.ts` fails when it drifts from `buildCsp('production')`.
+`dangerousDisableAssetCspModification` is `["style-src"]`: Tauri otherwise adds a nonce to `style-src`, which makes
+browsers ignore `'unsafe-inline'`, and the editor's and inputs' style elements were blocked (seen as `style-src-elem`
+violations in the first run).
+
+Test of the desktop build under Xvfb (WebKitGTK, a scratch build of the app with a self-test script added to the page,
+which reports over `ws://127.0.0.1`, itself allowed by the policy): no policy violations after the change; the engine worker
+started with WebAssembly and loaded the 10 demo chats; the IPC command `get_desktop_settings` answered; the native
+transport opened a TLS connection to `chat.signal.org` through the app's TCP and returned the ServerHello (3,227 bytes,
+`16 03 03`); a second instance started with `sgnl://signal.me/#p/%2B15550100001` forwarded its link to the running app
+and the page took it (`takeDeepLinks`). Not tested: macOS and Windows (`http://tauri.localhost`, WKWebView, WebView2).
+Pictures did not show in the demo chats, with the policy and without it (see `FRICTION_LOG.md`: the Cache API refuses
+`tauri://` requests in WebKitGTK).
+
+Web deployments: `npm run csp:print` prints the production policy for a response header (`dev/printCsp.ts`; it takes
+`SIGNAL_TUNNEL_URL` and `APP_ENV` from the environment). The reverse proxy's headers, `frame-ancestors` and the rest are
+the deployment's job (`proxy/README.md`, "Headers for the app", and the all-in-one image).
 
 ### S-04 Tauri capabilities (Medium, fixed)
 
@@ -123,14 +172,14 @@ Fixed:
 
 Tests: `opens_only_web_mail_and_phone_links_outside_the_app` in `tauri/src/lib.rs`.
 
-### S-05 Logout does not unlink the device (Medium, open)
+### S-05 Logout does not unlink the device (Medium, fixed)
 
-`destroy` forgets the account locally ("the phone keeps listing the device until it unlinks it",
-`src/api/signal/methods/client.ts`). The server keeps the device registered: it queues messages for it, and uses its
-prekeys, until the phone removes it. The local keys are gone, so nobody can use the device, and no data leaks, but the
-user believes the session is closed. Linked devices may remove themselves (`unlinkDevice`, already used for relink).
-Recommendation: on a user's logout of a linked device, send `DELETE /v1/devices/{id}` best effort in parallel with the
-local wipe, never delaying the wipe. Not changed here because it alters a documented behaviour and needs a decision.
+`destroy` forgot the account locally but left the device registered, so the server went on queueing messages for it and
+using its prekeys until the phone removed it. Now logging out a linked device sends `DELETE /v1/devices/{id}` (a linked
+device may remove only itself) while the data is wiped; the wipe never waits for the request and its failure, such as with
+no connection, is only logged. The primary device and the demo account send nothing. Limits: a logout from the passcode
+lock screen cannot do it, because the engine is not running and the credentials are encrypted without the key; and a page
+that reloads right away may cut the request. Test: `src/api/signal/methods/client.test.ts`.
 
 ### S-06 Phone-initiated unlink keeps the data (Low, accepted)
 
@@ -241,8 +290,8 @@ and a modified byte (see PLAN.md). Certificate dates use the device clock, so a 
 2. `npm run check:ts`, `npm run check:hosts`, and `npx vitest run src/lib/signal/clearLocalData.test.ts
    src/util/maskSensitiveText.test.ts src/util/passcode/engineKey.test.ts`.
 3. At rest and logout: run `npm run dev`, open the page in Chrome, call `await signalDev.seedDemo()` in the console, reload,
-   set a passcode in Settings, and list `indexedDB.databases()`, `localStorage` and `caches.keys()`. After a fix of S-02
-   `ts-signal*` must hold no readable message text or password. For S-01: lock, reload, "forgot passcode" and log out;
+   set a passcode in Settings, and list `indexedDB.databases()`, `localStorage` and `caches.keys()`. With a passcode
+   `ts-signal*` must hold no readable message text or password, and the cached images must start with `TSE1`. For S-01: lock, reload, "forgot passcode" and log out;
    every store above must be empty after the reload and the app must not sign in again.
 4. CSP in workers: serve the built app without headers and with the headers of `proxy/README.md`, and fetch another
    origin from the worker (the engine's `worker-*.js`) in each case.
