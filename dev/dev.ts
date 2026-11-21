@@ -1,4 +1,4 @@
-// `npm run dev`: both frontends on one port. Web A's server listens on `DEV_PORT` (1234) at `/a/`, sends `/` to `/k/`
+// `npm run dev`: both frontends on one port. Web A's server listens on `DEV_PORT` (1234) at `/a/`, sends `/` to the default frontend
 // and proxies `/k/` to Web K's server, which listens on `WEBK_DEV_PORT` (the next port)
 import { type ChildProcess, spawn } from 'child_process';
 import { resolve } from 'path';
