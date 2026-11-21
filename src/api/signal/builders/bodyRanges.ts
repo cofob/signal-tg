@@ -4,8 +4,10 @@ import type { BodyRange, BodyRangeSchema } from '../../../lib/signal/proto/gener
 import type { ApiFormattedText, ApiMessageEntity, ApiMessageEntityDefault } from '../../types';
 import { ApiMessageEntityTypes } from '../../types';
 
+import { RE_LINK_TEMPLATE } from '../../../config';
 import { BodyRange_Style } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { uuidToString } from '../../../lib/signal/serviceId';
+import { parseSignalLink } from '../../../util/signalLinks';
 
 type Replacement = { start: number; length: number; text: string };
 
@@ -13,6 +15,18 @@ export type MentionedUser = { userId: string; name: string };
 
 // A mention takes one object replacement character in the body (Signal Desktop `ts/types/BodyRange.std.ts`)
 const MENTION_PLACEHOLDER = '￼';
+
+// Text that links are not made of: the entities of other kinds that the text has already
+const NO_LINK_ENTITY_TYPES = new Set<ApiMessageEntity['type']>([
+  ApiMessageEntityTypes.Code, ApiMessageEntityTypes.Pre, ApiMessageEntityTypes.MentionName,
+]);
+const RE_LINK = new RegExp(RE_LINK_TEMPLATE, 'gi');
+// Links with a scheme or `www.`, and Signal's links, which have no `www.`; plain `name.ext` is no link
+const RE_EXPLICIT_LINK = /^(?:(?:https?|ftp):\/\/|www\.)/i;
+const RE_ADDRESS_WITH_USER = /^[^/?#]*@/;
+const RE_LINK_END = /[.,;:!?]+$/;
+// Signal Desktop `shouldLinkifyMessage`: a text that changes its direction has no links
+const RE_DIRECTIONAL_OVERRIDE = /[\u202c-\u202e]/;
 
 const ENTITY_TYPE_BY_STYLE: Partial<Record<BodyRange_Style, ApiMessageEntityDefault['type']>> = {
   [BodyRange_Style.BOLD]: ApiMessageEntityTypes.Bold,
@@ -74,7 +88,43 @@ export function buildApiFormattedText(
     });
   }
 
+  entities.push(...buildLinkEntities(text, entities));
+
   return { text, entities: entities.length ? entities.sort((a, b) => a.offset - b.offset) : undefined };
+}
+
+/**
+ * Entities of the links in a text, which Signal does not send: apps find them in the text. A link that overlaps code
+ * or a mention is none.
+ */
+function buildLinkEntities(text: string, entities: ApiMessageEntity[]): ApiMessageEntity[] {
+  if (RE_DIRECTIONAL_OVERRIDE.test(text)) return [];
+
+  const links: ApiMessageEntity[] = [];
+  for (const { 0: match, index: offset } of text.matchAll(RE_LINK)) {
+    const link = trimLinkEnd(match);
+    if (!link || RE_ADDRESS_WITH_USER.test(link) || !(RE_EXPLICIT_LINK.test(link) || parseSignalLink(link))) continue;
+
+    const end = offset + link.length;
+    const isTaken = entities.some((entity) => (
+      NO_LINK_ENTITY_TYPES.has(entity.type) && entity.offset < end && offset < entity.offset + entity.length
+    ));
+    if (!isTaken) links.push({ type: ApiMessageEntityTypes.Url, offset, length: link.length });
+  }
+  return links;
+}
+
+/** The punctuation that ends the sentence around a link, and the bracket that closes one opened before the link */
+function trimLinkEnd(link: string) {
+  let trimmed = link.replace(RE_LINK_END, '');
+  while (trimmed.endsWith(')') && countChar(trimmed, '(') < countChar(trimmed, ')')) {
+    trimmed = trimmed.slice(0, -1).replace(RE_LINK_END, '');
+  }
+  return trimmed;
+}
+
+function countChar(text: string, char: string) {
+  return text.split(char).length - 1;
 }
 
 /**
