@@ -76,7 +76,7 @@ LABEL org.opencontainers.image.title="TeleSignal" \
       org.opencontainers.image.description="TeleSignal web app with nginx and the tunnel to Signal servers" \
       org.opencontainers.image.source="https://github.com/cofob/signal-tg" \
       org.opencontainers.image.documentation="https://github.com/cofob/signal-tg/blob/master/docs/DEPLOY.md" \
-      org.opencontainers.image.licenses="GPL-3.0-or-later" \
+      org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 

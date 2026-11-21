@@ -4,7 +4,8 @@ name = "telesignal"
 version = "0.0.0"
 description = "TeleSignal"
 authors = ["Alexander Zinchuk", "TeleSignal contributors"]
-license = "GPLv3"
+# The bundle holds Web K (`webk/`, GPL-3.0-only) beside the rest (GPL-3.0-or-later)
+license = "GPL-3.0-only"
 edition = "2024"
 rust-version = "1.97"
 

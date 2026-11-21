@@ -46,4 +46,4 @@ GitHub Actions checks every push; `npm run check` runs the web checks locally. T
 
 ## License
 
-GPL-3.0-or-later. `rust/libsignal` is [libsignal](https://github.com/signalapp/libsignal), AGPL-3.0-only.
+GPL-3.0-or-later. `rust/libsignal` is [libsignal](https://github.com/signalapp/libsignal), AGPL-3.0-only. `webk/` is [Telegram Web K](https://github.com/morethanwords/tweb), GPL-3.0-only (`webk/NOTICE.md`), so the builds that include it, the web app, the container image and the desktop app, are distributed under GPL-3.0-only.
