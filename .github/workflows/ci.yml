@@ -1,0 +1,364 @@
+# Checks every push and pull request: the web app (types, lint, styles, hosts, tests, production build, generated
+# files), the tunnel and desktop app crates, and the libsignal WebAssembly bindings. Rust jobs run only when their
+# files change; the `CI success` job is the single check to require on the default branch.
+
+name: CI
+
+on:
+  push:
+    tags-ignore:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A push and its pull request share the branch name, so the newer run replaces the older one
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref_name != github.event.repository.default_branch }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  # Keep in line with `rust/signal-wasm/rust-toolchain`
+  RUST_TOOLCHAIN: 1.98.1
+  # `tsc` and the bundler outgrow the default heap of Node.js
+  NODE_OPTIONS: --max-old-space-size=8192
+  # GramJS still reads these at build time until plan stage 3 removes it; the app never connects to Telegram
+  TELEGRAM_API_ID: '1'
+  TELEGRAM_API_HASH: unused
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web == 'true' || github.event_name == 'workflow_dispatch' }}
+      tunnel: ${{ steps.filter.outputs.tunnel == 'true' || github.event_name == 'workflow_dispatch' }}
+      desktop: ${{ steps.filter.outputs.desktop == 'true' || github.event_name == 'workflow_dispatch' }}
+      wasm: ${{ steps.filter.outputs.wasm == 'true' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Path filter
+        id: filter
+        uses: dorny/paths-filter@v4.0.3
+        with:
+          filters: |
+            web:
+              - 'src/**'
+              - 'public/**'
+              - 'plugins/**'
+              - 'dev/**'
+              - 'deploy/**'
+              - 'tests/**'
+              - 'index.html'
+              - '*.{ts,js,json}'
+              - 'buf.gen.yaml'
+              - '.node-version'
+              - '.npmrc'
+              - '.github/workflows/ci.yml'
+            tunnel:
+              - 'proxy/**'
+              - '.github/workflows/ci.yml'
+            desktop:
+              - 'tauri/**'
+              - 'proxy/**'
+              - 'deploy/prepareTauriConfig.js'
+              - '.github/workflows/ci.yml'
+            wasm:
+              - 'rust/**'
+              - 'src/lib/signal/wasm/**'
+              - '.github/workflows/ci.yml'
+
+  typescript:
+    name: Check TypeScript
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types and lint
+        run: npm run check:ts
+
+  styles:
+    name: Check styles and hosts
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint styles
+        run: npm run check:css
+
+      - name: Check Telegram hosts
+        run: npm run check:hosts
+
+  test:
+    name: Run tests
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  generated:
+    name: Check generated files
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate localization types
+        run: npm run lang:ts
+
+      - name: Generate protobuf code
+        run: npm run signal:proto
+
+      - name: Check that nothing changed
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated files are out of date. Run \`npm run lang:ts\` and \`npm run signal:proto\`, then commit the result."
+            exit 1
+          fi
+
+  build:
+    name: Build web app
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build:production
+
+      - name: Upload web app
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: telesignal-web
+          path: dist
+          retention-days: 7
+          if-no-files-found: error
+
+  tunnel:
+    name: Check tunnel
+    needs: changes
+    if: needs.changes.outputs.tunnel == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: proxy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy, rustfmt
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: proxy
+          prefix-key: v0-rust-tunnel
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      # The desktop app depends on the library without the WebSocket server
+      - name: Clippy without the server
+        run: cargo clippy --locked --lib --no-default-features -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked
+
+  desktop:
+    name: Check desktop app
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: tauri
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: clippy
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: tauri
+          prefix-key: v0-rust-desktop
+
+      - name: Install Linux dependencies
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      # The crate embeds the frontend directory at compile time; the checks need it to exist, not to hold the app
+      - name: Create the frontend directory
+        run: mkdir -p dist
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked
+
+  wasm:
+    name: Check WASM build
+    needs: changes
+    if: needs.changes.outputs.wasm == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: rust/signal-wasm
+          prefix-key: v0-rust-wasm
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      # `wasm-bindgen-cli` must match the `wasm-bindgen` crate in the lockfile
+      - name: Read the wasm-bindgen version
+        id: bindgen
+        run: |
+          version=$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' rust/signal-wasm/Cargo.lock)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install wasm-bindgen-cli
+        uses: taiki-e/install-action@v2.90.6
+        with:
+          tool: wasm-bindgen@${{ steps.bindgen.outputs.version }}
+
+      - name: Build
+        run: bash rust/signal-wasm/build.sh
+
+      # The binary embeds the paths of the machine that built it, such as the Cargo registry directory, so a rebuild
+      # differs byte for byte from the committed one; its size and the bindings reveal an outdated commit
+      - name: Compare with the committed output
+        run: |
+          {
+            echo '### WebAssembly output'
+            echo
+            echo '| File | Committed | Rebuilt |'
+            echo '| --- | --- | --- |'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for file in src/lib/signal/wasm/generated/*; do
+            committed=$(git cat-file -s "HEAD:$file")
+            rebuilt=$(stat -c %s "$file")
+            echo "| \`$(basename "$file")\` | $committed | $rebuilt |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          git diff --stat -- src/lib/signal/wasm/generated || true
+
+  success:
+    name: CI success
+    needs: [changes, typescript, styles, test, generated, build, tunnel, desktop, wasm]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check the results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) exit 1 ;;
+          esac
