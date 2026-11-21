@@ -8,7 +8,6 @@ import type {
   ApiFormattedText,
   ApiGame,
   ApiLocation,
-  ApiMediaTodo,
   ApiMessagePoll,
   ApiMessageStoryData,
   ApiMessageWebPage,
@@ -18,7 +17,6 @@ import type {
   ApiPollResults,
   ApiRichMessage,
   ApiSticker,
-  ApiTodoItem,
   ApiVideo,
   ApiVoice,
   ApiWebDocument,
@@ -85,7 +83,7 @@ export function buildMessageContent(
   const hasUnsupportedMedia = mtpMessage.media instanceof GramJs.MessageMediaUnsupported;
 
   if (!richMessage && mtpMessage.message && !hasUnsupportedMedia
-    && !content.sticker && !content.todo && !content.contact && !content.video?.isRound) {
+    && !content.sticker && !content.contact && !content.video?.isRound) {
     const text = buildMessageTextContent(mtpMessage.message, mtpMessage.entities);
     const textWithTimestamps = addTimestampEntities(text);
     content = {
@@ -193,9 +191,6 @@ export function buildMessageMediaContent(
 
   const pollId = buildPollIdFromMedia(media);
   if (pollId) return { pollId };
-
-  const todo = buildTodoFromMedia(media);
-  if (todo) return { todo };
 
   const widget = buildWidgetFromMedia(media);
   if (widget) return { widget };
@@ -418,14 +413,6 @@ export function buildWebPagesFromPoll(
   return webPages.length ? webPages : undefined;
 }
 
-function buildTodoFromMedia(media: GramJs.TypeMessageMedia): ApiMediaTodo | undefined {
-  if (!(media instanceof GramJs.MessageMediaToDo)) {
-    return undefined;
-  }
-
-  return buildTodo(media.todo, media.completions);
-}
-
 function buildLocationFromMedia(media: GramJs.TypeMessageMedia): ApiLocation | undefined {
   if (media instanceof GramJs.MessageMediaGeo) {
     return buildGeo(media);
@@ -617,36 +604,6 @@ function addWebPageFromMedia(webPages: ApiWebPage[], media: GramJs.TypeMessageMe
   if (!webPage) return;
 
   webPages.push(webPage);
-}
-
-export function buildTodoItem(item: GramJs.TodoItem): ApiTodoItem {
-  return {
-    id: item.id,
-    title: buildApiFormattedText(item.title),
-  };
-}
-
-export function buildTodo(todo: GramJs.TodoList, completions?: GramJs.TodoCompletion[]): ApiMediaTodo {
-  const { title, list: items } = todo;
-
-  const todoItems = items.map(buildTodoItem);
-
-  const todoCompletions = completions?.map((completion) => ({
-    itemId: completion.id,
-    completedBy: getApiChatIdFromMtpPeer(completion.completedBy),
-    completedAt: completion.date,
-  }));
-
-  return {
-    mediaType: 'todo',
-    todo: {
-      title: buildApiFormattedText(title),
-      items: todoItems,
-      othersCanAppend: todo.othersCanAppend,
-      othersCanComplete: todo.othersCanComplete,
-    },
-    completions: todoCompletions,
-  };
 }
 
 export function buildPollResults(pollResults: GramJs.PollResults): ApiPollResults {

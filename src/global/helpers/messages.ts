@@ -96,14 +96,14 @@ export function getMessageTranscription(message: ApiMessage) {
 
 export function hasMessageText(message: MediaContainer) {
   const {
-    action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
+    action, text, sticker, photo, video, audio, voice, document, pollId, dice,
     webPage, contact, location, game, storyData, widget,
   } = message.content;
 
   if (pollId) return false;
 
   return Boolean(text) || !(
-    sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
+    sticker || photo || video || audio || voice || document || contact || pollId || webPage
     || location || game || storyData || dice
     || widget || action?.type === 'phoneCall'
   );

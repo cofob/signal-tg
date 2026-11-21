@@ -79,9 +79,6 @@ export interface GramJsAppConfig {
   poll_close_period_max?: number;
   poll_countries_max?: number;
   phone_country_iso2?: string;
-  todo_items_max?: number;
-  todo_title_length_max?: number;
-  todo_item_length_max?: number;
   quote_length_max?: number;
   ignore_restriction_reasons?: string[];
   need_age_video_verification?: boolean;
@@ -197,9 +194,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     pollClosePeriodMax: appConfig.poll_close_period_max,
     pollCountriesMax: appConfig.poll_countries_max,
     phoneCountryIso2: appConfig.phone_country_iso2,
-    todoItemsMax: appConfig.todo_items_max,
-    todoTitleLengthMax: appConfig.todo_title_length_max,
-    todoItemLengthMax: appConfig.todo_item_length_max,
     quoteLengthMax: appConfig.quote_length_max,
     ignoreRestrictionReasons: appConfig.ignore_restriction_reasons,
     needAgeVideoVerification: appConfig.need_age_video_verification,

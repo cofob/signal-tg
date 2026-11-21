@@ -299,30 +299,6 @@ export type ApiNewPoll = {
   attachedMedia?: ApiAttachment;
 };
 
-export interface ApiTodoItem {
-  id: number;
-  title: ApiFormattedText;
-}
-
-export interface ApiTodoList {
-  title: ApiFormattedText;
-  items: ApiTodoItem[];
-  othersCanAppend?: boolean;
-  othersCanComplete?: boolean;
-}
-
-export interface ApiTodoCompletion {
-  itemId: number;
-  completedBy: string;
-  completedAt: number;
-}
-
-export interface ApiMediaTodo {
-  mediaType: 'todo';
-  todo: ApiTodoList;
-  completions?: ApiTodoCompletion[];
-}
-
 export interface ApiWidget {
   mediaType: 'widget';
   width: number;
@@ -336,10 +312,6 @@ export interface ApiWidget {
   publicDataHash?: string;
   widgetId?: string;
 }
-
-export type ApiNewMediaTodo = {
-  todo: ApiTodoList;
-};
 
 export interface ApiWebPagePending {
   mediaType: 'webpage';
@@ -402,7 +374,6 @@ export interface ApiMessageReplyInfo {
   replyToTopId?: number;
   isForumTopic?: true;
   isQuote?: true;
-  todoItemId?: number;
   pollOption?: string;
   replyOptionText?: ApiFormattedText;
   quoteText?: ApiFormattedText;
@@ -430,7 +401,6 @@ export interface ApiInputMessageReplyInfo {
   quoteText?: ApiFormattedText;
   quoteRich?: ApiRichText[];
   quoteOffset?: number;
-  todoItemId?: number;
   pollOption?: string;
 }
 
@@ -621,7 +591,6 @@ export type MediaContent = {
   sticker?: ApiSticker;
   contact?: ApiContact;
   pollId?: string;
-  todo?: ApiMediaTodo;
   widget?: ApiWidget;
   action?: ApiMessageAction;
   webPage?: ApiMessageWebPage;

@@ -171,7 +171,7 @@ import {
   selectThreadReadState,
 } from '../../selectors/threads';
 import {
-  deleteEphemeralMessagesWithAnimation, deleteMessages, updateWithLocalMedia,
+  deleteEphemeralMessagesWithAnimation, deleteMessages,
 } from '../apiUpdaters/messages';
 
 type SendEphemeralMessagesParams = {
@@ -873,24 +873,6 @@ addActionHandler('editMessage', (global, actions, payload): ActionReturnType => 
   })();
 });
 
-addActionHandler('editTodo', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, todo, messageId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!chat || !message) {
-    return;
-  }
-
-  callApi('editTodo', {
-    chat,
-    message,
-    todo,
-  });
-});
-
 addActionHandler('cancelUploadMedia', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId } = payload;
 
@@ -992,7 +974,7 @@ addActionHandler('updateDraftReplyInfo', (global, actions, payload): ActionRetur
     const isNewTarget = update.replyToMsgId !== undefined;
     const baseReplyInfo = currentReplyInfo && isNewTarget
       ? omit(currentReplyInfo, [
-        'replyToPeerId', 'quoteText', 'quoteRich', 'quoteOffset', 'todoItemId', 'pollOption',
+        'replyToPeerId', 'quoteText', 'quoteRich', 'quoteOffset', 'pollOption',
       ]) : currentReplyInfo;
 
     updatedReplyInfo = {
@@ -1699,71 +1681,6 @@ addActionHandler('appendPollAnswer', async (global, actions, payload): Promise<v
   }
 
   await callApi('appendPollAnswer', { chat, messageId, text });
-});
-
-addActionHandler('toggleTodoCompleted', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, completedIds, incompletedIds } = payload;
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  const currentUserId = global.currentUserId;
-
-  const currentTodo = message?.content.todo;
-  if (!currentTodo || !currentUserId || !chat) {
-    return;
-  }
-
-  const currentCompletions = currentTodo.completions || [];
-  const currentCompletionIds = currentCompletions.map((c) => c.itemId);
-
-  const newCompletions = [...currentCompletions];
-  const now = getServerTime();
-
-  completedIds.forEach((itemId) => {
-    if (!currentCompletionIds.includes(itemId)) {
-      newCompletions.push({
-        itemId,
-        completedBy: currentUserId,
-        completedAt: now,
-      });
-    }
-  });
-
-  const finalCompletions = newCompletions.filter((c) => !incompletedIds.includes(c.itemId));
-
-  const newContent = {
-    ...message.content,
-    todo: {
-      ...currentTodo,
-      completions: finalCompletions,
-    },
-  };
-
-  const messageUpdate: Partial<ApiMessage> = {
-    ...message,
-    content: newContent,
-  };
-
-  global = updateWithLocalMedia(global, chatId, message.id, false, messageUpdate);
-  setGlobal(global);
-
-  callApi('toggleTodoCompleted', { chat, messageId: message.id, completedIds, incompletedIds });
-});
-addActionHandler('appendTodoList', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, items, messageId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!chat || !message) {
-    return;
-  }
-
-  callApi('appendTodoList', {
-    chat,
-    message,
-    items,
-  });
 });
 
 addActionHandler('cancelPollVote', (global, actions, payload): ActionReturnType => {

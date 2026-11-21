@@ -17,7 +17,6 @@ import type {
   ApiInputRichMessage,
   ApiMessage,
   ApiMessageEntity,
-  ApiNewMediaTodo,
   ApiPeer,
   ApiReaction,
   ApiStealthMode,
@@ -153,7 +152,6 @@ import buildAttachment, {
   prepareAttachment,
   prepareAttachmentsToSend,
 } from '../middle/composer/helpers/buildAttachment';
-import { parseCheckList } from '../middle/composer/helpers/parseCheckList';
 import { armSendCollapseReserve } from '../middle/helpers/messageListReserves';
 import {
   buildRichMessageFromFormatted,
@@ -207,7 +205,6 @@ import RecordModeMenu, { type RecordMode } from '../middle/composer/RecordModeMe
 import RoundVideoRecorder from '../middle/composer/RoundVideoRecorder';
 import SendAsMenu from '../middle/composer/SendAsMenu.async';
 import SymbolMenuButton from '../middle/composer/SymbolMenuButton';
-import ToDoListModal from '../middle/composer/ToDoListModal.async';
 import VoiceRecordBar from '../middle/composer/VoiceRecordBar';
 import WebPagePreview from '../middle/composer/WebPagePreview';
 import ReactionSelector from '../middle/message/reactions/ReactionSelector';
@@ -270,7 +267,6 @@ type StateProps = {
   isReplying?: boolean;
   hasSuggestedPost?: boolean;
   forwardedMessagesCount?: number;
-  todoListModal: TabState['todoListModal'];
   botKeyboardMessageId?: number;
   botKeyboardPlaceholder?: string;
   hiddenBotKeyboardId?: number;
@@ -340,11 +336,6 @@ enum MainButtonState {
   SendOneTime = 'sendOneTime',
 }
 
-type ConvertedCheckListSource = {
-  chatId: string;
-  threadId: ThreadId;
-};
-
 type ScheduledMessageArgs = TabState['contentToBeScheduled'] | {
   id: string; queryId: string; isSilent?: boolean;
 };
@@ -395,7 +386,6 @@ const Composer = ({
   isReplying,
   hasSuggestedPost,
   forwardedMessagesCount,
-  todoListModal,
   botKeyboardMessageId,
   botKeyboardPlaceholder,
   hiddenBotKeyboardId,
@@ -464,8 +454,6 @@ const Composer = ({
     stopTypingDraft,
     clearDraft,
     showDialog,
-    openTodoListModal,
-    closeTodoListModal,
     loadScheduledHistory,
     openThread,
     addRecentEmoji,
@@ -540,7 +528,7 @@ const Composer = ({
   const canSchedule = !isMonoforum && !isEphemeralReply;
 
   const {
-    canSendStickers, canSendGifs, canAttachMedia, canAttachPolls, canAttachEmbedLinks, canAttachToDoLists,
+    canSendStickers, canSendGifs, canAttachMedia, canAttachPolls, canAttachEmbedLinks,
     canSendVoices, canSendRoundVideos, canSendPlainText, canSendAudios, canSendVideos, canSendPhotos, canSendDocuments,
   } = useMemo(
     () => getAllowedAttachmentOptions(
@@ -1657,24 +1645,6 @@ const Composer = ({
     );
   });
 
-  const handleTodoListCreate = useLastCallback(() => {
-    if (!isCurrentUserPremium) {
-      showNotification({
-        message: lang('SubscribeToTelegramPremiumForCreateToDo'),
-      });
-      return;
-    }
-
-    const { todoItemsMax, todoTitleLengthMax, todoItemLengthMax } = getGlobal().appConfig;
-    const initialCheckList = parseCheckList(richEditor.getValue(), {
-      maxItemsCount: todoItemsMax,
-      maxTitleLength: todoTitleLengthMax,
-      maxItemLength: todoItemLengthMax,
-    });
-
-    openTodoListModal({ chatId, initialCheckList });
-  });
-
   const handleOpenRichInput = useLastCallback(() => {
     if (!isInMessageList || isEditingMedia) {
       return;
@@ -2046,64 +2016,6 @@ const Composer = ({
     getTooltipBoundary, handleBotCommandSelect, handleInlineBotSelect, handleStickerSelect,
     isInMessageList,
   ]);
-
-  const handleToDoListSend = useLastCallback((todo: ApiNewMediaTodo) => {
-    if (!validateEphemeralReply()) return;
-
-    if (!currentMessageList) {
-      return;
-    }
-
-    const convertedSource = todoListModal?.initialCheckList ? { chatId, threadId } : undefined;
-
-    if (isInScheduledList) {
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        scheduleTodoList(
-          { todo },
-          scheduledAt,
-          scheduleRepeatPeriod,
-          currentMessageList,
-          convertedSource,
-        );
-      });
-    } else {
-      sendTodoList(
-        { messageList: currentMessageList, todo, isSilent: isSilentPosting },
-        convertedSource,
-      );
-    }
-  });
-
-  const sendTodoList = useLastCallback((
-    params: { messageList: MessageList; todo: ApiNewMediaTodo; isSilent?: boolean },
-    convertedSource?: ConvertedCheckListSource,
-  ) => {
-    sendMessage(params);
-    if (convertedSource) clearConvertedDraft(convertedSource);
-  });
-
-  const scheduleTodoList = useLastCallback((
-    args: ScheduledMessageArgs,
-    scheduledAt: number,
-    scheduleRepeatPeriod: number | undefined,
-    messageList: MessageList,
-    convertedSource?: ConvertedCheckListSource,
-  ) => {
-    handleMessageSchedule(args, scheduledAt, scheduleRepeatPeriod, messageList);
-    if (convertedSource) clearConvertedDraft(convertedSource);
-  });
-
-  const clearConvertedDraft = useLastCallback((source: ConvertedCheckListSource) => {
-    clearDraft({ chatId: source.chatId, threadId: source.threadId, isLocalOnly: true });
-
-    if (source.chatId !== chatId || source.threadId !== threadId) {
-      return;
-    }
-
-    requestMeasure(() => {
-      resetComposer(false);
-    });
-  });
 
   const sendSilent = useLastCallback((additionalArgs?: ScheduledMessageArgs) => {
     if (isInScheduledList) {
@@ -2687,13 +2599,6 @@ const Composer = ({
         onClose={handleCloseRichMediaEditor}
         onApply={handleApplyRichMediaEdit}
       />
-      {isForCurrentMessageList && (
-        <ToDoListModal
-          modal={todoListModal}
-          onClear={closeTodoListModal}
-          onSend={handleToDoListSend}
-        />
-      )}
       <SendAsMenu
         isOpen={isSendAsMenuOpen}
         onClose={closeSendAsMenu}
@@ -2792,7 +2697,6 @@ const Composer = ({
               canAttachMedia={canAttachMedia}
               canAttachFiles={isRichInputExpansionActive || !hasRichOnlyContent}
               canAttachPolls={canAttachPolls}
-              canAttachToDoLists={canAttachToDoLists}
               canSendPhotos={canSendPhotos}
               canSendVideos={canSendVideos}
               canSendDocuments={canSendDocuments}
@@ -2800,7 +2704,6 @@ const Composer = ({
               canInsertDate={!isComposerBlocked}
               onFileSelect={isRichInputExpansionActive ? handleRichMediaSelect : handleFileSelect}
               onDateInsert={handleFormattedDateInsert}
-              onTodoListCreate={handleTodoListCreate}
               isScheduled={isInScheduledList}
               attachBots={isInMessageList ? attachBots : undefined}
               peerType={attachMenuPeerType}
@@ -3271,7 +3174,6 @@ export default memo(withGlobal<OwnProps>(
       isReplying,
       hasSuggestedPost,
       forwardedMessagesCount: isForwarding ? forwardMessageIds!.length : undefined,
-      todoListModal: tabState.todoListModal,
       chatFullInfo,
       topInlineBotIds: global.topPeerCategories.botsInline?.peerIds,
       topGuestBotIds: global.topPeerCategories.botsGuestChat?.peerIds,

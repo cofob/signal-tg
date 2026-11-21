@@ -46,7 +46,6 @@ export type OwnProps = {
   canAttachMedia: boolean;
   canAttachFiles: boolean;
   canAttachPolls: boolean;
-  canAttachToDoLists: boolean;
   canSendPhotos: boolean;
   canSendVideos: boolean;
   canSendDocuments: boolean;
@@ -65,7 +64,6 @@ export type OwnProps = {
   menuPositionX: 'left' | 'right';
   onFileSelect: (files: File[], shouldSendAsFile?: boolean) => void;
   onDateInsert: (text: ApiFormattedText) => void;
-  onTodoListCreate: NoneToVoidFunction;
   onRichInputExpand: NoneToVoidFunction;
   onMenuOpen: NoneToVoidFunction;
   onMenuClose: NoneToVoidFunction;
@@ -78,7 +76,6 @@ const AttachMenu = ({
   canAttachMedia,
   canAttachFiles,
   canAttachPolls,
-  canAttachToDoLists,
   canSendPhotos,
   canSendVideos,
   canSendDocuments,
@@ -99,7 +96,6 @@ const AttachMenu = ({
   onDateInsert,
   onMenuOpen,
   onMenuClose,
-  onTodoListCreate,
   onRichInputExpand,
 }: OwnProps) => {
   const {
@@ -297,9 +293,6 @@ const AttachMenu = ({
             )}
             {canAttachPolls && !editingMessage && (
               <MenuItem icon="poll" onClick={handlePollCreate}>{lang('Poll')}</MenuItem>
-            )}
-            {canAttachToDoLists && !editingMessage && (
-              <MenuItem icon="select" onClick={onTodoListCreate}>{lang('TitleToDoList')}</MenuItem>
             )}
             {canInsertDate && !editingMessage && (
               <MenuItem icon="calendar" onClick={handleDateMenuClick}>{lang('GiftInfoDate')}</MenuItem>

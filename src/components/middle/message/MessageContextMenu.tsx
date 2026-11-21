@@ -84,7 +84,6 @@ type OwnProps = {
   canShowReactionsCount?: boolean;
   canShowReactionList?: boolean;
   canEdit?: boolean;
-  canAppendTodoList?: boolean;
   canForward?: boolean;
   canFaveSticker?: boolean;
   canUnfaveSticker?: boolean;
@@ -114,7 +113,6 @@ type OwnProps = {
   onReply?: NoneToVoidFunction;
   onOpenThread?: VoidFunction;
   onEdit?: NoneToVoidFunction;
-  onAppendTodoList?: NoneToVoidFunction;
   onPin?: NoneToVoidFunction;
   onUnpin?: NoneToVoidFunction;
   onForward?: NoneToVoidFunction;
@@ -170,7 +168,6 @@ const MessageContextMenu = ({
   canReply,
   canQuote,
   canEdit,
-  canAppendTodoList,
   noReplies,
   canPin,
   canUnpin,
@@ -205,7 +202,6 @@ const MessageContextMenu = ({
   onReply,
   onOpenThread,
   onEdit,
-  onAppendTodoList,
   onPin,
   onUnpin,
   onForward,
@@ -425,11 +421,6 @@ const MessageContextMenu = ({
           </MenuItem>
         )}
         {canEdit && <MenuItem icon="edit" onClick={onEdit}>{lang('Edit')}</MenuItem>}
-        {canAppendTodoList && (
-          <MenuItem icon="add" onClick={onAppendTodoList}>
-            {lang('MenuButtonAppendTodoList')}
-          </MenuItem>
-        )}
         {canFaveSticker && (
           <MenuItem icon="star-regular" onClick={onFaveSticker}>{lang('AddToFavorites')}</MenuItem>
         )}

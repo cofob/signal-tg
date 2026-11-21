@@ -192,7 +192,6 @@ import RoundVideo from './RoundVideo';
 import Sticker from './Sticker';
 import Story from './Story';
 import StoryMention from './StoryMention';
-import TodoList from './TodoList';
 import Video from './Video';
 import WebPage from './WebPage';
 import Widget from './Widget';
@@ -260,7 +259,6 @@ type StateProps = {
   focusDirection?: FocusDirection;
   focusedQuote?: string;
   focusedQuoteOffset?: number;
-  focusedTodoItemId?: number;
   focusedPollOption?: string;
   noFocusHighlight?: boolean;
   scrollTargetPosition?: ScrollTargetPosition;
@@ -385,7 +383,6 @@ const Message = ({
   focusDirection,
   focusedQuote,
   focusedQuoteOffset,
-  focusedTodoItemId,
   focusedPollOption,
   noFocusHighlight,
   scrollTargetPosition,
@@ -565,7 +562,7 @@ const Message = ({
     photo, video, audio,
     voice, document, sticker, contact,
     location,
-    action, game, storyData, todo, dice, widget,
+    action, game, storyData, dice, widget,
   } = getMessageContent(message);
 
   const withVoiceTranscription = Boolean(!isTranscriptionHidden && (isTranscriptionError || transcribedText));
@@ -805,10 +802,7 @@ const Message = ({
     () => shouldHighlight && richMessage ? getRichQuoteTexts(richMessage.blocks) : undefined,
     [richMessage, shouldHighlight],
   );
-  const quoteSelector = focusedTodoItemId !== undefined
-    ? `.todo-list .Checkbox:has(input[value="${focusedTodoItemId}"]) .label, `
-    + `.todo-list [data-todo-item-id="${focusedTodoItemId}"]`
-    : focusedPollOption !== undefined ? `[data-poll-option="${btoa(focusedPollOption)}"]` : undefined;
+  const quoteSelector = focusedPollOption !== undefined ? `[data-poll-option="${btoa(focusedPollOption)}"]` : undefined;
   const highlightedText = textForLanguageDetection;
   useTextHighlight(textRef, { text: highlightedText, richTexts: richQuoteTexts, search: highlight });
   const getQuoteRange = useTextHighlight(quoteSelector ? ref : textRef, {
@@ -1329,9 +1323,6 @@ const Message = ({
             observeIntersectionForLoading={observeIntersectionForLoading}
             observeIntersectionForPlaying={observeIntersectionForPlaying}
           />
-        )}
-        {todo && (
-          <TodoList message={message} todoList={todo} />
         )}
         {game && (
           <Game
@@ -2035,7 +2026,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       direction: focusDirection, noHighlight: noFocusHighlight, isResizingContainer,
       quote: focusedQuote, quoteOffset: focusedQuoteOffset, scrollTargetPosition,
-      todoItemId: focusedTodoItemId, pollOption: focusedPollOption,
+      pollOption: focusedPollOption,
     } = (isFocused && focusedMessage) || {};
 
     const middleSearch = selectCurrentMiddleSearch(global);
@@ -2184,7 +2175,6 @@ export default memo(withGlobal<OwnProps>(
       isResizingContainer: isFocused ? isResizingContainer : undefined,
       focusedQuote: isFocused ? focusedQuote : undefined,
       focusedQuoteOffset: isFocused ? focusedQuoteOffset : undefined,
-      focusedTodoItemId: isFocused ? focusedTodoItemId : undefined,
       focusedPollOption: isFocused ? focusedPollOption : undefined,
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
       tags: global.savedReactionTags?.byKey,

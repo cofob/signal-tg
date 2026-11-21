@@ -1650,23 +1650,8 @@ export interface LangPair {
   'SuggestedPostConfirmTitle': undefined;
   'ButtonPublish': undefined;
   'PublishNow': undefined;
-  'TitleNewToDoList': undefined;
-  'TitleEditToDoList': undefined;
-  'TitleAppendToDoList': undefined;
   'InputTitle': undefined;
-  'TitleToDoList': undefined;
   'TitleTask': undefined;
-  'TitleAddTask': undefined;
-  'AllowOthersAddTasks': undefined;
-  'AllowOthersMarkAsDone': undefined;
-  'TitleGroupToDoList': undefined;
-  'TitleYourToDoList': undefined;
-  'MenuButtonAppendTodoList': undefined;
-  'SubscribeToTelegramPremiumForToggleTask': undefined;
-  'SubscribeToTelegramPremiumForCreateToDo': undefined;
-  'SubscribeToTelegramPremiumForAppendToDo': undefined;
-  'ToDoListTasksLimitReached': undefined;
-  'ToDoListTasksTitle': undefined;
   'NativeDownloadFailed': undefined;
   'MediaSpoilerSensitive': undefined;
   'TextSensitiveModal': undefined;
@@ -3398,45 +3383,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ButtonPublishAtTime': {
     'time': V;
   };
-  'TitleUserToDoList': {
-    'peer': V;
-  };
-  'DescriptionCompletedToDoTasks': {
-    'number': V;
-    'count': V;
-  };
-  'MessageActionTodoCompletionsAsDone': {
-    'peer': V;
-    'task': V;
-  };
-  'MessageActionTodoCompletionsAsDoneYou': {
-    'task': V;
-  };
-  'MessageActionTodoCompletionsAsNotDone': {
-    'peer': V;
-    'task': V;
-  };
-  'MessageActionTodoCompletionsAsNotDoneYou': {
-    'task': V;
-  };
-  'MessageActionAppendTodo': {
-    'peer': V;
-    'task': V;
-    'list': V;
-  };
-  'MessageActionAppendTodoYou': {
-    'task': V;
-    'list': V;
-  };
-  'MessageActionAppendTodoMultiple': {
-    'peer': V;
-    'tasks': V;
-    'list': V;
-  };
-  'MessageActionAppendTodoMultipleYou': {
-    'tasks': V;
-    'list': V;
-  };
   'MessageActionPollAppendAnswer': {
     'peer': V;
     'option': V;
@@ -4024,12 +3970,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'CommunityWithChats': {
     'count': V;
   };
-  'MessageActionTodoTaskCount': {
-    'count': V;
-  };
-  'HintTodoListTasksCount2': {
-    'count': V;
-  };
   'TextAgeVerificationModal': {
     'count': V;
   };
@@ -4526,7 +4466,6 @@ export interface LangKeyGroups {
       | 'SuggestedPostRejected'
       | 'SuggestedPostRejectedWithReason'
       | 'SuggestedPostConfirmMessage'
-      | 'TitleUserToDoList'
       | 'UnofficialSecurityRisk'
       | 'MessageLockedPremium'
       | 'StoryMentionedTitle';
@@ -4960,43 +4899,6 @@ export interface LangKeyGroups {
       | 'SuggestedPostConfirmDetailsWithTimeUser';
     variables: 'amount' | 'duration' | 'time';
   };
-  'count,number': {
-    keys:
-      | 'DescriptionCompletedToDoTasks';
-    variables: 'count' | 'number';
-  };
-  'peer,task': {
-    keys:
-      | 'MessageActionTodoCompletionsAsDone'
-      | 'MessageActionTodoCompletionsAsNotDone';
-    variables: 'peer' | 'task';
-  };
-  'task': {
-    keys:
-      | 'MessageActionTodoCompletionsAsDoneYou'
-      | 'MessageActionTodoCompletionsAsNotDoneYou';
-    variables: 'task';
-  };
-  'list,peer,task': {
-    keys:
-      | 'MessageActionAppendTodo';
-    variables: 'list' | 'peer' | 'task';
-  };
-  'list,task': {
-    keys:
-      | 'MessageActionAppendTodoYou';
-    variables: 'list' | 'task';
-  };
-  'list,peer,tasks': {
-    keys:
-      | 'MessageActionAppendTodoMultiple';
-    variables: 'list' | 'peer' | 'tasks';
-  };
-  'list,tasks': {
-    keys:
-      | 'MessageActionAppendTodoMultipleYou';
-    variables: 'list' | 'tasks';
-  };
   'option,peer': {
     keys:
       | 'MessageActionPollAppendAnswer'
@@ -5224,8 +5126,6 @@ export interface LangPluralKeyGroups {
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
-      | 'MessageActionTodoTaskCount'
-      | 'HintTodoListTasksCount2'
       | 'TextAgeVerificationModal'
       | 'RemainingPublicPostsSearch'
       | 'HintPublicPostsSearchQuota'

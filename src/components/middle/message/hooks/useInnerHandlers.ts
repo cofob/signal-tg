@@ -61,7 +61,7 @@ export default function useInnerHandlers({
   } = message;
 
   const {
-    replyToMsgId, replyToPeerId, replyToTopId, isQuote, quoteText, quoteRich, quoteOffset, todoItemId, pollOption,
+    replyToMsgId, replyToPeerId, replyToTopId, isQuote, quoteText, quoteRich, quoteOffset, pollOption,
   } = getMessageReplyInfo(message) || {};
 
   const handleSenderClick = useLastCallback(() => {
@@ -123,7 +123,6 @@ export default function useInnerHandlers({
         originChannelId: replyToPeerId,
         originMessageId: replyToTopId,
         focusMessageId: replyToMsgId,
-        todoItemId,
         pollOption,
       });
       return;
@@ -137,7 +136,6 @@ export default function useInnerHandlers({
       noForumTopicPanel: !replyToPeerId, // Open topic panel for cross-chat replies
       quote: isQuote ? quoteRich?.map(getRichQuoteText).join('\n') || quoteText?.text : undefined,
       quoteOffset: isQuote ? quoteOffset : undefined,
-      todoItemId,
       pollOption,
     });
   });

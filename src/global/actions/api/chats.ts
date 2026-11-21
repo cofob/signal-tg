@@ -314,7 +314,7 @@ addActionHandler('openThread', (global, actions, payload): ActionReturnType => {
 addActionHandler('openThread', async (global, actions, payload): Promise<void> => {
   const {
     type, isComments, noForumTopicPanel, shouldReplaceHistory, shouldReplaceLast,
-    focusMessageId, todoItemId, pollOption,
+    focusMessageId, pollOption,
     tabId = getCurrentTabId(),
   } = payload;
   let { chatId } = payload;
@@ -478,7 +478,6 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
       chatId,
       threadId,
       messageId: focusMessageId,
-      todoItemId,
       pollOption,
       tabId,
     });

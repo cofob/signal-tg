@@ -14,14 +14,12 @@ import type {
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputSuggestedPostInfo,
-  ApiMediaTodo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessageForwardInfo,
   ApiMessagePoll,
   ApiMessageReportResult,
   ApiMessageThreadInfo,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiPeer,
   ApiPreparedInlineMessage,
@@ -305,7 +303,6 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
     quoteText: replyTo.quoteText ? buildMessageTextContent(replyTo.quoteText, replyTo.quoteEntities) : undefined,
     quoteRich: replyTo.quoteRich?.map((text) => buildApiRichText(text, { photosById: {}, documentsById: {} })),
     quoteOffset: replyTo.quoteOffset,
-    todoItemId: replyTo.todoItemId,
     pollOption: replyTo.pollOption && serializeBytes(replyTo.pollOption),
   } satisfies ApiInputMessageReplyInfo : undefined;
 
@@ -384,7 +381,6 @@ function buildApiReplyInfo(
       quoteRich,
       quoteOffset,
       replyToEphemeral,
-      todoItemId,
       pollOption,
     } = replyHeader;
 
@@ -410,7 +406,6 @@ function buildApiReplyInfo(
       replyToPeerId: replyToPeerId && getApiChatIdFromMtpPeer(replyToPeerId),
       replyMedia: replyMedia && buildMessageMediaContent(replyMedia, context),
       isQuote: quote,
-      todoItemId,
       pollOption: serializedPollOption,
       replyOptionText: replyPollAnswer && buildApiFormattedText(replyPollAnswer.text),
       quoteText: quoteText ? buildMessageTextContent(quoteText, quoteEntities) : undefined,
@@ -440,13 +435,6 @@ function buildNewLocalPoll(poll: ApiNewPoll): ApiMessagePoll {
   };
 }
 
-function buildNewLocalTodo(todo: ApiNewMediaTodo): ApiMediaTodo {
-  return {
-    mediaType: 'todo',
-    todo: todo.todo,
-  };
-}
-
 export function buildLocalMessage({
   chat,
   lastMessageId,
@@ -460,7 +448,6 @@ export function buildLocalMessage({
   gif,
   audio,
   poll,
-  todo,
   contact,
   groupedId,
   scheduledAt,
@@ -484,7 +471,6 @@ export function buildLocalMessage({
   gif?: ApiVideo;
   audio?: ApiAudio;
   poll?: ApiNewPoll;
-  todo?: ApiNewMediaTodo;
   contact?: ApiContact;
   groupedId?: string;
   scheduledAt?: number;
@@ -503,7 +489,6 @@ export function buildLocalMessage({
   const resultReplyInfo = replyInfo && buildReplyInfo(replyInfo, chat.isForum);
 
   const localPoll = poll && buildNewLocalPoll(poll);
-  const localTodo = todo && buildNewLocalTodo(todo);
 
   const localDice = dice ? {
     mediaType: 'dice',
@@ -528,7 +513,6 @@ export function buildLocalMessage({
       contact,
       storyData: story && { mediaType: 'storyData', ...story },
       pollId: localPoll?.summary.id,
-      todo: localTodo,
       dice: localDice,
       action,
     }),
@@ -700,7 +684,6 @@ function buildReplyInfo(inputInfo: ApiInputReplyInfo, isForum?: boolean): ApiRep
     quoteText: inputInfo.quoteText,
     quoteRich: inputInfo.quoteRich,
     quoteOffset: inputInfo.quoteOffset,
-    todoItemId: inputInfo.todoItemId,
     pollOption: inputInfo.pollOption,
     isForumTopic: isForum && inputInfo.replyToTopId ? true : undefined,
     isQuote: inputInfo.quoteText || inputInfo.quoteRich?.length ? true : undefined,

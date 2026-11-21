@@ -22,14 +22,12 @@ import type {
   ApiMessageReadMetric,
   ApiMessageSearchContext,
   ApiMessageSearchType,
-  ApiNewMediaTodo,
   ApiOnProgress,
   ApiPeer,
   ApiReaction,
   ApiSearchPostsFlood,
   ApiSendMessageAction,
   ApiSticker,
-  ApiTodoItem,
   ApiTopicWithState,
   ApiUser,
   ApiUserStatus,
@@ -104,7 +102,6 @@ import {
   buildInputStory,
   buildInputSuggestedPost,
   buildInputTextWithEntities,
-  buildInputTodo,
   buildInputUser,
   buildMessageFromUpdate,
   buildMtpMessageEntity,
@@ -352,7 +349,7 @@ export function sendMessageLocal(
 ) {
   const {
     chat, lastMessageId, text, entities, richMessage, replyInfo, suggestedPostInfo,
-    attachment, sticker, story, gif, audio, poll, todo,
+    attachment, sticker, story, gif, audio, poll,
     contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
     dice,
   } = params;
@@ -375,7 +372,6 @@ export function sendMessageLocal(
     gif,
     audio,
     poll,
-    todo,
     contact,
     groupedId,
     scheduledAt,
@@ -406,7 +402,7 @@ export function sendApiMessage(
 ) {
   const {
     chat, text, entities, richMessage, replyInfo, suggestedPostInfo, suggestedMedia,
-    attachment, sticker, story, gif, audio, poll, todo, contact, dice,
+    attachment, sticker, story, gif, audio, poll, contact, dice,
 
     isSilent, scheduledAt, scheduleRepeatPeriod, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
     isInvertedMedia, webPageMediaSize, webPageUrl,
@@ -528,8 +524,6 @@ export function sendApiMessage(
 
         return;
       }
-    } else if (todo) {
-      media = buildInputTodo(todo);
     } else if (story) {
       media = buildInputStory(story);
     } else if (webPageUrl && webPageMediaSize) {
@@ -1139,118 +1133,11 @@ function canSendRichMessage(params: SendMessageParams) {
     && !params.gif
     && !params.audio
     && !params.poll
-    && !params.todo
     && !params.contact
     && !params.dice
     && !(params.suggestedPostInfo && params.suggestedMedia)
     && !(params.webPageUrl && params.webPageMediaSize),
   );
-}
-
-export async function editTodo({
-  chat,
-  message,
-  todo,
-}: {
-  chat: ApiChat;
-  message: ApiMessage;
-  todo: ApiNewMediaTodo;
-}) {
-  const media = buildInputTodo(todo);
-  const isScheduled = message.date * 1000 > getServerTime() * 1000;
-
-  const newContent: MediaContent = {
-    ...message.content,
-    todo: {
-      mediaType: 'todo',
-      todo: todo.todo,
-    },
-  };
-
-  const messageUpdate: ApiMessage = {
-    ...message,
-    content: newContent,
-  };
-
-  sendApiUpdate({
-    '@type': isScheduled ? 'updateScheduledMessage' : 'updateMessage',
-    id: message.id,
-    chatId: chat.id,
-    message: messageUpdate,
-    isFull: true,
-  });
-
-  try {
-    await invokeRequest(new GramJs.messages.EditMessage({
-      media,
-      peer: buildInputPeer(chat.id, chat.accessHash),
-      id: message.id,
-    }), { shouldThrow: true });
-  } catch (err) {
-    if (DEBUG) {
-      // eslint-disable-next-line no-console
-      console.warn(err);
-    }
-
-    const apiError = buildApiError(err as Error);
-
-    sendApiUpdate({
-      '@type': 'error',
-      error: {
-        ...apiError,
-        hasErrorKey: true,
-      },
-    });
-
-    // Rollback changes
-    sendApiUpdate({
-      '@type': 'updateMessage',
-      id: message.id,
-      chatId: chat.id,
-      message,
-      isFull: true,
-    });
-  }
-}
-
-export async function appendTodoList({
-  chat,
-  message,
-  items,
-}: {
-  chat: ApiChat;
-  message: ApiMessage;
-  items: ApiTodoItem[];
-}) {
-  const todoItems = items.map((item) => {
-    return new GramJs.TodoItem({
-      id: item.id,
-      title: buildInputTextWithEntities(item.title),
-    });
-  });
-
-  try {
-    await invokeRequest(new GramJs.messages.AppendTodoList({
-      peer: buildInputPeer(chat.id, chat.accessHash),
-      msgId: message.id,
-      list: todoItems,
-    }), { shouldThrow: true });
-  } catch (err) {
-    if (DEBUG) {
-      // eslint-disable-next-line no-console
-      console.warn(err);
-    }
-
-    const apiError = buildApiError(err as Error);
-
-    sendApiUpdate({
-      '@type': 'error',
-      error: {
-        ...apiError,
-        hasErrorKey: true,
-      },
-    });
-  }
 }
 
 export async function rescheduleMessage({
@@ -2314,24 +2201,6 @@ export async function appendPollAnswer({
     answer: new GramJs.InputPollAnswer({
       text: buildInputTextWithEntities({ text }),
     }),
-  }));
-}
-
-export async function toggleTodoCompleted({
-  chat, messageId, completedIds, incompletedIds,
-}: {
-  chat: ApiChat;
-  messageId: number;
-  completedIds: number[];
-  incompletedIds: number[];
-}) {
-  const { id, accessHash } = chat;
-
-  await invokeRequest(new GramJs.messages.ToggleTodoCompleted({
-    peer: buildInputPeer(id, accessHash),
-    msgId: messageId,
-    completed: completedIds,
-    incompleted: incompletedIds,
   }));
 }
 

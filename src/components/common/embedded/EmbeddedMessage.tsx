@@ -108,11 +108,8 @@ const EmbeddedMessage = ({
       ? selectReplyOptionText(global, optionMedia, replyInfo) : undefined
   ), [optionMedia, replyInfo]);
   const replyOptionText = useSelector(selectOptionText);
-  // Poll options always show a check, like in other clients; todo items reflect their completion
-  const isReplyOptionCompleted = replyInfo?.type === 'message' && (
-    replyInfo.pollOption !== undefined
-    || optionMedia?.content.todo?.completions?.some((completion) => completion.itemId === replyInfo.todoItemId)
-  );
+  // Poll options always show a check, like in other clients
+  const isReplyOptionCompleted = replyInfo?.type === 'message' && replyInfo.pollOption !== undefined;
   const hasPictogram = canRenderCompactMediaPreview(containedMedia?.content);
 
   const isRoundVideo = Boolean(containedMedia && getMessageRoundVideo(containedMedia));

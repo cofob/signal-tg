@@ -481,11 +481,8 @@ export function selectPollFromMessage<T extends GlobalState>(global: T, message:
 }
 
 export function selectReplyOptionText(
-  global: GlobalState, media: MediaContainer, { todoItemId, pollOption, replyOptionText }: ApiMessageReplyInfo,
+  global: GlobalState, media: MediaContainer, { pollOption, replyOptionText }: ApiMessageReplyInfo,
 ) {
-  if (todoItemId !== undefined) {
-    return media.content.todo?.todo.items.find((item) => item.id === todoItemId)?.title;
-  }
   if (pollOption !== undefined) {
     const poll = selectPollFromMessage(global, media);
     return poll?.summary.answers.find((answer) => answer.option === pollOption)?.text ?? replyOptionText;
@@ -691,7 +688,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
 
   // https://github.com/telegramdesktop/tdesktop/blob/335095a332607c41a8d20b47e61f5bbd66366d4b/Telegram/SourceFiles/data/data_peer.cpp#L653
   const canEditMessagesIndefinitely = (() => {
-    if (content.todo) return true;
     if (isPrivate) return isChatWithSelf;
     if (isBasicGroup) return false;
     if (isSuperGroup) return canPinMessage;

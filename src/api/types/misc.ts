@@ -369,9 +369,6 @@ export interface ApiAppConfig {
   pollClosePeriodMax: number;
   pollCountriesMax: number;
   phoneCountryIso2?: string;
-  todoItemsMax: number;
-  todoTitleLengthMax: number;
-  todoItemLengthMax: number;
   quoteLengthMax: number;
   ignoreRestrictionReasons?: string[];
   needAgeVideoVerification?: boolean;

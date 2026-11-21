@@ -13,7 +13,6 @@ import type {
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMissingInvitedUser,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
@@ -28,7 +27,6 @@ import type {
   ApiUser,
   ApiVideo,
 } from '../../api/types';
-import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type {
@@ -172,7 +170,6 @@ export type TabState = {
     gif?: ApiVideo;
     sticker?: ApiSticker;
     poll?: ApiNewPoll;
-    todo?: ApiNewMediaTodo;
     isSilent?: boolean;
     sendGrouped?: boolean;
     sendCompressed?: boolean;
@@ -193,7 +190,6 @@ export type TabState = {
     isResizingContainer?: boolean;
     quote?: string;
     quoteOffset?: number;
-    todoItemId?: number;
     pollOption?: string;
     scrollTargetPosition?: ScrollTargetPosition;
   };
@@ -490,13 +486,6 @@ export type TabState = {
     shouldInsertToRichInput?: boolean;
     shared?: MusicPickerSharedResults;
     global?: MusicPickerGlobalResults;
-  };
-
-  todoListModal?: {
-    chatId: string;
-    messageId?: number;
-    forNewTask?: boolean;
-    initialCheckList?: ParsedCheckList;
   };
 
   preparedMessageModal?: {

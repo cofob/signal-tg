@@ -391,7 +391,7 @@ async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnPro
   } = params;
   const hasSupportedContent = Boolean(text || attachment || poll);
   const hasUnsupportedContent = Boolean(params.richMessage || params.sticker || params.gif || params.audio
-    || params.contact || params.story || params.todo || params.dice);
+    || params.contact || params.story || params.dice);
   if (!hasSupportedContent || hasUnsupportedContent) throw new Error('Signal has no counterpart for this content');
 
   // A Signal poll has no description

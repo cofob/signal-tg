@@ -70,7 +70,6 @@ export { default as MediaEditor } from '../components/ui/mediaEditor/MediaEditor
 export { default as EditedVideoPreview } from '../components/ui/mediaEditor/EditedVideoPreview';
 export { default as PollModal } from '../components/modals/poll/PollModal';
 export { default as MusicPickerModal } from '../components/modals/musicPicker/MusicPickerModal';
-export { default as ToDoListModal } from '../components/middle/composer/ToDoListModal';
 export { default as SymbolMenu } from '../components/middle/composer/SymbolMenu';
 export { default as ChatCommandTooltip } from '../components/common/tooltips/ChatCommandTooltip';
 export { default as BotCommandMenu } from '../components/middle/composer/BotCommandMenu';

@@ -125,7 +125,6 @@ type StateProps = {
   canDelete?: boolean;
   canReport?: boolean;
   canEdit?: boolean;
-  canAppendTodoList?: boolean;
   canForward?: boolean;
   canFaveSticker?: boolean;
   canUnfaveSticker?: boolean;
@@ -192,7 +191,6 @@ const ContextMenuContainer = ({
   canReport,
   canShowReactionList,
   canEdit,
-  canAppendTodoList,
   enabledReactions,
   reactionsLimit,
   isPrivate,
@@ -260,8 +258,6 @@ const ContextMenuContainer = ({
     openDeleteMessageModal,
     deleteEphemeralMessage,
     reportMessages,
-    openTodoListModal,
-    showNotification,
     loadRichMessage,
     loadSavedMusicIds,
     toggleMusicInProfile,
@@ -518,30 +514,8 @@ const ContextMenuContainer = ({
   });
 
   const handleEdit = useLastCallback(() => {
-    if (message.content.todo) {
-      openTodoListModal({
-        chatId: message.chatId,
-        messageId: message.id,
-      });
-    } else {
-      const messageId = message.isInAlbum ? selectAlbumMessageIdToEdit(getGlobal(), message) : message.id;
-      startEditingMessage({ messageId });
-    }
-    closeMenu();
-  });
-
-  const handleAppendTodoList = useLastCallback(() => {
-    if (!isCurrentUserPremium) {
-      showNotification({
-        message: lang('SubscribeToTelegramPremiumForAppendToDo'),
-      });
-    } else {
-      openTodoListModal({
-        chatId: message.chatId,
-        messageId: message.id,
-        forNewTask: true,
-      });
-    }
+    const messageId = message.isInAlbum ? selectAlbumMessageIdToEdit(getGlobal(), message) : message.id;
+    startEditingMessage({ messageId });
     closeMenu();
   });
 
@@ -737,7 +711,6 @@ const ContextMenuContainer = ({
         repliesThreadInfo={repliesThreadInfo}
         canUnpin={canUnpin}
         canEdit={canEdit}
-        canAppendTodoList={canAppendTodoList}
         canForward={canForward}
         canFaveSticker={canFaveSticker}
         canUnfaveSticker={canUnfaveSticker}
@@ -768,7 +741,6 @@ const ContextMenuContainer = ({
         onOpenThread={handleOpenThread}
         onReply={handleReply}
         onEdit={handleEdit}
-        onAppendTodoList={handleAppendTodoList}
         onPin={handlePin}
         onUnpin={handleUnpin}
         onForward={handleForward}
@@ -911,9 +883,6 @@ export default memo(withGlobal<OwnProps>(
     const story = storyData ? selectPeerStory(global, storyData.peerId, storyData.id) : undefined;
 
     const savedDialogId = selectSavedDialogIdFromMessage(global, message);
-    const todoItemsMax = global.appConfig.todoItemsMax;
-    const canAppendTodoList = message.content.todo?.todo.othersCanAppend
-      && message.content.todo?.todo.items?.length < todoItemsMax;
 
     return {
       chat,
@@ -931,7 +900,6 @@ export default memo(withGlobal<OwnProps>(
       canUnpin: !message.isEphemeral && !isScheduled && canUnpin,
       canDelete: message.isEphemeral || canDelete,
       canEdit: !message.isEphemeral && !isPinned && canEdit,
-      canAppendTodoList: !message.isEphemeral && canAppendTodoList,
       canForward: !isScheduled && canForward,
       canFaveSticker: !message.isEphemeral && !isScheduled && canFaveSticker,
       canUnfaveSticker: !message.isEphemeral && !isScheduled && canUnfaveSticker,

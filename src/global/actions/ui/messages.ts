@@ -466,7 +466,7 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
   const {
     chatId, threadId = MAIN_THREAD_ID, messageListType = 'thread', noHighlight, groupedId, groupedChatId,
     replyMessageId, isResizingContainer, shouldReplaceHistory, noForumTopicPanel, quote, quoteOffset,
-    scrollTargetPosition, timestamp, todoItemId, pollOption, tabId = getCurrentTabId(),
+    scrollTargetPosition, timestamp, pollOption, tabId = getCurrentTabId(),
   } = payload;
 
   let { messageId } = payload;
@@ -514,7 +514,6 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
     isResizingContainer,
     quote,
     quoteOffset,
-    todoItemId,
     pollOption,
     scrollTargetPosition,
     direction: undefined,
@@ -904,28 +903,6 @@ addActionHandler('openPollModal', (global, actions, payload): ActionReturnType =
   }, tabId);
 });
 addTabStateResetterAction('closePollModal', 'pollModal');
-
-addActionHandler('openTodoListModal', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageId, forNewTask, initialCheckList, tabId = getCurrentTabId(),
-  } = payload;
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!messageId && currentMessageList?.chatId === chatId) {
-    const replyInfo = selectDraft(global, chatId, currentMessageList.threadId)?.replyInfo;
-    if (replyInfo?.type === 'ephemeral') return;
-  }
-
-  return updateTabState(global, {
-    todoListModal: {
-      chatId,
-      messageId,
-      forNewTask,
-      initialCheckList,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeTodoListModal', 'todoListModal');
 
 addActionHandler('createServiceNotification', (global, actions, payload): ActionReturnType => {
   const { message } = payload;

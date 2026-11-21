@@ -5,7 +5,7 @@ import type { ApiMessageAction } from '../../types/messageActions';
 
 import { buildApiBotApp } from './bots';
 import { buildApiPhoto } from './common';
-import { buildPollAnswer, buildTodoItem } from './messageContent';
+import { buildPollAnswer } from './messageContent';
 import { buildApiWallpaper } from './misc';
 import { buildApiCurrencyAmount } from './payments';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
@@ -352,25 +352,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       mediaType: 'action',
       type: 'suggestedPostRefund',
       payerInitiated: Boolean(payerInitiated),
-    };
-  }
-  if (action instanceof GramJs.MessageActionTodoCompletions) {
-    const {
-      completed, incompleted,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'todoCompletions',
-      completedIds: completed,
-      incompletedIds: incompleted,
-    };
-  }
-  if (action instanceof GramJs.MessageActionTodoAppendTasks) {
-    const { list } = action;
-    return {
-      mediaType: 'action',
-      type: 'todoAppendTasks',
-      items: list.map(buildTodoItem),
     };
   }
   if (action instanceof GramJs.MessageActionPollAppendAnswer) {

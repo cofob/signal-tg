@@ -1,6 +1,6 @@
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
-  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem, ApiVideo,
+  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiVideo,
 } from './messages';
 import type { ApiWallpaper } from './misc';
 import type { ApiTypeCurrencyAmount } from './stars';
@@ -225,17 +225,6 @@ export interface ApiMessageActionSuggestedPostRefund extends ActionMediaType {
   payerInitiated: boolean;
 }
 
-export interface ApiMessageActionTodoCompletions extends ActionMediaType {
-  type: 'todoCompletions';
-  completedIds: number[];
-  incompletedIds: number[];
-}
-
-export interface ApiMessageActionTodoAppendTasks extends ActionMediaType {
-  type: 'todoAppendTasks';
-  items: ApiTodoItem[];
-}
-
 export interface ApiMessageActionPollAppendAnswer extends ActionMediaType {
   type: 'pollAppendAnswer';
   answer: ApiPollAnswer;
@@ -306,8 +295,8 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined
   | ApiMessageActionSuggestedPostApproval
-  | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund | ApiMessageActionTodoCompletions
-  | ApiMessageActionTodoAppendTasks | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer
+  | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund
+  | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer
 
   | ApiMessageActionNewCreatorPending
   | ApiMessageActionChangeCreator | ApiMessageActionNoForwardsToggle | ApiMessageActionNoForwardsRequest

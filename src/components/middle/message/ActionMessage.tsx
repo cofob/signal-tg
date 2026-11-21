@@ -114,8 +114,6 @@ const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>([
   'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest',
 ]);
 const WITH_LINK_BREAKS_ACTIONS = new Set<ApiMessageAction['type']>([
-  'todoCompletions',
-  'todoAppendTasks',
   'pollAppendAnswer',
   'pollDeleteAnswer',
 ]);

@@ -81,7 +81,6 @@ export function getMessageSummaryEmoji(message: ApiMessage) {
     document,
     sticker,
     pollId,
-    todo,
   } = message.content;
 
   if (message.groupedId || photo) {
@@ -110,10 +109,6 @@ export function getMessageSummaryEmoji(message: ApiMessage) {
 
   if (pollId) {
     return '📊';
-  }
-
-  if (todo) {
-    return '📝';
   }
 
   return undefined;
@@ -153,7 +148,6 @@ function getSummaryDescription(
     location,
     game,
     storyData,
-    todo,
     dice,
     richMessage,
     widget,
@@ -237,14 +231,6 @@ function getSummaryDescription(
     summary = truncatedText || lang('AttachStory');
   }
 
-  if (todo) {
-    summary = renderTextWithEntities({
-      text: todo.todo.title.text,
-      entities: todo.todo.title.entities,
-      asPreview: true,
-    });
-  }
-
   if (dice) {
     summary = dice.emoticon;
   }
@@ -279,12 +265,7 @@ function getSummaryDescriptionText(
   description: TeactNode,
   truncateLength: number,
 ): string {
-  const { todo } = message.content;
   const { poll } = statefulContent || {};
-
-  if (todo) {
-    return trimText(getFormattedTextWithSpoilers(todo.todo.title), truncateLength);
-  }
 
   if (poll) {
     return trimText(getFormattedTextWithSpoilers(poll.summary.question), truncateLength);

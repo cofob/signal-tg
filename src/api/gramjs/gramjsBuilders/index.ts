@@ -18,7 +18,6 @@ import type {
   ApiLocation,
   ApiMessageEntity,
   ApiMessagePoll,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiPhoneCall,
   ApiPrivacyKey,
@@ -327,28 +326,6 @@ function buildInputGeoPoint(geo: ApiLocation['geo']) {
     lat: geo.lat,
     long: geo.long,
     accuracyRadius: geo.accuracyRadius,
-  });
-}
-
-export function buildInputTodo(todo: ApiNewMediaTodo) {
-  const { title, items } = todo.todo;
-
-  const todoItems = items.map((item) => {
-    return new GramJs.TodoItem({
-      id: item.id,
-      title: buildInputTextWithEntities(item.title),
-    });
-  });
-
-  const todoList = new GramJs.TodoList({
-    title: buildInputTextWithEntities(title),
-    list: todoItems,
-    othersCanAppend: todo.todo.othersCanAppend || undefined,
-    othersCanComplete: todo.todo.othersCanComplete || undefined,
-  });
-
-  return new GramJs.InputMediaTodo({
-    todo: todoList,
   });
 }
 
@@ -750,7 +727,7 @@ export function buildInputReplyTo(replyInfo: ApiInputReplyInfo) {
 
   if (replyInfo.type === 'message') {
     const {
-      replyToMsgId, replyToTopId, replyToPeerId, quoteText, quoteRich, quoteOffset, monoforumPeerId, todoItemId,
+      replyToMsgId, replyToTopId, replyToPeerId, quoteText, quoteRich, quoteOffset, monoforumPeerId,
       pollOption,
     } = replyInfo;
     const mtpQuoteRich = quoteRich?.map(buildMtpRichText);
@@ -765,7 +742,6 @@ export function buildInputReplyTo(replyInfo: ApiInputReplyInfo) {
       quoteEntities: validQuoteRich ? undefined : quoteText?.entities?.map(buildMtpMessageEntity),
       quoteRich: validQuoteRich,
       quoteOffset: validQuoteRich || quoteText ? quoteOffset : undefined,
-      todoItemId,
       pollOption: pollOption !== undefined ? deserializeBytes(pollOption) : undefined,
     });
   }

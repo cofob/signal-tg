@@ -28,7 +28,6 @@ import type {
   ApiMessageEntity,
   ApiMessageReadMetric,
   ApiMessageSearchContext,
-  ApiNewMediaTodo,
   ApiNotification,
   ApiNotifyPeerType,
   ApiPeer,
@@ -48,7 +47,6 @@ import type {
   ApiStickerSet,
   ApiStickerSetInfo,
   ApiThemeParameters,
-  ApiTodoItem,
   ApiTopPeerCategory,
   ApiUpdate,
   ApiUser,
@@ -58,7 +56,6 @@ import type {
   LinkContext,
   PrivacyVisibility,
 } from '../../api/types';
-import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type { P2pMessage } from '../../lib/vibecalls';
@@ -626,11 +623,6 @@ export interface ActionPayloads {
     entities?: ApiMessageEntity[];
     richMessage?: ApiInputRichMessage;
   } & WithTabId;
-  editTodo: {
-    chatId: string;
-    todo: ApiNewMediaTodo;
-    messageId: number;
-  } & WithTabId;
   deleteHistory: {
     chatId: string;
     shouldDeleteForAll?: boolean;
@@ -991,7 +983,6 @@ export interface ActionPayloads {
     noForumTopicPanel?: boolean;
     quote?: string;
     quoteOffset?: number;
-    todoItemId?: number;
     pollOption?: string;
     scrollTargetPosition?: ScrollTargetPosition;
     timestamp?: number;
@@ -1166,7 +1157,6 @@ export interface ActionPayloads {
     shouldReplaceLast?: boolean;
     noForumTopicPanel?: boolean;
     focusMessageId?: number;
-    todoItemId?: number;
     pollOption?: string;
   } & ({
     isComments: true;
@@ -1375,17 +1365,6 @@ export interface ActionPayloads {
     messageId: number;
     text: string;
   };
-  toggleTodoCompleted: {
-    chatId: string;
-    messageId: number;
-    completedIds: number[];
-    incompletedIds: number[];
-  };
-  appendTodoList: {
-    chatId: string;
-    items: ApiTodoItem[];
-    messageId: number;
-  } & WithTabId;
   cancelPollVote: {
     chatId: string;
     messageId: number;
@@ -2290,13 +2269,6 @@ export interface ActionPayloads {
   loadMusicPickerGlobal: {
     query: string;
   } & WithTabId;
-  openTodoListModal: {
-    chatId: string;
-    messageId?: number;
-    forNewTask?: boolean;
-    initialCheckList?: ParsedCheckList;
-  } & WithTabId;
-  closeTodoListModal: WithTabId | undefined;
   requestConfetti: (ConfettiParams & WithTabId) | WithTabId;
   requestWave: {
     startX: number;

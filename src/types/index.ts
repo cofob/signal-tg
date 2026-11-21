@@ -21,7 +21,6 @@ import type {
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiPageBlockPhoto,
   ApiPageBlockVideo,
@@ -774,7 +773,6 @@ export type SendMessageParams = {
   gif?: ApiVideo;
   audio?: ApiAudio;
   poll?: ApiNewPoll;
-  todo?: ApiNewMediaTodo;
   dice?: string;
   contact?: ApiContact;
   isSilent?: boolean;

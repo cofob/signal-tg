@@ -1340,7 +1340,7 @@ function updateReactions<T extends GlobalState>(
   return global;
 }
 
-export function updateWithLocalMedia(
+function updateWithLocalMedia(
   global: RequiredGlobalState,
   chatId: string,
   id: number,
