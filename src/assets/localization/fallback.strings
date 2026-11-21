@@ -2176,8 +2176,6 @@
 "FileShowInFolder" = "Show in Folder";
 "FileNotFound" = "This file was moved or deleted";
 "FileOpenFailed" = "Failed to open the file";
-"FileOpenDangerousTitle" = "Open this file?";
-"FileOpenDangerousText" = "This type of file can run code on your computer. Open it only if you trust the sender.";
 "FileSaveDialogTitle" = "Save file";
 "SettingsAskWhereToSave" = "Ask where to save each file";
 "SettingsAskWhereToSaveDescription" = "Choose a folder for each download instead of saving to Downloads";

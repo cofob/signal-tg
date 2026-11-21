@@ -155,9 +155,9 @@ request bodies, one at a time, so a large video builds no JSON array and does no
 | `begin_file_save(fileName, key, shouldAskWhere, dialogTitle)` | Sanitizes the name and creates a hidden temporary file `.<name>.<id>.part` in the destination folder: the system Downloads folder, or the folder of the path that the user picks in the native save dialog when `shouldAskWhere` is set (the "Ask where to save each file" setting, Data and Storage). Returns a save ID, or nothing when the user cancels the dialog |
 | `write_file_chunk` | Appends the raw request body to the save named by the `save-id` header |
 | `finish_file_save(id)` | Moves the file to its final name (`name (1).ext` when the name is taken, the picked path for the dialog), marks it as downloaded from the Internet (quarantine attribute on macOS, Mark of the Web on Windows), records it under `key` and emits `saved-files-changed` to every window. Returns the final file and folder names for the toast |
-| `abort_file_save(id)` | Removes the temporary file. A window that closes or reloads ends its unfinished saves the same way |
+| `abort_file_save(id)` | Removes the temporary file. A window that closes or reloads ends its unfinished saves the same way, and the exit of the app ends all of them |
 | `list_saved_files` | Returns the keys of the recorded files that still exist and drops the records of the others |
-| `open_saved_file(key, prompt)` | Opens a recorded file with the default app |
+| `open_saved_file(key)` | Opens a recorded file with the default app, after a confirmation when its type is dangerous |
 | `reveal_saved_file(key)` | Shows a recorded file in Finder, Explorer or the file manager |
 
 The page names a file by a key, the media hash for an attachment, and keeps the keys that `saved-files-changed` and
@@ -174,9 +174,12 @@ the page says so.
 - `open_saved_file` and `reveal_saved_file` take a key, never a path, and act only on records that `finish_file_save`
   made. The records persist in `saved_files.json` in the app data directory (at most 5000, the oldest go first). A
   record whose file is gone, or is a link or a folder now, is dropped.
+- A save belongs to the window that began it: `write_file_chunk`, `finish_file_save` and `abort_file_save` answer
+  "Unknown save" to any other window, and a page runs its saves one at a time.
 - Opening a file of a dangerous type (`DANGEROUS_EXTENSIONS`: Signal Desktop's list from
-  `ts/util/isFileDangerous.std.ts` plus the macOS and Linux types it lacks) asks in a native dialog, with the texts
-  of the page's language. The page cannot skip it.
+  `ts/util/isFileDangerous.std.ts` plus the types of macOS, Linux and Windows packages, disk images, scripts and Office
+  macros that it lacks; the text after the last dot counts, so `.exe` is dangerous) asks in a native dialog. Rust builds
+  the dialog, in English, with the real file name and extension; the page passes no text for it and cannot skip it.
 - The `dialog` and `opener` plugins are registered without permissions for the page; only the commands above are in
   `capabilities/default.json`. The opener's reveal uses Finder on macOS, `SHOpenFolderAndSelectItems` on Windows and the
   `org.freedesktop.FileManager1` D-Bus interface on Linux; when that fails, the app opens the folder with the default

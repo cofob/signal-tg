@@ -44,16 +44,49 @@ const MAX_EXTENSION_BYTES: usize = 32;
 const MAX_KEY_BYTES: usize = 512;
 const MAX_PENDING_SAVES: usize = 16;
 const MAX_SAVED_FILES: usize = 5000;
+const UNKNOWN_SAVE_ERROR: &str = "Unknown save";
+// The warning before opening a dangerous file is fixed here: text from the page could disguise it
+const OPEN_WARNING_TITLE: &str = "Open this file?";
+const OPEN_WARNING_OPEN_LABEL: &str = "Open";
+const OPEN_WARNING_CANCEL_LABEL: &str = "Cancel";
 /// Characters that Windows forbids in names; replacing them everywhere keeps files portable
 const FORBIDDEN_NAME_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 /// Names that Windows reserves for devices, with any extension
 const RESERVED_NAMES: &[&str] = &[
-  "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
-  "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  "CONIN$",
+  "CONOUT$",
+  "COM1",
+  "COM2",
+  "COM3",
+  "COM4",
+  "COM5",
+  "COM6",
+  "COM7",
+  "COM8",
+  "COM9",
+  "COM\u{B9}",
+  "COM\u{B2}",
+  "COM\u{B3}",
+  "LPT1",
+  "LPT2",
+  "LPT3",
+  "LPT4",
+  "LPT5",
+  "LPT6",
+  "LPT7",
+  "LPT8",
+  "LPT9",
+  "LPT\u{B9}",
+  "LPT\u{B2}",
+  "LPT\u{B3}",
 ];
 /// Extensions of files that can run code or change the system when opened. The first group is the
-/// list of Signal Desktop (`ts/util/isFileDangerous.std.ts`); the second adds the types of macOS and
-/// Linux, which that list lacks.
+/// list of Signal Desktop (`ts/util/isFileDangerous.std.ts`); the others add the types of macOS and
+/// Linux, scripts, installers, disk images and Office files with macros, which that list lacks.
 const DANGEROUS_EXTENSIONS: &[&str] = &[
   "ade",
   "adp",
@@ -125,18 +158,56 @@ const DANGEROUS_EXTENSIONS: &[&str] = &[
   "url",
   "workflow",
   "zsh",
+  // Disk images, installers and Windows app packages
+  "appinstaller",
+  "application",
+  "appx",
+  "appxbundle",
+  "gadget",
+  "img",
+  "iso",
+  "msix",
+  "msixbundle",
+  "ocx",
+  "scf",
+  "vhd",
+  "vhdx",
+  "xll",
+  // Scripts, and shortcuts and macOS bundles that run or open something
+  "action",
+  "fileloc",
+  "inetloc",
+  "pl",
+  "prefpane",
+  "py",
+  "pyw",
+  "rb",
+  "saver",
+  "webloc",
+  // Office files with macros
+  "docm",
+  "pptm",
+  "xlsm",
 ];
 
-/// Characters that reorder text or have no width, which could disguise a file's extension
+/// Characters that reorder text, have no width or show as blanks, which could disguise a file's name
 fn is_invisible_char(c: char) -> bool {
   matches!(
     c,
-    '\u{061C}'
+    '\u{00AD}'
+      | '\u{034F}'
+      | '\u{061C}'
+      | '\u{115F}'
+      | '\u{1160}'
+      | '\u{180E}'
       | '\u{200B}'..='\u{200F}'
       | '\u{202A}'..='\u{202E}'
       | '\u{2060}'..='\u{2064}'
       | '\u{2066}'..='\u{206F}'
+      | '\u{2800}'
+      | '\u{3164}'
       | '\u{FEFF}'
+      | '\u{FFA0}'
   )
 }
 
@@ -206,12 +277,17 @@ fn numbered_file_name(file_name: &str, number: u32) -> String {
   format!("{stem} ({number}){extension}")
 }
 
-/// Whether opening the file can run code, judged by its extension like Signal Desktop does
-/// (`ts/util/isFileDangerous.std.ts`): Windows ignores dots and spaces after the extension
-pub fn is_file_dangerous(file_name: &str) -> bool {
+/// The text after the last dot, which Windows and the file managers take for the extension even in
+/// `.exe`; Windows also ignores dots and spaces at the end. Empty when the name has no dot.
+fn get_extension(file_name: &str) -> &str {
   let name = file_name.trim_end_matches(|c: char| c == '.' || c.is_whitespace());
-  let (_, extension) = split_extension(name);
-  let extension = extension.trim_start_matches('.').to_ascii_lowercase();
+  name.rsplit_once('.').map_or("", |(_, extension)| extension)
+}
+
+/// Whether opening the file can run code, judged by its extension like Signal Desktop does
+/// (`ts/util/isFileDangerous.std.ts`)
+pub fn is_file_dangerous(file_name: &str) -> bool {
+  let extension = get_extension(file_name).to_ascii_lowercase();
   DANGEROUS_EXTENSIONS.contains(&extension.as_str())
 }
 
@@ -420,16 +496,6 @@ pub enum SavedFileOutcome {
   Cancelled,
 }
 
-/// The texts of the confirmation for a dangerous file, in the page's language
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OpenPrompt {
-  title: String,
-  message: String,
-  open_label: String,
-  cancel_label: String,
-}
-
 impl Files {
   /// `data_dir` is where the records persist; `None` keeps them in memory only
   pub fn new(data_dir: Option<PathBuf>) -> Self {
@@ -452,18 +518,31 @@ impl Files {
     Ok(id)
   }
 
-  fn get_pending(&self, id: u32) -> Result<Arc<Mutex<PendingSave>>, String> {
-    lock(&self.pending)
+  /// The save with this ID, when `owner` began it; another window gets the answer for an unknown one
+  fn get_owned(&self, id: u32, owner: &str) -> Result<Arc<Mutex<PendingSave>>, String> {
+    let save = lock(&self.pending)
       .get(&id)
       .cloned()
-      .ok_or_else(|| "Unknown save".to_string())
+      .ok_or(UNKNOWN_SAVE_ERROR)?;
+    if lock(&save).owner != owner {
+      return Err(UNKNOWN_SAVE_ERROR.to_string());
+    }
+    Ok(save)
   }
 
-  /// Takes a save out of the registry; a command that still works on it finishes first
-  fn take_pending(&self, id: u32) -> Result<Arc<Mutex<PendingSave>>, String> {
-    lock(&self.pending)
+  /// Takes a save that `owner` began out of the registry; a command that still works on it finishes
+  /// first
+  fn take_owned(&self, id: u32, owner: &str) -> Result<Arc<Mutex<PendingSave>>, String> {
+    let mut pending = lock(&self.pending);
+    let is_owned = pending
+      .get(&id)
+      .is_some_and(|save| lock(save).owner == owner);
+    if !is_owned {
+      return Err(UNKNOWN_SAVE_ERROR.to_string());
+    }
+    pending
       .remove(&id)
-      .ok_or_else(|| "Unknown save".to_string())
+      .ok_or_else(|| UNKNOWN_SAVE_ERROR.to_string())
   }
 
   /// Ends the saves that a window began, which its reload or close leaves unfinished
@@ -474,9 +553,17 @@ impl Files {
       .map(|(id, _)| *id)
       .collect();
     for id in ids {
-      if let Ok(save) = self.take_pending(id) {
+      if let Ok(save) = self.take_owned(id, owner) {
         discard_temp_file(&mut lock(&save));
       }
+    }
+  }
+
+  /// Ends every save, as the app exits, so that no temporary file stays behind
+  pub fn abort_all(&self) {
+    let saves: Vec<_> = lock(&self.pending).drain().map(|(_, save)| save).collect();
+    for save in saves {
+      discard_temp_file(&mut lock(&save));
     }
   }
 }
@@ -592,6 +679,7 @@ async fn pick_save_path(
 /// one at a time
 #[tauri::command]
 pub async fn write_file_chunk(
+  window: WebviewWindow,
   files: tauri::State<'_, Files>,
   request: Request<'_>,
 ) -> Result<(), String> {
@@ -605,7 +693,7 @@ pub async fn write_file_chunk(
     return Err("Expected raw bytes".to_string());
   };
 
-  let save = files.get_pending(id)?;
+  let save = files.get_owned(id, window.label())?;
   let mut save = lock(&save);
   save
     .file
@@ -622,7 +710,7 @@ pub async fn finish_file_save(
   files: tauri::State<'_, Files>,
   id: u32,
 ) -> Result<SavedFileInfo, String> {
-  let save = files.take_pending(id)?;
+  let save = files.take_owned(id, window.label())?;
   let mut save = lock(&save);
 
   // Windows cannot rename an open file
@@ -668,8 +756,12 @@ fn move_to_target(temp_path: &Path, target: &Target) -> io::Result<PathBuf> {
 }
 
 #[tauri::command]
-pub async fn abort_file_save(files: tauri::State<'_, Files>, id: u32) -> Result<(), String> {
-  let save = files.take_pending(id)?;
+pub async fn abort_file_save(
+  window: WebviewWindow,
+  files: tauri::State<'_, Files>,
+  id: u32,
+) -> Result<(), String> {
+  let save = files.take_owned(id, window.label())?;
   discard_temp_file(&mut lock(&save));
   Ok(())
 }
@@ -693,7 +785,6 @@ pub async fn open_saved_file(
   window: WebviewWindow,
   files: tauri::State<'_, Files>,
   key: String,
-  prompt: OpenPrompt,
 ) -> Result<SavedFileOutcome, String> {
   let Some(path) = get_existing_path(&window, &files, &key) else {
     return Ok(SavedFileOutcome::Missing);
@@ -703,7 +794,7 @@ pub async fn open_saved_file(
     .file_name()
     .map(|name| name.to_string_lossy().into_owned())
     .unwrap_or_default();
-  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name, prompt).await {
+  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name).await {
     return Ok(SavedFileOutcome::Cancelled);
   }
 
@@ -749,16 +840,24 @@ fn get_existing_path(window: &WebviewWindow, files: &Files, key: &str) -> Option
   None
 }
 
-async fn confirm_open(window: &WebviewWindow, file_name: &str, prompt: OpenPrompt) -> bool {
+/// The warning with the real file name and extension
+fn build_open_warning(file_name: &str) -> String {
+  format!(
+    "File: {file_name}\nType: .{}\n\nThis type of file can run programs or change settings on your computer. Open it only if you trust the sender.",
+    get_extension(file_name)
+  )
+}
+
+async fn confirm_open(window: &WebviewWindow, file_name: &str) -> bool {
   let (sender, receiver) = tokio::sync::oneshot::channel();
   window
     .dialog()
-    .message(format!("{file_name}\n\n{}", prompt.message))
-    .title(prompt.title)
+    .message(build_open_warning(file_name))
+    .title(OPEN_WARNING_TITLE)
     .kind(MessageDialogKind::Warning)
     .buttons(MessageDialogButtons::OkCancelCustom(
-      prompt.open_label,
-      prompt.cancel_label,
+      OPEN_WARNING_OPEN_LABEL.to_string(),
+      OPEN_WARNING_CANCEL_LABEL.to_string(),
     ))
     .show(move |is_confirmed| {
       let _ = sender.send(is_confirmed);
@@ -871,6 +970,12 @@ mod tests {
       "abc.txt"
     );
     assert_eq!(sanitize_file_name("\u{7F}\u{85}x"), "x");
+    // Characters that show as blanks or join text without width
+    for c in [
+      '\u{AD}', '\u{34F}', '\u{115F}', '\u{1160}', '\u{3164}', '\u{FFA0}', '\u{2800}', '\u{180E}',
+    ] {
+      assert_eq!(sanitize_file_name(&format!("a{c}b.txt")), "ab.txt", "{c:?}");
+    }
   }
 
   #[test]
@@ -890,6 +995,9 @@ mod tests {
       "AUX ",
       "PRN.txt",
     ] {
+      assert!(sanitize_file_name(name).starts_with('_'), "{name}");
+    }
+    for name in ["CONIN$", "conout$.txt", "COM\u{B9}", "LPT\u{B3}.log"] {
       assert!(sanitize_file_name(name).starts_with('_'), "{name}");
     }
     assert_eq!(sanitize_file_name("CONSOLE.txt"), "CONSOLE.txt");
@@ -968,6 +1076,19 @@ mod tests {
       "trailing.exe . ",
       "a.settingcontent-ms",
       "program.AppImage",
+      // A leading dot still makes the extension on Windows
+      ".exe",
+      ".bat",
+      ".lnk",
+      ".desktop",
+      ".sh",
+      "...exe",
+      "macro.docm",
+      "disk.ISO",
+      "setup.msixbundle",
+      "run.py",
+      "link.webloc",
+      "x.saver",
     ] {
       assert!(is_file_dangerous(name), "{name}");
     }
@@ -981,7 +1102,8 @@ mod tests {
       "x.exe.txt",
       "",
       "..",
-      ".sh",
+      ".",
+      "doc.docx",
     ] {
       assert!(!is_file_dangerous(name), "{name}");
     }
@@ -1092,8 +1214,59 @@ mod tests {
     assert!(!dir.join(".0.part").exists());
     assert!(dir.join(".1.part").exists());
 
-    assert!(files.get_pending(9999).is_err());
+    assert!(files.get_owned(9999, "b").is_err());
     fs::remove_dir_all(&dir).unwrap();
+  }
+
+  #[test]
+  fn other_windows_cannot_use_a_save() {
+    let dir = make_temp_dir();
+    let files = Files::new(None);
+    let id = files
+      .add_pending(create_pending(&dir, "mine", "a"))
+      .unwrap();
+
+    assert!(files.get_owned(id, "b").is_err());
+    assert!(files.take_owned(id, "b").is_err());
+    // The refused window changed nothing
+    assert!(files.get_owned(id, "a").is_ok());
+    assert!(dir.join(".mine.part").exists());
+
+    assert!(files.take_owned(id, "a").is_ok());
+    assert!(files.get_owned(id, "a").is_err());
+    fs::remove_dir_all(&dir).unwrap();
+  }
+
+  #[test]
+  fn aborts_every_save_at_exit() {
+    let dir = make_temp_dir();
+    let files = Files::new(None);
+    files.add_pending(create_pending(&dir, "one", "a")).unwrap();
+    files.add_pending(create_pending(&dir, "two", "b")).unwrap();
+
+    files.abort_all();
+    assert!(lock(&files.pending).is_empty());
+    assert!(!dir.join(".one.part").exists());
+    assert!(!dir.join(".two.part").exists());
+    fs::remove_dir_all(&dir).unwrap();
+  }
+
+  #[test]
+  fn the_open_warning_names_the_file_and_type() {
+    let warning = build_open_warning("Invoice.PDF.exe");
+    assert!(warning.contains("File: Invoice.PDF.exe"));
+    assert!(warning.contains("Type: .exe"));
+    assert!(build_open_warning(".bat").contains("Type: .bat"));
+  }
+
+  #[test]
+  fn dangerous_extensions_are_lowercase_and_unique() {
+    let mut seen = std::collections::HashSet::new();
+    for extension in DANGEROUS_EXTENSIONS {
+      assert_eq!(*extension, extension.to_ascii_lowercase());
+      assert!(!extension.starts_with('.'));
+      assert!(seen.insert(*extension), "{extension} is listed twice");
+    }
   }
 
   #[test]

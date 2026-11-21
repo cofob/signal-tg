@@ -240,8 +240,14 @@ pub fn run() {
   ]);
 
   app
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app, event| {
+      // Saves that the exit interrupts leave temporary files, so they end here
+      if matches!(event, tauri::RunEvent::Exit) {
+        app.state::<Files>().abort_all();
+      }
+    });
 }
 
 #[tauri::command]

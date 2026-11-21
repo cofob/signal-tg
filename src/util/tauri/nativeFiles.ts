@@ -26,17 +26,26 @@ const CHUNK_BYTES = 2 * 1024 * 1024;
 const SAVE_ID_HEADER = 'save-id';
 const SAVED_NOTIFICATION_DURATION_MS = 8000;
 
+// Saves run one at a time: each can open a save dialog, and the app limits the saves in progress
+let saveQueue = Promise.resolve();
+
 /**
  * Saves the file that a blob URL holds through the desktop app, which picks the destination: the
  * Downloads folder, or a path from a save dialog when the setting asks for one. `key` names the file
  * for the actions that follow, such as `openSavedFile`; it is the media hash for attachments.
  */
-export async function saveFile(url: string, fileName: string, key = generateUniqueId()) {
-  const { shouldAskWhereToSave } = selectSharedSettings(getGlobal());
-  const lang = getTranslationFn();
+export function saveFile(url: string, fileName: string, key = generateUniqueId()) {
+  saveQueue = saveQueue.then(() => runSave(url, fileName, key));
+  return saveQueue;
+}
 
+/** Never rejects, so that a failed save does not stop the ones after it */
+async function runSave(url: string, fileName: string, key: string) {
   let saveId: number | undefined;
   try {
+    const { shouldAskWhereToSave } = selectSharedSettings(getGlobal());
+    const lang = getTranslationFn();
+
     saveId = await invoke<number | null>('begin_file_save', {
       fileName,
       key,
@@ -75,18 +84,8 @@ export async function saveFile(url: string, fileName: string, key = generateUniq
 
 /** Opens a saved file with the default app; the app confirms first when the file type is dangerous */
 export async function openSavedFile(key: string, tabId?: number) {
-  const lang = getTranslationFn();
   try {
-    const outcome = await invoke<SavedFileOutcome>('open_saved_file', {
-      key,
-      prompt: {
-        title: lang('FileOpenDangerousTitle'),
-        message: lang('FileOpenDangerousText'),
-        openLabel: lang('Open'),
-        cancelLabel: lang('Cancel'),
-      },
-    });
-    handleOutcome(outcome, tabId);
+    handleOutcome(await invoke<SavedFileOutcome>('open_saved_file', { key }), tabId);
   } catch (err) {
     handleFailure(err, tabId);
   }

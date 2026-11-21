@@ -1712,8 +1712,6 @@ export interface LangPair {
   'FileShowInFolder': undefined;
   'FileNotFound': undefined;
   'FileOpenFailed': undefined;
-  'FileOpenDangerousTitle': undefined;
-  'FileOpenDangerousText': undefined;
   'FileSaveDialogTitle': undefined;
   'SettingsAskWhereToSave': undefined;
   'SettingsAskWhereToSaveDescription': undefined;
