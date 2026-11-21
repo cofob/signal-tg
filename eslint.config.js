@@ -37,6 +37,8 @@ export default defineConfig(
     'public/',
     'deploy/update_version.js',
     'tauri/target/',
+    // Web K follows its own style and linter (`webk/.oxlintrc.json`)
+    'webk/',
   ]),
   {
     name: 'teact-config',

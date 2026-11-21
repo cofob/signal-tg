@@ -1,0 +1,41 @@
+# Telegram Web K provenance
+
+This directory vendors [morethanwords/tweb](https://github.com/morethanwords/tweb) (Telegram Web K), branch `master`,
+commit `2e4bbb52b6aec5e95ee32e5c2882c1f05de32200` (2026-11-11), licensed under GPL-3.0-only (`LICENSE`).
+TeleSignal ships it as its second frontend at `/k/`; `docs/signal/ITERATIONS.md` section 11 tracks the port.
+
+## License
+
+Web K is GPL-3.0-only. The rest of the repository is GPL-3.0-or-later (`package.json`), and the vendored libsignal
+crates (`rust/libsignal`) are AGPL-3.0-only. GPL-3.0-or-later code may be combined with GPL-3.0-only code, and GPL-3.0
+section 13 allows combining GPL-3.0 code with AGPL-3.0 code, so the combined work is distributed under GPL-3.0-only
+with the AGPL-3.0 terms applying to the libsignal parts. Both frontends ship in one build and one origin, so the
+build as a whole is offered under those terms; the source of every part is this repository.
+
+## Vendored files
+
+Every file tracked at the commit above, except:
+
+- the deployed build in `public/` (hashed `*.js`, `*.css`, `*.map`, `*.wasm`, `*.png`, `*.html`, `changelogs/`,
+  `version`); `public/assets`, `site.webmanifest`, `site_apple.webmanifest`, `browserconfig.xml` and the
+  `opus-recorder` WebAssembly files are vendored;
+- `public/assets/img/emoji` (Apple emoji images), which the build copies from `emoji-data-ios` instead, as Web A does;
+- the Playwright suites and their configs (`e2e/`, `playwright.*.ts`, `vite.*e2e*.config.ts`, `vite.preview.config.ts`,
+  `snapshot-server/`), the unit tests (`src/tests/`), the deploy and preview scripts (`build.js`, `git-serve*.js`,
+  `ssh.example.json`, `docker-compose.yaml`);
+- editor and agent settings (`.agents/`, `.claude/`, `.cursorignore`, `.zed/`, `fff.code-workspace`, `CLAUDE.md`,
+  `REVIEW.md`), upstream CI (`.github/`, `.docker/`, `.oss-scanner/`), `.git-blame-ignore-revs`;
+- `.env`, which holds Telegram's API id and hash and push server key;
+- the `src/opus-recorder` and `src/solid` submodules: the app uses the built copies in `src/vendor`.
+
+## Local changes
+
+The port to Signal changes Web K in place; `git log -- webk` lists the changes after the import commit. In summary:
+
+- Build: `vite.config.ts` serves and builds the app under `/k/`, `package.json` drops Telegram-only dependencies.
+
+## Updating
+
+1. Check out the new tweb commit and copy its tracked files with the exclusions above.
+2. Reapply the local changes (`git diff <import commit> -- webk`), update the commit in this file and record any new
+   local change above.
