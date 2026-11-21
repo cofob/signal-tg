@@ -21,12 +21,20 @@ export function acquireEngineOwnership(onLost: NoneToVoidFunction) {
       release = resolveHeld;
     });
 
+    let isGranted = false;
     navigator.locks.request(getEngineStoreName(ENGINE_LOCK_NAME), { steal: true }, () => {
+      isGranted = true;
       releaseHeldLock = release;
       resolve();
       return held;
     }).catch(() => {
-      // The request rejects only when another start took the lock
+      // Before the lock was granted, the request failed (such as with `SecurityError` where storage is denied): the
+      // engine runs without it, as where Web Locks are missing
+      if (!isGranted) {
+        resolve();
+        return;
+      }
+      // After it, another start took the lock
       if (releaseHeldLock !== release) return;
       releaseHeldLock = undefined;
       onLost();
