@@ -1,7 +1,7 @@
 import type { ConversationRecord } from '../db/MessageDb';
 import type { AccountRecord, StoryDistributionList } from '../store/SignalStore';
 
-import { getServerTime } from '../../../util/serverTime';
+import { getServerTimeOffset } from '../../../util/serverTime';
 
 // Signal Desktop `MY_STORY_ID` in `ts/types/Stories.std.ts`: the identifier of My Story is the nil UUID
 export const MY_STORY_ID = '00000000-0000-0000-0000-000000000000';
@@ -9,9 +9,9 @@ export const MY_STORY_ID = '00000000-0000-0000-0000-000000000000';
 export const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const MS_PER_SECOND = 1000;
 
-/** The time on the server's clock in milliseconds, which story expiry follows */
+/** The time on the server's clock in milliseconds, which story expiry follows; `getServerTime` has seconds only */
 export function getStoryTime() {
-  return getServerTime() * MS_PER_SECOND;
+  return Date.now() + getServerTimeOffset() * MS_PER_SECOND;
 }
 
 /**
