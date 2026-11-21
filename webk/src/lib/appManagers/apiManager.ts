@@ -155,7 +155,7 @@ export class ApiManager extends ApiManagerMethods {
 
   public invokeApi<T extends keyof MethodDeclMap>(method: T, params: MethodDeclMap[T]['req'] = {}, options: InvokeApiOptions = {}): CancellablePromise<MethodDeclMap[T]['res']> {
     const deferred = deferredPromise<MethodDeclMap[T]['res']>();
-    this.appSignalManager.invoke(method, params).then(deferred.resolve, (error: ApiError) => {
+    this.appSignalManager.invoke(method, params).then((result) => deferred.resolve(result), (error: ApiError) => {
       if(options.ignoreErrors || options.noErrorBox) {
         error.handled = true;
       }

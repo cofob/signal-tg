@@ -135,7 +135,7 @@ export default class AppSignalManager extends AppManager {
       'account.unregisterDevice': () => true,
       'langpack.getLangPack': () => Promise.reject(makeError(UNSUPPORTED_ERROR as ErrorType)),
       'langpack.getDifference': () => Promise.reject(makeError(UNSUPPORTED_ERROR as ErrorType)),
-      'messages.getDialogFilters': () => ({_: 'messages.dialogFilters', pFlags: {}, filters: []}),
+      'messages.getDialogFilters': () => ({_: 'messages.dialogFilters', pFlags: {}, filters: [{_: 'dialogFilterDefault'}]}),
       'messages.getSuggestedDialogFilters': () => [],
       'messages.getDialogs': (params) => this.getDialogs(params),
       'messages.getPinnedDialogs': (params) => this.getPinnedDialogs(params),
