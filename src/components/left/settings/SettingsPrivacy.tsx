@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPrivacySettings } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalPinSettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
@@ -28,7 +28,8 @@ type OwnProps = {
 };
 
 type StateProps = {
-  hasPassword?: boolean;
+  signalPin?: ApiSignalPinSettings;
+  isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
@@ -51,7 +52,8 @@ const DAYS_PER_MONTH = 30;
 
 const SettingsPrivacy = ({
   isActive,
-  hasPassword,
+  signalPin,
+  isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
   webAuthCount,
@@ -73,6 +75,7 @@ const SettingsPrivacy = ({
   const {
     openDeleteAccountModal,
     loadPrivacySettings,
+    loadPhoneNumberPrivacy,
     loadBlockedUsers,
     updateContentSettings,
     loadDefaultHistoryTtl,
@@ -85,14 +88,20 @@ const SettingsPrivacy = ({
     openAgeVerificationModal,
     loadPasskeys,
     openPasskeyModal,
+    loadSignalPinSettings,
+    loadSignalContactDiscovery,
+    setSignalContactDiscovery,
   } = getActions();
 
   useEffect(() => {
     if (!isCurrentUserFrozen) {
       loadBlockedUsers();
       loadPrivacySettings({});
+      loadPhoneNumberPrivacy();
       loadWebAuthorizations();
       loadPasskeys();
+      loadSignalPinSettings();
+      loadSignalContactDiscovery();
     }
   }, [isCurrentUserFrozen]);
 
@@ -114,6 +123,10 @@ const SettingsPrivacy = ({
   useHistoryBack({
     isActive,
     onBack: onReset,
+  });
+
+  const handleContactDiscoveryChange = useLastCallback((isEnabled: boolean) => {
+    setSignalContactDiscovery({ isEnabled });
   });
 
   const handleArchiveAndMuteChange = useLastCallback((isEnabled: boolean) => {
@@ -226,21 +239,21 @@ const SettingsPrivacy = ({
             </div>
           </ListItem>
         )}
-        <ListItem
-          icon="2fa-filled"
-          iconBg="green"
-          narrow
-          onClick={() => openSettingsScreen({
-            screen: hasPassword ? SettingsScreens.TwoFaEnabled : SettingsScreens.TwoFaDisabled,
-          })}
-        >
-          <div className="multiline-item">
-            <span className="title">{lang('TwoStepVerification')}</span>
-            <span className="subtitle" dir="auto">
-              {lang(hasPassword ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-            </span>
-          </div>
-        </ListItem>
+        {signalPin && (
+          <ListItem
+            icon="2fa-filled"
+            iconBg="green"
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.SignalPin })}
+          >
+            <div className="multiline-item">
+              <span className="title">{lang('SignalPinSettings')}</span>
+              <span className="subtitle" dir="auto">
+                {lang(signalPin.hasPin ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
+              </span>
+            </div>
+          </ListItem>
+        )}
         {arePasskeysAvailable && (
           <ListItem
             icon="key-filled"
@@ -283,6 +296,17 @@ const SettingsPrivacy = ({
           </ListItem>
         )}
       </Island>
+
+      {isContactDiscoveryEnabled !== undefined && (
+        <Island>
+          <Checkbox
+            label={lang('SignalContactDiscovery')}
+            subLabel={lang('SignalContactDiscoveryAbout')}
+            checked={isContactDiscoveryEnabled}
+            onCheck={handleContactDiscoveryChange}
+          />
+        </Island>
+      )}
 
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('PrivacyTitle')}</IslandTitle>
       <Island>
@@ -488,7 +512,8 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          hasPassword, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
+          signalPin, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
+          shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
@@ -506,7 +531,8 @@ export default memo(withGlobal<OwnProps>(
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
 
     return {
-      hasPassword,
+      signalPin,
+      isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
       webAuthCount: global.activeWebSessions.orderedHashes.length,

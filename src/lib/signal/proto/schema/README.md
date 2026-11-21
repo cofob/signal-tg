@@ -9,9 +9,11 @@ Copied without changes from [signalapp/Signal-Android](https://github.com/signal
 | `WebSocketResources.proto` | `core/network/src/main/protowire/` |
 | `DeviceName.proto` | `core/util-jvm/src/main/protowire/` |
 | `Backup.proto` | `lib/archive/src/main/protowire/` |
+| `SVR2.proto` | `lib/libsignal-service/src/main/protowire/` |
 
-`ProvisionEnvelope.proto` is `rust/provisioning/src/proto/provisioning.proto` from
-[signalapp/libsignal](https://github.com/signalapp/libsignal) `v0.108.3`, licensed under AGPL-3.0.
+`ProvisionEnvelope.proto` is `rust/provisioning/src/proto/provisioning.proto` and `Cdsi.proto` is
+`rust/net/src/proto/cds2.proto` from [signalapp/libsignal](https://github.com/signalapp/libsignal) `v0.108.3`,
+licensed under AGPL-3.0.
 
 After updating a schema, run `npm run signal:proto` to regenerate `../generated` with
 [protobuf-es](https://github.com/bufbuild/protobuf-es) (`buf.gen.yaml` at the repository root).

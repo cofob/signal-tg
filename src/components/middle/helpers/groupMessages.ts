@@ -42,7 +42,16 @@ export function groupMessages(
   messages.forEach((message, index) => {
     const currentDateGroup = dateGroups[dateGroups.length - 1];
     const currentSenderGroup = currentDateGroup.senderGroups[currentDateGroup.senderGroups.length - 1];
-    if (message.isInAlbum) {
+    if ((message.content.album?.items.length || 0) > 1) {
+      currentSenderGroup.push({
+        albumId: `album-${message.id}`,
+        isSingleMessage: true,
+        messages: [message],
+        mainMessage: message,
+        captionMessage: message.content.text ? message : undefined,
+        hasMultipleCaptions: false,
+      } satisfies IAlbum);
+    } else if (message.isInAlbum) {
       if (!currentAlbum) {
         currentAlbum = {
           albumId: message.groupedId!,

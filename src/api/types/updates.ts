@@ -62,7 +62,8 @@ export type ApiUpdateAuthorizationStateType = (
   'authorizationStateReady' |
   'authorizationStateClosing' |
   'authorizationStateClosed' |
-  'authorizationStateWaitQrCode'
+  'authorizationStateWaitQrCode' |
+  'authorizationStateWaitCaptcha'
 );
 
 export type ApiUpdateConnectionStateType = (
@@ -78,6 +79,7 @@ export type ApiUpdateAuthorizationState = {
   hint?: string;
   noReset?: boolean;
   qrCode?: { token: string; expires: number };
+  codeInfo?: ApiAuthCodeInfo;
   // Signal link and sync: the link screen shows the message history transfer instead of the QR code
   historySync?: ApiHistorySyncProgress;
 };
@@ -87,6 +89,16 @@ export type ApiHistorySyncProgress = {
   // From 0 to 1, while downloading and importing
   progress?: number;
 };
+
+/** How the verification code of a Signal registration was sent and when it can be sent again */
+export type ApiAuthCodeInfo = {
+  transport?: ApiAuthCodeTransport;
+  // Local times in milliseconds; absent when the transport cannot be used
+  nextSmsAt?: number;
+  nextCallAt?: number;
+};
+
+export type ApiAuthCodeTransport = 'sms' | 'voice';
 
 export type ApiUpdateWebAuthTokenFailed = {
   '@type': 'updateWebAuthTokenFailed';

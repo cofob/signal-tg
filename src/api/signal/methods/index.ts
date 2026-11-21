@@ -1,4 +1,14 @@
 export {
+  provideAuthCaptcha,
+  provideAuthCode,
+  provideAuthPassword,
+  provideAuthPhoneNumber,
+  provideAuthRegistration,
+  requestAuthCode,
+  restartAuth,
+  restartAuthWithQr,
+} from './auth';
+export {
   deleteHistory,
   fetchChat,
   fetchChatFolders,
@@ -6,6 +16,7 @@ export {
   fetchFullChat,
   fetchPeerSettings,
   hidePeerSettingsBar,
+  lookUpPhoneNumber,
   requestChatUpdate,
   searchChats,
   toggleChatArchived,
@@ -14,7 +25,42 @@ export {
   updateChatNotifySettings,
 } from './chats';
 export { destroy, disconnect } from './client';
+export { fetchCountryList, fetchNearestCountry } from './countries';
+export {
+  addChatMembers,
+  checkChatInvite,
+  createGroupChat,
+  deleteChat,
+  deleteChatMember,
+  deleteChatUser,
+  deleteExportedChatInvite,
+  deleteRevokedExportedChatInvites,
+  editChatPhoto,
+  editExportedChatInvite,
+  exportChatInvite,
+  fetchChatInviteImporters,
+  fetchExportedChatInvites,
+  hideAllChatJoinRequests,
+  hideChatJoinRequest,
+  importChatInvite,
+  joinChannel,
+  setHistoryTtl,
+  toggleJoinRequest,
+  updateChatAbout,
+  updateChatAdmin,
+  updateChatDefaultBannedRights,
+  updateChatMemberBannedRights,
+  updateChatTitle,
+} from './groups';
 export { downloadMedia } from './media';
+export {
+  fetchSignalContactDiscovery,
+  fetchSignalPinSettings,
+  removeSignalPin,
+  setSignalContactDiscovery,
+  setSignalPin,
+  setSignalRegistrationLock,
+} from './pin';
 export {
   closePoll,
   deleteMessages,
@@ -34,6 +80,20 @@ export {
   sendReaction,
 } from './messages';
 export {
+  confirmUsername,
+  deleteUsername,
+  fetchPhoneNumberPrivacy,
+  fetchSafetyNumber,
+  fetchUsernameLink,
+  getChatByUsername,
+  reserveUsername,
+  resetUsernameLink,
+  resolveUsernameLink,
+  updateOwnProfile,
+  updatePhoneNumberPrivacy,
+  updateSafetyNumberVerified,
+} from './profile';
+export {
   blockUser,
   fetchBlockedUsers,
   fetchConfig,
@@ -43,5 +103,15 @@ export {
   updateNotificationSettings,
 } from './settings';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
+  clearRecentStickers,
+  fetchFeaturedStickers,
+  fetchRecentStickers,
+  fetchStickers,
+  fetchStickerSets,
+  installStickerSet,
+  removeRecentSticker,
+  uninstallStickerSet,
+} from './stickers';
+export {
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchProfilePhotos, fetchUsers, getChatByAci, reportSpam,
 } from './users';

@@ -887,11 +887,8 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
     return;
   }
 
-  const { id: channelId, accessHash } = chat;
-
-  if (!(channelId && accessHash)) {
-    return;
-  }
+  // Signal groups have no access hash; joining one accepts our invitation
+  const { id: channelId, accessHash = '' } = chat;
 
   try {
     const theme = extractCurrentThemeParams();
@@ -948,21 +945,24 @@ addActionHandler('deleteChatUser', (global, actions, payload): ActionReturnType 
   void callApi('deleteChatUser', { chat, user, shouldRevokeHistory });
 });
 
-addActionHandler('deleteChat', (global, actions, payload): ActionReturnType => {
+// Signal groups cannot be deleted for everyone; deleting one leaves it, which the last admin cannot do
+addActionHandler('deleteChat', async (global, actions, payload): Promise<void> => {
   const { chatId, tabId = getCurrentTabId() } = payload;
   const chat = selectChat(global, chatId);
   if (!chat) {
     return;
   }
 
+  const isLeft = await callApi('deleteChat', { chatId: chat.id });
+  if (!isLeft) return;
+
+  global = getGlobal();
   global = leaveChat(global, chatId);
   setGlobal(global);
 
   if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
     actions.openChat({ id: undefined, tabId });
   }
-
-  void callApi('deleteChat', { chatId: chat.id });
 });
 
 async function checkFutureCreatorAndOpenModal(
@@ -1045,14 +1045,13 @@ addActionHandler('leaveBasicGroup', async (global, actions, payload): Promise<vo
     return;
   }
 
-  actions.deleteHistory({ chatId, shouldDeleteForAll: false, tabId });
-
+  // The history stays until leaving succeeds: the last admin of a Signal group cannot leave
   global = getGlobal();
   const user = selectUser(global, currentUserId);
-  if (user) {
-    await callApi('deleteChatUser', { chat, user, shouldRevokeHistory: false });
-  }
+  const isLeft = user && await callApi('deleteChatUser', { chat, user, shouldRevokeHistory: false });
+  if (!isLeft) return;
 
+  actions.deleteHistory({ chatId, shouldDeleteForAll: false, tabId });
   cleanupAfterLeave(chatId, tabId);
 });
 
@@ -1650,16 +1649,17 @@ addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Prom
   actions.openChat({ id: TMP_CHAT_ID, tabId });
 
   const chat = await fetchChatByPhoneNumber(global, phoneNumber);
-  if (!chat) {
+  if (!chat || 'error' in chat) {
     actions.openPreviousChat({ tabId });
+    const error = chat?.error ?? 'notFound';
     actions.showNotification({
-      message: {
+      message: error === 'notFound' ? {
         key: 'UsernameByPhoneNotFound',
         variables: {
           phone: phoneNumber,
         },
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
+      } : { key: error === 'rateLimited' ? 'ErrorPhoneLookupRateLimited' : 'ErrorPhoneLookupUnavailable' },
       tabId,
     });
     return;
@@ -1701,6 +1701,31 @@ addActionHandler('openTelegramLink', (global, actions, payload): ActionReturnTyp
   const { url, linkContext } = payload;
 
   if (isDeepLink(url)) processDeepLink(url, linkContext);
+});
+
+/** Opens the chat behind a `signal.me/#eu/` username link or its QR code */
+addActionHandler('openChatByUsernameLink', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+
+  const username = await callApi('resolveUsernameLink', url);
+  if (!username) {
+    actions.showNotification({ message: { key: 'SignalUsernameLinkInvalid' }, tabId });
+    return;
+  }
+  actions.openChatByUsername({ username, tabId });
+});
+
+/** Opens the chat with a Signal user by ACI, such as a shared contact that has no chat yet */
+addActionHandler('openChatByAci', async (global, actions, payload): Promise<void> => {
+  const { aci, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('getChatByAci', aci);
+  if (!result) return;
+
+  global = getGlobal();
+  global = updateChat(global, result.chat.id, result.chat);
+  global = updateUser(global, result.user.id, result.user);
+  setGlobal(global);
+  actions.openChat({ id: result.chat.id, tabId });
 });
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
@@ -3632,25 +3657,6 @@ export async function loadFullChat<T extends GlobalState>(
   return result;
 }
 
-export async function migrateChat<T extends GlobalState>(
-  global: T, actions: RequiredGlobalActions, chat: ApiChat,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-): Promise<ApiChat | undefined> {
-  try {
-    const supergroup = await callApi('migrateChat', chat);
-
-    return supergroup;
-  } catch (error) {
-    if ((error as ApiError).message === 'CHANNELS_TOO_MUCH') {
-      actions.openLimitReachedModal({ limit: 'channels', tabId });
-    } else {
-      actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-    }
-
-    return undefined;
-  }
-}
-
 export async function fetchChatByUsername<T extends GlobalState>(
   global: T,
   username: string,
@@ -3685,10 +3691,11 @@ export async function fetchChatByPhoneNumber<T extends GlobalState>(global: T, p
     return selectChat(global, localUser.id);
   }
 
-  const { chat, user } = await callApi('getChatByPhoneNumber', phoneNumber) || {};
-  if (!chat) {
-    return undefined;
-  }
+  // Signal: the contact discovery service finds the user, or tells why it did not
+  const result = await callApi('lookUpPhoneNumber', phoneNumber);
+  if (!result) return undefined;
+  if ('error' in result) return result;
+  const { chat, user } = result;
 
   global = getGlobal();
   global = updateChat(global, chat.id, chat);
@@ -3928,24 +3935,15 @@ async function openAttachMenuFromLink<T extends GlobalState>(
   });
 }
 
-export async function ensureIsSuperGroup<T extends GlobalState>(
+/**
+ * Signal groups are basic groups that have the admins, bans and join requests of supergroups, and no supergroup
+ * to migrate to, so every group is returned as it is
+ */
+export function ensureIsSuperGroup<T extends GlobalState>(
   global: T,
   actions: RequiredGlobalActions,
   chatId: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
+  ..._args: TabArgs<T>
 ) {
-  const chat = selectChat(global, chatId);
-  if (!chat || !isChatBasicGroup(chat)) {
-    return chat;
-  }
-
-  const newChat = await migrateChat(global, actions, chat, tabId);
-  if (!newChat) {
-    return undefined;
-  }
-
-  actions.loadFullChat({ chatId: newChat.id });
-  actions.openChat({ id: newChat.id, tabId });
-
-  return newChat;
+  return Promise.resolve(selectChat(global, chatId));
 }

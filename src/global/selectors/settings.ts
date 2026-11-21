@@ -65,7 +65,9 @@ export function selectIsWallpaperUploading<T extends GlobalState>(global: T) {
 }
 
 export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
-  const { settings: { byKey: { hasPassword, canChangeSensitive }, passkeys, privacy }, appConfig } = global;
+  const {
+    settings: { byKey: { hasPassword, canChangeSensitive, signalPin }, passkeys, privacy }, appConfig,
+  } = global;
   const hasPasscode = Boolean(global.passcode.hasPasscode);
   const sessionsCount = global.activeSessions.orderedHashes.length;
   const lastSeenVisibility = privacy.lastSeen?.visibility;
@@ -73,6 +75,7 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   return {
     isPasswordStateKnown: hasPassword !== undefined,
     hasPassword,
+    hasSignalPinSettings: Boolean(signalPin),
     hasPasscode,
     canSetPasscode: selectCanSetPasscode(global),
     canUnlockWithPasskey: hasPasscode && Boolean(IS_WEBAUTHN_SUPPORTED),

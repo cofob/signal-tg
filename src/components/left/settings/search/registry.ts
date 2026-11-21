@@ -40,7 +40,6 @@ type SettingsSearchEntry = {
 type EntryOptions = Omit<SettingsSearchEntry, 'screen' | 'titleKey'>;
 
 const PRIVACY_VISIBILITY_SCREENS: [SettingsScreens, RegularLangKey][] = [
-  [SettingsScreens.PrivacyPhoneNumber, 'PrivacyPhoneTitle'],
   [SettingsScreens.PrivacyLastSeen, 'LastSeenTitle'],
   [SettingsScreens.PrivacyProfilePhoto, 'PrivacyProfilePhotoTitle'],
   [SettingsScreens.PrivacyBio, 'PrivacyBioTitle'],
@@ -154,6 +153,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'SetColor',
   },
   {
+    screen: SettingsScreens.Username,
+    parent: SettingsScreens.EditProfile,
+    titleKey: 'Username',
+    keywordsKey: 'SettingsKeywordsUsername',
+  },
+  {
     screen: SettingsScreens.SignalProxy,
     parent: SettingsScreens.DataStorage,
     titleKey: 'SignalProxyTitle',
@@ -187,12 +192,11 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     screenWhen: { flag: 'hasPasscode', screen: SettingsScreens.PasscodeEnabled },
   },
   {
-    screen: SettingsScreens.TwoFaDisabled,
+    screen: SettingsScreens.SignalPin,
     parent: SettingsScreens.Privacy,
-    titleKey: 'TwoStepVerification',
-    keywordsKey: 'SettingsKeywordsTwoStep',
-    requires: 'isPasswordStateKnown',
-    screenWhen: { flag: 'hasPassword', screen: SettingsScreens.TwoFaEnabled },
+    titleKey: 'SignalPinSettings',
+    keywordsKey: 'SettingsKeywordsSignalPin',
+    requires: 'hasSignalPinSettings',
   },
   {
     screen: SettingsScreens.Passkeys,
@@ -276,9 +280,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywordsKey: 'SettingsKeywordsLogOut', icon: 'logout', iconBg: 'gray',
   }),
 
-  ...buildEntries(SettingsScreens.EditProfile, [
-    'FirstName', 'LastName', 'UserBio', 'SettingsBirthday', 'Username', 'PersonalChannelTitle',
-  ]),
+  ...buildEntries(SettingsScreens.EditProfile, ['FirstName', 'LastName', 'SignalProfileAbout']),
+  ...buildEntries(SettingsScreens.Username, ['SignalUsernameLink', 'SignalUsernameLinkReset', 'SignalUsernameDelete']),
 
   ...buildEntries(SettingsScreens.KeyboardShortcuts, [
     'SettingsSendEnter', IS_MAC_OS || IS_IOS ? 'SettingsSendCmdenter' : 'SettingsSendCtrlenter',
@@ -351,6 +354,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['SettingsSensitiveTitle', 'SettingsSensitiveDisableFiltering'], {
     requires: 'canChangeSensitive',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalContactDiscovery'], { requires: 'hasSignalPinSettings' }),
   ...buildEntries(SettingsScreens.Privacy, ['NewChatsFromNonContacts'], {
     requires: 'canDisplayAutoarchiveSetting',
   }),
@@ -365,6 +369,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     ...buildEntries(screen, [titleKey], { isSectionHeader: true }),
     ...buildEntries(screen, ['P2PEverybody', 'P2PContacts', 'P2PNobody']),
   ]),
+  ...buildEntries(SettingsScreens.PrivacyPhoneNumber, ['PrivacyPhoneTitle', 'PrivacyPhoneTitle2'], {
+    isSectionHeader: true,
+  }),
+  ...buildEntries(SettingsScreens.PrivacyPhoneNumber, ['P2PEverybody', 'P2PNobody']),
   ...buildEntries(SettingsScreens.PrivacyLastSeen, ['HideReadTime'], { requires: 'canHideReadTime' }),
   ...buildEntries(SettingsScreens.PrivacyPhoneCall, ['PrivacyP2P']),
 

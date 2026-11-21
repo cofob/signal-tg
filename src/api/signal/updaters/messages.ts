@@ -66,7 +66,8 @@ export async function handleMessageChanges({
       continue;
     }
 
-    const { message: apiMessage, poll } = await buildApiMessageWithPoll(message, conversation, users);
+    const { message: apiMessage, poll, webPage } = await buildApiMessageWithPoll(message, conversation, users);
+    const webPages = webPage && [webPage];
     const localMessage = localMessagesById.get(message.id);
     if (localMessage) {
       localMessagesById.delete(message.id);
@@ -75,13 +76,13 @@ export async function handleMessageChanges({
       });
     } else if (addedMessageIds.includes(message.id)) {
       updates.push({
-        '@type': 'newMessage', chatId, id: message.id, message: apiMessage, poll,
+        '@type': 'newMessage', chatId, id: message.id, message: apiMessage, poll, webPages,
       });
       // A message ends the typing indicator of its sender
       if (!message.isOutgoing && apiMessage.senderId) stopTyping(chatId, apiMessage.senderId);
     } else {
       updates.push({
-        '@type': 'updateMessage', chatId, id: message.id, message: apiMessage, poll, isFull: true,
+        '@type': 'updateMessage', chatId, id: message.id, message: apiMessage, poll, webPages, isFull: true,
       });
     }
   }

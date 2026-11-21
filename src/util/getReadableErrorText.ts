@@ -6,6 +6,7 @@ import { DEBUG } from '../config';
 
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
+  SIGNAL_PIN_RESET_FAILED: 'SignalPinErrorResetFailed',
   CHAT_RESTRICTED: 'ErrorChatRestricted',
   CHAT_SEND_POLL_FORBIDDEN: 'ErrorChatSendPollForbidden',
   CHAT_SEND_STICKERS_FORBIDDEN: 'ErrorChatSendStickersForbidden',
@@ -67,6 +68,10 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SESSION_IS_FRESH: 'ErrorSessionTooFresh',
   INPUT_USER_DEACTIVATED: 'ErrorInputUserDeactivated',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
+  SIGNAL_GROUP_CHANGE_FAILED: 'ErrorGroupChangeFailed',
+  SIGNAL_GROUP_TITLE_TOO_LONG: 'ErrorGroupTitleTooLong',
+  SIGNAL_GROUP_DESCRIPTION_TOO_LONG: 'ErrorGroupDescriptionTooLong',
+  SIGNAL_GROUP_LAST_ADMIN: 'ErrorGroupLastAdmin',
 };
 
 if (DEBUG) {

@@ -2,6 +2,7 @@ import type {
   ApiAppConfig,
   ApiAttachBot,
   ApiAudio,
+  ApiAuthCodeInfo,
   ApiAvailableReaction,
   ApiBotPreviewMedia,
   ApiChat,
@@ -171,6 +172,7 @@ export type GlobalState = {
     rememberMe?: boolean;
     nearestCountry?: string;
     isCodeViaApp?: boolean;
+    codeInfo?: ApiAuthCodeInfo;
     hint?: string;
     qrCode?: {
       token: string;

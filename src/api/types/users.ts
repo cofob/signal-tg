@@ -1,5 +1,6 @@
 import type { API_CHAT_TYPES } from '../../config';
 import type { ApiBotInfo } from './bots';
+import type { ApiChat } from './chats';
 import type { ApiAudio, ApiDocument, ApiFormattedText, ApiPhoto } from './messages';
 import type { ApiPeerTheme, ApiWallpaper } from './misc';
 import type {
@@ -11,6 +12,10 @@ import type {
   ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
+
+/** A Signal user found by phone number, or why none was */
+export type ApiPhoneNumberLookup = { chat: ApiChat; user: ApiUser }
+  | { error: 'notFound' | 'rateLimited' | 'unavailable' };
 
 export interface ApiUser {
   id: string;

@@ -2,6 +2,7 @@ import type {
   ApiAttachBot,
   ApiAttachment,
   ApiAudio,
+  ApiAuthCodeTransport,
   ApiAvatarUpload,
   ApiBirthday,
   ApiChat,
@@ -127,10 +128,13 @@ export interface ActionPayloads {
   // auth
   setAuthPhoneNumber: { phoneNumber: string };
   setAuthCode: { code: string };
+  setAuthCaptcha: { captchaLink: string };
+  requestAuthCode: { transport: ApiAuthCodeTransport };
   setAuthPassword: { password: string };
   signUp: {
     firstName: string;
     lastName: string;
+    isDiscoverableByPhoneNumber?: boolean;
   };
   returnToAuthPhoneNumber: undefined;
   setAuthRememberMe: { value: boolean };
@@ -259,6 +263,22 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadPasskeys: undefined;
+  loadSignalPinSettings: undefined;
+  setSignalPin: {
+    pin: string;
+  } & WithTabId;
+  removeSignalPin: WithTabId | undefined;
+  setSignalRegistrationLock: {
+    isEnabled: boolean;
+  } & WithTabId;
+  loadSignalContactDiscovery: undefined;
+  setSignalContactDiscovery: {
+    isEnabled: boolean;
+  } & WithTabId;
+  openPhoneNumberLookupModal: {
+    phoneNumber: string;
+  } & WithTabId;
+  closePhoneNumberLookupModal: WithTabId | undefined;
   startPasskeyRegistration: WithTabId | undefined;
   deletePasskey: {
     id: string;
@@ -1643,12 +1663,36 @@ export interface ActionPayloads {
   loadCurrentUser: undefined;
   updateProfile: {
     photo?: ApiAvatarUpload;
-    firstName?: string;
+    shouldRemovePhoto?: true;
+    firstName: string;
     lastName?: string;
     bio?: string;
-    username?: string;
-    personalChannelId?: string | false;
   } & WithTabId;
+  reserveUsername: {
+    nickname: string;
+    discriminator?: string;
+  } & WithTabId;
+  confirmUsername: WithTabId | undefined;
+  deleteUsername: WithTabId | undefined;
+  loadUsernameLink: WithTabId | undefined;
+  resetUsernameLink: WithTabId | undefined;
+  resetUsernameEdit: WithTabId | undefined;
+  openChatByUsernameLink: {
+    url: string;
+  } & WithTabId;
+  openChatByAci: {
+    aci: string;
+  } & WithTabId;
+  loadPhoneNumberPrivacy: undefined;
+  updatePhoneNumberPrivacy: {
+    isShared?: boolean;
+    isDiscoverable?: boolean;
+  } & WithTabId;
+  openSafetyNumberModal: {
+    userId: string;
+  } & WithTabId;
+  closeSafetyNumberModal: WithTabId | undefined;
+  toggleSafetyNumberVerified: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;

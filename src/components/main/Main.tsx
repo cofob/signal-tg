@@ -116,7 +116,6 @@ type StateProps = {
   wasTimeFormatSetManually?: boolean;
   isPhoneCallActive?: boolean;
   addedSetIds?: string[];
-  addedCustomEmojiIds?: string[];
   newContactUserId?: string;
   newContactByPhoneNumber?: boolean;
   openedGame?: TabState['openedGame'];
@@ -164,7 +163,6 @@ const Main = ({
   withInterfaceAnimations,
   wasTimeFormatSetManually,
   addedSetIds,
-  addedCustomEmojiIds,
   isPhoneCallActive,
   newContactUserId,
   newContactByPhoneNumber,
@@ -206,7 +204,6 @@ const Main = ({
     loadDiceStickers,
     loadDefaultTopicIcons,
     loadAddedStickers,
-    loadFavoriteStickers,
     ensureTimeFormat,
     closeStickerSetModal,
     closeCustomEmojiSets,
@@ -349,19 +346,15 @@ const Main = ({
     }
   }, [isMasterTab]);
 
-  // Sticker sets
+  // Installed Signal sticker packs, which need no app config
   useEffect(() => {
-    if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen) {
-      if (!addedSetIds || !addedCustomEmojiIds) {
-        loadStickerSets();
-        loadFavoriteStickers();
-      }
-
-      if (addedSetIds && addedCustomEmojiIds) {
-        loadAddedStickers();
-      }
+    if (!isMasterTab || !isSynced) return;
+    if (addedSetIds) {
+      loadAddedStickers();
+    } else {
+      loadStickerSets();
     }
-  }, [addedSetIds, addedCustomEmojiIds, isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
+  }, [addedSetIds, isMasterTab, isSynced]);
 
   useEffect(() => {
     if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen && diceEmojies) {
@@ -683,7 +676,6 @@ export default memo(withGlobal<OwnProps>(
       wasTimeFormatSetManually,
       isPhoneCallActive: isMasterTab ? Boolean(global.phoneCall) : undefined,
       addedSetIds: global.stickers.added.setIds,
-      addedCustomEmojiIds: global.customEmojis.added.setIds,
       newContactUserId: newContact?.userId,
       newContactByPhoneNumber: newContact?.isByPhoneNumber,
       openedGame,

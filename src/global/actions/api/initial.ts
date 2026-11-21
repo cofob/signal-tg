@@ -133,6 +133,24 @@ addActionHandler('setAuthCode', (global, actions, payload): ActionReturnType => 
   });
 });
 
+addActionHandler('setAuthCaptcha', (global, actions, payload): ActionReturnType => {
+  void callApi('provideAuthCaptcha', payload.captchaLink);
+
+  return updateAuth(global, {
+    isLoading: true,
+    errorKey: undefined,
+  });
+});
+
+addActionHandler('requestAuthCode', (global, actions, payload): ActionReturnType => {
+  void callApi('requestAuthCode', payload.transport);
+
+  return updateAuth(global, {
+    isLoading: true,
+    errorKey: undefined,
+  });
+});
+
 addActionHandler('setAuthPassword', (global, actions, payload): ActionReturnType => {
   const { password } = payload;
 
@@ -185,9 +203,9 @@ addActionHandler('uploadProfilePhoto', async (global, actions, payload): Promise
 });
 
 addActionHandler('signUp', (global, actions, payload): ActionReturnType => {
-  const { firstName, lastName } = payload;
+  const { firstName, lastName, isDiscoverableByPhoneNumber } = payload;
 
-  void callApi('provideAuthRegistration', { firstName, lastName });
+  void callApi('provideAuthRegistration', { firstName, lastName, isDiscoverableByPhoneNumber });
 
   return updateAuth(global, {
     isLoading: true,
@@ -206,8 +224,10 @@ addActionHandler('returnToAuthPhoneNumber', (global): ActionReturnType => {
 addActionHandler('goToAuthQrCode', (global): ActionReturnType => {
   void callApi('restartAuthWithQr');
 
+  // The previous code belongs to a closed provisioning socket
   return updateAuth(global, {
     isLoadingQrCode: true,
+    qrCode: undefined,
     errorKey: undefined,
   });
 });

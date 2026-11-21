@@ -6,7 +6,10 @@ import { getActions } from '../../../global';
 
 import type { ApiAttachMenuPeerType, ApiFormattedText, ApiMessage } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
-import type { MessageListType, ThemeKey, ThreadId } from '../../../types';
+import type {
+  MessageList, MessageListType, ThemeKey, ThreadId,
+} from '../../../types';
+import { MAIN_THREAD_ID } from '../../../api/types';
 
 import {
   CONTENT_TYPES_WITH_PREVIEW, DEBUG_LOG_FILENAME, SUPPORTED_AUDIO_CONTENT_TYPES,
@@ -36,6 +39,7 @@ import MenuSeparator from '../../ui/MenuSeparator';
 import ResponsiveHoverButton from '../../ui/ResponsiveHoverButton';
 import AttachBotItem from './AttachBotItem';
 import FormattedDateModal from './FormattedDateModal';
+import ShareContactModal from './ShareContactModal';
 
 import './AttachMenu.scss';
 
@@ -106,6 +110,7 @@ const AttachMenu = ({
   const [isAttachMenuOpen, openAttachMenu, closeAttachMenu] = useFlag();
   const [handleMouseEnter, handleMouseLeave, markMouseInside] = useMouseInside(isAttachMenuOpen, closeAttachMenu);
   const [isDateModalOpen, openDateModal, closeDateModal] = useFlag();
+  const [isContactModalOpen, openContactModal, closeContactModal] = useFlag();
 
   const canSendVideoAndPhoto = canSendPhotos && canSendVideos;
   const canSendVideoOrPhoto = canSendPhotos || canSendVideos;
@@ -201,12 +206,21 @@ const AttachMenu = ({
     });
   });
 
+  const messageList = useMemo<MessageList>(() => ({
+    chatId, threadId: threadId ?? MAIN_THREAD_ID, type: messageListType,
+  }), [chatId, threadId, messageListType]);
+
+  const handleContactClick = useLastCallback(() => {
+    closeAttachMenu();
+    openContactModal();
+  });
+
   const handlePollCreate = useLastCallback(() => {
     closeAttachMenu();
     openPollModal({ chatId, threadId, messageListType });
   });
 
-  if (!isButtonVisible && !isDateModalOpen) {
+  if (!isButtonVisible && !isDateModalOpen && !isContactModalOpen) {
     return undefined;
   }
 
@@ -294,6 +308,9 @@ const AttachMenu = ({
             {canAttachPolls && !editingMessage && (
               <MenuItem icon="poll" onClick={handlePollCreate}>{lang('Poll')}</MenuItem>
             )}
+            {!editingMessage && !isScheduled && (
+              <MenuItem icon="user" onClick={handleContactClick}>{lang('AttachContact')}</MenuItem>
+            )}
             {canInsertDate && !editingMessage && (
               <MenuItem icon="calendar" onClick={handleDateMenuClick}>{lang('GiftInfoDate')}</MenuItem>
             )}
@@ -319,6 +336,11 @@ const AttachMenu = ({
           </Menu>
         </>
       )}
+      <ShareContactModal
+        isOpen={isContactModalOpen}
+        messageList={messageList}
+        onClose={closeContactModal}
+      />
       <FormattedDateModal
         isOpen={isDateModalOpen}
         onClose={closeDateModal}

@@ -3,6 +3,7 @@ use std::fmt;
 
 use js_sys::{Error as JsError, Object, Reflect};
 use libsignal_protocol::{ProtocolAddress as LsProtocolAddress, SignalProtocolError};
+use usernames::{UsernameError, UsernameLinkError};
 use wasm_bindgen::prelude::*;
 
 use crate::handles::ProtocolAddress;
@@ -107,6 +108,37 @@ pub(crate) fn protocol_error(error: SignalProtocolError, operation: &str) -> JsV
 
 pub(crate) fn generic_error(error: impl fmt::Display, operation: &str) -> JsValue {
     make_error(None, &error.to_string(), operation, None)
+}
+
+/// Names as in upstream `rust/bridge/shared/types/src/node/error.rs`
+pub(crate) fn username_error(error: UsernameError, operation: &str) -> JsValue {
+    let name = match error {
+        UsernameError::BadNicknameCharacter => "BadNicknameCharacter",
+        UsernameError::NicknameTooShort => "NicknameTooShort",
+        UsernameError::NicknameTooLong => "NicknameTooLong",
+        UsernameError::NicknameCannotBeEmpty => "NicknameCannotBeEmpty",
+        UsernameError::NicknameCannotStartWithDigit => "CannotStartWithDigit",
+        UsernameError::MissingSeparator => "MissingSeparator",
+        UsernameError::DiscriminatorCannotBeEmpty => "DiscriminatorCannotBeEmpty",
+        UsernameError::DiscriminatorCannotBeZero => "DiscriminatorCannotBeZero",
+        UsernameError::DiscriminatorCannotBeSingleDigit => "DiscriminatorCannotBeSingleDigit",
+        UsernameError::DiscriminatorCannotHaveLeadingZeros => "DiscriminatorCannotHaveLeadingZeros",
+        UsernameError::BadDiscriminatorCharacter => "BadDiscriminatorCharacter",
+        UsernameError::DiscriminatorTooLarge => "DiscriminatorTooLarge",
+    };
+    make_error(Some(name), &error.to_string(), operation, None)
+}
+
+pub(crate) fn username_link_error(error: UsernameLinkError, operation: &str) -> JsValue {
+    let name = match error {
+        UsernameLinkError::InputDataTooLong => "InputDataTooLong",
+        UsernameLinkError::InvalidEntropyDataLength => "InvalidEntropyDataLength",
+        UsernameLinkError::UsernameLinkDataTooShort
+        | UsernameLinkError::HmacMismatch
+        | UsernameLinkError::BadCiphertext
+        | UsernameLinkError::InvalidDecryptedDataStructure => "InvalidUsernameLinkEncryptedData",
+    };
+    make_error(Some(name), &error.to_string(), operation, None)
 }
 
 pub(crate) trait ProtocolResultExt<T> {

@@ -131,6 +131,40 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalProfileAbout': undefined;
+  'SignalProfileAboutHelp': undefined;
+  'SignalProfileRemovePhoto': undefined;
+  'SignalProfileSaveFailed': undefined;
+  'SignalProfileUsernameHelp': undefined;
+  'SignalUsernameSet': undefined;
+  'SignalUsernameNumber': undefined;
+  'SignalUsernameHelp': undefined;
+  'SignalUsernameTaken': undefined;
+  'SignalUsernameExpired': undefined;
+  'SignalUsernameRateLimited': undefined;
+  'SignalUsernameTooShort': undefined;
+  'SignalUsernameTooLong': undefined;
+  'SignalUsernameStartsWithDigit': undefined;
+  'SignalUsernameCharacters': undefined;
+  'SignalUsernameNumberInvalid': undefined;
+  'SignalUsernameFailed': undefined;
+  'SignalUsernameLink': undefined;
+  'SignalUsernameLinkHelp': undefined;
+  'SignalUsernameLinkReset': undefined;
+  'SignalUsernameResetConfirm': undefined;
+  'SignalUsernameLinkResetDone': undefined;
+  'SignalUsernameLinkInvalid': undefined;
+  'SignalUsernameDelete': undefined;
+  'SignalPhoneSharedInfo': undefined;
+  'SignalPhoneHiddenInfo': undefined;
+  'SignalPhoneDiscoverableInfo': undefined;
+  'SignalPhoneUnlistedInfo': undefined;
+  'SettingsKeywordsUsername': undefined;
+  'SafetyNumber': undefined;
+  'SafetyNumberView': undefined;
+  'SafetyNumberMarkVerified': undefined;
+  'SafetyNumberClearVerification': undefined;
+  'SafetyNumberVerified': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -146,6 +180,59 @@ export interface LangPair {
   'SignalHistorySyncWaiting': undefined;
   'SignalHistorySyncNote': undefined;
   'SignalHistorySyncFailed': undefined;
+  'SignalRegisterLink': undefined;
+  'SignalLinkExisting': undefined;
+  'SignalRegisterTitle': undefined;
+  'SignalRegisterHelp': undefined;
+  'SignalRegisterDiscoverable': undefined;
+  'SignalCaptchaTitle': undefined;
+  'SignalCaptchaHelp1': undefined;
+  'SignalCaptchaHelp2': undefined;
+  'SignalCaptchaHelp3': undefined;
+  'SignalCaptchaOpen': undefined;
+  'SignalCaptchaLink': undefined;
+  'SignalCaptchaErrorFormat': undefined;
+  'SignalCaptchaErrorRejected': undefined;
+  'SignalCodeSentSms': undefined;
+  'SignalCodeSentVoice': undefined;
+  'SignalCodeResendSms': undefined;
+  'SignalCodeCall': undefined;
+  'SignalCodeErrorSendFailed': undefined;
+  'SignalCodeErrorUndeliverable': undefined;
+  'SignalCodeErrorNoCode': undefined;
+  'SignalCodeErrorNotRequested': undefined;
+  'SignalProfileDescription': undefined;
+  'SignalRegisterErrorSession': undefined;
+  'SignalRegisterErrorRejected': undefined;
+  'SignalRegisterErrorChallenge': undefined;
+  'SignalRegisterErrorNetwork': undefined;
+  'SignalPinTitle': undefined;
+  'SignalPinDescription': undefined;
+  'SignalPinPlaceholder': undefined;
+  'SignalPinErrorRateLimited': undefined;
+  'SignalPinErrorLockedNoTime': undefined;
+  'SignalPinSettings': undefined;
+  'SignalPinAbout': undefined;
+  'SignalPinCreate': undefined;
+  'SignalPinChange': undefined;
+  'SignalPinRemove': undefined;
+  'SignalPinRemoveText': undefined;
+  'SignalPinRegistrationLock': undefined;
+  'SignalPinRegistrationLockAbout': undefined;
+  'SignalPinNew': undefined;
+  'SignalPinNewDescription': undefined;
+  'SignalPinConfirm': undefined;
+  'SignalPinErrorShort': undefined;
+  'SignalPinErrorMismatch': undefined;
+  'SignalPinErrorSave': undefined;
+  'SignalPhoneLookupTitle': undefined;
+  'SignalPhoneLookupConfirm': undefined;
+  'SignalContactDiscovery': undefined;
+  'SignalContactDiscoveryAbout': undefined;
+  'SignalPinErrorUnavailable': undefined;
+  'SignalPinErrorResetFailed': undefined;
+  'ErrorPhoneLookupRateLimited': undefined;
+  'ErrorPhoneLookupUnavailable': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -704,7 +791,6 @@ export interface LangPair {
   'SettingsPerformanceAutoplayGif': undefined;
   'SettingsPerformanceAutoplayVideo': undefined;
   'SettingsPerformanceGranularTitle': undefined;
-  'FavoriteStickers': undefined;
   'GroupStickers': undefined;
   'ErrorSendRestrictedStickersAll': undefined;
   'ErrorPhoneNumberInvalid': undefined;
@@ -1007,7 +1093,7 @@ export interface LangPair {
   'StickerSearchResult': undefined;
   'StickerSearchGlobalResult': undefined;
   'NoStickersFound': undefined;
-  'TrendingStickers': undefined;
+  'StickersArtistSeries': undefined;
   'AccDescrCloseTrendingStickers': undefined;
   'SearchGifsTitle': undefined;
   'SharedMedia': undefined;
@@ -1493,6 +1579,17 @@ export interface LangPair {
   'ActionUserLeftYou': undefined;
   'ActionUserJoinedYou': undefined;
   'ActionJoinedByRequestYou': undefined;
+  'ActionGroupDescriptionYou': undefined;
+  'ActionGroupDescriptionRemovedYou': undefined;
+  'ActionGroupJoinRequestedYou': undefined;
+  'ActionGroupLinkOnYou': undefined;
+  'ActionGroupLinkOnWithApprovalYou': undefined;
+  'ActionGroupLinkOffYou': undefined;
+  'ActionGroupLinkResetYou': undefined;
+  'ActionGroupAccessAdmins': undefined;
+  'ActionGroupAccessMembers': undefined;
+  'ActionGroupAnnouncementsOnYou': undefined;
+  'ActionGroupAnnouncementsOffYou': undefined;
   'ActionRemovedPhotoYou': undefined;
   'ActionRemovedPhotoChannel': undefined;
   'ActionChangedPhotoYou': undefined;
@@ -2280,6 +2377,10 @@ export interface LangPair {
   'ErrorPeersListEmpty': undefined;
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;
+  'ErrorGroupChangeFailed': undefined;
+  'ErrorGroupTitleTooLong': undefined;
+  'ErrorGroupDescriptionTooLong': undefined;
+  'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
   'ReportSubmitError': undefined;
@@ -2307,6 +2408,7 @@ export interface LangPair {
   'SettingsKeywordsSessions': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSignalPin': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -2385,6 +2487,30 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'SignalUsernameDeleteConfirm': {
+    'username': V;
+  };
+  'SafetyNumberHint': {
+    'user': V;
+  };
+  'SafetyNumberUnavailable': {
+    'user': V;
+  };
+  'ActionSafetyChanged': {
+    'user': V;
+  };
+  'ActionSafetyVerified': {
+    'user': V;
+  };
+  'ActionSafetyVerifiedSynced': {
+    'user': V;
+  };
+  'ActionSafetyUnverified': {
+    'user': V;
+  };
+  'ActionSafetyUnverifiedSynced': {
+    'user': V;
+  };
   'MessageRequestBlockTitle': {
     'title': V;
   };
@@ -2393,6 +2519,18 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalHistorySyncImporting': {
     'percent': V;
+  };
+  'SignalCodeResendSmsIn': {
+    'time': V;
+  };
+  'SignalCodeCallIn': {
+    'time': V;
+  };
+  'SignalPhoneSearch': {
+    'phone': V;
+  };
+  'SignalPhoneLookupText': {
+    'phone': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -2940,6 +3078,61 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionJoinedByRequest': {
     'from': V;
   };
+  'ActionGroupDescription': {
+    'from': V;
+  };
+  'ActionGroupDescriptionRemoved': {
+    'from': V;
+  };
+  'ActionGroupAdminAdded': {
+    'from': V;
+    'user': V;
+  };
+  'ActionGroupAdminAddedYou': {
+    'user': V;
+  };
+  'ActionGroupAdminRemoved': {
+    'from': V;
+    'user': V;
+  };
+  'ActionGroupAdminRemovedYou': {
+    'user': V;
+  };
+  'ActionGroupJoinRequested': {
+    'from': V;
+  };
+  'ActionGroupLinkOn': {
+    'from': V;
+  };
+  'ActionGroupLinkOnWithApproval': {
+    'from': V;
+  };
+  'ActionGroupLinkOff': {
+    'from': V;
+  };
+  'ActionGroupLinkReset': {
+    'from': V;
+  };
+  'ActionGroupInfoAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupInfoAccessYou': {
+    'access': V;
+  };
+  'ActionGroupMembersAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupMembersAccessYou': {
+    'access': V;
+  };
+  'ActionGroupAnnouncementsOn': {
+    'from': V;
+  };
+  'ActionGroupAnnouncementsOff': {
+    'from': V;
+  };
   'ActionVideoInvited': {
     'from': V;
     'user': V;
@@ -3419,6 +3612,12 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'user': V;
     'count': V;
   };
+  'SignalPinErrorIncorrect': {
+    'count': V;
+  };
+  'SignalPinErrorLocked': {
+    'count': V;
+  };
   'Participants': {
     'count': V;
   };
@@ -3629,6 +3828,13 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'FolderLinkNotificationUpdatedSubtitle': {
     'count': V;
   };
+  'ActionGroupInvited': {
+    'from': V;
+    'count': V;
+  };
+  'ActionGroupInvitedYou': {
+    'count': V;
+  };
   'ActionGameScore': {
     'from': V;
     'count': V;
@@ -3795,6 +4001,13 @@ export interface LangKeyGroups {
       | 'UserPlayingGame'
       | 'UserActionRecordRound'
       | 'UserActionUploadRound'
+      | 'SafetyNumberHint'
+      | 'SafetyNumberUnavailable'
+      | 'ActionSafetyChanged'
+      | 'ActionSafetyVerified'
+      | 'ActionSafetyVerifiedSynced'
+      | 'ActionSafetyUnverified'
+      | 'ActionSafetyUnverifiedSynced'
       | 'CallEmojiKeyTooltip'
       | 'ChatListDeleteForEveryone'
       | 'ConversationPinMessagesFor'
@@ -3813,6 +4026,8 @@ export interface LangKeyGroups {
       | 'VoipPeerIncompatible'
       | 'ActionAddUserYou'
       | 'ActionKickUserYou'
+      | 'ActionGroupAdminAddedYou'
+      | 'ActionGroupAdminRemovedYou'
       | 'ActionVideoInvitedYou'
       | 'NoForwardsRequestTitle'
       | 'ActionSuggestedPhotoYou'
@@ -3880,7 +4095,8 @@ export interface LangKeyGroups {
   };
   'username': {
     keys:
-      | 'UsernameAvailable';
+      | 'UsernameAvailable'
+      | 'SignalUsernameDeleteConfirm';
     variables: 'username';
   };
   'limit,limit2': {
@@ -3917,6 +4133,39 @@ export interface LangKeyGroups {
       | 'SignalHistorySyncDownloading'
       | 'SignalHistorySyncImporting';
     variables: 'percent';
+  };
+  'time': {
+    keys:
+      | 'SignalCodeResendSmsIn'
+      | 'SignalCodeCallIn'
+      | 'ConversationScheduleMessageSendToday'
+      | 'AutoDeleteSetInfo'
+      | 'AutoDeleteIn'
+      | 'AutoDeleteGlobalActionFromYou'
+      | 'ActionTTLYouChanged'
+      | 'ActionTTLChannelChanged'
+      | 'SlowModeHint'
+      | 'ErrorFloodTime'
+      | 'ErrorPasswordFresh'
+      | 'ErrorSessionFresh'
+      | 'PollEndsTime'
+      | 'PollResultsTime'
+      | 'TimeIn'
+      | 'MessageMetaEditedAtTime'
+      | 'LinkExpiresIn'
+      | 'InviteLinkExpiresIn'
+      | 'LastSeenTodayAt'
+      | 'LastSeenYesterdayAt'
+      | 'LiveLocationUpdatedTodayAt'
+      | 'LiveLocationUpdatedYesterdayAt';
+    variables: 'time';
+  };
+  'phone': {
+    keys:
+      | 'SignalPhoneSearch'
+      | 'SignalPhoneLookupText'
+      | 'UsernameByPhoneNotFound';
+    variables: 'phone';
   };
   'volume': {
     keys:
@@ -3990,30 +4239,6 @@ export interface LangKeyGroups {
       | 'MediaAccessCameraMicrophoneText'
       | 'ContextMenuNoForwardsPeer';
     variables: 'name';
-  };
-  'time': {
-    keys:
-      | 'ConversationScheduleMessageSendToday'
-      | 'AutoDeleteSetInfo'
-      | 'AutoDeleteIn'
-      | 'AutoDeleteGlobalActionFromYou'
-      | 'ActionTTLYouChanged'
-      | 'ActionTTLChannelChanged'
-      | 'SlowModeHint'
-      | 'ErrorFloodTime'
-      | 'ErrorPasswordFresh'
-      | 'ErrorSessionFresh'
-      | 'PollEndsTime'
-      | 'PollResultsTime'
-      | 'TimeIn'
-      | 'MessageMetaEditedAtTime'
-      | 'LinkExpiresIn'
-      | 'InviteLinkExpiresIn'
-      | 'LastSeenTodayAt'
-      | 'LastSeenYesterdayAt'
-      | 'LiveLocationUpdatedTodayAt'
-      | 'LiveLocationUpdatedYesterdayAt';
-    variables: 'time';
   };
   'date,time': {
     keys:
@@ -4100,6 +4325,15 @@ export interface LangKeyGroups {
       | 'ActionUserJoined'
       | 'ActionUserJoinedByLink'
       | 'ActionJoinedByRequest'
+      | 'ActionGroupDescription'
+      | 'ActionGroupDescriptionRemoved'
+      | 'ActionGroupJoinRequested'
+      | 'ActionGroupLinkOn'
+      | 'ActionGroupLinkOnWithApproval'
+      | 'ActionGroupLinkOff'
+      | 'ActionGroupLinkReset'
+      | 'ActionGroupAnnouncementsOn'
+      | 'ActionGroupAnnouncementsOff'
       | 'ActionUserRegistered'
       | 'ActionRemovedPhoto'
       | 'ActionChangedPhoto'
@@ -4201,11 +4435,6 @@ export interface LangKeyGroups {
     keys:
       | 'GuardManagedByDescription';
     variables: 'approvalInfo' | 'managedBy';
-  };
-  'phone': {
-    keys:
-      | 'UsernameByPhoneNotFound';
-    variables: 'phone';
   };
   'query': {
     keys:
@@ -4339,6 +4568,8 @@ export interface LangKeyGroups {
     keys:
       | 'ActionAddUser'
       | 'ActionKickUser'
+      | 'ActionGroupAdminAdded'
+      | 'ActionGroupAdminRemoved'
       | 'ActionVideoInvited'
       | 'ActionNewCreatorPending'
       | 'ActionChangeCreator';
@@ -4349,6 +4580,18 @@ export interface LangKeyGroups {
       | 'ActionAddUsersMany'
       | 'ActionVideoInvitedMany';
     variables: 'from' | 'users';
+  };
+  'access,from': {
+    keys:
+      | 'ActionGroupInfoAccess'
+      | 'ActionGroupMembersAccess';
+    variables: 'access' | 'from';
+  };
+  'access': {
+    keys:
+      | 'ActionGroupInfoAccessYou'
+      | 'ActionGroupMembersAccessYou';
+    variables: 'access';
   };
   'from,theme': {
     keys:
@@ -4583,6 +4826,8 @@ export interface LangPluralKeyGroups {
   };
   'count': {
     keys:
+      | 'SignalPinErrorIncorrect'
+      | 'SignalPinErrorLocked'
       | 'Participants'
       | 'RequestPeerSelectLimit'
       | 'CreateBotLimitText'
@@ -4648,6 +4893,7 @@ export interface LangPluralKeyGroups {
       | 'FolderLinkNotificationDeletedSubtitle'
       | 'FolderLinkNotificationAddedSubtitle'
       | 'FolderLinkNotificationUpdatedSubtitle'
+      | 'ActionGroupInvitedYou'
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
@@ -4708,6 +4954,12 @@ export interface LangPluralKeyGroups {
       | 'BrowserMoreTabs';
     variables: 'count' | 'title';
   };
+  'count,from': {
+    keys:
+      | 'ActionGroupInvited'
+      | 'ActionGameScoreNoGame';
+    variables: 'count' | 'from';
+  };
   'count,from,game': {
     keys:
       | 'ActionGameScore';
@@ -4717,11 +4969,6 @@ export interface LangPluralKeyGroups {
     keys:
       | 'ActionGameScoreYou';
     variables: 'count' | 'game';
-  };
-  'count,from': {
-    keys:
-      | 'ActionGameScoreNoGame';
-    variables: 'count' | 'from';
   };
   'size': {
     keys:

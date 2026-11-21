@@ -67,7 +67,7 @@ export default class SignalClient {
     });
     this.connection = connection;
 
-    updateDeviceCapabilities(connection, Boolean(account.number)).catch(handlers.onError);
+    updateDeviceCapabilities(connection, Boolean(account.number), account.hasSvrPin).catch(handlers.onError);
   }
 
   close() {

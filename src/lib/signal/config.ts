@@ -6,6 +6,7 @@ export const SIGNAL_CHAT_HOST = 'chat.signal.org';
 export const SIGNAL_STORAGE_HOST = 'storage.signal.org';
 export const SIGNAL_CDSI_HOST = 'cdsi.signal.org';
 export const SIGNAL_CONTENT_PROXY_HOST = 'contentproxy.signal.org';
+export const SIGNAL_SVR2_HOST = 'svr2.signal.org';
 export const SIGNAL_CDN_HOSTS: Record<number, string> = {
   0: 'cdn.signal.org',
   2: 'cdn2.signal.org',
@@ -14,6 +15,8 @@ export const SIGNAL_CDN_HOSTS: Record<number, string> = {
 
 export const SIGNAL_TUNNEL_URL = import.meta.env.TG_SIGNAL_TUNNEL_URL || undefined;
 export const SIGNAL_USER_AGENT = `TeleSignal/${APP_VERSION}`;
+// The device id of an account's primary device; linked devices get higher ids
+export const SIGNAL_PRIMARY_DEVICE_ID = 1;
 
 let signalProxyUrl: string | undefined;
 
@@ -29,6 +32,12 @@ export function getSignalTunnelUrl() {
 export function setSignalProxyUrl(url: string | undefined) {
   signalProxyUrl = url;
 }
+
+// Production enclaves of libsignal `rust/net/src/env.rs` (`PROD`) with the ids of `rust/attest/src/constants.rs`
+export const SIGNAL_CDSI_MRENCLAVE = '15637fa1e54fe655176d3df1a9f94b87c01ed377acaa570682dc5d72c95ef07b';
+export const SIGNAL_SVR2_MRENCLAVE = 'fdbbacdc0c043d0d53fe1440f62728de0386f45ab0a275bd8f99e03a02af355e';
+// The SVR2 enclave before the current one, which clients still read during the rotation
+export const SIGNAL_SVR2_PREVIOUS_MRENCLAVE = 'ced8217b26228e4b210c985786999d095c4958a94faf37b14acaf25c4cbb02a4';
 
 // TLS root of every Signal service host; the tunnel transport trusts only this certificate
 export const SIGNAL_CA_PEM = `-----BEGIN CERTIFICATE-----

@@ -143,9 +143,10 @@
       color: var(--color-accent-own);
     }
 
-    // Delivered checks are grey; over media they keep the overlay text color
+    // Delivered checks take the dimmer meta color of the bubble and read ones its accent, so both stay readable on
+    // colored bubbles; over media they keep the overlay text color
     .Message.own &.MessageOutgoingStatus--delivered {
-      color: var(--color-icon-secondary);
+      color: var(--color-message-meta-own);
     }
 
     .media.no-footer &.MessageOutgoingStatus--delivered,

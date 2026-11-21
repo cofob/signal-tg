@@ -233,6 +233,20 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.DataStorage });
           return;
 
+        case SettingsScreens.Username:
+          openSettingsScreen({ screen: SettingsScreens.EditProfile });
+          return;
+
+        case SettingsScreens.SignalPin:
+          openSettingsScreen({ screen: SettingsScreens.Privacy });
+          return;
+        case SettingsScreens.SignalPinNew:
+          openSettingsScreen({ screen: SettingsScreens.SignalPin });
+          return;
+        case SettingsScreens.SignalPinConfirm:
+          openSettingsScreen({ screen: SettingsScreens.SignalPinNew });
+          return;
+
         case SettingsScreens.PrivacyPhoneNumber:
         case SettingsScreens.PrivacyAddByPhone:
         case SettingsScreens.PrivacyLastSeen:

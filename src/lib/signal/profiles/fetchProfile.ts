@@ -15,6 +15,9 @@ export type SignalProfile = {
   avatarPath?: string;
   // Whether anyone may send sealed sender messages to this user without their profile key
   hasUnrestrictedUnidentifiedAccess?: boolean;
+  // Encrypted fields, base64, that a profile write sends back unchanged
+  paymentAddress?: string;
+  phoneNumberSharing?: string;
 };
 
 type ProfileResponse = {
@@ -23,13 +26,23 @@ type ProfileResponse = {
   about?: string;
   aboutEmoji?: string;
   avatar?: string;
+  paymentAddress?: string;
+  phoneNumberSharing?: string;
   unrestrictedUnidentifiedAccess?: boolean;
 };
 
 const HTTP_OK = 200;
+const HTTP_NOT_FOUND = 404;
 const AVATAR_CDN_NUMBER = 0;
 
 const textDecoder = new TextDecoder();
+
+/** The server has no profile for this profile key version: the user changed their key or has no account any more */
+export class ProfileNotFoundError extends Error {
+  constructor(readonly aci: string) {
+    super(`No profile of ${aci} for this profile key`);
+  }
+}
 
 /**
  * Fetches the versioned profile of `aci` (`GET /v1/profile/{aci}/{version}`) and decrypts its fields with
@@ -41,6 +54,7 @@ export async function fetchProfile(
   const serviceId = wasm.ServiceId_ParseFromServiceIdString(aci);
   const version = textDecoder.decode(wasm.ProfileKey_GetProfileKeyVersion(profileKey, serviceId));
   const { status, json } = await connection.sendJsonRequest<ProfileResponse>('GET', `/v1/profile/${aci}/${version}`);
+  if (status === HTTP_NOT_FOUND) throw new ProfileNotFoundError(aci);
   if (status !== HTTP_OK || !json) throw new Error(`Profile request for ${aci} failed with HTTP ${status}`);
 
   const key = new Uint8Array(profileKey);
@@ -55,7 +69,20 @@ export async function fetchProfile(
     aboutEmoji: json.aboutEmoji ? await decryptProfileText(json.aboutEmoji, key) : undefined,
     avatarPath: json.avatar,
     hasUnrestrictedUnidentifiedAccess: json.unrestrictedUnidentifiedAccess,
+    paymentAddress: json.paymentAddress,
+    phoneNumberSharing: json.phoneNumberSharing,
   };
+}
+
+/**
+ * Fetches the identity key from the unversioned profile, which needs no profile key. Returns `undefined` when the
+ * user has no account (Signal Desktop falls back to it when the versioned profile is missing).
+ */
+export async function fetchProfileIdentityKey(connection: ChatConnection, aci: string) {
+  const { status, json } = await connection.sendJsonRequest<ProfileResponse>('GET', `/v1/profile/${aci}`);
+  if (status === HTTP_NOT_FOUND) return undefined;
+  if (status !== HTTP_OK || !json) throw new Error(`Profile request for ${aci} failed with HTTP ${status}`);
+  return json.identityKey ? bufferFromBase64(json.identityKey) : undefined;
 }
 
 /** Downloads and decrypts a profile avatar from its CDN path */

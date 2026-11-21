@@ -560,7 +560,7 @@ const Message = ({
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
   const isAlbum = Boolean(album)
-    && album.messages.length > 1
+    && (album.isSingleMessage || album.messages.length > 1)
     && !album.messages.some((msg) => Object.keys(msg.content).length === 0);
   const isInDocumentGroupNotFirst = isInDocumentGroup && !isFirstInDocumentGroup;
   const isInDocumentGroupNotLast = isInDocumentGroup && !isLastInDocumentGroup;

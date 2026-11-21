@@ -13,11 +13,15 @@ import type {
 import { MAIN_THREAD_ID } from '../../types';
 
 import { ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
+import { buildGroupInviteLink } from '../../../lib/signal/groups/inviteLinks';
+import { AccessControl_AccessRequired } from '../../../lib/signal/proto/generated/Groups_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
-import { buildApiUser, buildAvatarColor, buildPeerSettings, getAvatarPhotoId } from './users';
+import {
+  buildApiUser, buildAvatarColor, buildAvatarPhoto, buildPeerSettings, getAvatarPhotoId,
+} from './users';
 
 const READ_STATE_PAGE_SIZE = 50;
 // Signal group admins edit the group, add and remove members and admins, pin messages and delete them for everyone
@@ -29,11 +33,11 @@ const GROUP_ADMIN_RIGHTS: ApiChatAdminRights = {
   pinMessages: true,
   addAdmins: true,
 };
-const ANNOUNCEMENTS_ONLY_RIGHTS: ApiChatBannedRights = { sendMessages: true };
 
 /**
  * Builds the chat of a conversation. Private conversations are chats with the user's id; groups are basic
  * groups. A group we are no longer a member of keeps its history but cannot be written to, as in Signal.
+ * A group we are invited to is not joined until we accept.
  */
 export function buildApiChat(conversation: ConversationRecord, selfAci: string): ApiChat {
   const id = getPeerId(conversation);
@@ -59,6 +63,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
   }
 
   const { memberAcis, adminAcis } = conversation;
+  const isInvited = getIsInvitedToGroup(conversation, selfAci);
   return {
     id,
     type: 'chatTypeBasicGroup',
@@ -69,10 +74,39 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
     membersCount: memberAcis?.length,
     ttlPeriod: conversation.expireTimer,
     isListed,
-    isForbidden: memberAcis && !memberAcis.includes(selfAci) ? true : undefined,
+    isForbidden: memberAcis && !memberAcis.includes(selfAci) && !isInvited ? true : undefined,
+    isNotJoined: isInvited || undefined,
+    isJoinToSend: isInvited || undefined,
     adminRights: adminAcis?.includes(selfAci) ? GROUP_ADMIN_RIGHTS : undefined,
-    defaultBannedRights: conversation.isAnnouncementsOnly ? ANNOUNCEMENTS_ONLY_RIGHTS : undefined,
+    defaultBannedRights: buildGroupBannedRights(conversation),
   };
+}
+
+/** Whether we are invited to a group and have not accepted or declined yet */
+export function getIsInvitedToGroup(conversation: ConversationRecord, selfAci: string) {
+  return Boolean(conversation.groupState?.pendingMembers.some(({ serviceId }) => serviceId === selfAci));
+}
+
+/**
+ * What members other than admins may not do: send messages in announcement-only groups, and edit the group
+ * or add members when only admins may
+ */
+function buildGroupBannedRights({ isAnnouncementsOnly, groupState }: ConversationRecord) {
+  const isInfoAdminOnly = groupState?.accessControl.attributes === AccessControl_AccessRequired.ADMINISTRATOR;
+  const isMembersAdminOnly = groupState?.accessControl.members === AccessControl_AccessRequired.ADMINISTRATOR;
+  if (!isAnnouncementsOnly && !isInfoAdminOnly && !isMembersAdminOnly) return undefined;
+  return {
+    sendMessages: isAnnouncementsOnly || undefined,
+    changeInfo: isInfoAdminOnly || undefined,
+    inviteUsers: isMembersAdminOnly || undefined,
+  } satisfies ApiChatBannedRights;
+}
+
+/** The group link while it is on (Signal Desktop `buildGroupLink`) */
+export function getGroupInviteLink({ masterKey, groupState }: ConversationRecord) {
+  const isLinkOn = groupState?.inviteLinkPassword
+    && groupState.accessControl.addFromInviteLink !== AccessControl_AccessRequired.UNSATISFIABLE;
+  return isLinkOn ? buildGroupInviteLink(masterKey!, groupState.inviteLinkPassword!) : undefined;
 }
 
 /**
@@ -83,7 +117,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
 export function getIsChatListed(conversation: ConversationRecord, selfAci: string) {
   if (conversation.lastMessageId !== undefined || conversation.pinIndex !== undefined) return true;
   return conversation.type === 'group' && !conversation.isBlocked
-    && Boolean(conversation.memberAcis?.includes(selfAci));
+    && (Boolean(conversation.memberAcis?.includes(selfAci)) || getIsInvitedToGroup(conversation, selfAci));
 }
 
 /** Pinned conversations in pin order */
@@ -164,12 +198,18 @@ export async function buildGroupFullInfo(
   }
 
   const adminAcis = new Set(conversation.adminAcis);
+  const isSelfAdmin = adminAcis.has(selfAci);
+  const requesters = isSelfAdmin ? conversation.groupState?.requestingMembers ?? [] : [];
+  const requesterConversations: ConversationRecord[] = [];
+  for (const { aci } of requesters) {
+    requesterConversations.push(await processor.getOrCreatePrivateConversation(aci));
+  }
   const members = memberConversations.map((member): ApiChatMember => {
-    const isAdmin = adminAcis.has(member.id);
+    const isMemberAdmin = adminAcis.has(member.id);
     return {
       userId: getPeerId(member),
-      isAdmin: isAdmin ? true : undefined,
-      adminRights: isAdmin ? GROUP_ADMIN_RIGHTS : undefined,
+      isAdmin: isMemberAdmin ? true : undefined,
+      adminRights: isMemberAdmin ? GROUP_ADMIN_RIGHTS : undefined,
     };
   });
 
@@ -177,6 +217,7 @@ export async function buildGroupFullInfo(
     fullInfo: {
       settings: buildPeerSettings(conversation, selfAci),
       about: conversation.description,
+      profilePhoto: buildAvatarPhoto(conversation),
       ttlPeriod: conversation.expireTimer,
       members,
       adminMembersById: buildCollectionByKey(members.filter(({ isAdmin }) => isAdmin), 'userId'),
@@ -185,8 +226,11 @@ export async function buildGroupFullInfo(
       enabledReactions: { type: 'all' },
       // New members of Signal groups do not see earlier messages
       isPreHistoryHidden: true,
+      inviteLink: getGroupInviteLink(conversation),
+      requestsPending: requesters.length || undefined,
+      recentRequesterIds: requesterConversations.length ? requesterConversations.map(getPeerId) : undefined,
     },
-    users: memberConversations.map((member) => buildApiUser(member, selfAci)),
+    users: [...memberConversations, ...requesterConversations].map((member) => buildApiUser(member, selfAci)),
   };
 }
 

@@ -1,7 +1,13 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8Array;
+
+export function AccountEntropyPool_Generate(): string;
+
 export function BackupKey_DeriveBackupId(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): Uint8Array;
+
+export function Cds2ClientState_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
 
 export class CiphertextMessage {
     private constructor();
@@ -205,6 +211,29 @@ export function MessageBackupKey_FromBackupKeyAndBackupId(backup_key_bytes: Uint
 export function MessageBackupKey_GetAesKey(key: MessageBackupKey): Uint8Array;
 
 export function MessageBackupKey_GetHmacKey(key: MessageBackupKey): Uint8Array;
+
+export class PinHash {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function PinHash_AccessKey(ph: PinHash): Uint8Array;
+
+/**
+ * Decrypts the master key that SVR2 restored, as libsignal-net `Svr2_RestoreMasterKey` does
+ */
+export function PinHash_DecodeMasterKey(ph: PinHash, encoded: Uint8Array): Uint8Array;
+
+/**
+ * Encrypts the master key for SVR2 storage as libsignal-net `Svr2_StartMasterKeyBackup` does
+ */
+export function PinHash_EncodeMasterKey(ph: PinHash, master_key: Uint8Array): Uint8Array;
+
+/**
+ * Hashes a normalized PIN with the salt of the SVR2 enclave's group and the SVR2 username
+ */
+export function PinHash_FromUsernameMrenclave(pin: Uint8Array, username: string, mrenclave: Uint8Array): PinHash;
 
 export class PlaintextContent {
     private constructor();
@@ -514,6 +543,11 @@ export function ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params: Se
  */
 export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params: ServerPublicParams, request_context: Uint8Array, response: Uint8Array, current_time: number): Uint8Array;
 
+/**
+ * Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+ */
+export function ServerPublicParams_VerifySignature(params: ServerPublicParams, message: Uint8Array, notary_signature: Uint8Array): void;
+
 export function ServiceId_ParseFromServiceIdBinary(input: Uint8Array): Uint8Array;
 
 export function ServiceId_ParseFromServiceIdString(input: string): Uint8Array;
@@ -555,6 +589,23 @@ export function SessionRecord_GetRemoteRegistrationId(obj: SessionRecord): numbe
 export function SessionRecord_HasUsableSenderChain(obj: SessionRecord, now: number): boolean;
 
 export function SessionRecord_Serialize(obj: SessionRecord): Uint8Array;
+
+/**
+ * The client side of an attested connection, from the enclave's attestation message to an established session
+ */
+export class SgxClientState {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function SgxClientState_CompleteHandshake(cli: SgxClientState, handshake_received: Uint8Array): void;
+
+export function SgxClientState_EstablishedRecv(cli: SgxClientState, received_ciphertext: Uint8Array): Uint8Array;
+
+export function SgxClientState_EstablishedSend(cli: SgxClientState, plaintext_to_send: Uint8Array): Uint8Array;
+
+export function SgxClientState_InitialRequest(obj: SgxClientState): Uint8Array;
 
 export class SignalMessage {
     private constructor();
@@ -601,6 +652,12 @@ export function SignedPreKeyRecord_GetTimestamp(obj: SignedPreKeyRecord): number
 export function SignedPreKeyRecord_New(id: number, timestamp_millis: number, pub_key: PublicKey, priv_key: PrivateKey, signature: Uint8Array): SignedPreKeyRecord;
 
 export function SignedPreKeyRecord_Serialize(obj: SignedPreKeyRecord): Uint8Array;
+
+export function Svr2Client_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
+
+export function SvrKey_DeriveRegistrationLock(svr_key: Uint8Array): Uint8Array;
+
+export function SvrKey_DeriveRegistrationRecoveryPassword(svr_key: Uint8Array): Uint8Array;
 
 export class TlsClient {
     free(): void;
@@ -655,15 +712,29 @@ export function UnidentifiedSenderMessageContent_New(message: CiphertextMessage,
 
 export function UnidentifiedSenderMessageContent_Serialize(obj: UnidentifiedSenderMessageContent): Uint8Array;
 
+/**
+ * Returns the 32 bytes of entropy followed by the encrypted username
+ */
+export function UsernameLink_Create(username: string, entropy?: Uint8Array | null): Uint8Array;
+
 export function UsernameLink_DecryptUsername(entropy: Uint8Array, encrypted_username: Uint8Array): string;
 
+export function Username_CandidatesFrom(nickname: string, min_len: number, max_len: number): string[];
+
 export function Username_Hash(username: string): Uint8Array;
+
+export function Username_HashFromParts(nickname: string, discriminator: string, min_len: number, max_len: number): Uint8Array;
+
+export function Username_Proof(username: string, randomness: Uint8Array): Uint8Array;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
+    readonly AccountEntropyPool_Generate: () => [number, number];
     readonly BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly Cds2ClientState_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
     readonly CiphertextMessage_Type: (a: number) => number;
@@ -720,6 +791,9 @@ export interface InitOutput {
     readonly MessageBackupKey_FromBackupKeyAndBackupId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly MessageBackupKey_GetAesKey: (a: number) => [number, number];
     readonly MessageBackupKey_GetHmacKey: (a: number) => [number, number];
+    readonly PinHash_DecodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly PinHash_EncodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly PinHash_FromUsernameMrenclave: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly PlaintextContent_Deserialize: (a: number, b: number) => [number, number, number];
     readonly PlaintextContent_FromDecryptionErrorMessage: (a: number) => number;
     readonly PlaintextContent_GetBody: (a: number) => [number, number];
@@ -800,6 +874,7 @@ export interface InitOutput {
     readonly ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly ServerPublicParams_VerifySignature: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];
@@ -816,6 +891,10 @@ export interface InitOutput {
     readonly SessionRecord_GetRemoteRegistrationId: (a: number) => [number, number, number];
     readonly SessionRecord_HasUsableSenderChain: (a: number, b: number) => [number, number, number];
     readonly SessionRecord_Serialize: (a: number) => [number, number, number, number];
+    readonly SgxClientState_CompleteHandshake: (a: number, b: number, c: number) => [number, number];
+    readonly SgxClientState_EstablishedRecv: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly SgxClientState_EstablishedSend: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly SgxClientState_InitialRequest: (a: number) => [number, number, number, number];
     readonly SignalMessage_Deserialize: (a: number, b: number) => [number, number, number];
     readonly SignalMessage_GetBody: (a: number) => [number, number];
     readonly SignalMessage_GetCounter: (a: number) => number;
@@ -829,6 +908,9 @@ export interface InitOutput {
     readonly SignedPreKeyRecord_GetTimestamp: (a: number) => [number, number, number];
     readonly SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
+    readonly Svr2Client_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly SvrKey_DeriveRegistrationLock: (a: number, b: number) => [number, number, number, number];
+    readonly SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
     readonly UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContentHint: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContents: (a: number) => [number, number, number, number];
@@ -837,8 +919,12 @@ export interface InitOutput {
     readonly UnidentifiedSenderMessageContent_GetSenderCert: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_Serialize: (a: number) => [number, number, number, number];
+    readonly UsernameLink_Create: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly UsernameLink_DecryptUsername: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly Username_CandidatesFrom: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly Username_Hash: (a: number, b: number) => [number, number, number, number];
+    readonly Username_HashFromParts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly Username_Proof: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly __wbg_ciphertextmessage_free: (a: number, b: number) => void;
     readonly __wbg_decryptionerrormessage_free: (a: number, b: number) => void;
     readonly __wbg_fingerprint_free: (a: number, b: number) => void;
@@ -859,6 +945,7 @@ export interface InitOutput {
     readonly __wbg_servercertificate_free: (a: number, b: number) => void;
     readonly __wbg_serverpublicparams_free: (a: number, b: number) => void;
     readonly __wbg_sessionrecord_free: (a: number, b: number) => void;
+    readonly __wbg_sgxclientstate_free: (a: number, b: number) => void;
     readonly __wbg_signalmessage_free: (a: number, b: number) => void;
     readonly __wbg_tlsclient_free: (a: number, b: number) => void;
     readonly __wbg_unidentifiedsendermessagecontent_free: (a: number, b: number) => void;
@@ -887,9 +974,11 @@ export interface InitOutput {
     readonly tlsclient_send: (a: number, b: number, c: number) => void;
     readonly tlsclient_takeOutgoing: (a: number) => [number, number, number, number];
     readonly ring_core_0_17_14__bn_mul_mont: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+    readonly __wbg_pinhash_free: (a: number, b: number) => void;
     readonly __wbg_kybersecretkey_free: (a: number, b: number) => void;
     readonly __wbg_plaintextcontent_free: (a: number, b: number) => void;
     readonly __wbg_signedprekeyrecord_free: (a: number, b: number) => void;
+    readonly PinHash_AccessKey: (a: number) => [number, number];
     readonly kybersecretkey_cloneHandle: (a: number) => number;
     readonly KyberSecretKey_Serialize: (a: number) => [number, number];
     readonly plaintextcontent_cloneHandle: (a: number) => number;

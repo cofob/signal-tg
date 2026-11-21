@@ -594,6 +594,14 @@ export function getSharedMediaKeys(
     const message = messages[messageId];
     if (!message) return;
 
+    const albumItems = message.content.album?.items;
+    if (albumItems) {
+      albumItems.forEach((item, index) => {
+        if (validator({ ...message, content: item })) keys.push(buildRichMediaKey(messageId, index));
+      });
+      return;
+    }
+
     if (validator(message)) {
       keys.push(messageId);
       return;
@@ -619,7 +627,9 @@ export function parseSharedMediaKey(key: SharedMediaKey): { messageId: number; m
 }
 
 export function getSharedMediaKey(message: ApiMessage, mediaIndex?: number): SharedMediaKey {
-  return isRichMediaMessage(message) ? buildRichMediaKey(message.id, mediaIndex || 0) : message.id;
+  return isRichMediaMessage(message) || message.content.album
+    ? buildRichMediaKey(message.id, mediaIndex || 0)
+    : message.id;
 }
 
 // Rich messages keep their media in page blocks. The ones that also have regular media are shown by that media.
@@ -642,15 +652,18 @@ export function getRichMessageMediaBlocks(richMessage: ApiRichMessage) {
   return blocks;
 }
 
-// Returns a copy of the message holding only one media, which lets shared media components render it as a regular one.
-// It is derived on demand and never stored in the global state.
+// Returns a copy of a rich message or a Signal album holding only one media, which lets shared media components render
+// it as a regular one. It is derived on demand and never stored in the global state.
 export function getRichMediaMessage(message: ApiMessage, mediaIndex: number): ApiMessage | undefined {
   let mediaMessages = RICH_MEDIA_MESSAGES_BY_MESSAGE.get(message);
   if (!mediaMessages) {
-    mediaMessages = getRichMessageMediaBlocks(message.content.richMessage!).map((block) => ({
-      ...message,
-      content: buildPageBlockMediaContent(block),
-    }));
+    const { album, richMessage } = message.content;
+    mediaMessages = album
+      ? album.items.map((item) => ({ ...message, content: item }))
+      : getRichMessageMediaBlocks(richMessage!).map((block) => ({
+        ...message,
+        content: buildPageBlockMediaContent(block),
+      }));
     RICH_MEDIA_MESSAGES_BY_MESSAGE.set(message, mediaMessages);
   }
 

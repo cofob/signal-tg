@@ -7,6 +7,8 @@ const PORT = 443;
 const TUNNEL_PATH = '/tunnel';
 const MAX_MESSAGE_SIZE = 64 * 1024;
 const DEFAULT_ALPN_PROTOCOLS = ['http/1.1'];
+// A tunnel that accepts the WebSocket but never answers would otherwise leave every request to the host waiting
+const HANDSHAKE_TIMEOUT_MS = 20 * 1000;
 
 /** Carries a TLS connection's bytes to a Signal host */
 export interface TunnelTransport {
@@ -59,6 +61,13 @@ export default class TlsTunnel {
     const tunnel = new TlsTunnel(host, alpnProtocols);
 
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const error = new Error(`TLS handshake with ${host} timed out`);
+        tunnel.transport.close();
+        tunnel.fail(error);
+        reject(error);
+      }, HANDSHAKE_TIMEOUT_MS);
+
       tunnel.transport = openTransport(host, {
         onOpen: () => {
           tunnel.isTransportOpen = true;
@@ -71,16 +80,19 @@ export default class TlsTunnel {
           try {
             tunnel.receive(data);
           } catch (err) {
+            clearTimeout(timeout);
             tunnel.fail(err as Error);
             reject(err);
             return;
           }
           if (wasHandshaking && !tunnel.tls.isHandshaking()) {
+            clearTimeout(timeout);
             tunnel.alpnProtocol = tunnel.tls.alpnProtocol();
             resolve(tunnel);
           }
         },
         onClose: (reason) => {
+          clearTimeout(timeout);
           const error = new Error(`Tunnel to ${host} closed${reason ? `: ${reason}` : ''}`);
           tunnel.fail(error);
           reject(error);

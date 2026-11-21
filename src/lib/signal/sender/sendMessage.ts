@@ -7,16 +7,22 @@ import type {
   ReceiptMessage_Type,
   SyncMessage_BlockedSchema,
   SyncMessage_DeleteForMeSchema,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
+  VerifiedSchema,
 } from '../proto/generated/SignalService_pb';
-import type { RecipientResult, SenderContext, SendOptions } from './sendContent';
+import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
 import type { GroupTarget } from './sendToGroup';
 
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
+import { bufferFromHex } from '../../../util/encoding/buffer';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
 import { sendWithSenderKey } from './sendToGroup';
 
-import { ContentSchema, SyncMessageSchema, TypingMessage_Action } from '../proto/generated/SignalService_pb';
+import {
+  ContentSchema, SyncMessage_StickerPackOperation_Type, SyncMessageSchema, TypingMessage_Action,
+} from '../proto/generated/SignalService_pb';
 
 export type OutgoingMessage =
   | { case: 'dataMessage'; value: MessageInitShape<typeof DataMessageSchema> }
@@ -153,11 +159,44 @@ export function sendBlockedSync(context: SenderContext, blocked: MessageInitShap
   return syncToOtherDevices(context, { content: { case: 'blocked', value: blocked } }, Date.now());
 }
 
+/** Asks our other devices to fetch the latest state of `type`, such as our profile or storage manifest after a write */
+export function sendFetchLatestSync(context: SenderContext, type: SyncMessage_FetchLatest_Type) {
+  return syncToOtherDevices(context, { content: { case: 'fetchLatest', value: { type } } }, Date.now());
+}
+
+/** Tells our other devices which sticker packs were installed or removed here (Signal Desktop `getStickerPackSync`) */
+export function sendStickerPackSync(
+  context: SenderContext, operations: { id: string; key: string; isInstalled: boolean }[],
+) {
+  return syncToOtherDevices(context, {
+    stickerPackOperation: operations.map(({ id, key, isInstalled }) => ({
+      packId: bufferFromHex(id),
+      packKey: bufferFromHex(key),
+      type: isInstalled ? SyncMessage_StickerPackOperation_Type.INSTALL : SyncMessage_StickerPackOperation_Type.REMOVE,
+    })),
+  }, Date.now());
+}
+
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */
 export function sendDeleteForMeSync(
   context: SenderContext, deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>,
 ) {
   return syncToOtherDevices(context, { content: { case: 'deleteForMe', value: deleteForMe } }, Date.now());
+}
+
+/**
+ * Tells our other devices that our username changed, so they read it from the storage service (Signal Desktop
+ * `getUsernameChangeSyncMessage`)
+ */
+export function sendUsernameChangeSync(context: SenderContext) {
+  return syncToOtherDevices(context, { content: { case: 'usernameChange', value: {} } }, Date.now());
+}
+
+/** Tells our other devices that we verified a contact's safety number or cleared it (Signal Desktop `getVerificationSync`) */
+export function sendVerifiedSync(context: SenderContext, verified: MessageInitShape<typeof VerifiedSchema>) {
+  return syncToOtherDevices(context, {
+    content: { case: 'verified', value: { ...verified, nullMessage: getRandomPadding() } },
+  }, Date.now());
 }
 
 /** A null message starts a new session after the old one was archived */
@@ -181,9 +220,17 @@ async function sendToRecipients(
   return [...results, ...await sendToEach(context, remaining, content, options)];
 }
 
-function syncToOtherDevices(
+async function syncToOtherDevices(
   context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number,
-) {
+): Promise<SendResult> {
+  // A primary device without linked devices has nobody to sync with (Signal Android
+  // `SignalServiceMessageSender.sendSyncMessage`); linked devices become known from their sessions with us
+  const { store, account } = context;
+  if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID
+    && !(await store.getSessionDeviceIds(account.aci)).some((deviceId) => deviceId !== account.deviceId)) {
+    return { isSealedSender: false };
+  }
+
   const syncMessage = create(SyncMessageSchema, init);
   syncMessage.padding = getRandomPadding();
   return sendContent(context, context.account.aci, {

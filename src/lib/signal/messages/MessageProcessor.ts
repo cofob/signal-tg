@@ -1,10 +1,12 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
+import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type {
   ConversationRecord, MessageRecord, NewMessageRecord, SendStatus,
 } from '../db/MessageDb';
+import type { GroupState } from '../groups/fetchGroup';
+import type { DecryptedGroupChange } from '../groups/groupChange';
 import type {
   AddressableMessage,
   AddressableMessageSchema,
@@ -12,26 +14,37 @@ import type {
   ConversationIdentifierSchema,
   DataMessage,
   EditMessage,
+  GroupContextV2,
   ReceiptMessage,
   SyncMessage,
   SyncMessage_DeleteForMe,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_Sent,
   TypingMessage,
+  Verified,
 } from '../proto/generated/SignalService_pb';
-import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
 import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
+import type { AccountStorageField, LocalAccountFields, StorageChanges } from '../storage/storageRecords';
+import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
-import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
+import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
-import { fetchGroup } from '../groups/fetchGroup';
+import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
+import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
+import {
+  applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
+} from '../groups/groupChange';
+import { fetchGroupLog } from '../groups/groupLog';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
-import { fetchProfile } from '../profiles/fetchProfile';
+import { buildGroupNotices } from '../groups/groupUpdates';
+import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
@@ -41,16 +54,32 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStickerPackSync,
   sendTyping,
+  sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
+import { getNextStickerPackPosition } from '../stickers/stickerPacks';
+import {
+  ACCOUNT_KEY,
+  buildStorageWrite,
+  getAci,
+  getMutedUntil,
+  getStickerPackStorageKey,
+  getStorageChanges,
+  mergeStorageChanges,
+  omitChangedFields,
+} from '../storage/storageRecords';
+import { syncStorageService } from '../storage/syncStorage';
+import { saveIdentity } from '../store/protocolStores';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
 
-import { Member_Role } from '../proto/generated/Groups_pb';
+import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
   BodyRangeSchema,
@@ -58,9 +87,15 @@ import {
   DataMessageSchema,
   GroupContextV2Schema,
   ReceiptMessage_Type,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
+  Verified_State,
 } from '../proto/generated/SignalService_pb';
+import {
+  AccountRecord_PhoneNumberSharingMode, ManifestRecordSchema, StorageRecordSchema,
+} from '../proto/generated/StorageService_pb';
 
 export type MessageChanges = {
   conversations: ConversationRecord[];
@@ -99,7 +134,11 @@ type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
   onTyping(event: TypingEvent): void;
   onError(error: Error): void;
+  // Ids of sticker packs installed or removed here or on another device
+  onStickerPacksChange?(ids: string[]): void;
 };
+
+type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
 
 type MessageSource = {
   authorAci: string;
@@ -117,8 +156,33 @@ type MessageSource = {
 
 type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 
+/** A storage service write with what `commitStorageWrite` needs to know about the changes it carries */
+type PendingStorageWrite = {
+  write: StorageWrite;
+  changeCount: number;
+  // The write carries a new username, which our other devices learn through a `usernameChange` sync
+  hasUsernameChange: boolean;
+};
+
+/** Account record fields that this device changes; each one present is written to the storage service */
+export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
+
+const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
+  username: 'username',
+  usernameLink: 'usernameLink',
+  isPhoneNumberShared: 'phoneNumberSharingMode',
+  isPhoneNumberUnlisted: 'unlistedPhoneNumber',
+};
+
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+// Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
+const STORAGE_SYNC_DELAY_MS = 500;
+// Storage record cases supported after earlier versions stored such records without reading them
+const STORAGE_RECORD_TYPES_ADDED_LATER: NonNullable<StorageRecord['record']['case']>[] = ['installedStickerPack'];
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Signal Desktop `ts/routineProfileRefresh.preload.ts`
+const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
+const MAX_PROFILES_TO_REFRESH = 50;
 // Signal Desktop `ts/util/canEditMessage.dom.ts` and `ts/util/getDeleteMaxAgeMs.std.ts`
 const EDIT_MAX_AGE_MS = DAY_MS;
 const MAX_EDIT_COUNT = 10;
@@ -169,7 +233,7 @@ export default class MessageProcessor {
 
   private expirationTimer?: ReturnType<typeof setTimeout>;
 
-  private groupRefreshes = new Map<string, Promise<void>>();
+  private groupRefreshes = new Map<string, Promise<ConversationRecord | undefined>>();
 
   // Profiles of new conversations are fetched one at a time to stay within the server's rate limit
   private profileQueue = Promise.resolve();
@@ -178,6 +242,16 @@ export default class MessageProcessor {
 
   // Receipts and syncs for local changes made without a connection, sent after the next one
   private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
+
+  // Storage service syncs run one at a time
+  private storageSync = Promise.resolve();
+
+  private storageSyncTimer?: ReturnType<typeof setTimeout>;
+
+  private isStorageSyncQueued = false;
+
+  // Counts local storage record changes, so a write clears only the changes it carried
+  private storageChangeCount = 0;
 
   constructor(
     private db: MessageDb,
@@ -199,6 +273,7 @@ export default class MessageProcessor {
   stop() {
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
+    clearTimeout(this.storageSyncTimer);
   }
 
   /**
@@ -220,7 +295,9 @@ export default class MessageProcessor {
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
       if (!found) throw new Error(`Unknown conversation ${conversationId}`);
       // Writing accepts the message request, so the message carries our profile key
-      const accepted = found.isAccepted ? found : await this.putConversation({ ...found, isAccepted: true });
+      const accepted = found.isAccepted
+        ? found
+        : await this.putLocalConversation(found, { ...found, isAccepted: true });
       const outgoing = createOutgoingDataMessage(account, accepted, init, sentAt);
       const { message: added } = await this.addMessage(accepted, {
         conversationId,
@@ -451,7 +528,7 @@ export default class MessageProcessor {
    * Answers a message request here and on our other devices (`syncMessageRequestResponse` and
    * `applyMessageRequestResponse` in Signal Desktop `ts/models/conversations.preload.ts`). Accepting shares our
    * profile key with the contact; a spam report names the contact's latest messages. A changed block also sends
-   * the blocked list, since this device does not write the storage service yet.
+   * the blocked list, as Signal Desktop does besides the storage service write.
    */
   async respondToMessageRequest(conversationId: string, type: MessageRequestResponseType) {
     const account = await this.getAccount();
@@ -464,9 +541,11 @@ export default class MessageProcessor {
           !message.isOutgoing && message.authorAci === found.id && Boolean(message.serverGuid)
         ))
         : [];
+      const responded = await this.applyMessageRequestResponse(found, type);
+      await this.markStorageChanges(getStorageChanges(found, responded, account.aci));
       return {
         previous: found,
-        conversation: await this.applyMessageRequestResponse(found, type),
+        conversation: responded,
         spamServerGuids: reported.map(({ serverGuid }) => serverGuid!),
       };
     });
@@ -495,7 +574,7 @@ export default class MessageProcessor {
     const isChanged = await this.runSerial(async () => {
       const conversation = await this.db.getConversation(conversationId);
       if (!conversation?.isBlocked) return false;
-      await this.putConversation({ ...conversation, isBlocked: false });
+      await this.putLocalConversation(conversation, { ...conversation, isBlocked: false });
       const blockedE164s = await this.client.store.getItem('blockedE164s');
       if (conversation.e164 && blockedE164s?.includes(conversation.e164)) {
         await this.client.store.setItem('blockedE164s', blockedE164s.filter((e164) => e164 !== conversation.e164));
@@ -648,7 +727,7 @@ export default class MessageProcessor {
         });
       }
       const remaining = maxId !== undefined ? (await this.db.getUnreadMessages(conversationId)).length : 0;
-      await this.putConversation({ ...found, unreadCount: remaining, isMarkedUnread: false });
+      await this.putLocalConversation(found, { ...found, unreadCount: remaining, isMarkedUnread: false });
       this.scheduleExpiration();
       return { conversation: found, messages: unread };
     });
@@ -667,88 +746,177 @@ export default class MessageProcessor {
   }
 
   /**
-   * Merges storage service records: contacts and groups with their archive, mute, block and
-   * message request state, the order of pinned conversations and account settings
+   * Reads the storage service and writes the local changes of its records, one sync at a time
+   * (see `syncStorageService`)
    */
-  async applyStorageRecords(records: StorageRecord[]) {
-    const { store, account } = this.client.getSenderContext();
-    // Pins come only from the account record
-    let pinIndexById: Map<string, number> | undefined;
+  syncStorage() {
+    const sync = this.storageSync.then(() => syncStorageService(this.client.getSenderContext(), this));
+    this.storageSync = sync.catch(() => undefined);
+    return sync;
+  }
 
-    await this.runSerial(async () => {
-      const blockedE164s = new Set(await store.getItem('blockedE164s'));
-      const blockedE164Count = blockedE164s.size;
-      for (const { record } of records) {
-        if (record.case === 'contact') {
-          const contact = record.value;
-          const aci = contact.aci || (contact.aciBinary.length ? uuidToString(contact.aciBinary) : undefined);
-          // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
-          if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
-          if (!aci || aci === account.aci) continue;
-          if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+  /**
+   * Merges stored storage records of types this device learned to handle after storing them, once per type. Records
+   * are fetched only when new, so a type supported later would otherwise stay unread until another device rewrites it
+   * (Signal Desktop reprocesses its unknown records after an upgrade the same way).
+   */
+  mergeStoredRecordsOfNewTypes() {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const merged = new Set(await store.getItem('storageMergedRecordTypes'));
+      const types = STORAGE_RECORD_TYPES_ADDED_LATER.filter((type) => !merged.has(type));
+      if (!types.length) return;
 
-          const conversation = await this.ensurePrivateConversation(aci);
-          await this.putConversation({
-            ...conversation,
-            e164: contact.e164 || conversation.e164,
-            profileName: contact.givenName || conversation.profileName,
-            profileFamilyName: contact.familyName || conversation.profileFamilyName,
-            systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
-            nickname: [contact.nickname?.given, contact.nickname?.family].filter(Boolean).join(' ') || undefined,
-            username: contact.username || undefined,
-            isArchived: contact.archived,
-            isMarkedUnread: contact.markedUnread,
-            isBlocked: contact.blocked,
-            isAccepted: contact.whitelisted || conversation.isAccepted,
-            mutedUntil: Number(contact.mutedUntilTimestamp) || undefined,
-          });
-        } else if (record.case === 'groupV2' && record.value.masterKey.length) {
-          const group = record.value;
-          const conversation = await this.getOrCreateGroupConversation(group.masterKey, 0);
-          await this.putConversation({
-            ...conversation,
-            isArchived: group.archived,
-            isMarkedUnread: group.markedUnread,
-            isBlocked: group.blocked,
-            isAccepted: group.whitelisted || conversation.isAccepted,
-            mutedUntil: Number(group.mutedUntilTimestamp) || undefined,
-          });
-        } else if (record.case === 'account') {
-          const accountRecord = record.value;
-          pinIndexById = new Map();
-          accountRecord.pinnedConversations.forEach(({ identifier }, index) => {
-            if (identifier.case === 'contact') {
-              const { serviceId, serviceIdBinary } = identifier.value;
-              pinIndexById!.set(serviceId || uuidToString(serviceIdBinary), index);
-            } else if (identifier.case === 'groupMasterKey') {
-              pinIndexById!.set(getGroupId(identifier.value), index);
-            }
-          });
-          await this.client.updateAccount({
-            isReadReceiptsEnabled: accountRecord.readReceipts,
-            isTypingIndicatorsEnabled: accountRecord.typingIndicators,
-            isLinkPreviewsEnabled: accountRecord.linkPreviews,
-          });
-        }
+      const stored = await store.getItem('storageManifest');
+      if (stored) {
+        const records = (await store.getStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored))))
+          .filter(Boolean)
+          .map((record) => fromBinary(StorageRecordSchema, record))
+          .filter(({ record }) => record.case && types.includes(record.case));
+        if (records.length) await this.mergeStorageRecords(records);
       }
-
-      if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
-
-      if (!pinIndexById) return;
-      for (const conversation of await this.db.getConversations()) {
-        const pinIndex = pinIndexById.get(conversation.id);
-        if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
-      }
+      await store.setItem('storageMergedRecordTypes', [...merged, ...types]);
     });
   }
 
-  /** Changes how this device lists a conversation; other devices learn it only through the storage service */
+  /**
+   * Merges a newer storage manifest: records new to this device go into the local state, except for fields changed
+   * here since the last write, and are stored with the manifest for later writes
+   */
+  applyStorageManifest(manifest: ManifestRecord, records: Map<string, Uint8Array<ArrayBuffer>>) {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      const previousIds = new Set(stored && getManifestIds(fromBinary(ManifestRecordSchema, stored)));
+      const ids = new Set(getManifestIds(manifest));
+
+      await this.mergeStorageRecords([...records.values()].map((record) => fromBinary(StorageRecordSchema, record)));
+      await store.setStorageRecords(records);
+      await store.removeStorageRecords([...previousIds].filter((id) => !ids.has(id)));
+      // Ids the server has no record for are left out, so the next write drops them
+      const merged = clone(ManifestRecordSchema, manifest);
+      merged.identifiers = manifest.identifiers.filter(({ raw }) => {
+        const id = bufferToBase64(raw);
+        return records.has(id) || previousIds.has(id);
+      });
+      await store.setItem('storageManifest', toBinary(ManifestRecordSchema, merged));
+    });
+  }
+
+  /** The write of local record changes on top of the stored manifest, see `buildStorageWrite` */
+  buildStorageWrite() {
+    return this.runSerial(async (): Promise<PendingStorageWrite | undefined> => {
+      const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      const changes = await store.getItem('storageChanges');
+      // The primary device creates the first manifest
+      if (!stored || !changes || !Object.keys(changes).length) return undefined;
+
+      const account = await this.getAccount();
+      const manifest = fromBinary(ManifestRecordSchema, stored);
+      const ids = getManifestIds(manifest);
+      const serialized = await store.getStorageRecords(ids);
+      const records = new Map<string, Uint8Array>();
+      ids.forEach((id, index) => {
+        if (serialized[index]) records.set(id, serialized[index]);
+      });
+      const profileKeys = new Map<string, Uint8Array>();
+      for (const id of Object.keys(changes)) {
+        const profileKey = id !== ACCOUNT_KEY ? (await store.getRecipient(id))?.profileKey : undefined;
+        if (profileKey) profileKeys.set(id, profileKey);
+      }
+
+      const write = buildStorageWrite({
+        manifest,
+        records,
+        changes,
+        conversations: await this.db.getConversations(),
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
+        profileKeys,
+        selfAci: account.aci,
+        deviceId: account.deviceId,
+        localAccount: account,
+      });
+      return write && {
+        write,
+        changeCount: this.storageChangeCount,
+        hasUsernameChange: Boolean(changes[ACCOUNT_KEY]?.includes('username')),
+      };
+    });
+  }
+
+  /** Stores the records of an accepted write and clears the changes it carried */
+  commitStorageWrite({ write, changeCount }: PendingStorageWrite) {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      await store.setStorageRecords(write.inserts);
+      await store.removeStorageRecords(write.deleteIds);
+      await store.setItem('storageManifest', toBinary(ManifestRecordSchema, write.manifest));
+      // Changes made while the write was on its way go out again with the next one
+      if (changeCount === this.storageChangeCount) await store.setItem('storageChanges', {});
+    });
+  }
+
+  /** Changes how a conversation is listed; other devices learn it through the storage service */
   updateConversationState(
     id: string, update: Partial<Pick<ConversationRecord, 'isArchived' | 'isMarkedUnread' | 'mutedUntil' | 'pinIndex'>>,
   ) {
     return this.runSerial(async () => {
       const conversation = await this.db.getConversation(id);
-      return conversation && this.putConversation({ ...conversation, ...update });
+      return conversation && this.putLocalConversation(conversation, { ...conversation, ...update });
+    });
+  }
+
+  /** Stores what this device changed in our profile, which the profile itself carries to other devices */
+  updateOwnConversation(update: Partial<Pick<
+    ConversationRecord, 'profileName' | 'profileFamilyName' | 'about' | 'aboutEmoji' | 'avatarPath'
+  >>) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      const conversation = await this.ensurePrivateConversation(account.aci);
+      return this.putConversation({ ...conversation, ...update });
+    });
+  }
+
+  /**
+   * Stores our username, its link or phone number privacy changed on this device, and writes them to the account
+   * record of the storage service. The username is on our private conversation, the rest on the account.
+   */
+  updateOwnAccount(update: OwnAccountUpdate) {
+    return this.runSerial(async () => {
+      const { username, ...accountUpdate } = update;
+      const account = await this.client.updateAccount(accountUpdate);
+      if ('username' in update) {
+        const self = await this.ensurePrivateConversation(account.aci);
+        await this.putConversation({ ...self, username });
+      }
+      const fields = (Object.keys(update) as (keyof OwnAccountUpdate)[]).map((key) => OWN_ACCOUNT_FIELDS[key]);
+      await this.markStorageChanges({ [ACCOUNT_KEY]: fields });
+    });
+  }
+
+  /** Stores the username of a contact that a username lookup found */
+  setConversationUsername(aci: string, username: string) {
+    return this.runSerial(async () => {
+      const conversation = await this.ensurePrivateConversation(aci);
+      return this.putConversation({ ...conversation, username });
+    });
+  }
+
+  /**
+   * Installs or removes a sticker pack on this device. Other devices learn it from a `stickerPackOperation` sync and
+   * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
+   */
+  async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
+    const isChanged = await this.runSerial(async () => {
+      const state: StickerPackState = isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() };
+      if (!await this.applyStickerPackState(id, key, state)) return false;
+      await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+      return true;
+    });
+    if (!isChanged) return;
+    await this.sendWhenConnected(async (context) => {
+      await sendStickerPackSync(context, [{ id, key, isInstalled }]);
     });
   }
 
@@ -761,10 +929,27 @@ export default class MessageProcessor {
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, profileKey);
+    let profile;
+    try {
+      profile = await fetchProfile(connection, aci, profileKey);
+    } catch (err) {
+      if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
+      // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
+      // try again after the usual interval instead of on every connection
+      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
+      await this.runSerial(async () => {
+        await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });
+      });
+      return;
+    }
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
+    // Signal Desktop `updateIdentityKey` in `ts/services/profiles.preload.ts`: the profile shows a changed key
+    // before a message does, and gives the safety number of users we have no session with
+    const { identityKey } = profile;
+    if (identityKey && aci !== account.aci) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
     await this.runSerial(async () => {
       const conversation = await this.ensurePrivateConversation(aci);
       await this.putConversation({
@@ -774,9 +959,69 @@ export default class MessageProcessor {
         about: profile.about,
         aboutEmoji: profile.aboutEmoji,
         avatarPath: profile.avatarPath,
+        profileFetchedAt: Date.now(),
       });
     });
     this.flush();
+  }
+
+  /**
+   * Fetches the profiles of up to 50 private conversations whose profile is missing or older than three days,
+   * most recently active first (Signal Desktop `routineProfileRefresh`). Conversations created before the
+   * connection, such as those from history transfer or storage service, get their names and avatars this way.
+   */
+  async refreshStaleProfiles() {
+    const { store, account } = this.client.getSenderContext();
+    const now = Date.now();
+    const candidates = (await this.db.getConversations())
+      .filter(({ id, type, profileFetchedAt }) => (
+        type === 'private' && id !== account.aci && (!profileFetchedAt || now - profileFetchedAt > PROFILE_MAX_AGE_MS)
+      ))
+      .sort((a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0));
+
+    let count = 0;
+    for (const { id } of candidates) {
+      if (count >= MAX_PROFILES_TO_REFRESH) break;
+      // Profiles without a known profile key cannot be decrypted
+      if (!(await store.getRecipient(id))?.profileKey) continue;
+      count++;
+      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(id)).catch(this.events.onError);
+    }
+    await this.profileQueue;
+  }
+
+  /**
+   * Adds a safety number change notice to the private conversation with `aci` and to the groups we share
+   * (Signal Desktop `addKeyChange` in `ts/models/conversations.preload.ts`). `SignalStore.onIdentityChange` calls it.
+   */
+  addSafetyNumberChange(aci: string) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      if (aci === account.aci) return;
+      await this.addIdentityNotices(aci, { kind: 'safetyNumberChange' });
+    });
+  }
+
+  /**
+   * Marks the safety number with `aci` as verified, or clears the verification, and tells our other devices
+   * (Signal Desktop `toggleVerified` and `getVerificationSync`)
+   */
+  async setVerified(aci: string, isVerified: boolean) {
+    const { store } = this.client;
+    const state = isVerified ? Verified_State.VERIFIED : Verified_State.DEFAULT;
+    const identity = await store.runExclusive(async () => {
+      const current = await store.getIdentity(aci);
+      if (!current) throw new Error(`No identity key of ${aci}`);
+      if ((current.verified === Verified_State.VERIFIED) === isVerified) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current;
+    });
+    if (!identity) return;
+
+    await this.runSerial(() => this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified }));
+    await this.sendWhenConnected(async (context) => {
+      await sendVerifiedSync(context, { destinationAci: aci, identityKey: identity.publicKey, state });
+    });
   }
 
   /**
@@ -845,6 +1090,242 @@ export default class MessageProcessor {
     for (const send of this.pendingSends.splice(0)) {
       await this.sendWhenConnected(send).catch(this.events.onError);
     }
+  }
+
+  /** Runs a storage service sync after `STORAGE_SYNC_DELAY_MS`, or after the next connection while there is none */
+  private scheduleStorageSync() {
+    clearTimeout(this.storageSyncTimer);
+    this.storageSyncTimer = setTimeout(() => {
+      this.storageSyncTimer = undefined;
+      if (this.isStorageSyncQueued) return;
+      this.isStorageSyncQueued = true;
+      this.sendWhenConnected(() => {
+        this.isStorageSyncQueued = false;
+        return this.syncStorage();
+      }).catch(this.events.onError);
+    }, STORAGE_SYNC_DELAY_MS);
+  }
+
+  /** Stores a conversation changed on this device and marks the storage record fields that changed */
+  private async putLocalConversation(previous: ConversationRecord, next: ConversationRecord) {
+    const account = await this.getAccount();
+    await this.putConversation(next);
+    await this.markStorageChanges(getStorageChanges(previous, next, account.aci));
+    return next;
+  }
+
+  private async markStorageChanges(added: StorageChanges) {
+    if (!Object.keys(added).length) return;
+    const { store } = this.client;
+    await store.setItem('storageChanges', mergeStorageChanges(await store.getItem('storageChanges') ?? {}, added));
+    this.storageChangeCount++;
+    this.scheduleStorageSync();
+  }
+
+  /**
+   * Merges storage service records: contacts and groups with their archive, mute, block and message request state,
+   * and the account record with Note to Self, the order of pinned conversations and settings. Fields in
+   * `storageChanges` keep their local values.
+   */
+  private async mergeStorageRecords(records: StorageRecord[]) {
+    const { store } = this.client;
+    const account = await this.getAccount();
+    const changes = await store.getItem('storageChanges') ?? {};
+    const accountChanges = new Set(changes[ACCOUNT_KEY]);
+    const blockedE164s = new Set(await store.getItem('blockedE164s'));
+    const blockedE164Count = blockedE164s.size;
+    // Pins come only from the account record
+    let pinIndexById: Map<string, number> | undefined;
+
+    for (const { record } of records) {
+      if (record.case === 'contact') {
+        const contact = record.value;
+        const aci = getAci(contact.aci, contact.aciBinary);
+        // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
+        if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
+        if (!aci || aci === account.aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164 || conversation.e164,
+          profileName: contact.givenName || conversation.profileName,
+          profileFamilyName: contact.familyName || conversation.profileFamilyName,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+          nickname: [contact.nickname?.given, contact.nickname?.family].filter(Boolean).join(' ') || undefined,
+          username: contact.username || undefined,
+          ...omitChangedFields({
+            isArchived: contact.archived,
+            isMarkedUnread: contact.markedUnread,
+            isBlocked: contact.blocked,
+            isAccepted: contact.whitelisted || conversation.isAccepted,
+            mutedUntil: getMutedUntil(contact.mutedUntilTimestamp),
+          }, changes[aci]),
+        });
+      } else if (record.case === 'groupV2' && record.value.masterKey.length) {
+        const group = record.value;
+        const conversation = await this.getOrCreateGroupConversation(group.masterKey, 0);
+        await this.putConversation({
+          ...conversation,
+          ...omitChangedFields({
+            isArchived: group.archived,
+            isMarkedUnread: group.markedUnread,
+            isBlocked: group.blocked,
+            isAccepted: group.whitelisted || conversation.isAccepted,
+            mutedUntil: getMutedUntil(group.mutedUntilTimestamp),
+          }, changes[conversation.id]),
+        });
+      } else if (record.case === 'account') {
+        const accountRecord = record.value;
+        if (!accountChanges.has('pinnedConversations')) {
+          pinIndexById = new Map();
+          accountRecord.pinnedConversations.forEach(({ identifier }, index) => {
+            if (identifier.case === 'contact') {
+              const aci = getAci(identifier.value.serviceId, identifier.value.serviceIdBinary);
+              if (aci) pinIndexById!.set(aci, index);
+            } else if (identifier.case === 'groupMasterKey') {
+              pinIndexById!.set(getGroupId(identifier.value), index);
+            }
+          });
+        }
+        const self = await this.ensurePrivateConversation(account.aci);
+        await this.putConversation({
+          ...self,
+          isArchived: accountChanges.has('noteToSelfArchived') ? self.isArchived : accountRecord.noteToSelfArchived,
+          isMarkedUnread: accountChanges.has('noteToSelfMarkedUnread')
+            ? self.isMarkedUnread
+            : accountRecord.noteToSelfMarkedUnread,
+        });
+        const { usernameLink } = accountRecord;
+        await this.client.updateAccount({
+          isReadReceiptsEnabled: accountRecord.readReceipts,
+          isTypingIndicatorsEnabled: accountRecord.typingIndicators,
+          isLinkPreviewsEnabled: accountRecord.linkPreviews,
+          ...omitAccountChanges({
+            // Signal Desktop `mergeAccountRecord`: an unknown sharing mode means nobody
+            isPhoneNumberShared: accountRecord.phoneNumberSharingMode
+              === AccountRecord_PhoneNumberSharingMode.EVERYBODY,
+            isPhoneNumberUnlisted: accountRecord.unlistedPhoneNumber,
+            usernameLink: usernameLink?.entropy.length && usernameLink.serverId.length
+              ? { entropy: usernameLink.entropy, serverId: uuidToString(usernameLink.serverId) }
+              : undefined,
+          }, accountChanges),
+        });
+        const username = accountRecord.username || undefined;
+        if (!accountChanges.has('username') && self.username !== username) {
+          await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+        }
+      } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
+        // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
+        const { packId, packKey, position, deletedAtTimestamp } = record.value;
+        const id = bufferToHex(packId);
+        if (changes[getStickerPackStorageKey(id)]) continue;
+        await this.applyStickerPackState(
+          id,
+          packKey.length ? bufferToHex(packKey) : undefined,
+          // An unset position reads as 0 and leaves the local one (Signal Desktop keeps it when the field is absent)
+          deletedAtTimestamp
+            ? { uninstalledAt: Number(deletedAtTimestamp) }
+            : { isInstalled: true, position: position || undefined },
+        );
+      }
+    }
+
+    if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    if (getIsContactDiscoveryEnabled(account)) {
+      const numberOnlyContacts = getNumberOnlyContacts(records);
+      if (numberOnlyContacts.length) this.resolveContactNumbers(numberOnlyContacts).catch(this.events.onError);
+    }
+
+    if (!pinIndexById) return;
+    for (const conversation of await this.db.getConversations()) {
+      const pinIndex = pinIndexById.get(conversation.id);
+      if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
+    }
+  }
+
+  /**
+   * Looks up the numbers of all stored storage service contacts without an ACI, once contact discovery is turned on.
+   * Only a primary device does it: a linked device gets contacts with ACIs from the primary device.
+   */
+  async discoverStorageContacts() {
+    const { store } = this.client;
+    if (!getIsContactDiscoveryEnabled(await this.getAccount())) return;
+    const manifest = await store.getItem('storageManifest');
+    if (!manifest) return;
+    const ids = getManifestIds(fromBinary(ManifestRecordSchema, manifest));
+    const records = (await store.getStorageRecords(ids))
+      .filter(Boolean)
+      .map((record) => fromBinary(StorageRecordSchema, record));
+    const contacts = getNumberOnlyContacts(records);
+    if (contacts.length) await this.resolveContactNumbers(contacts);
+  }
+
+  /**
+   * Creates conversations for the storage service contacts whose numbers turn out to have Signal accounts. Their
+   * records stay as they are: the conversations change only locally.
+   */
+  private async resolveContactNumbers(contacts: ContactRecord[]) {
+    const { store, connection } = this.client.getSenderContext();
+    const records = await refreshE164s(
+      connection, store, contacts.map(({ e164 }) => e164), await this.getAcisAndAccessKeys(),
+    );
+    await this.runSerial(async () => {
+      for (const contact of contacts) {
+        const aci = records.get(contact.e164)?.aci;
+        if (!aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(this.client.store, aci, contact.profileKey);
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+        });
+      }
+    });
+    this.flush();
+  }
+
+  /** The ACIs and access keys of the other users whose numbers we know, which let CDSI return their ACIs */
+  private async getAcisAndAccessKeys() {
+    const { store, account } = this.client.getSenderContext();
+    const acisAndAccessKeys = [];
+    for (const { id, type, e164 } of await this.db.getConversations()) {
+      if (type !== 'private' || !e164 || id === account.aci) continue;
+      const profileKey = (await store.getRecipient(id))?.profileKey;
+      if (profileKey) acisAndAccessKeys.push({ aci: id, accessKey: wasm.ProfileKey_DeriveAccessKey(profileKey) });
+    }
+    return acisAndAccessKeys;
+  }
+
+  /**
+   * Stores whether a sticker pack is installed and returns whether that changed. A pack installed without a position
+   * goes after the others; a removal of a pack this device never had needs no record.
+   */
+  private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
+    const { store } = this.client;
+    const packs = await store.getItem('stickerPacks') ?? {};
+    const current = packs[id];
+    const packKey = key ?? current?.key;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return false;
+
+    const wasInstalled = current?.installedAt !== undefined;
+    if ('isInstalled' in state) {
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return false;
+      packs[id] = {
+        id,
+        key: packKey,
+        installedAt: current?.installedAt ?? Date.now(),
+        position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
+      };
+    } else {
+      if (!wasInstalled) return false;
+      packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
+    }
+    await store.setItem('stickerPacks', packs);
+    this.events.onStickerPacksChange?.([id]);
+    return true;
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -926,7 +1407,9 @@ export default class MessageProcessor {
     return {
       id: bufferFromBase64(id),
       secretParams: wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-      refresh: () => this.refreshGroup(id, masterKey),
+      refresh: async () => {
+        await this.refreshGroup(id, masterKey);
+      },
     };
   }
 
@@ -1084,6 +1567,13 @@ export default class MessageProcessor {
       );
       if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
     }
+    for (const { packId, packKey, type } of sync.stickerPackOperation) {
+      await this.applyStickerPackState(
+        bufferToHex(packId),
+        bufferToHex(packKey),
+        type === SyncMessage_StickerPackOperation_Type.REMOVE ? { uninstalledAt: Date.now() } : { isInstalled: true },
+      );
+    }
 
     const { content } = sync;
     switch (content.case) {
@@ -1115,8 +1605,71 @@ export default class MessageProcessor {
       case 'deleteForMe':
         await this.applyDeleteForMeSync(content.value);
         break;
+      case 'verified':
+        await this.applyVerifiedSync(content.value);
+        break;
+      case 'fetchLatest':
+        // Another device wrote our profile or the storage service (Signal Desktop `onFetchLatestSync`); the profile
+        // is fetched outside the serial queue, which this handler runs in
+        if (content.value.type === SyncMessage_FetchLatest_Type.LOCAL_PROFILE) {
+          void this.refreshProfile(source.authorAci).catch(this.events.onError);
+        }
+        if (content.value.type === SyncMessage_FetchLatest_Type.STORAGE_MANIFEST) this.scheduleStorageSync();
+        break;
+      case 'usernameChange':
+        // Another device changed our username and wrote it to the storage service
+        this.scheduleStorageSync();
+        break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Applies a verification change from another device; a new key of a verified contact is saved as verified
+   * (Signal Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`)
+   */
+  private async applyVerifiedSync(verified: Verified) {
+    const aci = verified.destinationAci
+      || (verified.destinationAciBinary.length ? uuidToString(verified.destinationAciBinary) : undefined);
+    const { identityKey, state } = verified;
+    if (!aci || !identityKey.length) return;
+
+    const { store } = this.client;
+    const wasVerified = await store.runExclusive(async () => {
+      const existing = await store.getIdentity(aci);
+      const isSameKey = Boolean(existing && buffersEqual(existing.publicKey, identityKey));
+      if (state === Verified_State.DEFAULT && !isSameKey) return undefined;
+      if (!isSameKey) await saveIdentity(store, aci, identityKey);
+      const current = (await store.getIdentity(aci))!;
+      if (current.verified === state) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current.verified === Verified_State.VERIFIED;
+    });
+
+    const isVerified = state === Verified_State.VERIFIED;
+    if (wasVerified === undefined || wasVerified === isVerified) return;
+    await this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified, isFromOtherDevice: true });
+  }
+
+  /** Adds an identity notice about `aci` to their private conversation and to the groups we share with them */
+  private async addIdentityNotices(
+    aci: string, notice: Pick<NewMessageRecord, 'kind' | 'isVerified' | 'isFromOtherDevice'>,
+  ) {
+    const now = Date.now();
+    const groups = (await this.db.getConversations())
+      .filter(({ type, memberAcis }) => type === 'group' && memberAcis?.includes(aci));
+    for (const conversation of [await this.ensurePrivateConversation(aci), ...groups]) {
+      await this.addMessage(conversation, {
+        ...notice,
+        conversationId: conversation.id,
+        authorAci: '',
+        actorAci: aci,
+        sentAt: now,
+        receivedAt: now,
+        isOutgoing: false,
+        readAt: now,
+      });
     }
   }
 
@@ -1167,10 +1720,7 @@ export default class MessageProcessor {
   }
 
   private async getConversationForMessage(source: MessageSource, message: DataMessage) {
-    const masterKey = message.groupV2?.masterKey;
-    if (masterKey?.length) {
-      return this.getOrCreateGroupConversation(masterKey, message.groupV2!.revision);
-    }
+    if (message.groupV2?.masterKey.length) return this.getGroupConversationForMessage(source, message.groupV2);
     const aci = source.isOutgoing ? source.destinationAci : source.authorAci;
     if (!aci) return undefined;
     const conversation = await this.ensurePrivateConversation(aci);
@@ -1185,13 +1735,39 @@ export default class MessageProcessor {
     return this.runSerial(() => this.ensurePrivateConversation(aci));
   }
 
+  /**
+   * Finds the Signal user of a phone number in the contact discovery enclave and returns their private conversation,
+   * which gets the number. Signal Desktop looks up a number that the user typed in the same way
+   * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
+   */
+  async lookUpPhoneNumber(e164: string) {
+    const known = (await this.db.getConversations()).find((conversation) => (
+      conversation.type === 'private' && conversation.e164 === e164
+    ));
+    if (known) return known;
+
+    const { connection } = this.client.getSenderContext();
+    const records = await lookUpE164s(connection, [e164], await this.getAcisAndAccessKeys());
+    const aci = records.get(e164)?.aci;
+    if (!aci) return undefined;
+    const conversation = await this.runSerial(async () => {
+      const existing = await this.ensurePrivateConversation(aci);
+      return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
+    });
+    this.flush();
+    return conversation;
+  }
+
   private async ensurePrivateConversation(aci: string) {
     const existing = await this.db.getConversation(aci);
     if (existing) return existing;
     const created = await this.putConversation({
       id: aci, localId: await this.db.allocateLocalId(), type: 'private', unreadCount: 0,
     });
-    this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
+    // Profiles need the connection; our own conversation is created before it, and its profile is fetched after
+    if (this.client.isConnected) {
+      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
+    }
     return created;
   }
 
@@ -1206,48 +1782,233 @@ export default class MessageProcessor {
   }
 
   /**
-   * Fetches the group state outside the envelope queue, with its send endorsements; group changes are not
-   * applied one by one yet. Concurrent refreshes of a group share one fetch.
+   * A group message at the next revision with its signed change applies the change and adds its notices
+   * (Signal Desktop `updateGroupViaSingleChange`); other new revisions fetch the whole state
    */
-  private refreshGroup(id: string, masterKey: Uint8Array) {
+  private async getGroupConversationForMessage(source: MessageSource, context: GroupContextV2) {
+    const { masterKey, revision, groupChange } = context;
+    const existing = await this.db.getConversation(getGroupId(masterKey));
+    const state = existing?.groupState;
+    if (!existing || !state || !groupChange.length || revision !== state.revision + 1) {
+      return this.getOrCreateGroupConversation(masterKey, revision);
+    }
+
+    const change = this.readGroupChange(existing, groupChange);
+    if (change?.revision !== revision) return this.getOrCreateGroupConversation(masterKey, revision);
+    const { aci: selfAci } = await this.getAccount();
+    const next = applyGroupChange(state, change);
+    const updated = await this.storeGroupState(existing, next, {
+      change, isOutgoing: source.isOutgoing, sentAt: source.sentAt,
+    });
+    // A state we kept while not a member, as when we asked to join, lacks the members
+    const isMember = (group: GroupState) => group.members.some(({ aci }) => aci === selfAci);
+    if (!isMember(state) && isMember(next)) void this.refreshGroup(existing.id, masterKey);
+    return updated;
+  }
+
+  /** The decrypted change of a group message, or `undefined` when it is invalid or of a later change epoch */
+  private readGroupChange(conversation: ConversationRecord, groupChange: Uint8Array) {
+    try {
+      const actions = verifyGroupChange(fromBinary(GroupChangeSchema, groupChange), conversation.id);
+      const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(conversation.masterKey!);
+      return actions && decryptGroupChange(secretParams, actions);
+    } catch (err) {
+      this.events.onError(err as Error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Stores a group state that this device led to: after our change, whose notices are ours, or of a group we
+   * created (`isCreated` adds its notice) or joined, whose conversation starts here
+   */
+  applyGroupState(
+    masterKey: Uint8Array,
+    state: GroupState,
+    { change, isCreated }: { change?: DecryptedGroupChange; isCreated?: boolean },
+  ) {
+    return this.runSerial(async () => {
+      const id = getGroupId(masterKey);
+      const { aci: selfAci } = await this.getAccount();
+      const existing = await this.db.getConversation(id);
+      // Groups we create, join or ask to join are past the message request (`messageRequests.ts`)
+      const isJoining = !existing || isCreated || [
+        ...change?.addMembers ?? [], ...change?.promotePendingMembers ?? [], ...change?.addRequestingMembers ?? [],
+      ].some(({ aci }) => aci === selfAci);
+      const conversation = existing ?? await this.putConversation({
+        id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
+      });
+      const sentAt = this.allocateTimestamp();
+      const updated = await this.storeGroupState(
+        isJoining ? { ...conversation, isAccepted: true } : conversation,
+        state,
+        change && { change, isOutgoing: true, sentAt },
+      );
+      if (!isCreated) return updated;
+
+      const { conversation: withNotice } = await this.addMessage(updated, {
+        conversationId: id,
+        kind: 'groupUpdate',
+        authorAci: '',
+        actorAci: (await this.getAccount()).aci,
+        groupUpdate: { type: 'create' },
+        sentAt,
+        receivedAt: sentAt,
+        isOutgoing: true,
+        readAt: sentAt,
+      });
+      return withNotice;
+    });
+  }
+
+  /**
+   * Tells the members, and invited users with an ACI, about a new revision. `groupChange` is the signed change
+   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group
+   * (Signal Desktop `ts/jobs/helpers/sendGroupUpdate.preload.ts`).
+   */
+  async sendGroupUpdate(id: string, groupChange?: Uint8Array, extraRecipients: string[] = []) {
+    const account = await this.getAccount();
+    const conversation = await this.db.getConversation(id);
+    const state = conversation?.groupState;
+    if (!conversation || !state) throw new Error(`Unknown group ${id}`);
+
+    const recipients = new Set([
+      ...state.members.map(({ aci }) => aci),
+      ...state.pendingMembers.map(({ serviceId }) => serviceId).filter((serviceId) => ACI_PATTERN.test(serviceId)),
+      ...extraRecipients,
+    ]);
+    recipients.delete(account.aci);
+    const timestamp = this.allocateTimestamp();
+    const message = createOutgoingDataMessage(account, conversation, {}, timestamp, false);
+    if (groupChange) message.groupV2!.groupChange = groupChange;
+    return this.sendContentTo(conversation, [...recipients], { case: 'dataMessage', value: message }, { timestamp });
+  }
+
+  /**
+   * Brings a group to its current revision outside the envelope queue, with its send endorsements, when one
+   * change does not reach it. Members apply each change of the group log with its notices; others, and members
+   * whose log cannot be applied, fetch the state. Concurrent refreshes of a group share one request.
+   */
+  refreshGroup(id: string, masterKey: Uint8Array) {
     const running = this.groupRefreshes.get(id);
     if (running) return running;
 
     const refresh = (async () => {
-      const { account, connection, store } = this.client.getSenderContext();
-      const group = await fetchGroup(account, connection, masterKey);
-      for (const member of group.members) {
-        if (member.profileKey && member.aci !== account.aci) await saveProfileKey(store, member.aci, member.profileKey);
+      const { account, store } = this.client.getSenderContext();
+      const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
+      const known = (await this.db.getConversation(id))?.groupState;
+      const isMember = known?.members.some(({ aci }) => aci === account.aci);
+      const caughtUp = isMember
+        ? await this.applyGroupLog(id, secretParams, known!.revision).catch(this.events.onError)
+        : undefined;
+      const result = caughtUp ?? await this.storeFetchedGroup(id, masterKey);
+      const { conversation, members, sendEndorsementsResponse } = result;
+      if (members) {
+        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse);
       }
-      await this.runSerial(async () => {
-        const conversation = await this.db.getConversation(id);
-        if (!conversation) return;
-        await this.putConversation({
-          ...conversation,
-          revision: group.revision,
-          title: group.title,
-          description: group.description,
-          memberAcis: group.members.map(({ aci }) => aci),
-          adminAcis: group.members.filter(({ role }) => role === Member_Role.ADMINISTRATOR).map(({ aci }) => aci),
-          expireTimer: group.expireTimer || undefined,
-          isAnnouncementsOnly: group.isAnnouncementsOnly,
-          avatarPath: group.avatarUrl,
-        });
-      });
-      this.flush();
-      await saveGroupSendEndorsements(
-        store,
-        account.aci,
-        id,
-        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-        group.members.map(({ aci }) => aci),
-        group.sendEndorsementsResponse,
-      );
+      return conversation;
     })();
 
     this.groupRefreshes.set(id, refresh);
     refresh.catch(this.events.onError).finally(() => this.groupRefreshes.delete(id));
     return refresh;
+  }
+
+  /** Stores the fetched group state unless a change applied meanwhile is newer; returns the members it stored */
+  private async storeFetchedGroup(id: string, masterKey: Uint8Array) {
+    const { account, connection } = this.client.getSenderContext();
+    const { state, sendEndorsementsResponse } = await fetchGroup(account, connection, masterKey);
+    return this.runSerial(async () => {
+      const conversation = await this.db.getConversation(id);
+      if (!conversation || (conversation.groupState?.revision ?? -1) > state.revision) return { conversation };
+      return {
+        conversation: await this.storeGroupState(conversation, state),
+        members: state.members.map(({ aci }) => aci),
+        sendEndorsementsResponse,
+      };
+    });
+  }
+
+  /**
+   * Applies the changes after `fromRevision` from the group log, each with its notices; the state of the last
+   * revision then replaces what the changes made (Signal Desktop `integrateGroupChanges`)
+   */
+  private async applyGroupLog(id: string, secretParams: Uint8Array, fromRevision: number) {
+    const { account, connection } = this.client.getSenderContext();
+    const { entries, sendEndorsementsResponse } = await fetchGroupLog(account, connection, secretParams, fromRevision);
+    return this.runSerial(async () => {
+      let conversation = (await this.db.getConversation(id))!;
+      let state = conversation.groupState!;
+      for (const { change, state: revisionState } of entries) {
+        const actions = change?.actions.length ? fromBinary(GroupChange_ActionsSchema, change.actions) : undefined;
+        const revision = actions?.version ?? revisionState?.version ?? -1;
+        if (revision <= state.revision) continue;
+
+        if (actions && revision === state.revision + 1) {
+          const decrypted = decryptGroupChange(secretParams, actions);
+          state = applyGroupChange(state, decrypted);
+          conversation = await this.storeGroupState(conversation, state, {
+            change: decrypted, isOutgoing: decrypted.sourceServiceId === account.aci, sentAt: Date.now(),
+          });
+        } else if (revisionState) {
+          state = decryptGroupState(secretParams, revisionState);
+          conversation = await this.storeGroupState(conversation, state);
+        } else {
+          throw new Error(`Group log of ${id} misses revision ${state.revision + 1}`);
+        }
+      }
+
+      const last = entries[entries.length - 1]?.state;
+      if (last?.version === state.revision) {
+        state = decryptGroupState(secretParams, last);
+        conversation = await this.storeGroupState(conversation, state);
+      }
+      return { conversation, members: state.members.map(({ aci }) => aci), sendEndorsementsResponse };
+    });
+  }
+
+  /** Stores a group state and the profile keys it brings; a change adds its notices */
+  private async storeGroupState(
+    conversation: ConversationRecord,
+    state: GroupState,
+    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number },
+  ) {
+    const { aci: selfAci } = await this.getAccount();
+    const profileKeys = applied ? getChangeProfileKeys(applied.change) : state.members;
+    for (const { aci, profileKey } of profileKeys) {
+      if (profileKey && aci !== selfAci) await saveProfileKey(this.client.store, aci, profileKey);
+    }
+
+    let updated = await this.putConversation({
+      ...conversation,
+      revision: state.revision,
+      title: state.title,
+      description: state.description,
+      memberAcis: state.members.map(({ aci }) => aci),
+      adminAcis: state.members.filter(({ role }) => role === Member_Role.ADMINISTRATOR).map(({ aci }) => aci),
+      expireTimer: state.expireTimer || undefined,
+      isAnnouncementsOnly: state.isAnnouncementsOnly,
+      avatarPath: state.avatarUrl,
+      groupState: state,
+    });
+    if (!applied) return updated;
+
+    const { change, isOutgoing, sentAt } = applied;
+    const now = Date.now();
+    const base = {
+      conversationId: updated.id, authorAci: '', sentAt, receivedAt: now, isOutgoing, readAt: now,
+    };
+    for (const { actorAci, update } of buildGroupNotices(change)) {
+      ({ conversation: updated } = await this.addMessage(updated, {
+        ...base, kind: 'groupUpdate', actorAci, groupUpdate: update,
+      }));
+    }
+    if (change.expireTimer) {
+      ({ conversation: updated } = await this.addMessage(updated, {
+        ...base, kind: 'timerUpdate', actorAci: change.sourceServiceId, expireTimer: change.expireTimer.value,
+      }));
+    }
+    return updated;
   }
 
   /**
@@ -1796,4 +2557,30 @@ export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
   return bufferToBase64(wasm.GroupPublicParams_GetGroupIdentifier(publicParams));
+}
+
+function getManifestIds(manifest: ManifestRecord) {
+  return manifest.identifiers.map(({ raw }) => bufferToBase64(raw));
+}
+
+/** Leaves out account fields that changed on this device since the last storage write, so local changes win */
+function omitAccountChanges(update: OwnAccountUpdate, changedFields: { has(field: AccountStorageField): boolean }) {
+  const result = { ...update };
+  for (const [key, field] of Object.entries(OWN_ACCOUNT_FIELDS) as [keyof OwnAccountUpdate, AccountStorageField][]) {
+    if (changedFields.has(field)) delete result[key];
+  }
+  return result;
+}
+
+/** Contact discovery of storage service contacts is off by default: Signal Desktop never looks up numbers in bulk */
+function getIsContactDiscoveryEnabled(account: AccountRecord) {
+  return account.deviceId === SIGNAL_PRIMARY_DEVICE_ID && Boolean(account.isContactDiscoveryEnabled);
+}
+
+function getNumberOnlyContacts(records: StorageRecord[]) {
+  return records
+    .map(({ record }) => (record.case === 'contact' ? record.value : undefined))
+    .filter((contact): contact is ContactRecord => (
+      Boolean(contact?.e164 && !contact.blocked && !getAci(contact.aci, contact.aciBinary))
+    ));
 }
