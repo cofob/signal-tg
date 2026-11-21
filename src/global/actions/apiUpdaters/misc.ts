@@ -87,10 +87,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateRecoveryKeyUnconfirmed':
-      actions.openRecoveryKeyModal({ tabId: getCurrentTabId() });
-      break;
-
     case 'updateAiComposeTones':
       actions.loadAiComposeTones();
       break;

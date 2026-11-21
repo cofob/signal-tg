@@ -398,11 +398,6 @@ export type ApiUpdateSafetyNumberBlock = {
   userIds: string[];
 };
 
-// Signal: the recovery key of a new account was not confirmed as saved yet
-export type ApiUpdateRecoveryKeyUnconfirmed = {
-  '@type': 'updateRecoveryKeyUnconfirmed';
-};
-
 export type ApiUpdateScheduledMessageSendFailed = {
   '@type': 'updateScheduledMessageSendFailed';
   chatId: string;
@@ -997,7 +992,7 @@ export type ApiUpdate = (
   ApiUpdateMessagePoll | ApiUpdateMessagePollUnread | ApiUpdateMessagePollVote |
   ApiUpdateDeleteHistory |
   ApiDeleteParticipantHistory | ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed |
-  ApiUpdateSafetyNumberBlock | ApiUpdateRecoveryKeyUnconfirmed |
+  ApiUpdateSafetyNumberBlock |
   ApiUpdateServiceNotification | ApiDeleteContact | ApiUpdateUser | ApiUpdateUserStatus |
   ApiUpdateUserFullInfo | ApiUpdateVideoProcessingPending | ApiUpdatePeerSettings | ApiUpdatePeerHistoryTtl
   | ApiUpdatePeerTheme | ApiUpdatePeerWallpaper

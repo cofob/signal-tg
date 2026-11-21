@@ -1795,7 +1795,8 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberChangeModal: WithTabId | undefined;
   sendMessageAnyway: WithTabId | undefined;
-  openRecoveryKeyModal: WithTabId | undefined;
+  // Settings open it always; the main screen opens it for a recovery key that the user did not confirm yet
+  openRecoveryKeyModal: ({ shouldSkipConfirmed?: boolean } & WithTabId) | undefined;
   closeRecoveryKeyModal: WithTabId | undefined;
   confirmRecoveryKeySaved: WithTabId | undefined;
   loadPersonalChannels: undefined;

@@ -684,9 +684,10 @@ addActionHandler('sendMessageAnyway', async (global, actions, payload): Promise<
 });
 
 addActionHandler('openRecoveryKeyModal', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
+  const { shouldSkipConfirmed, tabId = getCurrentTabId() } = payload || {};
 
   const result = await callApi('fetchRecoveryKey');
+  if (shouldSkipConfirmed && !result?.isUnconfirmed) return;
   if (!result) {
     // Linked devices do not have the key to show
     actions.showNotification({ message: { key: 'RecoveryKeyPrimaryOnly' }, tabId });
