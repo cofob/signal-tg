@@ -7,6 +7,7 @@ import SignalStore from '../../lib/signal/store/SignalStore';
 import { handleCallChanges } from './updaters/calls';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
+import { handleNotificationProfilesChange } from './updaters/notificationProfiles';
 import { handleStickerPacksChange } from './updaters/stickers';
 import { handleStoryChanges } from './updaters/stories';
 
@@ -30,6 +31,7 @@ export const processor = new MessageProcessor(db, client, {
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
   onStickerPacksChange: (ids) => void handleStickerPacksChange(ids).catch(logError),
+  onNotificationProfilesChange: (state) => void handleNotificationProfilesChange(state).catch(logError),
 });
 
 export const groups = new GroupManager(client, db, processor, logError);

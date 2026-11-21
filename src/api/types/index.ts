@@ -11,3 +11,4 @@ export * from './calls';
 export * from './callLog';
 export * from './stories';
 export * from './peers';
+export * from './notificationProfiles';

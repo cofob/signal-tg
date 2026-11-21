@@ -62,6 +62,9 @@ export {
 } from './devices';
 export { downloadMedia } from './media';
 export {
+  deleteNotificationProfile, fetchNotificationProfiles, saveNotificationProfile, setNotificationProfileActive,
+} from './notificationProfiles';
+export {
   fetchSignalContactDiscovery,
   fetchSignalPinSettings,
   removeSignalPin,

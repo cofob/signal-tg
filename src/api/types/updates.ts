@@ -42,6 +42,7 @@ import type {
   ApiSessionData,
   ApiWallpaper,
 } from './misc';
+import type { ApiNotificationProfilesState } from './notificationProfiles';
 import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, PrivacyVisibility } from './settings';
@@ -808,6 +809,12 @@ export type ApiUpdateStory = {
   story: ApiStory | ApiStorySkipped;
 };
 
+// Signal: the notification profiles after a change, or the one that is on changed
+export type ApiUpdateNotificationProfiles = {
+  '@type': 'updateNotificationProfiles';
+  state: ApiNotificationProfilesState;
+};
+
 // Signal: the call history after a change; the app replaces its list
 export type ApiUpdateCallLog = {
   '@type': 'updateCallLog';
@@ -916,6 +923,7 @@ export type ApiUpdate = (
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities
   | ApiUpdateCallLog
+  | ApiUpdateNotificationProfiles
   | ApiUpdateNotSupportedInFrozenAccountError
 );
 

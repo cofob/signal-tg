@@ -15,6 +15,7 @@ import './api/passcode';
 import './api/reactions';
 import './api/stories';
 import './api/callLog';
+import './api/notificationProfiles';
 import './ui/initial';
 import './ui/animations';
 import './ui/chats';

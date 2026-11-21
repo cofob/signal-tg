@@ -159,6 +159,11 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       setGlobal(global);
       break;
 
+    case 'updateNotificationProfiles':
+      global = { ...global, notificationProfiles: update.state };
+      setGlobal(global);
+      break;
+
     case 'updateCallLog':
       global = { ...global, callLog: update.entries };
       setGlobal(global);

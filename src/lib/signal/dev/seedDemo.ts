@@ -8,13 +8,14 @@ import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/gene
 import type SignalStore from '../store/SignalStore';
 
 import { bufferToBase64Url } from '../../../util/encoding/base64';
-import { bufferFromHex } from '../../../util/encoding/buffer';
+import { bufferFromHex, bufferToHex } from '../../../util/encoding/buffer';
 import { buildStickerPackLink } from '../../../util/signalLinks';
 import { STORY_BACKGROUNDS } from '../../../util/storyBackgrounds';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
 import { buildAccessControl } from '../groups/fetchGroup';
 import { buildGroupInviteLink } from '../groups/inviteLinks';
+import { DEFAULT_PROFILE_COLOR } from '../notificationProfiles/notificationProfiles';
 import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
 import { wasm } from '../wasm';
@@ -58,6 +59,7 @@ const SMILEY_MOUTH_RADIUS = 120;
 const DEMO_USERNAME_LINK_LENGTH = 48;
 const DEMO_KEY_LENGTH = 32;
 const DEMO_PASSWORD_LENGTH = 16;
+const DEMO_PROFILE_ID_LENGTH = 16;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -637,6 +639,43 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     });
     lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
   }
+
+  // Notification profiles: one on a schedule, and one turned on by hand for a while
+  const workProfileId = bufferToHex(getRandomBytes(DEMO_PROFILE_ID_LENGTH));
+  const sleepProfileId = bufferToHex(getRandomBytes(DEMO_PROFILE_ID_LENGTH));
+  await store.setItem('notificationProfiles', [
+    {
+      id: workProfileId,
+      name: 'Work',
+      emoji: '💼',
+      color: DEFAULT_PROFILE_COLOR,
+      createdAt: now - 20 * MINUTE,
+      areAllCallsAllowed: false,
+      areAllMentionsAllowed: true,
+      allowedConversationIds: [alice, group.id],
+      isScheduleEnabled: true,
+      scheduleStartTime: 900,
+      scheduleEndTime: 1700,
+      scheduleDays: [1, 2, 3, 4, 5],
+    },
+    {
+      id: sleepProfileId,
+      name: 'Sleep',
+      emoji: '😴',
+      color: DEFAULT_PROFILE_COLOR,
+      createdAt: now - 10 * MINUTE,
+      areAllCallsAllowed: false,
+      areAllMentionsAllowed: false,
+      allowedConversationIds: [bob],
+      isScheduleEnabled: true,
+      scheduleStartTime: 2200,
+      scheduleEndTime: 700,
+      scheduleDays: [1, 2, 3, 4, 5, 6, 7],
+    },
+  ]);
+  await store.setItem('notificationProfileOverride', {
+    enabled: { profileId: sleepProfileId, endsAt: now + 90 * MINUTE },
+  });
 
   for (const conversation of conversations) {
     const last = lastByConversation.get(conversation.id);

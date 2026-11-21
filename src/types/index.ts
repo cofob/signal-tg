@@ -271,6 +271,7 @@ export enum SettingsScreens {
   SignalPinNew,
   SignalPinConfirm,
   SignalDevices,
+  NotificationProfiles,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

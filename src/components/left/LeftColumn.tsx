@@ -231,6 +231,10 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.DataStorage });
           return;
 
+        case SettingsScreens.NotificationProfiles:
+          openSettingsScreen({ screen: SettingsScreens.Notifications });
+          return;
+
         case SettingsScreens.Username:
           openSettingsScreen({ screen: SettingsScreens.EditProfile });
           return;

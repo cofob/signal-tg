@@ -2299,6 +2299,28 @@ export interface LangPair {
   'CallLogClearConfirm': undefined;
   'CallLogCleared': undefined;
   'ActionPaymentActivatedYou': undefined;
+  'NotificationProfiles': undefined;
+  'SettingsKeywordsNotificationProfiles': undefined;
+  'NotificationProfilesInfo': undefined;
+  'NotificationProfilesSyncOff': undefined;
+  'NotificationProfileNew': undefined;
+  'NotificationProfileEdit': undefined;
+  'NotificationProfileName': undefined;
+  'NotificationProfileEmoji': undefined;
+  'NotificationProfileAllowed': undefined;
+  'NotificationProfileNobody': undefined;
+  'NotificationProfileMentions': undefined;
+  'NotificationProfileCalls': undefined;
+  'NotificationProfileSchedule': undefined;
+  'NotificationProfileFrom': undefined;
+  'NotificationProfileUntil': undefined;
+  'NotificationProfileOn': undefined;
+  'NotificationProfileOff': undefined;
+  'NotificationProfileDaily': undefined;
+  'NotificationProfileWeekdays': undefined;
+  'NotificationProfileWeekends': undefined;
+  'NotificationProfileForHour': undefined;
+  'NotificationProfileDelete': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -3310,6 +3332,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionPaymentActivated': {
     'user': V;
   };
+  'NotificationProfileOnUntil': {
+    'time': V;
+  };
+  'NotificationProfileDeleteInfo': {
+    'name': V;
+  };
 }
 
 export interface LangPairPlural {
@@ -3653,6 +3681,9 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PageTitleNotifications': {
     'count': V;
   };
+  'NotificationProfileChats': {
+    'count': V;
+  };
 }
 
 export interface LangKeyGroups {
@@ -3816,7 +3847,8 @@ export interface LangKeyGroups {
       | 'LinkExpiresIn'
       | 'InviteLinkExpiresIn'
       | 'LastSeenTodayAt'
-      | 'LastSeenYesterdayAt';
+      | 'LastSeenYesterdayAt'
+      | 'NotificationProfileOnUntil';
     variables: 'time';
   };
   'phone': {
@@ -3854,7 +3886,8 @@ export interface LangKeyGroups {
       | 'SignalDevicesUnlinkTitle'
       | 'NewDiscussionChatTitle'
       | 'ContextMenuNoForwardsPeer'
-      | 'StoriesSettingDeleteListInfo';
+      | 'StoriesSettingDeleteListInfo'
+      | 'NotificationProfileDeleteInfo';
     variables: 'name';
   };
   'volume': {
@@ -4466,7 +4499,8 @@ export interface LangPluralKeyGroups {
       | 'Views'
       | 'Voice'
       | 'SeenByUsers'
-      | 'PageTitleNotifications';
+      | 'PageTitleNotifications'
+      | 'NotificationProfileChats';
     variables: 'count';
   };
   'index': {
