@@ -597,6 +597,8 @@ function removeTelegramOnlyFields(untypedCached: any) {
   delete untypedCached.chats?.loadingParameters?.saved;
   delete untypedCached.chats?.lastMessageIds?.saved;
   delete untypedCached.defaultTopicIconsId;
+  // Saved reaction tags
+  delete untypedCached.savedReactionTags;
   // QR code share themes
   delete untypedCached.shareThemeBackdrops;
   // Recommended folders
@@ -704,7 +706,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentlyFoundChatIds',
       'recentlyFoundSettingIds',
       'peerColors',
-      'savedReactionTags',
     ]),
     lastIsChatInfoShown: !getIsMobile() ? global.lastIsChatInfoShown : undefined,
     stickers: reduceStickers(global),

@@ -252,7 +252,6 @@ export enum SettingsScreens {
   PasscodeCongratulations,
   Experimental,
   Stickers,
-  QuickReaction,
   CustomEmoji,
   KeyboardShortcuts,
   SignalProxy,
@@ -438,7 +437,6 @@ export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice
 export type MiddleSearchType = 'chat' | 'myChats';
 export type MiddleSearchParams = {
   requestedQuery?: string;
-  savedTag?: ApiReaction;
   isHashtag?: boolean;
   fromPeerId?: string;
   fetchingQuery?: string;

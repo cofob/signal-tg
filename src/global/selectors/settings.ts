@@ -45,8 +45,6 @@ export function selectAvailableSettingsScreen<T extends GlobalState>(global: T, 
     case SettingsScreens.AutoDeleteMessages:
       if (selectIsCurrentUserFrozen(global) || global.settings.byKey.defaultHistoryTtl === undefined) return undefined;
       return screen;
-    case SettingsScreens.QuickReaction:
-      return global.config?.defaultReaction ? screen : undefined;
     default:
       return screen;
   }
@@ -75,7 +73,6 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
     canHideReadTime: lastSeenVisibility === 'contacts' || lastSeenVisibility === 'nobody',
     areStickerSetsLoaded: Boolean(global.stickers.added.setIds),
     areCustomEmojiSetsLoaded: Boolean(global.customEmojis.added.setIds),
-    isQuickReactionAvailable: selectAvailableSettingsScreen(global, SettingsScreens.QuickReaction) !== undefined,
   };
 }
 

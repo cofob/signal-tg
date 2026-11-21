@@ -23,8 +23,6 @@ import type {
   ApiPrivacySettings,
   ApiPromoData,
   ApiReaction,
-  ApiReactionKey,
-  ApiSavedReactionTag,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
@@ -77,10 +75,6 @@ export type GlobalState = {
   lastIsChatInfoShown?: boolean;
   initialUnreadNotifications?: number;
   shouldShowContextMenuHint?: boolean;
-  reactionPollingPause?: {
-    until: number;
-    chatId: string;
-  };
 
   audioPlayer: {
     volume: number;
@@ -360,11 +354,6 @@ export type GlobalState = {
   archiveSettings: {
     isMinimized: boolean;
     isHidden: boolean;
-  };
-
-  savedReactionTags?: {
-    byKey: Record<ApiReactionKey, ApiSavedReactionTag>;
-    hash: string;
   };
 
 };

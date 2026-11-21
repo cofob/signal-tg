@@ -63,33 +63,6 @@ export type PollVote = {
   date: number;
 };
 
-type ReportOptionsSection = {
-  type: 'options';
-  title: string;
-  subtitle?: string;
-  options: {
-    text: string;
-    option: string;
-  }[];
-};
-
-type ReportCommentSection = {
-  type: 'comment';
-  title?: string;
-  isOptional?: boolean;
-  option: string;
-};
-
-export type ReportSection = ReportOptionsSection | ReportCommentSection;
-
-type MessageReportContext = {
-  option: string;
-  description: string;
-  title?: string;
-  sections: ReportSection[];
-  isSubmitting?: boolean;
-};
-
 export type MusicPickerSharedResults = {
   generation: number;
   ids: SearchResultKey[];
@@ -159,7 +132,6 @@ export type TabState = {
   selectedMessages?: {
     chatId: string;
     messageIds: number[];
-    reportContext?: MessageReportContext;
   };
 
   chatInviteModal?: {
@@ -387,15 +359,6 @@ export type TabState = {
   historyCalendarSelectedAt?: number;
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];
-
-  reportModal?: {
-    chatId?: string;
-    messageIds: number[];
-    description: string;
-    peerId?: string;
-    subject: 'story' | 'message';
-    sections: ReportSection[];
-  };
 
   activeDownloads: ActiveDownloads;
   // Keys (media hashes) of the files that the desktop app saved and that still exist

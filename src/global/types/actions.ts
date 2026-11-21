@@ -22,7 +22,6 @@ import type {
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMessageEntity,
-  ApiMessageReadMetric,
   ApiMessageSearchContext,
   ApiNewStory,
   ApiNotification,
@@ -31,7 +30,6 @@ import type {
   ApiPrivacyKey,
   ApiPrivacySettings,
   ApiReaction,
-  ApiReportReason,
   ApiRichText,
   ApiSendMessageAction,
   ApiSessionData,
@@ -484,10 +482,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-  deleteParticipantHistory: {
-    peerId: string;
-    chatId: string;
-  } & WithTabId;
   markMessageListRead: {
     maxId: number;
   } & WithTabId;
@@ -523,11 +517,6 @@ export interface ActionPayloads {
     chatId: string;
     shouldDeleteForAll?: boolean;
   } & WithTabId;
-  deleteSavedHistory: {
-    chatId: string;
-  } & WithTabId;
-  openPreviousReportModal: WithTabId | undefined;
-  closeReportModal: WithTabId | undefined;
   stopActiveEmojiInteraction: {
     id: number;
   } & WithTabId;
@@ -543,37 +532,10 @@ export interface ActionPayloads {
     messageId: number;
     reaction?: ApiReaction;
   };
-  sendEmojiInteraction: {
-    messageId: number;
-    chatId: string;
-    emoji: string;
-    interactions: number[];
-  };
-  sendWatchingEmojiInteraction: {
-    chatId: string;
-    id: number;
-    emoticon: string;
-    x: number;
-    y: number;
-    startSize: number;
-    isReversed?: boolean;
-  } & WithTabId;
-  reportMessages: {
-    chatId: string;
-    messageIds: number[];
-    description?: string;
-    option?: string;
-  } & WithTabId;
-
   sendMessageAction: {
     action: ApiSendMessageAction;
     chatId: string;
     threadId: ThreadId;
-  };
-  reportChannelSpam: {
-    chatId: string;
-    participantId: string;
-    messageIds: number[];
   };
   loadSeenBy: {
     chatId: string;
@@ -788,9 +750,6 @@ export interface ActionPayloads {
     screen?: ManagementScreens;
   } & WithTabId) | undefined;
   closeManagement: WithTabId | undefined;
-  checkPublicLink: { chatId: string; username: string } & WithTabId;
-  updatePublicLink: { username: string; shouldDisableUsernames?: boolean } & WithTabId;
-  updatePrivateLink: WithTabId | undefined;
   resetManagementError: { chatId: string } & WithTabId;
 
   setShouldCloseRightColumn: {
@@ -865,17 +824,6 @@ export interface ActionPayloads {
   } & WithTabId) | undefined;
 
   // Accounts
-  reportPeer: {
-    chatId?: string;
-    reason: ApiReportReason;
-    description: string;
-  } & WithTabId;
-  reportProfilePhoto: {
-    chatId?: string;
-    reason: ApiReportReason;
-    description: string;
-    photo?: ApiPhoto;
-  } & WithTabId;
   openFrozenAccountModal: WithTabId | undefined;
   closeFrozenAccountModal: WithTabId | undefined;
   openDeleteAccountModal: {
@@ -970,10 +918,6 @@ export interface ActionPayloads {
     ids: number[];
     shouldIncrement?: boolean;
   };
-  scheduleMessageReadMetricsReport: {
-    chatId: string;
-    metrics: ApiMessageReadMetric[];
-  };
   loadFactChecks: {
     chatId: string;
     ids: number[];
@@ -1011,22 +955,7 @@ export interface ActionPayloads {
   };
 
   // Reactions
-  loadTopReactions: undefined;
-  loadRecentReactions: undefined;
   loadAvailableReactions: undefined;
-  loadDefaultTagReactions: undefined;
-  clearRecentReactions: undefined;
-  loadSavedReactionTags: undefined;
-  editSavedReactionTag: {
-    reaction: ApiReaction;
-    title?: string;
-  };
-
-  loadMessageReactions: {
-    chatId: string;
-    ids: number[];
-  };
-
   toggleReaction: {
     chatId: string;
     messageId: number;
@@ -1034,9 +963,6 @@ export interface ActionPayloads {
     shouldAddToRecent?: boolean;
   } & WithTabId;
 
-  setDefaultReaction: {
-    reaction: ApiReaction;
-  };
   sendDefaultReaction: {
     chatId: string;
     messageId: number;
@@ -1154,12 +1080,6 @@ export interface ActionPayloads {
   copyStoryLink: {
     peerId: string;
     storyId: number;
-  } & WithTabId;
-  reportStory: {
-    peerId: string;
-    option?: string;
-    storyId: number;
-    description?: string;
   } & WithTabId;
   openStoryPrivacyEditor: WithTabId | undefined;
   closeStoryPrivacyEditor: WithTabId | undefined;
@@ -1292,7 +1212,6 @@ export interface ActionPayloads {
   loadShufflePlaylist: WithTabId | undefined;
   loadSavedMusicIds: undefined;
   toggleMusicInProfile: { audio: ApiAudio } & WithTabId;
-  reportMusicListen: { audio: ApiAudio; listenedDuration: number; isPageUnload?: boolean };
   reorderSavedMusic: { audioId: string; afterAudioId?: string } & WithTabId;
 
   // Downloads
@@ -1393,10 +1312,6 @@ export interface ActionPayloads {
     isFromSuggestion?: boolean;
   } & WithTabId;
   closeBirthdaySetupModal: WithTabId | undefined;
-  checkUsername: {
-    username: string;
-  } & WithTabId;
-
   deleteContact: { userId: string };
   loadUser: { userId: string };
   loadCommonChats: {
@@ -1624,22 +1539,6 @@ export interface ActionPayloads {
     action: ApiInlineButtonAction;
   } & WithTabId;
 
-  toggleUsername: {
-    username: string;
-    isActive: boolean;
-  };
-  sortUsernames: {
-    usernames: string[];
-  };
-  toggleChatUsername: {
-    chatId: string;
-    username: string;
-    isActive: boolean;
-  };
-  sortChatUsernames: {
-    chatId: string;
-    usernames: string[];
-  };
   openPollModal: {
     chatId: string;
     threadId?: ThreadId;
@@ -1794,23 +1693,6 @@ export interface ActionPayloads {
     peerId: string;
   } & WithTabId);
   closeDeleteMemberModal: WithTabId | undefined;
-
-  deleteParticipantReaction: {
-    chatId: string;
-    messageId: number;
-    peerId: string;
-    notificationPluralValue?: number;
-  } & WithTabId;
-  deleteParticipantReactions: {
-    chatId: string;
-    peerId: string;
-    shouldUseNotificationPluralLang?: boolean;
-  } & WithTabId;
-  reportMessageReaction: {
-    chatId: string;
-    messageId: number;
-    peerId: string;
-  };
 
   saveVoiceWaveform: {
     chatId: string;

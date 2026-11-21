@@ -158,12 +158,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsSignalProxy',
   },
   {
-    screen: SettingsScreens.QuickReaction,
-    parent: SettingsScreens.Stickers,
-    titleKey: 'DoubleTapSetting',
-    requires: 'isQuickReactionAvailable',
-  },
-  {
     screen: SettingsScreens.CustomEmoji,
     parent: SettingsScreens.Stickers,
     titleKey: 'Emoji',

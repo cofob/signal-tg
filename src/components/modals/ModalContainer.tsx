@@ -33,7 +33,6 @@ import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
 import RecoveryKeyModal from './recoveryKey/RecoveryKeyModal.async';
-import ReportModal from './reportModal/ReportModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
@@ -44,7 +43,6 @@ type ModalKey = keyof Pick<TabState,
   'safeLinkModalUrl' |
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
-  'reportModal' |
   'pollModal' |
   'musicPicker' |
   'chatInviteModal' |
@@ -132,7 +130,6 @@ const WrappedModalBoundary = <T,>({
 const LEGACY_MODALS: LegacyModalRegistry = {
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
-  reportModal: ReportModal,
   chatInviteModal: ChatInviteModal,
   disableSharingAboutModal: DisableSharingAboutModal,
   isFrozenAccountModalOpen: FrozenAccountModal,

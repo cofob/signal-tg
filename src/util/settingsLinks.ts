@@ -87,7 +87,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['appearance/stickers-and-emoji/emoji/suggest', [
     SettingsScreens.CustomEmoji, 'SuggestAnimatedEmoji', { requires: 'areCustomEmojiSetsLoaded' },
   ]],
-  ['appearance/stickers-and-emoji/emoji/quick-reaction', [SettingsScreens.QuickReaction]],
   ['appearance/stickers-and-emoji/suggest-by-emoji', [SettingsScreens.Stickers, 'SuggestStickers']],
   ['appearance/stickers-and-emoji/dynamic-order', [SettingsScreens.Stickers, 'InstalledStickersDynamicPackOrder']],
 

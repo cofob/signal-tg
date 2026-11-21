@@ -188,12 +188,8 @@ const Main = ({
     openChat,
     toggleLeftColumn,
     updatePageTitle,
-    loadTopReactions,
-    loadRecentReactions,
-    loadDefaultTagReactions,
     loadFeaturedEmojiStickers,
     loadPeerColors,
-    loadSavedReactionTags,
     openRecoveryKeyModal,
     loadAllStories,
     loadAllHiddenStories,
@@ -270,12 +266,8 @@ const Main = ({
     if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen) {
       loadPromoData();
       loadContentSettings();
-      loadRecentReactions();
-      loadDefaultTagReactions();
-      loadTopReactions();
       loadEmojiKeywords({ language: BASE_EMOJI_KEYWORD_LANG });
       loadFeaturedEmojiStickers();
-      loadSavedReactionTags();
       loadAnimatedEmojis();
       loadAvailableReactions();
       loadGenericEmojiEffects();

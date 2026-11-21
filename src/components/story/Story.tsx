@@ -788,12 +788,11 @@ export default memo(withGlobal<OwnProps>((global, {
     },
     forwardMessages: { storyId: forwardedStoryId },
     safeLinkModalUrl,
-    reportModal,
   } = tabState;
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
-    viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
+    viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || isPrivacyModalOpen
     || isDeleteModalOpen || safeLinkModalUrl,
   );
 

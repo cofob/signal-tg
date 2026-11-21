@@ -4,14 +4,13 @@ import {
   type ApiReactions } from '../../api/types';
 
 import { MIN_SCREEN_WIDTH_FOR_STATIC_LEFT_COLUMN, MIN_SCREEN_WIDTH_FOR_STATIC_RIGHT_COLUMN } from '../../config';
-import { getServerTime } from '../../util/serverTime';
 import windowSize from '../../util/windowSize';
 import {
   MIN_LEFT_COLUMN_WIDTH,
   SIDE_COLUMN_MAX_WIDTH,
 } from '../../components/middle/helpers/calculateMiddleFooterTransforms';
 import { getReactionKey, updateReactionCount } from '../helpers';
-import { selectIsChatWithSelf, selectTabState } from '../selectors';
+import { selectTabState } from '../selectors';
 import { updateChatMessage } from './messages';
 
 import { getIsMobile } from '../../hooks/useAppLayout';
@@ -44,8 +43,7 @@ export function subtractXForEmojiInteraction(global: GlobalState, x: number) {
 export function addMessageReaction<T extends GlobalState>(
   global: T, message: ApiMessage, userReactions: ApiReaction[],
 ): T {
-  const isInSavedMessages = selectIsChatWithSelf(global, message.chatId);
-  const currentReactions = message.reactions || { results: [], areTags: isInSavedMessages };
+  const currentReactions = message.reactions || { results: [] };
 
   // Update UI without waiting for server response
   const results = updateReactionCount(currentReactions.results, userReactions);
@@ -73,15 +71,6 @@ export function addMessageReaction<T extends GlobalState>(
       recentReactions,
     },
   });
-}
-
-const REACTION_POLLING_PAUSE_SECONDS = 30;
-
-export function pauseReactionPolling<T extends GlobalState>(global: T, chatId: string): T {
-  return {
-    ...global,
-    reactionPollingPause: { until: getServerTime() + REACTION_POLLING_PAUSE_SECONDS, chatId },
-  };
 }
 
 export function removePeerReactions(message: ApiMessage, peerId: string): Partial<ApiMessage> | undefined {

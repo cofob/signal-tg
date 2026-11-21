@@ -133,16 +133,12 @@ const ReactionSelector = ({
   });
 
   const hintText = useMemo(() => {
-    if (isInSavedMessages) {
-      return lang('SavedTagReactionsHint2');
-    }
-
     if (isInStoryViewer) {
       return lang('StoryReactionsHint');
     }
 
     return undefined;
-  }, [isInSavedMessages, isInStoryViewer, lang]);
+  }, [isInStoryViewer, lang]);
 
   if (!reactionsToRender.length) return undefined;
 

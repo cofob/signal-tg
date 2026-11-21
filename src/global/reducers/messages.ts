@@ -785,7 +785,7 @@ export function toggleMessageSelection<T extends GlobalState>(
     newMessageIds = [...messageIds, ...newSelectedMessageIds];
   }
 
-  if (!newMessageIds.length && !oldSelectedMessages.reportContext) {
+  if (!newMessageIds.length) {
     return exitMessageSelectMode(global, tabId);
   }
 

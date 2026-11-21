@@ -19,8 +19,6 @@ import type {
   ApiMessagePoll,
   ApiPeer,
   ApiReaction,
-  ApiReactionKey,
-  ApiSavedReactionTag,
   ApiTypeStory,
   ApiUser,
   ApiWebPage,
@@ -37,7 +35,6 @@ import type {
   ThreadId,
 } from '../../../types';
 import type { Signal } from '../../../util/signals';
-import { MAIN_THREAD_ID } from '../../../api/types';
 
 import { EMOJI_STATUS_LOOP_LIMIT, MESSAGE_APPEARANCE_DELAY } from '../../../config';
 import {
@@ -136,7 +133,6 @@ import useShowTransition from '../../../hooks/useShowTransition';
 import useTextHighlight from '../../../hooks/useTextHighlight';
 import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 import useInnerHandlers from './hooks/useInnerHandlers';
-import useMessageReadMetrics from './hooks/useMessageReadMetrics';
 import useOuterHandlers from './hooks/useOuterHandlers';
 
 import Audio from '../../common/Audio';
@@ -261,7 +257,6 @@ type StateProps = {
   webPageStory?: ApiTypeStory;
   isConnected: boolean;
   shouldWarnAboutFiles?: boolean;
-  tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
   maxTimestamp?: number;
@@ -361,7 +356,6 @@ const Message = ({
   getIsMessageListReady,
   containerRef,
   shouldWarnAboutFiles,
-  tags,
   poll,
   maxTimestamp,
   lastPlaybackTimestamp,
@@ -458,25 +452,9 @@ const Message = ({
   const messageReplyInfo = getMessageReplyInfo(message) || getEphemeralReplyInfo(message);
   const isEphemeralReply = messageReplyInfo?.type === 'ephemeral';
   const storyReplyInfo = getStoryReplyInfo(message);
-  const readMetricsMessage = album?.mainMessage || message;
-  const canReportReadMetrics = messageListType === 'thread'
-    && threadId === MAIN_THREAD_ID
-    && !isQuickPreview
-    && !isLocal
-    && !isLocalOnly
-    && readMetricsMessage.viewsCount !== undefined;
   const hasMessageReply = isReplyToMessage(message)
     && (!isEphemeralReply || Boolean(replyMessage))
     && (!isInDocumentGroup || isFirstInDocumentGroup);
-
-  useMessageReadMetrics({
-    messageRef: ref,
-    containerRef,
-    chatId,
-    messageId: readMetricsMessage.id,
-    isEnabled: canReportReadMetrics,
-    isMessageListActive,
-  });
 
   const {
     photo, video, audio,
@@ -968,7 +946,6 @@ const Message = ({
         threadId={threadId}
         metaChildren={meta}
         observeIntersection={observeIntersectionForPlaying}
-        tags={tags}
         isAccountFrozen={isAccountFrozen}
       />
     );
@@ -1507,7 +1484,6 @@ const Message = ({
             threadId={threadId}
             isOutside
             observeIntersection={observeIntersectionForPlaying}
-            tags={tags}
             isAccountFrozen={isAccountFrozen}
           />
         )}
@@ -1715,7 +1691,6 @@ export default memo(withGlobal<OwnProps>(
       focusedQuoteOffset: isFocused ? focusedQuoteOffset : undefined,
       focusedPollOption: isFocused ? focusedPollOption : undefined,
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
-      tags: global.savedReactionTags?.byKey,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,

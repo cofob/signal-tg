@@ -11,7 +11,6 @@ import type {
   ApiInputStoryReplyInfo,
   ApiMessage,
   ApiMessageEntity,
-  ApiMessageReadMetric,
   ApiOnProgress,
   ApiSticker,
   ApiStory,
@@ -28,7 +27,7 @@ import type {
 import type { MessageKey } from '../../../util/keys/messageKey';
 import type { RequiredGlobalActions } from '../../index';
 import type {
-  ActionReturnType, GlobalState, ReportSection, TabArgs,
+  ActionReturnType, GlobalState, TabArgs,
 } from '../../types';
 import { MAIN_THREAD_ID, MESSAGE_DELETED } from '../../../api/types';
 import { LoadMoreDirection } from '../../../types';
@@ -36,7 +35,6 @@ import { LoadMoreDirection } from '../../../types';
 import {
   GIF_MIME_TYPE,
   MAX_MEDIA_FILES_FOR_ALBUM,
-  MESSAGE_ID_REQUIRED_ERROR,
   MESSAGE_LIST_SLICE,
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
@@ -128,7 +126,6 @@ import {
   selectListedIds,
   selectMessageReplyInfo,
   selectOutlyingListByMessageId,
-  selectPeer,
   selectPeerStory,
   selectPinnedIds,
   selectPollFromMessage,
@@ -1074,16 +1071,6 @@ addActionHandler('deleteEphemeralMessage', async (global, actions, payload): Pro
   }
 });
 
-addActionHandler('deleteParticipantHistory', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, peerId,
-  } = payload;
-  const chat = selectChat(global, chatId)!;
-  const peer = selectPeer(global, peerId)!;
-
-  void callApi('deleteParticipantHistory', { chat, peer });
-});
-
 addActionHandler('deleteScheduledMessages', (global, actions, payload): ActionReturnType => {
   const { messageIds, tabId = getCurrentTabId() } = payload;
   const currentMessageList = selectCurrentMessageList(global, tabId);
@@ -1138,184 +1125,6 @@ addActionHandler('deleteHistory', async (global, actions, payload): Promise<void
   });
 });
 
-addActionHandler('deleteSavedHistory', async (global, actions, payload): Promise<void> => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return;
-  }
-
-  await callApi('deleteSavedHistory', { chat });
-
-  global = getGlobal();
-  const activeChat = selectCurrentMessageList(global, tabId);
-  if (activeChat && activeChat.threadId === chatId) {
-    actions.openChat({ id: undefined, tabId });
-  }
-});
-
-addActionHandler('reportMessages', async (global, actions, payload): Promise<void> => {
-  const {
-    messageIds, description = '', option = '', chatId, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId)!;
-  const { selectedMessages, reportModal } = selectTabState(global, tabId);
-  const reportContext = selectedMessages?.reportContext;
-  const reportSections = reportContext?.sections || reportModal?.sections || [];
-  const latestReportSection = reportSections[reportSections.length - 1];
-  const selectedOption = latestReportSection?.type === 'options'
-    ? latestReportSection.options.find((item) => item.option === option)
-    : undefined;
-  const reportTitle = reportContext?.title || selectedOption?.text || latestReportSection?.title;
-
-  if (reportContext) {
-    global = updateTabState(global, {
-      selectedMessages: {
-        ...selectedMessages,
-        reportContext: {
-          ...reportContext,
-          isSubmitting: true,
-        },
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-
-  let response;
-  try {
-    const ephemeralMessage = messageIds.length === 1
-      ? selectEphemeralMessage(global, chatId, messageIds[0]) : undefined;
-    if (ephemeralMessage) {
-      const result = await callApi('reportEphemeralMessage', {
-        chat,
-        messageId: ephemeralMessage.id,
-        description,
-        option,
-      });
-      response = result ? { result, error: undefined } : undefined;
-    } else {
-      response = await callApi('reportMessages', {
-        peer: chat, messageIds, description, option,
-      });
-    }
-  } catch (err) {
-    actions.closeReportModal({ tabId });
-    if (reportContext) actions.exitMessageSelectMode({ tabId });
-    throw err;
-  }
-
-  if (!response) {
-    if (!reportContext) return;
-
-    global = getGlobal();
-    const currentSelectedMessages = selectTabState(global, tabId).selectedMessages;
-    const currentReportContext = currentSelectedMessages?.reportContext;
-    if (currentReportContext?.sections !== reportContext.sections) return;
-
-    global = updateTabState(global, {
-      selectedMessages: {
-        ...currentSelectedMessages!,
-        reportContext: {
-          ...currentReportContext,
-          isSubmitting: undefined,
-        },
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  if (reportContext) {
-    global = getGlobal();
-    if (selectTabState(global, tabId).selectedMessages?.reportContext?.sections !== reportContext.sections) {
-      return;
-    }
-  }
-
-  const { result, error } = response;
-
-  if (error === MESSAGE_ID_REQUIRED_ERROR) {
-    global = getGlobal();
-    const currentSelectedMessages = selectTabState(global, tabId).selectedMessages;
-    global = updateTabState(global, {
-      reportModal: undefined,
-      selectedMessages: {
-        chatId,
-        messageIds: reportContext ? currentSelectedMessages?.messageIds || [] : [],
-        reportContext: {
-          option,
-          description,
-          title: reportTitle,
-          sections: reportSections,
-        },
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  if (!result) return;
-
-  if (result.type === 'reported') {
-    actions.showNotification({
-      message: result
-        ? {
-          key: 'ReportPeerAlertSuccess',
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        }
-        : { key: 'ReportSubmitError' },
-      tabId,
-    });
-    actions.closeReportModal({ tabId });
-    if (reportContext) {
-      actions.exitMessageSelectMode({ tabId });
-    }
-    return;
-  }
-
-  if (result.type === 'selectOption') {
-    global = getGlobal();
-    const newSection = {
-      type: 'options',
-      title: result.title,
-      options: result.options,
-      subtitle: reportTitle,
-    } satisfies ReportSection;
-    global = updateTabState(global, {
-      selectedMessages: reportContext ? undefined : selectTabState(global, tabId).selectedMessages,
-      reportModal: {
-        chatId,
-        messageIds,
-        description,
-        subject: 'message',
-        sections: [...reportSections, newSection],
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-
-  if (result.type === 'comment') {
-    global = getGlobal();
-    const newSection = {
-      type: 'comment',
-      isOptional: result.isOptional,
-      option: result.option,
-      title: reportTitle,
-    } satisfies ReportSection;
-    global = updateTabState(global, {
-      selectedMessages: reportContext ? undefined : selectTabState(global, tabId).selectedMessages,
-      reportModal: {
-        chatId,
-        messageIds,
-        description,
-        subject: 'message',
-        sections: [...reportSections, newSection],
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-});
-
 addActionHandler('sendMessageAction', async (global, actions, payload): Promise<void> => {
   const { action, chatId, threadId } = payload;
   if (global.connectionState !== 'connectionStateReady') return;
@@ -1329,17 +1138,6 @@ addActionHandler('sendMessageAction', async (global, actions, payload): Promise<
   await callApi('sendMessageAction', {
     peer: chat, threadId, action,
   });
-});
-
-addActionHandler('reportChannelSpam', (global, actions, payload): ActionReturnType => {
-  const { participantId, chatId, messageIds } = payload;
-  const peer = selectPeer(global, participantId);
-  const chat = selectChat(global, chatId);
-  if (!peer || !chat) {
-    return;
-  }
-
-  void callApi('reportChannelSpam', { peer, chat, messageIds });
 });
 
 addActionHandler('markMessageListRead', (global, actions, payload): ActionReturnType => {
@@ -2829,50 +2627,6 @@ addActionHandler('loadMessageViews', async (global, actions, payload): Promise<v
   });
 
   setGlobal(global);
-});
-
-const SEND_READ_METRICS_TIMEOUT = 1000;
-let readMetricsReportTimeout: number | undefined;
-let readMetricsToReport: Record<string, ApiMessageReadMetric[]> = {};
-
-function reportMessageReadMetrics() {
-  if (readMetricsReportTimeout) {
-    clearTimeout(readMetricsReportTimeout);
-    readMetricsReportTimeout = undefined;
-  }
-
-  const currentReadMetricsToReport = readMetricsToReport;
-  readMetricsToReport = {};
-
-  const global = getGlobal();
-  if (selectIsCurrentUserFrozen(global)) return;
-
-  Object.entries(currentReadMetricsToReport).forEach(([chatId, metrics]) => {
-    if (!metrics.length) return;
-
-    const chat = selectChat(global, chatId);
-    if (!chat) return;
-
-    void callApi('reportMessageReadMetrics', { chat, metrics });
-  });
-}
-
-addActionHandler('scheduleMessageReadMetricsReport', (global, actions, payload): ActionReturnType => {
-  const { chatId, metrics } = payload;
-
-  if (!metrics.length) return undefined;
-
-  if (!readMetricsReportTimeout) {
-    readMetricsReportTimeout = window.setTimeout(reportMessageReadMetrics, SEND_READ_METRICS_TIMEOUT);
-  }
-
-  if (!readMetricsToReport[chatId]) {
-    readMetricsToReport[chatId] = [];
-  }
-
-  readMetricsToReport[chatId].push(...metrics);
-
-  return undefined;
 });
 
 addActionHandler('loadFactChecks', async (global, actions, payload): Promise<void> => {

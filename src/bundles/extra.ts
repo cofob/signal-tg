@@ -15,7 +15,6 @@ export { default as AgeVerificationModal } from '../components/modals/ageVerific
 export { default as ChatInviteModal } from '../components/modals/chatInvite/ChatInviteModal';
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 
-export { default as ReportModal } from '../components/modals/reportModal/ReportModal';
 export { default as CalendarModal } from '../components/common/CalendarModal';
 export { default as DeleteMessageModal } from '../components/common/DeleteMessageModal';
 export { default as DeleteMemberModal } from '../components/modals/deleteMember/DeleteMemberModal';

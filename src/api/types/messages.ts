@@ -15,15 +15,6 @@ export interface ApiDimensions {
   height: number;
 }
 
-export type ApiMessageReadMetric = {
-  messageId: number;
-  viewId: string;
-  timeInViewMs: number;
-  activeTimeInViewMs: number;
-  heightToViewportRatioPermille: number;
-  seenRangeRatioPermille: number;
-};
-
 export interface ApiPhotoSize extends ApiDimensions {
   type: 's' | 'm' | 'x' | 'y' | 'w';
 }
@@ -633,7 +624,6 @@ export interface ApiMessage {
 
 export interface ApiReactions {
   canSeeList?: boolean;
-  areTags?: boolean;
   results: ApiReactionCount[];
   recentReactions?: ApiPeerReaction[];
   topReactors?: ApiMessageReactor[];
@@ -701,12 +691,6 @@ export type ApiReactionCustomEmoji = {
 export type ApiReaction = ApiReactionEmoji | ApiReactionCustomEmoji;
 
 export type ApiReactionKey = `${string}-${string}` | 'unsupported';
-
-export type ApiSavedReactionTag = {
-  reaction: ApiReaction;
-  title?: string;
-  count: number;
-};
 
 export interface ApiBaseThreadInfo {
   chatId: string;

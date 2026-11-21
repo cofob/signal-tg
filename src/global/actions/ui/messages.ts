@@ -1003,33 +1003,6 @@ addActionHandler('closeOneTimeMediaModal', (global, actions, payload): ActionRet
   setGlobal(global);
 });
 
-addActionHandler('closeReportModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    reportModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openPreviousReportModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const reportModal = selectTabState(global, tabId).reportModal;
-  if (!reportModal) {
-    return undefined;
-  }
-
-  if (reportModal.sections.length === 1) {
-    actions.closeReportModal({ tabId });
-    return undefined;
-  }
-
-  return updateTabState(global, {
-    reportModal: {
-      ...reportModal,
-      sections: reportModal.sections.slice(0, -1),
-    },
-  }, tabId);
-});
-
 function copyTextForMessages(
   payload: { request: MessageCopyRequest; shouldNotify?: boolean; textFormat?: ClipboardTextFormat },
   tabId: number,

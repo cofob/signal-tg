@@ -61,7 +61,6 @@ import { areSortedArraysEqual, buildCollectionByKey } from '../../util/iteratees
 import { isLocalMessageId } from '../../util/keys/messageKey';
 import resetScroll from '../../util/resetScroll';
 import { debounce, onTickEnd } from '../../util/schedulers';
-import { getServerTime } from '../../util/serverTime';
 import getOffsetToContainer from '../../util/visibility/getOffsetToContainer';
 import { REM } from '../common/helpers/mediaDimensions';
 import { groupMessages } from './helpers/groupMessages';
@@ -141,7 +140,6 @@ type StateProps = {
   isChatProtected?: boolean;
   isActive?: boolean;
   shouldScrollToBottom?: boolean;
-  reactionPollingPause?: { until: number; chatId: string };
   serverThemeSettings?: ApiThemeSettings;
   actionMessageBg: string;
   canAnimateTheme?: boolean;
@@ -167,7 +165,6 @@ enum Content {
   MessageList,
 }
 
-const MESSAGE_REACTIONS_POLLING_INTERVAL = 20 * 1000;
 const MESSAGE_FACT_CHECK_UPDATE_INTERVAL = 5 * 1000;
 const MESSAGE_STORY_POLLING_INTERVAL = 5 * 60 * 1000;
 
@@ -235,7 +232,6 @@ const MessageList = ({
   currentUserId,
   isChatProtected,
   isAccountFrozen,
-  reactionPollingPause,
   serverThemeSettings,
   actionMessageBg,
   canAnimateTheme,
@@ -246,7 +242,7 @@ const MessageList = ({
   onScrollDownToggle,
 }: OwnProps & StateProps) => {
   const {
-    loadViewportMessages, setScrollOffset, loadMessageReactions, copyMessagesByIds,
+    loadViewportMessages, setScrollOffset, copyMessagesByIds,
     loadPeerStoriesByIds, loadFactChecks,
   } = getActions();
   const lang = useLang();
@@ -496,21 +492,6 @@ const MessageList = ({
     currentLastMessage?.isTypingDraft && !currentLastMessage.isOutgoing,
   );
   const isCurrentLastMessageOwnSent = Boolean(currentLastMessage?.isOutgoing);
-
-  useInterval(() => {
-    if (!messageIds || !messagesById || type === 'scheduled' || isAccountFrozen || !isActive) return;
-    if (!isGroupChat) return;
-    if (reactionPollingPause?.chatId === chatId && reactionPollingPause.until > getServerTime()) return;
-
-    const ids = messageIds.filter((id) => {
-      const message = messagesById[id];
-      return message && message.reactions && !message.content.action;
-    });
-
-    if (!ids.length) return;
-
-    loadMessageReactions({ chatId, ids });
-  }, MESSAGE_REACTIONS_POLLING_INTERVAL);
 
   useInterval(() => {
     if (!messageIds || !messagesById || type === 'scheduled' || !isActive) {
@@ -1416,7 +1397,6 @@ export default memo(withGlobal<OwnProps>(
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
       shouldScrollToBottom,
-      reactionPollingPause: global.reactionPollingPause,
       serverThemeSettings: selectChatThemeSettings(global, chatId),
       actionMessageBg: selectActionMessageBg(global, chatId),
       canAnimateTheme: selectCanAnimateInterface(global),

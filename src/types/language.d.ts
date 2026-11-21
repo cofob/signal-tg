@@ -24,8 +24,6 @@ export interface LangPair {
   'SendActionUploadFile': undefined;
   'SendActionRecordRound': undefined;
   'SendActionUploadRound': undefined;
-  'SetUrlInUse': undefined;
-  'UsernameInUse': undefined;
   'CreateGroupError': undefined;
   'PasscodeControllerErrorCurrent': undefined;
   'LimitReachedPublicLinksPremium': undefined;
@@ -277,8 +275,6 @@ export interface LangPair {
   'ConversationDeleteMessagesForEveryone': undefined;
   'ChatListDeleteForCurrentUser': undefined;
   'Delete': undefined;
-  'FakeMessage': undefined;
-  'ScamMessage': undefined;
   'SendWithoutSound': undefined;
   'SetReminder': undefined;
   'ScheduleMessage': undefined;
@@ -292,15 +288,7 @@ export interface LangPair {
   'NoteToSelf': undefined;
   'SavedMessagesShort': undefined;
   'AccDescrPrevious': undefined;
-  'ReportReasonSpam': undefined;
-  'ReportReasonViolence': undefined;
-  'ReportReasonPornography': undefined;
-  'ReportReasonChildAbuse': undefined;
-  'ReportPeerReasonCopyright': undefined;
-  'ReportReasonOther': undefined;
   'ReportPeerReport': undefined;
-  'ReportReasonDescription': undefined;
-  'ReportButton': undefined;
   'StickersRemoveFromFavorites': undefined;
   'StickersAddToFavorites': undefined;
   'ViewPackPreview': undefined;
@@ -463,7 +451,6 @@ export interface LangPair {
   'Theme': undefined;
   'ColorTheme': undefined;
   'AccDescrStickers': undefined;
-  'DoubleTapSetting': undefined;
   'SuggestStickers': undefined;
   'UploadImage': undefined;
   'SetColor': undefined;
@@ -577,8 +564,6 @@ export interface LangPair {
   'Forward': undefined;
   'MediaZoomOut': undefined;
   'MediaZoomIn': undefined;
-  'PeerInfoReportProfileVideo': undefined;
-  'PeerInfoReportProfilePhoto': undefined;
   'MediaviewProfilePhoto': undefined;
   'AccActionPlay': undefined;
   'AttachAudio': undefined;
@@ -734,7 +719,6 @@ export interface LangPair {
   'EmptyGroupInfoLine4': undefined;
   'Reactions': undefined;
   'ChatListMarkAllAsRead': undefined;
-  'PaymentCheckoutName': undefined;
   'PaymentReceipt': undefined;
   'ChannelAddUsers': undefined;
   'RemoveMember': undefined;
@@ -939,12 +923,6 @@ export interface LangPair {
   'GroupInaccessible': undefined;
   'AriaPasswordToggle': undefined;
   'NothingFound': undefined;
-  'SetUrlShort': undefined;
-  'SetUrlLong': undefined;
-  'SetUrlInvalid': undefined;
-  'UsernameShort': undefined;
-  'UsernameLong': undefined;
-  'UsernameInvalid': undefined;
   'AriaCodeWordWrap': undefined;
   'AriaBackToChatList': undefined;
   'NoContactsFound': undefined;
@@ -1617,7 +1595,6 @@ export interface LangPair {
   'ChatSetPhotoOrVideo': undefined;
   'Checking': undefined;
   'ChooseStickerMyStickerSets': undefined;
-  'ClearRecentReactionsAlertMessage': undefined;
   'ClearRecentStickersAlertMessage': undefined;
   'ClearSearchAlert': undefined;
   'StoryPrivacyOptionCloseFriends': undefined;
@@ -1705,18 +1682,8 @@ export interface LangPair {
   'ReplyPrivately': undefined;
   'ReplyToAnotherChat': undefined;
   'ReplyToGroupStory': undefined;
-  'Report2Comment': undefined;
-  'Report2CommentOptional': undefined;
-  'ReportSend': undefined;
-  'ReportStory': undefined;
   'Reset': undefined;
   'Saved': undefined;
-  'SavedTagFilterByTag': undefined;
-  'SavedTagLabelTag': undefined;
-  'SavedTagLabelTagText': undefined;
-  'SavedTagReactionsHint2': undefined;
-  'SavedTagRemoveTag': undefined;
-  'SavedTagRenameTag': undefined;
   'SearchAsChat': undefined;
   'SearchAsList': undefined;
   'SearchEmptyViewTitle': undefined;
@@ -1773,12 +1740,6 @@ export interface LangPair {
   'UserRestrictionsNoSendText': undefined;
   'UserRestrictionsNoSendVideos': undefined;
   'UserRestrictionsNoSendVoice': undefined;
-  'UsernameActivateAlertShow': undefined;
-  'UsernameActivateAlertText': undefined;
-  'UsernameActivateAlertTitle': undefined;
-  'UsernameDeactivateAlertHide': undefined;
-  'UsernameDeactivateAlertText': undefined;
-  'UsernameDeactivateAlertTitle': undefined;
   'UsernameCopied': undefined;
   'VideoUnsupportedDesktop': undefined;
   'VideoUnsupportedMobile': undefined;
@@ -1794,20 +1755,12 @@ export interface LangPair {
   'MediaviewGroupPhoto': undefined;
   'MediaviewProfilePhotoByYou': undefined;
   'MediaviewProfilePublicPhoto': undefined;
-  'ReportPleaseSelectMessages': undefined;
   'SettingsTitleChatName': undefined;
   'SettingsWindowSystem': undefined;
-  'UsernamesActive': undefined;
-  'UsernamesDescription': undefined;
-  'UsernamesEdit': undefined;
-  'UsernamesNonActive': undefined;
-  'UsernamesSubtitle': undefined;
   'VideoPlayerPictureInPicture': undefined;
   'AriaReplaceAttachment': undefined;
   'GroupTitleEmptyError': undefined;
   'ContactFirstNameRequired': undefined;
-  'ReportChatIllegalDrugs': undefined;
-  'ReportChatPersonalDetails': undefined;
   'UserNameCopied': undefined;
   'ChatNameCopied': undefined;
   'SettingsTestServerLogin': undefined;
@@ -1882,7 +1835,6 @@ export interface LangPair {
   'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
-  'ReportSubmitError': undefined;
   'PageTitleInactive': undefined;
   'SettingsKeywordsChatBackground': undefined;
   'SettingsKeywordsTheme': undefined;
@@ -1949,9 +1901,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ActionWatchingAnimations': {
     'emoji': V;
-  };
-  'SetUrlAvailable': {
-    'url': V;
   };
   'UsernameAvailable': {
     'username': V;
@@ -2701,7 +2650,6 @@ export interface LangPairWithVariables<V = LangVariable> {
 
 export interface LangPairPlural {
   'DeleteForMeChatHint': undefined;
-  'ReactionDeleted': undefined;
   'MediaReplaceInvalidError': undefined;
   'FwdMessagesToNoteToSelf': undefined;
 }
@@ -3084,12 +3032,6 @@ export interface LangKeyGroups {
       | 'DiceToast';
     variables: 'emoji';
   };
-  'url': {
-    keys:
-      | 'SetUrlAvailable'
-      | 'OpenUrlText';
-    variables: 'url';
-  };
   'username': {
     keys:
       | 'UsernameAvailable'
@@ -3257,6 +3199,11 @@ export interface LangKeyGroups {
       | 'ActionSharingDisabled'
       | 'ActionSharingEnabled';
     variables: 'from';
+  };
+  'url': {
+    keys:
+      | 'OpenUrlText';
+    variables: 'url';
   };
   'timer': {
     keys:

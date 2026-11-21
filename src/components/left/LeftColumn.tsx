@@ -331,7 +331,6 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.Main });
           return;
 
-        case SettingsScreens.QuickReaction:
         case SettingsScreens.CustomEmoji:
           openSettingsScreen({ screen: SettingsScreens.Stickers });
           return;

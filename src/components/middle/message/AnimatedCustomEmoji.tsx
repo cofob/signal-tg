@@ -58,7 +58,7 @@ const AnimatedCustomEmoji: FC<OwnProps & StateProps> = ({
     style,
     handleClick,
   } = useAnimatedEmoji(
-    chatId, messageId, soundId, activeEmojiInteractions, isOwn, effect?.emoji, getCustomEmojiSize(1),
+    chatId, messageId, soundId, isOwn, effect?.emoji, getCustomEmojiSize(1),
   );
 
   return (

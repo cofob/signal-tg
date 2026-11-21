@@ -108,7 +108,6 @@ const StickerSet = ({
   const {
     clearRecentStickers,
     clearRecentCustomEmoji,
-    clearRecentReactions,
     toggleStickerSet,
     loadStickers,
   } = getActions();
@@ -137,9 +136,7 @@ const StickerSet = ({
   const isEmoji = stickerSet.isEmoji;
 
   const handleClearRecent = useLastCallback(() => {
-    if (isReactionPicker) {
-      clearRecentReactions();
-    } else if (isEmoji) {
+    if (isEmoji) {
       clearRecentCustomEmoji();
     } else {
       clearRecentStickers();
@@ -343,7 +340,7 @@ const StickerSet = ({
 
       {isRecent && (
         <ConfirmDialog
-          text={lang(isReactionPicker ? 'ClearRecentReactionsAlertMessage' : 'ClearRecentStickersAlertMessage')}
+          text={lang('ClearRecentStickersAlertMessage')}
           isOpen={isConfirmModalOpen}
           onClose={closeConfirmModal}
           confirmHandler={handleClearRecent}
