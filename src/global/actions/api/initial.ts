@@ -168,6 +168,28 @@ addActionHandler('signUp', (global, actions, payload): ActionReturnType => {
   });
 });
 
+addActionHandler('restoreAuthBackup', async (global, actions, payload): Promise<void> => {
+  const { recoveryKey, file } = payload;
+  const data = file ? new Uint8Array(await file.arrayBuffer()) : undefined;
+  void callApi('provideAuthRestore', recoveryKey, data);
+
+  global = getGlobal();
+  global = updateAuth(global, {
+    backupRestore: { step: 'verifying' },
+    errorKey: undefined,
+  });
+  setGlobal(global);
+});
+
+addActionHandler('skipAuthRestore', (global): ActionReturnType => {
+  void callApi('skipAuthRestore');
+
+  return updateAuth(global, {
+    isLoading: true,
+    errorKey: undefined,
+  });
+});
+
 addActionHandler('returnToAuthPhoneNumber', (global): ActionReturnType => {
   void callApi('restartAuth');
 

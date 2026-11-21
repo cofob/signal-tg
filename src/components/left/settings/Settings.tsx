@@ -21,6 +21,7 @@ import SettingsKeyboardShortcuts from './keyboardShortcuts/SettingsKeyboardShort
 import SettingsPasscode from './passcode/SettingsPasscode';
 import SettingsSearch from './search/SettingsSearch';
 import SettingsAutoDeleteMessages from './SettingsAutoDeleteMessages';
+import SettingsBackups from './SettingsBackups';
 import SettingsCustomEmoji from './SettingsCustomEmoji';
 import SettingsDataStorage from './SettingsDataStorage';
 import SettingsEditProfile from './SettingsEditProfile';
@@ -491,6 +492,11 @@ const Settings = ({
       case SettingsScreens.SignalDevices:
         return (
           <SettingsSignalDevices isActive={isScreenActive} onReset={handleReset} />
+        );
+
+      case SettingsScreens.Backups:
+        return (
+          <SettingsBackups isActive={isScreenActive} onReset={handleReset} />
         );
 
       case SettingsScreens.Performance:

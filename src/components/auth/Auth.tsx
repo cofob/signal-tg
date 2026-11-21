@@ -12,6 +12,7 @@ import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useHistoryBack from '../../hooks/useHistoryBack';
 
 import Transition from '../ui/Transition';
+import AuthBackupRestore from './AuthBackupRestore';
 import AuthCaptcha from './AuthCaptcha';
 import AuthCode from './AuthCode.async';
 import AuthHistorySync from './AuthHistorySync';
@@ -57,6 +58,8 @@ const Auth = ({
         return <AuthPhoneNumber />;
       case 'authorizationStateWaitCaptcha':
         return <AuthCaptcha />;
+      case 'authorizationStateWaitBackupRestore':
+        return <AuthBackupRestore />;
       case 'authorizationStateWaitQrCode':
         return isSyncingHistory ? <AuthHistorySync /> : <AuthQrCode />;
       default:
@@ -76,6 +79,8 @@ const Auth = ({
         return 3;
       case 'authorizationStateWaitCaptcha':
         return 6;
+      case 'authorizationStateWaitBackupRestore':
+        return 7;
       case 'authorizationStateWaitQrCode':
         return isSyncingHistory ? 5 : 4;
       default:

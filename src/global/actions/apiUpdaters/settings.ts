@@ -3,6 +3,7 @@ import type { ActionReturnType } from '../../types';
 import { addActionHandler, setGlobal } from '../../index';
 import {
   addNotifyException,
+  replaceSettings,
   updateNotifyDefaults,
   updateTopic,
 } from '../../reducers';
@@ -21,6 +22,10 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       global = addNotifyException(global, chatId, settings);
       setGlobal(global);
       break;
+    }
+
+    case 'updateBackupSettings': {
+      return replaceSettings(global, { backups: update.settings });
     }
 
     case 'updateTopicNotifySettings': {

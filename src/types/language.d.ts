@@ -2286,6 +2286,57 @@ export interface LangPair {
   'DesktopMenuSelectAll': undefined;
   'DesktopMenuWindow': undefined;
   'DesktopMenuMinimize': undefined;
+  'SettingsBackups': undefined;
+  'SettingsBackupsDesc': undefined;
+  'SettingsKeywordsBackups': undefined;
+  'BackupsAbout': undefined;
+  'BackupsTierFree': undefined;
+  'BackupsTierPaid': undefined;
+  'BackupsTurnOn': undefined;
+  'BackupsTurnOff': undefined;
+  'BackupsTurnOffText': undefined;
+  'BackupsTurnOffDelete': undefined;
+  'BackupsFrequency': undefined;
+  'BackupsFrequencyDaily': undefined;
+  'BackupsFrequencyWeekly': undefined;
+  'BackupsFrequencyMonthly': undefined;
+  'BackupsFrequencyManual': undefined;
+  'BackupsBackUpNow': undefined;
+  'BackupsCancel': undefined;
+  'BackupsLastBackup': undefined;
+  'BackupsNever': undefined;
+  'BackupsOnServer': undefined;
+  'BackupsOnServerNone': undefined;
+  'BackupsLastFailed': undefined;
+  'BackupsStepExporting': undefined;
+  'BackupsStepValidating': undefined;
+  'BackupsRecoveryKey': undefined;
+  'BackupsRecoveryKeyAbout': undefined;
+  'BackupsUnavailable': undefined;
+  'BackupsUnavailableNoRecoveryKey': undefined;
+  'BackupsUnavailableNoMediaKey': undefined;
+  'BackupsFile': undefined;
+  'BackupsExportFile': undefined;
+  'BackupsImportFile': undefined;
+  'BackupsFileAbout': undefined;
+  'BackupsImportText': undefined;
+  'BackupsImportChoose': undefined;
+  'BackupsErrorRateLimited': undefined;
+  'BackupsErrorNetwork': undefined;
+  'BackupsErrorNotEnabled': undefined;
+  'BackupsErrorInvalidBackup': undefined;
+  'BackupsErrorWrongKey': undefined;
+  'BackupsErrorInvalidKey': undefined;
+  'BackupsErrorForwardSecrecy': undefined;
+  'AuthRestoreTitle': undefined;
+  'AuthRestoreText': undefined;
+  'AuthRestoreKey': undefined;
+  'AuthRestoreButton': undefined;
+  'AuthRestoreFile': undefined;
+  'AuthRestoreSkip': undefined;
+  'AuthRestoreErrorNoBackup': undefined;
+  'AuthRestoreStepVerifying': undefined;
+  'AuthRestoreStepValidating': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -3279,6 +3330,19 @@ export interface LangPairWithVariables<V = LangVariable> {
   'DesktopMenuHide': {
     'app': V;
   };
+  'BackupsStepUploading': {
+    'percent': V;
+  };
+  'AuthRestoreFound': {
+    'date': V;
+    'size': V;
+  };
+  'AuthRestoreStepDownloading': {
+    'percent': V;
+  };
+  'AuthRestoreStepImporting': {
+    'percent': V;
+  };
 }
 
 export interface LangPairPlural {
@@ -3622,6 +3686,9 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PageTitleNotifications': {
     'count': V;
   };
+  'BackupsImportDone': {
+    'count': V;
+  };
 }
 
 export interface LangKeyGroups {
@@ -3755,7 +3822,10 @@ export interface LangKeyGroups {
   'percent': {
     keys:
       | 'SignalHistorySyncDownloading'
-      | 'SignalHistorySyncImporting';
+      | 'SignalHistorySyncImporting'
+      | 'BackupsStepUploading'
+      | 'AuthRestoreStepDownloading'
+      | 'AuthRestoreStepImporting';
     variables: 'percent';
   };
   'time': {
@@ -4321,6 +4391,11 @@ export interface LangKeyGroups {
       | 'DesktopMenuHide';
     variables: 'app';
   };
+  'date,size': {
+    keys:
+      | 'AuthRestoreFound';
+    variables: 'date' | 'size';
+  };
 }
 
 export interface LangPluralKeyGroups {
@@ -4429,7 +4504,8 @@ export interface LangPluralKeyGroups {
       | 'Views'
       | 'Voice'
       | 'SeenByUsers'
-      | 'PageTitleNotifications';
+      | 'PageTitleNotifications'
+      | 'BackupsImportDone';
     variables: 'count';
   };
   'index': {

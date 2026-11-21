@@ -16,7 +16,7 @@ import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
-  client, db, keyTransparency, logError, processor, store,
+  backups, client, db, keyTransparency, logError, processor, store,
 } from './engine';
 import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
@@ -118,6 +118,7 @@ export async function stopClient(shouldForget: boolean) {
   historyTransferController?.abort();
   processor.stop();
   keyTransparency.stop();
+  backups.stop();
   client.close();
   resetCdsiState();
   currentAccount = undefined;
@@ -349,8 +350,15 @@ async function attemptConnection() {
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   keyTransparency.start();
+  void startBackupSchedule();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
+}
+
+/** Backups run while the app is open and connected, once the account has backups turned on */
+async function startBackupSchedule() {
+  const account = await store.getItem('account');
+  if (account?.backups?.isEnabled) backups.start();
 }
 
 /**

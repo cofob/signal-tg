@@ -144,6 +144,17 @@ const SettingsMain = ({
           </ListItem>
 
           <ListItem
+            icon="archive-filled"
+            iconBg="orange"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.Backups })}
+          >
+            <span className="title">{lang('SettingsBackups')}</span>
+            <span className="subtitle">{lang('SettingsBackupsDesc')}</span>
+          </ListItem>
+
+          <ListItem
             icon="devices-filled"
             iconBg="blue"
             multiline

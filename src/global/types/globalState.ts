@@ -3,6 +3,7 @@ import type {
   ApiAudio,
   ApiAuthCodeInfo,
   ApiAvailableReaction,
+  ApiBackupRestoreState,
   ApiChat,
   ApiChatFolder,
   ApiChatFullInfo,
@@ -144,6 +145,7 @@ export type GlobalState = {
       expires: number;
     };
     historySync?: ApiHistorySyncProgress;
+    backupRestore?: ApiBackupRestoreState;
 
   };
   countryList: {

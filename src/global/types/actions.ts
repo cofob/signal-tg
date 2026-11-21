@@ -3,6 +3,7 @@ import type {
   ApiAudio,
   ApiAuthCodeTransport,
   ApiAvatarUpload,
+  ApiBackupFrequency,
   ApiBirthday,
   ApiChat,
   ApiChatAdminRights,
@@ -226,6 +227,17 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadSignalPinSettings: undefined;
+  restoreAuthBackup: { recoveryKey: string; file?: File };
+  skipAuthRestore: undefined;
+  loadBackupSettings: undefined;
+  loadBackupRemoteStatus: undefined;
+  enableBackups: { frequency: ApiBackupFrequency } & WithTabId;
+  disableBackups: { shouldDeleteBackup?: boolean } & WithTabId;
+  setBackupFrequency: { frequency: ApiBackupFrequency } & WithTabId;
+  backUpNow: WithTabId | undefined;
+  cancelBackup: undefined;
+  exportBackupFile: WithTabId | undefined;
+  importBackupFile: { file: File; recoveryKey: string } & WithTabId;
   loadSignalDevices: undefined;
   loadSignalMessageSettings: undefined;
   updateSignalMessageSettings: Partial<ApiSignalMessageSettings>;

@@ -66,6 +66,7 @@ type BackupServiceOptions = {
 };
 
 const MS_PER_SECOND = 1000;
+const PERCENT = 100;
 const MS_PER_DAY = 24 * 60 * 60 * MS_PER_SECOND;
 // Signal Android `BackupFrequency` and `BackupMessagesJob`
 const FREQUENCY_INTERVALS: Record<BackupFrequency, number | undefined> = {
@@ -97,6 +98,8 @@ export default class BackupService {
 
   private abortController?: AbortController;
 
+  private currentProgress?: BackupProgress;
+
   constructor(private options: BackupServiceOptions) {}
 
   /** Whether this account has what backups need, and what is missing otherwise */
@@ -108,6 +111,11 @@ export default class BackupService {
 
   get isBackingUp() {
     return this.isRunning;
+  }
+
+  /** The step of the backup that is running, with the share of the upload that went out */
+  get progress() {
+    return this.currentProgress;
   }
 
   /**
@@ -153,10 +161,20 @@ export default class BackupService {
     this.abortController = new AbortController();
     const signal = options.signal ? AbortSignal.any([options.signal, this.abortController.signal])
       : this.abortController.signal;
+    this.currentProgress = undefined;
     this.options.onChange();
+    const onProgress = (progress: BackupProgress) => {
+      const previous = this.currentProgress;
+      this.currentProgress = progress;
+      // The upload reports every chunk; the settings show whole percents
+      const isSame = previous?.step === progress.step
+        && Math.floor((previous.progress ?? 0) * PERCENT) === Math.floor((progress.progress ?? 0) * PERCENT);
+      if (!isSame) this.options.onChange();
+      options.onProgress?.(progress);
+    };
 
     try {
-      const result = await this.runBackup(signal, options.onProgress);
+      const result = await this.runBackup(signal, onProgress);
       const account = await this.getAccount();
       await this.options.client.updateAccount({
         backups: {
@@ -174,8 +192,21 @@ export default class BackupService {
     } finally {
       this.isRunning = false;
       this.abortController = undefined;
+      this.currentProgress = undefined;
       this.options.onChange();
     }
+  }
+
+  /**
+   * The backup as a file for the user to keep: the file that goes to the service, made by the same export. Backups
+   * need not be turned on, but the account needs its recovery key, which opens the file.
+   */
+  async exportToFile(options: { signal?: AbortSignal; onProgress?(progress: BackupProgress): void } = {}) {
+    const { account } = await this.getKeys();
+    const { file, stats } = await this.buildFile(
+      account, account.backups?.messageDays, options.signal ?? new AbortController().signal, options.onProgress,
+    );
+    return { file, stats };
   }
 
   cancelBackup() {
@@ -209,17 +240,22 @@ export default class BackupService {
 
   /** Starts the schedule: a check shortly after the start and then hourly */
   start() {
-    this.stop();
+    this.clearTimers();
     this.firstCheckTimer = setTimeout(() => void this.check(), FIRST_CHECK_DELAY_MS);
     this.timer = setInterval(() => void this.check(), CHECK_INTERVAL_MS);
   }
 
+  /** Ends the schedule and a backup that is running */
   stop() {
+    this.clearTimers();
+    this.abortController?.abort();
+  }
+
+  private clearTimers() {
     clearTimeout(this.firstCheckTimer);
     clearInterval(this.timer);
     this.firstCheckTimer = undefined;
     this.timer = undefined;
-    this.abortController?.abort();
   }
 
   /** Runs the backup that is due, or refreshes the one on the service when its day is up */
@@ -244,30 +280,11 @@ export default class BackupService {
 
   private async runBackup(signal: AbortSignal, onProgress?: (progress: BackupProgress) => void) {
     const { account, keys } = await this.getKeys();
-    const { store, db, appVersion } = this.options;
-    const messageKeys = deriveMessageBackupKeys(keys.backupKey, account.aci);
+    const { store } = this.options;
 
     let messageDays = account.backups?.messageDays;
     for (;;) {
-      signal.throwIfAborted();
-      onProgress?.({ step: 'exporting' });
-      const exported = createBackupExport({
-        store,
-        db,
-        account,
-        appVersion,
-        backupTier: account.backups?.tier,
-        messageCutoffMs: messageDays !== undefined
-          ? getServerTime() * MS_PER_SECOND - messageDays * MS_PER_DAY : undefined,
-      });
-      const { file, uncompressedLength } = await writeBackupFile(exported.info, exported.frames, messageKeys, {
-        estimatedUncompressedLength: account.backups?.uncompressedLength,
-      });
-
-      // The validator is the same as the service's clients run on a restore
-      signal.throwIfAborted();
-      onProgress?.({ step: 'validating' });
-      await validateBackupFile(file, messageKeys);
+      const { file, uncompressedLength, stats } = await this.buildFile(account, messageDays, signal, onProgress);
 
       signal.throwIfAborted();
       onProgress?.({ step: 'uploading', progress: 0 });
@@ -291,8 +308,40 @@ export default class BackupService {
       await this.options.client.updateAccount({
         backups: { ...(await this.getAccount()).backups, uncompressedLength, messageDays },
       });
-      return { size: file.length, stats: exported.stats } satisfies BackupResult;
+      return { size: file.length, stats } satisfies BackupResult;
     }
+  }
+
+  /** Exports the local data to the encrypted backup file and validates it */
+  private async buildFile(
+    account: AccountRecord,
+    messageDays: number | undefined,
+    signal: AbortSignal,
+    onProgress?: (progress: BackupProgress) => void,
+  ) {
+    const { store, db, appVersion } = this.options;
+    const messageKeys = deriveMessageBackupKeys(getArchiveKeys(account).backupKey, account.aci);
+
+    signal.throwIfAborted();
+    onProgress?.({ step: 'exporting' });
+    const exported = createBackupExport({
+      store,
+      db,
+      account,
+      appVersion,
+      backupTier: account.backups?.tier,
+      messageCutoffMs: messageDays !== undefined
+        ? getServerTime() * MS_PER_SECOND - messageDays * MS_PER_DAY : undefined,
+    });
+    const { file, uncompressedLength } = await writeBackupFile(exported.info, exported.frames, messageKeys, {
+      estimatedUncompressedLength: account.backups?.uncompressedLength,
+    });
+
+    // The validator is the one that the clients of the service run on a restore
+    signal.throwIfAborted();
+    onProgress?.({ step: 'validating' });
+    await validateBackupFile(file, messageKeys);
+    return { file, uncompressedLength, stats: exported.stats };
   }
 
   /** The level of the credential for the tier of the account: the media credential knows it when there is one */

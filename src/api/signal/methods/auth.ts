@@ -4,11 +4,13 @@ import { startSession, switchToDeviceLink, switchToRegistration } from '../clien
 import { logError } from '../engine';
 import {
   requestRegistrationCode,
+  skipRegistrationRestore,
   submitRegistrationCaptcha,
   submitRegistrationCode,
   submitRegistrationPhoneNumber,
   submitRegistrationPin,
   submitRegistrationProfile,
+  submitRegistrationRestore,
 } from '../registration';
 
 // Registration of a new account with a phone number; the link QR code stays the default way to sign in
@@ -46,6 +48,15 @@ export function provideAuthPassword(pin: string) {
     if (account) return startSession(account);
     return undefined;
   }).catch(logError);
+}
+
+/** Restores the backup of the recovery key at registration, from the backup service or from a backup file */
+export function provideAuthRestore(recoveryKey: string, file?: Uint8Array<ArrayBuffer>) {
+  void submitRegistrationRestore(recoveryKey, file).catch(logError);
+}
+
+export function skipAuthRestore() {
+  skipRegistrationRestore();
 }
 
 /** Returns to phone number entry: from the link QR code, or to correct the number */

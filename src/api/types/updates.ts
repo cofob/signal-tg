@@ -43,7 +43,7 @@ import type {
 } from './misc';
 import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiPrivacyKey, PrivacyVisibility } from './settings';
+import type { ApiBackupSettings, ApiPrivacyKey, PrivacyVisibility } from './settings';
 import type { ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
@@ -63,7 +63,8 @@ export type ApiUpdateAuthorizationStateType = (
   'authorizationStateClosing' |
   'authorizationStateClosed' |
   'authorizationStateWaitQrCode' |
-  'authorizationStateWaitCaptcha'
+  'authorizationStateWaitCaptcha' |
+  'authorizationStateWaitBackupRestore'
 );
 
 export type ApiUpdateConnectionStateType = (
@@ -82,6 +83,17 @@ export type ApiUpdateAuthorizationState = {
   codeInfo?: ApiAuthCodeInfo;
   // Signal link and sync: the link screen shows the message history transfer instead of the QR code
   historySync?: ApiHistorySyncProgress;
+  // Signal registration: the step that offers to restore a backup with the recovery key
+  backupRestore?: ApiBackupRestoreState;
+};
+
+/** A restore of a backup at registration: waiting for the recovery key while `step` is not set */
+export type ApiBackupRestoreState = {
+  step?: 'verifying' | 'downloading' | 'validating' | 'importing';
+  // From 0 to 1, while downloading and importing
+  progress?: number;
+  // The backup that the recovery key found
+  found?: { size: number; modifiedAt?: number };
 };
 
 export type ApiHistorySyncProgress = {
@@ -675,6 +687,11 @@ export type ApiUpdateServerTimeOffset = {
   serverTimeOffset: number;
 };
 
+export type ApiUpdateBackupSettings = {
+  '@type': 'updateBackupSettings';
+  settings: ApiBackupSettings;
+};
+
 export type ApiUpdateGroupCall = {
   '@type': 'updateGroupCall';
   call: ApiGroupCall;
@@ -893,7 +910,7 @@ export type ApiUpdate = (
   | ApiUpdateDiscussion |
   ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode |
   ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings | ApiUpdatePeerBlocked | ApiUpdatePrivacy |
-  ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
+  ApiUpdateServerTimeOffset | ApiUpdateBackupSettings | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
   ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
   ApiUpdatePendingJoinRequests |

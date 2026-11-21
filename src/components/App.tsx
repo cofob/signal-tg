@@ -158,6 +158,7 @@ const App = ({
         break;
       case 'authorizationStateWaitCaptcha':
       case 'authorizationStateWaitRegistration':
+      case 'authorizationStateWaitBackupRestore':
         activeKey = AppScreens.auth;
         break;
       case 'authorizationStateWaitQrCode':

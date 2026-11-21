@@ -3,6 +3,8 @@ import type { TeactNode } from '../lib/teact/teact';
 import type {
   ApiAttachment,
   ApiAudio,
+  ApiBackupRemoteStatus,
+  ApiBackupSettings,
   ApiChat,
   ApiChatInviteImporter,
   ApiContact,
@@ -166,6 +168,8 @@ export interface AccountSettings {
   lastRecordMessageMode?: 'voice' | 'video';
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
+  backups?: ApiBackupSettings;
+  backupRemote?: ApiBackupRemoteStatus;
   signalDevices?: ApiSignalDevices;
   signalMessageSettings?: ApiSignalMessageSettings;
   // The result of the last key transparency check of our own account
@@ -274,6 +278,7 @@ export enum SettingsScreens {
   SignalPinNew,
   SignalPinConfirm,
   SignalDevices,
+  Backups,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

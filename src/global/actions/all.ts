@@ -10,6 +10,7 @@ import './api/accounts';
 import './api/users';
 import './api/musicPicker';
 import './api/topPeers';
+import './api/backups';
 import './api/settings';
 import './api/passcode';
 import './api/reactions';

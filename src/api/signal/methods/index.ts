@@ -4,9 +4,11 @@ export {
   provideAuthPassword,
   provideAuthPhoneNumber,
   provideAuthRegistration,
+  provideAuthRestore,
   requestAuthCode,
   restartAuth,
   restartAuthWithQr,
+  skipAuthRestore,
 } from './auth';
 export {
   deleteHistory,
@@ -24,6 +26,17 @@ export {
   toggleDialogUnread,
   updateChatNotifySettings,
 } from './chats';
+export {
+  backUpNow,
+  cancelBackup,
+  disableBackups,
+  enableBackups,
+  exportBackupFile,
+  fetchBackupRemoteStatus,
+  fetchBackupSettings,
+  importBackupFile,
+  setBackupFrequency,
+} from './backups';
 export { destroy, disconnect, reconnectNow } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
