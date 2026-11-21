@@ -261,6 +261,15 @@
   }
 }
 
+// Peer colors are Signal's avatar colors: avatars keep them, but names and quotes are too dark on dark Signal bubbles
+html.theme-signal.theme-dark {
+  @for $i from 0 through 25 {
+    .peer-color-#{$i}:not(.Avatar) {
+      --accent-color: color-mix(in srgb, var(--color-peer-#{$i}, var(--color-text)) 50%, white);
+    }
+  }
+}
+
 .peer-color-count-1,
 .peer-color-count-2,
 .peer-color-count-3 {

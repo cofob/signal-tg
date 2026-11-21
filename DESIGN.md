@@ -4,7 +4,7 @@ This is the theming CSS-variable reference for the client. It covers global them
 
 ## Reading the tables
 
-- **Light / Dark** are the initialized built-in theme values with no server theme, using the generic platform defaults. They are not a guarantee about a selected server theme.
+- **Light / Dark** are the initialized built-in Telegram theme values with no server theme, using the generic platform defaults. They are not a guarantee about a selected server theme. The Signal theme, the default for new installs, replaces part of them; see [Signal theme](#signal-theme).
 - **CSS alias** means the declaration contains a live `var(...)` reference. Its linked variable supplies the default. **CSS-derived** means an expression reads other variables. **No CSS alias** means a literal, Sass result or separately assigned JavaScript value, even when its color matches another row.
 - Custom properties normally inherit from the parent element. The reference column describes dependencies between variables, not just parent-to-child inheritance. Locally overridden properties and registered non-inheriting properties are identified below.
 - Stylesheet fallbacks come from [variables](src/styles/_variables.scss). Initialization overlays [light/dark base colors](src/styles/themes.json), then the [runtime palette](src/util/theme.ts). A CSS fallback alias can therefore become a concrete initialized value. Per-chat scopes and message aliases can override the same names again.
@@ -147,6 +147,25 @@ The primary alpha variants have stylesheet fallback references to [--color-prima
 | <a id="bar-gradient"></a>`--bar-gradient` | `var(--color-peer-gradient-{id})` | CSS alias in .peer-color-{id}: [--color-peer-gradient-{id}](#color-peer-gradient-{id}) |
 
 Inside `.peer-color-{id}`, [--accent-color](#accent-color) aliases [--color-peer-{id}](#color-peer-{id}) with [--color-text](#color-text) as fallback. Accent backgrounds alias the indexed peer background variables, falling back to [--hover-color](#hover-color) and [--active-color](#active-color). The `.peer-color-count-*` wrappers use those hover/active aliases directly.
+
+### Signal theme
+
+Selecting Signal in Settings › Appearance stores `isSignalTheme` in the light and dark theme settings. With no server theme, the [runtime palette](src/util/theme.ts) then uses Signal Desktop's colors (`stylesheets/_variables.scss`), and [theme application](src/util/switchTheme.ts) adds the `theme-signal` class to the document root. The runtime palette derives every other variable from these inputs as for the Telegram theme, so the listed values replace the Telegram ones in the tables above and below. A server theme takes precedence over the Signal palette.
+
+| Variable | Light | Dark | Default reference / inheritance |
+| --- | --- | --- | --- |
+| [--color-primary](#color-primary), [--color-active](#color-active), [--message-outgoing-background](#message-outgoing-background), [--color-background-own](#color-background-own) | `#2c6bed` | `#2c6bed` | No CSS alias; Signal ultramarine; shades, tints and alpha variants are derived as usual |
+| [--color-links](#color-links), [--message-incoming-links](#message-incoming-links), [--message-incoming-accent](#message-incoming-accent), [--message-incoming-control](#message-incoming-control) | `#2c6bed` | `#6191f3` | No CSS alias; the dark value is Signal's lighter ultramarine for text on dark surfaces |
+| [--color-background](#color-background) / [--color-background-secondary](#color-background-secondary) | `#ffffff` / `#f6f6f6` | `#1b1b1b` / `#121212` | No CSS alias; Signal gray scale |
+| [--color-background-selected](#color-background-selected), [--color-chat-active](#color-chat-active) | `#e9e9e9` | `#3b3b3b` | No CSS alias; the open chat is a gray row, and its text keeps the regular colors |
+| [--color-background-secondary-accent](#color-background-secondary-accent) | `#e9e9e9` | `#2e2e2e` | No CSS alias |
+| [--color-text-secondary](#color-text-secondary) and its copies | `#5e5e5e` | `#b9b9b9` | No CSS alias; Signal gray-60 and gray-25 |
+| [--message-incoming-background](#message-incoming-background) | `#e9e9e9` | `#3b3b3b` | No CSS alias; Signal gray-05 and gray-75 |
+| [--message-incoming-file-description](#message-incoming-file-description) | `#52525299` | `#ffffff80` | No CSS alias; the incoming secondary color |
+| Outgoing text, accent, control and links | `#ffffff` | `#ffffff` | No CSS alias; white on the ultramarine fill, with underlined links; secondary and meta colors are `#ffffffa6` |
+| [--theme-background-color](#theme-background-color) | `#ffffff` | `#121212` | No CSS alias; the default wallpaper is this plain color with no pattern, so [--pattern-color](#pattern-color) is unset |
+
+Stylesheets add these `theme-signal` overrides: bubbles have no tail or shadow and use 18px corners (`--border-radius-messages`) with 4px corners between grouped messages; the chat composer is filled with [--message-incoming-background](#message-incoming-background) without a shadow. On the default background, action messages in `.MessageList` set [--message-service-text](#message-service-text) to [--color-text-secondary](#color-text-secondary) and [--message-service-background](#message-service-background) to `transparent`; dates that are not stuck show plain [--color-text-secondary](#color-text-secondary) text, and the unread divider is a [--color-borders](#color-borders) rule with its label in [--color-text](#color-text). In dark Signal themes, `.peer-color-{id}` wrappers other than avatars mix [--accent-color](#accent-color) 50% toward white, since peer colors are Signal's dark avatar colors.
 
 ## Message-specific variables
 

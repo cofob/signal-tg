@@ -245,7 +245,6 @@ function LeftColumn({
         case SettingsScreens.PrivacyForwarding:
         case SettingsScreens.PrivacyGroupChats:
         case SettingsScreens.PrivacyVoiceMessages:
-        case SettingsScreens.PrivacyMessages:
         case SettingsScreens.AutoDeleteMessages:
         case SettingsScreens.PrivacyBlockedUsers:
         case SettingsScreens.ActiveWebsites:
@@ -387,14 +386,6 @@ function LeftColumn({
         case SettingsScreens.QuickReaction:
         case SettingsScreens.CustomEmoji:
           openSettingsScreen({ screen: SettingsScreens.Stickers });
-          return;
-
-        case SettingsScreens.DoNotTranslate:
-          openSettingsScreen({ screen: SettingsScreens.Language });
-          return;
-
-        case SettingsScreens.PrivacyNoPaidMessages:
-          openSettingsScreen({ screen: SettingsScreens.PrivacyMessages });
           return;
 
         default:

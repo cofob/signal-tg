@@ -260,18 +260,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       });
       break;
     }
-
-    case 'updatePaidReactionPrivacy': {
-      global = {
-        ...global,
-        settings: {
-          ...global.settings,
-          paidReactionPrivacy: update.private,
-        },
-      };
-      setGlobal(global);
-      break;
-    }
   }
 
   return undefined;

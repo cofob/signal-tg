@@ -3,13 +3,13 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import type { AttachmentPointerSchema } from '../../lib/signal/proto/generated/SignalService_pb';
 import type { ApiAttachment, ApiDimensions, ApiOnProgress } from '../types';
 
+import { saveAttachmentBlob } from '../../lib/signal/attachments/attachmentCache';
 import { uploadAttachment } from '../../lib/signal/attachments/uploadAttachment';
 import { AttachmentPointer_Flags } from '../../lib/signal/proto/generated/SignalService_pb';
 import { bufferFromHex } from '../../util/encoding/buffer';
 import { fetchBlob } from '../../util/files';
 import { getSafeMimeType } from '../../util/media/safeMimeType';
 import { decodeWaveform } from '../../util/waveform';
-import { saveAttachmentBlob } from './media/attachments';
 import { encodeBlurHash } from './media/blurHash';
 import { client } from './engine';
 

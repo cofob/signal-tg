@@ -38,8 +38,12 @@ export type ConversationRecord = {
   isArchived?: boolean;
   isMarkedUnread?: boolean;
   isBlocked?: boolean;
-  // Whether we accepted the message request, or wrote first
+  // Whether we accepted the message request, wrote first, or share our profile (`whitelisted` in storage)
   isAccepted?: boolean;
+  // We reported the conversation as spam
+  isReported?: boolean;
+  // The last `reportSpamToken` of an envelope from the contact, sent with spam reports
+  reportingToken?: Uint8Array;
   mutedUntil?: number;
   // Position in the pinned conversations list
   pinIndex?: number;
@@ -72,6 +76,8 @@ export type MessageRecord = {
   revisions?: { dataMessage: Uint8Array; editedAt: number }[];
   editedAt?: number;
   deletedAt?: number;
+  // The group admin who deleted another member's message for everyone
+  deletedByAdminAci?: string;
   // Text of the latest version, for previews and search
   body?: string;
   reactions?: { emoji: string; authorAci: string; sentAt: number }[];
@@ -82,9 +88,14 @@ export type MessageRecord = {
   readAt?: number;
   viewedAt?: number;
   isViewOnceOpened?: boolean;
+  // Indexes in `DataMessage.attachments` that the CDN no longer has
+  unavailableAttachmentIndexes?: number[];
+  isStickerUnavailable?: true;
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   isSealedSender?: boolean;
+  // The server's id of the envelope, which spam reports name
+  serverGuid?: string;
 };
 
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;
@@ -135,6 +146,19 @@ export default class MessageDb {
     return record;
   }
 
+  /** Puts conversations in one transaction */
+  async putConversations(records: ConversationRecord[]) {
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(CONVERSATIONS, 'readwrite');
+      const store = transaction.objectStore(CONVERSATIONS);
+      for (const record of records) store.put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
   getMessage(id: number) {
     return this.request<MessageRecord | undefined>(MESSAGES, 'readonly', (store) => store.get(id));
   }
@@ -142,6 +166,50 @@ export default class MessageDb {
   async addMessage(record: NewMessageRecord): Promise<MessageRecord> {
     const id = await this.request<IDBValidKey>(MESSAGES, 'readwrite', (store) => store.add(record));
     return { ...record, id: id as number };
+  }
+
+  /**
+   * Adds messages in order in one transaction, skipping each message whose author and timestamp a stored message
+   * has; notices have no author and are always added. Returns the added records, `undefined` for skipped ones.
+   */
+  async addMessagesIfAbsent(records: NewMessageRecord[]) {
+    const db = await this.open();
+    return new Promise<(MessageRecord | undefined)[]>((resolve, reject) => {
+      const transaction = db.transaction(MESSAGES, 'readwrite');
+      const store = transaction.objectStore(MESSAGES);
+      const results: (MessageRecord | undefined)[] = [];
+
+      // Each step starts in the callback of the previous one, so a duplicate within `records` is found too
+      function addNext() {
+        const record = records[results.length];
+        if (!record) return;
+        const add = () => {
+          const request = store.add(record);
+          request.onsuccess = () => {
+            results.push({ ...record, id: request.result as number });
+            addNext();
+          };
+        };
+        if (!record.authorAci) {
+          add();
+          return;
+        }
+        const lookup = store.index(BY_AUTHOR_SENT_AT).getKey([record.authorAci, record.sentAt]);
+        lookup.onsuccess = () => {
+          if (lookup.result === undefined) {
+            add();
+            return;
+          }
+          results.push(undefined);
+          addNext();
+        };
+      }
+
+      transaction.oncomplete = () => resolve(results);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+      addNext();
+    });
   }
 
   async putMessage(record: MessageRecord) {
@@ -153,9 +221,9 @@ export default class MessageDb {
     return this.request(MESSAGES, 'readwrite', (store) => store.delete(id));
   }
 
-  /** Deletes every message of a conversation and returns their ids */
-  async deleteConversationMessages(conversationId: string) {
-    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
+  /** Deletes the messages of a conversation up to `maxId` (every message by default) and returns their ids */
+  async deleteConversationMessages(conversationId: string, maxId = Number.MAX_SAFE_INTEGER) {
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, maxId]);
     const ids: number[] = [];
     await this.iterate(MESSAGES, 'readwrite', (store) => store.index(BY_CONVERSATION).openCursor(range), (cursor) => {
       ids.push((cursor.value as MessageRecord).id);
@@ -179,6 +247,19 @@ export default class MessageDb {
     const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
     await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
       messages.push(cursor.value as MessageRecord);
+      return messages.length < limit;
+    });
+    return messages;
+  }
+
+  /** The newest messages of a conversation that pass `filter`, newest first */
+  async findLatestMessages(conversationId: string, limit: number, filter: (message: MessageRecord) => boolean) {
+    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
+    const messages: MessageRecord[] = [];
+    const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
+    await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
+      const message = cursor.value as MessageRecord;
+      if (filter(message)) messages.push(message);
       return messages.length < limit;
     });
     return messages;

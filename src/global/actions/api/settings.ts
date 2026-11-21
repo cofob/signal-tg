@@ -36,6 +36,7 @@ import { updateTabState } from '../../reducers/tabs';
 import {
   selectChat, selectCurrentMessageList, selectIsCurrentUserFrozen,
   selectLanguageCode,
+  selectPeer,
   selectTabState, selectUser,
 } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
@@ -262,7 +263,8 @@ addActionHandler('loadChatThemes', async (global): Promise<void> => {
 
 const CHAT_THEME_KEYS: ThemeKey[] = ['light', 'dark'];
 
-addActionHandler('applyChatTheme', (global, actions, { emoticon, tabId = getCurrentTabId() }): ActionReturnType => {
+addActionHandler('applyChatTheme', (global, actions, payload): ActionReturnType => {
+  const { emoticon, isSignalTheme, tabId = getCurrentTabId() } = payload;
   const chatTheme = global.settings.chatThemes?.find((theme) => theme.emoticon === emoticon);
   if (emoticon && !chatTheme) return global;
 
@@ -271,6 +273,7 @@ addActionHandler('applyChatTheme', (global, actions, { emoticon, tabId = getCurr
       ...RESET_WALLPAPER_SETTINGS,
       chatThemeEmoticon: emoticon,
       serverThemeSettings: chatTheme && getChatThemeEntry(chatTheme.settings, theme === 'dark'),
+      isSignalTheme,
     });
   });
   return updateTabState(global, {
@@ -361,7 +364,8 @@ addActionHandler('loadBlockedUsers', async (global): Promise<void> => {
 addActionHandler('blockUser', async (global, actions, payload): Promise<void> => {
   const { userId, isOnlyStories } = payload;
 
-  const user = selectUser(global, userId);
+  // Signal blocks groups too
+  const user = selectPeer(global, userId);
   if (!user) return;
 
   const result = await callApi('blockUser', {
@@ -378,7 +382,8 @@ addActionHandler('blockUser', async (global, actions, payload): Promise<void> =>
 addActionHandler('unblockUser', async (global, actions, payload): Promise<void> => {
   const { userId, isOnlyStories } = payload;
 
-  const user = selectUser(global, userId);
+  // Signal blocks groups too
+  const user = selectPeer(global, userId);
   if (!user) return;
 
   const result = await callApi('unblockUser', {
@@ -556,7 +561,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
     callApi('fetchPrivacySettings', 'voiceMessages'),
     callApi('fetchPrivacySettings', 'bio'),
     callApi('fetchPrivacySettings', 'birthday'),
-    callApi('fetchPrivacySettings', 'noPaidMessages'),
     callApi('fetchPrivacySettings', 'savedMusic'),
   ]);
 
@@ -576,7 +580,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
     voiceMessagesSettings,
     bioSettings,
     birthdaySettings,
-    noPaidMessagesSettings,
     savedMusicSettings,
   ] = result as {
     rules: ApiPrivacySettings;
@@ -600,7 +603,6 @@ addActionHandler('loadPrivacySettings', async (global, actions, payload): Promis
         voiceMessages: voiceMessagesSettings.rules,
         bio: bioSettings.rules,
         birthday: birthdaySettings.rules,
-        noPaidMessages: noPaidMessagesSettings.rules,
         savedMusic: savedMusicSettings.rules,
       },
     },
@@ -677,21 +679,6 @@ addActionHandler('setPrivacySettings', async (global, actions, payload): Promise
 
   if (!settings) {
     return;
-  }
-
-  if (privacyKey === 'noPaidMessages') {
-    global = getGlobal();
-    const idsForUpdate = [
-      ...updatedIds.filter((id) => !settings.allowUserIds.includes(id)),
-      ...settings.allowUserIds.filter((id) => !updatedIds.includes(id)),
-    ];
-
-    idsForUpdate.forEach((userId) => {
-      global = updateUserFullInfo(global, userId, {
-        settings: undefined,
-      });
-    });
-    setGlobal(global);
   }
 
   const rules = buildApiInputPrivacyRules(global, {
@@ -923,30 +910,17 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
   const shouldArchiveAndMuteNewNonContact = payload.shouldArchiveAndMuteNewNonContact
     ?? Boolean(global.settings.byKey.shouldArchiveAndMuteNewNonContact);
   const shouldHideReadMarks = payload.shouldHideReadMarks ?? Boolean(global.settings.byKey.shouldHideReadMarks);
-  const shouldNewNonContactPeersRequirePremium = payload.shouldNewNonContactPeersRequirePremium
-    ?? Boolean(global.settings.byKey.shouldNewNonContactPeersRequirePremium);
-    // eslint-disable-next-line no-null/no-null
-  const nonContactPeersPaidStars = payload.nonContactPeersPaidStars === null ? undefined
-    : payload.nonContactPeersPaidStars || global.settings.byKey.nonContactPeersPaidStars;
-
-  // eslint-disable-next-line no-null/no-null
-  const shouldUpdateUsersSettings = (payload.nonContactPeersPaidStars === null)
-    || payload.nonContactPeersPaidStars;
 
   global = getGlobal();
   global = replaceSettings(global, {
     shouldArchiveAndMuteNewNonContact,
     shouldHideReadMarks,
-    shouldNewNonContactPeersRequirePremium,
-    nonContactPeersPaidStars,
   });
   setGlobal(global);
 
   const result = await callApi('updateGlobalPrivacySettings', {
     shouldArchiveAndMuteNewNonContact,
     shouldHideReadMarks,
-    shouldNewNonContactPeersRequirePremium,
-    nonContactPeersPaidStars,
   });
 
   global = getGlobal();
@@ -955,21 +929,7 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
       ? !shouldArchiveAndMuteNewNonContact
       : result.shouldArchiveAndMuteNewNonContact,
     shouldHideReadMarks: !result ? !shouldHideReadMarks : result.shouldHideReadMarks,
-    shouldNewNonContactPeersRequirePremium: !result
-      ? !shouldNewNonContactPeersRequirePremium
-      : result.shouldNewNonContactPeersRequirePremium,
-    nonContactPeersPaidStars: !result
-      ? undefined
-      : result.nonContactPeersPaidStars,
   });
-
-  if (shouldUpdateUsersSettings) {
-    Object.keys(global.users.fullInfoById).forEach((userId) => {
-      global = updateUserFullInfo(global, userId, {
-        settings: undefined,
-      });
-    });
-  }
 
   setGlobal(global);
 });

@@ -11,7 +11,6 @@ import {
   selectCanScheduleUntilOnline,
   selectIsChatWithSelf,
   selectIsStoryViewerOpen,
-  selectPeerPaidMessagesStars,
 } from '../../../../global/selectors';
 import { selectCurrentMessageList } from '../../../../global/selectors/messages';
 import { selectAnimationLevel } from '../../../../global/selectors/sharedState';
@@ -25,8 +24,6 @@ import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
 import useSchedule from '../../../../hooks/useSchedule';
 
-import AnimatedCounter from '../../../common/AnimatedCounter';
-import Icon from '../../../common/icons/Icon';
 import Button from '../../../ui/Button';
 import Modal from '../../../ui/Modal';
 import TabList from '../../../ui/TabList';
@@ -48,7 +45,6 @@ type StateProps = {
   isChatWithSelf?: boolean;
   canScheduleUntilOnline?: boolean;
   isInScheduledList?: boolean;
-  paidMessagesStars?: number;
   isStoryViewerOpen?: boolean;
 };
 
@@ -69,7 +65,6 @@ const AiMessageEditorModal = ({
   isChatWithSelf,
   canScheduleUntilOnline,
   isInScheduledList,
-  paidMessagesStars,
   isStoryViewerOpen,
 }: OwnProps & StateProps) => {
   const {
@@ -93,9 +88,6 @@ const AiMessageEditorModal = ({
     handleContextMenuClose,
     handleContextMenuHide,
   } = useContextMenuHandlers(mainButtonRef, !modal);
-
-  const starsForMessage = paidMessagesStars || 0;
-  const shouldRenderPaidBadge = Boolean(paidMessagesStars);
 
   useEffect(() => {
     if (!isCustomSendMenuOpen) {
@@ -317,26 +309,9 @@ const AiMessageEditorModal = ({
             disabled={shouldGenerate || isLoading || Boolean(error) || !hasContent}
             ariaLabel={lang('Send')}
             onClick={handleSend}
-            onContextMenu={!isInScheduledList && !paidMessagesStars ? handleContextMenu : undefined}
+            onContextMenu={!isInScheduledList ? handleContextMenu : undefined}
             iconName="new-send"
-          >
-            <Button
-              className={buildClassName(
-                styles.paidStarsBadge,
-                !shouldRenderPaidBadge && styles.hidden,
-              )}
-              nonInteractive
-              size="tiny"
-              color="stars"
-              pill
-              fluid
-            >
-              <div className={styles.paidStarsBadgeText}>
-                <Icon name="star" />
-                <AnimatedCounter text={lang.number(starsForMessage)} />
-              </div>
-            </Button>
-          </Button>
+          />
         )}
         {isOpen && !isEditing && !isInScheduledList && (
           <CustomSendMenu
@@ -361,7 +336,6 @@ export default memo(withGlobal<OwnProps>(
   (global, { modal }): Complete<StateProps> => {
     const chatId = modal?.chatId;
     const currentMessageList = selectCurrentMessageList(global);
-    const paidMessagesStars = chatId ? selectPeerPaidMessagesStars(global, chatId) : undefined;
 
     return {
       animationLevel: selectAnimationLevel(global),
@@ -371,7 +345,6 @@ export default memo(withGlobal<OwnProps>(
         ? selectCanScheduleUntilOnline(global, currentMessageList.chatId)
         : undefined,
       isInScheduledList: currentMessageList?.type === 'scheduled',
-      paidMessagesStars,
       isStoryViewerOpen: selectIsStoryViewerOpen(global),
     };
   },

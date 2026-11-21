@@ -39,23 +39,6 @@
     --reaction-text-color: var(--text-color-reaction-chosen);
   }
 
-  &.paid {
-    z-index: 2;
-  }
-
-  // Outside, an unchosen paid reaction keeps the regular chip
-  &.paid:not(.outside) {
-    --reaction-background: #FFB72740 !important;
-    --reaction-background-hover: #FFB72766 !important;
-    --reaction-text-color: #FFB727 !important;
-  }
-
-  &.paid.chosen {
-    --reaction-background: #FFB727 !important;
-    --reaction-background-hover: #E6A523 !important;
-    --reaction-text-color: #FFFFFF !important;
-  }
-
   &:hover {
     --reaction-background: var(--reaction-background-hover) !important;
 
@@ -141,19 +124,4 @@
 
 .disabled {
   opacity: 0.5;
-}
-
-.paidCounter {
-  position: absolute;
-  z-index: 1;
-  top: -150%;
-  right: 50%;
-  transform: translateX(50%);
-
-  font-family: var(--font-family-numbers-rounded);
-  font-size: 2.5rem;
-  font-variant-numeric: tabular-nums;
-  color: #FFBC2E;
-
-  -webkit-text-stroke: 1px #E58E0D;
 }

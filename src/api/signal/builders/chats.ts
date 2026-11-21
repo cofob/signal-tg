@@ -19,7 +19,7 @@ import { buildCollectionByKey } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
-import { buildApiUser, getAvatarPhotoId } from './users';
+import { buildApiUser, buildAvatarColor, buildPeerSettings, getAvatarPhotoId } from './users';
 
 const READ_STATE_PAGE_SIZE = 50;
 // Signal group admins edit the group, add and remove members and admins, pin messages and delete them for everyone
@@ -41,6 +41,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
   const id = getPeerId(conversation);
   const folderId = conversation.isArchived ? ARCHIVED_FOLDER_ID : undefined;
   const avatarPhotoId = getAvatarPhotoId(conversation);
+  const color = buildAvatarColor(conversation);
   const isListed = getIsChatListed(conversation, selfAci);
 
   if (conversation.type === 'private') {
@@ -51,6 +52,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
       title: [firstName, lastName].filter(Boolean).join(' '),
       folderId,
       avatarPhotoId,
+      color,
       usernames,
       hasUsername,
       ttlPeriod: conversation.expireTimer,
@@ -66,6 +68,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
     title: conversation.title ?? '',
     folderId,
     avatarPhotoId,
+    color,
     membersCount: memberAcis?.length,
     ttlPeriod: conversation.expireTimer,
     isListed,
@@ -210,11 +213,14 @@ export async function buildGroupFullInfo(
 
   return {
     fullInfo: {
+      settings: buildPeerSettings(conversation, selfAci),
       about: conversation.description,
       ttlPeriod: conversation.expireTimer,
       members,
       adminMembersById: buildCollectionByKey(members.filter(({ isAdmin }) => isAdmin), 'userId'),
       canViewMembers: true,
+      // Signal allows any emoji as a reaction
+      enabledReactions: { type: 'all' },
       // New members of Signal groups do not see earlier messages
       isPreHistoryHidden: true,
       inviteLink: getGroupInviteLink(conversation),

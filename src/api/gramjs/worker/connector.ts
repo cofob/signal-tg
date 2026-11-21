@@ -14,6 +14,7 @@ import { getCurrentTabId, subscribeToMasterChange } from '../../../util/establis
 import generateUniqueId from '../../../util/generateUniqueId';
 import { ACCOUNT_SLOT, DATA_BROADCAST_CHANNEL_NAME } from '../../../util/multiaccount';
 import { pause, throttleWithTickEnd } from '../../../util/schedulers';
+import serveNativeTransport from '../../../util/tauri/serveNativeTransport';
 
 type RequestState = {
   messageId: string;
@@ -31,6 +32,7 @@ const API_DESTROY_TIMEOUT_MS = 3000; // 3 sec
 const NO_QUEUE_BEFORE_INIT = new Set(['destroy']);
 
 let worker: Worker | undefined;
+let stopNativeTransport: NoneToVoidFunction | undefined;
 
 const requestStates = new Map<string, RequestState>();
 const requestStatesByCallback = new Map<AnyToVoidFunction, RequestState>();
@@ -96,6 +98,13 @@ export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs) {
     });
     subscribeToWorker(onUpdate);
 
+    if (IS_TAURI) {
+      // Arrives before `initApi`, so the engine's first connection already uses the native transport
+      const { port1, port2 } = new MessageChannel();
+      stopNativeTransport = serveNativeTransport(port1);
+      worker.postMessage({ payloads: [{ type: 'initNativeTransport', port: port2 }] }, [port2]);
+    }
+
     if (IS_SAFARI || (initialArgs.platform === 'macOS' && IS_TAURI)) {
       setupHealthCheck();
     }
@@ -129,6 +138,8 @@ export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs) {
 function destroyApi() {
   worker?.terminate();
   worker = undefined;
+  stopNativeTransport?.();
+  stopNativeTransport = undefined;
   resetApi();
 }
 

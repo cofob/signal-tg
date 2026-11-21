@@ -29,7 +29,6 @@ import {
   selectBot,
   selectCanManage,
   selectCanManageAutoDelete,
-  selectCanTranslateChat,
   selectChat,
   selectChatFullInfo,
   selectChatHistoryTtl,
@@ -94,7 +93,6 @@ export type OwnProps = {
   canEnterVoiceChat?: boolean;
   canCreateVoiceChat?: boolean;
   pendingJoinRequests?: number;
-  canTranslate?: boolean;
   channelMonoforumId?: string;
   onSearchClick: () => void;
   onAsMessagesClick: () => void;
@@ -122,7 +120,6 @@ type StateProps = {
   isChatInfoShown?: boolean;
   isRightColumnShown?: boolean;
   canManage?: boolean;
-  canTranslate?: boolean;
   isBlocked?: boolean;
   isBot?: boolean;
   isChatWithSelf?: boolean;
@@ -169,7 +166,6 @@ const HeaderMenuContainer = ({
   canEditTopic,
   canManage,
   isRightColumnShown,
-  canTranslate,
   isBlocked,
   isBot,
   isChatWithSelf,
@@ -204,7 +200,6 @@ const HeaderMenuContainer = ({
     openChat,
     openUrl,
     toggleManagement,
-    togglePeerTranslations,
     blockUser,
     unblockUser,
     setViewForumAsMessages,
@@ -386,11 +381,6 @@ const HeaderMenuContainer = ({
 
   const handleSearch = useLastCallback(() => {
     onSearchClick();
-    closeMenu();
-  });
-
-  const handleEnableTranslations = useLastCallback(() => {
-    togglePeerTranslations({ chatId, isEnabled: true });
     closeMenu();
   });
 
@@ -752,14 +742,6 @@ const HeaderMenuContainer = ({
               {lang('ReportSelectMessages')}
             </MenuItem>
           )}
-          {canTranslate && (
-            <MenuItem
-              icon="language"
-              onClick={handleEnableTranslations}
-            >
-              {lang('AiMessageEditorTranslate')}
-            </MenuItem>
-          )}
           {canReportChat && (
             <MenuItem
               icon="flag"
@@ -857,7 +839,6 @@ export default memo(withGlobal<OwnProps>(
     const chatBot = !isSystemBot(chatId) ? selectBot(global, chatId) : undefined;
     const userFullInfo = isPrivate ? selectUserFullInfo(global, chatId) : undefined;
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
-    const fullInfo = userFullInfo || chatFullInfo;
 
     const topic = selectTopic(global, chatId, threadId);
     // Disable manual creation for bot forums
@@ -866,8 +847,6 @@ export default memo(withGlobal<OwnProps>(
     );
     const canEditTopic = topic && getCanManageTopic(chat, topic);
     const canManage = selectCanManage(global, chatId);
-    // Context menu item should only be displayed if user hid translation panel
-    const canTranslate = selectCanTranslateChat(global, chatId) && fullInfo?.isTranslationDisabled;
 
     const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
     const savedDialog = isSavedDialog ? selectChat(global, String(threadId)) : undefined;
@@ -894,7 +873,6 @@ export default memo(withGlobal<OwnProps>(
       canEditTopic,
       canManage,
       isRightColumnShown: selectIsRightColumnShown(global),
-      canTranslate,
       isBlocked: userFullInfo?.isBlocked,
       isBot: Boolean(chatBot),
       isChatWithSelf,

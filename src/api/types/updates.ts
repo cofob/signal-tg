@@ -21,10 +21,8 @@ import type {
 } from './chats';
 import type {
   ApiFormattedText,
-  ApiMediaExtendedPreview,
   ApiMessage,
   ApiMessagePoll,
-  ApiPaidReactionPrivacyType,
   ApiPhoto,
   ApiReaction,
   ApiReactions,
@@ -32,7 +30,6 @@ import type {
   ApiThreadInfo,
   ApiTopic,
   ApiWebPage,
-  BoughtPaidMedia,
 } from './messages';
 import type {
   ApiEmojiInteraction,
@@ -47,7 +44,6 @@ import type {
 import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
-import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
@@ -82,6 +78,14 @@ export type ApiUpdateAuthorizationState = {
   hint?: string;
   noReset?: boolean;
   qrCode?: { token: string; expires: number };
+  // Signal link and sync: the link screen shows the message history transfer instead of the QR code
+  historySync?: ApiHistorySyncProgress;
+};
+
+export type ApiHistorySyncProgress = {
+  step: 'waiting' | 'downloading' | 'importing';
+  // From 0 to 1, while downloading and importing
+  progress?: number;
 };
 
 export type ApiUpdateWebAuthTokenFailed = {
@@ -478,18 +482,6 @@ export type ApiUpdateMessageReactions = {
   threadId?: ThreadId;
   reactions: ApiReactions;
 };
-
-export type ApiUpdateMessageExtendedMedia = {
-  '@type': 'updateMessageExtendedMedia';
-  id: number;
-  chatId: string;
-} & ({
-  isBought?: true;
-  extendedMedia: BoughtPaidMedia[];
-} | {
-  isBought?: undefined;
-  extendedMedia: ApiMediaExtendedPreview[];
-});
 
 export type ApiDeleteContact = {
   '@type': 'deleteContact';
@@ -920,11 +912,6 @@ export type ApiUpdatePremiumFloodWait = {
   isUpload?: boolean;
 };
 
-export type ApiUpdateStarsBalance = {
-  '@type': 'updateStarsBalance';
-  balance: ApiTypeCurrencyAmount;
-};
-
 export type ApiUpdateDeleteProfilePhoto = {
   '@type': 'updateDeleteProfilePhoto';
   peerId: string;
@@ -944,11 +931,6 @@ export type ApiUpdateEntities = {
   threadInfos?: ApiThreadInfo[];
   polls?: ApiMessagePoll[];
   webPages?: ApiWebPage[];
-};
-
-export type ApiUpdatePaidReactionPrivacy = {
-  '@type': 'updatePaidReactionPrivacy';
-  private: ApiPaidReactionPrivacyType;
 };
 
 export type ApiUpdateLangPackTooLong = {
@@ -1011,15 +993,15 @@ export type ApiUpdate = (
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
   ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
-  ApiUpdateMessageExtendedMedia | ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
+  ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
   ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateStarsBalance | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateBotCommands
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
-  | ApiUpdateEntities | ApiUpdatePaidReactionPrivacy | ApiUpdateLangPackTooLong | ApiUpdateLangPack
+  | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
   | ApiUpdateAiComposeTones
 );

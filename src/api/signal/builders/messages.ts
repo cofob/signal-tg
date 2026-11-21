@@ -1,6 +1,6 @@
 import { fromBinary } from '@bufbuild/protobuf';
 
-import type { ConversationRecord, MessageRecord } from '../../../lib/signal/db/MessageDb';
+import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
 import type { GroupUpdate } from '../../../lib/signal/groups/groupUpdates';
 import type {
   BodyRange, DataMessage_PollCreate, DataMessage_Quote,
@@ -39,6 +39,7 @@ const INVITE_LINK_UPDATES = {
   off: 'linkOff',
   reset: 'linkReset',
 } as const;
+const DELIVERED_STATUSES = new Set<SendStatus>(['delivered', 'read', 'viewed']);
 
 /** Builds the app message of a stored Signal message; `conversation` is the one it belongs to */
 export async function buildApiMessage(message: MessageRecord, conversation: ConversationRecord): Promise<ApiMessage> {
@@ -84,11 +85,28 @@ export async function buildApiMessageWithPoll(
   if (message.kind !== 'message') {
     return { message: { ...base, content: { action: { mediaType: 'action', type: 'unsupported' } } } };
   }
+  if (message.deletedAt) {
+    const adminId = message.deletedByAdminAci ? await users.getUserId(message.deletedByAdminAci) : undefined;
+    return { message: { ...base, content: { action: { mediaType: 'action', type: 'deleted', adminId } } } };
+  }
+  if (message.isViewOnceOpened) {
+    return {
+      message: { ...base, content: { action: { mediaType: 'action', type: 'viewOnce', isViewed: true } } },
+    };
+  }
   // Hidden from the history, see `getIsMessageHidden`
   if (!message.dataMessage) return { message: { ...base, content: {} } };
 
   const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
   const media = buildMessageMedia(message, dataMessage);
+  // View-once media stays out of the chat and opens once in the media viewer; outgoing media cannot be opened,
+  // as in Signal Desktop
+  if (dataMessage.isViewOnce) {
+    const viewOnceMedia = message.isOutgoing ? undefined : media.photo ?? media.video;
+    return {
+      message: { ...base, content: { action: { mediaType: 'action', type: 'viewOnce', media: viewOnceMedia } } },
+    };
+  }
   const mentionedUsers = await resolveMentionedUsers(dataMessage.bodyRanges, users);
   const poll = dataMessage.pollCreate
     ? await buildApiPoll(message, dataMessage.pollCreate, selfAci, users)
@@ -100,8 +118,7 @@ export async function buildApiMessageWithPoll(
     pollId: poll?.summary.id,
   });
   if (content.text) content.text.emojiOnlyCount = getEmojiOnlyCountForMessage(content);
-  // View-once media (the app has no flow for it yet), gift badges, payments and other content without
-  // a counterpart in the app
+  // Gift badges, payments and other content without a counterpart in the app
   if (!Object.keys(content).length) content.action = { mediaType: 'action', type: 'unsupported' };
 
   const isMentioned = Boolean(selfAci) && dataMessage.bodyRanges.some((range) => getMentionAci(range) === selfAci);
@@ -115,12 +132,12 @@ export async function buildApiMessageWithPoll(
       editDate: message.editedAt ? convertToSeconds(message.editedAt) : undefined,
       reactions: await buildApiReactions(message, selfAci, users),
       sendingState: getSendingState(message),
+      isDelivered: getIsDelivered(message) || undefined,
       ttlPeriod: message.expiresAt ? Math.round(message.expiresAt / MS_PER_SECOND) - base.date : undefined,
       isMentioned: isMentioned || undefined,
       hasUnreadMention: isMentioned && !message.readAt ? true : undefined,
       isMediaUnread: !message.isOutgoing && !message.viewedAt && hasViewableMedia ? true : undefined,
-      isForwardingAllowed: !dataMessage.isViewOnce,
-      isProtected: dataMessage.isViewOnce || undefined,
+      isForwardingAllowed: true,
     },
     poll,
   };
@@ -185,11 +202,11 @@ async function buildGroupUpdateAction(
 }
 
 /**
- * Remote deletes and opened view-once messages leave records without content. The app removes them, as it
- * does with messages deleted for everyone.
+ * Messages without content that the history leaves out. Remote deletes and opened view-once messages also
+ * lose their content, but stay as placeholders, as in Signal.
  */
 export function getIsMessageHidden(message: MessageRecord) {
-  return message.kind === 'message' && !message.dataMessage;
+  return message.kind === 'message' && !message.dataMessage && !message.deletedAt && !message.isViewOnceOpened;
 }
 
 /** Resolves users by ACI once for messages built together; users seen only in groups get a private conversation */
@@ -244,11 +261,12 @@ async function buildReplyInfo(
   const authorAci = quote.authorAci || (quote.authorAciBinary.length ? uuidToString(quote.authorAciBinary) : '');
   const sentAt = Number(quote.id);
   const target = authorAci ? await db.findMessage(authorAci, sentAt) : undefined;
-  if (target && target.conversationId === message.conversationId && !getIsMessageHidden(target)) {
+  const isTargetDeleted = Boolean(target && !target.dataMessage);
+  if (target && target.conversationId === message.conversationId && !isTargetDeleted) {
     return { type: 'message', replyToMsgId: target.id };
   }
 
-  const hasText = Boolean(quote.text) && !(target && getIsMessageHidden(target));
+  const hasText = Boolean(quote.text) && !isTargetDeleted;
   return {
     type: 'message',
     replyFrom: authorAci ? {
@@ -339,6 +357,14 @@ function getSendingState({ isOutgoing, recipientStatus }: MessageRecord): ApiMes
   if (statuses.includes('pending')) return 'messageSendingStatePending';
   if (statuses.includes('failed')) return 'messageSendingStateFailed';
   return undefined;
+}
+
+/**
+ * Like read checks (`getIsReadByRecipient`), delivered checks show the highest status any recipient reached,
+ * as Signal Desktop `getMessagePropStatus` in `ts/state/selectors/message.preload.ts` does
+ */
+function getIsDelivered({ isOutgoing, recipientStatus }: MessageRecord) {
+  return isOutgoing && Object.values(recipientStatus ?? {}).some((status) => DELIVERED_STATUSES.has(status));
 }
 
 function convertToSeconds(timestamp: number) {

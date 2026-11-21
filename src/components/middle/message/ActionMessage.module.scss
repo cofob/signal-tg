@@ -122,6 +122,11 @@ $service-hover-background: color-mix(in srgb, var(--message-service-background),
     // Solid color for filter
     background-color: black;
 
+    // Signal shows service text without a chip on its plain background
+    :global(html.theme-signal .MessageList.with-default-bg) & {
+      visibility: hidden;
+    }
+
     @media print {
       display: none;
     }

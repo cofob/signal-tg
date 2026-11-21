@@ -171,12 +171,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'Emoji',
     aliasKey: 'StickersListEmojiItem',
   },
-  {
-    screen: SettingsScreens.DoNotTranslate,
-    parent: SettingsScreens.Language,
-    titleKey: 'DoNotTranslate',
-    requires: 'isDoNotTranslateAvailable',
-  },
 
   {
     screen: SettingsScreens.PrivacyBlockedUsers,
@@ -269,11 +263,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'PrivacyVoiceMessages',
   },
   {
-    screen: SettingsScreens.PrivacyMessages,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'PrivacyMessages',
-  },
-  {
     screen: SettingsScreens.PrivacyGroupChats,
     parent: SettingsScreens.Privacy,
     titleKey: 'AutodownloadGroupChats',
@@ -346,7 +335,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.CustomEmoji, ['SuggestAnimatedEmoji'], { requires: 'areCustomEmojiSetsLoaded' }),
 
   ...buildEntries(SettingsScreens.Language, [
-    'ShowTranslateButton', 'ShowTranslateChatButton', 'LocalizationInterfaceLanguage',
+    'ShowTranslateButton', 'LocalizationInterfaceLanguage',
   ]),
 
   ...buildEntries(SettingsScreens.Folders, ['ShowFolderTags']),
@@ -381,10 +370,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ]),
   ...buildEntries(SettingsScreens.PrivacyLastSeen, ['HideReadTime'], { requires: 'canHideReadTime' }),
   ...buildEntries(SettingsScreens.PrivacyPhoneCall, ['PrivacyP2P']),
-  ...buildEntries(SettingsScreens.PrivacyMessages, ['PrivacyMessagesTitle'], { isSectionHeader: true }),
-  ...buildEntries(SettingsScreens.PrivacyMessages, [
-    'P2PEverybody', 'PrivacyMessagesContactsAndPremium', 'PrivacyChargeForMessages',
-  ]),
 
   ...buildEntries(SettingsScreens.AutoDeleteMessages, [
     'SetAutoDeleteTimer', 'SettingsItemPrivacyOff', 'SetCustomTime',

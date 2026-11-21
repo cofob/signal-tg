@@ -47,7 +47,6 @@ import {
   getMessageAudio,
   getMessageDocument,
   getMessageLink,
-  getMessagePaidMedia,
   getMessagePhoto,
   getMessageVideo,
   getMessageVoice,
@@ -85,7 +84,7 @@ import {
   selectRequestedChatTranslationTone,
 } from './chats';
 import { selectMessageDownloadableMedia } from './media';
-import { selectPeer, selectPeerPaidMessagesStars } from './peers';
+import { selectPeer } from './peers';
 import { selectPeerStory } from './stories';
 import { selectIsStickerFavorite } from './symbols';
 import { selectTabState } from './tabs';
@@ -1322,7 +1321,6 @@ export function selectLastServiceNotification<T extends GlobalState>(global: T) 
 export function selectIsMessageProtected<T extends GlobalState>(global: T, message?: ApiMessage) {
   return Boolean(message && (
     message.isProtected || selectIsChatProtected(global, message.chatId) || hasMessageTtl(message)
-    || getMessagePaidMedia(message)
   ));
 }
 
@@ -1443,17 +1441,13 @@ export function selectCanSchedule<T extends GlobalState>(
   global: T,
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
-  const chatId = selectCurrentMessageList(global, tabId)?.chatId;
-  const paidMessagesStars = chatId ? selectPeerPaidMessagesStars(global, chatId) : undefined;
-  return !paidMessagesStars;
+  return true;
 }
 
 export function selectCanScheduleUntilOnline<T extends GlobalState>(global: T, id: string) {
   const isChatWithSelf = selectIsChatWithSelf(global, id);
   const chatBot = selectBot(global, id);
-  const paidMessagesStars = selectPeerPaidMessagesStars(global, id);
-  return Boolean(!paidMessagesStars
-    && !isChatWithSelf && !chatBot && isUserId(id) && selectUserStatus(global, id)?.wasOnline);
+  return Boolean(!isChatWithSelf && !chatBot && isUserId(id) && selectUserStatus(global, id)?.wasOnline);
 }
 
 export function selectForwardsContainVoiceMessages<T extends GlobalState>(
@@ -1592,18 +1586,16 @@ function сheckMessageSendingDenied(message: ApiMessage, options: IAllowedAttach
 }
 
 export function selectCanTranslateMessage<T extends GlobalState>(
-  global: T, message: ApiMessage, detectedLanguage?: string, ...[tabId = getCurrentTabId()]: TabArgs<T>
+  global: T, message: ApiMessage, ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
-  const { canTranslate: isTranslationEnabled, doNotTranslate } = global.settings.byKey;
-
-  const canTranslateLanguage = !detectedLanguage || !doNotTranslate.includes(detectedLanguage);
+  const { canTranslate: isTranslationEnabled } = global.settings.byKey;
 
   const isTranslatable = isMessageTranslatable(message);
 
   // Separate translations are disabled when chat translation enabled
   const chatRequestedLanguage = selectRequestedChatTranslationLanguage(global, message.chatId, tabId);
 
-  return IS_TRANSLATION_SUPPORTED && isTranslationEnabled && canTranslateLanguage && isTranslatable
+  return IS_TRANSLATION_SUPPORTED && isTranslationEnabled && isTranslatable
     && !chatRequestedLanguage;
 }
 

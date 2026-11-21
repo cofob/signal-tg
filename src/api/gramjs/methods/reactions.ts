@@ -1,7 +1,7 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiChat, ApiPeer, ApiReaction, ApiSticker,
+  ApiChat, ApiPeer, ApiReaction,
 } from '../../types';
 
 import { split } from '../../../util/iteratees';
@@ -12,19 +12,15 @@ import {
   TOP_REACTIONS_LIMIT,
 } from '../../../limits';
 import {
-  buildApiAvailableEffect,
   buildApiAvailableReaction,
   buildApiReaction,
   buildApiSavedReactionTag,
   buildMessagePeerReaction,
 } from '../apiBuilders/reactions';
-import { buildStickerFromDocument } from '../apiBuilders/symbols';
 import {
-  buildInputPaidReactionPrivacy,
   buildInputPeer,
   buildInputReaction,
   DEFAULT_PRIMITIVES,
-  generateRandomTimestampedBigInt,
 } from '../gramjsBuilders';
 import localDb from '../localDb';
 import { invokeRequest } from './client';
@@ -103,39 +99,6 @@ export async function fetchAvailableReactions() {
   return result.reactions.map(buildApiAvailableReaction);
 }
 
-export async function fetchAvailableEffects() {
-  const result = await invokeRequest(new GramJs.messages.GetAvailableEffects({
-    hash: DEFAULT_PRIMITIVES.INT,
-  }));
-
-  if (!result || result instanceof GramJs.messages.AvailableEffectsNotModified) {
-    return undefined;
-  }
-
-  const documentsMap = new Map(result.documents.map((doc) => [String(doc.id), doc]));
-
-  const effects = result.effects.map(buildApiAvailableEffect);
-
-  const stickers: ApiSticker[] = [];
-  const emojis: ApiSticker[] = [];
-
-  for (const effect of effects) {
-    if (effect.effectAnimationId) {
-      const document = documentsMap.get(effect.effectAnimationId);
-      const emoji = document && buildStickerFromDocument(document, false, effect.isPremium);
-      if (emoji) emojis.push(emoji);
-    } else {
-      const document = documentsMap.get(effect.effectStickerId);
-      const sticker = document && buildStickerFromDocument(document);
-      if (sticker) {
-        stickers.push(sticker);
-      }
-    }
-  }
-
-  return { effects, emojis, stickers };
-}
-
 export function sendReaction({
   chat, messageId, reactions, shouldAddToRecent,
 }: {
@@ -152,30 +115,6 @@ export function sendReaction({
   }), {
     shouldReturnTrue: true,
     shouldThrow: true,
-  });
-}
-
-export function sendPaidReaction({
-  chat,
-  messageId,
-  count,
-  isPrivate,
-  peerId,
-}: {
-  chat: ApiChat;
-  messageId: number;
-  count: number;
-  isPrivate?: boolean;
-  peerId?: string;
-}) {
-  return invokeRequest(new GramJs.messages.SendPaidReaction({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    msgId: messageId,
-    randomId: generateRandomTimestampedBigInt(),
-    count,
-    private: buildInputPaidReactionPrivacy(isPrivate, peerId),
-  }), {
-    shouldReturnTrue: true,
   });
 }
 

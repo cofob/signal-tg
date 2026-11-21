@@ -3,7 +3,6 @@ import type {
   ApiAppConfig,
   ApiAttachBot,
   ApiAudio,
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiBotPreviewMedia,
   ApiChat,
@@ -17,10 +16,10 @@ import type {
   ApiEmojiGroup,
   ApiEmojiStatusType,
   ApiGroupCall,
+  ApiHistorySyncProgress,
   ApiMessage,
   ApiMessagePoll,
   ApiNotifyPeerType,
-  ApiPaidReactionPrivacyType,
   ApiPasskey,
   ApiPasskeyOption,
   ApiPeerColors,
@@ -36,12 +35,10 @@ import type {
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiStarsAmount,
   ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
-  ApiTonAmount,
   ApiTopPeerCategory,
   ApiTranscription,
   ApiUpdateAuthorizationStateType,
@@ -189,6 +186,7 @@ export type GlobalState = {
       token: string;
       expires: number;
     };
+    historySync?: ApiHistorySyncProgress;
     passkeyOption?: ApiPasskeyOption;
 
   };
@@ -334,7 +332,6 @@ export type GlobalState = {
     topReactions: ApiReaction[];
     recentReactions: ApiReaction[];
     defaultTags: ApiReaction[];
-    effectReactions: ApiReaction[];
     availableReactions?: ApiAvailableReaction[];
     hash: {
       topReactions?: string;
@@ -342,7 +339,6 @@ export type GlobalState = {
       defaultTags?: string;
     };
   };
-  availableEffectById: Record<string, ApiAvailableEffect>;
 
   stickers: {
     setsById: Record<string, ApiStickerSet>;
@@ -376,10 +372,6 @@ export type GlobalState = {
       emoji?: string;
       stickers?: ApiSticker[];
       hash?: string;
-    };
-    effect: {
-      stickers: ApiSticker[];
-      emojis: ApiSticker[];
     };
     diceSetIdByEmoji?: Record<string, string>;
   };
@@ -459,7 +451,6 @@ export type GlobalState = {
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
     lastPremiumBandwithNotificationDate?: number;
-    paidReactionPrivacy?: ApiPaidReactionPrivacyType;
     botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
     passkeys?: ApiPasskey[];
@@ -487,12 +478,6 @@ export type GlobalState = {
     hash: string;
   };
 
-  stars?: {
-    balance: ApiStarsAmount;
-  };
-  ton?: {
-    balance: ApiTonAmount;
-  };
 };
 
 export type RequiredGlobalState = GlobalState & { _: never };

@@ -2,17 +2,14 @@ import { memo, useMemo, useRef } from '../../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../../global';
 
 import type {
-  ApiAvailableEffect,
   ApiMessage,
   ApiMessageEntity,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
 } from '../../../../api/types';
 import type { IAnchorPosition } from '../../../../types';
-import { MAIN_THREAD_ID } from '../../../../api/types';
 
 import { getReactionKey, getStoryKey } from '../../../../global/helpers';
 import {
@@ -38,7 +35,7 @@ import useTuckFilter from '../../../../hooks/useTuckFilter';
 
 import CustomEmojiPicker from '../../../common/CustomEmojiPicker';
 import Menu from '../../../ui/Menu';
-import StickerPicker from '../../composer/StickerPicker';
+import EmojiPicker from '../../composer/EmojiPicker';
 import ReactionPickerLimited from './ReactionPickerLimited';
 
 import styles from './ReactionPicker.module.scss';
@@ -55,9 +52,7 @@ interface StateProps {
   position?: IAnchorPosition;
   isTranslucent?: boolean;
   sendAsMessage?: boolean;
-  chatId?: string;
-  isForEffects?: boolean;
-  availableEffectById: Record<string, ApiAvailableEffect>;
+  hasReactionCatalog?: boolean;
 }
 
 const FULL_PICKER_SHIFT_DELTA = { x: -23, y: -64 };
@@ -74,13 +69,10 @@ const ReactionPicker = ({
   isCurrentUserPremium,
   shouldUseFullPicker,
   sendAsMessage,
-  chatId,
-  isForEffects,
-  availableEffectById,
+  hasReactionCatalog,
 }: OwnProps & StateProps) => {
   const {
-    toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction, saveEffectInDraft,
-    requestEffectInComposer, addLocalPaidReaction, openPaidReactionModal,
+    toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction,
   } = getActions();
 
   const renderedMessageId = useCurrentOrPrev(message?.id, true);
@@ -128,36 +120,22 @@ const ReactionPicker = ({
     closeReactionPicker();
   });
 
-  const handleToggleReaction = useLastCallback((reaction: ApiReactionWithPaid) => {
+  const handleEmojiSelect = useLastCallback((emoticon: string) => {
+    handleToggleReaction({ type: 'emoji', emoticon });
+  });
+
+  const handleToggleReaction = useLastCallback((reaction: ApiReaction) => {
     if (!renderedChatId || !renderedMessageId) {
       return;
     }
 
-    if (reaction.type === 'paid') {
-      addLocalPaidReaction({
-        chatId: renderedChatId, messageId: renderedMessageId, count: 1,
-      });
-    } else {
-      toggleReaction({
-        chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
-      });
-    }
-    closeReactionPicker();
-  });
-
-  const handleReactionContextMenu = useLastCallback((reaction: ApiReactionWithPaid) => {
-    if (reaction.type !== 'paid') return;
-
-    openPaidReactionModal({
-      chatId: renderedChatId!,
-      messageId: renderedMessageId!,
+    toggleReaction({
+      chatId: renderedChatId, messageId: renderedMessageId, reaction, shouldAddToRecent: true,
     });
     closeReactionPicker();
   });
 
-  const handleStoryReactionSelect = useLastCallback((item: ApiReactionWithPaid | ApiSticker) => {
-    if ('type' in item && item.type === 'paid') return; // Not supported for stories
-
+  const handleStoryReactionSelect = useLastCallback((item: ApiReaction | ApiSticker) => {
     const reaction = 'id' in item ? { type: 'custom', documentId: item.id } as const : item;
 
     const sticker = 'type' in item && item.type === 'custom' ? getGlobal().customEmojis.byId[item.documentId]
@@ -203,16 +181,6 @@ const ReactionPicker = ({
     closeReactionPicker();
   });
 
-  const handleStickerSelect = useLastCallback((sticker: ApiSticker) => {
-    const availableEffects = Object.values(availableEffectById);
-    const effectId = availableEffects.find((effect) => effect.effectStickerId === sticker.id)?.id;
-
-    if (chatId) saveEffectInDraft({ chatId, threadId: MAIN_THREAD_ID, effectId });
-
-    if (effectId) requestEffectInComposer({});
-    closeReactionPicker();
-  });
-
   const selectedReactionIds = useMemo(() => {
     return (message?.reactions?.results || []).reduce<string[]>((acc, { chosenOrder, reaction }) => {
       if (chosenOrder !== undefined) {
@@ -246,18 +214,15 @@ const ReactionPicker = ({
       backdropExcludedSelector=".Modal.confirm"
       onClose={closeReactionPicker}
     >
-      {isForEffects && chatId ? (
-        <StickerPicker
-          className=""
+      {!hasReactionCatalog && !renderedStoryId ? (
+        <EmojiPicker
+          chatId={renderedChatId}
+          idPrefix="message-reaction-emoji-"
           isHidden={!isOpen}
-          loadAndPlay={Boolean(isOpen && shouldUseFullPicker)}
-          idPrefix="message-effect"
-          canSendStickers={false}
-          noContextMenus={false}
-          chatId={chatId}
+          loadAndPlay={isOpen}
           isTranslucent={isTranslucent}
-          onStickerSelect={handleStickerSelect}
-          isForEffects={isForEffects}
+          onEmojiSelect={handleEmojiSelect}
+          onCustomEmojiSelect={handleToggleCustomReaction}
         />
       ) : (
         <>
@@ -277,14 +242,12 @@ const ReactionPicker = ({
             isTranslucent={isTranslucent}
             onCustomEmojiSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleCustomReaction}
             onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-            onReactionContext={handleReactionContextMenu}
           />
           {!shouldUseFullPicker && Boolean(renderedChatId) && (
             <ReactionPickerLimited
               chatId={renderedChatId}
               loadAndPlay={isOpen}
               onReactionSelect={renderedStoryId ? handleStoryReactionSelect : handleToggleReaction}
-              onReactionContext={handleReactionContextMenu}
               selectedReactionIds={selectedReactionIds}
               message={message}
             />
@@ -297,9 +260,8 @@ const ReactionPicker = ({
 
 export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
   const state = selectTabState(global);
-  const availableEffectById = global.availableEffectById;
   const {
-    chatId, messageId, storyPeerId, storyId, position, sendAsMessage, isForEffects,
+    chatId, messageId, storyPeerId, storyId, position, sendAsMessage,
   } = state.reactionPicker || {};
   const story = storyPeerId && storyId
     ? selectPeerStory(global, storyPeerId, storyId) as ApiStory | ApiStorySkipped
@@ -313,6 +275,8 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
   const areAllReactionsAllowed = chatFullInfo?.enabledReactions?.type === 'all'
     && chatFullInfo?.enabledReactions?.areCustomAllowed;
 
+  // Signal has no reaction catalog: any emoji is a reaction, so the picker shows the full emoji set
+  const hasReactionCatalog = Boolean(global.reactions.availableReactions?.length);
   const currentReactions = message?.reactions?.results;
   const shouldUseCurrentReactions = Boolean(maxUniqueReactions && currentReactions
     && currentReactions.length >= maxUniqueReactions);
@@ -322,13 +286,11 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     story,
     position,
     shouldUseFullPicker: (chat?.isForbidden || areSomeReactionsAllowed || shouldUseCurrentReactions) ? false
-      : (areAllReactionsAllowed || isPrivateChat),
+      : (areAllReactionsAllowed || isPrivateChat || !hasReactionCatalog),
     isTranslucent: selectIsContextMenuTranslucent(global),
     isCurrentUserPremium: selectIsCurrentUserPremium(global),
     sendAsMessage,
-    isForEffects,
-    chatId,
-    availableEffectById,
+    hasReactionCatalog,
   };
 })(ReactionPicker));
 

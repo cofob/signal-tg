@@ -3,7 +3,6 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type { ApiPhoneCallDiscardReason } from '../../types';
 import type { ApiMessageAction } from '../../types/messageActions';
 
-import { toJSNumber } from '../../../util/numbers';
 import { buildApiBotApp } from './bots';
 import { buildApiPhoto } from './common';
 import { buildPollAnswer, buildTodoItem } from './messageContent';
@@ -323,34 +322,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       mediaType: 'action',
       type: 'suggestBirthday',
       birthday: buildApiBirthday(action.birthday),
-    };
-  }
-  if (action instanceof GramJs.MessageActionPaidMessagesPrice) {
-    const {
-      stars, broadcastMessagesAllowed,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'paidMessagesPrice',
-      isAllowedInChannel: broadcastMessagesAllowed,
-      stars: toJSNumber(stars),
-    };
-  }
-  if (action instanceof GramJs.MessageActionPaidMessagesRefunded) {
-    const {
-      stars, count,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'paidMessagesRefunded',
-      stars: toJSNumber(stars),
-      count,
-    };
-  }
-  if (action instanceof GramJs.MessageActionNoPaidMessagesTokenUsed) {
-    return {
-      mediaType: 'action',
-      type: 'noPaidMessagesTokenUsed',
     };
   }
   if (action instanceof GramJs.MessageActionSuggestedPostApproval) {

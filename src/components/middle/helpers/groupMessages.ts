@@ -66,14 +66,6 @@ export function groupMessages(
           }
         }
       }
-    } else if ((message.content.paidMedia?.extendedMedia.length || 0) > 1) {
-      currentSenderGroup.push({
-        albumId: `paid-${message.id}`,
-        messages: [message],
-        mainMessage: message,
-        hasMultipleCaptions: false,
-        isPaidMedia: true,
-      } satisfies IAlbum);
     } else if (message.groupedId) {
       if (!currentDocumentGroup) {
         currentDocumentGroup = {
@@ -127,7 +119,6 @@ export function groupMessages(
         || message.isEphemeral !== nextMessage.isEphemeral
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
         || message.guestChatViaId !== nextMessage.guestChatViaId
-        || (!withUsers && message.paidMessageStars)
         || (nextMessage.suggestedPostInfo)
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle

@@ -1,13 +1,12 @@
 import {
-  memo, useCallback, useMemo, useRef, useState,
+  memo, useMemo, useRef, useState,
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { IAnchorPosition, MessageListType, ThreadId, TranslationTone } from '../../types';
+import type { IAnchorPosition, MessageListType, ThreadId } from '../../types';
 import { MAIN_THREAD_ID } from '../../api/types';
 import { ManagementScreens } from '../../types';
 
-import { COCOON_EMOJI_ID } from '../../config';
 import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
 import {
   getHasAdminRight,
@@ -18,7 +17,6 @@ import {
 import {
   selectBot,
   selectCanAnimateInterface,
-  selectCanTranslateChat,
   selectChat,
   selectChatFullInfo,
   selectIsChatRestricted,
@@ -27,10 +25,6 @@ import {
   selectIsInSelectMode,
   selectIsRightColumnShown,
   selectLanguageCode,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedChatTranslationTone,
-  selectTranslationLanguage,
-  selectUserFullInfo,
 } from '../../global/selectors';
 import { ARE_CALLS_SUPPORTED } from '../../util/browser/windowEnvironment';
 import { isUserId } from '../../util/entities/ids';
@@ -41,14 +35,7 @@ import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
-import CustomEmoji from '../common/CustomEmoji';
-import Icon from '../common/icons/Icon';
 import Button from '../ui/Button';
-import DropdownMenu from '../ui/DropdownMenu';
-import Link from '../ui/Link';
-import MenuItem from '../ui/MenuItem';
-import MenuSeparator from '../ui/MenuSeparator';
-import NestedMenuItem from '../ui/NestedMenuItem';
 import HeaderMenuContainer from './HeaderMenuContainer.async';
 
 interface OwnProps {
@@ -74,14 +61,8 @@ interface StateProps {
   channelMonoforumId?: string;
   pendingJoinRequests?: number;
   noAnimation?: boolean;
-  canTranslate?: boolean;
-  isTranslating?: boolean;
-  translationLanguage: string;
   language: string;
-  detectedChatLanguage?: string;
-  doNotTranslate: string[];
   isAccountFrozen?: boolean;
-  currentTone?: TranslationTone;
 }
 
 const HeaderActions = ({
@@ -102,30 +83,17 @@ const HeaderActions = ({
   isRightColumnShown,
   isForForum,
   noAnimation,
-  canTranslate,
-  isTranslating,
-  translationLanguage,
   language,
-  detectedChatLanguage,
-  doNotTranslate,
   isAccountFrozen,
-  currentTone,
   onTopicSearch,
 }: OwnProps & StateProps) => {
   const {
     openMiddleSearch,
     requestMasterAndRequestCall,
     requestNextManagementScreen,
-    showNotification,
     openChat,
-    requestChatTranslation,
-    setChatTranslationTone,
-    togglePeerTranslations,
-    openChatLanguageModal,
-    setSettingOption,
     setViewForumAsMessages,
     openFrozenAccountModal,
-    openCocoonModal,
   } = getActions();
   const menuButtonRef = useRef<HTMLButtonElement>();
 
@@ -147,15 +115,6 @@ const HeaderActions = ({
 
   const handleHeaderMenuHide = useLastCallback(() => {
     setMenuAnchor(undefined);
-  });
-
-  const handleTranslateClick = useLastCallback(() => {
-    if (isTranslating) {
-      requestChatTranslation({ chatId, toLanguageCode: undefined });
-      return;
-    }
-
-    requestChatTranslation({ chatId, toLanguageCode: translationLanguage });
   });
 
   const handleJoinRequestsClick = useLastCallback(() => {
@@ -193,142 +152,12 @@ const HeaderActions = ({
     requestMasterAndRequestCall({ userId: chatId });
   });
 
-  const getTextWithLanguage = useCallback((
-    key: 'TranslateToButton' | 'DoNotTranslateLanguage' | 'AddedToDoNotTranslate',
-    langCode: string,
-  ) => {
-    const translatedNames = new Intl.DisplayNames([language], { type: 'language' });
-    const translatedName = translatedNames.of(langCode)!;
-    return lang(key, { language: translatedName });
-  }, [language, lang]);
-
-  const buttonText = useMemo(() => {
-    if (isTranslating) return lang('ShowOriginalButton');
-
-    return getTextWithLanguage('TranslateToButton', translationLanguage);
-  }, [translationLanguage, getTextWithLanguage, isTranslating, lang]);
-
-  const doNotTranslateText = useMemo(() => {
-    if (!detectedChatLanguage) return undefined;
-
-    return getTextWithLanguage('DoNotTranslateLanguage', detectedChatLanguage);
-  }, [getTextWithLanguage, detectedChatLanguage]);
-
-  const handleHide = useLastCallback(() => {
-    togglePeerTranslations({ chatId, isEnabled: false });
-    requestChatTranslation({ chatId, toLanguageCode: undefined });
-  });
-
-  const handleChangeLanguage = useLastCallback(() => {
-    openChatLanguageModal({ chatId });
-  });
-
-  const handleCocoonClick = useLastCallback(() => {
-    openCocoonModal();
-  });
-
-  const handleDoNotTranslate = useLastCallback(() => {
-    if (!detectedChatLanguage) return;
-
-    setSettingOption({
-      doNotTranslate: [...doNotTranslate, detectedChatLanguage],
-    });
-    requestChatTranslation({ chatId, toLanguageCode: undefined });
-
-    showNotification({ message: getTextWithLanguage('AddedToDoNotTranslate', detectedChatLanguage) });
-  });
-
-  const handleSetTone = useLastCallback((tone: TranslationTone) => {
-    setChatTranslationTone({ chatId, tone });
-    setSettingOption({ translationTone: tone });
-  });
-
   useKeyboardShortcuts(useMemo(() => (canSearch ? {
     searchInChat: handleSearchClick,
   } : undefined), [canSearch]));
 
-  const MoreMenuButton = useMemo(() => {
-    return ({ onTrigger, isOpen }: { onTrigger: () => void; isOpen?: boolean }) => (
-      <Button
-        round
-        ripple={isRightColumnShown}
-        color="translucent"
-        size="smaller"
-        className={isOpen ? 'active' : ''}
-        onClick={onTrigger}
-        ariaLabel={lang('AiMessageEditorTranslate')}
-        iconName="language"
-      />
-    );
-  }, [isRightColumnShown, lang]);
-
   return (
     <div className="HeaderActions">
-      {!isForForum && canTranslate && (
-        <DropdownMenu
-          className="stickers-more-menu with-menu-transitions"
-          trigger={MoreMenuButton}
-          positionX="right"
-        >
-          <MenuItem icon="language" onClick={handleTranslateClick}>
-            {buttonText}
-          </MenuItem>
-          <MenuItem icon="replace" onClick={handleChangeLanguage}>
-            {lang('ChatTranslateMenuTo')}
-          </MenuItem>
-          <NestedMenuItem
-            icon="tone"
-            submenuClassName="translation-tone-menu"
-            submenu={(
-              <>
-                <MenuItem
-                  icon={currentTone === 'neutral' ? 'check' : undefined}
-                  customIcon={currentTone !== 'neutral' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => handleSetTone('neutral')}
-                >
-                  {lang('TranslationToneNeutral')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTone === 'formal' ? 'check' : undefined}
-                  customIcon={currentTone !== 'formal' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => handleSetTone('formal')}
-                >
-                  {lang('TranslationToneFormal')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTone === 'casual' ? 'check' : undefined}
-                  customIcon={currentTone !== 'casual' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => handleSetTone('casual')}
-                >
-                  {lang('TranslationToneCasual')}
-                </MenuItem>
-              </>
-            )}
-          >
-            {lang('TranslationTone')}
-          </NestedMenuItem>
-          <MenuSeparator />
-          {detectedChatLanguage
-            && <MenuItem icon="hand-stop" onClick={handleDoNotTranslate}>{doNotTranslateText}</MenuItem>}
-          <MenuItem icon="close-circle" onClick={handleHide}>{lang('Hide')}</MenuItem>
-          <MenuSeparator />
-          <MenuItem withWrap onClick={handleCocoonClick}>
-            {lang('TranslateMenuCocoon', {
-              link: (
-                <Link isPrimary onClick={(e) => e.preventDefault()}>
-                  {lang('TranslateMenuCocoonLinkText')}
-                </Link>
-              ),
-            }, {
-              withNodes: true,
-              withMarkdown: true,
-              specialReplacement: {
-                '🥚': <CustomEmoji documentId={COCOON_EMOJI_ID} />,
-              },
-            })}
-          </MenuItem>
-        </DropdownMenu>
-      )}
       {!isMobile && (
         <>
           {canSearch && (
@@ -416,25 +245,18 @@ export default memo(withGlobal<OwnProps>(
     const isChannel = Boolean(chat && isChatChannel(chat));
     const isSuperGroup = Boolean(chat && isChatSuperGroup(chat));
     const language = selectLanguageCode(global);
-    const translationLanguage = selectTranslationLanguage(global);
     const isPrivate = isUserId(chatId);
-    const { doNotTranslate, translationTone } = global.settings.byKey;
 
     const isRestricted = selectIsChatRestricted(global, chatId);
     if (!chat || isRestricted || selectIsInSelectMode(global)) {
       return {
         noMenu: true,
         language,
-        translationLanguage,
-        doNotTranslate,
-        currentTone: translationTone,
       } as Complete<StateProps>;
     }
 
     const bot = selectBot(global, chatId);
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
-    const userFullInfo = isPrivate ? selectUserFullInfo(global, chatId) : undefined;
-    const fullInfo = chatFullInfo || userFullInfo;
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
     const isDiscussionThread = messageListType === 'thread' && threadId !== MAIN_THREAD_ID;
@@ -456,10 +278,7 @@ export default memo(withGlobal<OwnProps>(
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
 
-    const isTranslating = Boolean(selectRequestedChatTranslationLanguage(global, chatId));
-    const canTranslate = selectCanTranslateChat(global, chatId) && !fullInfo?.isTranslationDisabled;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
-    const currentTone = selectRequestedChatTranslationTone(global, chatId);
 
     const channelMonoforumId = isChatChannel(chat) ? chat.linkedMonoforumId : undefined;
 
@@ -476,15 +295,9 @@ export default memo(withGlobal<OwnProps>(
       canCreateVoiceChat,
       pendingJoinRequests,
       noAnimation,
-      canTranslate,
-      isTranslating,
-      translationLanguage,
       language,
-      doNotTranslate,
-      detectedChatLanguage: chat.detectedLanguage,
       isAccountFrozen,
       channelMonoforumId,
-      currentTone,
     };
   },
 )(HeaderActions));

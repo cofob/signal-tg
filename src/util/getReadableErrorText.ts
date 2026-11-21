@@ -5,6 +5,7 @@ import type { LangFn } from './localization';
 import { DEBUG } from '../config';
 
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
+  SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
   CHAT_RESTRICTED: 'ErrorChatRestricted',
   CHAT_SEND_POLL_FORBIDDEN: 'ErrorChatSendPollForbidden',
   CHAT_SEND_STICKERS_FORBIDDEN: 'ErrorChatSendStickersForbidden',
@@ -70,7 +71,6 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   STARGIFT_CONVERT_TOO_OLD: 'ErrorStargiftConvertTooOld',
   SUBSCRIPTION_ALREADY_ACTIVE: 'ErrorSubscriptionAlreadyActive',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
-  PAID_MEDIA_FORBIDDEN: 'ErrorPaidMediaForbidden',
   USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
   SIGNAL_GROUP_CHANGE_FAILED: 'ErrorGroupChangeFailed',
 };

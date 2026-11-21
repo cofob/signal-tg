@@ -29,6 +29,20 @@ export type AccountRecord = {
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
   isDemo?: boolean;
+  // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
+  historyTransfer?: HistoryTransferState;
+};
+
+/** Where the primary device uploaded the message history archive */
+export type TransferArchive = {
+  cdn: number;
+  key: string;
+};
+
+export type HistoryTransferState = {
+  archive?: TransferArchive;
+  // Chat items an interrupted import stored; the next import skips them
+  importedItemCount?: number;
 };
 
 // Sealed sender access of a recipient; `undefined` until a profile fetch or a send shows it
@@ -58,6 +72,15 @@ type Items = {
   pniIdentityKeyPair: KeyPairBytes;
   // Next ids for generated keys, per local service id
   nextKeyIds: Record<string, { preKey: number; signedPreKey: number; kyberPreKey: number }>;
+  // Blocked phone numbers without a known ACI, kept so the blocked list we sync does not unblock them
+  blockedE164s: string[];
+  // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
+  notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
+};
+
+export type NotificationDefaults = {
+  isMuted?: boolean;
+  shouldShowPreviews?: boolean;
 };
 
 export type IdentityRecord = {

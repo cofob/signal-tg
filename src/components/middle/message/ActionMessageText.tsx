@@ -581,6 +581,26 @@ const ActionMessageText = ({
       case 'historyClear':
         return lang('ActionHistoryCleared');
 
+      // Signal Desktop `getMessageStatusContents` in `ts/components/conversation/Message.dom.tsx`
+      case 'deleted': {
+        const { adminId } = action;
+        if (adminId && adminId !== currentUserId) {
+          const admin = selectPeer(global, adminId);
+          const adminTitle = (admin && getPeerTitle(lang, admin)) || userFallbackText;
+          const adminLink = renderPeerLink(adminId, adminTitle, asPreview);
+          return lang('ActionMessageDeletedByAdmin', { admin: adminLink }, { withNodes: true });
+        }
+        return translateWithYou(lang, 'ActionMessageDeleted', isOutgoing || Boolean(adminId), { from: senderLink });
+      }
+
+      // Signal Desktop `ts/components/conversation/Message.dom.tsx` (`#renderTapToViewText`)
+      case 'viewOnce':
+        if (action.isViewed) return lang('ActionViewOnceViewed');
+        if (action.media) {
+          return lang(action.media.mediaType === 'video' ? 'ActionViewOnceVideo' : 'ActionViewOncePhoto');
+        }
+        return lang('ActionViewOnceMedia');
+
       case 'setMessagesTtl': {
         const { period, autoSettingFromId } = action;
 
@@ -628,49 +648,6 @@ const ActionMessageText = ({
 
       case 'customAction':
         return action.message;
-
-      case 'paidMessagesPrice': {
-        const { stars, isAllowedInChannel } = action;
-        if (stars === 0) {
-          if (isChannel) {
-            return lang(
-              isAllowedInChannel ? 'ActionMessageChannelFree' : 'ActionMessageChannelDisabled',
-              { peer: chatLink },
-              { withNodes: true },
-            );
-          }
-          return translateWithYou(lang, 'ActionPaidMessagePriceFree', isOutgoing, { peer: senderLink });
-        }
-        return translateWithYou(lang, 'ActionPaidMessagePrice', isOutgoing, {
-          peer: senderLink,
-          amount: formatStarsAsText(lang, stars),
-        }, { withMarkdown: true });
-      }
-
-      case 'noPaidMessagesTokenUsed': {
-        if (isOutgoing) {
-          return lang('ActionNoPaidTokenUsedYou', {
-            user: renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview),
-          }, { withNodes: true });
-        }
-
-        return lang('ActionNoPaidTokenUsed', { user: senderLink }, { withNodes: true });
-      }
-
-      case 'paidMessagesRefunded': {
-        const { stars } = action;
-        const user = selectPeer(global, chatId);
-        const userTitle = (user && getPeerTitle(lang, user)) || userFallbackText;
-
-        const key = isOutgoing
-          ? 'ApiMessageActionPaidMessagesRefundedOutgoing'
-          : 'ApiMessageActionPaidMessagesRefundedIncoming';
-
-        return lang(key, {
-          stars: formatStarsAsText(lang, stars),
-          user: renderPeerLink(user?.id, userTitle),
-        }, { withNodes: true, withMarkdown: true });
-      }
 
       case 'suggestedPostSuccess': {
         const { amount: price } = action;

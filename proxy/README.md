@@ -9,8 +9,10 @@ The crate has two parts:
 
 - `src/lib.rs`, a transport-independent library: the host allowlist, upstream connections (address
   checks, optional HTTP `CONNECT` proxy), ClientHello checks and the byte relay with per-client
-  limits. A Tauri command can drive the same relay over IPC; see [Library](#library).
-- `src/main.rs` and `src/server/`, the WebSocket server that the web app uses.
+  limits. The desktop app's native transport (`tauri/src/transport.rs`) drives the same relay over
+  Tauri IPC; see [Library](#library).
+- `src/main.rs` and `src/server/`, the WebSocket server that the web app uses. The default `server`
+  feature builds it; other front ends depend on the crate with `default-features = false`.
 
 ## Running
 
@@ -69,7 +71,7 @@ Environment variables; `0` turns off the limits marked optional, and other numbe
 | `PORT` | `8787` | Listening port |
 | `HOST` | `127.0.0.1` | Listening IP address |
 | `ALLOW_PUBLIC_BIND` | `0` | `1` allows a non-loopback `HOST` |
-| `ALLOWED_ORIGINS` | loopback | Comma-separated exact origins, such as `https://signal.example.com`. Unset allows `http://localhost`, `http://127.0.0.1` and `http://[::1]` with any port |
+| `ALLOWED_ORIGINS` | loopback | Comma-separated exact origins, such as `https://signal.example.com`. Unset allows `http://localhost`, `http://127.0.0.1` and `http://[::1]` with any port. The desktop app (`tauri/`) connects from `tauri://localhost`, and from `http://tauri.localhost` on Windows |
 | `ALLOW_NO_ORIGIN` | `0` | `1` accepts requests without `Origin`, such as Node scripts |
 | `UPSTREAM_PROXY` | none | `http://[user:password@]host:port` HTTP `CONNECT` proxy for upstream connections; percent-encode special characters in the credentials |
 | `TRUST_PROXY` | `0` | `1` takes the client address from the rightmost `X-Forwarded-For` entry |
@@ -211,6 +213,6 @@ let end: End = relay::relay(&tunnel, &mut client_rx, &mut client_tx, upstream, s
 
 `relay` returns once the tunnel ended; the caller then closes its transport according to `End` and
 may count `end.is_violation()` with `slot.record_violation()`. `src/server/websocket.rs` is the
-WebSocket adapter. A Tauri front end can build `client_rx` from a channel fed by an IPC command and
-`client_tx` from `futures_util::sink::unfold` over a Tauri `Channel`, and pass
-`std::future::pending()` as `shutdown` if it has none.
+WebSocket adapter. The desktop app (`tauri/src/transport.rs`) builds `client_rx` from a channel fed by
+an IPC command and `client_tx` from `futures_util::sink::unfold` over a Tauri `Channel`, and passes
+`std::future::pending()` as `shutdown`.

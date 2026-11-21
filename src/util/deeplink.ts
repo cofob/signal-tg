@@ -58,7 +58,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
           choose,
           originalParts: [parsedLink.username, parsedLink.appName],
           isDirect: parsedLink.isDirect,
-          noPaidMessagesToken: parsedLink.noPaidMessagesToken,
         });
         return true;
       }
@@ -71,7 +70,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       case 'contactLink':
         actions.openChatByContactToken({
           token: parsedLink.token,
-          noPaidMessagesToken: parsedLink.noPaidMessagesToken,
         });
         return true;
       case 'privateChannelLink': {
@@ -133,7 +131,7 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     case 'resolve': {
       const {
         domain, phone, post, comment, start, startattach, attach, thread, topic,
-        appname, startapp, mode, story, text, free,
+        appname, startapp, mode, story, text,
       } = params;
 
       const threadId = Number(thread) || Number(topic) || undefined;
@@ -153,7 +151,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
             startAttach: startattach,
             attach,
             text,
-            noPaidMessagesToken: free || undefined,
           });
         } else if (story) {
           openStoryViewerByUsername({ username: domain, storyId: Number(story) });

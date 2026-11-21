@@ -8,7 +8,7 @@ export interface ApiStarsAmount {
   nanos: number;
 }
 
-export interface ApiTonAmount {
+interface ApiTonAmount {
   currency: typeof TON_CURRENCY_CODE;
   // Nanotons
   amount: bigint;

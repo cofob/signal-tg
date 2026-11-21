@@ -70,6 +70,7 @@ type OwnProps = {
   isOwn?: boolean;
   isMediaUnread?: boolean;
   isViewOnceLocked?: boolean;
+  isUnavailable?: boolean;
   noProgress?: boolean;
   noProgressUpdates?: boolean;
   withPlayingRing?: boolean;
@@ -121,6 +122,7 @@ const TrackRow = ({
   isOwn,
   isMediaUnread,
   isViewOnceLocked,
+  isUnavailable,
   noProgress,
   noProgressUpdates,
   withPlayingRing,
@@ -192,7 +194,10 @@ const TrackRow = ({
 
   const reversePlayProgress = 1 - playProgress;
 
-  const generatedWaveform = useGeneratedVoiceWaveform(mediaSource, withWaveform, onWaveformGenerated);
+  const generatedWaveform = useGeneratedVoiceWaveform(
+    mediaSource, withWaveform && !isUnavailable, onWaveformGenerated,
+  );
+  const unavailableText = isUnavailable ? lang('MediaUnavailable') : undefined;
   const waveformCanvasRef = useWaveformCanvas(
     theme,
     mediaSource,
@@ -421,6 +426,7 @@ const TrackRow = ({
           onClick={handleButtonClick}
           isRtl={lang.isRtl}
           backgroundImage={coverBlobUrl}
+          disabled={isUnavailable}
           nonInteractive={isInOneTimeModal}
         >
           {!isInOneTimeModal && (
@@ -509,6 +515,7 @@ const TrackRow = ({
         (isDownloading || isUploading),
         date,
         transferProgress,
+        unavailableText,
         onDateClick,
       )}
       {variant === 'sharedMedia' && mediaSource && renderWithTitle()}
@@ -526,6 +533,7 @@ const TrackRow = ({
           onTranscribe,
           onHideTranscription,
           variant,
+          unavailableText,
         )
       )}
       {contextActions && contextMenuAnchor !== undefined && (
@@ -586,6 +594,7 @@ function renderAudio(
   showProgress?: boolean,
   date?: number,
   progress?: number,
+  unavailableText?: string,
   handleDateClick?: NoneToVoidFunction,
 ) {
   const {
@@ -605,10 +614,11 @@ function renderAudio(
           {renderSeekline(playProgress, bufferedRanges, seekerRef)}
         </div>
       )}
-      {!showSeekline && showProgress && (
+      {unavailableText && <div className="meta" dir="auto">{unavailableText}</div>}
+      {!unavailableText && !showSeekline && showProgress && (
         <AnimatedFileSize className="meta" size={audio.size} progress={progress} />
       )}
-      {!showSeekline && !showProgress && (
+      {!unavailableText && !showSeekline && !showProgress && (
         <div className="meta" dir={isRtl ? 'rtl' : undefined}>
           <span className="duration" dir="auto">{formatMediaDuration(duration)}</span>
           {performer && (
@@ -644,6 +654,7 @@ function renderVoice(
   onClickTranscribe?: VoidFunction,
   onHideTranscription?: (isHidden: boolean) => void,
   variant?: AudioVariant,
+  unavailableText?: string,
 ) {
   return (
     <div className="content">
@@ -696,8 +707,8 @@ function renderVoice(
         className={buildClassName('voice-duration', variant !== 'oneTimeModal' && isMediaUnread && 'unread')}
         dir="auto"
       >
-        {playProgress === 0 || playProgress === 1
-          ? formatMediaDuration(media.duration) : formatMediaDuration(media.duration * playProgress)}
+        {unavailableText ?? (playProgress === 0 || playProgress === 1
+          ? formatMediaDuration(media.duration) : formatMediaDuration(media.duration * playProgress))}
       </p>
     </div>
   );

@@ -3,15 +3,13 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { AttachmentPointer } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type { ApiOnProgress } from '../../types';
 
-import { downloadAttachment } from '../../../lib/signal/attachments/downloadAttachment';
+import { ATTACHMENT_CACHE_NAME, getAttachmentCacheKey } from '../../../lib/signal/attachments/attachmentCache';
+import { AttachmentUnavailableError, downloadAttachment } from '../../../lib/signal/attachments/downloadAttachment';
 import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import * as cacheApi from '../../../util/cacheApi';
-import { bufferToHex } from '../../../util/encoding/buffer';
 import { getSafeMimeType } from '../../../util/media/safeMimeType';
 import { parseAttachmentMediaId, STICKER_SLOT } from '../builders/media';
 import { db } from '../engine';
-
-type AttachmentLocation = Pick<AttachmentPointer, 'attachmentIdentifier' | 'cdnNumber' | 'digest'>;
 
 type DownloadState = {
   controller: AbortController;
@@ -25,21 +23,25 @@ type Download = DownloadState & {
   promise: Promise<Blob>;
 };
 
-// Decrypted attachments stay until logout, outside the app's expiring media caches: the CDN deletes them
-// after some weeks, while Signal Desktop keeps them on disk
-const ATTACHMENT_CACHE_NAME = 'ts-signal-attachments';
 const PROGRESS_STEP = 0.01;
 
 const downloads = new Map<string, Download>();
 // Serves the parts of a streamed file while it is being saved, or when the cache is unavailable
 let lastDownloaded: { key: string; blob: Blob } | undefined;
 
-/** The attachment pointer that a media id from `buildMessageMedia` refers to */
+/**
+ * The attachment pointer that a media id from `buildMessageMedia` refers to. Throws `AttachmentUnavailableError`
+ * when the CDN no longer has the attachment.
+ */
 export async function getAttachmentPointer(mediaId: string) {
   const parsed = parseAttachmentMediaId(mediaId);
   if (!parsed) return undefined;
   const message = await db.getMessage(parsed.messageId);
   if (!message?.dataMessage) return undefined;
+  const isUnavailable = parsed.slot === STICKER_SLOT
+    ? message.isStickerUnavailable
+    : message.unavailableAttachmentIndexes?.includes(parsed.slot);
+  if (isUnavailable) throw new AttachmentUnavailableError();
 
   const { attachments, sticker } = fromBinary(DataMessageSchema, message.dataMessage);
   return parsed.slot === STICKER_SLOT ? sticker?.data : attachments[parsed.slot];
@@ -50,7 +52,7 @@ export async function getAttachmentPointer(mediaId: string) {
  * which stops once every request with a progress callback is canceled.
  */
 export async function fetchAttachmentBlob(pointer: AttachmentPointer, onProgress?: ApiOnProgress) {
-  const key = getCacheKey(pointer);
+  const key = getAttachmentCacheKey(pointer);
   if (lastDownloaded?.key === key) return lastDownloaded.blob;
 
   const cached: Blob | undefined = await cacheApi.fetch(ATTACHMENT_CACHE_NAME, key, cacheApi.Type.Blob);
@@ -63,11 +65,6 @@ export async function fetchAttachmentBlob(pointer: AttachmentPointer, onProgress
     download.hasUncancelableRequest = true;
   }
   return download.promise;
-}
-
-/** Keeps a sent attachment, so it shows without a download */
-export async function saveAttachmentBlob(pointer: AttachmentLocation, blob: Blob) {
-  await cacheApi.save(ATTACHMENT_CACHE_NAME, getCacheKey(pointer), blob);
 }
 
 export async function clearAttachmentCache() {
@@ -107,11 +104,4 @@ function reportProgress(state: DownloadState, progress: number) {
   if (progress < 1 && progress - state.reportedProgress < PROGRESS_STEP) return;
   state.reportedProgress = progress;
   activeCallbacks.forEach((callback) => callback(progress));
-}
-
-/** Attachments are cached by their digest, which changes with every upload, or by their CDN location */
-function getCacheKey({ attachmentIdentifier, cdnNumber, digest }: AttachmentLocation) {
-  return digest.length
-    ? `attachment/${bufferToHex(digest)}`
-    : `attachment/${cdnNumber}/${encodeURIComponent(String(attachmentIdentifier.value))}`;
 }

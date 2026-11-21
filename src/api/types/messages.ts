@@ -53,6 +53,8 @@ export interface ApiPhoto {
   videoSizes?: ApiVideoSize[];
   blobUrl?: string;
   isSpoiler?: boolean;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiSticker {
@@ -70,6 +72,8 @@ export interface ApiSticker {
   hasEffect?: boolean;
   isFree?: boolean;
   shouldUseTextColor?: boolean;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiStickerSet {
@@ -142,6 +146,8 @@ export interface ApiVideo {
   altVideos?: ApiVideo[];
   storyboardInfo?: StoryboardInfo;
   cover?: ApiPhoto;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiAudio {
@@ -154,6 +160,8 @@ export interface ApiAudio {
   performer?: string;
   title?: string;
   thumbnailSizes?: ApiPhotoSize[];
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiVoice {
@@ -162,6 +170,8 @@ export interface ApiVoice {
   duration: number;
   waveform?: number[];
   size: number;
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiDocument {
@@ -176,6 +186,8 @@ export interface ApiDocument {
   previewBlobUrl?: string;
   innerMediaType?: 'photo' | 'video';
   mediaSize?: ApiDimensions & { fromDocumentAttribute?: boolean; fromPreload?: true };
+  // Signal: the CDN no longer has the file
+  isUnavailable?: true;
 }
 
 export interface ApiContact {
@@ -185,17 +197,6 @@ export interface ApiContact {
   phoneNumber: string;
   userId: string;
 }
-
-export type ApiPaidMedia = {
-  mediaType: 'paidMedia';
-  starsAmount: number;
-} & ({
-  isBought?: true;
-  extendedMedia: BoughtPaidMedia[];
-} | {
-  isBought?: undefined;
-  extendedMedia: ApiMediaExtendedPreview[];
-});
 
 export interface ApiPollAnswer {
   text: ApiFormattedText;
@@ -248,14 +249,6 @@ export interface ApiMessagePoll {
   summary: ApiPoll;
   results: ApiPollResults;
   attachedMedia?: MediaContent;
-}
-
-export interface ApiMediaExtendedPreview {
-  mediaType: 'extendedMediaPreview';
-  width?: number;
-  height?: number;
-  thumbnail?: ApiThumbnail;
-  duration?: number;
 }
 
 export interface ApiGeoPoint {
@@ -693,7 +686,6 @@ export type MediaContent = {
   location?: ApiLocation;
   game?: ApiGame;
   storyData?: ApiMessageStoryData;
-  paidMedia?: ApiPaidMedia;
   dice?: ApiDice;
   ttlSeconds?: number;
 };
@@ -715,8 +707,6 @@ export type SizeTarget =
   | 'full'
   | 'download';
 
-export type BoughtPaidMedia = Pick<MediaContent, 'photo' | 'video'>;
-
 export interface ApiMessage {
   id: number;
   ephemeralBotId?: string;
@@ -735,6 +725,8 @@ export interface ApiMessage {
   replyInfo?: ApiReplyInfo;
   suggestedPostInfo?: ApiInputSuggestedPostInfo;
   sendingState?: 'messageSendingStatePending' | 'messageSendingStateFailed';
+  // Signal: a recipient's device received the message
+  isDelivered?: true;
   forwardInfo?: ApiMessageForwardInfo;
   isDeleting?: boolean;
   previousLocalId?: number;
@@ -778,12 +770,10 @@ export interface ApiMessage {
   readDate?: number;
   savedPeerId?: string;
   factCheck?: ApiFactCheck;
-  effectId?: string;
   isInvertedMedia?: true;
   isVideoProcessingPending?: true;
   areReactionsPossible?: true;
   reportDeliveryUntilDate?: number;
-  paidMessageStars?: number;
   restrictionReasons?: ApiRestrictionReason[];
   summaryLanguageCode?: string;
   fromRank?: string;
@@ -825,11 +815,7 @@ export interface ApiMessageReactor {
 export interface ApiReactionCount {
   chosenOrder?: number;
   count: number;
-  reaction: ApiReactionWithPaid;
-  localAmount?: number;
-  localIsPrivate?: boolean;
-  localPeerId?: string;
-  localPreviousChosenOrder?: number;
+  reaction: ApiReaction;
 }
 
 export interface ApiAvailableReaction {
@@ -845,15 +831,6 @@ export interface ApiAvailableReaction {
   isInactive?: boolean;
   isPremium?: boolean;
   isLocalCache?: true;
-}
-
-export interface ApiAvailableEffect {
-  id: string;
-  emoticon: string;
-  staticIconId?: string;
-  effectAnimationId?: string;
-  effectStickerId: string;
-  isPremium?: boolean;
 }
 
 type ApiChatReactionsAll = {
@@ -878,35 +855,14 @@ export type ApiReactionCustomEmoji = {
   documentId: string;
 };
 
-export type ApiReactionPaid = {
-  type: 'paid';
-};
-
 export type ApiReaction = ApiReactionEmoji | ApiReactionCustomEmoji;
-export type ApiReactionWithPaid = ApiReaction | ApiReactionPaid;
 
-export type ApiReactionKey = `${string}-${string}` | 'paid' | 'unsupported';
+export type ApiReactionKey = `${string}-${string}` | 'unsupported';
 
 export type ApiSavedReactionTag = {
   reaction: ApiReaction;
   title?: string;
   count: number;
-};
-
-export type ApiPaidReactionPrivacyType = ApiPaidReactionPrivacyDefault |
-  ApiPaidReactionPrivacyAnonymous | PaidReactionPrivacyPeer;
-
-export type ApiPaidReactionPrivacyDefault = {
-  type: 'default';
-};
-
-export type ApiPaidReactionPrivacyAnonymous = {
-  type: 'anonymous';
-};
-
-export type PaidReactionPrivacyPeer = {
-  type: 'peer';
-  peerId: string;
 };
 
 export interface ApiBaseThreadInfo {
@@ -949,7 +905,7 @@ export type ApiMessageReportResult = {
   }[];
 };
 
-export type ApiMessageOutgoingStatus = 'read' | 'succeeded' | 'pending' | 'failed';
+export type ApiMessageOutgoingStatus = 'read' | 'delivered' | 'succeeded' | 'pending' | 'failed';
 
 // KeyboardButtons
 

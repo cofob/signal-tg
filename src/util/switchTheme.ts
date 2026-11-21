@@ -28,6 +28,7 @@ export default function switchTheme(
   withAnimation: boolean,
   overrides: ThemeColorOverrides = {},
   shouldSnapMessageColors?: boolean,
+  isSignalTheme?: boolean,
 ) {
   const root = document.documentElement;
   const isDarkTheme = theme === 'dark';
@@ -39,6 +40,7 @@ export default function switchTheme(
   requestMutation(() => {
     root.classList.toggle('theme-light', !isDarkTheme);
     root.classList.toggle('theme-dark', isDarkTheme);
+    root.classList.toggle('theme-signal', Boolean(isSignalTheme));
     baseBrowserColor = overrides['--color-background'] || colors['--color-background'];
     applyBrowserThemeColors();
     isInitialized = true;

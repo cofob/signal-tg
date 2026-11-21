@@ -75,7 +75,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['privacy/calls', [SettingsScreens.PrivacyPhoneCall]],
   ['privacy/calls/p2p', [SettingsScreens.PrivacyPhoneCall, 'PrivacyP2P']],
   ['privacy/voice', [SettingsScreens.PrivacyVoiceMessages]],
-  ['privacy/messages', [SettingsScreens.PrivacyMessages]],
   ['privacy/invites', [SettingsScreens.PrivacyGroupChats]],
   ['privacy/archive-and-mute', [
     SettingsScreens.Privacy, 'ArchiveAndMute', { requires: 'canDisplayAutoarchiveSetting' },
@@ -117,8 +116,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
 
   ['language', [SettingsScreens.Language]],
   ['language/show-button', [SettingsScreens.Language, 'ShowTranslateButton']],
-  ['language/translate-chats', [SettingsScreens.Language, 'ShowTranslateChatButton']],
-  ['language/do-not-translate', [SettingsScreens.DoNotTranslate]],
 ]);
 
 const SETTINGS_LINK_ALIASES = new Map([

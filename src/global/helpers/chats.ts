@@ -95,7 +95,7 @@ export function getChatTypeLangKey(chat: ApiChat): RegularLangKey {
 
 export function getChatTitle(lang: LangFn, chat: ApiChat, isSelf = false) {
   if (isSelf) {
-    return lang('SavedMessages');
+    return lang('NoteToSelf');
   }
   return chat.title || lang('HiddenName');
 }
@@ -197,11 +197,9 @@ export function getAllowedAttachmentOptions(
   isChatWithBot = false,
   isSavedMessages = false,
   isStoryReply = false,
-  paidMessagesStars?: number,
-  isInScheduledList = false,
   isEphemeral = false,
 ): IAllowedAttachmentOptions {
-  if (!chat || (paidMessagesStars && isInScheduledList)) {
+  if (!chat) {
     return {
       canAttachMedia: false,
       canAttachPolls: false,

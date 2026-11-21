@@ -3,7 +3,7 @@ import {
 } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiDraft, ApiPeer, ApiStarsAmount, ApiTypeCurrencyAmount } from '../../../api/types';
+import type { ApiDraft, ApiPeer, ApiTypeCurrencyAmount } from '../../../api/types';
 import type { TabState } from '../../../global/types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
@@ -43,8 +43,6 @@ export type OwnProps = {
 };
 
 type StateProps = {
-  starBalance?: ApiStarsAmount;
-  tonBalance?: bigint;
   peer?: ApiPeer;
   currentDraft?: ApiDraft;
   maxStarsAmount: number;
@@ -62,8 +60,6 @@ const FUTURE_TIME_ADJUSTMENT = 1 * 60;
 
 const SuggestMessageModal = ({
   modal,
-  starBalance,
-  tonBalance,
   peer,
   currentDraft,
   maxStarsAmount,
@@ -283,7 +279,6 @@ function formatPriceText(price?: ApiTypeCurrencyAmount) {
 
 export default memo(withGlobal<OwnProps>(
   (global, { modal }): Complete<StateProps> => {
-    const starBalance = global.stars?.balance;
     const peer = modal ? selectPeer(global, modal.chatId) : undefined;
     const currentDraft = modal ? selectDraft(global, modal.chatId, MAIN_THREAD_ID) : undefined;
 
@@ -301,8 +296,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       peer,
-      starBalance,
-      tonBalance: global.ton?.balance?.amount,
       currentDraft,
       maxStarsAmount,
       minStarsAmount,

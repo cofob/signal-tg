@@ -40,9 +40,7 @@ import {
 import { buildApiTopicEdit } from '../apiBuilders/forums';
 import { omitVirtualClassFields } from '../apiBuilders/helpers';
 import {
-  buildApiMessageExtendedMediaPreview,
   buildApiRichMessage,
-  buildBoughtMediaContent,
   buildMessagePollFromMedia,
   buildPoll,
   buildPollResults,
@@ -64,7 +62,6 @@ import {
   buildLangStrings,
   buildPrivacyKey,
 } from '../apiBuilders/misc';
-import { buildApiCurrencyAmount } from '../apiBuilders/payments';
 import {
   buildApiEmojiStatus,
   buildApiPeerId,
@@ -72,7 +69,6 @@ import {
   getApiChatIdFromMtpPeer,
 } from '../apiBuilders/peers';
 import {
-  buildApiPaidReactionPrivacy,
   buildApiReaction,
   buildMessageReactions,
 } from '../apiBuilders/reactions';
@@ -401,37 +397,6 @@ export function updater(update: Update) {
       threadId: update.topMsgId,
       chatId: getApiChatIdFromMtpPeer(update.peer),
       reactions: buildMessageReactions(update.reactions),
-    });
-  } else if (update instanceof GramJs.UpdateMessageExtendedMedia) {
-    const chatId = getApiChatIdFromMtpPeer(update.peer);
-    const isBought = update.extendedMedia[0] instanceof GramJs.MessageExtendedMedia;
-    if (isBought) {
-      const boughtMedia = buildBoughtMediaContent(update.extendedMedia);
-
-      if (!boughtMedia?.length) return;
-
-      sendApiUpdate({
-        '@type': 'updateMessageExtendedMedia',
-        id: update.msgId,
-        chatId,
-        isBought,
-        extendedMedia: boughtMedia,
-      });
-      return;
-    }
-
-    const previewMedia = !isBought ? update.extendedMedia
-      .filter((m): m is GramJs.MessageExtendedMediaPreview => m instanceof GramJs.MessageExtendedMediaPreview)
-      .map((m) => buildApiMessageExtendedMediaPreview(m))
-      .filter(Boolean) : undefined;
-
-    if (!previewMedia?.length) return;
-
-    sendApiUpdate({
-      '@type': 'updateMessageExtendedMedia',
-      id: update.msgId,
-      chatId,
-      extendedMedia: previewMedia,
     });
   } else if (update instanceof GramJs.UpdateDeleteMessages) {
     sendApiUpdate({
@@ -1210,20 +1175,6 @@ export function updater(update: Update) {
       '@type': 'updateViewForumAsMessages',
       chatId: buildApiPeerId(update.channelId, 'channel'),
       isEnabled: update.enabled ? true : undefined,
-    });
-  } else if (update instanceof GramJs.UpdateStarsBalance) {
-    const balance = buildApiCurrencyAmount(update.balance);
-    if (!balance) {
-      return;
-    }
-    sendApiUpdate({
-      '@type': 'updateStarsBalance',
-      balance,
-    });
-  } else if (update instanceof GramJs.UpdatePaidReactionPrivacy) {
-    sendApiUpdate({
-      '@type': 'updatePaidReactionPrivacy',
-      private: buildApiPaidReactionPrivacy(update.private),
     });
   } else if (update instanceof GramJs.UpdateLangPackTooLong) {
     sendApiUpdate({

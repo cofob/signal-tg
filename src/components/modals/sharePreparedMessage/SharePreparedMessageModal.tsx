@@ -1,53 +1,33 @@
 import {
   memo, useEffect,
 } from '../../../lib/teact/teact';
-import {
-  getActions, getGlobal, withGlobal,
-} from '../../../global';
+import { getActions, getGlobal } from '../../../global';
 
 import type { TabState } from '../../../global/types';
 import type { ThreadId } from '../../../types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import {
-} from '../../../global/helpers';
 import { getPeerTitle } from '../../../global/helpers/peers';
-import {
-  selectPeer, selectTabState,
-} from '../../../global/selectors';
+import { selectPeer } from '../../../global/selectors';
 
 import useFlag from '../../../hooks/useFlag';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
-import usePaidMessageConfirmation from '../../middle/composer/hooks/usePaidMessageConfirmation';
 
-import PaymentMessageConfirmDialog from '../../common/PaymentMessageConfirmDialog';
 import RecipientPicker from '../../common/RecipientPicker';
 
 export type OwnProps = {
   modal: TabState['sharePreparedMessageModal'];
 };
 
-type StateProps = {
-  paymentMessageConfirmDialogKey?: string;
-};
-
-export type SendParams = {
-  peerName?: string;
-  starsForSendMessage: number;
-};
-
-const PAYMENT_DIALOG_KEY = 'sharePreparedMessage';
-
 const SharePreparedMessageModal = ({
-  modal, paymentMessageConfirmDialogKey,
-}: OwnProps & StateProps) => {
+  modal,
+}: OwnProps) => {
   const {
     closeSharePreparedMessageModal,
     sendInlineBotResult,
     sendWebAppEvent,
     showNotification,
-    updateSharePreparedMessageModalSendArgs,
   } = getActions();
   const lang = useLang();
   const isOpen = Boolean(modal);
@@ -60,21 +40,7 @@ const SharePreparedMessageModal = ({
     }
   }, [isOpen, markIsShown]);
 
-  const {
-    message, filter, webAppKey, pendingSendArgs,
-  } = modal || {};
-
-  const {
-    starsForSendMessage,
-  } = pendingSendArgs || {};
-
-  const {
-    closeConfirmDialog: closeConfirmModalPayForMessage,
-    dialogHandler: paymentMessageConfirmDialogHandler,
-    shouldAutoApprove: shouldPaidMessageAutoApprove,
-    setAutoApprove: setShouldPaidMessageAutoApprove,
-    handleWithConfirmation: handleActionWithPaymentConfirmation,
-  } = usePaidMessageConfirmation(PAYMENT_DIALOG_KEY, starsForSendMessage || 0);
+  const { message, filter, webAppKey } = modal || {};
 
   const handleClose = useLastCallback(() => {
     closeSharePreparedMessageModal();
@@ -89,97 +55,48 @@ const SharePreparedMessageModal = ({
     }
   });
 
-  const handleSend = useLastCallback((id: string, threadId?: ThreadId) => {
-    if (message && webAppKey) {
-      const global = getGlobal();
-      const peer = selectPeer(global, id);
-      sendInlineBotResult({
-        chatId: id,
-        threadId: threadId || MAIN_THREAD_ID,
-        id: message.result.id,
-        queryId: message.result.queryId,
-      });
-      if (!starsForSendMessage) {
-        showNotification({
-          message: {
-            key: 'BotSharedToOne',
-            variables: { peer: getPeerTitle(lang, peer!) },
-            options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-          },
-        });
-      }
-      sendWebAppEvent({
-        webAppKey,
-        event: {
-          eventType: 'prepared_message_sent',
-        },
-      });
-      closeSharePreparedMessageModal();
-      updateSharePreparedMessageModalSendArgs({ args: undefined });
-    }
-  });
-
   const handleSelectRecipient = useLastCallback((id: string, threadId?: ThreadId) => {
-    updateSharePreparedMessageModalSendArgs({ args: { peerId: id, threadId } });
+    if (!message || !webAppKey) return;
+
+    const peer = selectPeer(getGlobal(), id);
+    sendInlineBotResult({
+      chatId: id,
+      threadId: threadId || MAIN_THREAD_ID,
+      id: message.result.id,
+      queryId: message.result.queryId,
+    });
+    showNotification({
+      message: {
+        key: 'BotSharedToOne',
+        variables: { peer: getPeerTitle(lang, peer!) },
+        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
+      },
+    });
+    sendWebAppEvent({
+      webAppKey,
+      event: {
+        eventType: 'prepared_message_sent',
+      },
+    });
+    closeSharePreparedMessageModal();
   });
-
-  const handleSendWithPaymentConfirmation = useLastCallback(() => {
-    if (pendingSendArgs) {
-      handleActionWithPaymentConfirmation(handleSend, pendingSendArgs.peerId, pendingSendArgs.threadId);
-    }
-  });
-
-  const handleClosePaymentMessageConfirmDialog = useLastCallback(() => {
-    closeConfirmModalPayForMessage();
-    updateSharePreparedMessageModalSendArgs({ args: undefined });
-  });
-
-  useEffect(() => {
-    if (pendingSendArgs) {
-      handleSendWithPaymentConfirmation();
-    }
-  }, [pendingSendArgs]);
-
-  const global = getGlobal();
-  const peer = pendingSendArgs ? selectPeer(global, pendingSendArgs.peerId) : undefined;
-  const peerName = peer ? getPeerTitle(lang, peer) : undefined;
 
   if (!isOpen && !isShown) {
     return undefined;
   }
 
   return (
-    <>
-      <RecipientPicker
-        isOpen={isOpen}
-        title={lang('SelectChat')}
-        searchPlaceholder={lang('Search')}
-        filter={filter}
-        onSelectRecipient={handleSelectRecipient}
-        onClose={handleClose}
-        onCloseAnimationEnd={unmarkIsShown}
-        isLowStackPriority
-      />
-      <PaymentMessageConfirmDialog
-        isOpen={paymentMessageConfirmDialogKey === PAYMENT_DIALOG_KEY}
-        onClose={handleClosePaymentMessageConfirmDialog}
-        userName={peerName}
-        messagePriceInStars={starsForSendMessage || 0}
-        messagesCount={1}
-        shouldAutoApprove={shouldPaidMessageAutoApprove}
-        setAutoApprove={setShouldPaidMessageAutoApprove}
-        confirmHandler={paymentMessageConfirmDialogHandler}
-      />
-    </>
+    <RecipientPicker
+      isOpen={isOpen}
+      title={lang('SelectChat')}
+      searchPlaceholder={lang('Search')}
+      filter={filter}
+      onSelectRecipient={handleSelectRecipient}
+      onClose={handleClose}
+      onCloseAnimationEnd={unmarkIsShown}
+      isLowStackPriority
+    />
   );
 };
 
-export default memo(withGlobal(
-  (global): Complete<StateProps> => {
-    const tabState = selectTabState(global);
-    const { paymentMessageConfirmDialogKey } = tabState;
-    return {
-      paymentMessageConfirmDialogKey,
-    };
-  },
-)(SharePreparedMessageModal));
+export default memo(SharePreparedMessageModal);

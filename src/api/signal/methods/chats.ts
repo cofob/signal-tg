@@ -11,6 +11,8 @@ import type {
 import { MAIN_THREAD_ID } from '../../types';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
+import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
+import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { GLOBAL_SEARCH_CONTACTS_LIMIT } from '../../../limits';
 import {
@@ -25,10 +27,11 @@ import {
 import { buildApiMessage } from '../builders/messages';
 import { buildApiUser, buildPeerSettings, getIsContact } from '../builders/users';
 import { getCurrentAccount } from '../client';
-import { db, processor } from '../engine';
+import { db, logError, processor } from '../engine';
 import { getConversationByPeerId, getPeerId } from '../peers';
 import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
 import { sendApiUpdate } from '../updates';
+import { collectShownMessages } from './messages';
 
 // The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
 const MAX_PINNED_CHATS = 4;
@@ -156,8 +159,44 @@ export async function fetchFullChat(chat: ApiChat) {
 }
 
 export async function fetchPeerSettings(peer: ApiPeer) {
+  const selfAci = getCurrentAccount()?.aci;
   const conversation = await getConversationByPeerId(peer.id);
-  return conversation && { settings: buildPeerSettings(conversation) };
+  return selfAci && conversation ? { settings: buildPeerSettings(conversation, selfAci) } : undefined;
+}
+
+/** Closing the bar of a message request accepts it */
+export async function hidePeerSettingsBar(peer: ApiPeer) {
+  const conversation = await getConversationByPeerId(peer.id);
+  if (!conversation) return undefined;
+
+  try {
+    await processor.respondToMessageRequest(conversation.id, SyncMessage_MessageRequestResponse_Type.ACCEPT);
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
+
+/**
+ * Deletes the chat's messages on this device and on our other devices. A message request is deleted as a
+ * response to it, as Signal Desktop does from the request bar.
+ */
+export async function deleteHistory({ chat }: { chat: ApiChat; shouldDeleteForAll?: boolean; maxId?: number }) {
+  const selfAci = getCurrentAccount()?.aci;
+  const conversation = await getConversationByPeerId(chat.id);
+  if (!selfAci || !conversation) return;
+
+  try {
+    if (getIsConversationAccepted(conversation, selfAci)) {
+      await processor.deleteConversation(conversation.id);
+    } else {
+      await processor.respondToMessageRequest(conversation.id, SyncMessage_MessageRequestResponse_Type.DELETE);
+    }
+  } catch (err) {
+    logError(err);
+  }
+  sendApiUpdate({ '@type': 'deleteHistory', chatId: chat.id });
 }
 
 /**
@@ -270,7 +309,7 @@ function sendChat(chat: ApiChat) {
 /** Builds what the chat list shows of a conversation and remembers it for later updates */
 async function buildChatSummary(conversation: ConversationRecord, selfAci: string): Promise<ChatSummary> {
   const chat = buildApiChat(conversation, selfAci);
-  const [lastMessageRecord] = await db.getMessages(conversation.id, 1);
+  const [lastMessageRecord] = await collectShownMessages(conversation.id, Number.MAX_SAFE_INTEGER, 1, false);
   const lastMessage = lastMessageRecord && await buildApiMessage(lastMessageRecord, conversation);
   const readState = await buildThreadReadState(conversation);
 

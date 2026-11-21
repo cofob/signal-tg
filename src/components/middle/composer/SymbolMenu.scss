@@ -287,10 +287,6 @@
   }
 }
 
-.effect-emojis.symbol-set-container {
-  --emoji-size: 2.25rem;
-}
-
 .symbol-set-container {
   display: grid !important;
   grid-auto-rows: var(--emoji-size, 4.5rem);

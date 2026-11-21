@@ -1,4 +1,3 @@
-import type { RegularLangKey } from '../../../types/language';
 import type { ActionReturnType } from '../../types';
 
 import { copyTextToClipboard } from '../../../util/clipboard';
@@ -10,7 +9,6 @@ import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { addStoriesForPeer } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import {
-  selectCurrentViewedStory,
   selectPeer,
   selectPeerFirstStoryId,
   selectPeerFirstUnreadStoryId,
@@ -19,7 +17,6 @@ import {
   selectTabState,
 } from '../../selectors';
 import { fetchChatByUsername } from '../api/chats';
-import { getPeerStarsForMessage } from '../api/messages';
 
 addActionHandler('openStoryViewer', async (global, actions, payload): Promise<void> => {
   const {
@@ -290,47 +287,6 @@ addActionHandler('copyStoryLink', async (global, actions, payload): Promise<void
       key: 'LinkCopied',
       options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
     },
-    tabId,
-  });
-});
-
-addActionHandler('sendMessage', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload;
-  const { storyId, peerId: storyPeerId } = selectCurrentViewedStory(global, tabId);
-  const isStoryReply = Boolean(storyId && storyPeerId);
-
-  if (!isStoryReply) {
-    return;
-  }
-  const messagePriceInStars = await getPeerStarsForMessage(global, storyPeerId!);
-  if (messagePriceInStars === undefined) return;
-
-  const { gif, sticker, isReaction } = payload;
-
-  let message: RegularLangKey;
-  if (gif) {
-    message = 'StoryTooltipGifSent';
-  } else if (sticker) {
-    message = 'StoryTooltipStickerSent';
-  } else if (isReaction) {
-    message = 'StoryTooltipReactionSent';
-  } else {
-    message = 'StoryTooltipMessageSent';
-  }
-
-  actions.showNotification({
-    message: {
-      key: message,
-      options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-    },
-    actionText: { key: 'StoryToastViewInChat' },
-    action: [{
-      action: 'closeStoryViewer',
-      payload: undefined,
-    }, {
-      action: 'openChat',
-      payload: { id: storyPeerId },
-    }],
     tabId,
   });
 });

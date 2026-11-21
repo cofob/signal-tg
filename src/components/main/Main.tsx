@@ -234,9 +234,6 @@ const Main = ({
     loadPeerColors,
     loadSavedReactionTags,
     loadAiComposeTones,
-    loadStarStatus,
-    loadAvailableEffects,
-    loadPaidReactionPrivacy,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -299,6 +296,8 @@ const Main = ({
       checkAppVersion();
       loadAuthorizations();
       loadPasswordInfo();
+      loadNotificationSettings();
+      loadNotificationExceptions();
     }
   }, [isMasterTab, isSynced]);
 
@@ -313,23 +312,18 @@ const Main = ({
       loadDefaultTagReactions();
       loadAttachBots();
 
-      loadNotificationSettings();
-      loadNotificationExceptions();
       loadTopPeers({ category: 'botsInline' });
       loadTopReactions();
-      loadStarStatus();
       loadEmojiKeywords({ language: BASE_EMOJI_KEYWORD_LANG });
       loadFeaturedEmojiStickers();
       loadSavedReactionTags();
       loadTopPeers({ category: 'botsApp' });
       loadTopPeers({ category: 'botsGuestChat' });
-      loadPaidReactionPrivacy();
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
       loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
-      loadAvailableEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
       loadAiComposeTones();

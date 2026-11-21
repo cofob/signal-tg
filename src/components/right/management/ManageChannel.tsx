@@ -9,7 +9,7 @@ import type {
 import { ManagementProgress, ManagementScreens } from '../../../types';
 
 import {
-  getChatAvatarHash, getHasAdminRight, isChatChannel, isChatPublic,
+  getChatAvatarHash, getHasAdminRight, isChatPublic,
 } from '../../../global/helpers';
 import {
   selectChat, selectChatFullInfo, selectIsChatRestricted, selectPeerAvatarPhoto, selectTabState,
@@ -22,7 +22,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import Island from '../../gili/layout/Island';
-import Switch from '../../gili/primitives/Switch';
 import AvatarEditable from '../../ui/AvatarEditable';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import FloatingActionButton from '../../ui/FloatingActionButton';
@@ -48,7 +47,6 @@ type StateProps = {
   canInvite?: boolean;
   exportedInvites?: ApiExportedInvite[];
   availableReactions?: ApiAvailableReaction[];
-  hasAutoTranslation?: boolean;
   canToggleAutoTranslation?: boolean;
 };
 
@@ -68,7 +66,6 @@ const ManageChannel = ({
   availableReactions,
   onScreenSelect,
   onClose,
-  hasAutoTranslation,
   canToggleAutoTranslation,
 }: OwnProps & StateProps) => {
   const {
@@ -79,7 +76,6 @@ const ManageChannel = ({
     openChat,
     loadExportedChatInvites,
     loadChatJoinRequests,
-    toggleAutoTranslation,
   } = getActions();
 
   const currentTitle = chat?.title || '';
@@ -94,12 +90,6 @@ const ManageChannel = ({
   const [error, setError] = useState<string | undefined>();
   const imageHash = chat && getChatAvatarHash(chat);
   const lang = useLang();
-
-  const hasAutoTranslationAvailable = chat && isChatChannel(chat);
-
-  const handleAutoTranslationChange = useLastCallback(() => {
-    toggleAutoTranslation({ chatId, isEnabled: !hasAutoTranslation });
-  });
 
   useHistoryBack({
     isActive,
@@ -306,21 +296,6 @@ const ManageChannel = ({
               {chatReactionsDescription}
             </span>
           </ListItem>
-          {hasAutoTranslationAvailable && (
-            <ListItem
-              icon="language"
-              narrow
-              ripple
-              disabled={!canToggleAutoTranslation}
-              onClick={handleAutoTranslationChange}
-            >
-              <span>{lang('AutomaticTranslation')}</span>
-              <Switch
-                id="auto-translation"
-                checked={Boolean(hasAutoTranslation)}
-              />
-            </ListItem>
-          )}
         </Island>
         <Island>
           <ListItem
@@ -381,7 +356,6 @@ export default memo(withGlobal<OwnProps>(
     const { progress } = management;
     const { invites } = management.byChatId[chatId] || {};
     const minLevelToToggleAutoTranslation = global.appConfig.channelAutoTranslationLevelMin;
-    const hasAutoTranslation = chat?.hasAutoTranslation;
     const chatBoostLevel = chat?.level;
     const canToggleAutoTranslation = chatBoostLevel && minLevelToToggleAutoTranslation
       ? chatBoostLevel >= minLevelToToggleAutoTranslation : false;
@@ -394,7 +368,6 @@ export default memo(withGlobal<OwnProps>(
       canInvite: getHasAdminRight(chat, 'inviteUsers'),
       exportedInvites: invites,
       availableReactions: global.reactions.availableReactions,
-      hasAutoTranslation,
       canToggleAutoTranslation,
     };
   },

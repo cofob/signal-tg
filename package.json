@@ -17,6 +17,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "build:tauri": "cross-env APP_ENV=production APP_TITLE=TeleSignal vite build --outDir tauri/dist --emptyOutDir --sourcemap false",
     "telegraph:update_changelog": "node ./dev/telegraphChangelog.js",
     "check:ts": "tsc && tsc -p src/lib/widget-sandbox/tsconfig.json --noEmit && eslint --cache --cache-location .cache/.eslintcache",
     "check:css": "stylelint \"**/*.{css,scss}\" --cache --cache-location .cache/.stylelintcache",
