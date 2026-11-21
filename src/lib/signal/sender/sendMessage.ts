@@ -20,6 +20,7 @@ import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromHex } from '../../../util/encoding/buffer';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
+import { NotGroupMemberError } from './sendErrors';
 import { dropFormerMembers, sendWithSenderKey } from './sendToGroup';
 
 import {
@@ -97,7 +98,13 @@ async function followUpSend(
     timestamp: options.timestamp,
     content: toBinary(ContentSchema, create(ContentSchema, content)),
     contentHint: ContentHint.Resendable,
-    recipients: [...new Set([...sentBefore?.recipients ?? [], ...others])],
+    // Members who left the group before the send got nothing, so they cannot ask for a resend
+    recipients: [...new Set([
+      ...sentBefore?.recipients ?? [],
+      ...others.filter((serviceId) => !results.some((result) => (
+        result.serviceId === serviceId && result.error instanceof NotGroupMemberError
+      ))),
+    ])],
     groupId,
     isUrgent: options.isUrgent ?? true,
     savedAt: Date.now(),

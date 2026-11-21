@@ -363,6 +363,15 @@ export default class MessageDb {
     return messages;
   }
 
+  /** The Signal timestamp of the oldest stored message of `authorAci` */
+  async getOldestSentAt(authorAci: string) {
+    const range = IDBKeyRange.bound([authorAci, 0], [authorAci, Number.MAX_SAFE_INTEGER]);
+    const [id] = await this.request<IDBValidKey[]>(
+      MESSAGES, 'readonly', (store) => store.index(BY_AUTHOR_SENT_AT).getAllKeys(range, 1),
+    );
+    return id === undefined ? undefined : (await this.getMessage(id as number))?.sentAt;
+  }
+
   /** Outgoing messages that wait for another send, the earliest retry first */
   getMessagesToRetry() {
     return this.request<MessageRecord[]>(MESSAGES, 'readonly', (store) => store.index(BY_SEND_RETRY_AT).getAll());

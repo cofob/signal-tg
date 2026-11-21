@@ -269,7 +269,7 @@ const SPAM_RESPONSES = new Set<MessageRequestResponseType>([
   SyncMessage_MessageRequestResponse_Type.SPAM,
   SyncMessage_MessageRequestResponse_Type.BLOCK_AND_SPAM,
 ]);
-const STATUS_BY_RECEIPT_TYPE: Record<ReceiptMessage_Type, SendStatus> = {
+const STATUS_BY_RECEIPT_TYPE: Record<ReceiptMessage_Type, EarlyReceiptRecord['status']> = {
   [ReceiptMessage_Type.DELIVERY]: 'delivered',
   [ReceiptMessage_Type.READ]: 'read',
   [ReceiptMessage_Type.VIEWED]: 'viewed',
@@ -305,8 +305,9 @@ export default class MessageProcessor {
   // Receipts and syncs for local changes made without a connection, sent after the next one
   private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
 
-  // Messages whose send is running, which a retry pass leaves alone
-  private sendsInFlight = new Set<number>();
+  // Messages whose send is running, with the number of running sends (an edit can start during the first send);
+  // a retry pass leaves them alone
+  private sendsInFlight = new Map<number, number>();
 
   // Retry passes run one at a time
   private retryPass = Promise.resolve();
@@ -403,8 +404,13 @@ export default class MessageProcessor {
         recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
         sendRetry: { startedAt: sentAt, attempt: 0, at: sentAt },
       });
-      this.sendsInFlight.add(added.id);
-      onStored?.(added);
+      this.markSendStarted(added.id);
+      try {
+        onStored?.(added);
+      } catch (err) {
+        this.markSendEnded(added.id);
+        throw err;
+      }
       return { conversation: accepted, message: added, dataMessage: outgoing };
     });
 
@@ -495,7 +501,7 @@ export default class MessageProcessor {
         recipientErrors: undefined,
         sendRetry: { startedAt: editedAt, attempt: 0, at: editedAt },
       });
-      this.sendsInFlight.add(updated.id);
+      this.markSendStarted(updated.id);
       return {
         conversation: found,
         message: updated,
@@ -1526,15 +1532,17 @@ export default class MessageProcessor {
       if (this.sendsInFlight.has(id)) continue;
       if (!isForced && sendRetry!.at > Date.now()) continue;
       if (!this.client.isConnected) return;
-      await this.retryMessage(id).catch(this.events.onError);
+      await this.retryMessage(id, isForced).catch(this.events.onError);
     }
     if (generation === this.generation) await this.scheduleSendRetry();
   }
 
-  private async retryMessage(messageId: number) {
+  private async retryMessage(messageId: number, isForced?: boolean) {
     const prepared = await this.runSerial(async () => {
+      // The pass chose the message before this ran: a send may have started or finished meanwhile
+      if (this.sendsInFlight.has(messageId)) return undefined;
       const message = await this.db.getMessage(messageId);
-      if (!message?.sendRetry) return undefined;
+      if (!message?.sendRetry || (!isForced && message.sendRetry.at > Date.now())) return undefined;
 
       const conversation = await this.db.getConversation(message.conversationId);
       const recipients = conversation && message.isOutgoing && message.dataMessage && !message.deletedAt
@@ -1564,6 +1572,16 @@ export default class MessageProcessor {
     });
   }
 
+  private markSendStarted(messageId: number) {
+    this.sendsInFlight.set(messageId, (this.sendsInFlight.get(messageId) ?? 0) + 1);
+  }
+
+  private markSendEnded(messageId: number) {
+    const count = (this.sendsInFlight.get(messageId) ?? 0) - 1;
+    if (count > 0) this.sendsInFlight.set(messageId, count);
+    else this.sendsInFlight.delete(messageId);
+  }
+
   /** Marks `recipients` pending and the message as being sent; `sendPrepared` sends it */
   private async prepareResend(message: MessageRecord, conversation: ConversationRecord, recipients: string[]) {
     const recipientStatus = { ...message.recipientStatus };
@@ -1575,7 +1593,7 @@ export default class MessageProcessor {
     const pending = await this.putMessage({
       ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
     });
-    this.sendsInFlight.add(message.id);
+    this.markSendStarted(message.id);
     return { conversation, message: pending, recipients };
   }
 
@@ -2011,7 +2029,7 @@ export default class MessageProcessor {
       const results = await this.sendContentTo(conversation, recipients, content, options);
       sent = await this.runSerial(() => this.storeSendResults(conversation, message, recipients, results));
     } finally {
-      this.sendsInFlight.delete(message.id);
+      this.markSendEnded(message.id);
     }
     if (sent.sendRetry) await this.scheduleSendRetry().catch(this.events.onError);
     return sent;
@@ -2027,7 +2045,11 @@ export default class MessageProcessor {
     const recipientErrors = { ...current.recipientErrors };
     for (const serviceId of recipients) {
       const error = getResultError(results, serviceId);
-      if (error) {
+      if (error instanceof NotGroupMemberError) {
+        // Not a recipient any more: a member who joins again is not offered a resend of the message
+        delete recipientStatus[serviceId];
+        delete recipientErrors[serviceId];
+      } else if (error) {
         recipientStatus[serviceId] = 'failed';
         recipientErrors[serviceId] = getSendErrorKind(error);
       } else {
@@ -2799,7 +2821,7 @@ export default class MessageProcessor {
   }
 
   private async handleReceipt(senderAci: string, receipt: ReceiptMessage) {
-    const status = STATUS_BY_RECEIPT_TYPE[receipt.type] as EarlyReceiptRecord['status'];
+    const status = STATUS_BY_RECEIPT_TYPE[receipt.type];
     for (const timestamp of receipt.timestamp) {
       const sentAt = Number(timestamp);
       if (!await this.applyReceipt(senderAci, sentAt, status)) await this.addEarlyReceipt(senderAci, sentAt, status);
@@ -2831,6 +2853,9 @@ export default class MessageProcessor {
    */
   private async addEarlyReceipt(senderAci: string, sentAt: number, status: EarlyReceiptRecord['status']) {
     const { store } = this.client;
+    // A receipt for something older than all our messages names a message we no longer have
+    const oldestSentAt = await this.db.getOldestSentAt(this.client.getSenderContext().account.aci);
+    if (oldestSentAt !== undefined && sentAt < oldestSentAt) return;
     const now = Date.now();
     const receipts = (await store.getItem('earlyReceipts') ?? []).filter(({ receivedAt }) => (
       now - receivedAt < EARLY_RECEIPT_MAX_AGE_MS
