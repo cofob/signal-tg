@@ -758,7 +758,9 @@ export default class MessageProcessor {
       const previousIds = new Set(stored && getManifestIds(fromBinary(ManifestRecordSchema, stored)));
       const ids = new Set(getManifestIds(manifest));
 
-      await this.mergeStorageRecords([...records.values()].map((record) => fromBinary(StorageRecordSchema, record)));
+      await this.mergeStorageRecords(
+        [...records.values()].map((record) => fromBinary(StorageRecordSchema, record)), !stored,
+      );
       await store.setStorageRecords(records);
       await store.removeStorageRecords([...previousIds].filter((id) => !ids.has(id)));
       // Ids the server has no record for are left out, so the next write drops them
@@ -1081,9 +1083,10 @@ export default class MessageProcessor {
   /**
    * Merges storage service records: contacts and groups with their archive, mute, block and message request state,
    * and the account record with Note to Self, the order of pinned conversations and settings. Fields in
-   * `storageChanges` keep their local values.
+   * `storageChanges` keep their local values. Profile keys of contacts replace the local ones only in the first sync
+   * of this device, or when there is none; else the local key is marked to be written to the contact record.
    */
-  private async mergeStorageRecords(records: StorageRecord[]) {
+  private async mergeStorageRecords(records: StorageRecord[], isFirstSync: boolean) {
     const { store } = this.client;
     const account = await this.getAccount();
     const changes = await store.getItem('storageChanges') ?? {};
@@ -1093,6 +1096,7 @@ export default class MessageProcessor {
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
     let isProfileKeyChanged = false;
+    const profileKeyChanges: StorageChanges = {};
 
     for (const { record } of records) {
       if (record.case === 'contact') {
@@ -1101,7 +1105,15 @@ export default class MessageProcessor {
         // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
         if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
         if (!aci || aci === account.aci) continue;
-        if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+        if (contact.profileKey.length) {
+          // Signal Desktop `mergeContactRecord` in `ts/services/storageRecordOps.preload.ts`
+          const localProfileKey = (await store.getRecipient(aci))?.profileKey;
+          if (isFirstSync || !localProfileKey) {
+            await saveProfileKey(store, aci, contact.profileKey);
+          } else if (!buffersEqual(localProfileKey, contact.profileKey)) {
+            profileKeyChanges[aci] = ['profileKey'];
+          }
+        }
 
         const conversation = await this.ensurePrivateConversation(aci);
         await this.putConversation({
@@ -1197,6 +1209,7 @@ export default class MessageProcessor {
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    await this.markStorageChanges(profileKeyChanges);
     // The profile under the new key has our current name and avatar; the queue runs it after this merge
     if (isProfileKeyChanged) this.queueProfileRefresh(account.aci);
 

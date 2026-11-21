@@ -26,7 +26,9 @@ import {
   StorageRecordSchema,
 } from '../proto/generated/StorageService_pb';
 
-type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
+type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
+// The profile key is not a conversation field: contact records get the one of the recipient
+type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
   | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath';
 type StorageField = ConversationStorageField | AccountStorageField;
@@ -44,7 +46,7 @@ type StorageWriteSource = {
   records: Map<string, Uint8Array>;
   changes: StorageChanges;
   conversations: ConversationRecord[];
-  // Profile keys of private conversations that get their first record
+  // Profile keys of the private conversations with changes
   profileKeys: Map<string, Uint8Array>;
   selfAci: string;
   deviceId: number;
@@ -61,14 +63,14 @@ const STORAGE_ID_LENGTH = 16;
 // `Number.MAX_SAFE_INTEGER` locally and the largest signed 64-bit number in records
 const MAX_SAFE_DATE = 8_640_000_000_000_000;
 const MUTED_FOREVER_PROTO = 2n ** 63n - 1n;
-const CONVERSATION_FIELDS: Record<ConversationStorageField, keyof ConversationRecord> = {
+const CONVERSATION_FIELDS: Record<ConversationRecordField, keyof ConversationRecord> = {
   archived: 'isArchived',
   markedUnread: 'isMarkedUnread',
   mutedUntilTimestamp: 'mutedUntil',
   blocked: 'isBlocked',
   whitelisted: 'isAccepted',
 };
-const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationStorageField[];
+const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationRecordField[];
 
 /**
  * The record fields that a local change of a conversation touches. Note to Self keeps its state and every pin
@@ -106,7 +108,7 @@ export function mergeStorageChanges(changes: StorageChanges, added: StorageChang
 export function omitChangedFields(patch: Partial<ConversationRecord>, fields?: StorageField[]) {
   const result = { ...patch };
   for (const field of fields ?? []) {
-    if (field in CONVERSATION_FIELDS) delete result[CONVERSATION_FIELDS[field as ConversationStorageField]];
+    if (field in CONVERSATION_FIELDS) delete result[CONVERSATION_FIELDS[field as ConversationRecordField]];
   }
   return result;
 }
@@ -152,7 +154,9 @@ export function buildStorageWrite({
     } else if (conversation) {
       record = stored?.record ?? createConversationRecord(conversation, profileKeys.get(conversation.id));
       const { value } = record.record as { value: ContactRecord | GroupV2Record };
-      setConversationFields(value, conversation, stored ? fields : CONVERSATION_FIELD_NAMES);
+      setConversationFields(
+        value, conversation, stored ? fields : CONVERSATION_FIELD_NAMES, profileKeys.get(conversation.id),
+      );
     } else {
       continue;
     }
@@ -240,7 +244,10 @@ function createConversationRecord(conversation: ConversationRecord, profileKey?:
 }
 
 function setConversationFields(
-  record: ContactRecord | GroupV2Record, conversation: ConversationRecord, fields: StorageField[],
+  record: ContactRecord | GroupV2Record,
+  conversation: ConversationRecord,
+  fields: StorageField[],
+  profileKey?: Uint8Array,
 ) {
   for (const field of fields) {
     switch (field) {
@@ -261,6 +268,9 @@ function setConversationFields(
       }
       case 'whitelisted':
         record.whitelisted = Boolean(conversation.isAccepted);
+        break;
+      case 'profileKey':
+        if (profileKey && 'profileKey' in record) record.profileKey = profileKey;
         break;
       default:
         break;
