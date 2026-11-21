@@ -110,6 +110,9 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     registrationId: 1,
     pniRegistrationId: 1,
     profileKey: getRandomBytes(32),
+    // The keys that backups come from
+    accountEntropyPool: wasm.AccountEntropyPool_Generate(),
+    mediaRootBackupKey: getRandomBytes(DEMO_KEY_LENGTH),
     isReadReceiptsEnabled: true,
     usernameLink: { entropy: getRandomBytes(32), serverId: crypto.randomUUID() },
     isStoryViewReceiptsEnabled: true,

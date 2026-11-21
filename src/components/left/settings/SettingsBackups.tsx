@@ -203,7 +203,7 @@ const SettingsBackups = ({
       <>
         <IslandDescription dir="auto">{lang('BackupsAbout')}</IslandDescription>
         <Island>
-          <ListItem icon="check-filled" narrow disabled={isUpdating} onClick={handleTurnOn}>
+          <ListItem icon="archive" narrow disabled={isUpdating} onClick={handleTurnOn}>
             {lang('BackupsTurnOn')}
           </ListItem>
         </Island>
@@ -225,7 +225,7 @@ const SettingsBackups = ({
           >
             {lang('BackupsExportFile')}
           </ListItem>
-          <ListItem icon="copy-media" narrow disabled={isUpdating || backups!.isRunning} onClick={openImportDialog}>
+          <ListItem icon="unarchive" narrow disabled={isUpdating || backups!.isRunning} onClick={openImportDialog}>
             {lang('BackupsImportFile')}
           </ListItem>
         </Island>

@@ -77,3 +77,15 @@ names no element, so these reports look like a component bug. Browser verificati
 ## The API connector drops `destroy` and `reconnectNow` while the engine is not started
 
 `NO_QUEUE_BEFORE_INIT` in `src/api/worker/connector.ts` makes `callApi` and `callApiLocal` resolve these two calls to `undefined` when the worker is not initialized, which is the case on the lock screen of a passcode and in the first seconds after a load. That suited GramJS, which had nothing at rest in the worker. The Signal engine keeps the account, keys and messages in IndexedDB and the Cache API, so a `destroy` that never arrives leaves them (reproduced in Chrome on the demo account; the logout actions now clear the stores from the page with `clearSignalLocalData()`, see S-01 in `docs/signal/SECURITY.md`). A new method that has to act on the stores without a started engine needs the same page-side route, and nothing in the connector says so; whether `destroy` should start the worker and run, or the stores' clearing should be reachable from the page only, is undecided.
+
+## Backups cannot end DEFLATE blocks at exact offsets, since `fflate` breaks on a sync flush
+
+`src/lib/signal/backups/backupWriter.ts` ports the gzip of Signal Desktop `toPaddedGzipIterable`, which ends a DEFLATE
+block around the account data and recipients and at the offsets of `MessageBackupSizing_FlushInterval`, then pads by
+`MessageBackupSizing_PaddingSize` for the largest block. `fflate` 0.8.3 `Gzip.flush(true)` (the sync flush that ends the
+block) produces data that Node's `gunzipSync` rejects with "invalid stored block lengths" when a block holds
+incompressible bytes such as keys: 96 of 200 random inputs failed with `flush(true)` and none with `flush()`. Verified in
+a Node script that pushes four chunks of text and random bytes with a flush after each. The writer uses `flush()`, so
+the blocks end where the compressor ends them and the padding follows the uncompressed size of the intervals; the
+backups are valid for libsignal's validator, but the padding is not exactly what the format describes. Whether another
+library or `CompressionStream` with a manual flush could end blocks exactly is not tried.
