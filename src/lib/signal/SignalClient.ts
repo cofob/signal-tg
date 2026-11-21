@@ -45,6 +45,7 @@ export default class SignalClient {
     const account = await this.store.getItem('account');
     if (!account) throw new Error('This browser is not linked to a Signal account');
     this.account = account;
+    this.unauthenticatedChat.open();
 
     this.connection?.close();
     // A closed connection no longer sends: senders wait for the next one (see `isConnected`)
