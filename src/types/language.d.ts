@@ -138,6 +138,40 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalProfileAbout': undefined;
+  'SignalProfileAboutHelp': undefined;
+  'SignalProfileRemovePhoto': undefined;
+  'SignalProfileSaveFailed': undefined;
+  'SignalProfileUsernameHelp': undefined;
+  'SignalUsernameSet': undefined;
+  'SignalUsernameNumber': undefined;
+  'SignalUsernameHelp': undefined;
+  'SignalUsernameTaken': undefined;
+  'SignalUsernameExpired': undefined;
+  'SignalUsernameRateLimited': undefined;
+  'SignalUsernameTooShort': undefined;
+  'SignalUsernameTooLong': undefined;
+  'SignalUsernameStartsWithDigit': undefined;
+  'SignalUsernameCharacters': undefined;
+  'SignalUsernameNumberInvalid': undefined;
+  'SignalUsernameFailed': undefined;
+  'SignalUsernameLink': undefined;
+  'SignalUsernameLinkHelp': undefined;
+  'SignalUsernameLinkReset': undefined;
+  'SignalUsernameResetConfirm': undefined;
+  'SignalUsernameLinkResetDone': undefined;
+  'SignalUsernameLinkInvalid': undefined;
+  'SignalUsernameDelete': undefined;
+  'SignalPhoneSharedInfo': undefined;
+  'SignalPhoneHiddenInfo': undefined;
+  'SignalPhoneDiscoverableInfo': undefined;
+  'SignalPhoneUnlistedInfo': undefined;
+  'SettingsKeywordsUsername': undefined;
+  'SafetyNumber': undefined;
+  'SafetyNumberView': undefined;
+  'SafetyNumberMarkVerified': undefined;
+  'SafetyNumberClearVerification': undefined;
+  'SafetyNumberVerified': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -2629,6 +2663,30 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'SignalUsernameDeleteConfirm': {
+    'username': V;
+  };
+  'SafetyNumberHint': {
+    'user': V;
+  };
+  'SafetyNumberUnavailable': {
+    'user': V;
+  };
+  'ActionSafetyChanged': {
+    'user': V;
+  };
+  'ActionSafetyVerified': {
+    'user': V;
+  };
+  'ActionSafetyVerifiedSynced': {
+    'user': V;
+  };
+  'ActionSafetyUnverified': {
+    'user': V;
+  };
+  'ActionSafetyUnverifiedSynced': {
+    'user': V;
+  };
   'MessageRequestBlockTitle': {
     'title': V;
   };
@@ -4405,6 +4463,13 @@ export interface LangKeyGroups {
       | 'UserPlayingGame'
       | 'UserActionRecordRound'
       | 'UserActionUploadRound'
+      | 'SafetyNumberHint'
+      | 'SafetyNumberUnavailable'
+      | 'ActionSafetyChanged'
+      | 'ActionSafetyVerified'
+      | 'ActionSafetyVerifiedSynced'
+      | 'ActionSafetyUnverified'
+      | 'ActionSafetyUnverifiedSynced'
       | 'CallEmojiKeyTooltip'
       | 'ChatListDeleteForEveryone'
       | 'ConversationPinMessagesFor'
@@ -4496,6 +4561,7 @@ export interface LangKeyGroups {
   'username': {
     keys:
       | 'UsernameAvailable'
+      | 'SignalUsernameDeleteConfirm'
       | 'CocoonFeature1Text';
     variables: 'username';
   };

@@ -4,7 +4,7 @@ import type MessageProcessor from '../messages/MessageProcessor';
 import type { SenderContext } from '../sender/sendContent';
 
 import { bufferToBase64 } from '../../../util/encoding/buffer';
-import { sendFetchLatestSync } from '../sender/sendMessage';
+import { sendFetchLatestSync, sendUsernameChangeSync } from '../sender/sendMessage';
 import {
   fetchManifest, fetchRecords, getStorageCredentials, getStorageKey, writeManifest,
 } from './storageService';
@@ -19,7 +19,7 @@ const MAX_WRITE_ATTEMPTS = 3;
  * Syncs the storage service (Signal Desktop `sync` and `upload` in `ts/services/storage.preload.ts`): merges a
  * newer manifest and the records new to this device, then writes the local changes on top of it. A write that
  * conflicts with another device's write starts over from the newer manifest. After a write, our other devices are
- * asked to fetch it.
+ * asked to fetch it, and told about a new username.
  */
 export async function syncStorageService(context: SenderContext, processor: MessageProcessor) {
   const storageKey = await getStorageKey(context.account);
@@ -41,6 +41,8 @@ export async function syncStorageService(context: SenderContext, processor: Mess
     if (await writeManifest(credentials, storageKey, pending.write)) {
       await processor.commitStorageWrite(pending);
       await sendFetchLatestSync(context, SyncMessage_FetchLatest_Type.STORAGE_MANIFEST);
+      // Only once the record has the new username, or the primary device would find it out of sync
+      if (pending.hasUsernameChange) await sendUsernameChangeSync(context);
       return;
     }
     if (attempt === MAX_WRITE_ATTEMPTS) throw new Error(`Storage service writes conflicted ${attempt} times`);

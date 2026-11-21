@@ -9,6 +9,7 @@ import type {
   SyncMessage_DeleteForMeSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
+  VerifiedSchema,
 } from '../proto/generated/SignalService_pb';
 import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
 import type { GroupTarget } from './sendToGroup';
@@ -158,7 +159,7 @@ export function sendBlockedSync(context: SenderContext, blocked: MessageInitShap
   return syncToOtherDevices(context, { content: { case: 'blocked', value: blocked } }, Date.now());
 }
 
-/** Asks our other devices to fetch the latest state of `type`, such as our storage manifest after a write */
+/** Asks our other devices to fetch the latest state of `type`, such as our profile or storage manifest after a write */
 export function sendFetchLatestSync(context: SenderContext, type: SyncMessage_FetchLatest_Type) {
   return syncToOtherDevices(context, { content: { case: 'fetchLatest', value: { type } } }, Date.now());
 }
@@ -181,6 +182,21 @@ export function sendDeleteForMeSync(
   context: SenderContext, deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>,
 ) {
   return syncToOtherDevices(context, { content: { case: 'deleteForMe', value: deleteForMe } }, Date.now());
+}
+
+/**
+ * Tells our other devices that our username changed, so they read it from the storage service (Signal Desktop
+ * `getUsernameChangeSyncMessage`)
+ */
+export function sendUsernameChangeSync(context: SenderContext) {
+  return syncToOtherDevices(context, { content: { case: 'usernameChange', value: {} } }, Date.now());
+}
+
+/** Tells our other devices that we verified a contact's safety number or cleared it (Signal Desktop `getVerificationSync`) */
+export function sendVerifiedSync(context: SenderContext, verified: MessageInitShape<typeof VerifiedSchema>) {
+  return syncToOtherDevices(context, {
+    content: { case: 'verified', value: { ...verified, nullMessage: getRandomPadding() } },
+  }, Date.now());
 }
 
 /** A null message starts a new session after the old one was archived */

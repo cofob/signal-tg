@@ -50,7 +50,8 @@ export type ConversationRecord = {
   pinnedMessages?: { messageId: number; pinnedAt: number; expiresAt?: number }[];
 };
 
-export type MessageKind = 'message' | 'timerUpdate' | 'groupUpdate';
+// Safety number notices name the contact in `actorAci`
+export type MessageKind = 'message' | 'timerUpdate' | 'groupUpdate' | 'safetyNumberChange' | 'verifiedChange';
 
 export type SendStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'viewed' | 'failed';
 
@@ -96,6 +97,9 @@ export type MessageRecord = {
   isSealedSender?: boolean;
   // The server's id of the envelope, which spam reports name
   serverGuid?: string;
+  // Verification notices: whether the safety number became verified, and whether another of our devices did it
+  isVerified?: boolean;
+  isFromOtherDevice?: boolean;
 };
 
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;

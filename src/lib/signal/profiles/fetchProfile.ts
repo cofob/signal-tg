@@ -15,6 +15,9 @@ export type SignalProfile = {
   avatarPath?: string;
   // Whether anyone may send sealed sender messages to this user without their profile key
   hasUnrestrictedUnidentifiedAccess?: boolean;
+  // Encrypted fields, base64, that a profile write sends back unchanged
+  paymentAddress?: string;
+  phoneNumberSharing?: string;
 };
 
 type ProfileResponse = {
@@ -23,6 +26,8 @@ type ProfileResponse = {
   about?: string;
   aboutEmoji?: string;
   avatar?: string;
+  paymentAddress?: string;
+  phoneNumberSharing?: string;
   unrestrictedUnidentifiedAccess?: boolean;
 };
 
@@ -55,6 +60,8 @@ export async function fetchProfile(
     aboutEmoji: json.aboutEmoji ? await decryptProfileText(json.aboutEmoji, key) : undefined,
     avatarPath: json.avatar,
     hasUnrestrictedUnidentifiedAccess: json.unrestrictedUnidentifiedAccess,
+    paymentAddress: json.paymentAddress,
+    phoneNumberSharing: json.phoneNumberSharing,
   };
 }
 

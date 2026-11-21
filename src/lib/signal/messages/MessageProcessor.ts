@@ -21,6 +21,7 @@ import type {
   SyncMessage_DeleteForMeSchema,
   SyncMessage_Sent,
   TypingMessage,
+  Verified,
 } from '../proto/generated/SignalService_pb';
 import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
@@ -28,7 +29,7 @@ import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
 import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
-import type { StorageChanges } from '../storage/storageRecords';
+import type { AccountStorageField, LocalAccountFields, StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
@@ -53,6 +54,7 @@ import {
   sendReceipts,
   sendStickerPackSync,
   sendTyping,
+  sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
@@ -70,6 +72,7 @@ import {
   omitChangedFields,
 } from '../storage/storageRecords';
 import { syncStorageService } from '../storage/syncStorage';
+import { saveIdentity } from '../store/protocolStores';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
@@ -86,8 +89,11 @@ import {
   SyncMessage_MessageRequestResponse_Type,
   SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
+  Verified_State,
 } from '../proto/generated/SignalService_pb';
-import { ManifestRecordSchema, StorageRecordSchema } from '../proto/generated/StorageService_pb';
+import {
+  AccountRecord_PhoneNumberSharingMode, ManifestRecordSchema, StorageRecordSchema,
+} from '../proto/generated/StorageService_pb';
 
 export type MessageChanges = {
   conversations: ConversationRecord[];
@@ -152,6 +158,18 @@ type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 type PendingStorageWrite = {
   write: StorageWrite;
   changeCount: number;
+  // The write carries a new username, which our other devices learn through a `usernameChange` sync
+  hasUsernameChange: boolean;
+};
+
+/** Account record fields that this device changes; each one present is written to the storage service */
+export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
+
+const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
+  username: 'username',
+  usernameLink: 'usernameLink',
+  isPhoneNumberShared: 'phoneNumberSharingMode',
+  isPhoneNumberUnlisted: 'unlistedPhoneNumber',
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
@@ -786,8 +804,13 @@ export default class MessageProcessor {
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
+        localAccount: account,
       });
-      return write && { write, changeCount: this.storageChangeCount };
+      return write && {
+        write,
+        changeCount: this.storageChangeCount,
+        hasUsernameChange: Boolean(changes[ACCOUNT_KEY]?.includes('username')),
+      };
     });
   }
 
@@ -810,6 +833,42 @@ export default class MessageProcessor {
     return this.runSerial(async () => {
       const conversation = await this.db.getConversation(id);
       return conversation && this.putLocalConversation(conversation, { ...conversation, ...update });
+    });
+  }
+
+  /** Stores what this device changed in our profile, which the profile itself carries to other devices */
+  updateOwnConversation(update: Partial<Pick<
+    ConversationRecord, 'profileName' | 'profileFamilyName' | 'about' | 'aboutEmoji' | 'avatarPath'
+  >>) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      const conversation = await this.ensurePrivateConversation(account.aci);
+      return this.putConversation({ ...conversation, ...update });
+    });
+  }
+
+  /**
+   * Stores our username, its link or phone number privacy changed on this device, and writes them to the account
+   * record of the storage service. The username is on our private conversation, the rest on the account.
+   */
+  updateOwnAccount(update: OwnAccountUpdate) {
+    return this.runSerial(async () => {
+      const { username, ...accountUpdate } = update;
+      const account = await this.client.updateAccount(accountUpdate);
+      if ('username' in update) {
+        const self = await this.ensurePrivateConversation(account.aci);
+        await this.putConversation({ ...self, username });
+      }
+      const fields = (Object.keys(update) as (keyof OwnAccountUpdate)[]).map((key) => OWN_ACCOUNT_FIELDS[key]);
+      await this.markStorageChanges({ [ACCOUNT_KEY]: fields });
+    });
+  }
+
+  /** Stores the username of a contact that a username lookup found */
+  setConversationUsername(aci: string, username: string) {
+    return this.runSerial(async () => {
+      const conversation = await this.ensurePrivateConversation(aci);
+      return this.putConversation({ ...conversation, username });
     });
   }
 
@@ -840,6 +899,10 @@ export default class MessageProcessor {
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
+    // Signal Desktop `updateIdentityKey` in `ts/services/profiles.preload.ts`: the profile shows a changed key
+    // before a message does, and gives the safety number of users we have no session with
+    const { identityKey } = profile;
+    if (identityKey && aci !== account.aci) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
     await this.runSerial(async () => {
       const conversation = await this.ensurePrivateConversation(aci);
       await this.putConversation({
@@ -852,6 +915,40 @@ export default class MessageProcessor {
       });
     });
     this.flush();
+  }
+
+  /**
+   * Adds a safety number change notice to the private conversation with `aci` and to the groups we share
+   * (Signal Desktop `addKeyChange` in `ts/models/conversations.preload.ts`). `SignalStore.onIdentityChange` calls it.
+   */
+  addSafetyNumberChange(aci: string) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      if (aci === account.aci) return;
+      await this.addIdentityNotices(aci, { kind: 'safetyNumberChange' });
+    });
+  }
+
+  /**
+   * Marks the safety number with `aci` as verified, or clears the verification, and tells our other devices
+   * (Signal Desktop `toggleVerified` and `getVerificationSync`)
+   */
+  async setVerified(aci: string, isVerified: boolean) {
+    const { store } = this.client;
+    const state = isVerified ? Verified_State.VERIFIED : Verified_State.DEFAULT;
+    const identity = await store.runExclusive(async () => {
+      const current = await store.getIdentity(aci);
+      if (!current) throw new Error(`No identity key of ${aci}`);
+      if ((current.verified === Verified_State.VERIFIED) === isVerified) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current;
+    });
+    if (!identity) return;
+
+    await this.runSerial(() => this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified }));
+    await this.sendWhenConnected(async (context) => {
+      await sendVerifiedSync(context, { destinationAci: aci, identityKey: identity.publicKey, state });
+    });
   }
 
   /**
@@ -1027,11 +1124,25 @@ export default class MessageProcessor {
             ? self.isMarkedUnread
             : accountRecord.noteToSelfMarkedUnread,
         });
+        const { usernameLink } = accountRecord;
         await this.client.updateAccount({
           isReadReceiptsEnabled: accountRecord.readReceipts,
           isTypingIndicatorsEnabled: accountRecord.typingIndicators,
           isLinkPreviewsEnabled: accountRecord.linkPreviews,
+          ...omitAccountChanges({
+            // Signal Desktop `mergeAccountRecord`: an unknown sharing mode means nobody
+            isPhoneNumberShared: accountRecord.phoneNumberSharingMode
+              === AccountRecord_PhoneNumberSharingMode.EVERYBODY,
+            isPhoneNumberUnlisted: accountRecord.unlistedPhoneNumber,
+            usernameLink: usernameLink?.entropy.length && usernameLink.serverId.length
+              ? { entropy: usernameLink.entropy, serverId: uuidToString(usernameLink.serverId) }
+              : undefined,
+          }, accountChanges),
         });
+        const username = accountRecord.username || undefined;
+        if (!accountChanges.has('username') && self.username !== username) {
+          await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+        }
       } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
         // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
         const { packId, packKey, position, deletedAtTimestamp } = record.value;
@@ -1359,12 +1470,71 @@ export default class MessageProcessor {
       case 'deleteForMe':
         await this.applyDeleteForMeSync(content.value);
         break;
+      case 'verified':
+        await this.applyVerifiedSync(content.value);
+        break;
       case 'fetchLatest':
-        // Another device wrote the storage service (Signal Desktop `onFetchLatestSync` in `ts/background.preload.ts`)
+        // Another device wrote our profile or the storage service (Signal Desktop `onFetchLatestSync`); the profile
+        // is fetched outside the serial queue, which this handler runs in
+        if (content.value.type === SyncMessage_FetchLatest_Type.LOCAL_PROFILE) {
+          void this.refreshProfile(source.authorAci).catch(this.events.onError);
+        }
         if (content.value.type === SyncMessage_FetchLatest_Type.STORAGE_MANIFEST) this.scheduleStorageSync();
+        break;
+      case 'usernameChange':
+        // Another device changed our username and wrote it to the storage service
+        this.scheduleStorageSync();
         break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Applies a verification change from another device; a new key of a verified contact is saved as verified
+   * (Signal Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`)
+   */
+  private async applyVerifiedSync(verified: Verified) {
+    const aci = verified.destinationAci
+      || (verified.destinationAciBinary.length ? uuidToString(verified.destinationAciBinary) : undefined);
+    const { identityKey, state } = verified;
+    if (!aci || !identityKey.length) return;
+
+    const { store } = this.client;
+    const wasVerified = await store.runExclusive(async () => {
+      const existing = await store.getIdentity(aci);
+      const isSameKey = Boolean(existing && buffersEqual(existing.publicKey, identityKey));
+      if (state === Verified_State.DEFAULT && !isSameKey) return undefined;
+      if (!isSameKey) await saveIdentity(store, aci, identityKey);
+      const current = (await store.getIdentity(aci))!;
+      if (current.verified === state) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current.verified === Verified_State.VERIFIED;
+    });
+
+    const isVerified = state === Verified_State.VERIFIED;
+    if (wasVerified === undefined || wasVerified === isVerified) return;
+    await this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified, isFromOtherDevice: true });
+  }
+
+  /** Adds an identity notice about `aci` to their private conversation and to the groups we share with them */
+  private async addIdentityNotices(
+    aci: string, notice: Pick<NewMessageRecord, 'kind' | 'isVerified' | 'isFromOtherDevice'>,
+  ) {
+    const now = Date.now();
+    const groups = (await this.db.getConversations())
+      .filter(({ type, memberAcis }) => type === 'group' && memberAcis?.includes(aci));
+    for (const conversation of [await this.ensurePrivateConversation(aci), ...groups]) {
+      await this.addMessage(conversation, {
+        ...notice,
+        conversationId: conversation.id,
+        authorAci: '',
+        actorAci: aci,
+        sentAt: now,
+        receivedAt: now,
+        isOutgoing: false,
+        readAt: now,
+      });
     }
   }
 
@@ -2233,4 +2403,13 @@ export function getGroupId(masterKey: Uint8Array) {
 
 function getManifestIds(manifest: ManifestRecord) {
   return manifest.identifiers.map(({ raw }) => bufferToBase64(raw));
+}
+
+/** Leaves out account fields that changed on this device since the last storage write, so local changes win */
+function omitAccountChanges(update: OwnAccountUpdate, changedFields: { has(field: AccountStorageField): boolean }) {
+  const result = { ...update };
+  for (const [key, field] of Object.entries(OWN_ACCOUNT_FIELDS) as [keyof OwnAccountUpdate, AccountStorageField][]) {
+    if (changedFields.has(field)) delete result[key];
+  }
+  return result;
 }

@@ -3,6 +3,8 @@ import type { KeyPairBytes } from './SignalStore';
 
 import { buffersEqual } from '../../../util/encoding/buffer';
 
+import { Verified_State } from '../proto/generated/SignalService_pb';
+
 export type LocalIdentity = {
   serviceId: string;
   keyPair: KeyPairBytes;
@@ -32,16 +34,13 @@ export function createProtocolStores(store: SignalStore, local: LocalIdentity) {
       getLocalRegistrationId: () => Promise.resolve(local.registrationId),
       getIdentityKey: (name: string) => store.getIdentity(name).then((record) => record?.publicKey),
       async saveIdentityKey(name: string, deviceId: number, publicKey: Uint8Array) {
-        const existing = await store.getIdentity(name);
-        if (existing && buffersEqual(existing.publicKey, publicKey)) return IDENTITY_NEW_OR_UNCHANGED;
-        await store.setIdentity(name, { publicKey });
-        return existing ? IDENTITY_REPLACED_EXISTING : IDENTITY_NEW_OR_UNCHANGED;
+        return await saveIdentity(store, name, publicKey) ? IDENTITY_REPLACED_EXISTING : IDENTITY_NEW_OR_UNCHANGED;
       },
       async isTrustedIdentity(name: string, deviceId: number, publicKey: Uint8Array, direction: number) {
         if (direction !== DIRECTION_SENDING) return true;
         const existing = await store.getIdentity(name);
-        // A changed key of a verified contact needs the user's approval before sending
-        return !existing?.isVerified || buffersEqual(existing.publicKey, publicKey);
+        // A changed key of a verified contact is not used for sending until it is saved, which clears the verification
+        return existing?.verified !== Verified_State.VERIFIED || buffersEqual(existing.publicKey, publicKey);
       },
       recordReceivedIdentityKey: () => Promise.resolve(),
     },
@@ -75,6 +74,26 @@ export function createProtocolStores(store: SignalStore, local: LocalIdentity) {
 }
 
 export type ProtocolStores = ReturnType<typeof createProtocolStores>;
+
+/**
+ * Stores the identity key of `serviceId` (trust on first use) and returns whether it replaced another key. A new key
+ * of a verified contact becomes unverified, and `SignalStore.onIdentityChange` learns about the change (Signal
+ * Desktop `saveIdentity` in `ts/SignalProtocolStore.preload.ts`).
+ */
+export async function saveIdentity(store: SignalStore, serviceId: string, publicKey: Uint8Array) {
+  const existing = await store.getIdentity(serviceId);
+  if (existing && buffersEqual(existing.publicKey, publicKey)) return false;
+
+  const isVerifiedOrUnverified = existing?.verified === Verified_State.VERIFIED
+    || existing?.verified === Verified_State.UNVERIFIED;
+  await store.setIdentity(serviceId, {
+    publicKey,
+    verified: isVerifiedOrUnverified ? Verified_State.UNVERIFIED : Verified_State.DEFAULT,
+  });
+  if (!existing) return false;
+  store.onIdentityChange?.(serviceId);
+  return true;
+}
 
 /** Key of a sender key record in `SignalStore` */
 export function getSenderKeyId(name: string, deviceId: number, distributionId: Uint8Array) {

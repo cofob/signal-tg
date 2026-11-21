@@ -72,6 +72,21 @@ export {
   sendReaction,
 } from './messages';
 export {
+  confirmUsername,
+  deleteUsername,
+  fetchPhoneNumberPrivacy,
+  fetchSafetyNumber,
+  fetchUsernameLink,
+  getChatByPhoneNumber,
+  getChatByUsername,
+  reserveUsername,
+  resetUsernameLink,
+  resolveUsernameLink,
+  updateOwnProfile,
+  updatePhoneNumberPrivacy,
+  updateSafetyNumberVerified,
+} from './profile';
+export {
   blockUser,
   fetchBlockedUsers,
   fetchConfig,

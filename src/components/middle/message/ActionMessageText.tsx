@@ -601,6 +601,16 @@ const ActionMessageText = ({
         }
         return lang('ActionViewOnceMedia');
 
+      case 'safetyNumberChange':
+        return lang('ActionSafetyChanged', { user: senderLink }, { withNodes: true });
+
+      case 'safetyNumberVerified': {
+        const key = action.isVerified
+          ? (action.isFromOtherDevice ? 'ActionSafetyVerifiedSynced' : 'ActionSafetyVerified')
+          : (action.isFromOtherDevice ? 'ActionSafetyUnverifiedSynced' : 'ActionSafetyUnverified');
+        return lang(key, { user: senderLink }, { withNodes: true });
+      }
+
       case 'setMessagesTtl': {
         const { period, autoSettingFromId } = action;
 
