@@ -655,9 +655,20 @@ export function UnidentifiedSenderMessageContent_New(message: CiphertextMessage,
 
 export function UnidentifiedSenderMessageContent_Serialize(obj: UnidentifiedSenderMessageContent): Uint8Array;
 
+/**
+ * Returns the 32 bytes of entropy followed by the encrypted username
+ */
+export function UsernameLink_Create(username: string, entropy?: Uint8Array | null): Uint8Array;
+
 export function UsernameLink_DecryptUsername(entropy: Uint8Array, encrypted_username: Uint8Array): string;
 
+export function Username_CandidatesFrom(nickname: string, min_len: number, max_len: number): string[];
+
 export function Username_Hash(username: string): Uint8Array;
+
+export function Username_HashFromParts(nickname: string, discriminator: string, min_len: number, max_len: number): Uint8Array;
+
+export function Username_Proof(username: string, randomness: Uint8Array): Uint8Array;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -837,8 +848,12 @@ export interface InitOutput {
     readonly UnidentifiedSenderMessageContent_GetSenderCert: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_Serialize: (a: number) => [number, number, number, number];
+    readonly UsernameLink_Create: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly UsernameLink_DecryptUsername: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly Username_CandidatesFrom: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly Username_Hash: (a: number, b: number) => [number, number, number, number];
+    readonly Username_HashFromParts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly Username_Proof: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly __wbg_ciphertextmessage_free: (a: number, b: number) => void;
     readonly __wbg_decryptionerrormessage_free: (a: number, b: number) => void;
     readonly __wbg_fingerprint_free: (a: number, b: number) => void;
