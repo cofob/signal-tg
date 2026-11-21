@@ -409,13 +409,15 @@ export default class MessageDb {
   }
 
   private open() {
-    this.db ??= new Promise((resolve, reject) => {
+    if (this.db) return this.db;
+
+    const opening = new Promise<IDBDatabase>((resolve, reject) => {
       const openRequest = indexedDB.open(DB_NAME, DB_VERSION);
       let isFailed = false;
       // A failed open is not kept, so that the next request opens the database again
       const fail = (err: unknown) => {
         isFailed = true;
-        this.db = undefined;
+        if (this.db === opening) this.db = undefined;
         reject(err);
       };
       openRequest.onupgradeneeded = ({ oldVersion }) => {
@@ -457,13 +459,14 @@ export default class MessageDb {
         // A newer version of the app in another tab upgrades the database once this connection is closed
         db.onversionchange = () => {
           db.close();
-          this.db = undefined;
+          if (this.db === opening) this.db = undefined;
         };
         resolve(db);
       };
       openRequest.onerror = () => fail(openRequest.error);
     });
-    return this.db;
+    this.db = opening;
+    return opening;
   }
 
   private async request<T>(

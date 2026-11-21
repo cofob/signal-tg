@@ -8,8 +8,8 @@ export const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 /**
  * When a story expires: a day after it was sent, but at most a day from now, so that a sender whose clock is ahead
- * cannot keep it longer (Signal Desktop `MessageReceiver.#handleStoryMessage`). Stories follow the device clock there
- * too, as the engine has no source of server time.
+ * cannot keep it longer (Signal Desktop `MessageReceiver.#handleStoryMessage`). Expiry deliberately follows Desktop's
+ * rule on the device clock, not the server time.
  */
 export function getStoryExpiresAt(sentAt: number) {
   return Math.min(sentAt, Date.now()) + STORY_LIFETIME_MS;

@@ -37,7 +37,7 @@ import type { AccountRecord, StoryDistributionList } from '../store/SignalStore'
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
-import { removeAttachmentBlob } from '../attachments/attachmentCache';
+import { getAttachmentCacheKey, removeAttachmentBlob } from '../attachments/attachmentCache';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup, GroupRequestError } from '../groups/fetchGroup';
@@ -1062,11 +1062,15 @@ export default class MessageProcessor {
       const previous = lists.find(({ id }) => id === list.id);
       // My Story is written only from the record of the storage service, never from defaults
       if (list.id === MY_STORY_ID && !previous) throw new Error('My Story has not been synced yet');
-      // Members known by PNI only are not shown in the app, so they stay while the audience keeps its meaning;
-      // switching between excluding and including people, or to all connections, starts without them
-      const isAllConnections = list.isBlockList && !list.memberAcis.length;
-      const isSameAudience = previous?.isBlockList === list.isBlockList;
-      const keptMemberIds = isSameAudience && !isAllConnections ? previous?.otherMemberIds : undefined;
+      // Members known by PNI only are not shown in the app, so they stay while the audience keeps its meaning, such
+      // as when other fields of the list change; switching between excluding and including people, or to all
+      // connections from a list of people, starts without them
+      const getIsAllConnections = (item?: StoryDistributionList) => (
+        Boolean(item?.isBlockList && !item.memberAcis.length)
+      );
+      const isAudienceChanged = previous?.isBlockList !== list.isBlockList
+        || (getIsAllConnections(list) && !getIsAllConnections(previous));
+      const keptMemberIds = isAudienceChanged ? undefined : previous?.otherMemberIds;
       const saved = { ...list, otherMemberIds: list.otherMemberIds ?? keptMemberIds };
       await store.setItem('storyDistributionLists', [...lists.filter(({ id }) => id !== list.id), saved]);
       await this.markStorageChanges({ [getStoryListKey(list.id)]: ['storyDistributionList'] });
@@ -2254,11 +2258,7 @@ export default class MessageProcessor {
     if (!conversation || conversation.isBlocked) return;
     // Signal Desktop drops stories of contacts we do not share our profile with
     if (conversation.type === 'private' && !conversation.isAccepted) return;
-    // The members come from the group state, which `loadMessageGroup` fetched before; without it the sender is unknown
-    if (conversation.type === 'group'
-      && (!conversation.groupState || await this.getIsGroupMessageDropped(conversation, source))) {
-      return;
-    }
+    if (conversation.type === 'group' && await this.getIsGroupMessageDropped(conversation, source)) return;
 
     await this.addStory({
       conversationId: conversation.id,
@@ -2518,9 +2518,15 @@ export default class MessageProcessor {
   private async removeStory(story: StoryRecord) {
     await this.db.deleteStory(story.id);
     this.changes.deletedStories.push(story);
-    // The photo or video of a story is not kept after the story
+    // The photo or video of a story is not kept after the story, unless another story has the same attachment
     const { attachment } = fromBinary(StoryMessageSchema, story.storyMessage);
-    if (attachment.case === 'fileAttachment') await removeAttachmentBlob(attachment.value);
+    if (attachment.case !== 'fileAttachment') return;
+    const key = getAttachmentCacheKey(attachment.value);
+    const isShared = (await this.db.getStories()).some((other) => {
+      const { attachment: otherAttachment } = fromBinary(StoryMessageSchema, other.storyMessage);
+      return otherAttachment.case === 'fileAttachment' && getAttachmentCacheKey(otherAttachment.value) === key;
+    });
+    if (!isShared) await removeAttachmentBlob(attachment.value);
   }
 
   private async removeAllStories() {
