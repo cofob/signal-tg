@@ -2,12 +2,10 @@ import type { LangKey } from '../../types/language';
 
 const INITIAL_KEYS: LangKey[] = [
   'PageTitleInactive',
-  'AuthTitle',
   'AuthKeepSignedIn',
   'Code',
   'Next',
   'WrongNumber',
-  'SentAppCode',
   'LoginJustSentSms',
   'StartText',
   'LoginPhonePlaceholder',

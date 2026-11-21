@@ -6,12 +6,10 @@ import type { LangKey } from '../../types/language';
 
 export default {
   "PageTitleInactive": "[Inactive]",
-  "AuthTitle": "Telegram",
   "AuthKeepSignedIn": "Keep me signed in",
   "Code": "Code",
   "Next": "Next",
   "WrongNumber": "Wrong number?",
-  "SentAppCode": "We've sent the code to the **Telegram** app on your other device.",
   "LoginJustSentSms": "We've sent you a code via SMS. Please enter it above.",
   "StartText": "Please confirm your country code\nand enter your phone number.",
   "LoginPhonePlaceholder": "Your phone number",

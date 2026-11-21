@@ -18,6 +18,13 @@ TeleSignal is based, is in [docs/TELEGRAM_WEB_A_CHANGELOG.md](docs/TELEGRAM_WEB_
   demand, restore during registration with the recovery key, and save or open a backup file. Turned off by default
   (`SIGNAL_BACKUPS=1` at build time) until it is checked against the live service; a linked device can only read.
 
+### Changed
+
+- Telegram's branding is replaced with TeleSignal's: the favicon, app and home screen icons, link preview image, page
+  and install names, descriptions, notification sound, no-JavaScript and unsupported browser pages, the logo of the
+  sign-up screens, the paper plane of the send button, and the duck, monkey and wallet animations and pictures. Texts
+  that named Telegram name TeleSignal or Signal.
+
 ### Fixed
 
 - Container image: the shipped scripts no longer point browser developer tools to source maps that the image does

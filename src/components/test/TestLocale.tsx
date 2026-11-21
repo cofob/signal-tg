@@ -30,15 +30,6 @@ const TestLocale = () => {
       <h1>{lang('NothingFound')}</h1>
       <p>{lang.withRegular(storedParameter)}</p>
       <p>{lang.with(storedAdvancedParameter)}</p>
-      <p>
-        {lang('LimitReachedChatInFolders', {
-          limit: 'first limit',
-          limit2: 'second limit',
-        }, {
-          withNodes: true,
-          withMarkdown: true,
-        })}
-      </p>
       <p>{lang('Participants', { count: 42 }, { pluralValue: 42 })}</p>
       <p>
         {lang('ActionPinnedText', {

@@ -223,7 +223,7 @@ const LeftMain = ({
           onClick={handleUpdateClick}
           isLoading={isTauriUpdateDownloading}
         >
-          {lang('UpdateTelegram')}
+          {lang('UpdateApp')}
         </Button>
       )}
       <NewChatButton
