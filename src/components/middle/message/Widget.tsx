@@ -733,7 +733,6 @@ function buildWidgetViewer(user?: ApiUser): WidgetViewer | undefined {
     firstName: user.firstName,
     lastName: user.lastName,
     username: getMainUsername(user),
-    isPremium: user.isPremium,
   };
 }
 

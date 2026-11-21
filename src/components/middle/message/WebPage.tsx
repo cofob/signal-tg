@@ -18,7 +18,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import Audio from '../../common/Audio';
-import CustomEmoji from '../../common/CustomEmoji';
 import Document from '../../common/Document';
 import EmojiIconBackground from '../../common/embedded/EmojiIconBackground';
 import Icon from '../../common/icons/Icon';
@@ -34,7 +33,6 @@ import './WebPage.scss';
 
 const MAX_TEXT_LENGTH = 170; // symbols
 const WEBPAGE_STORY_TYPE = 'telegram_story';
-const WEBPAGE_AI_TONE_TYPE = 'telegram_aicomposetone';
 const STICKER_SIZE = 80;
 const EMOJI_SIZE = 38;
 
@@ -160,7 +158,6 @@ const WebPage = ({
   } = webPage;
   const { mediaSize } = messageWebPage;
   const isStory = type === WEBPAGE_STORY_TYPE;
-  const isAiTone = type === WEBPAGE_AI_TONE_TYPE;
   const isExpiredStory = story && 'isDeleted' in story;
 
   const resultType = stickers?.isEmoji ? 'telegram_emojiset' : type;
@@ -171,9 +168,8 @@ const WebPage = ({
   const quickButtonIcon = getWebpageButtonIcon(resultType, { cachedPage: fullWebPage?.cachedPage });
 
   const truncatedDescription = trimText(description, MAX_TEXT_LENGTH);
-  const aiToneEmojiId = isAiTone ? webPage.aiComposeToneEmojiId : undefined;
   const isArticle = Boolean(truncatedDescription || title || siteName);
-  let isSquarePhoto = Boolean(stickers) || Boolean(aiToneEmojiId);
+  let isSquarePhoto = Boolean(stickers);
   if (isArticle && webPage?.photo && !webPage.video && !webPage.document) {
     isSquarePhoto = getIsSmallPhoto(webPage, mediaSize);
   }
@@ -188,7 +184,6 @@ const WebPage = ({
     !isArticle && 'no-article',
     document && 'with-document',
     quickButtonTitle && 'with-quick-button',
-    isAiTone && 'WebPage--ai-tone',
   );
 
   function renderQuickButton() {
@@ -323,11 +318,6 @@ const WebPage = ({
                 />
               </div>
             ))}
-          </div>
-        )}
-        {aiToneEmojiId && (
-          <div className="media-inner square-image WebPage--ai-tone-emoji">
-            <CustomEmoji documentId={aiToneEmojiId} size={STICKER_SIZE} />
           </div>
         )}
       </div>

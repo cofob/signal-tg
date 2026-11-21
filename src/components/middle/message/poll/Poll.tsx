@@ -43,7 +43,6 @@ import AvatarList from '../../../common/AvatarList';
 import CompactMapPreview from '../../../common/CompactMapPreview';
 import Document from '../../../common/Document';
 import Icon from '../../../common/icons/Icon';
-import PeerColorWrapper from '../../../common/PeerColorWrapper';
 import StickerView from '../../../common/StickerView';
 import Button from '../../../ui/Button';
 import TextTimer from '../../../ui/TextTimer';
@@ -96,7 +95,6 @@ const Poll = ({
     openMapModal,
     openMediaViewer,
     openPollResults,
-    requestConfetti,
     sendPollVote,
     loadMessage,
     showNotification,
@@ -108,7 +106,6 @@ const Poll = ({
   const { summary, results, attachedMedia } = poll;
   const { answers, question, isMultipleChoice } = summary;
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [isSendingVote, setIsSendingVote] = useState(false);
   const [isAppendingAnswer, setIsAppendingAnswer] = useState(false);
   const [newAnswerText, setNewAnswerText] = useState('');
@@ -129,7 +126,6 @@ const Poll = ({
   );
   const hasMaskedResults = areResultsHiddenForCurrentUser && hasChosenAnswer;
   const canVote = !summary.isClosed && !hasChosenAnswer;
-  const hasExplanation = summary.isQuiz && Boolean(results.solution?.trim() || results.solutionMedia);
   const hasOptionMedia = useMemo(
     () => answers.some((answer) => hasPollOptionMedia(answer)),
     [answers],
@@ -161,7 +157,6 @@ const Poll = ({
   const canShowResultsPanel = (
     hasChosenAnswer || canShowRestrictedResults
   ) && summary.isPublic && hasResultData && !areResultsHiddenForCurrentUser;
-  const canShowExplanation = hasExplanation && hasChosenAnswer;
   const canAppendAnswer = Boolean(
     summary.canAddAnswers && !summary.isClosed && !isInScheduled && answers.length < pollMaxAnswers,
   );
@@ -179,41 +174,10 @@ const Poll = ({
   }, isSendingVote ? VOTE_TIMEOUT : undefined);
 
   useEffect(() => {
-    if (!summary.isQuiz || !isSendingVote || areResultsHiddenForCurrentUser) {
-      return;
-    }
-
-    const resultByOption = results.resultByOption;
-    if (!resultByOption) {
-      return;
-    }
-
-    const pollResults = Object.values(resultByOption);
-    const chosenResults = pollResults.filter((result) => result.isChosen);
-    const correctResults = pollResults.filter((result) => result.isCorrect);
-
-    if (
-      !chosenResults.length
-      || chosenResults.length !== correctResults.length
-      || !chosenResults.every((result) => result.isCorrect)
-    ) {
-      return;
-    }
-
-    requestConfetti({});
-  }, [areResultsHiddenForCurrentUser, isSendingVote, results.resultByOption, summary.isQuiz]);
-
-  useEffect(() => {
     if (!canToggleAuthorResults) {
       setIsViewingAuthorResults(false);
     }
   }, [canToggleAuthorResults]);
-
-  useEffect(() => {
-    if (!canShowExplanation) {
-      setIsExplanationOpen(false);
-    }
-  }, [canShowExplanation]);
 
   useEffect(() => {
     if (canAppendAnswer) {
@@ -250,14 +214,6 @@ const Poll = ({
       items.push({ key: 'attached', media: attachedMedia.document });
     }
 
-    if (results.solutionMedia?.photo) {
-      items.push({ key: 'explanation', media: results.solutionMedia.photo });
-    } else if (results.solutionMedia?.video) {
-      items.push({ key: 'explanation', media: results.solutionMedia.video });
-    } else if (results.solutionMedia?.document) {
-      items.push({ key: 'explanation', media: results.solutionMedia.document });
-    }
-
     orderedAnswers.forEach((answer) => {
       if (answer.media?.photo) {
         items.push({ key: answer.option, media: answer.media.photo });
@@ -267,7 +223,7 @@ const Poll = ({
     });
 
     return items;
-  }, [attachedMedia, orderedAnswers, results.solutionMedia]);
+  }, [attachedMedia, orderedAnswers]);
 
   const previewIndexByKey = useMemo(() => {
     return previewItems.reduce((acc, item, index) => {
@@ -422,16 +378,11 @@ const Poll = ({
     setIsViewingAuthorResults((current) => !current);
   });
 
-  const handleToggleExplanation = useLastCallback(() => {
-    setIsExplanationOpen((current) => !current);
-  });
-
   const handleCloseDateEnd = useLastCallback(() => {
     loadMessage({ chatId, messageId });
   });
 
   const attachedPreviewIndex = attachedMedia && previewIndexByKey.attached;
-  const explanationPreviewIndex = results.solutionMedia && previewIndexByKey.explanation;
   const attachedMediaEl = attachedMedia && renderPollMedia({
     content: attachedMedia,
     theme,
@@ -442,18 +393,6 @@ const Poll = ({
     onOpenLocation: handleOpenLocation,
     onOpenPreview: handleOpenPreview,
   });
-  const explanationMedia = results.solutionMedia && renderPollMedia({
-    content: results.solutionMedia,
-    theme,
-    previewIndex: explanationPreviewIndex,
-    previewId: explanationPreviewIndex !== undefined ? getPollPreviewId(messageId, explanationPreviewIndex) : undefined,
-    observeIntersectionForLoading,
-    observeIntersectionForPlaying,
-    onOpenLocation: handleOpenLocation,
-    onOpenPreview: handleOpenPreview,
-    locationWidth: ATTACHED_MAP_WIDTH,
-    locationHeight: ATTACHED_MAP_HEIGHT,
-  });
 
   const questionText = useMemo(() => renderTextWithEntities({
     text: question.text,
@@ -463,10 +402,6 @@ const Poll = ({
     text: messageText.text,
     entities: messageText.entities,
   }), [messageText]);
-  const explanationText = useMemo(() => results.solution?.trim() ? renderTextWithEntities({
-    text: results.solution,
-    entities: results.solutionEntities,
-  }) : undefined, [results.solution, results.solutionEntities]);
   const footerSubtext = activeCloseDate
     ? lang(areResultsHiddenForCurrentUser ? 'PollResultsTime' : 'PollEndsTime', {
       time: (
@@ -524,19 +459,19 @@ const Poll = ({
           color="adaptive"
           onClick={handleSendVote}
         >
-          {renderFooterBody(lang(summary.isQuiz ? 'PollSubmitAnswers' : 'PollSubmitVotes'))}
+          {renderFooterBody(lang('PollSubmitVotes'))}
         </Button>
       );
     }
 
     if (canToggleAuthorResults) {
       const label = isViewingAuthorResults
-        ? lang(summary.isQuiz ? 'PollBackToAnswer' : 'PollBackToVote', undefined, {
+        ? lang('PollBackToVote', undefined, {
           withNodes: true,
           specialReplacement: PREVIOUS_ARROW_REPLACEMENT,
         })
         : lang(
-          summary.isQuiz ? 'PollAnswerCountButton' : 'PollVoteCountButton',
+          'PollVoteCountButton',
           { count: totalVoters },
           {
             withNodes: true,
@@ -579,7 +514,7 @@ const Poll = ({
           color="adaptive"
           onClick={handleSendVote}
         >
-          {renderFooterBody(lang(summary.isQuiz ? 'PollSubmitAnswers' : 'PollSubmitVotes'))}
+          {renderFooterBody(lang('PollSubmitVotes'))}
         </Button>
       );
     }
@@ -603,7 +538,7 @@ const Poll = ({
     if (totalVoters) {
       return (
         <div className={styles.footerStatic}>
-          {renderFooterBody(lang(summary.isQuiz ? 'PollAnsweredCount' : 'VoteCount', {
+          {renderFooterBody(lang('VoteCount', {
             count: totalVoters,
           }, { pluralValue: totalVoters }))}
         </div>
@@ -612,7 +547,7 @@ const Poll = ({
 
     return (
       <div className={styles.footerStatic}>
-        {renderFooterBody(lang(summary.isQuiz ? 'ChatQuizTotalVotesEmpty' : 'ChatPollTotalVotesResultEmpty'))}
+        {renderFooterBody(lang('ChatPollTotalVotesResultEmpty'))}
       </div>
     );
   }, [
@@ -627,7 +562,6 @@ const Poll = ({
     isViewingAuthorResults,
     lang,
     selectedOptions.length,
-    summary.isQuiz,
     trimmedNewAnswerText,
     footerSubtext,
     totalVoters,
@@ -637,35 +571,6 @@ const Poll = ({
     <>
       {attachedMediaEl}
       <div className={styles.root} dir={lang.isRtl ? 'rtl' : undefined}>
-        {isExplanationOpen && canShowExplanation && (
-          <PeerColorWrapper className={styles.explanation} shouldReset>
-            <div className={styles.explanationHeader}>
-              <span className={styles.explanationTitle}>
-                {lang('PollsSolutionTitle')}
-              </span>
-              {explanationText && (
-                <div className={styles.explanationText} dir="auto">
-                  {explanationText}
-                </div>
-              )}
-            </div>
-            <Button
-              round
-              size="tiny"
-              color="adaptive"
-              isText
-              iconName="close"
-              ariaLabel={lang('Close')}
-              onClick={handleToggleExplanation}
-              className={styles.explanationCloseButton}
-            />
-            {explanationMedia && (
-              <div className={styles.explanationMedia}>
-                {explanationMedia}
-              </div>
-            )}
-          </PeerColorWrapper>
-        )}
         {descriptionText && (
           <div dir="auto">
             {descriptionText}
@@ -675,27 +580,12 @@ const Poll = ({
           <div className={styles.question} dir="auto">
             {questionText}
           </div>
-          {canShowExplanation && !isExplanationOpen && (
-            <div className={styles.explanationToggleButton}>
-              <Button
-                round
-                size="smaller"
-                color="adaptive"
-                isText
-                iconName="lamp"
-                ariaLabel={lang('MediaPollSolutionAria')}
-                onClick={handleToggleExplanation}
-              />
-            </div>
-          )}
           <div className={styles.meta}>
             <div className={styles.metaInfo}>
               <span className={styles.metaLabel}>
                 {summary.isClosed
                   ? lang('FinalResults')
-                  : summary.isQuiz
-                    ? lang(summary.isPublic ? 'QuizPoll' : 'AnonymousQuizPoll')
-                    : lang(summary.isPublic ? 'PublicPoll' : 'AnonymousPoll')}
+                  : lang(summary.isPublic ? 'PublicPoll' : 'AnonymousPoll')}
               </span>
               {Boolean(pollRecentVoters?.length) && (
                 <AvatarList
@@ -717,7 +607,6 @@ const Poll = ({
                 key={answer.option}
                 answer={answer}
                 result={optionResult}
-                isQuiz={summary.isQuiz}
                 totalVotersCount={results.totalVoters}
                 hasResults={areInlineResultsVisible || hasMaskedResults}
                 hasMaskedResults={hasMaskedResults}

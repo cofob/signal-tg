@@ -143,7 +143,8 @@ does not apply.
 
 ## Releases
 
-`.github/workflows/desktop.yml` builds on `v*` tags and on manual runs:
+`.github/workflows/desktop.yml` builds the packages for the release workflow (`v*` tags, see
+`docs/RELEASING.md`) and on manual runs:
 
 | Runner | Target | Packages |
 | --- | --- | --- |
@@ -152,8 +153,8 @@ does not apply.
 | `windows-latest` | `x86_64-pc-windows-msvc` | NSIS `.exe` |
 | `ubuntu-22.04` | `x86_64-unknown-linux-gnu` | `.deb`, `.AppImage` |
 
-Each job uploads its packages as a workflow artifact. Tag builds also attach them to a draft GitHub
-release, which a maintainer publishes. The app version comes from `package.json`.
+Each job uploads its packages as a workflow artifact. In a release run they also attach to the draft GitHub
+release, which the workflow publishes once every asset exists. The app version comes from `package.json`.
 
 Signing and the updater are off unless these exist in the repository settings:
 

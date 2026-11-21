@@ -20,7 +20,6 @@ import {
   selectChatMessage,
   selectCurrentMessageList,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsForwardModalOpen,
   selectIsMediaViewerOpen,
   selectIsReactionPickerOpen,
@@ -131,7 +130,6 @@ type StateProps = {
   deleteFolderDialog?: ApiChatFolder;
   isReactionPickerOpen: boolean;
   isDeleteMessageModalOpen?: boolean;
-  isCurrentUserPremium?: boolean;
   noRightColumnAnimation?: boolean;
   withInterfaceAnimations?: boolean;
   isSynced?: boolean;
@@ -178,7 +176,6 @@ const Main = ({
   requestedDraft,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
-  isCurrentUserPremium,
   deleteFolderDialog,
   isMasterTab,
   noRightColumnAnimation,
@@ -207,7 +204,6 @@ const Main = ({
     loadDiceStickers,
     loadDefaultTopicIcons,
     loadAddedStickers,
-    loadDefaultStatusIcons,
     ensureTimeFormat,
     closeStickerSetModal,
     closeCustomEmojiSets,
@@ -220,8 +216,6 @@ const Main = ({
     checkAppVersion,
     openThread,
     toggleLeftColumn,
-    loadRecentEmojiStatuses,
-    loadUserCollectibleStatuses,
     updatePageTitle,
     loadTopReactions,
     loadRecentReactions,
@@ -230,7 +224,7 @@ const Main = ({
     loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
-    loadAiComposeTones,
+    openRecoveryKeyModal,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -281,6 +275,14 @@ const Main = ({
 
   useInterval(checkAppVersion, isMasterTab ? APP_OUTDATED_TIMEOUT_MS : undefined, true);
 
+  // The recovery key of a new account shows once per start, until the user confirms to have saved it
+  const hasCheckedRecoveryKeyRef = useRef(false);
+  useEffect(() => {
+    if (!isMasterTab || !isSynced || hasCheckedRecoveryKeyRef.current) return;
+    hasCheckedRecoveryKeyRef.current = true;
+    openRecoveryKeyModal({ shouldSkipConfirmed: true });
+  }, [isMasterTab, isSynced]);
+
   // Initial API calls
   useEffect(() => {
     if (isMasterTab && isSynced) {
@@ -319,11 +321,9 @@ const Main = ({
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
-      loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
-      loadAiComposeTones();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 
@@ -333,14 +333,6 @@ const Main = ({
       loadAllChats({ listType: 'saved' });
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen, hasCurrentUser]);
-
-  // Initial Premium API calls
-  useEffect(() => {
-    if (isMasterTab && isCurrentUserPremium && isAppConfigLoaded && !isAccountFrozen) {
-      loadDefaultStatusIcons();
-      loadRecentEmojiStatuses();
-    }
-  }, [isCurrentUserPremium, isMasterTab, isAppConfigLoaded, isAccountFrozen]);
 
   // Language-based API calls
   useEffect(() => {
@@ -704,7 +696,6 @@ export default memo(withGlobal<OwnProps>(
       botTrustRequestBot: botTrustRequest && selectUser(global, botTrustRequest.botId),
       requestedAttachBotInChat,
       requestedBotStartGroup,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

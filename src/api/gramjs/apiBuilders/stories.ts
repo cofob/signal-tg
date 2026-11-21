@@ -3,7 +3,6 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type {
   ApiMediaArea,
   ApiMediaAreaCoordinates,
-  ApiStealthMode,
   ApiStory,
   ApiStoryAlbum,
   ApiStoryForwardInfo,
@@ -145,13 +144,6 @@ export function buildApiStoryView(view: GramJs.TypeStoryView): ApiTypeStoryView 
   }
 
   return undefined;
-}
-
-export function buildApiStealthMode(stealthMode: GramJs.TypeStoriesStealthMode): ApiStealthMode {
-  return {
-    activeUntil: stealthMode.activeUntilDate,
-    cooldownUntil: stealthMode.cooldownUntilDate,
-  };
 }
 
 function buildApiMediaAreaCoordinates(coordinates: GramJs.TypeMediaAreaCoordinates): ApiMediaAreaCoordinates {

@@ -466,7 +466,6 @@ const Settings = ({
         return (
           <SettingsPrivacyVisibilityExceptionList
             isAllowList
-            withPremiumCategory={currentScreen === SettingsScreens.PrivacyGroupChatsAllowedContacts}
             screen={currentScreen}
             isActive={isScreenActive || privacyAllowScreens[currentScreen]}
             onReset={handleReset}

@@ -1,5 +1,6 @@
 import type { ActionReturnType } from '../../types';
 
+import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { isChatChannel, selectTabBrowserState } from '../../helpers';
 import { addActionHandler, setGlobal } from '../../index';
 import {
@@ -15,7 +16,6 @@ import {
   updatePeerStory,
   updatePeersWithStories,
   updatePoll,
-  updateStealthMode,
 } from '../../reducers';
 import { updateThreadInfo } from '../../reducers/threads';
 import {
@@ -78,9 +78,13 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       actions.loadConfig();
       break;
 
-    case 'updateAiComposeTones':
-      actions.loadAiComposeTones();
+    case 'updateSafetyNumberBlock': {
+      const { chatId, messageId, userIds } = update;
+      actions.openSafetyNumberChangeModal({
+        chatId, messageId, userIds, tabId: getCurrentTabId(),
+      });
       break;
+    }
 
     case 'updateNewAuthorization': {
       // Load more info about this session
@@ -245,21 +249,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateStealthMode':
-      global = updateStealthMode(global, update.stealthMode);
       setGlobal(global);
       break;
 
     case 'updateAttachMenuBots':
       actions.loadAttachBots();
       break;
-
-    case 'updatePremiumFloodWait': {
-      actions.processPremiumFloodWait({
-        isUpload: update.isUpload,
-      });
-      break;
-    }
   }
 
   return undefined;

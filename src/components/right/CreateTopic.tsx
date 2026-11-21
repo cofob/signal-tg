@@ -7,7 +7,7 @@ import type { ApiChat, ApiSticker } from '../../api/types';
 import type { TabState } from '../../global/types';
 
 import { DEFAULT_TOPIC_ICON_STICKER_ID } from '../../config';
-import { selectChat, selectIsCurrentUserPremium, selectTabState } from '../../global/selectors';
+import { selectChat, selectTabState } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import cycleRestrict from '../../util/cycleRestrict';
 import { getTopicColors } from '../../util/forumColors';
@@ -35,14 +35,12 @@ export type OwnProps = {
 type StateProps = {
   chat?: ApiChat;
   createTopicPanel?: TabState['createTopicPanel'];
-  isCurrentUserPremium?: boolean;
 };
 
 const CreateTopic = ({
   isActive,
   chat,
   createTopicPanel,
-  isCurrentUserPremium,
   onClose,
 }: OwnProps & StateProps) => {
   const { createTopic } = getActions();
@@ -84,15 +82,13 @@ const CreateTopic = ({
   }, [chat, createTopic, iconColorIndex, iconEmojiId, title]);
 
   const handleCustomEmojiSelect = useCallback((emoji: ApiSticker) => {
-    if (!emoji.isFree && !isCurrentUserPremium && emoji.id !== DEFAULT_TOPIC_ICON_STICKER_ID) return;
-
     if (emoji.id === DEFAULT_TOPIC_ICON_STICKER_ID) {
       setIconEmojiId(undefined);
       return;
     }
 
     setIconEmojiId(emoji.id);
-  }, [isCurrentUserPremium]);
+  }, []);
 
   const dummyTopic = useMemo(() => {
     return {
@@ -165,7 +161,6 @@ export default memo(withGlobal(
     return {
       chat: createTopicPanel?.chatId ? selectChat(global, createTopicPanel.chatId) : undefined,
       createTopicPanel,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
     };
   },
 )(CreateTopic));

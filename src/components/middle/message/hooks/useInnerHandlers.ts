@@ -25,7 +25,6 @@ export default function useInnerHandlers({
   senderPeer,
   botSender,
   guestFromSender,
-  isTranslatingChat,
   story,
   isReplyPrivate,
   isRepliesChat,
@@ -45,7 +44,6 @@ export default function useInnerHandlers({
   senderPeer?: ApiPeer;
   botSender?: ApiPeer;
   guestFromSender?: ApiPeer;
-  isTranslatingChat?: boolean;
   story?: ApiStory;
   isReplyPrivate?: boolean;
   isRepliesChat?: boolean;
@@ -55,7 +53,7 @@ export default function useInnerHandlers({
   const {
     openChat, openChatWithDraft, showNotification, focusMessage, openMediaViewer, openAudioPlayer,
     markMessagesRead, cancelUploadMedia, openForwardMenu,
-    openChatLanguageModal, openThread, openStoryViewer, searchChatMediaMessages,
+    openThread, openStoryViewer, searchChatMediaMessages,
   } = getActions();
 
   const {
@@ -63,7 +61,7 @@ export default function useInnerHandlers({
   } = message;
 
   const {
-    replyToMsgId, replyToPeerId, replyToTopId, isQuote, quoteText, quoteRich, quoteOffset, todoItemId, pollOption,
+    replyToMsgId, replyToPeerId, replyToTopId, isQuote, quoteText, quoteRich, quoteOffset, pollOption,
   } = getMessageReplyInfo(message) || {};
 
   const handleSenderClick = useLastCallback(() => {
@@ -125,7 +123,6 @@ export default function useInnerHandlers({
         originChannelId: replyToPeerId,
         originMessageId: replyToTopId,
         focusMessageId: replyToMsgId,
-        todoItemId,
         pollOption,
       });
       return;
@@ -139,7 +136,6 @@ export default function useInnerHandlers({
       noForumTopicPanel: !replyToPeerId, // Open topic panel for cross-chat replies
       quote: isQuote ? quoteRich?.map(getRichQuoteText).join('\n') || quoteText?.text : undefined,
       quoteOffset: isQuote ? quoteOffset : undefined,
-      todoItemId,
       pollOption,
     });
   });
@@ -282,12 +278,6 @@ export default function useInnerHandlers({
     selectMessage(e, groupedId);
   });
 
-  const handleTranslationClick = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-
-    openChatLanguageModal({ chatId, messageId: !isTranslatingChat ? messageId : undefined });
-  });
-
   const handleOpenThread = useLastCallback(() => {
     openThread({
       chatId: message.chatId,
@@ -316,7 +306,6 @@ export default function useInnerHandlers({
     handlePhotoMediaClick,
     handleVideoMediaClick,
     handleMetaClick: selectWithGroupedId,
-    handleTranslationClick,
     handleOpenThread,
     handleReadMedia,
     handleCancelUpload,

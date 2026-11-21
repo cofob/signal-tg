@@ -57,15 +57,13 @@ export function isKeyboardButtonUnsupportedForEphemeral(button: ApiKeyboardButto
 }
 
 export function isEphemeralSendSupported({
-  scheduledAt, contact, dice, poll, story, suggestedMedia, todo,
+  scheduledAt, contact, dice, poll, story,
 }: SendMessageParams) {
   return !scheduledAt && !(
     contact
     || dice
     || poll
     || story
-    || suggestedMedia
-    || todo
   );
 }
 

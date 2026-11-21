@@ -7,10 +7,8 @@ import type {
   ApiKeyboardButton,
   ApiMessage,
   ApiPhoto,
-  ApiTypeCurrencyAmount,
   ApiVideo,
 } from '../api/types';
-import type { ApiMessageAction } from '../api/types/messageActions';
 import type {
   IThemeSettings, MessageList, PerformanceType, ThemeKey, ThreadId, TopicsInfo,
 } from '../types';
@@ -33,7 +31,6 @@ import {
   IS_SCREEN_LOCKED_CACHE_KEY,
   SAVED_FOLDER_ID,
   SHARED_STATE_CACHE_KEY,
-  TON_CURRENCY_CODE,
 } from '../config';
 import { buildColor, serializeColor } from '../lib/color';
 import { MAIN_IDB_STORE } from '../util/browser/idb';
@@ -71,9 +68,6 @@ import {
 import { getIsMobile } from '../hooks/useAppLayout';
 
 const UPDATE_THROTTLE = 5000;
-const APP_CONFIG_NANOTON_KEYS = [
-  'tonSuggestedPostAmountMax', 'tonSuggestedPostAmountMin',
-] as const;
 
 // `patternColor` values the cache migration recognizes as defaults and replaces with the
 // wallpaper-derived ones
@@ -389,6 +383,7 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   const untypedCached = cached as any;
   // Push registrations are reconciled against the shared subscription registry
   delete untypedCached.push;
+  removeTelegramOnlyFields(untypedCached);
 
   cached.messageWidgetStorage ||= {};
   Object.values(cached.chats.fullInfoById).forEach((fullInfo) => {
@@ -511,7 +506,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   }
 
   if (cached.cacheVersion < 8) {
-    migrateNanotonsToBigInt(cached);
     cached.cacheVersion = 8;
   }
 
@@ -535,6 +529,22 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   if (cached.audioPlayer.orderMode === undefined) {
     cached.audioPlayer.orderMode = initialState.audioPlayer.orderMode;
   }
+}
+
+// Caches saved before Telegram-only features were removed still hold their fields
+function removeTelegramOnlyFields(untypedCached: any) {
+  const settings = untypedCached.settings?.byKey;
+  if (settings) {
+    delete settings.canTranslate;
+    delete settings.translationLanguage;
+    delete settings.translationTone;
+  }
+  delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
+  delete untypedCached.chatFolders?.areTagsEnabled;
+
+  Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
+    delete messageStore.summaryById;
+  });
 }
 
 function cloneThemeSettings(themes: Partial<Record<ThemeKey, IThemeSettings>>) {
@@ -991,7 +1001,6 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
       ephemeralById,
       anchoredById: {},
       threadsById,
-      summaryById: {},
     };
   });
 
@@ -1045,7 +1054,7 @@ function omitLocalDocument(document: ApiDocument): ApiDocument {
 
 function reduceSettings<T extends GlobalState>(global: T): GlobalState['settings'] {
   const {
-    byKey, botVerificationShownPeerIds, notifyDefaults, lastPremiumBandwithNotificationDate, accountDaysTtl, chatThemes,
+    byKey, botVerificationShownPeerIds, notifyDefaults, accountDaysTtl, chatThemes,
   } = global.settings;
 
   // Cached palettes remain usable offline; the catalog refresh restores wallpaper documents in the worker
@@ -1053,7 +1062,6 @@ function reduceSettings<T extends GlobalState>(global: T): GlobalState['settings
     byKey,
     privacy: {},
     botVerificationShownPeerIds,
-    lastPremiumBandwithNotificationDate,
     notifyDefaults,
     accountDaysTtl,
     chatThemes,
@@ -1099,38 +1107,4 @@ function migrateButtonActions(cached: GlobalState) {
       });
     });
   });
-}
-
-// A cache saved by an earlier app version holds TON amounts as plain numbers
-function migrateNanotonsToBigInt(cached: GlobalState) {
-  const { appConfig } = cached;
-
-  APP_CONFIG_NANOTON_KEYS.forEach((key) => {
-    const value = appConfig?.[key];
-    if (value !== undefined) appConfig[key] = BigInt(value);
-  });
-
-  Object.values(cached.messages.byChatId).forEach(({ byId, ephemeralById, threadsById }) => {
-    [...Object.values(byId), ...Object.values(ephemeralById)].forEach(({ content: { action }, suggestedPostInfo }) => {
-      migrateCurrencyAmountToBigInt(suggestedPostInfo?.price);
-      if (action) migrateActionNanotonsToBigInt(action);
-    });
-
-    Object.values(threadsById).forEach(({ localState }) => {
-      migrateCurrencyAmountToBigInt(localState?.draft?.suggestedPostInfo?.price);
-    });
-  });
-}
-
-function migrateActionNanotonsToBigInt(action: ApiMessageAction) {
-  switch (action.type) {
-    case 'suggestedPostApproval':
-    case 'suggestedPostSuccess':
-      migrateCurrencyAmountToBigInt(action.amount);
-      break;
-  }
-}
-
-function migrateCurrencyAmountToBigInt(currencyAmount?: ApiTypeCurrencyAmount) {
-  if (currencyAmount?.currency === TON_CURRENCY_CODE) currencyAmount.amount = BigInt(currencyAmount.amount);
 }

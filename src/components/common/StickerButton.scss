@@ -1,6 +1,5 @@
 .StickerButton {
   --custom-emoji-size: 2.25rem;
-  --premium-gradient: linear-gradient(88.39deg, #6C93FF -2.56%, #976FFF 51.27%, #DF69D1 107.39%);
 
   position: relative;
 
@@ -49,26 +48,6 @@
     &:hover {
       background-color: rgba(var(--color-text-secondary-rgb), 0.16);
     }
-  }
-
-  .sticker-locked, .sticker-premium {
-    position: absolute;
-    z-index: 2;
-    right: 0;
-    bottom: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-
-    font-size: 0.875rem;
-    color: white;
-
-    background: var(--premium-gradient);
   }
 
   &.selected {

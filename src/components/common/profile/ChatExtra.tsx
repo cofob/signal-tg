@@ -186,7 +186,7 @@ const ChatExtra = ({
   }, [peerId, chat, user]);
 
   const isTopicInfo = Boolean(topicId && topicId !== MAIN_THREAD_ID);
-  const shouldRenderAllLinks = (chat && isChatChannel(chat)) || user?.isPremium;
+  const shouldRenderAllLinks = chat && isChatChannel(chat);
 
   const activeUsernames = useMemo(() => {
     const result = usernames?.filter((u) => u.isActive);

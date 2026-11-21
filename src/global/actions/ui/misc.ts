@@ -18,7 +18,7 @@ import { getTranslationFn } from '../../../util/localization';
 import updateIcon from '../../../util/updateIcon';
 import { setPageTitle, setPageTitleInstant } from '../../../util/updatePageTitle';
 import {
-  canEditMediaInEditor, getAllowedAttachmentOptions, getChatTitle, runForFocusedTabs,
+  canEditMediaInEditor, getAllowedAttachmentOptions, getChatTitle,
 } from '../../helpers';
 import { addTabStateResetterAction } from '../../helpers/meta';
 import {
@@ -43,7 +43,6 @@ import { selectSharedSettings } from '../../selectors/sharedState';
 import { getIsMobile, getIsTablet } from '../../../hooks/useAppLayout';
 
 export const APP_VERSION_URL = 'version.txt';
-const FLOOD_PREMIUM_WAIT_NOTIFICATION_DURATION = 6000;
 const MAX_STORED_EMOJIS = 8 * 4; // Represents four rows of recent emojis
 
 addActionHandler('toggleChatInfo', (global, actions, payload): ActionReturnType => {
@@ -791,49 +790,6 @@ addActionHandler('setShouldCloseRightColumn', (global, actions, payload): Action
   }, tabId);
 });
 
-addActionHandler('processPremiumFloodWait', (global, actions, payload): ActionReturnType => {
-  const { isUpload } = payload;
-  const {
-    bandwidthPremiumDownloadSpeedup,
-    bandwidthPremiumUploadSpeedup,
-    bandwidthPremiumNotifyPeriod,
-  } = global.appConfig;
-  const { lastPremiumBandwithNotificationDate: lastNotifiedAt } = global.settings;
-
-  if (!bandwidthPremiumDownloadSpeedup || !bandwidthPremiumUploadSpeedup || !bandwidthPremiumNotifyPeriod) {
-    return undefined;
-  }
-  if (lastNotifiedAt && Date.now() < lastNotifiedAt + bandwidthPremiumNotifyPeriod * 1000) return undefined;
-
-  runForFocusedTabs(global, (tabId) => {
-    actions.showNotification({
-      title: {
-        key: isUpload ? 'UploadSpeedLimited' : 'DownloadSpeedLimited',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      message: isUpload ? {
-        key: 'UploadSpeedLimitedMessage',
-        variables: { factor: bandwidthPremiumUploadSpeedup },
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      } : {
-        key: 'DownloadSpeedLimitedMessage',
-        variables: { factor: bandwidthPremiumDownloadSpeedup },
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      duration: FLOOD_PREMIUM_WAIT_NOTIFICATION_DURATION,
-      tabId,
-    });
-  });
-
-  return {
-    ...global,
-    settings: {
-      ...global.settings,
-      lastPremiumBandwithNotificationDate: Date.now(),
-    },
-  };
-});
-
 let prevIsScreenLocked: boolean | undefined;
 let prevBlurredTabsCount: number = 0;
 let onlineTimeout: number | undefined;
@@ -905,15 +861,6 @@ addActionHandler('openQuickChatPicker', (global, actions, payload): ActionReturn
 });
 
 addTabStateResetterAction('closeQuickChatPicker', 'isQuickChatPickerOpen');
-
-addActionHandler('openCocoonModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    isCocoonModalOpen: true,
-  }, tabId);
-});
-
-addTabStateResetterAction('closeCocoonModal', 'isCocoonModalOpen');
 
 addActionHandler('requestMessageMediaEditor', (global, actions, payload): ActionReturnType => {
   const {

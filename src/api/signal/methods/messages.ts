@@ -46,7 +46,7 @@ import { parsePackStickerId, STICKER_SIZE } from '../builders/stickers';
 import { getCurrentAccount } from '../client';
 import { db, logError, processor } from '../engine';
 import { uploadMessageAttachment } from '../media';
-import { getConversationByPeerId, getUserPeerId } from '../peers';
+import { getConversationByPeerId, getPeerId, getUserPeerId } from '../peers';
 import { trackLocalMessage } from '../updaters/messages';
 import { sendApiUpdate } from '../updates';
 import { addRecentSticker } from './stickers';
@@ -347,8 +347,12 @@ export async function closePoll({ messageId }: { chat: ApiChat; messageId: numbe
   await processor.endPoll(messageId).catch(logError);
 }
 
-/** Forwarded messages show no author in Signal, so their local messages have no forward header */
-export async function forwardMessagesLocal(params: ForwardMessagesParams) {
+/**
+ * A forward is a new message with the content of the original; attachments keep their CDN pointers, which
+ * recipients can download while the CDN keeps the file. Forwarded messages show no author in Signal, so their
+ * local messages have no forward header
+ */
+export async function forwardMessages(params: ForwardMessagesParams) {
   const {
     toChat, messages, noCaptions, lastMessageId, wasDrafted,
   } = params;
@@ -359,21 +363,10 @@ export async function forwardMessagesLocal(params: ForwardMessagesParams) {
     const content = noCaptions && hasMedia ? omit(message.content, ['text']) : message.content;
     localMessages.push(await showLocalMessage(toChat, lastMessageId, content, { wasDrafted }));
   }
-  return { messageIds: messages.map(({ id }) => id), localMessages };
-}
 
-/**
- * A forward is a new message with the content of the original; attachments keep their CDN pointers, which
- * recipients can download while the CDN keeps the file
- */
-export async function forwardApiMessages(params: ForwardMessagesParams) {
-  const { toChat, noCaptions, forwardedLocalMessagesSlice } = params;
-  if (!forwardedLocalMessagesSlice) return;
-
-  const { messageIds, localMessages } = forwardedLocalMessagesSlice;
   const conversation = await getConversationByPeerId(toChat.id);
   for (const [index, localMessage] of localMessages.entries()) {
-    const record = await db.getMessage(messageIds[index]);
+    const record = await db.getMessage(messages[index].id);
     if (!conversation || !record?.dataMessage) {
       markLocalMessageFailed(localMessage);
       continue;
@@ -396,13 +389,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
       sticker: original.sticker,
     }, localMessage);
   }
-}
-
-export async function forwardMessages(params: ForwardMessagesParams) {
-  await forwardApiMessages({
-    ...params,
-    forwardedLocalMessagesSlice: params.forwardedLocalMessagesSlice ?? await forwardMessagesLocal(params),
-  });
 }
 
 function getIsAlbumItem({ groupedId, attachment }: SendMessageParams) {
@@ -495,13 +481,41 @@ async function sendAlbum(items: AlbumItem[]) {
 async function sendWithLocalMessage(conversation: ConversationRecord, init: DataMessageInit, localMessage: ApiMessage) {
   let isStored = false;
   try {
-    await processor.sendDataMessage(conversation.id, init, (stored) => {
+    const sent = await processor.sendDataMessage(conversation.id, init, (stored) => {
       isStored = true;
       trackLocalMessage(stored.id, localMessage);
     });
+    await reportBlockedRecipients(conversation, sent.id);
   } catch (err) {
     if (!isStored) markLocalMessageFailed(localMessage, err);
     else logError(err);
+  }
+}
+
+/**
+ * Asks the user about recipients whose new safety number kept the message from being sent, who can then send it
+ * anyway (`sendMessageAnyway`) or check the safety number first
+ */
+async function reportBlockedRecipients(conversation: ConversationRecord, messageId: number) {
+  const acis = await processor.getUnverifiedRecipients(messageId);
+  if (!acis.length) return;
+
+  sendApiUpdate({
+    '@type': 'updateSafetyNumberBlock',
+    chatId: getPeerId(conversation),
+    messageId,
+    userIds: await Promise.all(acis.map(getUserPeerId)),
+  });
+}
+
+/** Accepts the new safety numbers of the recipients who did not get the message, and sends it to them again */
+export async function sendMessageAnyway({ messageId }: { messageId: number }) {
+  try {
+    await processor.sendMessageAnyway(messageId);
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
   }
 }
 
@@ -511,7 +525,7 @@ async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnPro
   } = params;
   const hasSupportedContent = Boolean(text || attachment || sticker || contact || poll);
   const hasUnsupportedContent = Boolean(params.richMessage || params.gif || params.audio
-    || params.story || params.todo || params.dice);
+    || params.story || params.dice);
   if (!hasSupportedContent || hasUnsupportedContent) throw new Error('Signal has no counterpart for this content');
   if (sticker) return { sticker: await buildOutgoingSticker(sticker, onProgress) };
   if (contact) return { contact: [await buildOutgoingContact(contact)] };

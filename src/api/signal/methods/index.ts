@@ -69,22 +69,23 @@ export {
   fetchMessageReactionsList,
   fetchMessages,
   fetchMessagesById,
-  forwardApiMessages,
   forwardMessages,
-  forwardMessagesLocal,
   loadPollOptionResults,
   markMessageListRead,
   markMessagesRead,
   sendMessage,
   sendMessageAction,
+  sendMessageAnyway,
   sendMessageLocal,
   sendPollVote,
   sendReaction,
 } from './messages';
 export {
+  confirmRecoveryKeySaved,
   confirmUsername,
   deleteUsername,
   fetchPhoneNumberPrivacy,
+  fetchRecoveryKey,
   fetchSafetyNumber,
   fetchUsernameLink,
   getChatByUsername,
@@ -115,5 +116,5 @@ export {
   uninstallStickerSet,
 } from './stickers';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, getChatByAci, reportSpam,
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchProfilePhotos, fetchUsers, getChatByAci, reportSpam,
 } from './users';

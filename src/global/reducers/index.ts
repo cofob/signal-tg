@@ -11,7 +11,6 @@ export * from './settings';
 export * from './twoFaSettings';
 export * from './passcode';
 export * from './stories';
-export * from './translations';
 export * from './peers';
 export * from './polls';
 export * from './topics';

@@ -17,18 +17,15 @@ import type {
   ApiFormattedText,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiPageBlockPhoto,
   ApiPageBlockVideo,
   ApiPeer,
   ApiPhoto,
   ApiReaction,
-  ApiRichMessage,
   ApiSessionData,
   ApiSignalPinSettings,
   ApiSticker,
@@ -41,7 +38,6 @@ import type {
   ApiTypingStatus,
   ApiVideo,
   ApiVoice,
-  MediaContent,
 } from '../api/types';
 import type { DC_IDS } from '../config';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
@@ -59,7 +55,6 @@ export type SessionUserInfo = {
   phone?: string;
   avatarUri?: string;
   color?: number;
-  isPremium?: boolean;
   emojiStatusId?: string;
 };
 
@@ -185,9 +180,6 @@ export interface AccountSettings {
   shouldArchiveAndMuteNewNonContact?: boolean;
   defaultHistoryTtl?: number;
   shouldHideReadMarks?: boolean;
-  canTranslate: boolean;
-  translationLanguage?: string;
-  translationTone?: TranslationTone;
 }
 
 export type IAnchorPosition = {
@@ -328,7 +320,6 @@ export enum GlobalSearchContent {
   ChatList,
   ChannelList,
   BotApps,
-  PublicPosts,
   Media,
   Links,
   Files,
@@ -587,7 +578,7 @@ export type InlineBotSettings = {
   cacheTime: number;
 };
 
-export type CustomPeerType = 'premium' | 'toBeDistributed' | 'contacts' | 'nonContacts'
+export type CustomPeerType = 'contacts' | 'nonContacts'
   | 'groups' | 'channels' | 'bots' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
@@ -601,8 +592,6 @@ export type CustomPeer = {
   fakeType?: ApiFakeType;
   emojiStatusId?: string;
   customPeerAvatarColor?: string;
-  withPremiumGradient?: boolean;
-  isPremium?: boolean;
 } & ({
   titleKey: RegularLangKey;
   title?: undefined;
@@ -734,35 +723,6 @@ export interface TopicsInfo {
   orderedPinnedTopicIds?: number[];
 }
 
-export type TranslatedMessage = {
-  isPending?: boolean;
-  requestId?: string;
-  text?: ApiFormattedText;
-  richMessage?: ApiRichMessage;
-  summary?: TextSummary;
-};
-
-export const TRANSLATION_TONES = ['neutral', 'formal', 'casual'] as const;
-export type TranslationTone = typeof TRANSLATION_TONES[number];
-
-export type TextSummary = {
-  isPending?: false;
-  text: ApiFormattedText;
-} | {
-  isPending: true;
-  text?: undefined;
-};
-
-export type ChatTranslatedMessages = {
-  byLangCode: Record<string, Record<number, TranslatedMessage>>;
-};
-
-export type ChatRequestedTranslations = {
-  toLanguage?: string;
-  manualMessages?: Record<number, string>;
-  tone?: TranslationTone;
-};
-
 export type SimilarBotsInfo = {
   similarBotsIds?: string[];
   count: number;
@@ -810,19 +770,16 @@ export type SendMessageParams = {
   entities?: ApiMessageEntity[];
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   attachment?: ApiAttachment;
   sticker?: ApiSticker;
   story?: ApiStory | ApiStorySkipped;
   gif?: ApiVideo;
   audio?: ApiAudio;
   poll?: ApiNewPoll;
-  todo?: ApiNewMediaTodo;
   dice?: string;
   contact?: ApiContact;
   isSilent?: boolean;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   groupedId?: string;
   noWebPage?: boolean;
   sendAs?: ApiPeer;
@@ -840,7 +797,6 @@ export type SendMessageParams = {
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;
   forwardParams?: ForwardMessagesParams;
   isStoryReply?: boolean;
-  suggestedMedia?: MediaContent;
 };
 
 export type ForwardedLocalMessagesSlice = {
@@ -855,13 +811,11 @@ export type ForwardMessagesParams = {
   messages: ApiMessage[];
   isSilent?: boolean;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   sendAs?: ApiPeer;
   withMyScore?: boolean;
   noAuthors?: boolean;
   noCaptions?: boolean;
   privateForwardName?: string;
-  isCurrentUserPremium?: boolean;
   wasDrafted?: boolean;
   lastMessageId?: number;
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;

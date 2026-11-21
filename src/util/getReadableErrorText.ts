@@ -6,6 +6,8 @@ import { DEBUG } from '../config';
 
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
+  SIGNAL_PRIMARY_UNAUTHORIZED: 'SignalPrimaryUnauthorized',
+  SIGNAL_PINNED_LIMIT: 'SignalPinnedLimit',
   SIGNAL_PIN_RESET_FAILED: 'SignalPinErrorResetFailed',
   CHAT_RESTRICTED: 'ErrorChatRestricted',
   CHAT_SEND_POLL_FORBIDDEN: 'ErrorChatSendPollForbidden',
@@ -67,12 +69,7 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SESSION_TOO_FRESH: 'ErrorSessionTooFresh',
   SESSION_IS_FRESH: 'ErrorSessionTooFresh',
   INPUT_USER_DEACTIVATED: 'ErrorInputUserDeactivated',
-  BOT_PRECHECKOUT_TIMEOUT: 'ErrorBotPrecheckoutTimeout',
-  PROVIDER_ACCOUNT_TIMEOUT: 'ErrorProviderAccountTimeout',
-  STARGIFT_CONVERT_TOO_OLD: 'ErrorStargiftConvertTooOld',
-  SUBSCRIPTION_ALREADY_ACTIVE: 'ErrorSubscriptionAlreadyActive',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
-  USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
   SIGNAL_GROUP_CHANGE_FAILED: 'ErrorGroupChangeFailed',
   SIGNAL_GROUP_TITLE_TOO_LONG: 'ErrorGroupTitleTooLong',
   SIGNAL_GROUP_DESCRIPTION_TOO_LONG: 'ErrorGroupDescriptionTooLong',

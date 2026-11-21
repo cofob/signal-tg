@@ -1,3 +1,4 @@
+import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
 import type { ApiOnProgress } from '../../types';
 import { ApiMediaFormat } from '../../types';
 
@@ -9,8 +10,9 @@ import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import * as cacheApi from '../../../util/cacheApi';
 import { parseAttachmentMediaId, PREVIEW_SLOT, STICKER_SLOT } from '../builders/media';
 import { parsePackStickerId } from '../builders/stickers';
+import { getAvatarPhotoId } from '../builders/users';
 import { getCurrentAccount } from '../client';
-import { processor, store } from '../engine';
+import { db, processor, store } from '../engine';
 import { fetchAttachmentBlob, getAttachmentPointer } from '../media/attachments';
 import { renderBlurHash } from '../media/blurHash';
 import { getConversationByPeerId } from '../peers';
@@ -61,8 +63,11 @@ async function fetchMedia(
   const blob = packSticker
     ? await fetchStickerImage(packSticker.packId, packSticker.packKey, packSticker.stickerId)
     : type === 'avatar' || type === 'profile'
-      ? await fetchAvatar(url, id)
-      : await fetchMessageMedia(id, new URLSearchParams(query).has('size'), onProgress);
+      ? await fetchAvatar(url, await getConversationByPeerId(id))
+      : parseAttachmentMediaId(id)
+        ? await fetchMessageMedia(id, new URLSearchParams(query).has('size'), onProgress)
+        // The media viewer shows avatars as photos with the avatar photo id (`buildAvatarPhoto`)
+        : await fetchAvatar(url, await getConversationByAvatarPhotoId(id));
 
   const { type: mimeType, size: fullSize } = blob;
   // Streamed parts take bytes `start` to `end`, inclusive
@@ -104,9 +109,8 @@ async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgre
 }
 
 /** Avatars of users are encrypted with their profile key, those of groups with the group's secret params */
-async function fetchAvatar(url: string, peerId: string) {
-  const conversation = await getConversationByPeerId(peerId);
-  if (!conversation?.avatarPath) throw new Error(`Peer ${peerId} has no avatar`);
+async function fetchAvatar(url: string, conversation?: ConversationRecord) {
+  if (!conversation?.avatarPath) throw new Error(`No avatar for ${url}`);
 
   const data = conversation.type === 'group'
     ? await downloadGroupAvatar(conversation.avatarPath, conversation.masterKey!)
@@ -119,6 +123,10 @@ async function fetchAvatar(url: string, peerId: string) {
     void cacheApi.save(url.startsWith('avatar') ? MEDIA_CACHE_NAME_AVATARS : MEDIA_CACHE_NAME, url, blob);
   }
   return blob;
+}
+
+async function getConversationByAvatarPhotoId(avatarPhotoId: string) {
+  return (await db.getConversations()).find((conversation) => getAvatarPhotoId(conversation) === avatarPhotoId);
 }
 
 async function getProfileKey(aci: string) {

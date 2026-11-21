@@ -52,7 +52,6 @@ import {
   selectCurrentSharedMediaSearch,
   selectIsChatRestricted,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsRightColumnShown,
   selectMonoforumChannel,
   selectPeerStories,
@@ -174,7 +173,6 @@ type StateProps = {
   similarChannels?: string[];
   similarBots?: string[];
   botPreviewMedia?: ApiBotPreviewMedia[];
-  isCurrentUserPremium?: boolean;
   isTopicInfo?: boolean;
   isSavedDialog?: boolean;
   isSavedMessages?: boolean;
@@ -291,7 +289,6 @@ const Profile = ({
   shouldWarnAboutFiles,
   similarChannels,
   similarBots,
-  isCurrentUserPremium,
   isTopicInfo,
   isSavedDialog,
   isSavedMessages,
@@ -1353,7 +1350,6 @@ export default memo(withGlobal<OwnProps>(
     const activeDownloads = selectActiveDownloads(global);
     const { similarChannelIds } = selectSimilarChannelIds(global, chatId) || {};
     const { similarBotsIds } = selectSimilarBotsIds(global, chatId) || {};
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
 
     const peer = user || chat;
@@ -1431,7 +1427,6 @@ export default memo(withGlobal<OwnProps>(
       similarChannels: similarChannelIds,
       similarBots: similarBotsIds,
       botPreviewMedia,
-      isCurrentUserPremium,
       isTopicInfo,
       isSavedDialog,
       isSavedMessages,

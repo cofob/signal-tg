@@ -10,7 +10,6 @@ import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
 
 import {
-  COLLECTIBLE_STATUS_SET_ID,
   DEFAULT_STATUS_ICON_ID,
   DEFAULT_TOPIC_ICON_STICKER_ID,
   EMOJI_SIZE_PICKER,
@@ -20,7 +19,6 @@ import {
   STICKER_SIZE_PICKER,
 } from '../../config';
 import { getIsStickerSetInstalled, getReactionKey } from '../../global/helpers';
-import { selectIsSetPremium } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 
 import useAppLayout from '../../hooks/useAppLayout';
@@ -51,7 +49,6 @@ type OwnProps = {
   isSavedMessages?: boolean;
   isStatusPicker?: boolean;
   isReactionPicker?: boolean;
-  isCurrentUserPremium?: boolean;
   shouldHideHeader?: boolean;
   selectedReactionIds?: string[];
   withSelectionOrder?: boolean;
@@ -93,7 +90,6 @@ const StickerSet = ({
   isSavedMessages,
   isStatusPicker,
   isReactionPicker,
-  isCurrentUserPremium,
   shouldHideHeader,
   withDefaultTopicIcon,
   selectedReactionIds,
@@ -143,11 +139,9 @@ const StickerSet = ({
   const emojiMarginPx = isMobile ? 8 : 10;
   const emojiVerticalMarginPx = isMobile ? 8 : 4;
   const isRecent = stickerSet.id === RECENT_SYMBOL_SET_ID;
-  const isStatusCollectible = stickerSet.id === COLLECTIBLE_STATUS_SET_ID;
   const isFavorite = stickerSet.id === FAVORITE_SYMBOL_SET_ID;
   const isPopular = stickerSet.id === POPULAR_SYMBOL_SET_ID;
   const isEmoji = stickerSet.isEmoji;
-  const isPremiumSet = !isRecent && selectIsSetPremium(stickerSet);
 
   const handleClearRecent = useLastCallback(() => {
     if (isReactionPicker) {
@@ -161,8 +155,6 @@ const StickerSet = ({
   });
 
   const handleAddClick = useLastCallback(() => {
-    if (isPremiumSet && !isCurrentUserPremium) return;
-
     toggleStickerSet({
       stickerSetId: stickerSet.id,
     });
@@ -226,8 +218,6 @@ const StickerSet = ({
     }
   }, [shouldRender, loadStickers, stickerSet]);
 
-  const isLocked = !isSavedMessages && !isCurrentUserPremium && isPremiumSet && !isChatEmojiSet;
-
   const isInstalled = getIsStickerSetInstalled(stickerSet) && !stickerSet.isArchived;
 
   const canCut = !isInstalled && stickerSet.id !== RECENT_SYMBOL_SET_ID
@@ -245,31 +235,18 @@ const StickerSet = ({
   const favoriteStickerIdsSet = useMemo(() => (
     favoriteStickers ? new Set(favoriteStickers.map(({ id }) => id)) : undefined
   ), [favoriteStickers]);
-  const withAddSetButton = !noAddButton && !shouldHideHeader && !isRecent && !isStatusCollectible
-    && isEmoji && !isPopular && !isChatEmojiSet
-    && (!isInstalled || (!isCurrentUserPremium && !isSavedMessages));
-  const addSetButtonText = useMemo(() => {
-    if (isLocked) {
-      if (isInstalled) return lang('EmojiPremiumRestore');
-      return lang('Unlock');
-    }
-
-    return lang('Add');
-  }, [isLocked, lang, isInstalled]);
-
+  const withAddSetButton = !noAddButton && !shouldHideHeader && !isRecent
+    && isEmoji && !isPopular && !isChatEmojiSet && !isInstalled;
   return (
     <div
       ref={ref}
       key={stickerSet.id}
       id={`${idPrefix}-${index}`}
-      className={
-        buildClassName('symbol-set', isLocked && 'symbol-set-locked')
-      }
+      className="symbol-set"
     >
       {!shouldHideHeader && (
         <div className="symbol-set-header">
           <p className={buildClassName('symbol-set-title', withAddSetButton && 'symbol-set-title-external')}>
-            {isLocked && <Icon name="lock-filled" className="symbol-set-locked-icon" />}
             <span className="symbol-set-name">{stickerSet.title}</span>
             {(isChatEmojiSet || isChatStickerSet) && (
               <span className="symbol-set-chat">{lang(isChatEmojiSet ? 'GroupEmoji' : 'GroupStickers')}</span>
@@ -288,13 +265,12 @@ const StickerSet = ({
           {withAddSetButton && (
             <Button
               className="symbol-set-add-button"
-              withPremiumGradient={isPremiumSet && !isCurrentUserPremium}
               onClick={handleAddClick}
               pill
               size="tiny"
               fluid
             >
-              {addSetButtonText}
+              {lang('Add')}
             </Button>
           )}
         </div>
@@ -363,13 +339,10 @@ const StickerSet = ({
                   isStatusPicker={isStatusPicker}
                   canViewSet
                   noContextMenu={noContextMenus}
-                  isCurrentUserPremium={isCurrentUserPremium}
-                  shouldIgnorePremium={isChatEmojiSet}
                   withTranslucentThumb={isTranslucent}
                   withInstantThumb={withInstantThumbs}
                   onClick={onStickerSelect}
                   clickArg={sticker}
-                  noIcons={isEmoji && !isRecent}
                   isSelected={selectionIndex !== -1}
                   selectionOrder={withSelectionOrder && selectionIndex !== -1 ? selectionIndex + 1 : undefined}
                   onUnfaveClick={isFavorite && favoriteStickerIdsSet?.has(sticker.id) ? onStickerUnfave : undefined}

@@ -1,5 +1,4 @@
 .Avatar {
-  --premium-gradient: linear-gradient(88.39deg, #6C93FF -2.56%, #976FFF 51.27%, #DF69D1 107.39%);
   --radius: 50%;
   --_size: 0px;
   --_font-size: max(calc(var(--_size) / 2 - 4px), 0.5rem);
@@ -194,10 +193,6 @@
 
   &.hidden-user {
     --color-user: var(--color-deleted-account);
-  }
-
-  &.premium-gradient-bg > .inner {
-    background-image: var(--premium-gradient);
   }
 
   &.message-bubble {

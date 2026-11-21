@@ -14,7 +14,6 @@ import {
   selectChat,
   selectCurrentMessageList,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectShouldSchedule,
   selectStickerSet,
   selectTopic,
@@ -56,7 +55,6 @@ type StateProps = {
   canScheduleUntilOnline?: boolean;
   shouldSchedule?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   shouldUpdateStickerSetOrder?: boolean;
 };
 
@@ -71,7 +69,6 @@ const StickerSetModal = ({
   canScheduleUntilOnline,
   shouldSchedule,
   isSavedMessages,
-  isCurrentUserPremium,
   shouldUpdateStickerSetOrder,
   currentMessageList,
   onClose,
@@ -121,9 +118,9 @@ const StickerSetModal = ({
     }
 
     if (shouldSchedule || isScheduleRequested) {
-      requestCalendar((scheduledAt, scheduleRepeatPeriod) => {
+      requestCalendar((scheduledAt) => {
         sendMessage({
-          messageList: currentMessageList, sticker, isSilent, scheduledAt, scheduleRepeatPeriod,
+          messageList: currentMessageList, sticker, isSilent, scheduledAt,
         });
         onClose();
       });
@@ -231,7 +228,6 @@ const StickerSetModal = ({
                     onClick={canSendStickers && !isEmoji ? handleSelect : undefined}
                     clickArg={sticker}
                     isSavedMessages={isSavedMessages}
-                    isCurrentUserPremium={isCurrentUserPremium}
                   />
                 ))}
               </SharedCanvas>
@@ -285,7 +281,6 @@ export default memo(withGlobal<OwnProps>(
       isSavedMessages,
       shouldSchedule: selectShouldSchedule(global),
       stickerSet,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldUpdateStickerSetOrder: global.settings.byKey.shouldUpdateStickerSetOrder,
       currentMessageList,
     };

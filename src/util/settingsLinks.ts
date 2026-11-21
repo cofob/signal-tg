@@ -34,7 +34,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
 
   ['folders', [SettingsScreens.Folders]],
   ['folders/tab-view', [SettingsScreens.Folders, 'TabsPosition']],
-  ['folders/show-tags', [SettingsScreens.Folders, 'ShowFolderTags']],
   ['folders/create', [SettingsScreens.Folders, 'CreateNewFilter', { requires: 'canCreateFolder' }]],
 
   ['notifications', [SettingsScreens.Notifications]],
@@ -115,7 +114,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['power-saving/transitions', [SettingsScreens.Performance, 'SettingsPerformanceInterfaceAnimations']],
 
   ['language', [SettingsScreens.Language]],
-  ['language/show-button', [SettingsScreens.Language, 'ShowTranslateButton']],
 ]);
 
 const SETTINGS_LINK_ALIASES = new Map([

@@ -8,7 +8,6 @@ import { MAX_FOLDERS } from '../../limits';
 import { selectSharedSettings } from './sharedState';
 import {
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
 } from './users';
 
 const getReferencedWallpaperBackgroundsMemo = memoized(getReferencedWallpaperBackgrounds);
@@ -72,7 +71,6 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   const hasPasscode = Boolean(global.passcode.hasPasscode);
   const sessionsCount = global.activeSessions.orderedHashes.length;
   const lastSeenVisibility = privacy.lastSeen?.visibility;
-  const isPremium = selectIsCurrentUserPremium(global);
 
   return {
     isPasswordStateKnown: hasPassword !== undefined,
@@ -88,18 +86,13 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
     hasPasskeys: Boolean(appConfig.arePasskeysAvailable && passkeys?.length),
     canSetAutoDelete: selectAvailableSettingsScreen(global, SettingsScreens.AutoDeleteMessages) !== undefined,
     canChangeSensitive,
-    canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting || isPremium),
-    canCreateFolder: !isPremium
-      || Object.keys(global.chatFolders.byId).length < MAX_FOLDERS - 1,
+    canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting),
+    canCreateFolder: Object.keys(global.chatFolders.byId).length < MAX_FOLDERS - 1,
     canHideReadTime: lastSeenVisibility === 'contacts' || lastSeenVisibility === 'nobody',
     areStickerSetsLoaded: Boolean(global.stickers.added.setIds),
     areCustomEmojiSetsLoaded: Boolean(global.customEmojis.added.setIds),
     isQuickReactionAvailable: selectAvailableSettingsScreen(global, SettingsScreens.QuickReaction) !== undefined,
   };
-}
-
-export function selectTranslationLanguage<T extends GlobalState>(global: T) {
-  return global.settings.byKey.translationLanguage || selectLanguageCode(global);
 }
 
 export function selectShouldHideReadMarks<T extends GlobalState>(global: T) {

@@ -15,11 +15,15 @@ import { MAIN_THREAD_ID } from '../../types';
 import { ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
 import { buildGroupInviteLink } from '../../../lib/signal/groups/inviteLinks';
 import { AccessControl_AccessRequired } from '../../../lib/signal/proto/generated/Groups_pb';
+import { toPniServiceId } from '../../../lib/signal/serviceId';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
+import { getCurrentAccount } from '../client';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
-import { buildApiUser, buildAvatarColor, buildPeerSettings, getAvatarPhotoId } from './users';
+import {
+  buildApiUser, buildAvatarColor, buildAvatarPhoto, buildPeerSettings, getAvatarPhotoId,
+} from './users';
 
 const READ_STATE_PAGE_SIZE = 50;
 // Signal group admins edit the group, add and remove members and admins, pin messages and delete them for everyone
@@ -80,9 +84,13 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
   };
 }
 
-/** Whether we are invited to a group and have not accepted or declined yet */
+/** Whether we are invited to a group, by our ACI or our PNI, and have not accepted or declined yet */
 export function getIsInvitedToGroup(conversation: ConversationRecord, selfAci: string) {
-  return Boolean(conversation.groupState?.pendingMembers.some(({ serviceId }) => serviceId === selfAci));
+  const pni = getCurrentAccount()?.pni;
+  const selfPni = pni && toPniServiceId(pni);
+  return Boolean(conversation.groupState?.pendingMembers.some(({ serviceId }) => (
+    serviceId === selfAci || serviceId === selfPni
+  )));
 }
 
 /**
@@ -215,6 +223,7 @@ export async function buildGroupFullInfo(
     fullInfo: {
       settings: buildPeerSettings(conversation, selfAci),
       about: conversation.description,
+      profilePhoto: buildAvatarPhoto(conversation),
       ttlPeriod: conversation.expireTimer,
       members,
       adminMembersById: buildCollectionByKey(members.filter(({ isAdmin }) => isAdmin), 'userId'),

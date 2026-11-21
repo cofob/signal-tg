@@ -510,7 +510,7 @@ export async function fetchCurrentUser() {
   onCurrentUserUpdate(currentUser, currentUserFullInfo);
 
   currentUserId = currentUser.id;
-  setIsPremium({ isPremium: Boolean(currentUser.isPremium) });
+  setIsPremium({ isPremium: Boolean(user.premium) });
 }
 
 export function dispatchErrorUpdate<T extends GramJs.AnyRequest>(err: Error, request: T) {

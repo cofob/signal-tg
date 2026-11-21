@@ -119,7 +119,6 @@ export function buildApiAvailableReaction(availableReaction: GramJs.AvailableRea
   const {
     selectAnimation, staticIcon, reaction, title, appearAnimation,
     inactive, aroundAnimation, centerIcon, effectAnimation, activateAnimation,
-    premium,
   } = availableReaction;
 
   return {
@@ -133,6 +132,5 @@ export function buildApiAvailableReaction(availableReaction: GramJs.AvailableRea
     reaction: { type: 'emoji', emoticon: reaction },
     title,
     isInactive: inactive,
-    isPremium: premium,
   };
 }

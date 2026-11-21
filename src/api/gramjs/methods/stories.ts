@@ -7,7 +7,6 @@ import type {
   ApiPeer,
   ApiPeerStories,
   ApiReaction,
-  ApiStealthMode,
   ApiStoryAlbum,
   ApiTypeStory,
 } from '../../types';
@@ -19,7 +18,6 @@ import { buildApiReportResult } from '../apiBuilders/messages';
 import { getApiChatIdFromMtpPeer } from '../apiBuilders/peers';
 import {
   buildApiPeerStories,
-  buildApiStealthMode,
   buildApiStory,
   buildApiStoryAlbum,
   buildApiStoryView,
@@ -45,12 +43,11 @@ export async function fetchAllStories({
   isHidden?: boolean;
 }): Promise<
   undefined
-  | { state: string; stealthMode: ApiStealthMode }
+  | { state: string }
   | {
     peerStories: Record<string, ApiPeerStories>;
     hasMore?: true;
     state: string;
-    stealthMode: ApiStealthMode;
   }> {
   const params: ConstructorParameters<typeof GramJs.stories.GetAllStories>[0] = isFirstRequest
     ? (isHidden ? { hidden: true } : {})
@@ -64,7 +61,6 @@ export async function fetchAllStories({
   if (result instanceof GramJs.stories.AllStoriesNotModified) {
     return {
       state: result.state,
-      stealthMode: buildApiStealthMode(result.stealthMode),
     };
   }
 
@@ -117,7 +113,6 @@ export async function fetchAllStories({
     peerStories: allUserStories,
     hasMore: result.hasMore,
     state: result.state,
-    stealthMode: buildApiStealthMode(result.stealthMode),
   };
 }
 
@@ -473,21 +468,6 @@ export function sendStoryReaction({
     peer: buildInputPeer(peer.id, peer.accessHash),
     storyId,
     ...(shouldAddToRecent && { addToRecent: true }),
-  }), {
-    shouldReturnTrue: true,
-  });
-}
-
-export function activateStealthMode({
-  isForPast,
-  isForFuture,
-}: {
-  isForPast?: true;
-  isForFuture?: true;
-}) {
-  return invokeRequest(new GramJs.stories.ActivateStealthMode({
-    past: isForPast,
-    future: isForFuture,
   }), {
     shouldReturnTrue: true,
   });

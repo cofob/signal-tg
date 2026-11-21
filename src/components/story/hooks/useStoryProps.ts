@@ -6,7 +6,7 @@ import { getStoryMediaHash, hasMessageText } from '../../../global/helpers';
 import useMedia from '../../../hooks/useMedia';
 
 export default function useStoryProps(
-  story?: ApiTypeStory, isCurrentUserPremium = false, isDropdownMenuOpen = false,
+  story?: ApiTypeStory, isDropdownMenuOpen = false,
 ) {
   const isLoadedStory = story && 'content' in story;
   const isDeletedStory = story && 'isDeleted' in story;
@@ -36,7 +36,7 @@ export default function useStoryProps(
   const bestImageData = isVideo ? previewBlobUrl : fullMediaData || previewBlobUrl;
   const hasThumb = !previewBlobUrl && !hasFullData;
 
-  const canDownload = isCurrentUserPremium && isLoadedStory && !story.noForwards;
+  const canDownload = isLoadedStory && !story.noForwards;
   const downloadHash = isLoadedStory ? getStoryMediaHash(story, 'download') : undefined;
   const downloadMediaData = useMedia(downloadHash, !canDownload && !isDropdownMenuOpen);
 

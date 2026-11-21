@@ -128,7 +128,6 @@ export function groupMessages(
         || message.isEphemeral !== nextMessage.isEphemeral
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
         || message.guestChatViaId !== nextMessage.guestChatViaId
-        || (nextMessage.suggestedPostInfo)
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle
         || (isActionMessage(message) && message.content.action?.type !== 'phoneCall')

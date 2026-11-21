@@ -59,8 +59,6 @@ import {
   selectIsRightColumnShown,
   selectIsViewportNewest,
   selectMessageIdsByGroupId,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedMessageTranslationLanguage,
   selectTabState,
   selectViewportIds,
 } from '../../selectors';
@@ -468,7 +466,7 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
   const {
     chatId, threadId = MAIN_THREAD_ID, messageListType = 'thread', noHighlight, groupedId, groupedChatId,
     replyMessageId, isResizingContainer, shouldReplaceHistory, noForumTopicPanel, quote, quoteOffset,
-    scrollTargetPosition, timestamp, todoItemId, pollOption, tabId = getCurrentTabId(),
+    scrollTargetPosition, timestamp, pollOption, tabId = getCurrentTabId(),
   } = payload;
 
   let { messageId } = payload;
@@ -516,7 +514,6 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
     isResizingContainer,
     quote,
     quoteOffset,
-    todoItemId,
     pollOption,
     scrollTargetPosition,
     direction: undefined,
@@ -892,7 +889,6 @@ addActionHandler('openPollModal', (global, actions, payload): ActionReturnType =
     chatId,
     threadId,
     messageListType,
-    isQuiz,
     tabId = getCurrentTabId(),
   } = payload;
   const replyInfo = selectDraft(global, chatId, threadId ?? MAIN_THREAD_ID)?.replyInfo;
@@ -903,33 +899,10 @@ addActionHandler('openPollModal', (global, actions, payload): ActionReturnType =
       chatId,
       threadId,
       messageListType,
-      isQuiz,
     },
   }, tabId);
 });
 addTabStateResetterAction('closePollModal', 'pollModal');
-
-addActionHandler('openTodoListModal', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageId, forNewTask, initialCheckList, tabId = getCurrentTabId(),
-  } = payload;
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!messageId && currentMessageList?.chatId === chatId) {
-    const replyInfo = selectDraft(global, chatId, currentMessageList.threadId)?.replyInfo;
-    if (replyInfo?.type === 'ephemeral') return;
-  }
-
-  return updateTabState(global, {
-    todoListModal: {
-      chatId,
-      messageId,
-      forNewTask,
-      initialCheckList,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeTodoListModal', 'todoListModal');
 
 addActionHandler('createServiceNotification', (global, actions, payload): ActionReturnType => {
   const { message } = payload;
@@ -1014,26 +987,6 @@ addActionHandler('closePrivacySettingsNoticeModal', (global, actions, payload): 
 
   return updateTabState(global, {
     privacySettingsNoticeModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openChatLanguageModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-
-  const activeLanguage = messageId
-    ? selectRequestedMessageTranslationLanguage(global, chatId, messageId, tabId)
-    : selectRequestedChatTranslationLanguage(global, chatId, tabId);
-
-  return updateTabState(global, {
-    chatLanguageModal: { chatId, messageId, activeLanguage },
-  }, tabId);
-});
-
-addActionHandler('closeChatLanguageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    chatLanguageModal: undefined,
   }, tabId);
 });
 
@@ -1127,34 +1080,6 @@ addActionHandler('openPreviousReportModal', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openSuggestMessageModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    suggestMessageModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closeSuggestMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    suggestMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openSuggestedPostApprovalModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    suggestedPostApprovalModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closeSuggestedPostApprovalModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    suggestedPostApprovalModal: undefined,
-  }, tabId);
-});
-
 function copyTextForMessages(
   payload: { request: MessageCopyRequest; shouldNotify?: boolean; textFormat?: ClipboardTextFormat },
   tabId: number,
@@ -1170,7 +1095,6 @@ function copyTextForMessages(
   const contentPromise = loadBundle(Bundles.Editor).then((bundle) => bundle.buildMessageCopyContent(
     messageList,
     request,
-    tabId,
   ));
 
   void copyTextToClipboardFromPromise(

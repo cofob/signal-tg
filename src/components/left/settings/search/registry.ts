@@ -337,11 +337,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Stickers, ['ChooseStickerMyStickerSets'], { requires: 'areStickerSetsLoaded' }),
   ...buildEntries(SettingsScreens.CustomEmoji, ['SuggestAnimatedEmoji'], { requires: 'areCustomEmojiSetsLoaded' }),
 
-  ...buildEntries(SettingsScreens.Language, [
-    'ShowTranslateButton', 'LocalizationInterfaceLanguage',
-  ]),
+  ...buildEntries(SettingsScreens.Language, ['LocalizationInterfaceLanguage']),
 
-  ...buildEntries(SettingsScreens.Folders, ['ShowFolderTags']),
   ...buildEntries(SettingsScreens.Folders, ['TabsPosition', 'TabsPositionLeft', 'TabsPositionTop'], {
     requires: 'isDesktopLayout',
   }),
@@ -364,6 +361,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
   ...buildEntries(SettingsScreens.Privacy, ['SettingsItemPrivacyPasskeys'], {
     requires: 'arePasskeysAvailable', keywordsKey: 'SettingsKeywordsPasskeys',
   }),

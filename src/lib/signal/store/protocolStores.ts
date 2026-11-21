@@ -39,7 +39,10 @@ export function createProtocolStores(store: SignalStore, local: LocalIdentity) {
       async isTrustedIdentity(name: string, deviceId: number, publicKey: Uint8Array, direction: number) {
         if (direction !== DIRECTION_SENDING) return true;
         const existing = await store.getIdentity(name);
-        // A changed key of a verified contact is not used for sending until it is saved, which clears the verification
+        // Signal Android `SignalBaseIdentityKeyStore.isTrustedForSending`: an unverified identity, which is the changed
+        // key of a verified contact that we saved, waits until the user accepts it; sending to it fails meanwhile
+        if (existing?.verified === Verified_State.UNVERIFIED) return false;
+        // A changed key of a verified contact is not used for sending until it is saved, which makes it unverified
         return existing?.verified !== Verified_State.VERIFIED || buffersEqual(existing.publicKey, publicKey);
       },
       recordReceivedIdentityKey: () => Promise.resolve(),

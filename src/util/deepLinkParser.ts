@@ -8,7 +8,7 @@ import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
-  'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
+  'setlanguage' | 'addtheme' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
   'msg' | 'msg_url' | 'addlist' | 'oauth' |
   'newbot' | 'contact';
 
@@ -77,7 +77,6 @@ interface PublicUsernameOrBotLink {
   text?: string;
   choose?: string;
   isDirect?: boolean;
-  noPaidMessagesToken?: string;
 }
 
 interface GroupCallLink {
@@ -94,7 +93,6 @@ interface PrivateChannelLink {
 interface ContactLink {
   type: 'contactLink';
   token: string;
-  noPaidMessagesToken?: string;
 }
 
 interface SettingsScreenLink {
@@ -248,7 +246,6 @@ function parseTgLink(url: URL) {
         choose: queryParams.choose,
         ref: queryParams.ref,
         direct: queryParams.direct,
-        noPaidMessagesToken: queryParams.free,
       });
     case 'groupCallLink':
       return buildGroupCallLink({
@@ -259,7 +256,7 @@ function parseTgLink(url: URL) {
       return buildPrivateChannelLink({ channelId: queryParams.channel });
     }
     case 'contactLink':
-      return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
+      return buildContactLink({ token: queryParams.token });
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
     case 'oauth':
@@ -472,7 +469,6 @@ function buildPublicUsernameOrBotLink(
     choose,
     ref,
     direct,
-    noPaidMessagesToken,
   } = params;
   if (!username) {
     return undefined;
@@ -495,7 +491,6 @@ function buildPublicUsernameOrBotLink(
     choose,
     ref,
     isDirect: direct === '',
-    noPaidMessagesToken: noPaidMessagesToken || undefined,
   };
 }
 
@@ -535,7 +530,7 @@ function buildPrivateChannelLink(params: BuilderParams<PrivateChannelLink>): Bui
 }
 
 function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType<ContactLink> {
-  const { token, noPaidMessagesToken } = params;
+  const { token } = params;
 
   if (!token) {
     return undefined;
@@ -544,7 +539,6 @@ function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType
   return {
     type: 'contactLink',
     token,
-    noPaidMessagesToken: noPaidMessagesToken || undefined,
   };
 }
 

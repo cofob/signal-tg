@@ -24,6 +24,10 @@ Regenerate after changes: `npm run signal:wasm` (libsignal WebAssembly, needs Ru
 
 `tauri/` builds TeleSignal for macOS, Windows and Linux; it reaches Signal servers without the tunnel. See [tauri/README.md](tauri/README.md).
 
+## Checks and releases
+
+GitHub Actions checks every push; `npm run check` runs the web checks locally. Tags `v*` publish releases with the web bundle, the tunnel, its container image and the desktop packages. Changes that users notice go to [CHANGELOG.md](CHANGELOG.md); see [docs/RELEASING.md](docs/RELEASING.md).
+
 ## License
 
 GPL-3.0-or-later. `rust/libsignal` is [libsignal](https://github.com/signalapp/libsignal), AGPL-3.0-only.

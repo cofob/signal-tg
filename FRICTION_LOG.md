@@ -1,18 +1,29 @@
 # Friction log
 
-## `.gitignore` ignores every `tests/` directory
+## Upstream helper scripts that nothing calls remain in `dev/` and `deploy/`
 
-The root `.gitignore` has a bare `tests/` pattern (from Telegram Web A), so any directory named `tests` anywhere in the
-repository is ignored without a warning. Verified: libsignal's `rust/attest/tests/data`, which `attest` includes in
-every build (`sgx_session::testutil`), and the Rust integration tests of `rust/boring-shim` were silently left out of a
-commit; `git status` showed nothing. Both now have `!` exceptions in `.gitignore`, but the next vendored crate or Rust
-crate with a `tests` directory hits the same trap. Anchoring the pattern to the directory it was meant for (probably
-`/tests/`) would remove it.
+`dev/createBundleStatsComment.ts` (a pull request comment with bundle sizes, keyed by the removed `stars` and `wallet`
+bundles) and `deploy/copy_to_dist.sh` (copies static files into `dist` for Telegram Web A's deployment) are not
+referenced by `package.json`, by `.github/workflows/*` or by other code. Verified with a repository-wide search; the
+files come from Telegram Web A's pipeline and do not match TeleSignal's CI (`docs/RELEASING.md`). They can be deleted
+or, for the bundle size comment, rewritten for the current bundles and wired into `ci.yml`.
 
-## `cargo fmt --check` fails in `tauri/` before any change
+## A join request cannot be canceled after the group changed
 
-Verified on `ba4e008`: `cargo fmt --check` in `tauri/` reports two diffs in `src/mac.rs` (calls of
-`position_traffic_lights` that rustfmt puts on one line), and nothing else. The file compiles only on macOS, so
-`cargo clippy` on other systems never reads it, but `cargo fmt` does. The check therefore cannot gate a change to
-`tauri/` without first telling these old diffs from new ones. Running `cargo fmt` in `tauri/` once would remove it; it
-was left out of the change that found it because it touches an unrelated file.
+A user whose join request waits for admin approval keeps the state that `buildRequestedState` in
+`src/lib/signal/groups/GroupManager.ts` made from the join response: its revision, no group link password, and no read
+access to the group (`GET /v2/groups/` answers 403). Verified against the fake storage service of the groups test
+harness: when anyone changes the group after the request, canceling it through `buildLeaveChange` conflicts (409) at
+every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revision, and fails with "The group change
+conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
+is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
+
+## The app cannot tell whether this device is the primary device of the account
+
+Features that only a primary device has, such as the recovery key (`fetchRecoveryKey` in
+`src/api/signal/methods/profile.ts`), cannot be hidden from linked devices: no part of the global state carries the
+device kind, and `global.config` and `global.appConfig` are cached and loaded independently of the account. The
+Settings > Privacy row "Recovery key" therefore shows on every device and a linked device answers with a notification.
+Verified by reading the code: `AccountRecord.deviceId` lives only in `SignalStore`, behind the API layer. A flag that
+the API sends with the current user, or an app config field that follows the account, would let the row and its search
+entry follow `requires` like `arePasskeysAvailable`.

@@ -1,5 +1,4 @@
 import type {
-  ApiAiComposeTone,
   ApiAttachBot,
   ApiAttachment,
   ApiAudio,
@@ -14,16 +13,14 @@ import type {
   ApiChatReactions,
   ApiChatType,
   ApiDraft,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiExportedInvite,
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
-  ApiInputAiComposeTone,
   ApiInputEphemeralReplyInfo,
   ApiInputMessageReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
   ApiKeyboardButton,
   ApiLanguage,
   ApiLimitTypeWithModal,
@@ -31,7 +28,6 @@ import type {
   ApiMessageEntity,
   ApiMessageReadMetric,
   ApiMessageSearchContext,
-  ApiNewMediaTodo,
   ApiNotification,
   ApiNotifyPeerType,
   ApiPeer,
@@ -51,17 +47,14 @@ import type {
   ApiStickerSet,
   ApiStickerSetInfo,
   ApiThemeParameters,
-  ApiTodoItem,
   ApiTopPeerCategory,
   ApiUpdate,
   ApiUser,
   ApiVideo,
   BotsPrivacyType,
-  KeyboardButtonSuggestedMessage,
   LinkContext,
   PrivacyVisibility,
 } from '../../api/types';
-import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type { P2pMessage } from '../../lib/vibecalls';
@@ -104,7 +97,6 @@ import type {
   StoryViewerOrigin,
   ThemeKey,
   ThreadId,
-  TranslationTone,
   WebPageMediaSize,
 } from '../../types';
 import type { BrowserModalStateType, BrowserTab } from '../../types/browser';
@@ -115,7 +107,7 @@ import type { KeyboardShortcutId } from '../../util/keyboardShortcuts/registry';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { DownloadableMedia } from '../helpers';
 import type { SharedState } from './sharedState';
-import type { AiEditorContent, ReactionDeletionContext, TabState } from './tabState';
+import type { ReactionDeletionContext, TabState } from './tabState';
 
 export type WithTabId = { tabId?: number };
 
@@ -197,7 +189,7 @@ export interface ActionPayloads {
   checkChatInvite: {
     hash: string;
   } & WithTabId;
-  acceptChatInvite: { hash: string; isRequestNeeded?: boolean; isBroadcast?: boolean } & WithTabId;
+  acceptChatInvite: { hash: string; isBroadcast?: boolean } & WithTabId;
   closeChatInviteModal: WithTabId | undefined;
 
   // settings
@@ -313,7 +305,6 @@ export interface ActionPayloads {
     privacyKey: ApiPrivacyKey;
     isAllowList: boolean;
     updatedIds: string[];
-    isPremiumAllowed?: true;
     botsPrivacy: BotsPrivacyType;
   };
   loadNotificationExceptions: undefined;
@@ -489,9 +480,6 @@ export interface ActionPayloads {
   deleteChatFolder: {
     id: number;
   };
-  toggleDialogFilterTags: {
-    isEnabled: boolean;
-  };
   openChatByPhoneNumber: {
     phoneNumber: string;
     startAttach?: string | boolean;
@@ -516,9 +504,6 @@ export interface ActionPayloads {
     shouldCheckFetchingMessagesStatus?: boolean;
   } & WithTabId;
   searchPopularBotApps: WithTabId | undefined;
-  checkSearchPostsFlood: {
-    query?: string;
-  } & WithTabId;
   addRecentlyFoundChatId: {
     id: string;
   };
@@ -545,7 +530,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
     scheduledAt: number;
-    scheduleRepeatPeriod?: number;
   };
   deleteScheduledMessages: { messageIds: number[] } & WithTabId;
   // Message
@@ -651,11 +635,6 @@ export interface ActionPayloads {
     entities?: ApiMessageEntity[];
     richMessage?: ApiInputRichMessage;
   } & WithTabId;
-  editTodo: {
-    chatId: string;
-    todo: ApiNewMediaTodo;
-    messageId: number;
-  } & WithTabId;
   deleteHistory: {
     chatId: string;
     shouldDeleteForAll?: boolean;
@@ -719,21 +698,7 @@ export interface ActionPayloads {
     description?: string;
     option?: string;
   } & WithTabId;
-  approveSuggestedPost: {
-    chatId: string;
-    messageId: number;
-    scheduleDate?: number;
-  } & WithTabId;
 
-  confirmApproveSuggestedPost: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  rejectSuggestedPost: {
-    chatId: string;
-    messageId: number;
-    rejectComment?: string;
-  } & WithTabId;
   sendMessageAction: {
     action: ApiSendMessageAction;
     chatId: string;
@@ -813,7 +778,6 @@ export interface ActionPayloads {
     threadId?: ThreadId;
     isLocalOnly?: boolean;
     shouldKeepReply?: boolean;
-    shouldKeepSuggestedPost?: boolean;
   };
   loadPinnedMessages: {
     chatId: string;
@@ -826,11 +790,6 @@ export interface ActionPayloads {
   };
   replyToNextMessage: {
     targetIndexDelta: number;
-  } & WithTabId;
-  deleteChatUser: {
-    chatId: string;
-    userId: string;
-    shouldRevokeHistory?: boolean;
   } & WithTabId;
   deleteChat: { chatId: string } & WithTabId;
 
@@ -900,11 +859,6 @@ export interface ActionPayloads {
   disableContextMenuHint: undefined;
   focusNextReply: WithTabId | undefined;
 
-  openChatLanguageModal: {
-    chatId: string;
-    messageId?: number;
-  } & WithTabId;
-  closeChatLanguageModal: WithTabId | undefined;
   // poll result
   openPollResults: {
     chatId: string;
@@ -1021,7 +975,6 @@ export interface ActionPayloads {
     noForumTopicPanel?: boolean;
     quote?: string;
     quoteOffset?: number;
-    todoItemId?: number;
     pollOption?: string;
     scrollTargetPosition?: ScrollTargetPosition;
     timestamp?: number;
@@ -1033,12 +986,6 @@ export interface ActionPayloads {
     chatId: string;
     threadId: ThreadId;
   };
-  updateDraftSuggestedPostInfo: Partial<ApiInputSuggestedPostInfo> & WithTabId;
-  resetDraftSuggestedPostInfo: WithTabId | undefined;
-  initDraftFromSuggestedMessage: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
   updateInsertingPeerIdMention: {
     peerId?: string;
   } & WithTabId;
@@ -1078,9 +1025,6 @@ export interface ActionPayloads {
   setGlobalSearchClosing: ({
     isClosing?: boolean;
   } & WithTabId) | undefined;
-  processPremiumFloodWait: {
-    isUpload?: boolean;
-  };
 
   // Accounts
   reportPeer: {
@@ -1196,7 +1140,6 @@ export interface ActionPayloads {
     shouldReplaceLast?: boolean;
     noForumTopicPanel?: boolean;
     focusMessageId?: number;
-    todoItemId?: number;
     pollOption?: string;
   } & ({
     isComments: true;
@@ -1309,17 +1252,6 @@ export interface ActionPayloads {
     url: string;
   } & WithTabId;
 
-  requestChatTranslation: {
-    chatId: string;
-    toLanguageCode?: string;
-  } & WithTabId;
-
-  setMessageTranslationTone: {
-    chatId: string;
-    messageId: number;
-    tone: TranslationTone;
-  } & WithTabId;
-
   // Messages
   setEditingDraft: {
     draft?: EditingDraft;
@@ -1416,17 +1348,6 @@ export interface ActionPayloads {
     messageId: number;
     text: string;
   };
-  toggleTodoCompleted: {
-    chatId: string;
-    messageId: number;
-    completedIds: number[];
-    incompletedIds: number[];
-  };
-  appendTodoList: {
-    chatId: string;
-    items: ApiTodoItem[];
-    messageId: number;
-  } & WithTabId;
   cancelPollVote: {
     chatId: string;
     messageId: number;
@@ -1439,38 +1360,6 @@ export interface ActionPayloads {
   loadExtendedMedia: {
     chatId: string;
     ids: number[];
-  };
-
-  requestMessageTranslation: {
-    chatId: string;
-    id: number;
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  } & WithTabId;
-
-  showOriginalMessage: {
-    chatId: string;
-    id: number;
-  } & WithTabId;
-
-  markMessagesTranslationPending: {
-    chatId: string;
-    messageIds: number[];
-    requestId?: string;
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  };
-  translateMessages: {
-    chatId: string;
-    messageIds: number[];
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  };
-  summarizeMessage: {
-    chatId: string;
-    id: number;
-    toLanguageCode?: string;
-    onError?: NoneToVoidFunction;
   };
 
   // Reactions
@@ -1651,14 +1540,6 @@ export interface ActionPayloads {
     reaction?: ApiReaction;
     shouldAddToRecent?: boolean;
   } & WithTabId;
-  openStealthModal: ({
-    targetPeerId: string;
-  } | Record<string, never>) & WithTabId;
-  closeStealthModal: WithTabId | undefined;
-  activateStealthMode: {
-    isForPast?: boolean;
-    isForFuture?: boolean;
-  } | undefined;
   loadStoryAlbums: {
     peerId: string;
   };
@@ -1809,6 +1690,17 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  openSafetyNumberChangeModal: {
+    chatId: string;
+    messageId: number;
+    userIds: string[];
+  } & WithTabId;
+  closeSafetyNumberChangeModal: WithTabId | undefined;
+  sendMessageAnyway: WithTabId | undefined;
+  // Settings open it always; the main screen opens it for a recovery key that the user did not confirm yet
+  openRecoveryKeyModal: ({ shouldSkipConfirmed?: boolean } & WithTabId) | undefined;
+  closeRecoveryKeyModal: WithTabId | undefined;
+  confirmRecoveryKeySaved: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;
@@ -1874,11 +1766,6 @@ export interface ActionPayloads {
     userId: string;
   } & WithTabId;
   closeDisableSharingAboutModal: WithTabId | undefined;
-  openProfileRatingModal: {
-    userId: string;
-    level: number;
-  } & WithTabId;
-  closeProfileRatingModal: WithTabId | undefined;
   openRankModal: {
     chatId: string;
     userId: string;
@@ -1950,7 +1837,6 @@ export interface ActionPayloads {
   forwardMessages: {
     isSilent?: boolean;
     scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
   } & WithTabId;
   setForwardNoAuthors: {
     noAuthors: boolean;
@@ -2050,7 +1936,6 @@ export interface ActionPayloads {
   clearRecentCustomEmoji: undefined;
   loadFeaturedEmojiStickers: undefined;
   loadDefaultStatusIcons: undefined;
-  loadUserCollectibleStatuses: undefined;
   loadRecentEmojiStatuses: undefined;
 
   // Bots
@@ -2120,11 +2005,6 @@ export interface ActionPayloads {
     messageId?: number;
     threadId?: ThreadId;
     button: ApiKeyboardButton;
-  } & WithTabId;
-  clickSuggestedMessageButton: {
-    chatId: string;
-    messageId: number;
-    button: KeyboardButtonSuggestedMessage;
   } & WithTabId;
 
   switchBotInline: {
@@ -2374,7 +2254,6 @@ export interface ActionPayloads {
     chatId: string;
     threadId?: ThreadId;
     messageListType: MessageListType;
-    isQuiz?: boolean;
   } & WithTabId;
   closePollModal: WithTabId | undefined;
   openMusicPicker: {
@@ -2388,13 +2267,6 @@ export interface ActionPayloads {
   loadMusicPickerGlobal: {
     query: string;
   } & WithTabId;
-  openTodoListModal: {
-    chatId: string;
-    messageId?: number;
-    forNewTask?: boolean;
-    initialCheckList?: ParsedCheckList;
-  } & WithTabId;
-  closeTodoListModal: WithTabId | undefined;
   requestConfetti: (ConfettiParams & WithTabId) | WithTabId;
   requestWave: {
     startX: number;
@@ -2545,7 +2417,6 @@ export interface ActionPayloads {
   } & WithTabId;
   loadPeerColors: undefined;
   loadShareThemeBackdrops: undefined;
-  loadAiComposeTones: undefined;
   openLeftColumnContent: {
     contentKey?: LeftColumnContent;
   } & WithTabId;
@@ -2591,76 +2462,6 @@ export interface ActionPayloads {
     shouldHideReadMarks?: boolean;
   };
 
-  openAiMessageEditorModal: {
-    chatId: string;
-    threadId: ThreadId;
-    content: AiEditorContent;
-    initialTab?: 'translate' | 'style' | 'fix';
-    isFromAttachment?: boolean;
-    isEditing?: boolean;
-  } & WithTabId;
-  closeAiMessageEditorModal: WithTabId | undefined;
-  setAiMessageEditorTab: {
-    tab: 'translate' | 'style' | 'fix';
-  } & WithTabId;
-  setAiMessageEditorTranslateOptions: {
-    selectedLanguage?: string;
-    selectedTone?: ApiInputAiComposeTone;
-    shouldEmojify?: boolean;
-    clearResult?: boolean;
-  } & WithTabId;
-  setAiMessageEditorStyleOptions: {
-    selectedTone?: ApiInputAiComposeTone;
-    customPrompt?: string;
-    shouldEmojify?: boolean;
-    clearResult?: boolean;
-  } & WithTabId;
-  composeWithAiMessageEditor: {
-    shouldProofread?: boolean;
-    isEmojify?: boolean;
-    translateToLang?: string;
-    tone?: ApiInputAiComposeTone;
-  } & WithTabId;
-  applyAiMessageEditorResult: WithTabId | undefined;
-  sendAiMessageEditorResult: ({
-    isSilent?: boolean;
-    scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
-  } & WithTabId) | undefined;
-  clearAiMessageEditorPendingResult: WithTabId | undefined;
-  openAiToneEditorModal: {
-    toneToEdit?: ApiAiComposeTone;
-  } & WithTabId | undefined;
-  closeAiToneEditorModal: WithTabId | undefined;
-  createAiTone: {
-    title: string;
-    emojiId: string;
-    prompt: string;
-    shouldDisplayAuthor?: boolean;
-  } & WithTabId;
-  updateAiTone: {
-    tone: ApiInputAiComposeTone;
-    title?: string;
-    emojiId?: string;
-    prompt?: string;
-    shouldDisplayAuthor?: boolean;
-  } & WithTabId;
-  deleteAiTone: {
-    tone: ApiInputAiComposeTone;
-  } & WithTabId;
-  openAiTonePreview: {
-    slug: string;
-  } & WithTabId;
-  closeAiTonePreview: WithTabId | undefined;
-  saveAiTone: {
-    tone: ApiInputAiComposeTone;
-    unsave?: boolean;
-  } & WithTabId;
-  loadAiTonePreviewExample: {
-    tone: ApiInputAiComposeTone;
-    num: number;
-  } & WithTabId;
-
   openLeaveGroupModal: {
     chatId: string;
     nextOwnerId?: string;
@@ -2697,18 +2498,6 @@ export interface ActionPayloads {
   closeBrowserCloseConfirmationModal: ({
     shouldSkipInFuture?: boolean;
   } & WithTabId);
-
-  openSuggestMessageModal: {
-    chatId: string;
-    messageId?: number;
-  } & WithTabId;
-  closeSuggestMessageModal: WithTabId | undefined;
-
-  openSuggestedPostApprovalModal: {
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  closeSuggestedPostApprovalModal: WithTabId | undefined;
 
   openQuickPreview: {
     id: string;
@@ -2748,10 +2537,6 @@ export interface ActionPayloads {
     peerId: string;
   };
 
-  transcribeAudio: {
-    chatId: string;
-    messageId: number;
-  };
   saveVoiceWaveform: {
     chatId: string;
     messageId: number;
@@ -2759,10 +2544,9 @@ export interface ActionPayloads {
   };
 
   loadDefaultTopicIcons: undefined;
-  loadPremiumStickers: undefined;
 
   setEmojiStatus: {
-    emojiStatus: ApiEmojiStatusType;
+    emojiStatus: ApiEmojiStatus;
     referrerWebAppKey?: string;
   } & WithTabId;
   openSuggestedStatusModal: {
@@ -2896,9 +2680,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-
-  openCocoonModal: WithTabId | undefined;
-  closeCocoonModal: WithTabId | undefined;
 
   requestMessageMediaEditor: {
     chatId: string;
