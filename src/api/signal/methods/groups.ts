@@ -98,9 +98,18 @@ export async function editChatPhoto({ chat, photo }: { chat: ApiChat; photo?: Ap
   }
 }
 
-/** Disappearing message timers of groups are part of the group state */
+/** Disappearing message timers of groups are part of the group state; those of private chats are sent to the contact */
 export async function setHistoryTtl({ peer, period }: { peer: ApiPeer; period: number }) {
-  const conversation = await getGroupConversation(peer);
+  const conversation = await getConversationByPeerId(peer.id);
+  if (conversation?.type === 'private') {
+    try {
+      await processor.setExpireTimer(conversation.id, period);
+      return true as const;
+    } catch (err) {
+      logError(err);
+      return undefined;
+    }
+  }
   if (!conversation) return undefined;
   return changeGroup(peer, buildExpireTimerChange(period));
 }

@@ -172,6 +172,9 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+// Signal Desktop `ts/util/expirationTimer.std.ts` and `ts/models/conversations.preload.ts`
+const INITIAL_EXPIRE_TIMER_VERSION = 1;
+const MAX_EXPIRE_TIMER_VERSION = 0xffffffff;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -318,6 +321,47 @@ export default class MessageProcessor {
       timestamp: sentAt,
       expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
     });
+  }
+
+  /**
+   * Sets the disappearing messages timer of a private conversation, with a notice, and tells the contact and our
+   * other devices in a message that only carries the timer (Signal Desktop `updateExpirationTimer` and
+   * `ts/jobs/helpers/sendDirectExpirationTimerUpdate.preload.ts`). Each change counts the timer version up, so
+   * that the latest change wins on every device. Groups keep the timer in their state instead.
+   */
+  async setExpireTimer(conversationId: string, seconds: number) {
+    const account = await this.getAccount();
+    const timestamp = this.allocateTimestamp();
+    const timer = seconds || undefined;
+
+    const updated = await this.runSerial(async () => {
+      const found = await this.db.getConversation(conversationId);
+      if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
+      if (found.expireTimer === timer) return undefined;
+
+      const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
+      const withTimer = await this.putConversation({
+        ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
+      });
+      const { conversation } = await this.addMessage(withTimer, {
+        conversationId,
+        kind: 'timerUpdate',
+        authorAci: '',
+        actorAci: account.aci,
+        sentAt: timestamp,
+        receivedAt: timestamp,
+        isOutgoing: true,
+        expireTimer: timer,
+        readAt: timestamp,
+      });
+      return conversation;
+    });
+    if (!updated) return;
+
+    const message = createOutgoingDataMessage(
+      account, updated, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
+    );
+    await this.sendWithRetry(updated, [conversationId], { case: 'dataMessage', value: message }, timestamp);
   }
 
   /**
@@ -1765,8 +1809,17 @@ export default class MessageProcessor {
     const message = createOutgoingDataMessage(account, conversation, {}, timestamp, false);
     if (groupChange) message.groupV2!.groupChange = groupChange;
 
-    const content = { case: 'dataMessage', value: message } satisfies OutgoingMessage;
-    const results = await this.sendContentTo(conversation, [...recipients], content, { timestamp, isUrgent: false });
+    return this.sendWithRetry(conversation, [...recipients], { case: 'dataMessage', value: message }, timestamp);
+  }
+
+  /**
+   * Sends a message that is not urgent and has no record of its own, such as a group update or a timer change,
+   * and sends it once more to the recipients it did not reach after the next connection
+   */
+  private async sendWithRetry(
+    conversation: ConversationRecord, recipients: string[], content: OutgoingMessage, timestamp: number,
+  ) {
+    const results = await this.sendContentTo(conversation, recipients, content, { timestamp, isUrgent: false });
     // Users that left the registry do not come back
     const failed = results.filter(({ error }) => error && !(error instanceof UnregisteredUserError))
       .map(({ serviceId }) => serviceId);
