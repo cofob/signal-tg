@@ -247,6 +247,27 @@ jobs:
       - name: Tests
         run: cargo test --locked
 
+      - name: Build the container image
+        working-directory: .
+        run: docker build --target runtime --tag telesignal-tunnel:ci proxy
+
+      - name: Smoke-test the container image
+        working-directory: .
+        run: |
+          set -euo pipefail
+          docker run --rm --detach --name tunnel --publish 127.0.0.1:18787:8787 telesignal-tunnel:ci
+          ok=false
+          for _ in $(seq 1 30); do
+            if [[ "$(curl -fsS http://127.0.0.1:18787/health 2> /dev/null || true)" == ok ]]; then
+              ok=true
+              break
+            fi
+            sleep 1
+          done
+          docker logs tunnel || true
+          docker stop tunnel > /dev/null
+          [[ "$ok" == true ]]
+
   desktop:
     name: Check desktop app
     needs: changes
@@ -330,22 +351,27 @@ jobs:
       - name: Build
         run: bash rust/signal-wasm/build.sh
 
-      # The binary embeds the paths of the machine that built it, such as the Cargo registry directory, so a rebuild
-      # differs byte for byte from the committed one; its size and the bindings reveal an outdated commit
-      - name: Compare with the committed output
+      # The JavaScript glue and the type declarations depend only on the exported functions, so they are the same on
+      # every machine and show a commit that changed the Rust exports without regenerating them
+      - name: Check the bindings
         run: |
+          if ! git diff --exit-code -- 'src/lib/signal/wasm/generated/*.js' 'src/lib/signal/wasm/generated/*.d.ts'; then
+            echo "::error::The committed bindings are out of date. Run \`npm run signal:wasm\` and commit the result."
+            exit 1
+          fi
+
+      # The binary embeds the paths of the machine that built it, such as the Cargo registry directory and the
+      # checkout, so a rebuild never equals the committed file byte for byte. The report shows the size drift only
+      - name: Report the binary
+        run: |
+          file=src/lib/signal/wasm/generated/signal_wasm_bg.wasm
           {
-            echo '### WebAssembly output'
+            echo '### WebAssembly binary'
             echo
-            echo '| File | Committed | Rebuilt |'
-            echo '| --- | --- | --- |'
+            echo "Committed: $(git cat-file -s "HEAD:$file") bytes, rebuilt: $(stat -c %s "$file") bytes."
+            echo
+            echo 'The binary embeds build paths, so it differs from the committed one even when the source is the same.'
           } >> "$GITHUB_STEP_SUMMARY"
-          for file in src/lib/signal/wasm/generated/*; do
-            committed=$(git cat-file -s "HEAD:$file")
-            rebuilt=$(stat -c %s "$file")
-            echo "| \`$(basename "$file")\` | $committed | $rebuilt |" >> "$GITHUB_STEP_SUMMARY"
-          done
-          git diff --stat -- src/lib/signal/wasm/generated || true
 
   success:
     name: CI success
