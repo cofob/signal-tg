@@ -1,17 +1,33 @@
+import { unlinkDevice } from '../../../lib/signal/account/linkDevice';
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
 import {
   disableEncryptionAtRest, enableEncryptionAtRest, forgetStorageKey,
 } from '../../../lib/signal/store/atRestMigration';
 import { reconnectClient, stopClient } from '../client';
-import { db, store } from '../engine';
+import { db, logError, store } from '../engine';
 
 /**
- * Logging out forgets the account and local messages; the phone keeps listing the device until it unlinks it.
- * `noLogOut` only closes the connections.
+ * Logging out forgets the account and local messages, and removes a linked device from the account, so that the
+ * server stops queueing messages for it: the request goes out while the data is wiped, and its failure, such as with
+ * no connection, changes nothing about the logout. `noLogOut` only closes the connections.
  */
 export async function destroy(noLogOut = false) {
+  const unlinking = noLogOut ? undefined : unlinkLinkedDevice();
   await stopClient(!noLogOut);
   // The engine stops when the screen locks, and every start brings the key again
   await forgetStorageKey();
+  await unlinking;
+}
+
+/** A linked device may remove only itself; the primary device and the demo account have nothing to remove */
+async function unlinkLinkedDevice() {
+  try {
+    const account = await store.getItem('account');
+    if (!account || account.isDemo || account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) return;
+    await unlinkDevice(account);
+  } catch (err) {
+    logError(err);
+  }
 }
 
 /** Encrypts the engine's stores with `key`, which the page keeps in the passcode vault; used when a passcode is set */
