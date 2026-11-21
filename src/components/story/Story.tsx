@@ -5,12 +5,10 @@ import { getActions, withGlobal } from '../../global';
 
 import type {
   ApiChat,
-  ApiMediaAreaChannelPost,
   ApiPeer, ApiStory, ApiTypeStory,
 } from '../../api/types';
 import type { IDimensions } from '../../types';
-import type { IconName } from '../../types/icons';
-import type { AdvancedLangFnOptions, AdvancedLangFnParameters } from '../../util/localization/types';
+import type { AdvancedLangFnOptions } from '../../util/localization/types';
 import type { Signal } from '../../util/signals';
 import { MAIN_THREAD_ID } from '../../api/types';
 
@@ -43,7 +41,6 @@ import { PRIMARY_VIDEO_MIME, SECONDARY_VIDEO_MIME } from './helpers/videoFormats
 import useUnsupportedMedia from '../../hooks/media/useUnsupportedMedia';
 import useAppLayout, { getIsMobile } from '../../hooks/useAppLayout';
 import useCanvasBlur from '../../hooks/useCanvasBlur';
-import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useEffectWithPrevDeps from '../../hooks/useEffectWithPrevDeps';
 import useFlag from '../../hooks/useFlag';
 import useKeyboardShortcutHint from '../../hooks/useKeyboardShortcutHint';
@@ -66,11 +63,10 @@ import MenuItem from '../ui/MenuItem';
 import OptimizedVideo from '../ui/OptimizedVideo';
 import Skeleton from '../ui/placeholder/Skeleton';
 import Transition from '../ui/Transition';
-import MediaAreaOverlay from './mediaArea/MediaAreaOverlay';
 import StoryCaption from './StoryCaption';
 import StoryFooter from './StoryFooter';
-import StoryMusic from './StoryMusic';
 import StoryProgress from './StoryProgress';
+import TextStory from './TextStory';
 
 import styles from './StoryViewer.module.scss';
 
@@ -86,7 +82,6 @@ interface OwnProps {
   getIsAnimating: Signal<boolean>;
   onDelete: (story: ApiTypeStory) => void;
   onClose: NoneToVoidFunction;
-  onReport: NoneToVoidFunction;
 }
 
 interface StateProps {
@@ -98,7 +93,6 @@ interface StateProps {
   orderedIds?: number[];
   shouldForcePause?: boolean;
   storyChangelogUserId?: string;
-  viewersExpirePeriod: number;
   isChatExist?: boolean;
   arePeerSettingsLoaded?: boolean;
   withHeaderAnimation?: boolean;
@@ -128,7 +122,6 @@ function Story({
   dimensions,
   shouldForcePause,
   storyChangelogUserId,
-  viewersExpirePeriod,
   isChatExist,
   arePeerSettingsLoaded,
   getIsAnimating,
@@ -136,7 +129,6 @@ function Story({
   isAccountFrozen,
   onDelete,
   onClose,
-  onReport,
 }: OwnProps & StateProps) {
   const {
     viewStory,
@@ -144,15 +136,12 @@ function Story({
     openPreviousStory,
     openNextStory,
     loadPeerSkippedStories,
-    openForwardMenu,
-    copyStoryLink,
-    toggleStoryInProfile,
     openChat,
     showNotification,
-    openStoryPrivacyEditor,
     loadPeerSettings,
     fetchChat,
     loadStoryViews,
+    toggleStoriesHidden,
   } = getActions();
   const serverTime = getServerTime();
 
@@ -191,41 +180,14 @@ function Story({
   const isChatStory = !isUserStory;
   const isChannelStory = isChatStory && isChatChannel(peer as ApiChat);
   const isOut = isLoadedStory && story.isOut;
-  const isUnsupportedStory = isLoadedStory && Object.keys(story.content).length === 0;
-  const music = isLoadedStory ? story.music : undefined;
-
-  const canPinToProfile = useCurrentOrPrev(
-    isOut ? !story.isInProfile : undefined,
-    true,
-  );
-  const canUnpinFromProfile = useCurrentOrPrev(
-    isOut ? story.isInProfile : undefined,
-    true,
-  );
-  const areViewsExpired = Boolean(
-    isOut && (story.date + viewersExpirePeriod) < getServerTime(),
-  );
+  const textStory = isLoadedStory ? story.textStory : undefined;
+  const isUnsupportedStory = isLoadedStory && !textStory && Object.keys(story.content).length === 0;
 
   const forwardSenderTitle = forwardSender ? getPeerTitle(lang, forwardSender)
     : (isLoadedStory && story.forwardInfo?.fromName);
 
-  const canCopyLink = Boolean(
-    isLoadedStory
-    && story.isPublic
-    && !isChangelog
-    && peer?.hasUsername,
-  );
-
-  const canShare = Boolean(
-    isLoadedStory
-    && story.isPublic
-    && !story.noForwards
-    && !isChangelog
-    && !isCaptionExpanded,
-  );
-
   const canPlayStory = Boolean(
-    (hasFullData || isUnsupportedStory)
+    (hasFullData || isUnsupportedStory || textStory)
     && !shouldForcePause && isAppFocused && !isComposerHasFocus && !isCaptionExpanded
     && !isPausedBySpacebar && !isPausedByLongPress,
   );
@@ -234,14 +196,15 @@ function Story({
     ? story.content.video.duration
     : undefined;
 
-  const shouldShowComposer = !(isOut && isUserStory) && !isChangelog && !isChannelStory && !isAccountFrozen;
+  const shouldShowComposer = !(isOut && isUserStory) && !isChangelog && !isChannelStory && !isAccountFrozen
+    && !(isLoadedStory && story.noReplies);
   const shouldShowFooter = isLoadedStory && !shouldShowComposer && (isOut || isChannelStory);
   const headerAnimation = isMobile && withHeaderAnimation ? 'slideFade' : 'none';
 
   const {
     shouldRender: shouldRenderSkeleton,
     transitionClassNames: skeletonTransitionClassNames,
-  } = useShowTransitionDeprecated(!hasFullData && !isUnsupportedStory);
+  } = useShowTransitionDeprecated(!hasFullData && !isUnsupportedStory && !textStory);
 
   const {
     transitionClassNames: mediaTransitionClassNames,
@@ -269,12 +232,6 @@ function Story({
   const isStreamingSupported = useStreaming(videoRef, fullMediaData, PRIMARY_VIDEO_MIME);
 
   useStoryPreloader(peerId, storyId);
-
-  useEffect(() => {
-    if (storyId) {
-      viewStory({ peerId, storyId });
-    }
-  }, [storyId, peerId]);
 
   useEffect(() => {
     loadPeerSkippedStories({ peerId });
@@ -344,10 +301,18 @@ function Story({
   );
 
   const hasAllData = fullMediaData && (!altMediaHash || altMediaData);
+  const isStoryShown = Boolean(hasAllData || isUnsupportedVideo || isUnsupportedStory || textStory);
   useEffect(() => {
     // Start progress to the nest slide after media has been downloaded or it is unsupported
-    if (hasAllData || isUnsupportedVideo || isUnsupportedStory) handlePlayStory();
-  }, [hasAllData, isUnsupportedVideo, isUnsupportedStory]);
+    if (hasAllData || isUnsupportedVideo || isUnsupportedStory || textStory) handlePlayStory();
+  }, [hasAllData, isUnsupportedVideo, isUnsupportedStory, textStory]);
+
+  useEffect(() => {
+    // The author gets a viewed receipt once the story shows, so a story that fails to load stays unviewed
+    if (storyId && isStoryShown) {
+      viewStory({ peerId, storyId });
+    }
+  }, [storyId, peerId, isStoryShown]);
 
   useBackgroundMode(unmarkAppFocused, markAppFocused);
 
@@ -357,13 +322,13 @@ function Story({
   }, [hasAllData]);
 
   useEffect(() => {
-    if (!isLoadedStory || isDeletedStory || areViewsExpired) return;
+    if (!isLoadedStory || isDeletedStory) return;
 
     if (!isOut && !isChannelStory) return;
 
     // Refresh counters each time
     loadStoryViews({ peerId, storyId });
-  }, [isDeletedStory, areViewsExpired, isLoadedStory, peerId, storyId, isOut, isChannelStory]);
+  }, [isDeletedStory, isLoadedStory, peerId, storyId, isOut, isChannelStory]);
 
   useEffect(() => {
     if (
@@ -478,55 +443,13 @@ function Story({
     }) : undefined;
   }, [getIsAnimating, isComposerHasFocus]);
 
-  const handleCopyStoryLink = useLastCallback(() => {
-    copyStoryLink({ peerId, storyId });
-  });
-
-  const handlePinClick = useLastCallback(() => {
-    toggleStoryInProfile({ peerId, storyId, isInProfile: true });
-  });
-
-  const handleUnpinClick = useLastCallback(() => {
-    toggleStoryInProfile({ peerId, storyId, isInProfile: false });
-  });
-
   const handleDeleteStoryClick = useLastCallback(() => {
     onDelete(story!);
   });
 
-  const handleReportStoryClick = useLastCallback(() => {
-    onReport();
-  });
-
-  const handleForwardClick = useLastCallback(() => {
-    openForwardMenu({ fromChatId: peerId, storyId });
-  });
-
-  const handleInfoPrivacyEdit = useLastCallback(() => {
-    openStoryPrivacyEditor();
-  });
-
-  const handleInfoPrivacyClick = useLastCallback(() => {
-    const visibility = !isLoadedStory || story.isPublic
-      ? undefined
-      : story.isForContacts ? 'contacts' : (story.isForCloseFriends ? 'closeFriends' : 'nobody');
-
-    const variables = { user: getPeerTitle(lang, peer) };
-    let message: AdvancedLangFnParameters;
-    switch (visibility) {
-      case 'nobody':
-        message = { key: 'StorySelectedContactsHint', variables, options: NOTIFICATION_OPTIONS };
-        break;
-      case 'contacts':
-        message = { key: 'StoryContactsHint', variables, options: NOTIFICATION_OPTIONS };
-        break;
-      case 'closeFriends':
-        message = { key: 'StoryCloseFriendsHint', variables, options: NOTIFICATION_OPTIONS };
-        break;
-      default:
-        return;
-    }
-    showNotification({ message });
+  // Signal hides the stories of a contact or group from the ribbon (`hideStory`)
+  const handleToggleHiddenClick = useLastCallback(() => {
+    toggleStoriesHidden({ peerId, isHidden: !peer.areStoriesHidden });
   });
 
   const handleVolumeMuted = useLastCallback(() => {
@@ -585,55 +508,6 @@ function Story({
             onImageComplete={handleOpenNextStory}
           />
         ))}
-      </div>
-    );
-  }
-
-  function renderStoryPrivacyButton() {
-    if (!isUserStory) return undefined;
-
-    let privacyIcon: IconName = 'megaphone-filled';
-    const gradient: Record<string, [string, string]> = {
-      'megaphone-filled': ['#50ABFF', '#007AFF'],
-      'user-filled': ['#C36EFF', '#8B60FA'],
-      'star-regular-filled': ['#88D93A', '#30B73B'],
-      'group-filled': ['#FFB743', '#F69A36'],
-    };
-
-    if (isOut) {
-      const { visibility } = (story && 'visibility' in story && story.visibility) || {};
-
-      switch (visibility) {
-        case 'everybody':
-          privacyIcon = 'megaphone-filled';
-          break;
-        case 'contacts':
-          privacyIcon = 'user-filled';
-          break;
-        case 'closeFriends':
-          privacyIcon = 'star-regular-filled';
-          break;
-        case 'nobody':
-          privacyIcon = 'group-filled';
-      }
-    } else {
-      if (!story || !('content' in story) || story.isPublic) {
-        return undefined;
-      }
-
-      privacyIcon = story.isForCloseFriends
-        ? 'star-regular-filled'
-        : (story.isForContacts ? 'user-filled' : 'group-filled');
-    }
-
-    return (
-      <div
-        className={buildClassName(styles.visibilityButton, isOut && styles.visibilityButtonSelf)}
-        onClick={isOut ? handleInfoPrivacyEdit : handleInfoPrivacyClick}
-        style={`--color-from: ${gradient[privacyIcon][0]}; --color-to: ${gradient[privacyIcon][1]}`}
-      >
-        <Icon name={privacyIcon} />
-        {isOut && <Icon name="next" />}
       </div>
     );
   }
@@ -699,7 +573,6 @@ function Story({
         </Transition>
 
         <div className={styles.actions}>
-          {renderStoryPrivacyButton()}
           {isVideo && (
             <Button
               className={styles.button}
@@ -720,23 +593,19 @@ function Story({
             onOpen={handleDropdownMenuOpen}
             onClose={handleDropdownMenuClose}
           >
-            {canCopyLink && <MenuItem icon="copy" onClick={handleCopyStoryLink}>{lang('CopyLink')}</MenuItem>}
-            {canPinToProfile && (
-              <MenuItem icon="save-story" onClick={handlePinClick}>
-                {lang(isUserStory ? 'StorySave' : 'SaveToPosts')}
-              </MenuItem>
-            )}
-            {canUnpinFromProfile && (
-              <MenuItem icon="delete" onClick={handleUnpinClick}>
-                {lang(isUserStory ? 'ArchiveStory' : 'RemoveFromPosts')}
-              </MenuItem>
-            )}
             {canDownload && (
               <MenuItem icon="download" disabled={!downloadMediaData} onClick={handleDownload}>
                 {lang('MediaDownload')}
               </MenuItem>
             )}
-            {!isOut && <MenuItem icon="flag" onClick={handleReportStoryClick}>{lang('ReportStory')}</MenuItem>}
+            {!isOut && (
+              <MenuItem
+                icon={peer.areStoriesHidden ? 'eye-outline' : 'eye-crossed-outline'}
+                onClick={handleToggleHiddenClick}
+              >
+                {lang(peer.areStoriesHidden ? 'StoryMenuUnarchivePeer' : 'StoryMenuArchivePeer')}
+              </MenuItem>
+            )}
             {isOut && (
               <MenuItem
                 icon="delete"
@@ -782,6 +651,7 @@ function Story({
         style={`width: ${dimensions.width}px; height: ${dimensions.height}px`}
       >
         <canvas ref={thumbRef} className={styles.thumbnail} />
+        {textStory && <TextStory key={`text-${storyId}`} textStory={textStory} />}
         {previewBlobUrl && (
           <img
             key={`preview-${storyId}`}
@@ -847,14 +717,6 @@ function Story({
             />
           </>
         )}
-        {isLoadedStory && fullMediaData && (
-          <MediaAreaOverlay
-            key={`area-overlay-${storyId}-${peerId}`}
-            story={story}
-            isActive
-            isStoryPlaying={isDropdownMenuOpen}
-          />
-        )}
         {!isMobile && (
           <div className={styles.content}>
             <div className={styles.contentInner}>
@@ -889,17 +751,7 @@ function Story({
           isExpanded={isCaptionExpanded}
           onExpand={expandCaption}
           onFold={foldCaption}
-          className={buildClassName(captionAppearanceAnimationClassNames, music && styles.captionWithMusic)}
-        />
-      )}
-      {music && (
-        <StoryMusic
-          key={`music-${storyId}-${peerId}`}
-          audio={music}
-          isProtected={isLoadedStory && story.noForwards}
-          className={appearanceAnimationClassNames}
-          onMenuOpen={handleDropdownMenuOpen}
-          onMenuClose={handleDropdownMenuClose}
+          className={captionAppearanceAnimationClassNames}
         />
       )}
       {shouldRenderComposer && (
@@ -916,7 +768,6 @@ function Story({
           inputId="story-input-text"
           className={buildClassName(styles.composer, composerAppearanceAnimationClassNames)}
           inputPlaceholder={inputPlaceholder}
-          onForward={canShare ? handleForwardClick : undefined}
           onFocus={markComposerHasFocus}
           onBlur={unmarkComposerHasFocus}
         />
@@ -955,9 +806,7 @@ export default memo(withGlobal<OwnProps>((global, {
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;
-  const mediaAreas = isLoadedStory ? story.mediaAreas : undefined;
-  const forwardSenderId = forwardInfo?.fromPeerId
-    || mediaAreas?.find((area): area is ApiMediaAreaChannelPost => area.type === 'channelPost')?.channelId;
+  const forwardSenderId = forwardInfo?.fromPeerId;
   const forwardSender = forwardSenderId ? selectPeer(global, forwardSenderId) : undefined;
   const withHeaderAnimation = selectPerformanceSettingsValue(global, 'mediaViewerAnimations');
 
@@ -973,7 +822,6 @@ export default memo(withGlobal<OwnProps>((global, {
     isMuted,
     shouldForcePause,
     storyChangelogUserId: appConfig.storyChangelogUserId,
-    viewersExpirePeriod: appConfig.storyViewersExpirePeriod,
     isChatExist: Boolean(chat),
     arePeerSettingsLoaded: Boolean(userFullInfo?.settings),
     withHeaderAnimation,

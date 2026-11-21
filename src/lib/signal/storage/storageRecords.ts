@@ -10,14 +10,16 @@ import type {
   ManifestRecord,
   ManifestRecord_Identifier,
   StorageRecord,
+  StoryDistributionListRecord,
 } from '../proto/generated/StorageService_pb';
 import type { StickerPackRecord } from '../stickers/stickerPacks';
-import type { AccountRecord as LocalAccount } from '../store/SignalStore';
+import type { AccountRecord as LocalAccount, StoryDistributionList } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
 import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
-import { uuidToBytes, uuidToString } from '../serviceId';
+import { isPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
+import { MY_STORY_ID } from '../stories/storyLists';
 
 import {
   AccountRecord_PhoneNumberSharingMode,
@@ -27,23 +29,28 @@ import {
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
+  OptionalBool,
   StorageRecordSchema,
 } from '../proto/generated/StorageService_pb';
 
-type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
+type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted'
+  | 'hideStory';
 // The profile key is not a conversation field: contact records get the one of the recipient
 type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
-  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath';
-// Sticker pack records are written whole
-type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack';
+  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath'
+  | 'storiesDisabled' | 'storyViewReceiptsEnabled';
+// Sticker pack and story distribution list records are written whole
+type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList';
 
 /** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
-export type LocalAccountFields = Pick<LocalAccount, 'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted'>;
+export type LocalAccountFields = Pick<LocalAccount,
+  'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted' | 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'
+>;
 
 /**
- * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY` or the key of a sticker
- * pack (`getStickerPackStorageKey`)
+ * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY`, the key of a sticker
+ * pack (`getStickerPackStorageKey`) or the key of a story distribution list (`getStoryListKey`)
  */
 export type StorageChanges = Record<string, StorageField[]>;
 
@@ -60,13 +67,18 @@ type StorageWriteSource = {
   selfAci: string;
   deviceId: number;
   localAccount: LocalAccountFields;
+  storyLists: StoryDistributionList[];
 };
 
-// Conversation ids are ACIs and base64 group ids, so they never equal this key
+// Conversation ids are ACIs and base64 group ids, so they never equal this key or the story list keys
 export const ACCOUNT_KEY = 'account';
 const STICKER_PACK_KEY_PREFIX = 'stickerPack:';
+const STORY_LIST_KEY_PREFIX = 'storyList:';
 
 const ACI_BINARY_LENGTH = 16;
+// PNIs have a prefix byte in binary service id fields and a `PNI:` prefix in strings
+const PNI_BINARY_PREFIX = 1;
+const PNI_STRING_PREFIX_LENGTH = 4;
 // Signal Desktop `generateStorageID` and `RECORD_IKM_LENGTH` in `ts/services/storage.preload.ts`
 const STORAGE_ID_LENGTH = 16;
 const RECORD_IKM_LENGTH = 32;
@@ -80,6 +92,7 @@ const CONVERSATION_FIELDS: Record<ConversationRecordField, keyof ConversationRec
   mutedUntilTimestamp: 'mutedUntil',
   blocked: 'isBlocked',
   whitelisted: 'isAccepted',
+  hideStory: 'isStoryHidden',
 };
 const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationRecordField[];
 const ACCOUNT_FIELD_NAMES: AccountStorageField[] = [
@@ -133,6 +146,51 @@ export function omitChangedFields(patch: Partial<ConversationRecord>, fields?: S
   return result;
 }
 
+/** The key of a story distribution list in `StorageChanges` */
+export function getStoryListKey(listId: string) {
+  return `${STORY_LIST_KEY_PREFIX}${listId}`;
+}
+
+/** The local list of a story distribution list record; records without a valid identifier are skipped */
+export function parseStoryDistributionList(record: StoryDistributionListRecord): StoryDistributionList | undefined {
+  if (record.identifier.length !== ACI_BINARY_LENGTH) return undefined;
+  // Android writes binary service ids only, older clients strings (Signal Desktop `mergeStoryDistributionListRecord`)
+  const memberIds = record.recipientServiceIdsBinary.length
+    ? record.recipientServiceIdsBinary
+    : record.recipientServiceIds.flatMap(parseServiceIdString);
+  const memberAcis = memberIds.filter((id) => id.length === ACI_BINARY_LENGTH).map(uuidToString);
+  // PNIs and other service ids stay as they are, so that writing the list back keeps its members
+  const otherMemberIds = memberIds.filter((id) => id.length !== ACI_BINARY_LENGTH);
+  const id = uuidToString(record.identifier);
+  return {
+    id,
+    // Signal Desktop names My Story by its identifier; here it has no name of its own
+    name: id === MY_STORY_ID ? '' : record.name,
+    memberAcis,
+    otherMemberIds: otherMemberIds.length ? otherMemberIds : undefined,
+    areRepliesAllowed: record.allowsReplies,
+    isBlockList: record.isBlockList,
+    deletedAt: record.deletedAtTimestamp ? Number(record.deletedAtTimestamp) : undefined,
+  };
+}
+
+/** The binary service id of a service id string: an ACI is its UUID, a PNI has a prefix byte; invalid ones are skipped */
+function parseServiceIdString(serviceId: string) {
+  const isPni = isPniServiceId(serviceId);
+  try {
+    const uuidBytes = uuidToBytes(isPni ? serviceId.slice(PNI_STRING_PREFIX_LENGTH) : serviceId);
+    return [isPni ? Uint8Array.of(PNI_BINARY_PREFIX, ...uuidBytes) : uuidBytes];
+  } catch {
+    return [];
+  }
+}
+
+/** `storyViewReceiptsEnabled` of the account record; unset means view receipts follow read receipts */
+export function getOptionalBool(value: OptionalBool) {
+  if (value === OptionalBool.UNSET) return undefined;
+  return value === OptionalBool.ENABLED;
+}
+
 /** The ACI of a record field pair such as `aci` and `aciBinary`; PNIs in binary fields have a prefix byte */
 export function getAci(serviceId: string, serviceIdBinary: Uint8Array) {
   return serviceId || (serviceIdBinary.length === ACI_BINARY_LENGTH ? uuidToString(serviceIdBinary) : undefined);
@@ -152,9 +210,10 @@ export function getMutedUntil(timestamp: bigint) {
  * `changes` it carries: changes of records that cannot be written yet stay marked.
  */
 export function buildStorageWrite({
-  manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount,
+  manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount, storyLists,
 }: StorageWriteSource): { write: StorageWrite; writtenKeys: string[] } | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
+  const storyListsByKey = new Map(storyLists.map((list) => [getStoryListKey(list.id), list]));
   const storedRecords = indexRecords(records);
   const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
   const insertTypes = new Map<string, ItemType>();
@@ -166,7 +225,9 @@ export function buildStorageWrite({
     const stickerPack = key.startsWith(STICKER_PACK_KEY_PREFIX)
       ? stickerPacks[key.slice(STICKER_PACK_KEY_PREFIX.length)]
       : undefined;
-    const recordKey = key === ACCOUNT_KEY || stickerPack ? key : conversation && getRecordKey(conversation);
+    const storyList = storyListsByKey.get(key);
+    const isWholeRecord = key === ACCOUNT_KEY || stickerPack || storyList;
+    const recordKey = isWholeRecord ? key : conversation && getRecordKey(conversation);
     if (!recordKey) continue;
     const stored = storedRecords.get(recordKey);
 
@@ -176,6 +237,10 @@ export function buildStorageWrite({
     } else if (stored?.record.record.case === 'account') {
       record = stored.record;
       setAccountFields(stored.record.record.value, fields, conversations, selfAci, localAccount);
+    } else if (storyList) {
+      record = stored?.record
+        ?? create(StorageRecordSchema, { record: { case: 'storyDistributionList', value: {} } });
+      setStoryListFields(record.record.value as StoryDistributionListRecord, storyList);
     } else if (conversation) {
       record = stored?.record ?? createConversationRecord(conversation, profileKeys.get(conversation.id));
       const { value } = record.record as { value: ContactRecord | GroupV2Record };
@@ -293,6 +358,10 @@ function getStoredRecordKey({ record }: StorageRecord) {
       return record.value.masterKey.length ? getGroupKey(record.value.masterKey) : undefined;
     case 'account':
       return ACCOUNT_KEY;
+    case 'storyDistributionList':
+      return record.value.identifier.length === ACI_BINARY_LENGTH
+        ? getStoryListKey(uuidToString(record.value.identifier))
+        : undefined;
     case 'installedStickerPack':
       return record.value.packId.length ? getStickerPackStorageKey(bufferToHex(record.value.packId)) : undefined;
     default:
@@ -315,6 +384,8 @@ function getItemType({ record }: StorageRecord) {
       return ItemType.CONTACT;
     case 'groupV2':
       return ItemType.GROUPV2;
+    case 'storyDistributionList':
+      return ItemType.STORY_DISTRIBUTION_LIST;
     case 'installedStickerPack':
       return ItemType.STICKER_PACK;
     default:
@@ -385,6 +456,9 @@ function setConversationFields(
       case 'whitelisted':
         record.whitelisted = Boolean(conversation.isAccepted);
         break;
+      case 'hideStory':
+        record.hideStory = Boolean(conversation.isStoryHidden);
+        break;
       case 'profileKey':
         if (profileKey && 'profileKey' in record) record.profileKey = profileKey;
         break;
@@ -394,12 +468,26 @@ function setConversationFields(
   }
 }
 
+/** Signal Desktop `toStoryDistributionListRecord` in `ts/services/storageRecordOps.preload.ts` */
+function setStoryListFields(record: StoryDistributionListRecord, list: StoryDistributionList) {
+  record.identifier = uuidToBytes(list.id);
+  // Signal Desktop names My Story by its identifier
+  record.name = list.id === MY_STORY_ID ? MY_STORY_ID : list.name;
+  record.allowsReplies = list.areRepliesAllowed;
+  record.isBlockList = list.isBlockList;
+  record.deletedAtTimestamp = list.deletedAt ? BigInt(list.deletedAt) : 0n;
+  record.recipientServiceIdsBinary = [...list.memberAcis.map(uuidToBytes), ...list.otherMemberIds ?? []];
+  record.recipientServiceIds = [];
+}
+
 function setAccountFields(
   record: AccountRecord,
   fields: StorageField[],
   conversations: ConversationRecord[],
   selfAci: string,
-  { usernameLink, isPhoneNumberShared, isPhoneNumberUnlisted }: LocalAccountFields,
+  {
+    usernameLink, isPhoneNumberShared, isPhoneNumberUnlisted, isStoriesDisabled, isStoryViewReceiptsEnabled,
+  }: LocalAccountFields,
 ) {
   const self = conversations.find(({ id }) => id === selfAci);
   for (const field of fields) {
@@ -443,6 +531,14 @@ function setAccountFields(
         break;
       case 'unlistedPhoneNumber':
         record.unlistedPhoneNumber = Boolean(isPhoneNumberUnlisted);
+        break;
+      case 'storiesDisabled':
+        record.storiesDisabled = Boolean(isStoriesDisabled);
+        break;
+      case 'storyViewReceiptsEnabled':
+        record.storyViewReceiptsEnabled = isStoryViewReceiptsEnabled === undefined
+          ? OptionalBool.UNSET
+          : isStoryViewReceiptsEnabled ? OptionalBool.ENABLED : OptionalBool.DISABLED;
         break;
       default:
         break;

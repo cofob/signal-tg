@@ -11,6 +11,7 @@ import useShowTransition from '../../hooks/useShowTransition';
 
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
+import StoryComposerModal from '../story/StoryComposerModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
@@ -86,6 +87,7 @@ type ModalKey = keyof Pick<TabState,
   'safetyNumberChangeModal' |
   'recoveryKeyModal' |
   'quickPreview' |
+  'storyComposerModal' |
   'isAudioPlaylistModalOpen' |
   'isPasskeyModalOpen' |
   'birthdaySetupModal' |
@@ -187,6 +189,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   safetyNumberChangeModal: SafetyNumberChangeModal,
   recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
+  storyComposerModal: StoryComposerModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
   isPasskeyModalOpen: PasskeyModal,
   birthdaySetupModal: BirthdaySetupModal,

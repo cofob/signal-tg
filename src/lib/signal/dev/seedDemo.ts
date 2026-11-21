@@ -2,16 +2,19 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
-import type { ConversationRecord, NewMessageRecord } from '../db/MessageDb';
+import type { ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
+import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/generated/SignalService_pb';
 import type SignalStore from '../store/SignalStore';
 
 import { bufferToBase64Url } from '../../../util/encoding/base64';
 import { bufferFromHex } from '../../../util/encoding/buffer';
 import { buildStickerPackLink } from '../../../util/signalLinks';
+import { STORY_BACKGROUNDS } from '../../../util/storyBackgrounds';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
 import { buildGroupInviteLink } from '../groups/inviteLinks';
 import { getKnownStickerPacks } from '../stickers/stickerPacks';
+import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
 import { wasm } from '../wasm';
 
 import {
@@ -19,6 +22,8 @@ import {
   BodyRange_Style,
   DataMessage_Contact_Phone_Type,
   DataMessageSchema,
+  StoryMessageSchema,
+  TextAttachment_Style,
   Verified_State,
 } from '../proto/generated/SignalService_pb';
 
@@ -31,6 +36,10 @@ const TRAIL_WIDTH = 24;
 const TRAIL_POINTS = [[0.1, 0.85], [0.35, 0.45], [0.6, 0.7], [0.9, 0.15]];
 const SUN_RADIUS = 120;
 const SUN_CENTER_Y = 0.7 * PHOTO_HEIGHT;
+// Story photos are portrait, as phones take them
+const STORY_PHOTO_WIDTH = 720;
+const STORY_PHOTO_HEIGHT = 1280;
+const PEAKS = [[0, 0.75], [0.3, 0.4], [0.5, 0.6], [0.75, 0.3], [1, 0.7]];
 const LAKE_TOP = 0.55 * PHOTO_HEIGHT;
 // Zozo the French Bulldog, from Signal's artist series
 const DEMO_STICKER_PACK_INDEX = 2;
@@ -51,8 +60,12 @@ type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'bod
   dataMessage?: MessageInitShape<typeof DataMessageSchema>;
 };
 
+type DemoStory = Omit<NewStoryRecord, 'conversationId' | 'receivedAt' | 'expiresAt' | 'storyMessage'> & {
+  storyMessage: MessageInitShape<typeof StoryMessageSchemaType>;
+};
+
 /**
- * Fills the stores with a fake account, contacts, a group and messages, so the UI can be checked without
+ * Fills the stores with a fake account, contacts, a group, messages and stories, so the UI can be checked without
  * a phone. The account has `isDemo`, so the client never connects. Attachments, the sticker included, are drawn and
  * cached locally or marked unavailable, so seeding makes no requests; the sticker's pack downloads only when it is
  * opened. Reload the page afterwards.
@@ -63,6 +76,10 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
 
   const trailPhoto = await createDemoPhoto('demo-photo', drawTrailMap);
   const viewOncePhoto = await createDemoPhoto('demo-view-once-photo', drawSunset);
+  const mountainsPhoto = await createDemoPhoto(
+    'demo-story-mountains', drawMountains, STORY_PHOTO_WIDTH, STORY_PHOTO_HEIGHT,
+  );
+  const lakePhoto = await createDemoPhoto('demo-story-lake', drawSunset, STORY_PHOTO_WIDTH, STORY_PHOTO_HEIGHT);
   const albumPhotos = [
     await createDemoPhoto('demo-album-trail', drawTrailMap),
     await createDemoPhoto('demo-album-sunset', drawSunset),
@@ -91,8 +108,21 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     profileKey: getRandomBytes(32),
     isReadReceiptsEnabled: true,
     usernameLink: { entropy: getRandomBytes(32), serverId: crypto.randomUUID() },
+    isStoryViewReceiptsEnabled: true,
     isDemo: true,
   });
+  await store.setItem('storyDistributionLists', [
+    {
+      id: MY_STORY_ID, name: '', memberAcis: [dave], areRepliesAllowed: true, isBlockList: true,
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Hiking club',
+      memberAcis: [alice, bob],
+      areRepliesAllowed: true,
+      isBlockList: false,
+    },
+  ]);
   // Identity keys give safety numbers; Alice's is verified
   await store.setItem('aciIdentityKeyPair', generateKeyPair());
   await store.setIdentity(alice, { publicKey: generateKeyPair().publicKey, verified: Verified_State.VERIFIED });
@@ -180,7 +210,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       isAccepted: true,
     },
   ];
-  const [, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat] = conversations;
+  const [self, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat] = conversations;
 
   const messages: [ConversationRecord, DemoMessage][] = [
     [aliceChat, {
@@ -465,6 +495,112 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     const last = lastByConversation.get(conversation.id);
     await db.putConversation({ ...conversation, lastMessageId: last?.id, lastMessageAt: last?.sentAt });
   }
+
+  const ownStoryAt = now - 120 * MINUTE;
+  const stories: [ConversationRecord, DemoStory][] = [
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 180 * MINUTE,
+      isOutgoing: false,
+      viewedAt: now - 170 * MINUTE,
+      storyMessage: {
+        allowsReplies: true,
+        attachment: {
+          case: 'textAttachment', value: createTextAttachment('Coffee first ☕', 0, TextAttachment_Style.BOLD),
+        },
+      },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 25 * MINUTE,
+      isOutgoing: false,
+      storyMessage: {
+        allowsReplies: true,
+        attachment: { case: 'fileAttachment', value: { ...mountainsPhoto, caption: 'Trail check for Saturday' } },
+        bodyRanges: [{ start: 0, length: 11, associatedValue: { case: 'style', value: BodyRange_Style.BOLD } }],
+      },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 15 * MINUTE,
+      isOutgoing: false,
+      storyMessage: {
+        allowsReplies: true,
+        attachment: {
+          case: 'textAttachment',
+          value: createTextAttachment('Who is in for the 10 km loop? 🥾', 5, TextAttachment_Style.SERIF),
+        },
+      },
+    }],
+    [bobChat, {
+      authorAci: bob,
+      sentAt: now - 40 * MINUTE,
+      isOutgoing: false,
+      storyMessage: {
+        allowsReplies: false,
+        attachment: {
+          case: 'textAttachment', value: createTextAttachment('New bike day!', 6, TextAttachment_Style.SCRIPT),
+        },
+      },
+    }],
+    [group, {
+      authorAci: carol,
+      sentAt: now - 30 * MINUTE,
+      isOutgoing: false,
+      replies: [{ authorAci: alice, sentAt: now - 28 * MINUTE, body: 'So pretty!' }],
+      storyMessage: {
+        allowsReplies: true,
+        group: { masterKey: group.masterKey, revision: group.revision },
+        attachment: { case: 'fileAttachment', value: { ...lakePhoto, caption: 'Picnic spot by the lake' } },
+      },
+    }],
+    [self, {
+      authorAci: me,
+      sentAt: ownStoryAt,
+      isOutgoing: true,
+      viewedAt: ownStoryAt,
+      recipients: {
+        [alice]: {
+          status: 'viewed', isAllowedToReply: true, distributionListIds: [MY_STORY_ID], viewedAt: now - 110 * MINUTE,
+        },
+        [bob]: {
+          status: 'viewed', isAllowedToReply: true, distributionListIds: [MY_STORY_ID], viewedAt: now - 90 * MINUTE,
+        },
+        [carol]: { status: 'delivered', isAllowedToReply: true, distributionListIds: [MY_STORY_ID] },
+      },
+      replies: [
+        { authorAci: alice, sentAt: now - 108 * MINUTE, body: 'Where is this?' },
+        { authorAci: bob, sentAt: now - 89 * MINUTE, emoji: '❤️' },
+      ],
+      storyMessage: {
+        allowsReplies: true,
+        attachment: {
+          case: 'textAttachment',
+          value: createTextAttachment('Packed and ready for the weekend', 7, TextAttachment_Style.DEFAULT),
+        },
+      },
+    }],
+  ];
+  for (const [conversation, { storyMessage, ...record }] of stories) {
+    await db.addStory({
+      ...record,
+      conversationId: conversation.id,
+      receivedAt: record.sentAt,
+      expiresAt: record.sentAt + STORY_LIFETIME_MS,
+      storyMessage: toBinary(StoryMessageSchema, create(StoryMessageSchema, storyMessage)),
+    });
+  }
+}
+
+function createTextAttachment(text: string, backgroundIndex: number, textStyle: TextAttachment_Style) {
+  const background = STORY_BACKGROUNDS[backgroundIndex];
+  return {
+    text,
+    textStyle,
+    background: 'color' in background
+      ? { case: 'color' as const, value: background.color }
+      : { case: 'gradient' as const, value: background },
+  };
 }
 
 /** Messages with the links that Signal's apps share, and some that only look like them */
@@ -522,9 +658,14 @@ async function createDemoSticker(): Promise<Pick<DemoMessage, 'dataMessage'>> {
 }
 
 /** A photo attachment whose bytes are cached, so it shows without a download */
-async function createDemoPhoto(cdnKey: string, draw: (context: OffscreenCanvasRenderingContext2D) => void) {
-  const canvas = new OffscreenCanvas(PHOTO_WIDTH, PHOTO_HEIGHT);
-  draw(canvas.getContext('2d')!);
+async function createDemoPhoto(
+  cdnKey: string,
+  draw: (context: OffscreenCanvasRenderingContext2D, width: number, height: number) => void,
+  width = PHOTO_WIDTH,
+  height = PHOTO_HEIGHT,
+) {
+  const canvas = new OffscreenCanvas(width, height);
+  draw(canvas.getContext('2d')!, width, height);
   const blob = await canvas.convertToBlob({ type: PHOTO_MIME_TYPE });
   const pointer = create(AttachmentPointerSchema, {
     attachmentIdentifier: { case: 'cdnKey', value: cdnKey },
@@ -532,8 +673,8 @@ async function createDemoPhoto(cdnKey: string, draw: (context: OffscreenCanvasRe
     contentType: PHOTO_MIME_TYPE,
     key: getRandomBytes(64),
     size: blob.size,
-    width: PHOTO_WIDTH,
-    height: PHOTO_HEIGHT,
+    width,
+    height,
   });
   await saveAttachmentBlob(pointer, blob);
   return pointer;
@@ -581,16 +722,31 @@ function drawLake(context: OffscreenCanvasRenderingContext2D) {
   context.fillRect(0, LAKE_TOP, PHOTO_WIDTH, PHOTO_HEIGHT - LAKE_TOP);
 }
 
-function drawSunset(context: OffscreenCanvasRenderingContext2D) {
-  const gradient = context.createLinearGradient(0, 0, 0, PHOTO_HEIGHT);
+function drawSunset(context: OffscreenCanvasRenderingContext2D, width: number, height: number) {
+  const gradient = context.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, '#2c3e70');
   gradient.addColorStop(1, '#f39c4a');
   context.fillStyle = gradient;
-  context.fillRect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+  context.fillRect(0, 0, width, height);
 
   context.fillStyle = '#ffd56b';
   context.beginPath();
-  context.arc(PHOTO_WIDTH / 2, SUN_CENTER_Y, SUN_RADIUS, 0, 2 * Math.PI);
+  context.arc(width / 2, (SUN_CENTER_Y / PHOTO_HEIGHT) * height, SUN_RADIUS, 0, 2 * Math.PI);
+  context.fill();
+}
+
+function drawMountains(context: OffscreenCanvasRenderingContext2D, width: number, height: number) {
+  const sky = context.createLinearGradient(0, 0, 0, height);
+  sky.addColorStop(0, '#7ec8f2');
+  sky.addColorStop(1, '#e8f4fb');
+  context.fillStyle = sky;
+  context.fillRect(0, 0, width, height);
+
+  context.fillStyle = '#3d6b4f';
+  context.beginPath();
+  context.moveTo(0, height);
+  PEAKS.forEach(([x, y]) => context.lineTo(x * width, y * height));
+  context.lineTo(width, height);
   context.fill();
 }
 

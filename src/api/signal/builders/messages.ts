@@ -3,7 +3,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
 import type { GroupUpdate } from '../../../lib/signal/groups/groupUpdates';
 import type {
-  BodyRange, DataMessage_Contact, DataMessage_PollCreate, DataMessage_Quote,
+  BodyRange, DataMessage_Contact, DataMessage_PollCreate, DataMessage_Quote, DataMessage_StoryContext,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type {
   ApiMessage,
@@ -31,7 +31,7 @@ import { buildApiFormattedText, getMentionAci } from './bodyRanges';
 import { buildMessageMedia, buildWebPage } from './media';
 import { buildApiUser } from './users';
 
-type UserResolver = ReturnType<typeof createUserResolver>;
+export type UserResolver = ReturnType<typeof createUserResolver>;
 
 const MS_PER_SECOND = 1000;
 const INVITE_LINK_UPDATES = {
@@ -133,11 +133,13 @@ export async function buildApiMessageWithPoll(
   const poll = dataMessage.pollCreate
     ? await buildApiPoll(message, dataMessage.pollCreate, selfAci, users)
     : undefined;
-  const { body, bodyRanges } = dataMessage;
+  const { body, bodyRanges, storyContext, reaction } = dataMessage;
   const webPage = !Object.keys(media).length ? buildWebPage(message, dataMessage) : undefined;
+  // A reaction to a story shows as its emoji, replying to the story (Signal Desktop "Reacted to a story")
+  const storyReaction = storyContext && reaction?.emoji ? { text: reaction.emoji } : undefined;
   const content: MediaContent = omitUndefined({
     ...media,
-    text: body ? buildApiFormattedText(body, bodyRanges, mentionedUsers) : undefined,
+    text: body ? buildApiFormattedText(body, bodyRanges, mentionedUsers) : storyReaction,
     pollId: poll?.summary.id,
     webPage: webPage && { id: webPage.id },
   });
@@ -151,7 +153,9 @@ export async function buildApiMessageWithPoll(
     message: {
       ...base,
       content,
-      replyInfo: dataMessage.quote ? await buildReplyInfo(dataMessage.quote, message, users) : undefined,
+      replyInfo: storyContext
+        ? await buildStoryReplyInfo(storyContext, users)
+        : dataMessage.quote && await buildReplyInfo(dataMessage.quote, message, users),
       isEdited: message.editedAt ? true : undefined,
       editDate: message.editedAt ? convertToSeconds(message.editedAt) : undefined,
       reactions: await buildApiReactions(message, selfAci, users),
@@ -292,7 +296,7 @@ async function resolveContact(
   return conversation ? { userId: await users.getUserId(conversation.id) } : {};
 }
 
-async function resolveMentionedUsers(bodyRanges: BodyRange[], users: UserResolver) {
+export async function resolveMentionedUsers(bodyRanges: BodyRange[], users: UserResolver) {
   const mentionedUsers = new Map<string, MentionedUser>();
   for (const range of bodyRanges) {
     const aci = getMentionAci(range);
@@ -331,6 +335,19 @@ async function buildReplyInfo(
       ? buildApiFormattedText(quote.text, quote.bodyRanges, await resolveMentionedUsers(quote.bodyRanges, users))
       : undefined,
     isQuote: hasText || undefined,
+  };
+}
+
+/** A reply to a story names the story; an expired one is not found and shows as such */
+async function buildStoryReplyInfo(storyContext: DataMessage_StoryContext, users: UserResolver): Promise<ApiReplyInfo> {
+  const authorAci = storyContext.authorAci
+    || (storyContext.authorAciBinary.length ? uuidToString(storyContext.authorAciBinary) : '');
+  const story = authorAci ? await db.findStory(authorAci, Number(storyContext.sentTimestamp)) : undefined;
+  const conversation = story && await db.getConversation(story.conversationId);
+  return {
+    type: 'story',
+    peerId: conversation ? getPeerId(conversation) : await users.getUserId(authorAci),
+    storyId: story?.id ?? 0,
   };
 }
 
