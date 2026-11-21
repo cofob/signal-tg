@@ -195,6 +195,48 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       dataMessage: { body: 'Hi, we met at the conference' },
     }],
     [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'create' },
+      sentAt: now - 50 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'membersAdded', acis: [me, bob] },
+      sentAt: now - 49 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'inviteLink', state: 'onWithApproval' },
+      sentAt: now - 48 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: carol, groupUpdate: { type: 'joinRequested' },
+      sentAt: now - 47 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'joinApproved', aci: carol },
+      sentAt: now - 46 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: me, groupUpdate: { type: 'description' },
+      sentAt: now - 45 * MINUTE, isOutgoing: true, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate',
+      authorAci: '',
+      actorAci: alice,
+      groupUpdate: { type: 'adminChanged', aci: bob, isAdmin: true },
+      sentAt: now - 44 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate',
+      authorAci: '',
+      actorAci: alice,
+      groupUpdate: { type: 'access', target: 'info', isAdminOnly: true },
+      sentAt: now - 43 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'invited', count: 2 },
+      sentAt: now - 42 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
       authorAci: alice, sentAt: now - 40 * MINUTE, isOutgoing: false, readAt: now,
       dataMessage: { body: 'Plan for Saturday: hike, then picnic by the lake' },
     }],
