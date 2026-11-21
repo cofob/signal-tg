@@ -28,6 +28,7 @@ import { initAutolock } from './util/passcode/autolock';
 import { subscribeToPasscodeChannel } from './util/passcode/channel';
 import { initPasscodeNavigation } from './util/passcode/navigation';
 import { onBeforeUnload } from './util/schedulers';
+import { clearLegacySessionKeys } from './util/sessions';
 import initTauriApi from './util/tauri/initTauriApi';
 import setupTauriListeners from './util/tauri/setupTauriListeners';
 import updateWebmanifest from './util/updateWebmanifest';
@@ -73,11 +74,11 @@ async function init() {
 
   await initGlobal();
   getActions().init();
+  void clearLegacySessionKeys();
 
   initAutolock();
 
   getActions().updateShouldEnableDebugLog();
-  getActions().updateShouldDebugExportedSenders();
 
   const global = getGlobal();
 

@@ -1992,7 +1992,6 @@ export interface ActionPayloads {
   setPasscodeError: { errorKey: RegularLangFnParameters };
   clearPasscodeError: undefined;
   // Settings
-  updateShouldDebugExportedSenders: undefined;
   updateShouldEnableDebugLog: undefined;
   loadConfig: undefined;
   loadAppConfig: {

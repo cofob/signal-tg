@@ -32,10 +32,7 @@ export interface SharedSettings {
   wasTimeFormatSetManually: boolean;
   isConnectionStatusMinimized: boolean;
   canDisplayChatInTitle: boolean;
-  shouldForceHttpTransport?: boolean;
-  shouldAllowHttpTransport?: boolean;
   shouldCollectDebugLogs?: boolean;
-  shouldDebugExportedSenders?: boolean;
   // The tunnel for Signal hosts from the proxy server setting; `undefined` uses the build default
   signalProxyUrl?: string;
   shouldWarnAboutFiles?: boolean;

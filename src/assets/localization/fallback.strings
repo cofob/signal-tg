@@ -2623,9 +2623,6 @@
 "SettingsStartWave" = "Start wave";
 "SettingsVaporizeButton" = "Vaporize this button";
 "DebugDownloadLog" = "Download log";
-"SettingsAllowHttp" = "Allow HTTP Transport";
-"SettingsForceHttp" = "Force HTTP Transport";
-"DebugExportedSenders" = "Enable exported senders debug";
 "TestServer" = "Test server";
 "CodeLanguagePlainText" = "Plain text";
 "ErrorChatRestricted" = "You can't send messages in this chat, you were restricted";

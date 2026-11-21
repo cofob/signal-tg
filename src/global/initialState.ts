@@ -71,7 +71,7 @@ export const INITIAL_PERFORMANCE_STATE_MIN: PerformanceType = {
   textStreaming: false,
 };
 
-export const SHARED_STATE_CACHE_VERSION = 6;
+export const SHARED_STATE_CACHE_VERSION = 7;
 
 const PREFERS_REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -106,7 +106,6 @@ export const INITIAL_SHARED_STATE: SharedState = {
     wasTimeFormatSetManually: false,
     isConnectionStatusMinimized: true,
     canDisplayChatInTitle: true,
-    shouldAllowHttpTransport: true,
     shouldWarnAboutFiles: true,
     shouldKeepLockScreenBackground: true,
   },

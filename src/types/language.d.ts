@@ -2112,9 +2112,6 @@ export interface LangPair {
   'SettingsStartWave': undefined;
   'SettingsVaporizeButton': undefined;
   'DebugDownloadLog': undefined;
-  'SettingsAllowHttp': undefined;
-  'SettingsForceHttp': undefined;
-  'DebugExportedSenders': undefined;
   'TestServer': undefined;
   'CodeLanguagePlainText': undefined;
   'ErrorChatRestricted': undefined;

@@ -14,10 +14,10 @@ import { applyPerformanceSettings } from '../../../util/perfomanceSettings';
 import switchTheme, { hasActiveThemeTransition } from '../../../util/switchTheme';
 import { buildThemePalette, isThemePaletteTransitionSafe, updatePeerColors } from '../../../util/theme';
 import { removeWallpaperBlobIfUnused, updateSelectedWallpaperBlobs } from '../../../util/wallpaper/storage';
-import { callApi, setShouldEnableDebugLog } from '../../../api';
+import { setShouldEnableDebugLog } from '../../../api';
 import { addTabStateResetterAction } from '../../helpers/meta';
 import {
-  addActionHandler, getActions, getGlobal, setGlobal,
+  addActionHandler, getActions, getGlobal,
 } from '../../index';
 import { replaceSettings, updateSharedSettings, updateThemeSettings } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
@@ -32,7 +32,7 @@ const MAX_RECENTLY_FOUND_SETTINGS = 5;
 let prevGlobal: GlobalState | undefined;
 
 addCallback((global: GlobalState) => {
-  const { updatePageTitle, updateShouldDebugExportedSenders, updateShouldEnableDebugLog } = getActions();
+  const { updatePageTitle, updateShouldEnableDebugLog } = getActions();
 
   const oldGlobal = prevGlobal;
   prevGlobal = global;
@@ -111,24 +111,6 @@ addCallback((global: GlobalState) => {
     updatePageTitle();
   }
 
-  if (sharedSettings.shouldForceHttpTransport !== oldSharedSettings.shouldForceHttpTransport) {
-    callApi('setForceHttpTransport', Boolean(sharedSettings.shouldForceHttpTransport));
-  }
-
-  if (sharedSettings.shouldAllowHttpTransport !== oldSharedSettings.shouldAllowHttpTransport) {
-    callApi('setAllowHttpTransport', Boolean(sharedSettings.shouldAllowHttpTransport));
-    if (!sharedSettings.shouldAllowHttpTransport && sharedSettings.shouldForceHttpTransport) {
-      global = updateSharedSettings(global, {
-        shouldForceHttpTransport: false,
-      });
-      setGlobal(global);
-    }
-  }
-
-  if (sharedSettings.shouldDebugExportedSenders !== oldSharedSettings.shouldDebugExportedSenders) {
-    updateShouldDebugExportedSenders();
-  }
-
   if (sharedSettings.shouldCollectDebugLogs !== oldSharedSettings.shouldCollectDebugLogs) {
     updateShouldEnableDebugLog();
   }
@@ -144,11 +126,6 @@ addActionHandler('updateShouldEnableDebugLog', (global): ActionReturnType => {
     setShouldEnableDebugLog(false);
     disableDebugConsole();
   }
-});
-
-addActionHandler('updateShouldDebugExportedSenders', (global): ActionReturnType => {
-  const settings = selectSharedSettings(global);
-  callApi('setShouldDebugExportedSenders', Boolean(settings.shouldDebugExportedSenders));
 });
 
 addActionHandler('updateMediaEditorSettings', (global, actions, payload): ActionReturnType => {
