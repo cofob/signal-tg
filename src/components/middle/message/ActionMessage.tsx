@@ -97,6 +97,7 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'unsupported',
   'deleted',
   'viewOnce',
+  'signalCall',
   'safetyNumberChange',
   'safetyNumberVerified',
 ]);

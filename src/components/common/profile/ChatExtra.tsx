@@ -6,6 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type {
   ApiChat,
   ApiCountryCode,
+  ApiSignalChatStyle,
   ApiUser,
   ApiUserFullInfo,
   ApiUsername,
@@ -70,6 +71,7 @@ type StateProps = {
   phoneCodeList: ApiCountryCode[];
   description?: string;
   chatInviteLink?: string;
+  signalChatStyle?: ApiSignalChatStyle;
 };
 
 const NOTE_MAX_LINES = 3;
@@ -88,6 +90,7 @@ const ChatExtra = ({
   className,
   style,
   isInSettings,
+  signalChatStyle,
 }: OwnProps & StateProps) => {
   const {
     showNotification,
@@ -103,7 +106,7 @@ const ChatExtra = ({
     phoneNumber,
     isSelf,
   } = user || {};
-  const { id: chatId, usernames: chatUsernames } = chat || {};
+  const { id: chatId } = chat || {};
   const peerId = userId || chatId;
   const { birthday, note } = userFullInfo || {};
 
@@ -138,12 +141,6 @@ const ChatExtra = ({
 
     return result?.length ? result : undefined;
   }, [usernames]);
-
-  const activeChatUsernames = useMemo(() => {
-    const result = !user ? chatUsernames?.filter((u) => u.isActive) : undefined;
-
-    return result?.length ? result : undefined;
-  }, [chatUsernames, user]);
 
   const link = useMemo(() => {
     if (!chat) {
@@ -184,8 +181,8 @@ const ChatExtra = ({
     copy(formattedNumber!, 'PhoneCopied');
   });
 
-  const handleUsernameClick = useLastCallback((username: ApiUsername, isChat?: boolean) => {
-    copy(formatUsername(username.username, isChat), isChat ? 'LinkCopied' : 'UsernameCopied');
+  const handleUsernameClick = useLastCallback((username: ApiUsername) => {
+    copy(formatUsername(username.username), 'UsernameCopied');
   });
 
   const handleOpenQrCode = useLastCallback((e: React.MouseEvent) => {
@@ -203,37 +200,15 @@ const ChatExtra = ({
     return undefined;
   }
 
-  function renderUsernames(usernameList: ApiUsername[], isChat?: boolean) {
-    const [mainUsername, ...otherUsernames] = usernameList;
-
-    const usernameLinks = otherUsernames.length ? lang('UsernameAlso', {
-      usernames: otherUsernames.map((username, index) => (
-        <>
-          {index > 0 ? ', ' : ''}
-          <a
-            key={username.username}
-            href={formatUsername(username.username, true)}
-            onMouseDown={stopEvent}
-            onClick={(e) => {
-              stopEvent(e);
-              handleUsernameClick(username, isChat);
-            }}
-            className="text-entity-link username-link"
-          >
-            {formatUsername(username.username)}
-          </a>
-        </>
-      )),
-    }, { withNodes: true }) : undefined;
-
+  function renderUsername(username: ApiUsername) {
     return (
       <ListItem
-        icon={isChat ? 'link' : 'mention-filled'}
-        iconBg={isChat ? 'orange' : 'blue'}
+        icon="mention-filled"
+        iconBg="blue"
         multiline
         narrow
         ripple
-        rightElement={(
+        rightElement={isSelf ? (
           <Button
             round
             size="smaller"
@@ -243,18 +218,15 @@ const ChatExtra = ({
           >
             <QrIcon />
           </Button>
-        )}
+        ) : undefined}
         onClick={() => {
-          handleUsernameClick(mainUsername, isChat);
+          handleUsernameClick(username);
         }}
       >
         <span className="title" dir={lang.isRtl ? 'rtl' : undefined}>
-          {formatUsername(mainUsername.username, isChat)}
+          {formatUsername(username.username)}
         </span>
-        <span className="subtitle">
-          {Boolean(otherUsernames.length) && <span className="other-usernames">{usernameLinks}</span>}
-          {lang(isChat ? 'SetUrlPlaceholder' : 'Username')}
-        </span>
+        <span className="subtitle">{lang('Username')}</span>
       </ListItem>
     );
   }
@@ -285,7 +257,7 @@ const ChatExtra = ({
             <span className="subtitle">{lang('Phone')}</span>
           </ListItem>
         )}
-        {activeUsernames && renderUsernames(activeUsernames)}
+        {activeUsernames && renderUsername(activeUsernames[0])}
         {description && Boolean(description.length) && (
           <ListItem
             icon="info-filled"
@@ -303,8 +275,7 @@ const ChatExtra = ({
             <span className="subtitle">{lang(userId ? 'UserBio' : 'Info')}</span>
           </ListItem>
         )}
-        {activeChatUsernames && renderUsernames(activeChatUsernames, true)}
-        {!activeChatUsernames && canInviteUsers && link && (
+        {canInviteUsers && link && (
           <ListItem
             icon="link"
             iconBg="orange"
@@ -350,6 +321,33 @@ const ChatExtra = ({
             style={createVtnStyle('safetyNumber')}
           >
             <span>{lang('SafetyNumberView')}</span>
+          </ListItem>
+        )}
+        {signalChatStyle && (
+          <ListItem
+            icon="palette"
+            iconBg="purple"
+            narrow
+            isStatic
+            style={createVtnStyle('chatStyle')}
+          >
+            <span>{lang('ChatColor')}</span>
+            <span className={styles.chatStyleSwatches}>
+              {signalChatStyle.wallpaper && (
+                <span
+                  className={styles.chatStyleSwatch}
+                  title={lang('ChatColorWallpaper')}
+                  style={`background: ${signalChatStyle.wallpaper}`}
+                />
+              )}
+              {signalChatStyle.bubbleColor && (
+                <span
+                  className={styles.chatStyleSwatch}
+                  title={lang('ChatColorBubbles')}
+                  style={`background: ${signalChatStyle.bubbleColor}`}
+                />
+              )}
+            </span>
           </ListItem>
         )}
         {shouldRenderNote && (
@@ -431,6 +429,7 @@ export default memo(withGlobal<OwnProps>(
       isMuted,
       chatInviteLink,
       description,
+      signalChatStyle: userFullInfo?.signalChatStyle || chatFullInfo?.signalChatStyle,
     };
   },
 )(ChatExtra));

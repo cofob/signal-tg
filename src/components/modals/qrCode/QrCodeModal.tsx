@@ -1,4 +1,4 @@
-import { memo } from '../../../lib/teact/teact';
+import { memo, useEffect } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { ApiPeer } from '../../../api/types';
@@ -6,7 +6,7 @@ import type { TabState } from '../../../global/types';
 
 import { getPeerTitle } from '../../../global/helpers/peers';
 import { getMainUsername } from '../../../global/helpers/users';
-import { selectPeer } from '../../../global/selectors';
+import { selectPeer, selectTabState } from '../../../global/selectors';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import formatUsername from '../../common/helpers/formatUsername';
 
@@ -27,26 +27,34 @@ export type OwnProps = {
 type StateProps = {
   peer?: ApiPeer;
   username?: string;
+  link?: string;
 };
 
 const QR_SIZE = 200;
 
-const QrCodeModal = ({ modal, peer, username }: OwnProps & StateProps) => {
-  const { closeQrCodeModal, showNotification } = getActions();
+// The link is `https://signal.me/#eu/...`, which only the account itself can build: it holds the link entropy
+const QrCodeModal = ({
+  modal, peer, username, link,
+}: OwnProps & StateProps) => {
+  const { closeQrCodeModal, loadUsernameLink, showNotification } = getActions();
 
   const lang = useLang();
 
   const renderingPeer = useCurrentOrPrev(peer);
   const renderingUsername = useCurrentOrPrev(username);
-  const link = renderingUsername ? formatUsername(renderingUsername, true) : undefined;
+  const renderingLink = useCurrentOrPrev(link);
   const isOpen = Boolean(modal) && Boolean(peer) && Boolean(username);
+
+  useEffect(() => {
+    if (isOpen) loadUsernameLink();
+  }, [isOpen]);
 
   const handleClose = useLastCallback(() => {
     closeQrCodeModal();
   });
 
   const handleCopyLink = useLastCallback(() => {
-    copyTextToClipboard(link!);
+    copyTextToClipboard(renderingLink!);
     showNotification({ message: { key: 'LinkCopied' } });
   });
 
@@ -59,14 +67,14 @@ const QrCodeModal = ({ modal, peer, username }: OwnProps & StateProps) => {
       contentClassName={styles.content}
       onClose={handleClose}
     >
-      {link && (
+      {renderingLink && (
         <div className={styles.card}>
-          <SignalQrCode data={link} size={QR_SIZE} />
+          <SignalQrCode data={renderingLink} size={QR_SIZE} />
           <div className={styles.username}>{formatUsername(renderingUsername!)}</div>
           {renderingPeer && <div className={styles.title}>{getPeerTitle(lang, renderingPeer)}</div>}
         </div>
       )}
-      <Button onClick={handleCopyLink} noForcedUpperCase>{lang('CopyLink')}</Button>
+      <Button onClick={handleCopyLink} disabled={!renderingLink} noForcedUpperCase>{lang('CopyLink')}</Button>
     </Modal>
   );
 };
@@ -78,6 +86,7 @@ export default memo(withGlobal<OwnProps>(
     return {
       peer,
       username: peer ? getMainUsername(peer) : undefined,
+      link: selectTabState(global).usernameEdit?.link,
     };
   },
 )(QrCodeModal));

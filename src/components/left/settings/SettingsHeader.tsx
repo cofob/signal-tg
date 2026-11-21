@@ -90,6 +90,8 @@ const SettingsHeader = ({
         return <h3>{lang('DataSettings')}</h3>;
       case SettingsScreens.SignalProxy:
         return <h3>{lang('SignalProxyTitle')}</h3>;
+      case SettingsScreens.SignalSealedSenderProxy:
+        return <h3>{lang('SignalSealedProxyTitle')}</h3>;
       case SettingsScreens.Username:
         return <h3>{lang('Username')}</h3>;
       case SettingsScreens.SignalPin:
@@ -174,6 +176,8 @@ const SettingsHeader = ({
         return <h3>{lang('BlockedUsers')}</h3>;
       case SettingsScreens.Stories:
         return <h3>{lang('StoriesSettingTitle')}</h3>;
+      case SettingsScreens.NotificationProfiles:
+        return <h3>{lang('NotificationProfiles')}</h3>;
 
       case SettingsScreens.PasscodeDisabled:
       case SettingsScreens.PasscodeEnabled:

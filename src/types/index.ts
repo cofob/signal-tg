@@ -265,6 +265,8 @@ export enum SettingsScreens {
   SignalPinNew,
   SignalPinConfirm,
   SignalDevices,
+  NotificationProfiles,
+  SignalSealedSenderProxy,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
@@ -280,6 +282,7 @@ export enum LeftColumnContent {
   Archived,
   NewGroupStep1,
   NewGroupStep2,
+  Calls,
 }
 
 export enum GlobalSearchContent {

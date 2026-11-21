@@ -9,8 +9,8 @@ const HTTP_OK = 200;
  */
 export function getDeviceCapabilities(hasPhoneNumber: boolean, hasSvrPin?: boolean) {
   return {
-    // The server only uses the primary device's value
-    attachmentBackfill: false,
+    // Linked devices ask the primary device for attachments that the CDN no longer has (`attachmentBackfill.ts`)
+    attachmentBackfill: true,
     spqr: true,
     usernameChangeSyncMessage: true,
     optionalPhoneNumber: !hasPhoneNumber,

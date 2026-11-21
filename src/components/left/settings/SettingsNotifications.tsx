@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { ApiNotifyPeerType, ApiPeerNotifySettings } from '../../../api/types';
+import { SettingsScreens } from '../../../types';
 
 import { NOTIFICATION_MAX_VOLUME } from '../../../config';
 import { IS_IOS } from '../../../util/browser/windowEnvironment';
@@ -9,10 +10,12 @@ import { checkIfNotificationsSupported, playNotifySound } from '../../../util/no
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
+import useLastCallback from '../../../hooks/useLastCallback';
 import useRunDebounced from '../../../hooks/useRunDebounced';
 
 import Island, { IslandTitle } from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
+import ListItem from '../../ui/ListItem';
 import RangeSlider from '../../ui/RangeSlider';
 
 type OwnProps = {
@@ -43,6 +46,7 @@ const SettingsNotifications = ({
 }: OwnProps & StateProps) => {
   const {
     loadNotificationSettings,
+    openSettingsScreen,
     setSettingOption,
     updateContactSignUpNotification,
     updateNotificationSettings,
@@ -110,6 +114,10 @@ const SettingsNotifications = ({
     setSettingOption({ shouldNotifyAboutPinnedMessages: e.target.checked });
   }, [setSettingOption]);
 
+  const handleOpenProfiles = useLastCallback(() => {
+    openSettingsScreen({ screen: SettingsScreens.NotificationProfiles });
+  });
+
   const handleVolumeChange = useCallback((volume: number) => {
     updateWebNotificationSettings({
       notificationSoundVolume: volume,
@@ -124,6 +132,17 @@ const SettingsNotifications = ({
 
   return (
     <div className="settings-content custom-scroll">
+      <Island>
+        <ListItem
+          icon="mute"
+          iconBg="purple"
+          narrow
+          onClick={handleOpenProfiles}
+        >
+          {lang('NotificationProfiles')}
+        </ListItem>
+      </Island>
+
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
         {lang('NotificationsWeb')}
       </IslandTitle>

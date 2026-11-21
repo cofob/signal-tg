@@ -14,6 +14,12 @@ export async function saveAttachmentBlob(pointer: AttachmentLocation, blob: Blob
   await cacheApi.save(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer), blob);
 }
 
+/** Whether the decrypted attachment is cached */
+export async function getIsAttachmentCached(pointer: AttachmentLocation) {
+  const cached = await cacheApi.fetch(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer), cacheApi.Type.Blob);
+  return Boolean(cached);
+}
+
 /** Drops a cached attachment, such as the media of an expired story */
 export async function removeAttachmentBlob(pointer: AttachmentLocation) {
   await cacheApi.remove(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer));

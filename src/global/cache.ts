@@ -580,6 +580,7 @@ function removeTelegramOnlyFields(untypedCached: any) {
     delete settings.canAutoLoadVideoInChannels;
     delete settings.canAutoLoadFileInChannels;
   }
+  delete untypedCached.settings?.notifyDefaults?.channels;
   delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
   delete untypedCached.chatFolders?.areTagsEnabled;
   delete untypedCached.serviceNotifications;

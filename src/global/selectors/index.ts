@@ -11,3 +11,4 @@ export * from './stories';
 export * from './tabs';
 export * from './peers';
 export * from './musicPicker';
+export * from './notificationProfiles';

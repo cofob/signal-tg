@@ -37,6 +37,7 @@ type StateProps = Pick<AccountSettings, (
   'autoLoadFileMaxSizeMb'
 )> & {
   signalProxyUrl?: string;
+  signalSealedSenderProxyUrl?: string;
   shouldAskWhereToSave?: boolean;
 };
 
@@ -53,6 +54,7 @@ const SettingsDataStorage = ({
   canAutoLoadFileInGroups,
   autoLoadFileMaxSizeMb,
   signalProxyUrl,
+  signalSealedSenderProxyUrl,
   shouldAskWhereToSave,
   onReset,
 }: OwnProps & StateProps) => {
@@ -86,6 +88,10 @@ const SettingsDataStorage = ({
 
   const handleOpenSignalProxy = useLastCallback(() => {
     openSettingsScreen({ screen: SettingsScreens.SignalProxy });
+  });
+
+  const handleOpenSealedSenderProxy = useLastCallback(() => {
+    openSettingsScreen({ screen: SettingsScreens.SignalSealedSenderProxy });
   });
 
   function renderContentSizeSlider() {
@@ -196,6 +202,18 @@ const SettingsDataStorage = ({
             {signalProxyUrl ? new URL(signalProxyUrl).host : lang('SignalProxyDefault')}
           </span>
         </ListItem>
+        <ListItem
+          icon="lock"
+          multiline
+          onClick={handleOpenSealedSenderProxy}
+        >
+          <span className="title">{lang('SignalSealedProxyTitle')}</span>
+          <span className="subtitle">
+            {signalSealedSenderProxyUrl
+              ? new URL(signalSealedSenderProxyUrl).host
+              : lang('SignalSealedProxySame')}
+          </span>
+        </ListItem>
       </Island>
     </div>
   );
@@ -215,11 +233,12 @@ export default memo(withGlobal<OwnProps>(
       'canAutoLoadFileInGroups',
       'autoLoadFileMaxSizeMb',
     ]);
-    const { signalProxyUrl, shouldAskWhereToSave } = selectSharedSettings(global);
+    const { signalProxyUrl, signalSealedSenderProxyUrl, shouldAskWhereToSave } = selectSharedSettings(global);
 
     return {
       ...accountSettings,
       signalProxyUrl,
+      signalSealedSenderProxyUrl,
       shouldAskWhereToSave,
     };
   },

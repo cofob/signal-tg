@@ -97,6 +97,10 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalSealedProxyTitle': undefined;
+  'SignalSealedProxySame': undefined;
+  'SignalSealedProxyAbout': undefined;
+  'SignalSealedProxyUseMain': undefined;
   'SignalProfileAbout': undefined;
   'SignalProfileAboutHelp': undefined;
   'SignalProfileRemovePhoto': undefined;
@@ -1901,6 +1905,7 @@ export interface LangPair {
   'SettingsKeywordsAutoDelete': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSealedProxy': undefined;
   'SettingsKeywordsSignalDevices': undefined;
   'SettingsKeywordsReadReceipts': undefined;
   'SettingsKeywordsTypingIndicators': undefined;
@@ -1930,6 +1935,59 @@ export interface LangPair {
   'DesktopMenuSelectAll': undefined;
   'DesktopMenuWindow': undefined;
   'DesktopMenuMinimize': undefined;
+  'ActionCallIncomingAudio': undefined;
+  'ActionCallIncomingVideo': undefined;
+  'ActionCallOutgoingAudio': undefined;
+  'ActionCallOutgoingVideo': undefined;
+  'ActionCallDeclinedAudio': undefined;
+  'ActionCallDeclinedVideo': undefined;
+  'ActionCallMissedAudio': undefined;
+  'ActionCallMissedVideo': undefined;
+  'ActionCallUnansweredAudio': undefined;
+  'ActionCallUnansweredVideo': undefined;
+  'ActionCallGroupStarted': undefined;
+  'ActionCallGroupStartedYou': undefined;
+  'MenuCalls': undefined;
+  'CallLogEmptyTitle': undefined;
+  'CallLogEmptyText': undefined;
+  'CallLogInfo': undefined;
+  'CallLogCannotCall': undefined;
+  'CallLogIncoming': undefined;
+  'CallLogOutgoing': undefined;
+  'CallLogMissed': undefined;
+  'CallLogDeclined': undefined;
+  'CallLogGroup': undefined;
+  'CallLogClear': undefined;
+  'CallLogClearTitle': undefined;
+  'CallLogClearText': undefined;
+  'CallLogClearConfirm': undefined;
+  'CallLogCleared': undefined;
+  'ActionPaymentActivatedYou': undefined;
+  'NotificationProfiles': undefined;
+  'SettingsKeywordsNotificationProfiles': undefined;
+  'NotificationProfilesInfo': undefined;
+  'NotificationProfilesSyncOff': undefined;
+  'NotificationProfileNew': undefined;
+  'NotificationProfileEdit': undefined;
+  'NotificationProfileName': undefined;
+  'NotificationProfileEmoji': undefined;
+  'NotificationProfileAllowed': undefined;
+  'NotificationProfileNobody': undefined;
+  'NotificationProfileMentions': undefined;
+  'NotificationProfileCalls': undefined;
+  'NotificationProfileSchedule': undefined;
+  'NotificationProfileFrom': undefined;
+  'NotificationProfileUntil': undefined;
+  'NotificationProfileOn': undefined;
+  'NotificationProfileOff': undefined;
+  'NotificationProfileDaily': undefined;
+  'NotificationProfileWeekdays': undefined;
+  'NotificationProfileWeekends': undefined;
+  'NotificationProfileForHour': undefined;
+  'NotificationProfileDelete': undefined;
+  'ChatColor': undefined;
+  'ChatColorWallpaper': undefined;
+  'ChatColorBubbles': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -2736,9 +2794,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'UserInfoSuggestPhoto': {
     'user': V;
   };
-  'UsernameAlso': {
-    'usernames': V;
-  };
   'PeerPickerUnknownPeer': {
     'id': V;
   };
@@ -2750,6 +2805,33 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'DesktopMenuHide': {
     'app': V;
+  };
+  'ActionGiftBadgeReceived': {
+    'user': V;
+  };
+  'ActionGiftBadgeSent': {
+    'user': V;
+  };
+  'ActionPaymentSent': {
+    'user': V;
+  };
+  'ActionPaymentReceived': {
+    'user': V;
+  };
+  'ActionPaymentActivationAsked': {
+    'user': V;
+  };
+  'ActionPaymentActivationAskedYou': {
+    'user': V;
+  };
+  'ActionPaymentActivated': {
+    'user': V;
+  };
+  'NotificationProfileOnUntil': {
+    'time': V;
+  };
+  'NotificationProfileDeleteInfo': {
+    'name': V;
   };
 }
 
@@ -3047,6 +3129,9 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PageTitleNotifications': {
     'count': V;
   };
+  'NotificationProfileChats': {
+    'count': V;
+  };
 }
 
 export interface LangKeyGroups {
@@ -3109,7 +3194,14 @@ export interface LangKeyGroups {
       | 'UserInfoResetToOriginalAlertText'
       | 'UserInfoSetCustomPhoto'
       | 'UserInfoSetCustomPhotoSuccessPhotoText'
-      | 'UserInfoSuggestPhoto';
+      | 'UserInfoSuggestPhoto'
+      | 'ActionGiftBadgeReceived'
+      | 'ActionGiftBadgeSent'
+      | 'ActionPaymentSent'
+      | 'ActionPaymentReceived'
+      | 'ActionPaymentActivationAsked'
+      | 'ActionPaymentActivationAskedYou'
+      | 'ActionPaymentActivated';
     variables: 'user';
   };
   'users': {
@@ -3189,7 +3281,8 @@ export interface LangKeyGroups {
       | 'LinkExpiresIn'
       | 'InviteLinkExpiresIn'
       | 'LastSeenTodayAt'
-      | 'LastSeenYesterdayAt';
+      | 'LastSeenYesterdayAt'
+      | 'NotificationProfileOnUntil';
     variables: 'time';
   };
   'phone': {
@@ -3225,7 +3318,8 @@ export interface LangKeyGroups {
     keys:
       | 'SignalDevicesUnlinkTitle'
       | 'ContextMenuNoForwardsPeer'
-      | 'StoriesSettingDeleteListInfo';
+      | 'StoriesSettingDeleteListInfo'
+      | 'NotificationProfileDeleteInfo';
     variables: 'name';
   };
   'date,time': {
@@ -3618,11 +3712,6 @@ export interface LangKeyGroups {
       | 'ReplyToQuote';
     variables: 'senderTitle';
   };
-  'usernames': {
-    keys:
-      | 'UsernameAlso';
-    variables: 'usernames';
-  };
   'id': {
     keys:
       | 'PeerPickerUnknownPeer';
@@ -3728,7 +3817,8 @@ export interface LangPluralKeyGroups {
       | 'Views'
       | 'Voice'
       | 'SeenByUsers'
-      | 'PageTitleNotifications';
+      | 'PageTitleNotifications'
+      | 'NotificationProfileChats';
     variables: 'count';
   };
   'index': {

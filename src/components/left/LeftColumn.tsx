@@ -211,7 +211,12 @@ function LeftColumn({
           return;
 
         case SettingsScreens.SignalProxy:
+        case SettingsScreens.SignalSealedSenderProxy:
           openSettingsScreen({ screen: SettingsScreens.DataStorage });
+          return;
+
+        case SettingsScreens.NotificationProfiles:
+          openSettingsScreen({ screen: SettingsScreens.Notifications });
           return;
 
         case SettingsScreens.Username:
