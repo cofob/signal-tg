@@ -1,4 +1,4 @@
-import type { ActionReturnType } from '../../types';
+import type { ActionReturnType, GlobalState, SharedState } from '../../types';
 import { ManagementProgress } from '../../../types';
 
 import {
@@ -73,22 +73,29 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
 
 // Reconnecting moves the live connections, an open link code and new requests to the new tunnel
 addActionHandler('setSignalProxyUrl', (global, actions, payload): ActionReturnType => {
+  // The link screen shows a spinner until a new code arrives through the new tunnel
+  saveProxySettings(global, { signalProxyUrl: payload.url }, true);
+});
+
+addActionHandler('setSignalSealedSenderProxyUrl', (global, actions, payload): ActionReturnType => {
+  saveProxySettings(global, { signalSealedSenderProxyUrl: payload.url });
+});
+
+function saveProxySettings(
+  global: GlobalState, settings: Partial<SharedState['settings']>, shouldResetQrCode?: boolean,
+) {
   // Only the master tab runs the API; a change from another tab reaches it after a reload
   const isMasterTab = selectTabState(global, getCurrentTabId()).isMasterTab;
 
-  global = updateSharedSettings(
-    global,
-    payload.isSealedSender ? { signalSealedSenderProxyUrl: payload.url } : { signalProxyUrl: payload.url },
-  );
+  global = updateSharedSettings(global, settings);
   // Changes to initial shared state are not shared, and a reload takes the shared copy, which would drop the URL
   global = updateSharedState(global, { isInitial: undefined });
-  // The link screen shows a spinner until a new code arrives through the new tunnel
-  if (isMasterTab) global = updateAuth(global, { qrCode: undefined });
+  if (isMasterTab && shouldResetQrCode) global = updateAuth(global, { qrCode: undefined });
   setGlobal(global);
 
   forceUpdateSharedStateCache();
   if (isMasterTab) void reconnectApi();
-});
+}
 
 addActionHandler('setAuthPhoneNumber', (global, actions, payload): ActionReturnType => {
   const { phoneNumber } = payload;

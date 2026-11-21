@@ -268,7 +268,6 @@ export enum SettingsScreens {
   CustomEmoji,
   KeyboardShortcuts,
   SignalProxy,
-  SignalSealedSenderProxy,
   Stories,
   Username,
   SignalPin,
@@ -276,6 +275,7 @@ export enum SettingsScreens {
   SignalPinConfirm,
   SignalDevices,
   NotificationProfiles,
+  SignalSealedSenderProxy,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

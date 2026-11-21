@@ -127,10 +127,15 @@ async function sendHttp2Request(
 ): Promise<HttpResponse | undefined> {
   let canRetry = true;
   for (;;) {
-    const existing = connections.http2Connections.get(host);
-    const isReused = Boolean(existing?.canOpenStreams);
-    const connection = isReused ? existing : await openHttp2Connection(connections, host, request.trafficClass);
+    const existing = getUsableHttp2Connection(connections, host);
+    const isReused = Boolean(existing);
+    const connection = existing ?? await openHttp2Connection(connections, host, request.trafficClass);
     if (!connection) return undefined;
+    // A setting changed while the connection opened: it carries nothing yet, so it closes and the request starts over
+    if (!connection.isOnCurrentTunnel) {
+      connection.retire();
+      continue;
+    }
     try {
       return await connection.request(request);
     } catch (err) {
@@ -142,6 +147,19 @@ async function sendHttp2Request(
       canRetry = false;
     }
   }
+}
+
+/**
+ * The host's HTTP/2 connection while new requests can use it. One whose tunnel a setting change ended stops taking
+ * requests; those in flight finish on it, and it closes after the last.
+ */
+function getUsableHttp2Connection({ http2Connections }: ClassConnections, host: string) {
+  const connection = http2Connections.get(host);
+  if (!connection?.canOpenStreams) return undefined;
+  if (connection.isOnCurrentTunnel) return connection;
+  connection.retire();
+  http2Connections.delete(host);
+  return undefined;
 }
 
 /** Opens one connection per host at a time; a host without HTTP/2 gets the tunnel as an idle HTTP/1.1 connection */
@@ -213,10 +231,11 @@ function acquireConnection(pool: HostPool): Promise<HttpConnection | undefined> 
   while (pool.idle.length) {
     const { connection, timer } = pool.idle.pop()!;
     clearTimeout(timer);
-    if (connection.tunnel.isOpen) {
+    if (getIsUsable(connection)) {
       pool.activeCount++;
       return Promise.resolve(connection);
     }
+    connection.tunnel.close();
   }
   if (pool.activeCount < MAX_CONNECTIONS_PER_HOST) {
     pool.activeCount++;
@@ -237,17 +256,30 @@ async function openConnection(pool: HostPool, host: string, trafficClass: Traffi
   }
 }
 
-/** Returns a slot: a reusable connection goes to the next waiter or the idle list; otherwise the slot frees up */
+/** Whether new requests can use the connection: it is open and its tunnel is still the class's tunnel */
+function getIsUsable(connection: HttpConnection) {
+  return connection.tunnel.isOpen && connection.tunnel.isOnCurrentTunnel;
+}
+
+/**
+ * Returns a slot: a reusable connection goes to the next waiter or the idle list; otherwise the slot frees up. A
+ * connection whose tunnel a setting change ended closes instead.
+ */
 function releaseConnection(pool: HostPool, connection: HttpConnection | undefined) {
+  if (connection && !getIsUsable(connection)) {
+    connection.tunnel.close();
+    connection = undefined;
+  }
+
   const waiter = pool.waiters.shift();
   if (waiter) {
     // The slot moves to the waiter; without a connection it opens a new one
-    waiter(connection?.tunnel.isOpen ? connection : undefined);
+    waiter(connection);
     return;
   }
 
   pool.activeCount--;
-  if (!connection?.tunnel.isOpen) return;
+  if (!connection) return;
   const entry = {
     connection,
     timer: setTimeout(() => {

@@ -9,6 +9,7 @@ import { startDeviceLink } from '../account/provisioning';
 import { uploadAttachment } from '../attachments/uploadAttachment';
 import { importBackupArchive } from '../backups/transferHistory';
 import { fetchProfile } from '../profiles/fetchProfile';
+import { getAccessKey } from '../sender/sealedSender';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
 import { lookupUsername, resolveUsernameLink } from '../usernames/lookupUsername';
 import { initSignalWasm } from '../wasm';
@@ -146,10 +147,9 @@ const signalDev = {
     const { account, connection, unauthenticatedChat } = getContext();
     const profileKey = aci ? (await store.getRecipient(aci))?.profileKey : account.profileKey;
     if (!profileKey) throw new Error('No profile key');
-    console.log(
-      '[signal] Profile',
-      await fetchProfile(connection, aci ?? account.aci, profileKey, aci ? unauthenticatedChat : undefined),
-    );
+    const accessKey = aci ? await getAccessKey(store, aci) : undefined;
+    const unauthenticated = accessKey ? { chat: unauthenticatedChat, accessKey } : undefined;
+    console.log('[signal] Profile', await fetchProfile(connection, aci ?? account.aci, profileKey, unauthenticated));
   },
 
   /** Replaces local data with a demo account, contacts, a group and messages; reload the page afterwards */

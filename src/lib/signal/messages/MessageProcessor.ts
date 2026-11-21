@@ -55,7 +55,7 @@ import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
-import { saveProfileKey } from '../sender/sealedSender';
+import { getAccessKey, saveProfileKey } from '../sender/sealedSender';
 import {
   describeSendError, getSendErrorKind, GroupTerminatedError, NotGroupMemberError, UnregisteredUserError,
 } from '../sender/sendErrors';
@@ -1651,16 +1651,17 @@ export default class MessageProcessor {
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
-    // Other users' profiles are fetched without account credentials
-    const chat = aci === account.aci ? undefined : unauthenticatedChat;
+    // Other users' profiles are fetched without account credentials, unless they turned sealed sender off
+    const accessKey = aci === account.aci ? undefined : await getAccessKey(store, aci);
+    const unauthenticated = accessKey ? { chat: unauthenticatedChat, accessKey } : undefined;
     let profile;
     try {
-      profile = await fetchProfile(connection, aci, profileKey, chat);
+      profile = await fetchProfile(connection, aci, profileKey, unauthenticated);
     } catch (err) {
       if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
       // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
       // try again after the usual interval instead of on every connection
-      const identityKey = await fetchProfileIdentityKey(connection, aci, profileKey, chat);
+      const identityKey = await fetchProfileIdentityKey(connection, aci, unauthenticated);
       if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
       await this.runSerial(async () => {
         await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });

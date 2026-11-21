@@ -39,7 +39,7 @@ const SignalProxyForm = ({
   savedUrl,
   onSave,
 }: OwnProps & StateProps) => {
-  const { setSignalProxyUrl } = getActions();
+  const { setSignalProxyUrl, setSignalSealedSenderProxyUrl } = getActions();
 
   const lang = useLang();
 
@@ -72,8 +72,13 @@ const SignalProxyForm = ({
     }
 
     setValue(url);
-    setSignalProxyUrl({ url, isSealedSender });
+    saveUrl(url);
     onSave?.();
+  });
+
+  const saveUrl = useLastCallback((url: string | undefined) => {
+    if (isSealedSender) setSignalSealedSenderProxyUrl({ url });
+    else setSignalProxyUrl({ url });
   });
 
   const handleCheck = useLastCallback(async () => {
@@ -96,7 +101,7 @@ const SignalProxyForm = ({
 
   const handleUseDefault = useLastCallback(() => {
     setValue('');
-    setSignalProxyUrl({ url: undefined, isSealedSender });
+    saveUrl(undefined);
     onSave?.();
   });
 

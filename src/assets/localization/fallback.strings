@@ -142,7 +142,7 @@
 "SignalProxyErrorInvalid" = "Invalid URL";
 "SignalProxyErrorProtocol" = "Use wss://, or ws:// on localhost";
 "SignalProxyErrorCredentials" = "Remove the user name and password";
-"SignalSealedProxyTitle" = "Sealed sender";
+"SignalSealedProxyTitle" = "Sealed sender tunnel";
 "SignalSealedProxySame" = "Same tunnel";
 "SignalSealedProxyAbout" = "Messages sent with sealed sender, profile and username lookups and downloads carry no account credentials. Set a second tunnel server for them, so that no single tunnel operator can link them to your account. Leave it empty to send everything through the proxy server.";
 "SignalSealedProxyUseMain" = "Use proxy server";

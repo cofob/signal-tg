@@ -82,6 +82,7 @@ const MAX_DEVICE_LIST_ATTEMPTS = 3;
 const SEND_CONCURRENCY = 8;
 const HTTP_OK = 200;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 const HTTP_GONE = 410;
@@ -131,7 +132,7 @@ export async function sendContent(
     if (status === HTTP_OK) return { isSealedSender };
     if (status === HTTP_NOT_FOUND) throw new UnregisteredUserError(destination);
 
-    if (status === HTTP_UNAUTHORIZED && state.accessKey && !isStory) {
+    if (getIsAccessKeyRejected(status) && state.accessKey && !isStory) {
       await rejectAccessKey(state);
       continue;
     }
@@ -193,6 +194,11 @@ export async function createAciStores({ store, account }: SenderContext) {
   const keyPair = await store.getItem('aciIdentityKeyPair');
   if (!keyPair) throw new Error('ACI identity key is missing');
   return createProtocolStores(store, { serviceId: account.aci, keyPair, registrationId: account.registrationId });
+}
+
+/** The server refuses an invalid access key with 401 or 403 (Signal Desktop `ts/textsecure/OutgoingMessage.preload.ts`) */
+function getIsAccessKeyRejected(status: number) {
+  return status === HTTP_UNAUTHORIZED || status === HTTP_FORBIDDEN;
 }
 
 async function createSendState(context: SenderContext, destination: string): Promise<SendState> {
@@ -327,8 +333,8 @@ async function fetchSessions(state: SendState, deviceSpecifier: string) {
       'GET', path, undefined, { 'Unidentified-Access-Key': state.accessKey },
     )
     : undefined;
-  if (response?.status === HTTP_UNAUTHORIZED) await rejectAccessKey(state);
-  if (!response || response.status === HTTP_UNAUTHORIZED) {
+  if (response && getIsAccessKeyRejected(response.status)) await rejectAccessKey(state);
+  if (!response || getIsAccessKeyRejected(response.status)) {
     response = await connection.sendJsonRequest<PreKeyResponse>('GET', path);
   }
 

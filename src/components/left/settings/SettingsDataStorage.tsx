@@ -219,11 +219,11 @@ const SettingsDataStorage = ({
         </ListItem>
         <ListItem
           icon="lock"
-          narrow
+          multiline
           onClick={handleOpenSealedSenderProxy}
         >
-          {lang('SignalSealedProxyTitle')}
-          <span className="settings-item__current-value">
+          <span className="title">{lang('SignalSealedProxyTitle')}</span>
+          <span className="subtitle">
             {signalSealedSenderProxyUrl
               ? new URL(signalSealedSenderProxyUrl).host
               : lang('SignalSealedProxySame')}

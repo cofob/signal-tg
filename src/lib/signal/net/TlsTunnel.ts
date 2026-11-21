@@ -40,6 +40,9 @@ export default class TlsTunnel {
   /** The ALPN protocol the server chose, once the handshake completes */
   alpnProtocol?: string;
 
+  /** The tunnel this connection runs through, `undefined` for the default one; it never changes */
+  readonly tunnelUrl: string | undefined;
+
   private transport!: TunnelTransport;
 
   private tls: wasm.TlsClient;
@@ -56,6 +59,7 @@ export default class TlsTunnel {
 
   private constructor(host: string, readonly trafficClass: TrafficClass, alpnProtocols: string[]) {
     this.host = host;
+    this.tunnelUrl = getSignalTunnelUrl(trafficClass);
     this.tls = new wasm.TlsClient(host, [getSignalCaDer()], alpnProtocols);
   }
 
@@ -74,7 +78,7 @@ export default class TlsTunnel {
         reject(error);
       }, HANDSHAKE_TIMEOUT_MS);
 
-      tunnel.transport = openTransport(host, trafficClass, {
+      tunnel.transport = openTransport(host, trafficClass, tunnel.tunnelUrl, {
         onOpen: () => {
           tunnel.isTransportOpen = true;
           tunnel.flush();
@@ -109,6 +113,11 @@ export default class TlsTunnel {
 
   get isOpen() {
     return !this.isClosed;
+  }
+
+  /** Whether new requests of this class still go through this tunnel, which a proxy setting change ends */
+  get isOnCurrentTunnel() {
+    return this.tunnelUrl === getSignalTunnelUrl(this.trafficClass);
   }
 
   /** Bytes written to the tunnel but not sent to the network yet */
@@ -179,8 +188,9 @@ export default class TlsTunnel {
 }
 
 /** The proxy settings pick a WebSocket tunnel; without one the desktop app connects natively */
-function openTransport(host: string, trafficClass: TrafficClass, handlers: TunnelTransportHandlers): TunnelTransport {
-  const tunnelUrl = getSignalTunnelUrl(trafficClass);
+function openTransport(
+  host: string, trafficClass: TrafficClass, tunnelUrl: string | undefined, handlers: TunnelTransportHandlers,
+): TunnelTransport {
   if (!tunnelUrl && hasNativeTransport()) return new NativeTransport(host, trafficClass, handlers);
 
   const url = new URL(tunnelUrl ?? getDefaultTunnelUrl());
