@@ -5,9 +5,12 @@ import type MessageDb from '../db/MessageDb';
 import type { ConversationRecord, NewMessageRecord } from '../db/MessageDb';
 import type SignalStore from '../store/SignalStore';
 
+import { bufferToBase64Url } from '../../../util/encoding/base64';
 import { bufferFromHex } from '../../../util/encoding/buffer';
+import { buildStickerPackLink } from '../../../util/signalLinks';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
+import { buildGroupInviteLink } from '../groups/inviteLinks';
 import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { wasm } from '../wasm';
 
@@ -38,6 +41,10 @@ const SMILEY_RADIUS = 220;
 const SMILEY_EYE_OFFSET = 70;
 const SMILEY_EYE_RADIUS = 28;
 const SMILEY_MOUTH_RADIUS = 120;
+// 32 bytes of entropy and the 16-byte id of a username link, a group's master key and its link password
+const DEMO_USERNAME_LINK_LENGTH = 48;
+const DEMO_KEY_LENGTH = 32;
+const DEMO_PASSWORD_LENGTH = 16;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -71,6 +78,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
   const dave = crypto.randomUUID();
   const eve = crypto.randomUUID();
   const frank = crypto.randomUUID();
+  const linda = crypto.randomUUID();
   const now = Date.now();
 
   await store.setItem('account', {
@@ -162,8 +170,17 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     {
       id: eve, localId: 9, type: 'private', profileName: 'Eve', e164: '+15550100009', unreadCount: 0, isBlocked: true,
     },
+    {
+      id: linda,
+      localId: 10,
+      type: 'private',
+      profileName: 'Linda',
+      about: 'Message me: https://signal.me/#p/+15550100001',
+      unreadCount: 0,
+      isAccepted: true,
+    },
   ];
-  const [, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat] = conversations;
+  const [, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat] = conversations;
 
   const messages: [ConversationRecord, DemoMessage][] = [
     [aliceChat, {
@@ -426,6 +443,9 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     }],
   ];
 
+  // One link of each kind, to try how the app opens them
+  messages.push(...buildLinkMessages(lindaChat, linda, now));
+
   const lastByConversation = new Map<string, { id: number; sentAt: number }>();
   for (const [conversation, { dataMessage, kind = 'message', ...record }] of messages) {
     const message = await db.addMessage({
@@ -445,6 +465,32 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     const last = lastByConversation.get(conversation.id);
     await db.putConversation({ ...conversation, lastMessageId: last?.id, lastMessageAt: last?.sentAt });
   }
+}
+
+/** Messages with the links that Signal's apps share, and some that only look like them */
+function buildLinkMessages(conversation: ConversationRecord, authorAci: string, now: number): [
+  ConversationRecord, DemoMessage,
+][] {
+  const { id, key } = getKnownStickerPacks()[DEMO_STICKER_PACK_INDEX];
+  const links = [
+    `Username: https://signal.me/#eu/${bufferToBase64Url(getRandomBytes(DEMO_USERNAME_LINK_LENGTH))}`,
+    'Phone number: https://signal.me/#p/+15550100001',
+    `Group: ${buildGroupInviteLink(getRandomBytes(DEMO_KEY_LENGTH), getRandomBytes(DEMO_PASSWORD_LENGTH))}`,
+    `Sticker pack: ${buildStickerPackLink(id, key)}`,
+    'Signal proxy: https://signal.tube/#proxy.example.org',
+    'Call: https://signal.link/call/#key=bcdf-ghkm-npqr-stxz-bcdf-ghkm-npqr-stxz',
+    'In the app scheme: sgnl://signal.me/#p/+15550100001',
+    'Artist series: https://signal.art/',
+    'Donate: https://signaldonations.org/',
+    'Look-alike host: https://signal.me.example.com/#p/+15550100001',
+  ];
+  return links.map((body, index) => [conversation, {
+    authorAci,
+    sentAt: now - (links.length - index) * MINUTE,
+    isOutgoing: false,
+    readAt: now,
+    dataMessage: { body },
+  }]);
 }
 
 /**
