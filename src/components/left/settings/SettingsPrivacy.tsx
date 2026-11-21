@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type {
-  ApiKeyTransparencyStatus, ApiPrivacySettings, ApiSignalMessageSettings, ApiSignalPinSettings,
+  ApiKeyTransparencySelfStatus, ApiPrivacySettings, ApiSignalMessageSettings, ApiSignalPinSettings,
 } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { RegularLangKey } from '../../../types/language';
@@ -33,7 +33,7 @@ type OwnProps = {
 type StateProps = {
   signalPin?: ApiSignalPinSettings;
   signalMessageSettings?: ApiSignalMessageSettings;
-  keyTransparencySelfStatus?: ApiKeyTransparencyStatus;
+  keyTransparencySelfStatus?: ApiKeyTransparencySelfStatus;
   isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
@@ -56,8 +56,8 @@ const KEY_TRANSPARENCY_SELF_TEXTS = {
   running: 'KeyTransRunning',
   ok: 'KeyTransOk',
   fail: 'KeyTransFail',
-  unavailable: 'KeyTransFail',
-} as const satisfies Record<ApiKeyTransparencyStatus, RegularLangKey>;
+  intermittent: 'KeyTransSelfRetry',
+} as const satisfies Record<ApiKeyTransparencySelfStatus, RegularLangKey>;
 
 const SettingsPrivacy = ({
   isActive,

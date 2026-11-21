@@ -13,7 +13,7 @@ import type {
   ApiFormattedText,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiKeyTransparencyStatus,
+  ApiKeyTransparencySelfStatus,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -169,7 +169,7 @@ export interface AccountSettings {
   signalDevices?: ApiSignalDevices;
   signalMessageSettings?: ApiSignalMessageSettings;
   // The result of the last key transparency check of our own account
-  keyTransparencySelfStatus?: ApiKeyTransparencyStatus;
+  keyTransparencySelfStatus?: ApiKeyTransparencySelfStatus;
   isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;

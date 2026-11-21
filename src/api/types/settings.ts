@@ -12,10 +12,14 @@ export type ApiSignalPinSettings = {
 };
 
 /**
- * The state of an automatic key verification (key transparency): `idle` before it runs, `unavailable` for a chat
- * that cannot be checked
+ * The state of an automatic key verification (key transparency) of a chat: `idle` before it runs, `fail` when the log
+ * does not list the keys, `error` when the check could not finish and may be repeated, `unavailable` for a chat that
+ * cannot be checked
  */
-export type ApiKeyTransparencyStatus = 'idle' | 'running' | 'ok' | 'fail' | 'unavailable';
+export type ApiKeyTransparencyStatus = 'idle' | 'running' | 'ok' | 'fail' | 'error' | 'unavailable';
+
+/** The state of the check of our own account; `intermittent` is a first failure, which the check repeats a day later */
+export type ApiKeyTransparencySelfStatus = 'idle' | 'running' | 'ok' | 'fail' | 'intermittent';
 
 /** The message settings of the account, which the storage service keeps for all its devices */
 export type ApiSignalMessageSettings = {

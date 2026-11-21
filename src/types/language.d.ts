@@ -190,12 +190,17 @@ export interface LangPair {
   'KeyTransIdle': undefined;
   'KeyTransRunning': undefined;
   'KeyTransOk': undefined;
+  'KeyTransUnavailable': undefined;
   'KeyTransFail': undefined;
+  'KeyTransError': undefined;
   'KeyTransHint': undefined;
   'KeyTransLearnMore': undefined;
   'KeyTransOkText': undefined;
+  'KeyTransErrorText': undefined;
   'KeyTransUnavailableText': undefined;
   'KeyTransSelfIdle': undefined;
+  'KeyTransSelfRetry': undefined;
+  'KeyTransSelfFailedText': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;

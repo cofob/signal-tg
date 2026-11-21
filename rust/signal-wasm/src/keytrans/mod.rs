@@ -6,7 +6,8 @@
 //! crate. Differences from upstream:
 //!
 //! - The current time is an argument instead of `SystemTime::now`, which `wasm32-unknown-unknown` lacks. The
-//!   caller passes the server time, so a wrong device clock does not fail the verification.
+//!   caller passes `getServerTime`, which follows the `Date` header of the answers of the chat and storage servers
+//!   and is the device clock until the first one arrives.
 //! - Request failures are the exceptions of the JS callbacks, which `exports.rs` rethrows unchanged.
 //! - No logging.
 

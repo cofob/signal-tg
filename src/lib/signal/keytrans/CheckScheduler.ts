@@ -15,7 +15,12 @@ export default class CheckScheduler {
   // Changes whenever a timer is replaced or stopped, so a stale scheduling step does not set another timer
   private generation = 0;
 
-  constructor(private store: SignalStore, private interval: number, private callback: () => Promise<void>) {}
+  constructor(
+    private store: SignalStore,
+    private interval: number,
+    private firstDelay: number,
+    private callback: () => Promise<void>,
+  ) {}
 
   start() {
     if (this.isRunning) return;
@@ -50,9 +55,15 @@ export default class CheckScheduler {
     clearTimeout(this.timer);
     const { interval } = this;
     const now = Date.now();
-    // Without a last check, the first check comes at a random time within an interval
-    const lastCheck = await this.store.getItem('keyTransparencyLastSelfCheck') ?? now - interval * Math.random();
+    let lastCheck = await this.store.getItem('keyTransparencyLastSelfCheck');
+    if (lastCheck === undefined) {
+      // A new account, or one that never ran a check, starts `firstDelay` from now; the store keeps the time
+      lastCheck = now + this.firstDelay - interval;
+      await this.store.setItem('keyTransparencyLastSelfCheck', lastCheck);
+    }
     if (generation !== this.generation) return;
+    // A device clock that went back leaves a last check in the future, which would postpone the next one by as much
+    lastCheck = Math.min(lastCheck, now);
 
     const jitter = 1 + (Math.random() * 2 - 1) * JITTER_SHARE / 2;
     const delay = Math.max(0, lastCheck + interval * jitter - now);

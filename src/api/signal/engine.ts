@@ -2,6 +2,7 @@ import MessageDb from '../../lib/signal/db/MessageDb';
 import GroupManager from '../../lib/signal/groups/GroupManager';
 import KeyTransparency from '../../lib/signal/keytrans/KeyTransparency';
 import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
+import { setServerTimeListener } from '../../lib/signal/net/http';
 import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
@@ -9,6 +10,10 @@ import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
 import { handleStickerPacksChange } from './updaters/stickers';
 import { handleStoryChanges } from './updaters/stories';
+import { sendApiUpdate } from './updates';
+
+// The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
+const KEY_TRANSPARENCY_FAILED_ERROR = 'SIGNAL_KEY_TRANSPARENCY_FAILED';
 
 /** The Signal engine of this worker: protocol store, message database, connections and processing */
 export const store = new SignalStore();
@@ -29,11 +34,20 @@ export const processor = new MessageProcessor(db, client, {
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
   onStickerPacksChange: (ids) => void handleStickerPacksChange(ids).catch(logError),
+  onOwnIdentifierChange: (identifier) => void keyTransparency.onKnownIdentifierChange(identifier).catch(logError),
 });
 
 export const groups = new GroupManager(client, db, processor, logError);
 
-export const keyTransparency = new KeyTransparency(client, db);
+export const keyTransparency = new KeyTransparency(client, db, {
+  syncStorage: () => processor.syncStorage(),
+  onSelfCheckFailed: () => sendApiUpdate({
+    '@type': 'error', error: { message: KEY_TRANSPARENCY_FAILED_ERROR, hasErrorKey: true },
+  }),
+});
+
+// The Date header of the answers of the chat and storage servers gives the server time (`getServerTime`)
+setServerTimeListener((serverTimeOffset) => sendApiUpdate({ '@type': 'updateServerTimeOffset', serverTimeOffset }));
 
 // Safety number change notices; PNI identities belong to phone numbers, which have no conversation of their own
 store.onIdentityChange = (serviceId) => {

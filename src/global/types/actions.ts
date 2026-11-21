@@ -1575,6 +1575,7 @@ export interface ActionPayloads {
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
   checkKeyTransparency: WithTabId | undefined;
+  cancelKeyTransparencyCheck: WithTabId | undefined;
   loadKeyTransparencySelfStatus: undefined;
   runKeyTransparencySelfCheck: undefined;
   openSafetyNumberChangeModal: {

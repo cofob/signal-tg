@@ -4,6 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiKeyTransparencyStatus, ApiUser } from '../../../api/types';
 import type { TabState } from '../../../global/types';
 import type { IconName } from '../../../types/icons';
+import type { RegularLangKey } from '../../../types/language';
 
 import { KEY_TRANSPARENCY_URL } from '../../../config';
 import { getPeerTitle } from '../../../global/helpers/peers';
@@ -39,9 +40,17 @@ const BLOCK_PATTERN = new RegExp(`.{1,${BLOCK_SIZE}}`, 'g');
 const KEY_TRANSPARENCY_ICONS = {
   idle: 'key',
   ok: 'check-filled',
-  fail: 'info',
+  fail: 'warning',
+  error: 'info',
   unavailable: 'info',
 } as const satisfies Partial<Record<ApiKeyTransparencyStatus, IconName>>;
+const KEY_TRANSPARENCY_BUTTON_KEYS = {
+  idle: 'KeyTransIdle',
+  ok: 'KeyTransOk',
+  fail: 'KeyTransFail',
+  error: 'KeyTransError',
+  unavailable: 'KeyTransUnavailable',
+} as const satisfies Partial<Record<ApiKeyTransparencyStatus, RegularLangKey>>;
 
 /**
  * The safety number with a contact and its QR code, which their phone can scan (Signal Desktop
@@ -52,7 +61,9 @@ const SafetyNumberModal = ({
   modal,
   user,
 }: OwnProps & StateProps) => {
-  const { closeSafetyNumberModal, toggleSafetyNumberVerified, checkKeyTransparency } = getActions();
+  const {
+    closeSafetyNumberModal, toggleSafetyNumberVerified, checkKeyTransparency, cancelKeyTransparencyCheck,
+  } = getActions();
 
   const lang = useLang();
 
@@ -62,6 +73,8 @@ const SafetyNumberModal = ({
   const name = renderingUser ? getPeerTitle(lang, renderingUser) : '';
 
   const handleClose = useLastCallback(() => {
+    // The check stops at its next request, such as the one that waits out a rate limit
+    cancelKeyTransparencyCheck();
     closeSafetyNumberModal();
   });
 
@@ -76,24 +89,28 @@ const SafetyNumberModal = ({
   function renderKeyTransparency(status: ApiKeyTransparencyStatus) {
     const isRunning = status === 'running';
     const icon = status === 'running' ? undefined : KEY_TRANSPARENCY_ICONS[status];
-    const buttonText = isRunning
-      ? lang('KeyTransRunning')
-      : lang(status === 'idle' ? 'KeyTransIdle' : status === 'ok' ? 'KeyTransOk' : 'KeyTransFail');
+    const buttonText = status === 'running' ? lang('KeyTransRunning') : lang(KEY_TRANSPARENCY_BUTTON_KEYS[status]);
     const text = status === 'ok'
       ? lang('KeyTransOkText')
       : status === 'fail'
         ? lang('KeyTransFailText', { user: name })
-        : status === 'unavailable' ? lang('KeyTransUnavailableText') : undefined;
+        : status === 'error'
+          ? lang('KeyTransErrorText')
+          : status === 'unavailable' ? lang('KeyTransUnavailableText') : undefined;
 
     return (
       <div className={styles.keyTransparency}>
         <h3 className={styles.keyTransparencyTitle}>{lang('KeyTransTitle')}</h3>
         <Button
-          className={buildClassName(styles.keyTransparencyButton, status === 'ok' && styles.isVerified)}
+          className={buildClassName(
+            styles.keyTransparencyButton,
+            status === 'ok' && styles.isVerified,
+            status === 'fail' && styles.isFailed,
+          )}
           color="translucent"
           fluid
           disabled={isRunning}
-          nonInteractive={status !== 'idle'}
+          nonInteractive={status === 'unavailable'}
           noForcedUpperCase
           onClick={handleKeyTransparencyClick}
         >

@@ -9,6 +9,21 @@ import { createTransport, KeyTransparencyRequestError } from './transport';
 import NetworkError from '../net/NetworkError';
 import CheckScheduler from './CheckScheduler';
 
+/** A check that could not finish, so trying again later may succeed: the client is not connected or has no verdict yet */
+export class KeyTransparencyUnfinishedError extends Error {}
+
+/** Whether a failed check says nothing about the keys, as opposed to the log not listing them */
+export function isUnfinishedCheck(err: unknown) {
+  return err instanceof KeyTransparencyUnfinishedError || err instanceof NetworkError
+    || err instanceof KeyTransparencyRequestError || (err instanceof DOMException && err.name === 'AbortError');
+}
+
+type KeyTransparencyEvents = {
+  syncStorage(): Promise<unknown>;
+  // Our own account failed its check for the first time in a row
+  onSelfCheckFailed(): void;
+};
+
 /** The identifiers of an account that changes the search for it, as the `AccountDataField` of the Node package */
 export type KnownIdentifier = 'username' | 'phoneNumberDiscoverability';
 
@@ -27,6 +42,8 @@ const SECOND_MS = 1000;
 const MINUTE_MS = 60 * SECOND_MS;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 const WEEK_MS = 7 * DAY_MS;
+// Signal Desktop runs the first self check this long after linking or registration
+const FIRST_SELF_CHECK_DELAY_MS = 5 * MINUTE_MS;
 // The numbers of the Fibonacci sequence that Signal Desktop retries with, in seconds; requests are large
 const RETRY_DELAYS_MS = [5, 8, 13, 21, 34, 55].map((seconds) => seconds * SECOND_MS);
 // Signal Desktop waits this long after our number or username changed, which the log takes a while to show
@@ -50,9 +67,11 @@ export default class KeyTransparency {
   // writes them back
   private queue = Promise.resolve();
 
-  constructor(private client: SignalClient, private db: MessageDb) {
+  constructor(private client: SignalClient, private db: MessageDb, private events: KeyTransparencyEvents) {
     // A failed self check is kept in the health, and tries again at the time that it sets
-    this.scheduler = new CheckScheduler(client.store, WEEK_MS, () => this.selfCheck().catch(() => undefined));
+    this.scheduler = new CheckScheduler(
+      client.store, WEEK_MS, FIRST_SELF_CHECK_DELAY_MS, () => this.selfCheck().catch(() => undefined),
+    );
   }
 
   /** Runs the self check every week while the client is connected */
@@ -92,6 +111,8 @@ export default class KeyTransparency {
     const selfHealth = await this.client.store.getItem('keyTransparencySelfHealth');
     if (selfHealth === undefined) {
       await this.selfCheck(signal);
+    } else if (selfHealth === 'intermittent') {
+      throw new KeyTransparencyUnfinishedError('The key transparency check of our own account failed once');
     } else if (selfHealth !== 'ok') {
       throw new Error('The key transparency check of our own account failed');
     }
@@ -106,11 +127,9 @@ export default class KeyTransparency {
   }
 
   /** The result of the last self check; `idle` before the first, or when the log could not be reached */
-  async getSelfStatus(): Promise<'idle' | 'running' | 'ok' | 'fail'> {
+  async getSelfStatus(): Promise<'idle' | 'running' | 'ok' | 'fail' | 'intermittent'> {
     if (this.selfCheckPromise) return 'running';
-    const health = await this.client.store.getItem('keyTransparencySelfHealth');
-    if (health === 'ok') return 'ok';
-    return health === 'fail' ? 'fail' : 'idle';
+    return await this.client.store.getItem('keyTransparencySelfHealth') ?? 'idle';
   }
 
   /** Forgets what the log held for the identifier that we changed, so the change is not taken for tampering */
@@ -143,6 +162,12 @@ export default class KeyTransparency {
     const keyPair = await store.getItem('aciIdentityKeyPair');
     if (!account || !keyPair) throw new Error('This browser is not linked to a Signal account');
 
+    // Signal Desktop syncs the storage service first, since the username or number may have changed on another device
+    // and the log shows it already
+    if (await store.getItem('keyTransparencySelfHealth') === 'intermittent') {
+      await this.events.syncStorage().catch(() => undefined);
+    }
+
     const username = (await this.db.getConversation(account.aci))?.username;
     try {
       await this.check({
@@ -170,6 +195,7 @@ export default class KeyTransparency {
       if (newHealth === 'intermittent') {
         await this.scheduler.runAt(Date.now() + INTERMITTENT_ERROR_RETRY_DELAY_MS);
       }
+      if (newHealth === 'fail' && oldHealth !== 'fail') this.events.onSelfCheckFailed();
       throw err;
     }
   }
@@ -199,7 +225,7 @@ export default class KeyTransparency {
     aci, identityKey, e164, usernameHash, isSelf, isE164Discoverable,
   }: CheckRequest, signal?: AbortSignal) {
     // The socket without credentials would connect on its own, but a client that is not connected has no account to check
-    if (!this.client.isConnected) throw new Error('Signal is not connected');
+    if (!this.client.isConnected) throw new KeyTransparencyUnfinishedError('Signal is not connected');
     const { store, unauthenticatedChat } = this.client.getSenderContext();
     signal?.throwIfAborted();
 

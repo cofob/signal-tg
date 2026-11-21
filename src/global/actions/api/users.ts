@@ -554,11 +554,19 @@ addActionHandler('openSafetyNumberModal', async (global, actions, payload): Prom
   if (result?.keyTransparencyStatus === 'idle') actions.checkKeyTransparency({ tabId });
 });
 
+addActionHandler('cancelKeyTransparencyCheck', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const modal = selectTabState(global, tabId).safetyNumberModal;
+  const user = modal && selectUser(global, modal.userId);
+  if (user) await callApi('cancelKeyTransparencyCheck', { user });
+});
+
 addActionHandler('checkKeyTransparency', async (global, actions, payload): Promise<void> => {
   const { tabId = getCurrentTabId() } = payload || {};
   const modal = selectTabState(global, tabId).safetyNumberModal;
   const user = modal && selectUser(global, modal.userId);
-  if (!modal || !user || modal.keyTransparencyStatus !== 'idle') return;
+  const status = modal?.keyTransparencyStatus;
+  if (!modal || !user || !status || status === 'running' || status === 'unavailable') return;
 
   global = updateTabState(global, { safetyNumberModal: { ...modal, keyTransparencyStatus: 'running' } }, tabId);
   setGlobal(global);
