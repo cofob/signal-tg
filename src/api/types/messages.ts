@@ -646,7 +646,6 @@ export interface ApiMessage {
   guestChatViaId?: string;
   postAuthorTitle?: string;
   isScheduled?: boolean;
-  scheduleRepeatPeriod?: number;
   shouldHideKeyboardButtons?: boolean;
   isHideKeyboardSelective?: boolean;
   isFromScheduled?: boolean;

@@ -462,7 +462,6 @@ const PollModal = ({
     poll: ApiNewPoll,
     isSilent?: boolean,
     scheduledAt?: number,
-    scheduleRepeatPeriod?: number,
   ) => {
     sendMessage({
       messageList,
@@ -470,7 +469,6 @@ const PollModal = ({
       poll,
       isSilent: scheduledAt ? undefined : (isSilent || isSilentPosting),
       scheduledAt,
-      scheduleRepeatPeriod,
     });
     closePollModal();
   });
@@ -485,14 +483,14 @@ const PollModal = ({
     submitPoll(poll, isSilent);
   });
 
-  const handleSendScheduled = useLastCallback((scheduledAt: number, scheduleRepeatPeriod?: number) => {
+  const handleSendScheduled = useLastCallback((scheduledAt: number) => {
     const poll = buildPoll();
 
     if (!poll) {
       return;
     }
 
-    submitPoll(poll, undefined, scheduledAt, scheduleRepeatPeriod);
+    submitPoll(poll, undefined, scheduledAt);
   });
 
   const handlePrimarySend = useLastCallback(() => {

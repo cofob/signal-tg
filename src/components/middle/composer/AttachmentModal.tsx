@@ -82,7 +82,7 @@ export type OwnProps = {
   onSendSilent: (sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true) => void;
   onSendScheduled: (
     sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true,
-    scheduledAt?: number, scheduleRepeatPeriod?: number,
+    scheduledAt?: number,
   ) => void;
   onSendWhenOnline?: NoneToVoidFunction;
 };
@@ -371,14 +371,14 @@ const AttachmentModal = ({
   );
 
   const sendAttachments = useLastCallback((
-    isSilent?: boolean, scheduledAt?: number | true, scheduleRepeatPeriod?: number,
+    isSilent?: boolean, scheduledAt?: number | true,
   ) => {
     if (!isOpen || hasPreparingAttachments) return;
 
     const shouldSendScheduled = (shouldSchedule || scheduledAt) && isForMessage && !editingMessage;
     if (shouldSendScheduled) {
       const actualScheduledAt = typeof scheduledAt === 'number' ? scheduledAt : undefined;
-      onSendScheduled(isSendingCompressed, shouldSendGrouped, isInvertedMedia, actualScheduledAt, scheduleRepeatPeriod);
+      onSendScheduled(isSendingCompressed, shouldSendGrouped, isInvertedMedia, actualScheduledAt);
     } else if (isSilent) {
       onSendSilent(isSendingCompressed, shouldSendGrouped, isInvertedMedia);
     } else {

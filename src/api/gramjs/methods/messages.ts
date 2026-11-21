@@ -343,7 +343,7 @@ export function sendMessageLocal(
   const {
     chat, lastMessageId, text, entities, richMessage, replyInfo,
     attachment, sticker, story, gif, audio, poll,
-    contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
+    contact, scheduledAt, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
     dice,
   } = params;
 
@@ -367,7 +367,6 @@ export function sendMessageLocal(
     contact,
     groupedId,
     scheduledAt,
-    scheduleRepeatPeriod,
     sendAs,
     story,
     isInvertedMedia,
@@ -396,7 +395,7 @@ export function sendApiMessage(
     chat, text, entities, richMessage, replyInfo,
     attachment, sticker, story, gif, audio, poll, contact, dice,
 
-    isSilent, scheduledAt, scheduleRepeatPeriod, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
+    isSilent, scheduledAt, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
     isInvertedMedia, webPageMediaSize, webPageUrl,
   } = params;
 
@@ -433,7 +432,6 @@ export function sendApiMessage(
       groupedId,
       isSilent,
       scheduledAt,
-      scheduleRepeatPeriod,
     }, randomId, localMessage, onProgress, cancelSendingStatusTimeout);
   }
 
@@ -523,7 +521,6 @@ export function sendApiMessage(
       replyTo: replyInfo && buildInputReplyTo(replyInfo),
       silent: isSilent || undefined,
       scheduleDate: scheduledAt,
-      scheduleRepeatPeriod,
       sendAs: sendAs && buildInputPeer(sendAs.id, sendAs.accessHash),
       updateStickersetsOrder: shouldUpdateStickerSetOrder || undefined,
       invertMedia: isInvertedMedia || undefined,
@@ -815,7 +812,6 @@ function sendGroupedMedia(
     groupedId,
     isSilent,
     scheduledAt,
-    scheduleRepeatPeriod,
     sendAs,
   }: {
     chat: ApiChat;
@@ -826,7 +822,6 @@ function sendGroupedMedia(
     groupedId: string;
     isSilent?: boolean;
     scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
     sendAs?: ApiPeer;
   },
   randomId: GramJs.long,
@@ -911,7 +906,6 @@ function sendGroupedMedia(
       replyTo: replyInfo && buildInputReplyTo(replyInfo),
       ...(isSilent && { silent: isSilent }),
       ...(scheduledAt && { scheduleDate: scheduledAt }),
-      ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
     }), {
       shouldIgnoreUpdates: true,
@@ -1043,7 +1037,6 @@ export async function editMessage({
       peer: buildInputPeer(chat.id, chat.accessHash),
       id: message.id,
       ...(isScheduled && { scheduleDate: message.date }),
-      ...(message.scheduleRepeatPeriod && { scheduleRepeatPeriod: message.scheduleRepeatPeriod }),
       ...(noWebPage && { noWebpage: noWebPage }),
       ...(isInvertedMedia && { invertMedia: isInvertedMedia }),
     }), { shouldThrow: true });
@@ -1095,18 +1088,15 @@ export async function rescheduleMessage({
   chat,
   message,
   scheduledAt,
-  scheduleRepeatPeriod,
 }: {
   chat: ApiChat;
   message: ApiMessage;
   scheduledAt: number;
-  scheduleRepeatPeriod?: number;
 }) {
   await invokeRequest(new GramJs.messages.EditMessage({
     peer: buildInputPeer(chat.id, chat.accessHash),
     id: message.id,
     scheduleDate: scheduledAt,
-    scheduleRepeatPeriod,
   }));
 }
 
@@ -2165,7 +2155,7 @@ export async function fetchExtendedMedia({
 export function forwardMessagesLocal(params: ForwardMessagesParams) {
   const {
     toChat, toThreadId, messages,
-    scheduledAt, scheduleRepeatPeriod, sendAs, noAuthors, noCaptions,
+    scheduledAt, sendAs, noAuthors, noCaptions,
     privateForwardName, wasDrafted, lastMessageId,
   } = params;
 
@@ -2178,7 +2168,6 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
       toThreadId: Number(toThreadId),
       message,
       scheduledAt,
-      scheduleRepeatPeriod,
       noAuthors,
       noCaptions,
       privateForwardName,
@@ -2201,7 +2190,7 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
 export async function forwardApiMessages(params: ForwardMessagesParams) {
   const {
     fromChat, toChat, toThreadId, messages, isSilent,
-    scheduledAt, scheduleRepeatPeriod, sendAs, withMyScore, noAuthors, noCaptions,
+    scheduledAt, sendAs, withMyScore, noAuthors, noCaptions,
     forwardedLocalMessagesSlice,
   } = params;
 
@@ -2228,7 +2217,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
       dropMediaCaptions: noCaptions || undefined,
       ...(toThreadId && { topMsgId: Number(toThreadId) }),
       ...(scheduledAt && { scheduleDate: scheduledAt }),
-      ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
     }), {
       shouldThrow: true,

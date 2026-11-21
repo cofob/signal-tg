@@ -261,7 +261,7 @@ const MusicPickerModal = ({
   });
 
   const submitContent = useLastCallback(async (
-    { audio, file }: SendContent, scheduledAt?: number, scheduleRepeatPeriod?: number,
+    { audio, file }: SendContent, scheduledAt?: number,
   ) => {
     closeMusicPicker();
 
@@ -278,14 +278,13 @@ const MusicPickerModal = ({
       attachments: attachment && [attachment],
       isSilent: scheduledAt ? undefined : isSilentPosting,
       scheduledAt,
-      scheduleRepeatPeriod,
     });
   });
 
   const handleSubmit = useLastCallback((content: SendContent) => {
     if (isInScheduledList) {
-      requestCalendar((scheduledAt, scheduleRepeatPeriod) => {
-        submitContent(content, scheduledAt, scheduleRepeatPeriod);
+      requestCalendar((scheduledAt) => {
+        submitContent(content, scheduledAt);
       });
       return;
     }

@@ -1073,12 +1073,6 @@ export interface LangPair {
   'Today': undefined;
   'WeekdayYesterday': undefined;
   'User': undefined;
-  'MessageRepeatPeriodDaily': undefined;
-  'MessageRepeatPeriodWeekly': undefined;
-  'MessageRepeatPeriodBiweekly': undefined;
-  'MessageRepeatPeriodMonthly': undefined;
-  'MessageRepeatPeriodYearly': undefined;
-  'MessageScheduledRepeatPremium': undefined;
   'PremiumUnlockEmoji': undefined;
   'ChatListFilterErrorEmpty': undefined;
   'ChatListFilterErrorTitleEmpty': undefined;
@@ -1111,11 +1105,6 @@ export interface LangPair {
   'WaitingForNetwork': undefined;
   'ScheduleSendWhenOnline': undefined;
   'ScheduleRepeatNever': undefined;
-  'ScheduleRepeatDaily': undefined;
-  'ScheduleRepeatWeekly': undefined;
-  'ScheduleRepeatBiweekly': undefined;
-  'ScheduleRepeatMonthly': undefined;
-  'ScheduleRepeatYearly': undefined;
   'VoipIncoming': undefined;
   'LiveLocationUpdatedJustNow': undefined;
   'RightNow': undefined;
@@ -2781,9 +2770,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'count': V;
     'total': V;
   };
-  'ScheduleRepeat': {
-    'value': V;
-  };
   'MessageTimerShortHours': {
     'count': V;
   };
@@ -3586,12 +3572,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'LastSeenHoursAgo': {
     'count': V;
   };
-  'MessageRepeatPeriodEveryMinutes': {
-    'count': V;
-  };
-  'MessageRepeatPeriodEveryMonths': {
-    'count': V;
-  };
   'StickerPackRemoveStickerCount': {
     'count': V;
   };
@@ -3602,12 +3582,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'StickerPackAddEmojiCount': {
-    'count': V;
-  };
-  'ScheduleRepeatEveryMinutes': {
-    'count': V;
-  };
-  'ScheduleRepeatEveryMonths': {
     'count': V;
   };
   'Years': {
@@ -4256,11 +4230,6 @@ export interface LangKeyGroups {
       | 'ChatOutgoingContextMixedReactionCount';
     variables: 'count' | 'total';
   };
-  'value': {
-    keys:
-      | 'ScheduleRepeat';
-    variables: 'value';
-  };
   'logOut': {
     keys:
       | 'PasscodeForgotHelp';
@@ -4672,14 +4641,10 @@ export interface LangPluralKeyGroups {
       | 'ChatsPlural'
       | 'LastSeenMinutesAgo'
       | 'LastSeenHoursAgo'
-      | 'MessageRepeatPeriodEveryMinutes'
-      | 'MessageRepeatPeriodEveryMonths'
       | 'StickerPackRemoveStickerCount'
       | 'StickerPackAddStickerCount'
       | 'StickerPackRemoveEmojiCount'
       | 'StickerPackAddEmojiCount'
-      | 'ScheduleRepeatEveryMinutes'
-      | 'ScheduleRepeatEveryMonths'
       | 'Years'
       | 'LiveLocationUpdatedMinutesAgo'
       | 'Seconds'

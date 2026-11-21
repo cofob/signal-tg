@@ -11,7 +11,6 @@ import buildClassName from '../../../util/buildClassName';
 import {
   formatCalendarDate, formatCompactTimestamp, formatDateTime, isSameLocalDay, secondsToDate,
 } from '../../../util/localization/dateFormat';
-import { getRepeatPeriodText } from '../../../util/scheduledMessages';
 import { formatIntegerCompact } from '../../../util/text/textFormat';
 import renderText from '../../common/helpers/renderText';
 
@@ -75,10 +74,6 @@ const MessageMeta = ({
     onOpenThread();
   }
 
-  const repeatPeriodText = useMemo(() => {
-    return getRepeatPeriodText(message.scheduleRepeatPeriod, lang);
-  }, [message.scheduleRepeatPeriod, lang]);
-
   const dateTitle = useMemo(() => {
     if (!isActivated) return undefined;
     const createDateTime = formatDateTime(lang, secondsToDate(message.date), { date: 'short', time: 'long' });
@@ -133,18 +128,12 @@ const MessageMeta = ({
     }
 
     const time = formatDateTime(lang, secondsToDate(message.date), { time: 'short' });
-    const baseDate = !withFullDate
+    return !withFullDate
       ? time
       : formatCompactTimestamp(lang, secondsToDate(message.forwardInfo?.date || message.date), { withTime: true });
-
-    if (repeatPeriodText) {
-      return lang('FormatDateAtTime', { date: repeatPeriodText, time: baseDate });
-    }
-
-    return baseDate;
   }, [
     lang, message.date, message.editDate, message.forwardInfo?.date, message.isVideoProcessingPending,
-    repeatPeriodText, shouldShowPrimaryEditedDate, withFullDate,
+    shouldShowPrimaryEditedDate, withFullDate,
   ]);
 
   const fullClassName = buildClassName(

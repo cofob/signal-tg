@@ -1696,7 +1696,7 @@ addActionHandler('sendScheduledMessages', (global, actions, payload): ActionRetu
 
 addActionHandler('rescheduleMessage', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, messageId, scheduledAt, scheduleRepeatPeriod,
+    chatId, messageId, scheduledAt,
   } = payload;
 
   const chat = selectChat(global, chatId);
@@ -1709,7 +1709,6 @@ addActionHandler('rescheduleMessage', (global, actions, payload): ActionReturnTy
     chat,
     message,
     scheduledAt,
-    scheduleRepeatPeriod,
   });
 });
 
@@ -1755,7 +1754,7 @@ addActionHandler('loadCustomEmojis', async (global, actions, payload): Promise<v
 
 addActionHandler('forwardMessages', (global, actions, payload): ActionReturnType => {
   const {
-    isSilent, scheduledAt, scheduleRepeatPeriod, tabId = getCurrentTabId(),
+    isSilent, scheduledAt, tabId = getCurrentTabId(),
   } = payload;
   const { toChatId, toThreadId = MAIN_THREAD_ID } = selectTabState(global, tabId).forwardMessages;
   const toChat = toChatId ? selectChat(global, toChatId) : undefined;
@@ -1766,7 +1765,7 @@ addActionHandler('forwardMessages', (global, actions, payload): ActionReturnType
     actions.animateMessageSending({ chatId: toChat.id, threadId: toThreadId, tabId });
   }
 
-  executeForwardMessages(global, { chat: toChat, isSilent, scheduledAt, scheduleRepeatPeriod }, tabId);
+  executeForwardMessages(global, { chat: toChat, isSilent, scheduledAt }, tabId);
 });
 
 function executeForwardMessages(global: GlobalState, sendParams: SendMessageParams, tabId: number) {
@@ -1774,7 +1773,7 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
   const {
     fromChatId, messageIds, toChatId, withMyScore, noAuthors, noCaptions, toThreadId = MAIN_THREAD_ID,
   } = forwardMessages;
-  const { isSilent, scheduledAt, scheduleRepeatPeriod } = sendParams;
+  const { isSilent, scheduledAt } = sendParams;
 
   const isToMainThread = toThreadId === MAIN_THREAD_ID;
 
@@ -1813,7 +1812,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
         messages: slice,
         isSilent,
         scheduledAt,
-        scheduleRepeatPeriod,
         sendAs,
         withMyScore,
         // A widget always shows which bot it is from: the server keeps its forward header (widget-sandbox sdk-v1 §5.11)
@@ -1842,7 +1840,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
       sticker,
       isSilent,
       scheduledAt,
-      scheduleRepeatPeriod,
       sendAs,
       lastMessageId,
     };

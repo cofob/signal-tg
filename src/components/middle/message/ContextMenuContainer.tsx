@@ -281,7 +281,6 @@ const ContextMenuContainer = ({
     canScheduleUntilOnline,
     onClose,
     message.date,
-    message.scheduleRepeatPeriod,
   );
 
   const customEmojis = useMemo(() => (
@@ -576,13 +575,11 @@ const ContextMenuContainer = ({
 
   const handleRescheduleMessage = useLastCallback((
     scheduledAt: number,
-    scheduleRepeatPeriod?: number,
   ) => {
     rescheduleMessage({
       chatId: message.chatId,
       messageId: message.id,
       scheduledAt,
-      scheduleRepeatPeriod,
     });
     onClose();
   });

@@ -117,9 +117,9 @@ const StickerSetModal = ({
     }
 
     if (shouldSchedule || isScheduleRequested) {
-      requestCalendar((scheduledAt, scheduleRepeatPeriod) => {
+      requestCalendar((scheduledAt) => {
         sendMessage({
-          messageList: currentMessageList, sticker, isSilent, scheduledAt, scheduleRepeatPeriod,
+          messageList: currentMessageList, sticker, isSilent, scheduledAt,
         });
         onClose();
       });

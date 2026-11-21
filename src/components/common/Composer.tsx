@@ -1308,7 +1308,6 @@ const Composer = ({
     sendGrouped = attachmentSettings.shouldSendGrouped,
     isSilent,
     scheduledAt,
-    scheduleRepeatPeriod,
     isInvertedMedia,
   }: {
     attachments: ApiAttachment[];
@@ -1316,7 +1315,6 @@ const Composer = ({
     sendGrouped?: boolean;
     isSilent?: boolean;
     scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
     isInvertedMedia?: true;
   }) => {
     if (!validateEphemeralReply()) return;
@@ -1346,7 +1344,6 @@ const Composer = ({
         text,
         entities,
         scheduledAt,
-        scheduleRepeatPeriod,
         isSilent,
         shouldUpdateStickerSetOrder,
         attachments: prepareAttachmentsToSend(attachmentsToSend, sendCompressed),
@@ -1398,7 +1395,6 @@ const Composer = ({
     isSilent?: boolean,
     scheduledAt?: number,
     isInvertedMedia?: true,
-    scheduleRepeatPeriod?: number,
   ) => {
     if (canSendAttachments(attachments)) {
       sendAttachments({
@@ -1407,7 +1403,6 @@ const Composer = ({
         sendGrouped,
         isSilent,
         scheduledAt,
-        scheduleRepeatPeriod,
         isInvertedMedia,
       });
     }
@@ -1418,7 +1413,6 @@ const Composer = ({
       currentAttachments: ApiAttachment[],
       isSilent = false,
       scheduledAt?: number,
-      scheduleRepeatPeriod?: number,
       shouldSkipWebPagePreview?: boolean,
     ) => {
       const richEditorValue = richEditor.getValue();
@@ -1434,7 +1428,6 @@ const Composer = ({
           sendAttachments({
             attachments: currentAttachments,
             scheduledAt,
-            scheduleRepeatPeriod,
             isSilent,
           });
         }
@@ -1462,7 +1455,6 @@ const Composer = ({
             messageList: currentMessageList,
             richMessage: richMessageToSend,
             scheduledAt,
-            scheduleRepeatPeriod,
             isSilent,
             shouldUpdateStickerSetOrder,
           });
@@ -1500,7 +1492,6 @@ const Composer = ({
           text,
           entities,
           scheduledAt,
-          scheduleRepeatPeriod,
           isSilent,
           shouldUpdateStickerSetOrder,
           isInvertedMedia,
@@ -1528,7 +1519,6 @@ const Composer = ({
   const handleSend = useLastCallback(async (
     isSilent = false,
     scheduledAt?: number,
-    scheduleRepeatPeriod?: number,
     shouldSkipWebPagePreview?: boolean,
   ) => {
     if (!validateEphemeralReply()) return;
@@ -1571,13 +1561,12 @@ const Composer = ({
       }
     }
 
-    handleSendCore(currentAttachments, isSilent, scheduledAt, scheduleRepeatPeriod, shouldSkipWebPagePreview);
+    handleSendCore(currentAttachments, isSilent, scheduledAt, shouldSkipWebPagePreview);
   });
 
   const handleSendWithConfirmation = useLastCallback((
     isSilent = false,
     scheduledAt?: number,
-    scheduleRepeatPeriod?: number,
     shouldSkipWebPagePreview?: boolean,
   ) => {
     if (!checkCanSendRichContent()) {
@@ -1585,7 +1574,7 @@ const Composer = ({
     }
 
     handleSend(
-      isSilent, scheduledAt, scheduleRepeatPeriod, shouldSkipWebPagePreview,
+      isSilent, scheduledAt, shouldSkipWebPagePreview,
     );
   });
 
@@ -1622,7 +1611,6 @@ const Composer = ({
   const handleMessageSchedule = useLastCallback((
     args: ScheduledMessageArgs,
     scheduledAt: number,
-    scheduleRepeatPeriod: number | undefined,
     messageList: MessageList,
   ) => {
     if (!validateEphemeralReply() || isEphemeralReply) return;
@@ -1643,25 +1631,23 @@ const Composer = ({
     const { isSilent, ...restArgs } = args || {};
 
     if (!args || Object.keys(restArgs).length === 0) {
-      void handleSend(Boolean(isSilent), scheduledAt, scheduleRepeatPeriod);
+      void handleSend(Boolean(isSilent), scheduledAt);
     } else if (args.sendCompressed !== undefined || args.sendGrouped !== undefined) {
       const { sendCompressed = false, sendGrouped = false, isInvertedMedia } = args;
-      void handleSendAttachments(sendCompressed, sendGrouped, isSilent, scheduledAt, isInvertedMedia,
-        scheduleRepeatPeriod);
+      void handleSendAttachments(sendCompressed, sendGrouped, isSilent, scheduledAt, isInvertedMedia);
     } else {
       sendMessage({
         ...args,
         messageList,
         scheduledAt,
-        scheduleRepeatPeriod,
       });
     }
   });
 
   useEffectWithPrevDeps(([prevContentToBeScheduled]) => {
     if (currentMessageList && contentToBeScheduled && contentToBeScheduled !== prevContentToBeScheduled) {
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-        handleMessageSchedule(contentToBeScheduled, scheduledAt, scheduleRepeatPeriod, currentMessageList);
+      requestMessageSchedule((scheduledAt) => {
+        handleMessageSchedule(contentToBeScheduled, scheduledAt, currentMessageList);
       });
     }
   }, [contentToBeScheduled, currentMessageList, handleMessageSchedule, requestMessageSchedule]);
@@ -1740,12 +1726,11 @@ const Composer = ({
 
     if (isInScheduledList || isScheduleRequested) {
       forceShowSymbolMenu();
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
+      requestMessageSchedule((scheduledAt) => {
         cancelForceShowSymbolMenu();
         handleMessageSchedule(
           { gif, isSilent },
           scheduledAt,
-          scheduleRepeatPeriod,
           currentMessageList!,
         );
         requestMeasure(() => {
@@ -1784,12 +1769,11 @@ const Composer = ({
 
     if (isInScheduledList || isScheduleRequested) {
       forceShowSymbolMenu();
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
+      requestMessageSchedule((scheduledAt) => {
         cancelForceShowSymbolMenu();
         handleMessageSchedule(
           { sticker, isSilent },
           scheduledAt,
-          scheduleRepeatPeriod,
           currentMessageList!,
         );
         requestMeasure(() => {
@@ -1826,7 +1810,7 @@ const Composer = ({
     isSilent = isSilent || isSilentPosting;
 
     if (isInScheduledList || isScheduleRequested) {
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
+      requestMessageSchedule((scheduledAt) => {
         handleMessageSchedule(
           {
             id: inlineResult.id,
@@ -1834,7 +1818,6 @@ const Composer = ({
             isSilent,
           },
           scheduledAt,
-          scheduleRepeatPeriod,
           currentMessageList!,
         );
       });
@@ -1957,11 +1940,10 @@ const Composer = ({
 
   const sendSilent = useLastCallback((additionalArgs?: ScheduledMessageArgs) => {
     if (isInScheduledList) {
-      requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
+      requestMessageSchedule((scheduledAt) => {
         handleMessageSchedule(
           { ...additionalArgs, isSilent: true },
           scheduledAt,
-          scheduleRepeatPeriod,
           currentMessageList!,
         );
       });
@@ -2254,8 +2236,8 @@ const Composer = ({
         if (!currentMessageList) {
           return;
         }
-        requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-          handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList);
+        requestMessageSchedule((scheduledAt) => {
+          handleMessageSchedule({}, scheduledAt, currentMessageList);
         });
         break;
       default:
@@ -2363,8 +2345,8 @@ const Composer = ({
       return;
     }
 
-    requestMessageSchedule((scheduledAt, scheduleRepeatPeriod) => {
-      handleMessageSchedule({}, scheduledAt, scheduleRepeatPeriod, currentMessageList!);
+    requestMessageSchedule((scheduledAt) => {
+      handleMessageSchedule({}, scheduledAt, currentMessageList!);
     });
   });
 
@@ -2378,7 +2360,7 @@ const Composer = ({
 
   const sendWhenOnline = useLastCallback(() => {
     handleMessageSchedule(
-      {}, SCHEDULED_WHEN_ONLINE, undefined, currentMessageList!,
+      {}, SCHEDULED_WHEN_ONLINE, currentMessageList!,
     );
   });
 
@@ -2393,21 +2375,19 @@ const Composer = ({
   const handleSendScheduledAttachments = useLastCallback(
     (
       sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true,
-      scheduledAt?: number, scheduleRepeatPeriod?: number,
+      scheduledAt?: number,
     ) => {
       if (scheduledAt) {
         handleMessageSchedule(
           { sendCompressed, sendGrouped, isInvertedMedia },
           scheduledAt,
-          scheduleRepeatPeriod,
           currentMessageList!,
         );
       } else {
-        requestMessageSchedule((calendarScheduledAt, calendarRepeatPeriod) => {
+        requestMessageSchedule((calendarScheduledAt) => {
           handleMessageSchedule(
             { sendCompressed, sendGrouped, isInvertedMedia },
             calendarScheduledAt,
-            calendarRepeatPeriod,
             currentMessageList!,
           );
         });

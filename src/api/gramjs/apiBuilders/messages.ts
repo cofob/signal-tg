@@ -239,7 +239,6 @@ export function buildApiMessageWithChatId(
     viewsCount: mtpMessage.views,
     forwardsCount: mtpMessage.forwards,
     isScheduled,
-    scheduleRepeatPeriod: mtpMessage.scheduleRepeatPeriod,
     isFromScheduled: mtpMessage.fromScheduled,
     isSilent: mtpMessage.silent,
     isPinned: mtpMessage.pinned,
@@ -425,7 +424,6 @@ export function buildLocalMessage({
   contact,
   groupedId,
   scheduledAt,
-  scheduleRepeatPeriod,
   sendAs,
   story,
   isInvertedMedia,
@@ -447,7 +445,6 @@ export function buildLocalMessage({
   contact?: ApiContact;
   groupedId?: string;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   sendAs?: ApiPeer;
   story?: ApiStory | ApiStorySkipped;
   isInvertedMedia?: true;
@@ -498,7 +495,6 @@ export function buildLocalMessage({
       ...(media && (media.photo || media.video) && { isInAlbum: true }),
     }),
     ...(scheduledAt && { isScheduled: true }),
-    scheduleRepeatPeriod,
     isForwardingAllowed: true,
     isInvertedMedia,
     ...(isPending && { sendingState: 'messageSendingStatePending' }),
@@ -518,7 +514,6 @@ export function buildLocalForwardedMessage({
   toThreadId,
   message,
   scheduledAt,
-  scheduleRepeatPeriod,
   noAuthors,
   noCaptions,
   privateForwardName,
@@ -529,7 +524,6 @@ export function buildLocalForwardedMessage({
   toThreadId?: number;
   message: ApiMessage;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   noAuthors?: boolean;
   noCaptions?: boolean;
   privateForwardName?: string;
@@ -581,7 +575,6 @@ export function buildLocalForwardedMessage({
     chatId: toChat.id,
     content: updatedContent,
     date: scheduledAt || getServerTime(),
-    scheduleRepeatPeriod,
     isOutgoing: !asIncomingInChatWithSelf && toChat.type !== 'chatTypeChannel',
     senderId: toChat.type !== 'chatTypePrivate' ? (sendAs?.id || currentUserId) : undefined,
     sendingState: 'messageSendingStatePending',
