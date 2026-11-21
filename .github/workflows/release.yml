@@ -1,5 +1,6 @@
 # Publishes a GitHub release for every `v*` tag: the static web bundle, the tunnel binaries and container image, the
-# desktop packages (`desktop.yml`) and `SHA256SUMS`, with the notes from `CHANGELOG.md`. The tag must equal the version
+# all-in-one container image (`image.yml`), the desktop packages (`desktop.yml`) and `SHA256SUMS`, with the notes from
+# `CHANGELOG.md`. The tag must equal the version
 # in `package.json` (`npm run release:bump`). Every asset goes to a draft release first, and the release becomes visible
 # only after all of them succeeded. A tag with a pre-release suffix, such as `v0.2.0-rc.1`, publishes a pre-release
 # that is never the latest release. Procedure: `docs/RELEASING.md`.
@@ -104,7 +105,7 @@ jobs:
             echo
             echo '---'
             echo
-            echo "Check the downloads with \`sha256sum -c SHA256SUMS\`. The tunnel image is \`ghcr.io/${owner,,}/telesignal-tunnel:${VERSION}\`."
+            echo "Check the downloads with \`sha256sum -c SHA256SUMS\`. The all-in-one image with the app, nginx and the tunnel is \`ghcr.io/${owner,,}/telesignal:${VERSION}\` ([deployment](https://github.com/${REPOSITORY}/blob/${TAG}/docs/DEPLOY.md)); the tunnel alone is \`ghcr.io/${owner,,}/telesignal-tunnel:${VERSION}\`."
             echo "Full changelog: https://github.com/${REPOSITORY}/blob/${TAG}/CHANGELOG.md"
           } > release-notes.md
 
@@ -413,6 +414,16 @@ jobs:
           done <<< "$TAGS"
           docker buildx imagetools create "${args[@]}" "$IMAGE"
 
+  app-image:
+    name: App image
+    needs: preflight
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/image.yml
+    with:
+      tag: ${{ needs.preflight.outputs.tag }}
+
   desktop:
     name: Desktop
     needs: [preflight, draft]
@@ -426,7 +437,7 @@ jobs:
 
   publish:
     name: Checksum and publish release
-    needs: [preflight, draft, web, tunnel, image, desktop]
+    needs: [preflight, draft, web, tunnel, image, app-image, desktop]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:

@@ -18,13 +18,21 @@ npm run dev           # http://localhost:1234
 
 Regenerate after changes: `npm run signal:wasm` (libsignal WebAssembly, needs Rust) and `npm run signal:proto` (protobuf).
 
+## Deployment
+
+```sh
+docker run -d -p 127.0.0.1:8080:8080 --read-only --tmpfs /tmp ghcr.io/cofob/telesignal:latest
+```
+
+The image holds the web app, nginx and the tunnel to Signal servers. Settings, TLS in front, security headers and your own nginx configuration: [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Desktop app
 
 `tauri/` builds TeleSignal for macOS, Windows and Linux; it reaches Signal servers without the tunnel. See [tauri/README.md](tauri/README.md).
 
 ## Checks and releases
 
-GitHub Actions checks every push; `npm run check` runs the web checks locally. Tags `v*` publish releases with the web bundle, the tunnel, its container image and the desktop packages. Changes that users notice go to [CHANGELOG.md](CHANGELOG.md); see [docs/RELEASING.md](docs/RELEASING.md).
+GitHub Actions checks every push; `npm run check` runs the web checks locally. Tags `v*` publish releases with the web bundle, the tunnel, the container images and the desktop packages. Changes that users notice go to [CHANGELOG.md](CHANGELOG.md); see [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 

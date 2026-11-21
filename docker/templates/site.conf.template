@@ -1,0 +1,59 @@
+# The server of the image, rendered by the entrypoint to `/tmp/telesignal/nginx/site.conf` unless `/etc/nginx/conf.d`
+# holds a config of your own. Copy this file as a starting point; the `${...}` names are environment variables of the
+# image, and the entrypoint fills the `TELESIGNAL_` ones in (docs/DEPLOY.md).
+
+# Files with a content hash in their name never change, so they are cached for a year: everything in `/assets` and the
+# worker bundles at the top level. The rest, including `index.html`, the service worker, the web manifest and the
+# snapshot stylesheets (`skeleton-snapshot.css`, `wallpaper-snapshot.css`: fixed names that the app regenerates), is
+# revalidated on every use with its `ETag`, so that an update is never missed. The emoji images are the one set of
+# unhashed files that rarely change.
+map $uri $telesignal_cache_control {
+    default "no-cache";
+    "~/service\.worker-" "no-cache";
+    "~^/assets/.+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9.]+$" "public, max-age=31536000, immutable";
+    "~^/([A-Za-z]+\.)?worker-[A-Za-z0-9_-]{8}\.js$" "public, max-age=31536000, immutable";
+    "~^/img-apple-(64|160)/" "public, max-age=604800";
+}
+
+server {
+    listen ${NGINX_PORT} default_server;
+${TELESIGNAL_LISTEN_IPV6}
+    server_name _;
+
+    root /srv/telesignal;
+    index index.html;
+    access_log ${TELESIGNAL_ACCESS_LOG};
+${TELESIGNAL_REAL_IP}
+
+    include /tmp/telesignal/nginx/security-headers.inc;
+    add_header Cache-Control $telesignal_cache_control always;
+
+    # The WebSocket tunnel to Signal, on the app's origin
+    location = /tunnel {
+        proxy_pass http://127.0.0.1:${TUNNEL_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        # Replaces any client value, so the rightmost entry is the client; the tunnel runs with `TRUST_PROXY=1`
+        proxy_set_header X-Forwarded-For $remote_addr;
+        # The tunnel does not need the app's cookies
+        proxy_set_header Cookie "";
+        proxy_connect_timeout 10s;
+        # The tunnel closes idle connections itself (`IDLE_TIMEOUT_SECS`)
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+        proxy_buffering off;
+    }
+
+    # The tunnel's own `/health`, so that the check covers both processes
+    location = /healthz {
+        access_log off;
+        proxy_pass http://127.0.0.1:${TUNNEL_PORT}/health;
+    }
+
+    location / {
+${TELESIGNAL_PAGE_FILTERS}
+        try_files $uri $uri/ =404;
+    }
+}

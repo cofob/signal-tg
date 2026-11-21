@@ -106,6 +106,18 @@ export type ApiUpdateAuthorizationError = {
   errorCode?: string;
 };
 
+// Signal: the server stopped accepting this device and the engine removed its data; the link screen says why
+export type ApiUpdateDeviceDeauthorized = {
+  '@type': 'updateDeviceDeauthorized';
+  // The phone or another device removed this device, or the number of the primary device was registered elsewhere
+  reason: 'unlinked' | 'deregistered';
+};
+
+// Signal: the engine read its storage and found no account, so a session that the app stores for the slot is stale
+export type ApiUpdateStaleSession = {
+  '@type': 'updateStaleSession';
+};
+
 export type ApiUpdateConnectionState = {
   '@type': 'updateConnectionState';
   connectionState: ApiUpdateConnectionStateType;
@@ -564,7 +576,8 @@ export type ApiUpdateWebPage = {
 
 export type ApiUpdate = (
   ApiUpdateReady | ApiUpdateSession | ApiUpdateRequestUserUpdate | ApiUpdateAuthorizationState |
-  ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateCurrentUser | ApiUpdateChat |
+  ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateDeviceDeauthorized | ApiUpdateStaleSession |
+  ApiUpdateCurrentUser | ApiUpdateChat |
   ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds | ApiUpdateChatMembers |
   ApiUpdateChatParticipantRank | ApiUpdateChatJoin | ApiUpdateChatLeave | ApiUpdateChatPinned |
   ApiUpdatePinnedMessageIds | ApiUpdateChatListType | ApiUpdateChatFolder | ApiUpdateChatFoldersOrder |

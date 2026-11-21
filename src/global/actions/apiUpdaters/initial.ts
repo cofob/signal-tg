@@ -12,7 +12,7 @@ import type { ActionReturnType, GlobalState } from '../../types';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { retryLocalization } from '../../../util/localization';
 import { setServerTimeOffset } from '../../../util/serverTime';
-import { updateSessionUserId } from '../../../util/sessions';
+import { hasStoredSession, updateSessionUserId } from '../../../util/sessions';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
@@ -37,6 +37,21 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateConnectionState':
       onUpdateConnectionState(global, actions, update);
+      break;
+
+    case 'updateDeviceDeauthorized':
+      Object.values(global.byTabId).forEach(({ id: tabId }) => {
+        actions.showNotification({
+          message: { key: update.reason === 'unlinked' ? 'SignalDeviceUnlinked' : 'SignalDeviceDeregistered' },
+          tabId,
+        });
+      });
+      break;
+
+    case 'updateStaleSession':
+      // A slot that the app lists as logged in has no account in the engine, such as a copy of another account's
+      // slot: logging out removes it from the menu
+      if (hasStoredSession()) actions.signOut({ forceInitApi: true });
       break;
 
     case 'updateSession':

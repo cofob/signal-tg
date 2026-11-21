@@ -94,3 +94,12 @@ a Node script that pushes four chunks of text and random bytes with a flush afte
 the blocks end where the compressor ends them and the padding follows the uncompressed size of the intervals; the
 backups are valid for libsignal's validator, but the padding is not exactly what the format describes. Whether another
 library or `CompressionStream` with a manual flush could end blocks exactly is not tried.
+
+## Five npm dependencies come from GitHub, so every install needs `git` and GitHub access
+
+`package.json` pins `opus-recorder`, `emoji-data-ios`, `eslint-plugin-react-hooks-static-deps`, `eslint-plugin-tt-multitab`
+and `@mytonwallet/stylelint-whole-pixel` as `github:` references (`.npmrc` sets `allow-git=root` for them). Verified with
+the container build (`Dockerfile`): `npm ci` fails on a machine without GitHub access or, in a plain `node` Alpine image,
+without `git`, and fetching them took most of the two minutes that the install needs. A registry copy or a vendored
+tarball would make installs hermetic and let the image build run offline from a registry mirror. The two ESLint and one
+Stylelint plugins are needed by checks only, which the image build does not run, but `npm ci` installs them all.

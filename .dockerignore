@@ -1,0 +1,22 @@
+# The build context is an allow-list: the image needs the frontend sources and the tunnel crate only. The WebAssembly
+# module is committed (`src/lib/signal/wasm/generated`), so `rust/` stays out, and so do `.env` files.
+*
+
+!package.json
+!package-lock.json
+!.npmrc
+!index.html
+!vite.config.ts
+!tsconfig.json
+!tsconfig.base.json
+!postcss.config.ts
+!dev/
+!plugins/
+!public/
+!src/
+
+!proxy/Cargo.toml
+!proxy/Cargo.lock
+!proxy/src/
+
+!docker/

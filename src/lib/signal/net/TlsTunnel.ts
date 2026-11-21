@@ -1,5 +1,6 @@
 import type { TrafficClass } from '../config';
 
+import { DEBUG } from '../../../config';
 import { getSignalTunnelUrl, SIGNAL_CA_PEM } from '../config';
 import { wasm } from '../wasm';
 
@@ -60,6 +61,10 @@ export default class TlsTunnel {
   private constructor(host: string, readonly trafficClass: TrafficClass, alpnProtocols: string[]) {
     this.host = host;
     this.tunnelUrl = getSignalTunnelUrl(trafficClass);
+    if (DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug('[signal] Open tunnel', trafficClass, host, this.tunnelUrl ?? 'default');
+    }
     this.tls = new wasm.TlsClient(host, [getSignalCaDer()], alpnProtocols);
   }
 

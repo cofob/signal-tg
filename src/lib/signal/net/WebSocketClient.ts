@@ -1,5 +1,6 @@
 import type { TrafficClass } from '../config';
 
+import { DEBUG } from '../../../config';
 import { SIGNAL_USER_AGENT } from '../config';
 
 import NetworkError from './NetworkError';
@@ -70,6 +71,10 @@ export default class WebSocketClient {
   private constructor(private tunnel: TlsTunnel, private reader: StreamReader) {}
 
   static async connect(host: string, path: string, trafficClass: TrafficClass, headers: Record<string, string> = {}) {
+    if (DEBUG) {
+      // eslint-disable-next-line no-console
+      console.debug('[signal] Connect WebSocket', trafficClass, host, path);
+    }
     const tunnel = await TlsTunnel.open(host, trafficClass);
     const reader = new StreamReader(() => tunnel.read());
     const key = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(KEY_LENGTH))));
