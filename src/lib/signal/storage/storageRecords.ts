@@ -126,16 +126,18 @@ export function getMutedUntil(timestamp: bigint) {
  * `ts/services/storage.preload.ts`): each record with local changes is written again under a new random storage id
  * and its old id is deleted. Fields without local changes keep their remote values, unknown fields stay, and
  * records of other types keep their ids. A conversation without a record gets one; the account record is left to
- * the primary device until it exists. Returns `undefined` when nothing changed.
+ * the primary device until it exists. Returns `undefined` when nothing changed, else the write and the keys of
+ * `changes` it carries: changes of records that cannot be written yet stay marked.
  */
 export function buildStorageWrite({
   manifest, records, changes, conversations, profileKeys, selfAci, deviceId, localAccount,
-}: StorageWriteSource): StorageWrite | undefined {
+}: StorageWriteSource): { write: StorageWrite; writtenKeys: string[] } | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storedRecords = indexRecords(records);
   const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
   const insertTypes = new Map<string, ItemType>();
   const deleteIds: string[] = [];
+  const writtenKeys: string[] = [];
 
   for (const [key, fields] of Object.entries(changes)) {
     const conversation = conversationsById.get(key);
@@ -158,6 +160,7 @@ export function buildStorageWrite({
     const id = bufferToBase64(getRandomBytes(STORAGE_ID_LENGTH));
     inserts.set(id, toBinary(StorageRecordSchema, record));
     insertTypes.set(id, getItemType(record));
+    writtenKeys.push(key);
     if (stored) deleteIds.push(stored.id);
   }
   if (!inserts.size) return undefined;
@@ -170,7 +173,7 @@ export function buildStorageWrite({
   for (const [id, type] of insertTypes) {
     next.identifiers.push(create(ManifestRecord_IdentifierSchema, { raw: bufferFromBase64(id), type }));
   }
-  return { manifest: next, inserts, deleteIds };
+  return { write: { manifest: next, inserts, deleteIds }, writtenKeys };
 }
 
 /** Stored records by what they belong to: a contact's ACI, `group:` and a group's master key, or the account */

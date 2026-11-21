@@ -149,6 +149,8 @@ type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 /** A storage service write with what `commitStorageWrite` needs to know about the changes it carries */
 type PendingStorageWrite = {
   write: StorageWrite;
+  // The keys of `storageChanges` that the write carries
+  writtenKeys: string[];
   changeCount: number;
   // The write carries a new username, which our other devices learn through a `usernameChange` sync
   hasUsernameChange: boolean;
@@ -792,7 +794,7 @@ export default class MessageProcessor {
         if (profileKey) profileKeys.set(id, profileKey);
       }
 
-      const write = buildStorageWrite({
+      const built = buildStorageWrite({
         manifest,
         records,
         changes,
@@ -802,23 +804,33 @@ export default class MessageProcessor {
         deviceId: account.deviceId,
         localAccount: account,
       });
-      return write && {
-        write,
+      if (!built) return undefined;
+
+      const accountFields = built.writtenKeys.includes(ACCOUNT_KEY) ? changes[ACCOUNT_KEY] : undefined;
+      return {
+        ...built,
         changeCount: this.storageChangeCount,
-        hasUsernameChange: Boolean(changes[ACCOUNT_KEY]?.includes('username')),
+        // The username counts once the account record, which carries it, is written
+        hasUsernameChange: Boolean(accountFields?.includes('username')),
       };
     });
   }
 
   /** Stores the records of an accepted write and clears the changes it carried */
-  commitStorageWrite({ write, changeCount }: PendingStorageWrite) {
+  commitStorageWrite({ write, writtenKeys, changeCount }: PendingStorageWrite) {
     return this.runSerial(async () => {
       const { store } = this.client;
       await store.setStorageRecords(write.inserts);
       await store.removeStorageRecords(write.deleteIds);
       await store.setItem('storageManifest', toBinary(ManifestRecordSchema, write.manifest));
       // Changes made while the write was on its way go out again with the next one
-      if (changeCount === this.storageChangeCount) await store.setItem('storageChanges', {});
+      if (changeCount !== this.storageChangeCount) return;
+      const written = new Set(writtenKeys);
+      const changes = await store.getItem('storageChanges') ?? {};
+      await store.setItem(
+        'storageChanges',
+        Object.fromEntries(Object.entries(changes).filter(([key]) => !written.has(key))),
+      );
     });
   }
 
