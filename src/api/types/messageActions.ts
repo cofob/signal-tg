@@ -1,3 +1,4 @@
+import type { ApiCallLogOutcome, ApiCallLogType } from './callLog';
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
   ApiPhoto, ApiPollAnswer, ApiVideo,
@@ -252,8 +253,28 @@ export interface ApiMessageActionSafetyNumberVerified extends ActionMediaType {
   isFromOtherDevice?: true;
 }
 
+// Signal: a call of the call history. Calls cannot be made or answered here, so the notice only says what happened;
+// `isOutgoing` of the message is the direction.
+export interface ApiMessageActionSignalCall extends ActionMediaType {
+  type: 'signalCall';
+  callType: ApiCallLogType;
+  outcome: ApiCallLogOutcome;
+}
+
+// Signal: a donation made for the receiver as a gift badge; it is opened on the primary device, so only its notice shows
+export interface ApiMessageActionGiftBadge extends ActionMediaType {
+  type: 'giftBadge';
+}
+
+// Signal: a payment message; payments are made and shown on the primary device
+export interface ApiMessageActionPayment extends ActionMediaType {
+  type: 'payment';
+  paymentType: 'notification' | 'activationRequest' | 'activated';
+}
+
 export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
   | ApiMessageActionSafetyNumberChange | ApiMessageActionSafetyNumberVerified
+  | ApiMessageActionSignalCall | ApiMessageActionGiftBadge | ApiMessageActionPayment
   | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle | ApiMessageActionGroupUpdate
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate

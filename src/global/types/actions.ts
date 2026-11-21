@@ -27,6 +27,7 @@ import type {
   ApiMessageSearchContext,
   ApiNewStory,
   ApiNotification,
+  ApiNotificationProfile,
   ApiNotifyPeerType,
   ApiPhoto,
   ApiPrivacyKey,
@@ -1414,6 +1415,21 @@ export interface ActionPayloads {
   };
   loadStorySettings: undefined;
   updateStorySettings: Partial<ApiStorySettings>;
+  loadCallLog: undefined;
+  markCallLogSeen: undefined;
+  loadNotificationProfiles: undefined;
+  saveNotificationProfile: {
+    profile: Omit<ApiNotificationProfile, 'id'> & { id?: string };
+  };
+  deleteNotificationProfile: {
+    id: string;
+  };
+  // Turns a profile on by hand, until `endsAt` in seconds if given; without an id turns profiles off by hand
+  setNotificationProfileActive: {
+    id?: string;
+    endsAt?: number;
+  };
+  clearCallLog: WithTabId | undefined;
   loadStoryAlbums: {
     peerId: string;
   };
@@ -1574,6 +1590,10 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  checkKeyTransparency: WithTabId | undefined;
+  cancelKeyTransparencyCheck: WithTabId | undefined;
+  loadKeyTransparencySelfStatus: undefined;
+  runKeyTransparencySelfCheck: undefined;
   openSafetyNumberChangeModal: {
     chatId: string;
     messageId: number;

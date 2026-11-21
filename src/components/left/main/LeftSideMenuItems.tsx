@@ -37,6 +37,7 @@ import AccountMenuItems from './AccountMenuItems';
 type OwnProps = {
   onSelectSettings: NoneToVoidFunction;
   onSelectContacts: NoneToVoidFunction;
+  onSelectCalls: NoneToVoidFunction;
   onSelectArchived: NoneToVoidFunction;
   onSwitchAccount: (url: string) => void;
   footer?: string;
@@ -60,6 +61,7 @@ const LeftSideMenuItems = ({
   areStoriesDisabled,
   onSelectArchived,
   onSelectContacts,
+  onSelectCalls,
   onSelectSettings,
   onSwitchAccount,
   footer,
@@ -158,6 +160,12 @@ const LeftSideMenuItems = ({
         onClick={onSelectContacts}
       >
         {lang('MenuContacts')}
+      </MenuItem>
+      <MenuItem
+        icon="phone"
+        onClick={onSelectCalls}
+      >
+        {lang('MenuCalls')}
       </MenuItem>
       <MenuItem
         icon="settings"

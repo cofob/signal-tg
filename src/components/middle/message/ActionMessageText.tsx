@@ -14,6 +14,7 @@ import {
 } from '../../../global/helpers';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import { getMessageReplyInfo } from '../../../global/helpers/replies';
+import { getSignalCallLangKey } from '../../../global/helpers/signalCalls';
 import {
   selectChat,
   selectChatMessage,
@@ -25,6 +26,7 @@ import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
 import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
 import { formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
+import { getServerTime } from '../../../util/serverTime';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 import {
@@ -58,6 +60,7 @@ type StateProps = {
 };
 
 const NBSP = '\u00A0';
+const MS_PER_SECOND = 1000;
 const DEFAULT_TOPIC_ICON_ID = '0';
 
 const UNSUPPORTED_LANG_KEY = 'ActionUnsupported';
@@ -529,6 +532,40 @@ const ActionMessageText = ({
           return lang(action.media.mediaType === 'video' ? 'ActionViewOnceVideo' : 'ActionViewOncePhoto');
         }
         return lang('ActionViewOnceMedia');
+
+      // Signal Desktop `getCallingNotificationText` in `ts/util/callingNotification.std.ts`
+      case 'signalCall': {
+        const startedAgoMs = (getServerTime() - message.date) * MS_PER_SECOND;
+        return lang(getSignalCallLangKey(action.callType, action.outcome, isOutgoing, startedAgoMs));
+      }
+
+      // Signal Desktop `#renderGiftBadge` in `ts/components/conversation/Message.dom.tsx`
+      case 'giftBadge': {
+        if (isOutgoing) {
+          const chatLink = renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview);
+          return lang('ActionGiftBadgeSent', { user: chatLink }, { withNodes: true });
+        }
+        return lang('ActionGiftBadgeReceived', { user: senderLink }, { withNodes: true });
+      }
+
+      // Signal Desktop `PaymentEventNotification` in `ts/components/conversation/PaymentEventNotification.dom.tsx`
+      case 'payment': {
+        const chatLink = renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview);
+        switch (action.paymentType) {
+          case 'notification':
+            return isOutgoing
+              ? lang('ActionPaymentSent', { user: chatLink }, { withNodes: true })
+              : lang('ActionPaymentReceived', { user: senderLink }, { withNodes: true });
+          case 'activationRequest':
+            return isOutgoing
+              ? lang('ActionPaymentActivationAskedYou', { user: chatLink }, { withNodes: true })
+              : lang('ActionPaymentActivationAsked', { user: senderLink }, { withNodes: true });
+          default:
+            return isOutgoing
+              ? lang('ActionPaymentActivatedYou')
+              : lang('ActionPaymentActivated', { user: senderLink }, { withNodes: true });
+        }
+      }
 
       case 'safetyNumberChange':
         return lang('ActionSafetyChanged', { user: senderLink }, { withNodes: true });

@@ -6,7 +6,9 @@ import type {
   EditMessageSchema,
   ReceiptMessage_Type,
   StoryMessageSchema,
+  SyncMessage_AttachmentBackfillRequestSchema,
   SyncMessage_BlockedSchema,
+  SyncMessage_CallLogEventSchema,
   SyncMessage_ConfigurationSchema,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_FetchLatest_Type,
@@ -290,6 +292,25 @@ export function sendStickerPackSync(
       type: isInstalled ? SyncMessage_StickerPackOperation_Type.INSTALL : SyncMessage_StickerPackOperation_Type.REMOVE,
     })),
   }, Date.now());
+}
+
+/** Tells our other devices that we cleared or read the call log here (Signal Desktop `getClearCallHistoryMessage`) */
+export function sendCallLogEventSync(
+  context: SenderContext, callLogEvent: MessageInitShape<typeof SyncMessage_CallLogEventSchema>,
+) {
+  return syncToOtherDevices(context, { content: { case: 'callLogEvent', value: callLogEvent } }, Date.now());
+}
+
+/**
+ * Asks our primary device for the attachments of a message that the CDN no longer has (Signal Desktop
+ * `getAttachmentBackfillSyncMessage`)
+ */
+export function sendAttachmentBackfillRequestSync(
+  context: SenderContext, request: MessageInitShape<typeof SyncMessage_AttachmentBackfillRequestSchema>,
+) {
+  return syncToOtherDevices(
+    context, { content: { case: 'attachmentBackfillRequest', value: request } }, Date.now(), true,
+  );
 }
 
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */

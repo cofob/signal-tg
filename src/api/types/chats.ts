@@ -13,7 +13,7 @@ import type {
 } from './peers';
 import type { ApiInputRichMessage } from './richMessage';
 import type {
-  ApiUser, ApiUsername,
+  ApiSignalChatStyle, ApiUser, ApiUsername,
 } from './users';
 
 type ApiChatType = (
@@ -124,6 +124,8 @@ export interface ApiCommunityLinkedPeer {
 }
 
 export interface ApiChatFullInfo {
+  // Signal: shown only
+  signalChatStyle?: ApiSignalChatStyle;
   // The chat header bar of a group message request
   settings?: ApiPeerSettings;
   peerTheme?: ApiPeerTheme;

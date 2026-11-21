@@ -1,7 +1,8 @@
 import type { TrafficClass } from '../config';
 
-import { SIGNAL_USER_AGENT } from '../config';
+import { SIGNAL_CHAT_HOST, SIGNAL_STORAGE_HOST, SIGNAL_USER_AGENT } from '../config';
 import { pause } from '../../../util/schedulers';
+import { getServerTimeOffset, setServerTimeOffset } from '../../../util/serverTime';
 
 import Http2Connection, { Http2Error } from './Http2Connection';
 import StreamReader from './StreamReader';
@@ -84,7 +85,34 @@ function createClassConnections(): ClassConnections {
   };
 }
 
+// Servers that answer from their own clock; a CDN may send the time of an older response
+const SERVER_TIME_HOSTS = new Set([SIGNAL_CHAT_HOST, SIGNAL_STORAGE_HOST]);
+const MILLISECONDS_PER_SECOND = 1000;
+
+let serverTimeListener: ((serverTimeOffset: number) => void) | undefined;
+
+/** Called with the new offset of the device clock to the server's, in seconds, when a response changes it */
+export function setServerTimeListener(listener: (serverTimeOffset: number) => void) {
+  serverTimeListener = listener;
+}
+
 export async function sendHttpRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
+  const response = await sendRequest(host, request);
+  if (SERVER_TIME_HOSTS.has(host)) updateServerTime(response);
+  return response;
+}
+
+function updateServerTime({ headers }: HttpResponse) {
+  const serverTime = Date.parse(headers.get('date') ?? '');
+  if (Number.isNaN(serverTime)) return;
+
+  const offset = Math.floor(serverTime / MILLISECONDS_PER_SECOND) - Math.floor(Date.now() / MILLISECONDS_PER_SECOND);
+  if (offset === getServerTimeOffset()) return;
+  setServerTimeOffset(offset);
+  serverTimeListener?.(offset);
+}
+
+async function sendRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
   const connections = connectionsByClass[request.trafficClass];
   if (!connections.http1Hosts.has(host)) {
     const response = await sendHttp2Request(connections, host, request);

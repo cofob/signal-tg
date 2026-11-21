@@ -190,6 +190,21 @@ export interface LangPair {
   'RecoveryKeyCopied': undefined;
   'RecoveryKeySaved': undefined;
   'RecoveryKeyUnavailable': undefined;
+  'KeyTransTitle': undefined;
+  'KeyTransIdle': undefined;
+  'KeyTransRunning': undefined;
+  'KeyTransOk': undefined;
+  'KeyTransUnavailable': undefined;
+  'KeyTransFail': undefined;
+  'KeyTransError': undefined;
+  'KeyTransHint': undefined;
+  'KeyTransLearnMore': undefined;
+  'KeyTransOkText': undefined;
+  'KeyTransErrorText': undefined;
+  'KeyTransUnavailableText': undefined;
+  'KeyTransSelfIdle': undefined;
+  'KeyTransSelfRetry': undefined;
+  'KeyTransSelfFailedText': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -2253,6 +2268,7 @@ export interface LangPair {
   'SettingsKeywordsSealedSender': undefined;
   'SettingsKeywordsLinkPreviews': undefined;
   'SettingsKeywordsSignalPin': undefined;
+  'SettingsKeywordsKeyTrans': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -2275,6 +2291,59 @@ export interface LangPair {
   'DesktopMenuSelectAll': undefined;
   'DesktopMenuWindow': undefined;
   'DesktopMenuMinimize': undefined;
+  'ActionCallIncomingAudio': undefined;
+  'ActionCallIncomingVideo': undefined;
+  'ActionCallOutgoingAudio': undefined;
+  'ActionCallOutgoingVideo': undefined;
+  'ActionCallDeclinedAudio': undefined;
+  'ActionCallDeclinedVideo': undefined;
+  'ActionCallMissedAudio': undefined;
+  'ActionCallMissedVideo': undefined;
+  'ActionCallUnansweredAudio': undefined;
+  'ActionCallUnansweredVideo': undefined;
+  'ActionCallGroupStarted': undefined;
+  'ActionCallGroupStartedYou': undefined;
+  'MenuCalls': undefined;
+  'CallLogEmptyTitle': undefined;
+  'CallLogEmptyText': undefined;
+  'CallLogInfo': undefined;
+  'CallLogCannotCall': undefined;
+  'CallLogIncoming': undefined;
+  'CallLogOutgoing': undefined;
+  'CallLogMissed': undefined;
+  'CallLogDeclined': undefined;
+  'CallLogGroup': undefined;
+  'CallLogClear': undefined;
+  'CallLogClearTitle': undefined;
+  'CallLogClearText': undefined;
+  'CallLogClearConfirm': undefined;
+  'CallLogCleared': undefined;
+  'ActionPaymentActivatedYou': undefined;
+  'NotificationProfiles': undefined;
+  'SettingsKeywordsNotificationProfiles': undefined;
+  'NotificationProfilesInfo': undefined;
+  'NotificationProfilesSyncOff': undefined;
+  'NotificationProfileNew': undefined;
+  'NotificationProfileEdit': undefined;
+  'NotificationProfileName': undefined;
+  'NotificationProfileEmoji': undefined;
+  'NotificationProfileAllowed': undefined;
+  'NotificationProfileNobody': undefined;
+  'NotificationProfileMentions': undefined;
+  'NotificationProfileCalls': undefined;
+  'NotificationProfileSchedule': undefined;
+  'NotificationProfileFrom': undefined;
+  'NotificationProfileUntil': undefined;
+  'NotificationProfileOn': undefined;
+  'NotificationProfileOff': undefined;
+  'NotificationProfileDaily': undefined;
+  'NotificationProfileWeekdays': undefined;
+  'NotificationProfileWeekends': undefined;
+  'NotificationProfileForHour': undefined;
+  'NotificationProfileDelete': undefined;
+  'ChatColor': undefined;
+  'ChatColorWallpaper': undefined;
+  'ChatColorBubbles': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -2350,6 +2419,9 @@ export interface LangPairWithVariables<V = LangVariable> {
     'user': V;
   };
   'SafetyNumberUnavailable': {
+    'user': V;
+  };
+  'KeyTransFailText': {
     'user': V;
   };
   'ActionSafetyChanged': {
@@ -3265,6 +3337,33 @@ export interface LangPairWithVariables<V = LangVariable> {
   'DesktopMenuHide': {
     'app': V;
   };
+  'ActionGiftBadgeReceived': {
+    'user': V;
+  };
+  'ActionGiftBadgeSent': {
+    'user': V;
+  };
+  'ActionPaymentSent': {
+    'user': V;
+  };
+  'ActionPaymentReceived': {
+    'user': V;
+  };
+  'ActionPaymentActivationAsked': {
+    'user': V;
+  };
+  'ActionPaymentActivationAskedYou': {
+    'user': V;
+  };
+  'ActionPaymentActivated': {
+    'user': V;
+  };
+  'NotificationProfileOnUntil': {
+    'time': V;
+  };
+  'NotificationProfileDeleteInfo': {
+    'name': V;
+  };
 }
 
 export interface LangPairPlural {
@@ -3608,6 +3707,9 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PageTitleNotifications': {
     'count': V;
   };
+  'NotificationProfileChats': {
+    'count': V;
+  };
 }
 
 export interface LangKeyGroups {
@@ -3624,6 +3726,7 @@ export interface LangKeyGroups {
       | 'UserActionUploadRound'
       | 'SafetyNumberHint'
       | 'SafetyNumberUnavailable'
+      | 'KeyTransFailText'
       | 'ActionSafetyChanged'
       | 'ActionSafetyVerified'
       | 'ActionSafetyVerifiedSynced'
@@ -3672,7 +3775,14 @@ export interface LangKeyGroups {
       | 'UserInfoResetToOriginalAlertText'
       | 'UserInfoSetCustomPhoto'
       | 'UserInfoSetCustomPhotoSuccessPhotoText'
-      | 'UserInfoSuggestPhoto';
+      | 'UserInfoSuggestPhoto'
+      | 'ActionGiftBadgeReceived'
+      | 'ActionGiftBadgeSent'
+      | 'ActionPaymentSent'
+      | 'ActionPaymentReceived'
+      | 'ActionPaymentActivationAsked'
+      | 'ActionPaymentActivationAskedYou'
+      | 'ActionPaymentActivated';
     variables: 'user';
   };
   'users': {
@@ -3764,7 +3874,8 @@ export interface LangKeyGroups {
       | 'LinkExpiresIn'
       | 'InviteLinkExpiresIn'
       | 'LastSeenTodayAt'
-      | 'LastSeenYesterdayAt';
+      | 'LastSeenYesterdayAt'
+      | 'NotificationProfileOnUntil';
     variables: 'time';
   };
   'phone': {
@@ -3802,7 +3913,8 @@ export interface LangKeyGroups {
       | 'SignalDevicesUnlinkTitle'
       | 'NewDiscussionChatTitle'
       | 'ContextMenuNoForwardsPeer'
-      | 'StoriesSettingDeleteListInfo';
+      | 'StoriesSettingDeleteListInfo'
+      | 'NotificationProfileDeleteInfo';
     variables: 'name';
   };
   'volume': {
@@ -4414,7 +4526,8 @@ export interface LangPluralKeyGroups {
       | 'Views'
       | 'Voice'
       | 'SeenByUsers'
-      | 'PageTitleNotifications';
+      | 'PageTitleNotifications'
+      | 'NotificationProfileChats';
     variables: 'count';
   };
   'index': {

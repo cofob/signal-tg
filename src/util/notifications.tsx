@@ -26,6 +26,7 @@ import {
   selectCurrentMessageList,
   selectCustomEmoji,
   selectIsChatWithSelf,
+  selectIsMessageSilencedByNotificationProfile,
   selectNotifyDefaults,
   selectNotifyException,
   selectPeer,
@@ -192,7 +193,10 @@ function checkIfShouldNotify(chat: ApiChat, message: Partial<ApiMessage>) {
   const isPinMessage = message.content?.action?.type === 'pinMessage';
   const shouldSkipPinnedMessageNotification = isPinMessage && !shouldNotifyAboutPinnedMessages;
   const shouldNotifyAboutMessage = message.content?.action?.type !== 'phoneCall';
-  if (shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute) || !shouldNotifyAboutMessage
+  // Signal notification profiles: a profile that is on allows only some chats, and mutes do not lose their effect
+  const isSilencedByProfile = selectIsMessageSilencedByNotificationProfile(global, chat.id, message);
+  if (isSilencedByProfile || shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute)
+    || !shouldNotifyAboutMessage
     || chat.isNotJoined || !chat.isListed || selectIsChatWithSelf(global, chat.id)) {
     return false;
   }

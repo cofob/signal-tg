@@ -6,6 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type {
   ApiChat,
   ApiCountryCode,
+  ApiSignalChatStyle,
   ApiUser,
   ApiUserFullInfo,
   ApiUsername,
@@ -88,6 +89,7 @@ type StateProps = {
   hasSavedMessages?: boolean;
   personalChannel?: ApiChat;
   canViewSubscribers?: boolean;
+  signalChatStyle?: ApiSignalChatStyle;
 };
 
 const NOTE_MAX_LINES = 3;
@@ -111,6 +113,7 @@ const ChatExtra = ({
   style,
   isInSettings,
   canViewSubscribers,
+  signalChatStyle,
 }: OwnProps & StateProps) => {
   const {
     showNotification,
@@ -427,6 +430,33 @@ const ChatExtra = ({
             <span>{lang('SafetyNumberView')}</span>
           </ListItem>
         )}
+        {signalChatStyle && (
+          <ListItem
+            icon="palette"
+            iconBg="purple"
+            narrow
+            isStatic
+            style={createVtnStyle('chatStyle')}
+          >
+            <span>{lang('ChatColor')}</span>
+            <span className={styles.chatStyleSwatches}>
+              {signalChatStyle.wallpaper && (
+                <span
+                  className={styles.chatStyleSwatch}
+                  title={lang('ChatColorWallpaper')}
+                  style={`background: ${signalChatStyle.wallpaper}`}
+                />
+              )}
+              {signalChatStyle.bubbleColor && (
+                <span
+                  className={styles.chatStyleSwatch}
+                  title={lang('ChatColorBubbles')}
+                  style={`background: ${signalChatStyle.bubbleColor}`}
+                />
+              )}
+            </span>
+          </ListItem>
+        )}
         {shouldRenderNote && (
           <ListItem
             icon="note-filled"
@@ -552,6 +582,7 @@ export default memo(withGlobal<OwnProps>(
       hasSavedMessages,
       personalChannel,
       canViewSubscribers,
+      signalChatStyle: userFullInfo?.signalChatStyle || chatFullInfo?.signalChatStyle,
     };
   },
 )(ChatExtra));

@@ -24,6 +24,7 @@ import Button from '../../ui/Button';
 import Transition from '../../ui/Transition';
 import NewChatButton from '../NewChatButton';
 import LeftSearch from '../search/LeftSearch.async';
+import CallLog from './CallLog';
 import ChatFolders from './ChatFolders';
 import CommunityPanel from './community/CommunityPanel';
 import ContactList from './ContactList.async';
@@ -238,6 +239,8 @@ const LeftMain = ({
               );
             case LeftColumnContent.Contacts:
               return <ContactList filter={contactsFilter} isActive={isActive} onReset={onReset} />;
+            case LeftColumnContent.Calls:
+              return <CallLog isActive={isActive} onReset={onReset} />;
             default:
               return undefined;
           }

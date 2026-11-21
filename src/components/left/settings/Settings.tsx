@@ -31,6 +31,7 @@ import SettingsGeneralBackgroundColor from './SettingsGeneralBackgroundColor';
 import SettingsHeader from './SettingsHeader';
 import SettingsLanguage from './SettingsLanguage';
 import SettingsMain from './SettingsMain';
+import SettingsNotificationProfiles from './SettingsNotificationProfiles';
 import SettingsNotifications from './SettingsNotifications';
 import SettingsPerformance from './SettingsPerformance';
 import SettingsPrivacy from './SettingsPrivacy';
@@ -292,7 +293,14 @@ const Settings = ({
         );
       case SettingsScreens.Notifications:
         return (
-          <SettingsNotifications isActive={isScreenActive} onReset={handleReset} />
+          <SettingsNotifications
+            isActive={isScreenActive || activeScreen === SettingsScreens.NotificationProfiles}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.NotificationProfiles:
+        return (
+          <SettingsNotificationProfiles isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.DataStorage:
         return (

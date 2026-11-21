@@ -13,6 +13,7 @@ import type {
   ApiFormattedText,
   ApiInputReplyInfo,
   ApiInputRichMessage,
+  ApiKeyTransparencySelfStatus,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -167,6 +168,8 @@ export interface AccountSettings {
   signalPin?: ApiSignalPinSettings;
   signalDevices?: ApiSignalDevices;
   signalMessageSettings?: ApiSignalMessageSettings;
+  // The result of the last key transparency check of our own account
+  keyTransparencySelfStatus?: ApiKeyTransparencySelfStatus;
   isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
@@ -272,6 +275,7 @@ export enum SettingsScreens {
   SignalPinNew,
   SignalPinConfirm,
   SignalDevices,
+  NotificationProfiles,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
@@ -289,6 +293,7 @@ export enum LeftColumnContent {
   NewChannelStep2,
   NewGroupStep1,
   NewGroupStep2,
+  Calls,
 }
 
 export enum GlobalSearchContent {

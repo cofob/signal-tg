@@ -18,7 +18,7 @@ import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
-  client, db, logError, processor, store,
+  client, db, keyTransparency, logError, processor, store,
 } from './engine';
 import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
@@ -119,6 +119,7 @@ export async function stopClient(shouldForget: boolean) {
   resetRegistration();
   historyTransferController?.abort();
   processor.stop();
+  keyTransparency.stop();
   client.close();
   resetCdsiState();
   currentAccount = undefined;
@@ -351,6 +352,7 @@ async function attemptConnection() {
 
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
+  keyTransparency.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
 }

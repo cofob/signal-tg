@@ -24,6 +24,7 @@ export {
   toggleDialogUnread,
   updateChatNotifySettings,
 } from './chats';
+export { clearCallLog, fetchCallLog, markCallLogSeen } from './calls';
 export { destroy, disconnect, reconnectNow } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
@@ -61,6 +62,9 @@ export {
 } from './devices';
 export { downloadMedia } from './media';
 export {
+  deleteNotificationProfile, fetchNotificationProfiles, saveNotificationProfile, setNotificationProfileActive,
+} from './notificationProfiles';
+export {
   fetchSignalContactDiscovery,
   fetchSignalPinSettings,
   removeSignalPin,
@@ -89,6 +93,9 @@ export {
   sendPollVote,
   sendReaction,
 } from './messages';
+export {
+  cancelKeyTransparencyCheck, checkKeyTransparency, checkKeyTransparencySelf, fetchKeyTransparencySelfStatus,
+} from './keyTransparency';
 export {
   confirmRecoveryKeySaved,
   confirmUsername,

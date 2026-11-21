@@ -161,6 +161,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsUsername',
   },
   {
+    screen: SettingsScreens.NotificationProfiles,
+    parent: SettingsScreens.Notifications,
+    titleKey: 'NotificationProfiles',
+    keywordsKey: 'SettingsKeywordsNotificationProfiles',
+  },
+  {
     screen: SettingsScreens.SignalProxy,
     parent: SettingsScreens.DataStorage,
     titleKey: 'SignalProxyTitle',
@@ -367,6 +373,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   }),
   ...buildEntries(SettingsScreens.Privacy, ['SignalLinkPreviews'], { keywordsKey: 'SettingsKeywordsLinkPreviews' }),
   ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
+  ...buildEntries(SettingsScreens.NotificationProfiles, ['NotificationProfileNew']),
+  ...buildEntries(SettingsScreens.Privacy, ['KeyTransTitle'], {
+    requires: 'hasKeyTransparency', keywordsKey: 'SettingsKeywordsKeyTrans',
+  }),
   ...buildEntries(SettingsScreens.Stories, [
     'StoriesSettingEnable', 'StoriesSettingViewReceipts', 'StoryRibbonMyStory', 'StoriesSettingAllowReplies',
     'StoriesSettingCustomLists', 'StoriesSettingNewList',

@@ -2,28 +2,33 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
-import type { ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
+import type { CallRecord, ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
 import type { GroupMember, GroupState } from '../groups/fetchGroup';
 import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/generated/SignalService_pb';
 import type SignalStore from '../store/SignalStore';
 
 import { bufferToBase64Url } from '../../../util/encoding/base64';
-import { bufferFromHex } from '../../../util/encoding/buffer';
+import { bufferFromHex, bufferToHex } from '../../../util/encoding/buffer';
 import { buildStickerPackLink } from '../../../util/signalLinks';
 import { STORY_BACKGROUNDS } from '../../../util/storyBackgrounds';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
 import { buildAccessControl } from '../groups/fetchGroup';
 import { buildGroupInviteLink } from '../groups/inviteLinks';
+import { DEFAULT_PROFILE_COLOR } from '../notificationProfiles/notificationProfiles';
 import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
 import { wasm } from '../wasm';
 
+import {
+  ChatStyle_BubbleColorPreset, ChatStyle_WallpaperPreset,
+} from '../proto/generated/Backup_pb';
 import { Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
   BodyRange_Style,
   DataMessage_Contact_Phone_Type,
+  DataMessage_Payment_Activation_Type,
   DataMessageSchema,
   StoryMessageSchema,
   TextAttachment_Style,
@@ -57,6 +62,7 @@ const SMILEY_MOUTH_RADIUS = 120;
 const DEMO_USERNAME_LINK_LENGTH = 48;
 const DEMO_KEY_LENGTH = 32;
 const DEMO_PASSWORD_LENGTH = 16;
+const DEMO_PROFILE_ID_LENGTH = 16;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -104,6 +110,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
 
   await store.setItem('account', {
     aci: me,
+    defaultChatStyle: { bubbleColorPreset: ChatStyle_BubbleColorPreset.SOLID_INDIGO },
     deviceId: 2,
     deviceName: 'TeleSignal (demo)',
     password: 'demo',
@@ -326,6 +333,38 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       isOutgoing: false,
       readAt: now - 37 * MINUTE,
       ...sticker,
+    }],
+    // Gift badges and payments, which only show as notices
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 36 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 35 * MINUTE,
+      dataMessage: { giftBadge: { receiptCredentialPresentation: new Uint8Array([1]) } },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 35 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 34 * MINUTE,
+      dataMessage: { payment: { Item: { case: 'notification', value: { note: 'Dinner' } } } },
+    }],
+    [aliceChat, {
+      authorAci: me,
+      sentAt: now - 34 * MINUTE,
+      isOutgoing: true,
+      readAt: now - 34 * MINUTE,
+      recipientStatus: { [alice]: 'delivered' },
+      dataMessage: { giftBadge: { receiptCredentialPresentation: new Uint8Array([2]) } },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 33 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 32 * MINUTE,
+      dataMessage: {
+        payment: { Item: { case: 'activation', value: { type: DataMessage_Payment_Activation_Type.REQUEST } } },
+      },
     }],
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },
@@ -565,6 +604,89 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     });
     lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
   }
+
+  // Chat colors and wallpapers from the transferred history; Bob's chat uses the default style of the account
+  aliceChat.chatStyle = {
+    wallpaperPreset: ChatStyle_WallpaperPreset.GRADIENT_AQUA,
+    bubbleColorPreset: ChatStyle_BubbleColorPreset.GRADIENT_LAGOON,
+  };
+  carolChat.chatStyle = { wallpaperPreset: ChatStyle_WallpaperPreset.SOLID_BLUSH };
+
+  // Calls of the call history, which show in their chats and the call log
+  const demoCalls: [ConversationRecord, Omit<CallRecord, 'peerId' | 'messageId' | 'mode'>][] = [
+    [aliceChat, {
+      callId: '1001', type: 'audio', direction: 'incoming', status: 'accepted', timestamp: now - 500 * MINUTE,
+    }],
+    [bobChat, {
+      callId: '1002', type: 'audio', direction: 'outgoing', status: 'missed', timestamp: now - 290 * MINUTE,
+    }],
+    [group, {
+      callId: '1003', type: 'group', direction: 'incoming', status: 'joined', timestamp: now - 200 * MINUTE,
+    }],
+    [bobChat, {
+      callId: '1004', type: 'video', direction: 'incoming', status: 'declined', timestamp: now - 100 * MINUTE,
+    }],
+    [aliceChat, {
+      callId: '1005', type: 'video', direction: 'incoming', status: 'missed', timestamp: now - 22 * MINUTE,
+      isUnseen: true,
+    }],
+    [group, {
+      callId: '1006', type: 'group', direction: 'incoming', status: 'genericGroupCall', timestamp: now - 2 * MINUTE,
+      isUnseen: true,
+    }],
+  ];
+  for (const [conversation, call] of demoCalls) {
+    const message = await db.addMessage({
+      conversationId: conversation.id,
+      kind: 'call',
+      authorAci: '',
+      callId: call.callId,
+      sentAt: call.timestamp,
+      receivedAt: call.timestamp,
+      isOutgoing: call.direction === 'outgoing',
+    });
+    await db.putCall({
+      ...call, peerId: conversation.id, mode: call.type === 'group' ? 'group' : 'direct', messageId: message.id,
+    });
+    lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
+  }
+
+  // Notification profiles: one on a schedule, and one turned on by hand for a while
+  const workProfileId = bufferToHex(getRandomBytes(DEMO_PROFILE_ID_LENGTH));
+  const sleepProfileId = bufferToHex(getRandomBytes(DEMO_PROFILE_ID_LENGTH));
+  await store.setItem('notificationProfiles', [
+    {
+      id: workProfileId,
+      name: 'Work',
+      emoji: '💼',
+      color: DEFAULT_PROFILE_COLOR,
+      createdAt: now - 20 * MINUTE,
+      areAllCallsAllowed: false,
+      areAllMentionsAllowed: true,
+      allowedConversationIds: [alice, group.id],
+      isScheduleEnabled: true,
+      scheduleStartTime: 900,
+      scheduleEndTime: 1700,
+      scheduleDays: [1, 2, 3, 4, 5],
+    },
+    {
+      id: sleepProfileId,
+      name: 'Sleep',
+      emoji: '😴',
+      color: DEFAULT_PROFILE_COLOR,
+      createdAt: now - 10 * MINUTE,
+      areAllCallsAllowed: false,
+      areAllMentionsAllowed: false,
+      allowedConversationIds: [bob],
+      isScheduleEnabled: true,
+      scheduleStartTime: 2200,
+      scheduleEndTime: 700,
+      scheduleDays: [1, 2, 3, 4, 5, 6, 7],
+    },
+  ]);
+  await store.setItem('notificationProfileOverride', {
+    enabled: { profileId: sleepProfileId, endsAt: now + 90 * MINUTE },
+  });
 
   for (const conversation of conversations) {
     const last = lastByConversation.get(conversation.id);

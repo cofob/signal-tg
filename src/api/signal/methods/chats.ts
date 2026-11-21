@@ -27,6 +27,7 @@ import {
   getIsChatListed,
   getPinnedConversations,
 } from '../builders/chats';
+import { buildApiChatStyle } from '../builders/chatStyle';
 import { buildApiMessage } from '../builders/messages';
 import { buildApiUser, buildPeerSettings, getIsContact } from '../builders/users';
 import { getCurrentAccount } from '../client';
@@ -157,7 +158,7 @@ export async function fetchFullChat(chat: ApiChat) {
   const { fullInfo, users } = await buildGroupFullInfo(conversation, selfAci);
   sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(users, 'id') });
   return {
-    fullInfo,
+    fullInfo: { ...fullInfo, signalChatStyle: await buildApiChatStyle(conversation) },
     chats: [],
     userStatusesById: {},
     membersCount: conversation.memberAcis?.length,
