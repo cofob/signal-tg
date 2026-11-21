@@ -1,4 +1,6 @@
-import type { ApiPrivacySettings, ApiSignalPinSettings, ApiUsername } from '../../../api/types';
+import type {
+  ApiChatTheme, ApiPrivacySettings, ApiSignalPinSettings, ApiUsername,
+} from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 import type { ActionReturnType } from '../../types';
 import {
@@ -22,7 +24,7 @@ import { getServerTime } from '../../../util/serverTime';
 import { runSettingsAction } from '../../../util/settingsActions';
 import { resolveSettingsLink } from '../../../util/settingsLinks';
 import { getChatThemeEntry, RESET_WALLPAPER_SETTINGS } from '../../../util/wallpaper';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { buildApiInputPrivacyRules } from '../../helpers';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
@@ -299,7 +301,7 @@ addActionHandler('loadChatThemes', async (global): Promise<void> => {
   };
   CHAT_THEME_KEYS.forEach((theme) => {
     const emoticon = selectSharedSettings(global).themes[theme]?.chatThemeEmoticon;
-    const chatTheme = result.chatThemes.find((entry) => entry.emoticon === emoticon);
+    const chatTheme = result.chatThemes.find((entry: ApiChatTheme) => entry.emoticon === emoticon);
     global = updateThemeSettings(global, theme, {
       chatThemeEmoticon: chatTheme?.emoticon,
       serverThemeSettings: chatTheme && getChatThemeEntry(chatTheme.settings, theme === 'dark'),
@@ -879,10 +881,9 @@ addActionHandler('dismissSuggestion', async (global, actions, payload): Promise<
 });
 
 addActionHandler('loadPeerColors', async (global): Promise<void> => {
-  const generalHash = global.peerColors?.generalHash;
   const profileHash = global.peerColors?.profileHash;
   const [generalResult, profileResult] = await Promise.all([
-    callApi('fetchPeerColors', generalHash),
+    callApi('fetchPeerColors'),
     callApi('fetchPeerProfileColors', profileHash),
   ]);
 

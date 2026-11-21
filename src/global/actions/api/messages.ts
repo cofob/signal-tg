@@ -3,6 +3,7 @@ import type {
   ApiChat,
   ApiDraft,
   ApiError,
+  ApiFactCheck,
   ApiInputDraftReplyInfo,
   ApiInputMessageReplyInfo,
   ApiInputReplyInfo,
@@ -14,6 +15,7 @@ import type {
   ApiOnProgress,
   ApiSticker,
   ApiStory,
+  ApiThreadInfo,
   ApiUser,
   ApiVideo,
   MediaContent,
@@ -36,7 +38,6 @@ import {
   MAX_MEDIA_FILES_FOR_ALBUM,
   MESSAGE_ID_REQUIRED_ERROR,
   MESSAGE_LIST_SLICE,
-  SERVICE_NOTIFICATIONS_USER_ID,
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
@@ -64,7 +65,7 @@ import { debounce, onTickEnd, rafPromise } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
 import { parseSignalLink } from '../../../util/signalLinks';
 import { cancelVideoAttachmentProcessing, processVideoAttachment } from '../../../util/videoProcessingQueue';
-import { callApi, cancelApiProgress } from '../../../api/gramjs';
+import { callApi, cancelApiProgress } from '../../../api';
 import {
   getIsSavedDialog,
   getUserFullName,
@@ -74,7 +75,6 @@ import {
   isDeletedUser,
   isEphemeralSendSupported,
   isMessageLocal,
-  isServiceNotificationMessage,
   isUserRightBanned,
   runForFocusedTabs,
   splitMessagesForForwarding,
@@ -1397,15 +1397,6 @@ addActionHandler('markMessageListRead', (global, actions, payload): ActionReturn
     });
   });
 
-  if (chatId === SERVICE_NOTIFICATIONS_USER_ID) {
-    global = {
-      ...global,
-      serviceNotifications: global.serviceNotifications.map((notification) => {
-        return notification.isUnread && notification.id <= maxId ? { ...notification, isUnread: false } : notification;
-      }),
-    };
-  }
-
   const threadReadState = selectThreadReadState(global, chatId, threadId);
   global = replaceThreadReadStateParam(global, chatId, threadId, 'hasUnreadMark', undefined);
 
@@ -1592,7 +1583,7 @@ addActionHandler('loadScheduledHistory', async (global, actions, payload): Promi
     return;
   }
 
-  const { messages } = result;
+  const { messages }: { messages: ApiMessage[] } = result;
 
   const byId = buildCollectionByKey(messages, 'id');
   const ids = Object.keys(byId).map(Number).sort((a, b) => b - a);
@@ -1730,9 +1721,8 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
   const draft = selectDraft(global, toChatId!, toThreadId || MAIN_THREAD_ID);
   const lastMessageId = selectChatLastMessageId(global, toChat.id);
 
-  const [realMessages, serviceMessages] = partition(messages, (m) => !isServiceNotificationMessage(m));
-  const forwardableRealMessages = realMessages.filter((message) => selectCanForwardMessage(global, message));
-  const [ephemeralMessages, regularMessages] = partition(forwardableRealMessages, (message) => message.isEphemeral);
+  const forwardableMessages = messages.filter((message) => selectCanForwardMessage(global, message));
+  const [ephemeralMessages, regularMessages] = partition(forwardableMessages, (message) => message.isEphemeral);
   for (const messagesToForward of [regularMessages, ephemeralMessages]) {
     if (!messagesToForward.length) continue;
 
@@ -1758,27 +1748,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
 
       callApi('forwardMessages', forwardParams);
     }
-  }
-
-  for (const message of serviceMessages) {
-    const { text, entities } = message.content.text || {};
-    const { sticker } = message.content;
-
-    const replyInfo = selectMessageReplyInfo(global, toChat.id, toThreadId);
-
-    const params: SendMessageParams = {
-      chat: toChat,
-      replyInfo,
-      text,
-      entities,
-      sticker,
-      isSilent,
-      scheduledAt,
-      sendAs,
-      lastMessageId,
-    };
-
-    sendMessage(global, params);
   }
 
   global = getGlobal();
@@ -1929,10 +1898,7 @@ async function loadViewportMessages<T extends GlobalState>(
   const typingDraftMessages = localTypingDrafts ? Object.values(localTypingDrafts)
     .map((id) => selectChatMessage(global, chatId, id))
     .filter(Boolean) : [];
-  const localMessages = chatId === SERVICE_NOTIFICATIONS_USER_ID
-    ? global.serviceNotifications.filter(({ isDeleted }) => !isDeleted).map(({ message }) => message)
-    : typingDraftMessages;
-  const allMessages = ([] as ApiMessage[]).concat(messages, localMessages);
+  const allMessages = ([] as ApiMessage[]).concat(messages, typingDraftMessages);
   const byId = buildCollectionByKey(allMessages, 'id');
   const ids = Object.keys(byId).map(Number);
 
@@ -2376,7 +2342,7 @@ addActionHandler('loadPinnedMessages', async (global, actions, payload): Promise
     return;
   }
 
-  const { messages } = result;
+  const { messages }: { messages: ApiMessage[] } = result;
 
   const byId = buildCollectionByKey(messages, 'id');
   const ids = Object.keys(byId).map(Number).sort((a, b) => b - a);
@@ -2840,8 +2806,7 @@ interface ForwardToChatOptions {
   fromChat: ApiChat;
   toChat: ApiChat;
   toThreadId?: ThreadId;
-  realMessages: ApiMessage[];
-  serviceMessages: ApiMessage[];
+  messages: ApiMessage[];
   comment?: string;
   withMyScore?: boolean;
   noAuthors?: boolean;
@@ -2853,8 +2818,7 @@ function forwardMessagesToChat({
   fromChat,
   toChat,
   toThreadId = MAIN_THREAD_ID,
-  realMessages,
-  serviceMessages,
+  messages,
   comment,
   withMyScore,
   noAuthors,
@@ -2882,9 +2846,9 @@ function forwardMessagesToChat({
     });
   }
 
-  if (realMessages.length) {
-    const [ephemeralMessages, regularMessages] = partition(realMessages, (message) => message.isEphemeral);
-    const messageGroups = [regularMessages, ephemeralMessages].filter((messages) => messages.length);
+  if (messages.length) {
+    const [ephemeralMessages, regularMessages] = partition(messages, (message) => message.isEphemeral);
+    const messageGroups = [regularMessages, ephemeralMessages].filter((group) => group.length);
 
     for (const messagesToForward of messageGroups) {
       const messageSlices = global.config?.maxForwardedCount
@@ -2911,22 +2875,6 @@ function forwardMessagesToChat({
       }
     }
   }
-
-  for (const message of serviceMessages) {
-    const { text, entities } = message.content.text || {};
-    const { sticker } = message.content;
-
-    sendMessage(global, {
-      chat: toChat,
-      messageList: targetMessageList,
-      text,
-      entities,
-      sticker,
-      isSilent: true,
-      sendAs,
-      lastMessageId,
-    });
-  }
 }
 
 addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionReturnType => {
@@ -2948,10 +2896,9 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
     return;
   }
 
-  const [realMessages, serviceMessages] = partition(messages, (m) => !isServiceNotificationMessage(m));
-  const forwardableRealMessages = realMessages.filter((message) => selectCanForwardMessage(global, message));
+  const forwardableMessages = messages.filter((message) => selectCanForwardMessage(global, message));
 
-  if (!forwardableRealMessages.length && !serviceMessages.length) {
+  if (!forwardableMessages.length) {
     return;
   }
 
@@ -2964,8 +2911,7 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
       fromChat,
       toChat,
       toThreadId: topicId || MAIN_THREAD_ID,
-      realMessages: forwardableRealMessages,
-      serviceMessages,
+      messages: forwardableMessages,
       comment,
       withMyScore,
       noAuthors,
@@ -3129,7 +3075,9 @@ addActionHandler('loadMessageViews', async (global, actions, payload): Promise<v
   if (!result) return;
 
   global = getGlobal();
-  result.viewsInfo.forEach((update) => {
+  result.viewsInfo.forEach((update: {
+    id: number; views?: number; forwards?: number; threadInfo?: ApiThreadInfo;
+  }) => {
     global = updateChatMessage(global, chatId, update.id, {
       viewsCount: update.views,
       forwardsCount: update.forwards,
@@ -3201,7 +3149,7 @@ addActionHandler('loadFactChecks', async (global, actions, payload): Promise<voi
   if (!result) return;
 
   global = getGlobal();
-  result.forEach((factCheck, i) => {
+  result.forEach((factCheck: ApiFactCheck, i: number) => {
     global = updateChatMessage(global, chatId, ids[i], {
       factCheck,
     });

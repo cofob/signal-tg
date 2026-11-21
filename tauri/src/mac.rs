@@ -392,3 +392,27 @@ pub fn setup_traffic_light_positioner<R: Runtime>(
         }))
   }
 }
+
+/// `NSActivityUserInitiatedAllowingIdleSystemSleep`: the app counts as busy, so App Nap leaves it alone, while the
+/// computer may still sleep when idle
+const BACKGROUND_ACTIVITY_OPTIONS: u64 = 0x00FF_FFFF & !(1 << 20);
+
+/// Keeps macOS from putting the app to sleep (App Nap) while its window is hidden: a napping app delays its timers
+/// and network callbacks, and the engine would receive messages late. The activity lasts until the app exits.
+#[allow(unexpected_cfgs)]
+pub(crate) fn begin_background_activity() {
+  use cocoa::{
+    base::{id, nil},
+    foundation::NSString,
+  };
+  use objc::class;
+
+  unsafe {
+    let process_info: id = msg_send![class!(NSProcessInfo), processInfo];
+    let reason = NSString::alloc(nil).init_str("Receiving messages");
+    let activity: id =
+      msg_send![process_info, beginActivityWithOptions: BACKGROUND_ACTIVITY_OPTIONS reason: reason];
+    // The activity ends when it is released, which only the end of the process does
+    let _: id = msg_send![activity, retain];
+  }
+}

@@ -235,21 +235,8 @@ function onUpdateConnectionState<T extends GlobalState>(
 function onUpdateSession<T extends GlobalState>(global: T, actions: RequiredGlobalActions, update: ApiUpdateSession) {
   const { sessionData } = update;
   const { rememberMe, state } = global.auth;
-  const isEmpty = !sessionData || !sessionData.mainDcId;
 
-  const isTest = sessionData?.isTest;
-  if (isTest) {
-    global = {
-      ...global,
-      config: {
-        ...global.config,
-        isTestServer: isTest,
-      },
-    };
-    setGlobal(global);
-  }
-
-  if (!rememberMe || state !== 'authorizationStateReady' || isEmpty) {
+  if (!rememberMe || state !== 'authorizationStateReady' || !sessionData) {
     return;
   }
 

@@ -12,7 +12,7 @@ import { getSenderKeyId } from '../store/protocolStores';
 import { wasm } from '../wasm';
 import { getSenderCertificate } from './sealedSender';
 import { createAciStores, getSendDevices, sendToEach, updateDevices } from './sendContent';
-import { SendHttpError, UnregisteredUserError } from './sendErrors';
+import { NotGroupMemberError, SendHttpError, UnregisteredUserError } from './sendErrors';
 
 import { parseJson } from '../net/ResourceSocket';
 import { ContentSchema } from '../proto/generated/SignalService_pb';
@@ -23,6 +23,9 @@ export type GroupTarget = {
   secretParams: Uint8Array;
   // Fetches the group state again, which renews its send endorsements
   refresh(): Promise<void>;
+  // The accounts that are members now, `undefined` while the state is unknown. Absent for sends that name their
+  // recipients themselves, such as group updates, which also go to former members.
+  getMemberAcis?(): Promise<string[] | undefined>;
 };
 
 type GroupSendOptions = {
@@ -99,6 +102,22 @@ export function sendWithSenderKey(
 }
 
 /**
+ * Splits `recipients` into the members of the group now and the rest, who get a `NotGroupMemberError` result: the
+ * group changed after the message was created. Sends that name their recipients keep all of them.
+ */
+export async function dropFormerMembers(group: GroupTarget, recipients: string[]) {
+  const memberAcis = await group.getMemberAcis?.();
+  if (!memberAcis) return { kept: recipients, dropped: [] as RecipientResult[] };
+
+  const members = new Set(memberAcis);
+  return {
+    kept: recipients.filter((serviceId) => members.has(serviceId)),
+    dropped: recipients.filter((serviceId) => !members.has(serviceId))
+      .map((serviceId) => ({ serviceId, error: new NotGroupMemberError(serviceId) })),
+  };
+}
+
+/**
  * The sender key distribution message of the group, for a member that our current sender key reached,
  * so a retry request can give it the key again (Signal Desktop `ts/util/handleRetry.preload.ts`)
  */
@@ -152,9 +171,19 @@ async function sendWithRetries(
   const group = target.type === 'group' ? target.group : undefined;
   const isStory = Boolean(options.isStory);
   let didRefreshGroup = false;
+  const formerMembers = new Set<string>();
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const info = await getSenderKeyInfo(context, infoKey, target.type === 'storyList' ? target.listId : undefined);
+    // Members removed since the message was created, or by the refresh below, get nothing (Signal Desktop
+    // `getMessageRecipients` in `ts/jobs/helpers/sendNormalMessage.preload.ts` drops them at the start of the job)
+    if (group) {
+      const { dropped } = await dropFormerMembers(group, recipients);
+      for (const result of dropped) {
+        formerMembers.add(result.serviceId);
+        if (!failed.some(({ serviceId }) => serviceId === result.serviceId)) failed.push(result);
+      }
+    }
     const candidates = recipients.filter((serviceId) => !failed.some((result) => result.serviceId === serviceId));
 
     // Endorsements that expire soon or miss members are renewed once with the group state; a failed refresh
@@ -182,7 +211,7 @@ async function sendWithRetries(
 
     // A member left the group or the list: they must not read later messages. A group update also goes to removed
     // members, whom the endorsements of the new revision leave out.
-    if (removed.some(({ serviceId }) => !recipients.includes(serviceId)
+    if (removed.some(({ serviceId }) => !recipients.includes(serviceId) || formerMembers.has(serviceId)
       || (endorsements && !endorsements.members[serviceId]))) {
       await resetSenderKey(context, infoKey, info);
       continue;

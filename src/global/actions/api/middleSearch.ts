@@ -2,7 +2,9 @@ import type {
   ChatMediaSearchParams, ChatMediaSearchSegment, LoadingState, SharedMediaType, ThreadId,
 } from '../../../types';
 import type { ActionReturnType, GlobalState, TabArgs } from '../../types';
-import { type ApiMessage, type ApiPeer, MAIN_THREAD_ID } from '../../../api/types';
+import {
+  type ApiMessage, type ApiPeer, MAIN_THREAD_ID,
+} from '../../../api/types';
 import { LoadMoreDirection } from '../../../types';
 
 import {
@@ -17,7 +19,7 @@ import { tryParseDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByKey, isInsideSortedArrayRange } from '../../../util/iteratees';
 import { getSearchResultKey } from '../../../util/keys/searchResultKey';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import {
   getIsSavedDialog, getSharedMediaKeys, isSameReaction, parseSharedMediaKey,
 } from '../../helpers';
@@ -339,9 +341,8 @@ async function searchSharedMedia<T extends GlobalState>(
     return;
   }
 
-  const {
-    userStatusesById, messages, totalCount, nextOffsetId,
-  } = result;
+  const { userStatusesById, totalCount, nextOffsetId } = result;
+  const messages: ApiMessage[] = result.messages;
 
   const byId = buildCollectionByKey(messages, 'id');
   const newFoundIds = Object.keys(byId).map(Number);
@@ -542,9 +543,8 @@ async function searchChatMedia<T extends GlobalState>(
     return;
   }
 
-  const {
-    messages, userStatusesById,
-  } = result;
+  const { userStatusesById } = result;
+  const messages: ApiMessage[] = result.messages;
 
   const byId = buildCollectionByKey(messages, 'id');
   const newFoundIds = Object.keys(byId).map(Number);

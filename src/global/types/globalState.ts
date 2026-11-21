@@ -52,7 +52,6 @@ import type {
   EmojiKeywords,
   OrderMode,
   RepeatMode,
-  ServiceNotification,
   Thread,
   ThreadId,
   TopicsInfo,
@@ -383,8 +382,6 @@ export type GlobalState = {
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
     accountDaysTtl: number;
   };
-
-  serviceNotifications: ServiceNotification[];
 
   byTabId: Record<number, TabState>;
   sharedState: SharedState;

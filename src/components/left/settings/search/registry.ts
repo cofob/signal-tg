@@ -9,6 +9,7 @@ import { IS_IOS, IS_MAC_OS } from '../../../../util/browser/windowEnvironment';
 import { unique } from '../../../../util/iteratees';
 import { getIsKeyboardShortcutAvailable } from '../../../../util/keyboardShortcuts';
 import { KEYBOARD_SHORTCUT_IDS, KEYBOARD_SHORTCUTS } from '../../../../util/keyboardShortcuts/registry';
+import { CAN_PROTECT_CONTENT } from '../../../../util/tauri/desktopApp';
 
 export type SettingsSearchFlag =
   'isDesktopLayout' | 'canSendWithKeyboard' | keyof ReturnType<typeof selectSettingsSearchFlags>;
@@ -291,6 +292,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     'EmptyChatAppearanceLight', 'EmptyChatAppearanceDark', 'EmptyChatAppearanceSystem', 'SettingsTimeFormat12',
     'SettingsTimeFormat24', 'SettingsAutomaticTextReplacements', 'SettingsKeyboard',
   ]),
+  ...buildEntries(SettingsScreens.General, IS_TAURI ? ['SettingsDesktopTray', 'SettingsDesktopAutostart'] : []),
+  ...buildEntries(SettingsScreens.General, IS_TAURI && CAN_PROTECT_CONTENT ? ['SettingsDesktopProtect'] : []),
 
   ...buildEntries(SettingsScreens.GeneralChatBackground, [
     'UploadImage', 'ThemeResetToDefaults', 'BackgroundPatternIntensity', 'BackgroundBlurred',

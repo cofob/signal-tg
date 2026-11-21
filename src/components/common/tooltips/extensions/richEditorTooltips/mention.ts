@@ -22,7 +22,7 @@ import { selectChat } from '../../../../../global/selectors';
 import { pickTruthy, unique } from '../../../../../util/iteratees';
 import { getTranslationFn } from '../../../../../util/localization';
 import { debounce } from '../../../../../util/schedulers';
-import { callApi } from '../../../../../api/gramjs';
+import { callApi } from '../../../../../api';
 import { replaceEditorRange } from '../../../../middle/composer/helpers/richEditorComposer';
 import {
   buildBlockMatch,
@@ -105,7 +105,7 @@ async function searchMentionMemberIds(chatId: string, threadId: ThreadId | undef
 
   const topMsgId = typeof threadId === 'number' && threadId !== MAIN_THREAD_ID ? threadId : undefined;
   const result = await callApi('fetchMembers', { chat, memberFilter: 'mentions', query, topMsgId });
-  return result?.members?.map(({ userId }) => userId);
+  return result?.members?.map(({ userId }: { userId: string }) => userId);
 }
 
 function mergeMemberIds(localUsers: ApiUser[], memberIds: string[], currentUserId?: string) {

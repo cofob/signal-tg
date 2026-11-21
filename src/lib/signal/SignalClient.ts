@@ -71,10 +71,12 @@ export default class SignalClient {
     updateDeviceCapabilities(connection, Boolean(account.number), account.hasSvrPin).catch(handlers.onError);
   }
 
+  /** Closes the connections; the result settles once the closed chat connection has processed its envelopes */
   close() {
-    this.connection?.close();
+    const drained = this.connection?.close();
     this.connection = undefined;
     this.unauthenticatedChat.close();
+    return drained;
   }
 
   /** Changes the stored account; the client has loaded it at its first connection, or does here */

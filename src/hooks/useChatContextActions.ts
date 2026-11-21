@@ -5,7 +5,7 @@ import type { MenuItemContextAction } from '../components/ui/ListItem';
 import type { GlobalState } from '../global/types';
 import { type ApiChat, type ApiUser, MAIN_THREAD_ID } from '../api/types';
 
-import { ARCHIVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../config';
+import { ARCHIVED_FOLDER_ID } from '../config';
 import {
   getCanDeleteChat, isChatArchived, isChatChannel, isChatCommunity, isChatGroup,
 } from '../global/helpers';
@@ -66,7 +66,6 @@ const useChatContextActions = ({
   const lang = useLang();
 
   const { isSelf } = user || {};
-  const isServiceNotifications = user?.id === SERVICE_NOTIFICATIONS_USER_ID;
 
   const topicsReadStateSelector = useCallback((global: GlobalState) => {
     if (!chat?.id) return undefined;
@@ -243,14 +242,14 @@ const useChatContextActions = ({
       actionMarkAsUnread,
       canManageListPlacement && actionPin,
       !isSelf && actionMute,
-      !isSelf && !isServiceNotifications && !isInFolder && canManageListPlacement && actionArchive,
+      !isSelf && !isInFolder && canManageListPlacement && actionArchive,
       actionReport,
       actionDelete,
     ]);
   }, [
     chat, isPreview, lang, isSavedDialog, isResolvedPinned, deleteTitle, handleDelete, canChangeFolder,
     handleChatFolderChange, isMuted, handleUnmute, handleMute, isInSearch, chatReadState, topicsReadStates,
-    handleReport, user, folderId, isSelf, isServiceNotifications, currentUserId, isInCommunityPanel,
+    handleReport, user, folderId, isSelf, currentUserId, isInCommunityPanel,
     isLinkedCommunityCollapsed,
   ]);
 

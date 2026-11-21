@@ -4,7 +4,7 @@ import { ManagementProgress } from '../../../types';
 import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getTranslationFn } from '../../../util/localization';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { getUserFirstOrLastName } from '../../helpers';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
@@ -218,10 +218,7 @@ addActionHandler('deleteExportedChatInvite', async (global, actions, payload): P
   const peer = selectChat(global, chatId);
   if (!peer) return;
 
-  const result = await callApi('deleteExportedChatInvite', {
-    peer,
-    link,
-  });
+  const result = await callApi('deleteExportedChatInvite');
   if (!result) {
     return;
   }
@@ -243,10 +240,7 @@ addActionHandler('deleteRevokedExportedChatInvites', async (global, actions, pay
   const admin = selectUser(global, adminId || global.currentUserId!);
   if (!peer || !admin) return;
 
-  const result = await callApi('deleteRevokedExportedChatInvites', {
-    peer,
-    admin,
-  });
+  const result = await callApi('deleteRevokedExportedChatInvites');
   if (!result) {
     return;
   }

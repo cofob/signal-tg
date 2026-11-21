@@ -6,7 +6,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiAvatarUpload, ApiPhoto, ApiUser } from '../../../api/types';
 import { ManagementProgress } from '../../../types';
 
-import { MUTE_INDEFINITE_TIMESTAMP, SERVICE_NOTIFICATIONS_USER_ID, UNMUTE_TIMESTAMP } from '../../../config';
+import { MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP } from '../../../config';
 import { getIsChatMuted } from '../../../global/helpers/notifications';
 import {
   selectChat,
@@ -235,8 +235,7 @@ const ManageUser = ({
     return undefined;
   }
 
-  const canSetPersonalPhoto = user.id !== SERVICE_NOTIFICATIONS_USER_ID;
-  const canSuggestBirthday = canSetPersonalPhoto && hasBirthday === false;
+  const canSuggestBirthday = hasBirthday === false;
   const isLoading = progress === ManagementProgress.InProgress;
   const noteSymbolsLeft = contactNoteLimit - note.length;
 
@@ -292,38 +291,36 @@ const ManageUser = ({
             />
           </div>
         </Island>
-        {canSetPersonalPhoto && (
-          <>
-            <Island>
-              <ListItem icon="camera-add" ripple onClick={handleSuggestPhoto}>
-                <span className="list-item-ellipsis">{lang('UserInfoSuggestPhoto', { user: user.firstName })}</span>
+        <>
+          <Island>
+            <ListItem icon="camera-add" ripple onClick={handleSuggestPhoto}>
+              <span className="list-item-ellipsis">{lang('UserInfoSuggestPhoto', { user: user.firstName })}</span>
+            </ListItem>
+            <ListItem icon="camera-add" ripple onClick={handleSetPersonalPhoto}>
+              <span className="list-item-ellipsis">{lang('UserInfoSetCustomPhoto', { user: user.firstName })}</span>
+            </ListItem>
+            {personalPhoto && (
+              <ListItem
+                leftElement={(
+                  <Avatar
+                    photo={notPersonalPhoto}
+                    noPersonalPhoto
+                    peer={user}
+                    size="mini"
+                    className="personal-photo"
+                  />
+                )}
+                ripple
+                onClick={openResetPersonalPhotoDialog}
+              >
+                {lang('UserInfoResetCustomPhoto')}
               </ListItem>
-              <ListItem icon="camera-add" ripple onClick={handleSetPersonalPhoto}>
-                <span className="list-item-ellipsis">{lang('UserInfoSetCustomPhoto', { user: user.firstName })}</span>
-              </ListItem>
-              {personalPhoto && (
-                <ListItem
-                  leftElement={(
-                    <Avatar
-                      photo={notPersonalPhoto}
-                      noPersonalPhoto
-                      peer={user}
-                      size="mini"
-                      className="personal-photo"
-                    />
-                  )}
-                  ripple
-                  onClick={openResetPersonalPhotoDialog}
-                >
-                  {lang('UserInfoResetCustomPhoto')}
-                </ListItem>
-              )}
-            </Island>
-            <IslandDescription dir="auto">
-              {lang('UserInfoCustomPhotoInfo', { user: user.firstName })}
-            </IslandDescription>
-          </>
-        )}
+            )}
+          </Island>
+          <IslandDescription dir="auto">
+            {lang('UserInfoCustomPhotoInfo', { user: user.firstName })}
+          </IslandDescription>
+        </>
         {canSuggestBirthday && (
           <Island>
             <ListItem icon="gift" ripple onClick={handleSuggestBirthday}>

@@ -1,5 +1,13 @@
 # Friction log
 
+## UI actions still call removed Telegram API methods
+
+`src/api/signal/methods/types.ts` lists the names of Telegram methods that `callApi` accepts but the engine does not implement (forums, communities, group and phone calls, saved dialogs, scheduled and ephemeral messages, privacy settings, wallpapers, emoji and GIF search, and others). Each call resolves to `undefined`, so the code after it, such as the loaders in `src/global/actions/api/chats.ts`, `calls.async.ts`, `symbols.ts` and `settings.ts`, is dead. Their results are typed `any`, which made some callbacks need explicit parameter types after GramJS was removed (verified with `tsc`). Deleting the handlers and their action types, state and components shrinks the list; removing a name makes `tsc` show the remaining callers.
+
+## Telegram identifier and test server conventions remain in shared helpers
+
+`src/util/entities/ids.ts` still derives channel ids from `CHANNEL_ID_BASE` (`toChannelId` for `tg:` deep links in `src/util/deepLinkParser.ts`, `getRawPeerId` and `getPeerIdDividend` for peer colors and message links), while Signal peer ids are small local ids (`src/api/signal/peers.ts`), so the channel branch never runs. The test server concept (`config.isTestServer`, `isTest` in `AccountInfo` and `SharedSessionData`, the `test` URL parameter, `AuthPhoneNumber.tsx`, `App.tsx`) has no Signal counterpart and is never set. Verified by searching for the usages; not removed because the UI around them is still in use.
+
 ## Upstream helper scripts that nothing calls remain in `dev/` and `deploy/`
 
 `dev/createBundleStatsComment.ts` (a pull request comment with bundle sizes, keyed by the removed `stars` and `wallet`
@@ -18,24 +26,25 @@ every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revisi
 conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
 is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
 
-## Desktop notifications cannot open the chat that they announce
+## The desktop app cannot switch on spell checking in WebKitGTK
 
-`src/util/notifications.tsx` shows the desktop app's notifications with `sendNotification({ title, body })` of
-`@tauri-apps/plugin-notification`. On desktop the plugin shows the notification through `notify-rust` and drops the
-handle (`tauri-plugin-notification` 2.5.1, `src/desktop.rs`), and `onAction` exists on mobile only, so a click reaches
-the page as nothing, and the plugin offers no inline reply or grouping either. Verified by reading the plugin's source;
-not tried on macOS or Windows. Opening the chat needs native code per system (a `notify-rust` handle on Linux, a
-`UNUserNotificationCenter` delegate on macOS, a toast activation on Windows), or a heuristic: remember the last
-notified chat and open it when the window gains focus soon after.
+The composer sets `spellcheck` (`MessageInput.tsx`) and the system context menu is allowed in text fields
+(`setupTauriListeners.ts`), but on Linux the webview decides whether to spell-check, through
+`webkit_web_context_set_spell_checking_enabled`, which neither `wry` 0.57 nor the app calls (a search for "spell" in the
+`wry` and `tauri` sources finds nothing). Verified under Xvfb with WebKitGTK 2.52: misspelled words in the composer got
+no underline and the context menu had no suggestions, though the system may lack dictionaries there. Calling it from
+`Webview::with_webview` needs the `webkit2gtk` crate as a direct dependency, which the tree has through `wry` but
+`tauri/Cargo.toml` does not list. Whether WKWebView (macOS) and WebView2 (Windows) spell-check the composer is not
+tried.
 
-## The desktop app ships the webview inspector, so production turns off the context menu
+## A launch at login on Linux hides the window even when no tray host runs
 
-`tauri/Cargo.toml` enables the `devtools` feature of `tauri`, which keeps the inspector in release builds, and
-`src/util/tauri/setupTauriListeners.ts` cancels every `contextmenu` event outside `DEBUG` to hide it. The same line
-removes the system menu of text fields (cut, copy, paste, select all, spellcheck suggestions), and the inputs turn
-spellcheck off (`spellCheck={IS_TAURI ? false : undefined}`). Verified by reading both places; the inspector in a
-release build is not tried. Either dropping the feature or showing the system menu on editable targets only, with
-the inspector off, would restore text field menus.
+`tauri/src/lib.rs` opens the first window hidden for `--autostart` (`SHOULD_START_HIDDEN`), and the tray icon is how a
+hidden window comes back. On a Linux desktop without a StatusNotifier host (GNOME without the AppIndicator extension,
+for example) nobody can show the window except by launching the app a second time. Verified by reading the code; the
+hidden start itself was tried under Xvfb, a missing tray host was not. Detecting the host means asking the session bus
+whether `org.kde.StatusNotifierWatcher` has an owner, which needs `zbus` (in the tree through `notify-rust`) as a
+direct dependency; the start could then stay visible without one.
 
 ## The demo account has no downloadable document and no file with a risky name
 
@@ -54,3 +63,13 @@ Settings > Privacy row "Recovery key" therefore shows on every device and a link
 Verified by reading the code: `AccountRecord.deviceId` lives only in `SignalStore`, behind the API layer. A flag that
 the API sends with the current user, or an app config field that follows the account, would let the row and its search
 entry follow `requires` like `arePasskeysAvailable`.
+
+## Playwright screenshots of a focused input make `stricterdom` report `style` mutations
+
+In development builds `src/lib/fasterdom/stricterdom.ts` logs "Unexpected mutation detected: `style`" for each
+attribute change outside the mutation phase. `page.screenshot()` of Playwright hides the caret by default, which sets
+`caret-color: transparent !important` in the `style` attribute of the focused element and removes it afterwards, so
+every screenshot with a focused `input` adds two such errors (verified on the demo account: 0 errors after load, after
+opening a chat and after typing; 2 more after each default screenshot, none with `caret: 'initial'`). The error text
+names no element, so these reports look like a component bug. Browser verification scripts should pass
+`caret: 'initial'`; `stricterdom` could name the target element and ignore `caret-color`.

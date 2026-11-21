@@ -1,7 +1,9 @@
+import type { ApiMessage } from '../../../api/types';
+
 import { GLOBAL_SEARCH_SLICE } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getSearchResultKey } from '../../../util/keys/searchResultKey';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   addMessages, addUserStatuses, updateMusicPicker,
@@ -53,8 +55,9 @@ addActionHandler('loadMusicPickerShared', async (global, actions, payload): Prom
   }
 
   const {
-    messages, userStatusesById, totalCount, nextOffsetRate, nextOffsetId, nextOffsetPeerId,
+    userStatusesById, totalCount, nextOffsetRate, nextOffsetId, nextOffsetPeerId,
   } = result;
+  const messages: ApiMessage[] = result.messages;
 
   global = addMessages(global, messages);
   global = addUserStatuses(global, userStatusesById);

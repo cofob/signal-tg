@@ -1092,7 +1092,6 @@ export interface LangPair {
   'NoAudioFilesInfo': undefined;
   'AttachContact': undefined;
   'AttachStory': undefined;
-  'ServiceNotifications': undefined;
   'Bot': undefined;
   'ALongTimeAgo': undefined;
   'WithinAMonth': undefined;
@@ -1867,7 +1866,6 @@ export interface LangPair {
   'AccDescrTopic': undefined;
   'AllReactions': undefined;
   'AllViewers': undefined;
-  'AnonymousForward': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
   'August': undefined;
@@ -2154,9 +2152,6 @@ export interface LangPair {
   'SettingsStartWave': undefined;
   'SettingsVaporizeButton': undefined;
   'DebugDownloadLog': undefined;
-  'SettingsAllowHttp': undefined;
-  'SettingsForceHttp': undefined;
-  'DebugExportedSenders': undefined;
   'TestServer': undefined;
   'CodeLanguagePlainText': undefined;
   'ErrorChatRestricted': undefined;
@@ -2260,6 +2255,21 @@ export interface LangPair {
   'SettingsKeywordsLogOut': undefined;
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
+  'SettingsDesktopApp': undefined;
+  'SettingsDesktopTray': undefined;
+  'SettingsDesktopTrayDescription': undefined;
+  'SettingsDesktopAutostart': undefined;
+  'SettingsDesktopAutostartDescription': undefined;
+  'SettingsDesktopProtect': undefined;
+  'SettingsDesktopProtectDescription': undefined;
+  'ShortcutQuitApp': undefined;
+  'DesktopMenuUndo': undefined;
+  'DesktopMenuRedo': undefined;
+  'DesktopMenuCut': undefined;
+  'DesktopMenuPaste': undefined;
+  'DesktopMenuSelectAll': undefined;
+  'DesktopMenuWindow': undefined;
+  'DesktopMenuMinimize': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -3240,6 +3250,15 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'VoiceChatJoinConfirmChannel': {
     'chat': V;
+  };
+  'DesktopMenuOpen': {
+    'app': V;
+  };
+  'DesktopMenuQuit': {
+    'app': V;
+  };
+  'DesktopMenuHide': {
+    'app': V;
   };
 }
 
@@ -4274,6 +4293,13 @@ export interface LangKeyGroups {
     keys:
       | 'PeerPickerUnknownPeer';
     variables: 'id';
+  };
+  'app': {
+    keys:
+      | 'DesktopMenuOpen'
+      | 'DesktopMenuQuit'
+      | 'DesktopMenuHide';
+    variables: 'app';
   };
 }
 

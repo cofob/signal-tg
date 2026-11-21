@@ -2,8 +2,7 @@ import { onFullyIdle } from '../../lib/teact/teact';
 import { addCallback } from '../../lib/teact/teactn';
 import { getActions, getGlobal, setGlobal } from '../../global';
 
-import type { LocalDb } from '../../api/gramjs/localDb';
-import type { MethodArgs, Methods } from '../../api/gramjs/methods/types';
+import type { MethodArgs, Methods } from '../../api/signal/methods/types';
 import type { ApiInitialArgs } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 
@@ -14,9 +13,7 @@ import {
   handleMethodCallback,
   handleMethodResponse,
   initApi,
-  updateFullLocalDb,
-  updateLocalDb,
-} from '../../api/gramjs';
+} from '../../api';
 import { deepDiff } from '../deepDiff';
 import { deepMerge } from '../deepMerge';
 import { getCurrentTabId, subscribeToTokenDied } from '../establishMultitabRole';
@@ -56,20 +53,6 @@ type BroadcastChannelMessageResponse = {
   response: any;
 };
 
-type BroadcastChannelLocalDbUpdate = {
-  type: 'localDbUpdate';
-  batchedUpdates: {
-    name: keyof LocalDb;
-    prop: string;
-    value: any;
-  }[];
-};
-
-type BroadcastChannelLocalDbUpdateFull = {
-  type: 'localDbUpdateFull';
-  localDb: any;
-};
-
 type BroadcastChannelMessageCallback = {
   type: 'messageCallback';
   token: number;
@@ -100,8 +83,8 @@ export type TypedBroadcastChannel = {
 type BroadcastChannelMessage = (
   BroadcastChannelRequestGlobal | BroadcastChannelGlobalUpdate | BroadcastChannelCallApi |
   BroadcastChannelMessageResponse |
-  BroadcastChannelMessageCallback | BroadcastChannelCancelApiProgress | BroadcastChannelLocalDbUpdate |
-  BroadcastChannelLocalDbUpdateFull | BroadcastChannelGlobalDiff | BroadcastChannelInitApi
+  BroadcastChannelMessageCallback | BroadcastChannelCancelApiProgress |
+  BroadcastChannelGlobalDiff | BroadcastChannelInitApi
 );
 
 let resolveGlobalPromise: VoidFunction | undefined;
@@ -273,36 +256,6 @@ export function handleMessage({ data }: { data: BroadcastChannelMessage }) {
       break;
     }
 
-    case 'localDbUpdate': {
-      if (!isFirstGlobalResolved) return;
-      const global = getGlobal();
-      if (selectTabState(global).isMasterTab) return;
-
-      const {
-        batchedUpdates,
-      } = data;
-
-      batchedUpdates.forEach(({
-        name,
-        prop,
-        value,
-      }) => {
-        updateLocalDb(name, prop, value);
-      });
-      break;
-    }
-
-    case 'localDbUpdateFull': {
-      if (!isFirstGlobalResolved) return;
-      const global = getGlobal();
-      if (selectTabState(global).isMasterTab) return;
-
-      const { localDb } = data;
-
-      updateFullLocalDb(localDb);
-      break;
-    }
-
     case 'messageResponse': {
       if (!isFirstGlobalResolved) return;
       const global = getGlobal();
@@ -340,7 +293,7 @@ export function handleMessage({ data }: { data: BroadcastChannelMessage }) {
           messageId,
           callbackArgs,
         });
-      }] : args) as MethodArgs<keyof Methods>;
+      }] : args);
 
       (async () => {
         const result = await (callApiLocal(name, ...argsWithCallback));

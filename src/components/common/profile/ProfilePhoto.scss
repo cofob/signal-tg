@@ -18,7 +18,6 @@
 
   .spinner-wrapper,
   &.deleted-account,
-  &.replies-bot-account,
   &.no-photo,
   &.saved-messages {
     cursor: var(--custom-cursor, default);
@@ -37,7 +36,6 @@
     white-space: nowrap;
   }
 
-  &.replies-bot-account,
   &.deleted-account,
   &.saved-messages {
     font-size: 10rem;

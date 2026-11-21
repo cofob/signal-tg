@@ -1,4 +1,4 @@
-import { stopClient } from '../client';
+import { reconnectClient, stopClient } from '../client';
 
 /**
  * Logging out forgets the account and local messages; the phone keeps listing the device until it unlinks it.
@@ -10,4 +10,9 @@ export async function destroy(noLogOut = false) {
 
 export function disconnect() {
   void stopClient(false);
+}
+
+/** Replaces the chat connection at once, such as after the computer slept or the network changed */
+export function reconnectNow() {
+  reconnectClient();
 }

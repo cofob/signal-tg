@@ -10,6 +10,10 @@
     "allow-open-new-window-cmd",
     "allow-save-current-url",
     "allow-set-menu-translations",
+    "allow-quit-app",
+    "allow-get-desktop-settings",
+    "allow-set-desktop-settings",
+    "allow-show-notification",
     "allow-take-deep-links",
     "allow-signal-connect",
     "allow-signal-send",
@@ -28,7 +32,6 @@
     "process:default",
     "updater:default",
     "notification:allow-is-permission-granted",
-    "notification:allow-notify",
     "notification:allow-request-permission",
     "shell:default"
   ]

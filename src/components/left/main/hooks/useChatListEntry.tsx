@@ -315,7 +315,6 @@ function renderSummary(
       message={message}
       noEmoji={Boolean(blobUrl)}
       observeIntersectionForLoading={observeIntersection}
-      inChatList
     />
   );
 

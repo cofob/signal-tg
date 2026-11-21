@@ -226,7 +226,9 @@ export async function updateChatMemberBannedRights({
 }
 
 /** A Signal group has one link; its approval setting follows `isEnabled` */
-export async function toggleJoinRequest({ chat, isEnabled }: { chat: ApiChat; isEnabled: boolean }) {
+export async function toggleJoinRequest({ chat, isEnabled }: {
+  chat: ApiChat; isEnabled: boolean; shouldApplyToInvites?: boolean;
+}) {
   const conversation = await getGroupConversation(chat);
   if (!conversation) return undefined;
   return changeGroup(chat, buildInviteLinkChange({

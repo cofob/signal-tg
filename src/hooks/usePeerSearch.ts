@@ -6,7 +6,7 @@ import { isChatBasicGroup, isChatSuperGroup } from '../global/helpers';
 import { filterPeersByQuery } from '../global/helpers/peers';
 import { selectChatFullInfo } from '../global/selectors';
 import { isUserId } from '../util/entities/ids';
-import { callApi } from '../api/gramjs';
+import { callApi } from '../api';
 import useAsync from './useAsync';
 import useDebouncedMemo from './useDebouncedMemo';
 import useLastCallback from './useLastCallback';
@@ -58,7 +58,7 @@ export function prepareChatMemberSearch(chat: ApiChat) {
       query: trimmedQuery,
     });
 
-    const memberIds = searchResult?.members?.map((member) => member.userId) || [];
+    const memberIds = searchResult?.members?.map((member: { userId: string }) => member.userId) || [];
 
     if (!isChatSuperGroup(chat)) {
       return memberIds;

@@ -1300,7 +1300,6 @@
 "NoAudioFilesInfo" = "Your music library is empty.";
 "AttachContact" = "Contact";
 "AttachStory" = "Story";
-"ServiceNotifications" = "service notifications";
 "Bot" = "bot";
 "ALongTimeAgo" = "last seen a long time ago";
 "WithinAMonth" = "last seen within a month";
@@ -2312,7 +2311,6 @@
 "AccDescrTopic" = "Topic";
 "AllReactions" = "All reactions";
 "AllViewers" = "All viewers";
-"AnonymousForward" = "Author Hidden";
 "AreYouSure" = "Are you sure?";
 "AttachMenu" = "Attach...";
 "August" = "August";
@@ -2675,9 +2673,6 @@
 "SettingsStartWave" = "Start wave";
 "SettingsVaporizeButton" = "Vaporize this button";
 "DebugDownloadLog" = "Download log";
-"SettingsAllowHttp" = "Allow HTTP Transport";
-"SettingsForceHttp" = "Force HTTP Transport";
-"DebugExportedSenders" = "Enable exported senders debug";
 "TestServer" = "Test server";
 "CodeLanguagePlainText" = "Plain text";
 "ErrorChatRestricted" = "You can't send messages in this chat, you were restricted";
@@ -2785,3 +2780,21 @@
 "SettingsKeywordsLogOut" = "log out, sign out, exit";
 "SettingsKeywordsShortcuts" = "hotkeys, shortcuts, keyboard, keys, keybindings";
 "SettingsSearchEmpty" = "Start typing to find a setting";
+"SettingsDesktopApp" = "Desktop app";
+"SettingsDesktopTray" = "Close to tray";
+"SettingsDesktopTrayDescription" = "Closing the window keeps the app running to receive messages. Turn off to quit the app instead.";
+"SettingsDesktopAutostart" = "Launch at login";
+"SettingsDesktopAutostartDescription" = "Start minimized to the tray when you sign in to your computer.";
+"SettingsDesktopProtect" = "Hide content from screenshots";
+"SettingsDesktopProtectDescription" = "Other apps cannot capture the window in screenshots and screen recordings.";
+"ShortcutQuitApp" = "Quit app";
+"DesktopMenuOpen" = "Open {app}";
+"DesktopMenuQuit" = "Quit {app}";
+"DesktopMenuHide" = "Hide {app}";
+"DesktopMenuUndo" = "Undo";
+"DesktopMenuRedo" = "Redo";
+"DesktopMenuCut" = "Cut";
+"DesktopMenuPaste" = "Paste";
+"DesktopMenuSelectAll" = "Select All";
+"DesktopMenuWindow" = "Window";
+"DesktopMenuMinimize" = "Minimize";

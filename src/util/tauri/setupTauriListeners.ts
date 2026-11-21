@@ -1,21 +1,37 @@
 import { getActions } from '../../global';
 
+import { SettingsScreens } from '../../types';
+
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
 import { isSgnlLink, parseSignalLink } from '../signalLinks';
+
+const NOTIFICATION_CLICKED_EVENT = 'notification-clicked';
+const OPEN_SETTINGS_EVENT = 'open-settings';
+
+type NotificationClick = {
+  chatId: string;
+  messageId?: number;
+};
+
+// The inputs that hold text, unlike checkboxes, ranges and buttons
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email', 'password', 'number']);
 
 let isSetup = false;
 export default function setupTauriListeners() {
   if (isSetup) return;
   isSetup = true;
 
-  // Disable default tauri context menu in production build
+  // Show the system context menu only in text fields (cut, copy, paste, spelling suggestions) in production builds,
+  // which have no inspector; elsewhere it holds browser items such as Reload and Back
   if (!DEBUG) {
     document.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
+      if (!getIsEditableTarget(event.target)) event.preventDefault();
     });
   }
+
+  void listenToNativeEvents();
 
   // Disable Backspace handling as back navigation
   document.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -59,6 +75,38 @@ export default function setupTauriListeners() {
   // Run after Teact's delegated handlers so links can require confirmation
   window.addEventListener('click', handleClick);
   window.addEventListener('auxclick', handleClick);
+}
+
+function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has(target.type) && !target.readOnly && !target.disabled;
+  }
+  if (target instanceof HTMLTextAreaElement) return !target.readOnly && !target.disabled;
+  return target.isContentEditable;
+}
+
+async function listenToNativeEvents() {
+  try {
+    const { listen } = await import('@tauri-apps/api/event');
+
+    // The app brought the window forward after a click on a notification (`tauri/src/notifications.rs`)
+    await listen<NotificationClick>(NOTIFICATION_CLICKED_EVENT, ({ payload: { chatId, messageId } }) => {
+      if (messageId === undefined) {
+        getActions().openChat({ id: chatId, shouldReplaceHistory: true });
+        return;
+      }
+      getActions().focusMessage({ chatId, messageId, shouldReplaceHistory: true });
+    });
+
+    // Cmd+, in the macOS menu bar
+    await listen(OPEN_SETTINGS_EVENT, () => {
+      getActions().openSettingsScreen({ screen: SettingsScreens.Main });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to listen to native events:', err);
+  }
 }
 
 async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {

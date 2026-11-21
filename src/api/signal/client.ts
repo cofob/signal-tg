@@ -1,6 +1,6 @@
 import type { HistoryTransferProgress } from '../../lib/signal/backups/transferHistory';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
-import type { ApiInitialArgs } from '../types';
+import type { ApiInitialArgs, ApiSessionData } from '../types';
 
 import { DEBUG } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
@@ -31,8 +31,7 @@ const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
 const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
-// The UI treats a session without a main data center as signed out (`onUpdateSession`)
-const SIGNAL_SESSION_DATA = { mainDcId: 1, keys: {} };
+const SIGNAL_SESSION_DATA: ApiSessionData = { isLinked: true };
 
 let currentAccount: AccountRecord | undefined;
 let initialArgs: ApiInitialArgs | undefined;
@@ -41,6 +40,11 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
 let hasSyncedThisSession = false;
+// Whether the session reached its first connection attempt, from which it stays connected until it stops
+let isConnectionStarted = false;
+let isConnecting = false;
+// A reconnect that was asked for while a connection attempt was under way, which runs when the attempt ends
+let isReconnectPending = false;
 // Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
 let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
@@ -105,6 +109,8 @@ export function getCurrentAccount() {
 /** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
+  isConnectionStarted = false;
+  isReconnectPending = false;
   clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
@@ -201,7 +207,7 @@ export async function startSession(storedAccount: AccountRecord) {
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
   // The UI keeps its state and settings only for a stored session; the Signal account lives in the engine's own
-  // store, so this session holds no keys and only marks the account slot as signed in
+  // store, so this session holds no keys and only marks the account slot as linked
   sendApiUpdate({ '@type': 'updateSession', sessionData: SIGNAL_SESSION_DATA });
   if (hasHistoryTransferFailed) {
     sendApiUpdate({ '@type': 'error', error: { message: HISTORY_TRANSFER_FAILED_ERROR, hasErrorKey: true } });
@@ -213,6 +219,7 @@ export async function startSession(storedAccount: AccountRecord) {
   }
 
   hasSyncedThisSession = false;
+  isConnectionStarted = true;
   await connect();
 }
 
@@ -276,26 +283,50 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles
+ * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles.
+ * A failed step does not stop the others, and the next connection runs them all again.
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
   hasSyncedThisSession = true;
 
+  let isComplete = true;
+  const runStep = async (step: () => Promise<unknown>) => {
+    try {
+      await step();
+    } catch (err) {
+      isComplete = false;
+      logError(err);
+    }
+  };
+
   const context = client.getSenderContext();
-  if (!context.account.isInitialSyncDone) {
+  await runStep(async () => {
+    if (context.account.isInitialSyncDone) return;
     await sendInitialSyncRequests(context);
     await client.updateAccount({ isInitialSyncDone: true });
-  }
+  });
   void processor.refreshProfile(context.account.aci).catch(logError);
-  await processor.syncStorage();
+  await runStep(() => processor.syncStorage());
   void processor.refreshStaleProfiles().catch(logError);
+
+  if (!isComplete) hasSyncedThisSession = false;
 }
 
 async function connect() {
+  await attemptConnection();
+
+  if (isReconnectPending) {
+    isReconnectPending = false;
+    reconnectClient();
+  }
+}
+
+async function attemptConnection() {
   if (isDestroyed) return;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateConnecting' });
 
+  isConnecting = true;
   try {
     await client.connect({
       onContent: (decrypted) => processor.processContent(decrypted),
@@ -310,12 +341,43 @@ async function connect() {
     logError(err);
     scheduleReconnect();
     return;
+  } finally {
+    isConnecting = false;
   }
 
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
+}
+
+/**
+ * Replaces the chat connection at once, for the page to call after the computer slept or the network changed: the
+ * old socket can look alive for up to the keepalive timeout, and after failed attempts the next one waits for the
+ * backoff. An attempt that is already under way is left to finish, and the reconnect follows it.
+ */
+export function reconnectClient() {
+  if (isDestroyed || !isConnectionStarted || currentAccount?.isDemo) return;
+  if (isConnecting) {
+    isReconnectPending = true;
+    return;
+  }
+
+  void reconnect();
+}
+
+async function reconnect() {
+  isConnecting = true;
+  // The close reaches `scheduleReconnect`, whose timer the connection below makes unnecessary
+  const drained = client.close();
+  clearTimeout(reconnectTimer);
+  // The new connection loads the envelopes that are stored but not processed, and the old one still processes them
+  await drained;
+  isConnecting = false;
+
+  if (isDestroyed) return;
+  reconnectDelay = RECONNECT_MIN_DELAY_MS;
+  void connect();
 }
 
 function scheduleReconnect() {

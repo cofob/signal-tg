@@ -45,10 +45,7 @@ const MAX_KEY_BYTES: usize = 512;
 const MAX_PENDING_SAVES: usize = 16;
 const MAX_SAVED_FILES: usize = 5000;
 const UNKNOWN_SAVE_ERROR: &str = "Unknown save";
-// The warning before opening a dangerous file is fixed here: text from the page could disguise it
-const OPEN_WARNING_TITLE: &str = "Open this file?";
-const OPEN_WARNING_OPEN_LABEL: &str = "Open";
-const OPEN_WARNING_CANCEL_LABEL: &str = "Cancel";
+const FALLBACK_LANGUAGE: &str = "en";
 /// Characters that Windows forbids in names; replacing them everywhere keeps files portable
 const FORBIDDEN_NAME_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 /// Names that Windows reserves for devices, with any extension
@@ -439,7 +436,7 @@ impl SavedFiles {
   }
 }
 
-fn write_json_atomically(path: &Path, data: &SavedFilesData) -> io::Result<()> {
+pub(crate) fn write_json_atomically(path: &Path, data: &impl Serialize) -> io::Result<()> {
   if let Some(parent) = path.parent() {
     fs::create_dir_all(parent)?;
   }
@@ -785,6 +782,7 @@ pub async fn open_saved_file(
   window: WebviewWindow,
   files: tauri::State<'_, Files>,
   key: String,
+  lang_code: String,
 ) -> Result<SavedFileOutcome, String> {
   let Some(path) = get_existing_path(&window, &files, &key) else {
     return Ok(SavedFileOutcome::Missing);
@@ -794,7 +792,7 @@ pub async fn open_saved_file(
     .file_name()
     .map(|name| name.to_string_lossy().into_owned())
     .unwrap_or_default();
-  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name).await {
+  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name, &lang_code).await {
     return Ok(SavedFileOutcome::Cancelled);
   }
 
@@ -840,24 +838,78 @@ fn get_existing_path(window: &WebviewWindow, files: &Files, key: &str) -> Option
   None
 }
 
+/// The words of the warning before opening a dangerous file. They are fixed here, one set for each language of the
+/// app, and the page picks a set by its language code: text from the page could disguise the warning.
+struct OpenWarningText {
+  title: &'static str,
+  file_label: &'static str,
+  type_label: &'static str,
+  warning: &'static str,
+  open_label: &'static str,
+  cancel_label: &'static str,
+}
+
+const OPEN_WARNING_TEXTS: &[(&str, OpenWarningText)] = &[
+  (
+    "en",
+    OpenWarningText {
+      title: "Open this file?",
+      file_label: "File",
+      type_label: "Type",
+      warning: "This type of file can run programs or change settings on your computer. Open it only if you trust the sender.",
+      open_label: "Open",
+      cancel_label: "Cancel",
+    },
+  ),
+  (
+    "ru",
+    OpenWarningText {
+      title: "Открыть этот файл?",
+      file_label: "Файл",
+      type_label: "Тип",
+      warning: "Файлы этого типа могут запускать программы или менять настройки компьютера. Открывайте его, только если доверяете отправителю.",
+      open_label: "Открыть",
+      cancel_label: "Отмена",
+    },
+  ),
+];
+
+/// The text for a language code such as `ru` or `ru-RU`; a code that the app does not ship gets English
+fn get_open_warning_text(lang_code: &str) -> &'static OpenWarningText {
+  let language = lang_code
+    .split(['-', '_'])
+    .next()
+    .unwrap_or_default()
+    .to_ascii_lowercase();
+  let find = |code: &str| OPEN_WARNING_TEXTS.iter().find(|(known, _)| *known == code);
+  let (_, text) = find(&language)
+    .or_else(|| find(FALLBACK_LANGUAGE))
+    .expect("The fallback language has a text");
+  text
+}
+
 /// The warning with the real file name and extension
-fn build_open_warning(file_name: &str) -> String {
+fn build_open_warning(text: &OpenWarningText, file_name: &str) -> String {
   format!(
-    "File: {file_name}\nType: .{}\n\nThis type of file can run programs or change settings on your computer. Open it only if you trust the sender.",
-    get_extension(file_name)
+    "{}: {file_name}\n{}: .{}\n\n{}",
+    text.file_label,
+    text.type_label,
+    get_extension(file_name),
+    text.warning,
   )
 }
 
-async fn confirm_open(window: &WebviewWindow, file_name: &str) -> bool {
+async fn confirm_open(window: &WebviewWindow, file_name: &str, lang_code: &str) -> bool {
+  let text = get_open_warning_text(lang_code);
   let (sender, receiver) = tokio::sync::oneshot::channel();
   window
     .dialog()
-    .message(build_open_warning(file_name))
-    .title(OPEN_WARNING_TITLE)
+    .message(build_open_warning(text, file_name))
+    .title(text.title)
     .kind(MessageDialogKind::Warning)
     .buttons(MessageDialogButtons::OkCancelCustom(
-      OPEN_WARNING_OPEN_LABEL.to_string(),
-      OPEN_WARNING_CANCEL_LABEL.to_string(),
+      text.open_label.to_string(),
+      text.cancel_label.to_string(),
     ))
     .show(move |is_confirmed| {
       let _ = sender.send(is_confirmed);
@@ -1253,10 +1305,11 @@ mod tests {
 
   #[test]
   fn the_open_warning_names_the_file_and_type() {
-    let warning = build_open_warning("Invoice.PDF.exe");
+    let text = get_open_warning_text("en");
+    let warning = build_open_warning(text, "Invoice.PDF.exe");
     assert!(warning.contains("File: Invoice.PDF.exe"));
     assert!(warning.contains("Type: .exe"));
-    assert!(build_open_warning(".bat").contains("Type: .bat"));
+    assert!(build_open_warning(text, ".bat").contains("Type: .bat"));
   }
 
   #[test]

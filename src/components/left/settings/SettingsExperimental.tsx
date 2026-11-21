@@ -25,18 +25,12 @@ type OwnProps = {
 };
 
 type StateProps = {
-  shouldForceHttpTransport?: boolean;
-  shouldAllowHttpTransport?: boolean;
   shouldCollectDebugLogs?: boolean;
-  shouldDebugExportedSenders?: boolean;
 };
 
 const SettingsExperimental = ({
   isActive,
-  shouldForceHttpTransport,
-  shouldAllowHttpTransport,
   shouldCollectDebugLogs,
-  shouldDebugExportedSenders,
   onReset,
 }: OwnProps & StateProps) => {
   const { requestConfetti, setSharedSettingOption, requestWave } = getActions();
@@ -114,27 +108,9 @@ const SettingsExperimental = ({
       </Island>
       <Island>
         <Checkbox
-          label={lang('SettingsAllowHttp')}
-          checked={Boolean(shouldAllowHttpTransport)}
-          onCheck={() => setSharedSettingOption({ shouldAllowHttpTransport: !shouldAllowHttpTransport })}
-        />
-        <Checkbox
-          label={lang('SettingsForceHttp')}
-          disabled={!shouldAllowHttpTransport}
-          checked={Boolean(shouldForceHttpTransport)}
-          onCheck={() => setSharedSettingOption({ shouldForceHttpTransport: !shouldForceHttpTransport })}
-        />
-      </Island>
-      <Island>
-        <Checkbox
           label={lang('DebugMenuEnableLogs')}
           checked={Boolean(shouldCollectDebugLogs)}
           onCheck={() => setSharedSettingOption({ shouldCollectDebugLogs: !shouldCollectDebugLogs })}
-        />
-        <Checkbox
-          label={lang('DebugExportedSenders')}
-          checked={Boolean(shouldDebugExportedSenders)}
-          onCheck={() => setSharedSettingOption({ shouldDebugExportedSenders: !shouldDebugExportedSenders })}
         />
         <ListItem
           onClick={handleDownloadLog}
@@ -149,18 +125,8 @@ const SettingsExperimental = ({
 
 export default memo(withGlobal(
   (global): Complete<StateProps> => {
-    const {
-      shouldForceHttpTransport,
-      shouldAllowHttpTransport,
-      shouldCollectDebugLogs,
-      shouldDebugExportedSenders,
-    } = selectSharedSettings(global);
+    const { shouldCollectDebugLogs } = selectSharedSettings(global);
 
-    return {
-      shouldForceHttpTransport,
-      shouldAllowHttpTransport,
-      shouldCollectDebugLogs,
-      shouldDebugExportedSenders,
-    };
+    return { shouldCollectDebugLogs };
   },
 )(SettingsExperimental));

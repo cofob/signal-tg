@@ -28,6 +28,7 @@ const MESSAGE_PATH = '/api/v1/message';
 const QUEUE_EMPTY_PATH = '/api/v1/queue/empty';
 const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
+const HTTP_SERVER_ERROR = 500;
 
 /**
  * The authenticated chat socket of the linked device. Each envelope is stored before it is acknowledged,
@@ -46,9 +47,13 @@ export default class ChatConnection {
     socket.onRequest = (request) => {
       if (request.verb === 'PUT' && request.path === MESSAGE_PATH && request.body) {
         const entry = { id: crypto.randomUUID(), envelope: request.body, receivedAt: Date.now() };
-        void this.store.addUnprocessed(entry).then(() => {
+        this.store.addUnprocessed(entry).then(() => {
           request.respond(HTTP_OK, 'OK');
           this.enqueue(entry);
+        }, (err: Error) => {
+          // The server keeps an envelope it got no acknowledgement for and delivers it again
+          request.respond(HTTP_SERVER_ERROR, 'Could not store the envelope');
+          handlers.onError(err);
         });
         return;
       }
@@ -76,8 +81,10 @@ export default class ChatConnection {
     return connection;
   }
 
+  /** Closes the socket; the result settles once the envelopes that it received are processed */
   close() {
     this.socket.close();
+    return this.queue;
   }
 
   /** Sends a JSON request on the authenticated socket */

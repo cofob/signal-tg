@@ -9,8 +9,6 @@ cp .env.example .env
 npx npm@11 ci
 ```
 
-Until GramJS is removed, the build needs any values for `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` in `.env`.
-
 ## Development
 
 ```sh

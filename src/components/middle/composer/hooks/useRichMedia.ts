@@ -25,7 +25,7 @@ import {
   setRichMediaUpload,
   updateRichMediaUpload,
 } from '../../../../util/tiptap/richMedia';
-import { callApi, cancelApiProgress } from '../../../../api/gramjs';
+import { callApi, cancelApiProgress } from '../../../../api';
 import { MAX_UPLOAD_SIZE } from '../../../../limits';
 import buildAttachment, {
   prepareAttachment,

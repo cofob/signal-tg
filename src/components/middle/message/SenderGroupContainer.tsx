@@ -14,11 +14,9 @@ import type {
 import {
   EDITABLE_INPUT_CSS_SELECTOR,
   MESSAGE_APPEARANCE_DELAY,
-  REPLIES_USER_ID,
 } from '../../../config';
 import {
   getMainUsername,
-  isAnonymousForwardsChat,
   isAnonymousOwnMessage,
   isChatBasicGroup,
   isChatChannel,
@@ -61,8 +59,6 @@ type StateProps = {
   canShowSender: boolean;
   originSender?: ApiPeer;
   isChatWithSelf?: boolean;
-  isRepliesChat?: boolean;
-  isAnonymousForwards?: boolean;
   isChannel?: boolean;
   canRemoveSender?: boolean;
   kickedMembers?: ApiChatMember[];
@@ -79,8 +75,6 @@ const SenderGroupContainer = ({
   canShowSender,
   originSender,
   isChatWithSelf,
-  isRepliesChat,
-  isAnonymousForwards,
   isChannel,
   canPost,
   canRemoveSender,
@@ -119,7 +113,7 @@ const SenderGroupContainer = ({
   }, [appearanceOrder, noAppearanceAnimation]);
 
   const shouldPreferOriginSender = forwardInfo
-    && (isChatWithSelf || isRepliesChat || isAnonymousForwards || !messageSender);
+    && (isChatWithSelf || !messageSender);
   const avatarPeer = shouldPreferOriginSender ? originSender : messageSender;
   const isAvatarPeerUser = avatarPeer && isApiPeerUser(avatarPeer);
 
@@ -285,7 +279,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = selectChat(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const isAnonymousForwards = isAnonymousForwardsChat(chatId);
 
     const forceSenderName = !isChatWithSelf && isAnonymousOwnMessage(message);
     const canShowSender = withAvatar || forceSenderName;
@@ -312,8 +305,6 @@ export default memo(withGlobal<OwnProps>(
       canShowSender,
       originSender,
       isChatWithSelf,
-      isRepliesChat: chatId === REPLIES_USER_ID,
-      isAnonymousForwards,
       isChannel: chat && isChatChannel(chat),
       canRemoveSender,
       kickedMembers: canRemoveSender ? fullInfo?.kickedMembers : undefined,
