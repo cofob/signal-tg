@@ -101,3 +101,38 @@ export type LangPackStringValuePlural = {
 };
 
 export type LangPackStringValue = LangPackStringValueRegular | LangPackStringValueDeleted | LangPackStringValuePlural;
+
+export type ApiBackupFrequency = 'daily' | 'weekly' | 'monthly' | 'manual';
+
+/** The progress of a backup that is running: an export and its validation, then the upload */
+export type ApiBackupProgress = {
+  step: 'exporting' | 'validating' | 'uploading';
+  // From 0 to 1, while uploading
+  progress?: number;
+};
+
+/** Signal Secure Backups of this account: the settings and the state of the last backup */
+export type ApiBackupSettings = {
+  // The account lacks what a backup needs: its recovery key, or the root key of the media backup
+  unavailableReason?: 'noRecoveryKey' | 'noMediaRootKey';
+  isPrimary: boolean;
+  isEnabled: boolean;
+  frequency: ApiBackupFrequency;
+  // Milliseconds since the epoch
+  lastBackupAt?: number;
+  lastBackupSize?: number;
+  // The level of the backup credential: 200 is the free tier, 201 the paid one
+  tier?: number;
+  lastError?: string;
+  isRunning?: boolean;
+  progress?: ApiBackupProgress;
+};
+
+/** What the backup service holds for the account, read when the screen opens */
+export type ApiBackupRemoteStatus = {
+  hasBackup: boolean;
+  size?: number;
+  // Milliseconds since the epoch
+  modifiedAt?: number;
+  tier?: number;
+};

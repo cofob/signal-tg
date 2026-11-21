@@ -19,6 +19,10 @@ export const DEBUG_CALLS = false;
 export const DEBUG_LOG_FILENAME = 'tt-log.json';
 export const STRICTERDOM_ENABLED = DEBUG;
 
+// Signal Secure Backups (`src/lib/signal/backups`) stay off until their requests are checked against the live
+// servers: the settings screen, the restore step of a registration and the backup schedule need this flag
+export const IS_SIGNAL_BACKUPS_ENABLED = Boolean(import.meta.env.TG_SIGNAL_BACKUPS);
+
 export const PAGE_TITLE = import.meta.env.TG_APP_TITLE;
 export const PAGE_TITLE_TAURI = APP_NAME;
 

@@ -2,7 +2,7 @@ import type { HistoryTransferProgress } from '../../lib/signal/backups/transferH
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
 import type { ApiInitialArgs, ApiSessionData, ApiUpdateDeviceDeauthorized } from '../types';
 
-import { DEBUG } from '../../config';
+import { DEBUG, IS_SIGNAL_BACKUPS_ENABLED } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { resumePendingRegistration } from '../../lib/signal/account/register';
@@ -10,16 +10,20 @@ import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
 import {
   getSignalTunnelUrl, setSignalProxyUrl, setSignalSealedSenderProxyUrl, SIGNAL_PRIMARY_DEVICE_ID,
 } from '../../lib/signal/config';
-import { acquireEngineLock } from '../../lib/signal/engineLock';
+import { acquireEngineOwnership } from '../../lib/signal/engineOwnership';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
+import { isStorageKeyError, requireAtRestKey } from '../../lib/signal/store/atRest';
+import { applyStorageKey, forgetStorageKey, reapplyStorageKey } from '../../lib/signal/store/atRestMigration';
+import { holdEngineLock, releaseEngineLock } from '../../lib/signal/store/engineLock';
 import { initSignalWasm } from '../../lib/signal/wasm';
+import { ACCOUNT_SLOT } from '../../util/multiaccount';
 import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
-  client, db, keyTransparency, logError, processor, store,
+  backups, client, db, keyTransparency, logError, processor, store,
 } from './engine';
 import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
@@ -65,11 +69,29 @@ export async function startClient(args: ApiInitialArgs) {
   initialArgs = args;
   applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
   // The other frontend shows its inactive screen once this one starts, see `listenOtherClients`
-  await acquireEngineLock(() => void stopClient(false).catch(logError));
+  await acquireEngineOwnership(() => void stopClient(false).catch(logError));
+  holdEngineLock(ACCOUNT_SLOT || 1);
+  try {
+    await startEngine(args);
+  } catch (err) {
+    if (!isStorageKeyError(err)) throw err;
+    // The data is encrypted and its key is missing or wrong. Nothing is wiped, since the key may be only late, such as
+    // while another tab changes the passcode: the engine stops, and the page asks the user what to do
+    logError(err);
+    // A key that did not open the data must not encrypt new records either
+    forgetStorageKey();
+    requireAtRestKey();
+    releaseEngineLock();
+    sendApiUpdate({ '@type': 'updateStorageLocked' });
+  }
+}
+
+async function startEngine(args: ApiInitialArgs) {
+  await applyStorageKey(args.storageKey, store, db, logError);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
-  const account = await store.getItem('account') ?? await resumeInterruptedRegistration();
+  const account = await readStoredAccount();
   if (account?.isRegistrationPending) {
     sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
     resumeRegistration(account);
@@ -86,6 +108,11 @@ export async function startClient(args: ApiInitialArgs) {
     sendApiUpdate({ '@type': 'updateStaleSession' });
   }
   void runDeviceLink(args.platform).catch(logError);
+}
+
+/** The stored account, or one that a registration created; a record that the key does not open throws */
+async function readStoredAccount() {
+  return await store.getItem('account') ?? await resumeInterruptedRegistration();
 }
 
 /** The account that a registration created before the app stopped, when the server has it */
@@ -129,8 +156,10 @@ export async function stopClient(shouldForget: boolean) {
   linkSession?.cancel();
   resetRegistration();
   historyTransferController?.abort();
+  releaseEngineLock();
   processor.stop();
   keyTransparency.stop();
+  backups.stop();
   client.close();
   resetCdsiState();
   currentAccount = undefined;
@@ -138,6 +167,8 @@ export async function stopClient(shouldForget: boolean) {
     await store.clear();
     await db.clear();
     await clearAttachmentCache();
+    // A link that follows in this session stores its account encrypted too, with the key that the engine has now
+    await reapplyStorageKey(store, db).catch(logError);
   }
 }
 
@@ -367,8 +398,15 @@ async function attemptConnection() {
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   keyTransparency.start();
+  void startBackupSchedule();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
+}
+
+/** Backups run while the app is open and connected, once the account has backups turned on */
+async function startBackupSchedule() {
+  const account = await store.getItem('account');
+  if (IS_SIGNAL_BACKUPS_ENABLED && account?.backups?.isEnabled) backups.start();
 }
 
 /**

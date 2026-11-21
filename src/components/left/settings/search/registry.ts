@@ -102,6 +102,15 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     iconBg: 'blue',
   },
   {
+    screen: SettingsScreens.Backups,
+    parent: SettingsScreens.Main,
+    titleKey: 'SettingsBackups',
+    keywordsKey: 'SettingsKeywordsBackups',
+    icon: 'archive-filled',
+    iconBg: 'orange',
+    requires: 'hasBackups',
+  },
+  {
     screen: SettingsScreens.SignalDevices,
     parent: SettingsScreens.Main,
     titleKey: 'SignalDevices',

@@ -1,5 +1,7 @@
 import type { UsernameErrorReason, UsernameReservation } from '../../../lib/signal/usernames/manageUsername';
-import type { ApiPrivacySettings, ApiUser, PrivacyVisibility } from '../../types';
+import type {
+  ApiPrivacySettings, ApiUser, ApiUsernameLookup, PrivacyVisibility,
+} from '../../types';
 
 import { setPhoneNumberDiscoverability } from '../../../lib/signal/account/phoneNumberDiscoverability';
 import { formatRecoveryKey } from '../../../lib/signal/account/recoveryKey';
@@ -148,8 +150,12 @@ export async function resetUsernameLink() {
   }
 }
 
-/** Finds a user by username without account credentials; returns the private chat and user */
-export async function getChatByUsername(username: string) {
+/**
+ * Finds a user by username without account credentials; returns the private chat and user, or why there is none.
+ * The lookup runs for a username the user chose: the server learns its hash, so it must not follow typing (Signal
+ * Desktop looks up on the click only, in `ts/util/lookupConversationWithoutServiceId`).
+ */
+export async function getChatByUsername(username: string): Promise<ApiUsernameLookup | undefined> {
   const selfAci = getCurrentAccount()?.aci;
   if (!selfAci) return undefined;
 
@@ -157,10 +163,10 @@ export async function getChatByUsername(username: string) {
   try {
     aci = await lookupUsername(client.getSenderContext().unauthenticatedChat, username);
   } catch (err) {
-    logError(err);
-    return undefined;
+    // A username that `libsignal` rejects, such as `alice.00`, belongs to nobody
+    return { error: getUsernameErrorKey(err) === 'failed' ? 'unavailable' : 'notFound' };
   }
-  if (!aci) return undefined;
+  if (!aci) return { error: 'notFound' };
 
   const conversation = await processor.getOrCreatePrivateConversation(aci);
   // The lookup proves the username, which the contact's profile does not carry

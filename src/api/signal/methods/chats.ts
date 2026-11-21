@@ -208,7 +208,8 @@ export async function deleteHistory({ chat }: { chat: ApiChat; shouldDeleteForAl
 
 /**
  * Searches listed chats and contacts by name, username and phone number, like the conversation search of
- * Signal Desktop. Finding users by username on the server is not supported yet.
+ * Signal Desktop. It never asks the server: a user who is no chat or contact is found by `getChatByUsername` or
+ * `lookUpPhoneNumber`, which run for a username or number that the user chose from the results.
  */
 export async function searchChats({ query }: { query: string }) {
   const selfAci = getCurrentAccount()?.aci;

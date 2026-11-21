@@ -161,7 +161,7 @@ holds them):
 
 | Header | Value |
 | --- | --- |
-| `Content-Security-Policy` | The policy of `buildCsp` in `vite.config.ts`, plus `frame-ancestors 'none'`. The image build reads the policy back from the built `index.html`, so it cannot drift from the source. A browser applies a policy from a `<meta>` tag to the page only; the header covers the Web Worker that runs the Signal engine, and carries `frame-ancestors` |
+| `Content-Security-Policy` | The policy of `buildCsp` in `plugins/csp.ts`, plus `frame-ancestors 'none'`. The image build reads the policy back from the built `index.html`, so it cannot drift from the source. A browser applies a policy from a `<meta>` tag to the page only; the header covers the Web Worker that runs the Signal engine, and carries `frame-ancestors` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `same-origin`: the app's multi-account back navigation needs the referrer of its own origin, and other sites get none |
 | `X-Frame-Options` | `DENY` |

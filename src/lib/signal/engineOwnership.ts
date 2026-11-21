@@ -5,13 +5,13 @@ const ENGINE_LOCK_NAME = 'telesignal-engine';
 let releaseHeldLock: NoneToVoidFunction | undefined;
 
 /**
- * Takes the lock on the engine's stores of this worker's account slot, which the engine holds while it runs. Both
+ * Takes the exclusive lock on the engine's stores of this worker's account slot, which the engine holds while it runs. Both
  * frontends (Web A at `/a/`, Web K at `/k/`) start the engine through `startClient`, so only one engine of the origin
- * opens the stores at a time. A new start takes the lock away from the engine that holds it, as the frontend that the
+ * opens the stores at a time (`store/engineLock.ts` only marks a running engine for other contexts). A new start takes the lock away from the engine that holds it, as the frontend that the
  * user opened last becomes the active one; the engine that lost the lock stops through `onLost`.
  */
-export function acquireEngineLock(onLost: NoneToVoidFunction) {
-  releaseEngineLock();
+export function acquireEngineOwnership(onLost: NoneToVoidFunction) {
+  releaseEngineOwnership();
 
   return new Promise<void>((resolve) => {
     let release: NoneToVoidFunction;
@@ -32,7 +32,7 @@ export function acquireEngineLock(onLost: NoneToVoidFunction) {
   });
 }
 
-export function releaseEngineLock() {
+export function releaseEngineOwnership() {
   releaseHeldLock?.();
   releaseHeldLock = undefined;
 }

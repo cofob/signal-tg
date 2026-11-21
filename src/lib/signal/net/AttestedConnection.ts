@@ -87,6 +87,11 @@ export default class AttestedConnection {
     return frame && wasm.SgxClientState_EstablishedRecv(this.client!, frame);
   }
 
+  /** The hash of the Noise handshake, which an SVR-B restore request is bound to */
+  getHandshakeHash() {
+    return wasm.SgxClientState_GetHandshakeHash(this.client!);
+  }
+
   close() {
     this.socket.close();
     this.client?.free();

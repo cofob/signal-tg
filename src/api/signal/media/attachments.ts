@@ -3,7 +3,9 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { AttachmentPointer } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type { ApiOnProgress } from '../../types';
 
-import { ATTACHMENT_CACHE_NAME, getAttachmentCacheKey } from '../../../lib/signal/attachments/attachmentCache';
+import {
+  ATTACHMENT_CACHE_NAME, fetchCachedBlob, getAttachmentCacheKey, saveCachedBlob,
+} from '../../../lib/signal/attachments/attachmentCache';
 import { AttachmentUnavailableError, downloadAttachment } from '../../../lib/signal/attachments/downloadAttachment';
 import { DataMessageSchema, StoryMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import * as cacheApi from '../../../util/cacheApi';
@@ -66,7 +68,7 @@ export async function fetchAttachmentBlob(pointer: AttachmentPointer, onProgress
   const key = getAttachmentCacheKey(pointer);
   if (lastDownloaded?.key === key) return lastDownloaded.blob;
 
-  const cached: Blob | undefined = await cacheApi.fetch(ATTACHMENT_CACHE_NAME, key, cacheApi.Type.Blob);
+  const cached = await fetchCachedBlob(key);
   if (cached) return cached;
 
   const download = downloads.get(key) ?? startDownload(key, pointer);
@@ -101,7 +103,7 @@ async function downloadToCache(key: string, pointer: AttachmentPointer, state: D
   });
   const blob = new Blob([data], { type: getSafeMimeType(pointer.contentType) });
   lastDownloaded = { key, blob };
-  await cacheApi.save(ATTACHMENT_CACHE_NAME, key, blob);
+  await saveCachedBlob(key, blob);
   return blob;
 }
 

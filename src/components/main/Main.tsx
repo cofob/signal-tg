@@ -73,7 +73,6 @@ import ModalContainer from '../modals/ModalContainer';
 import RightColumn from '../right/RightColumn';
 import StoryViewer from '../story/StoryViewer.async';
 import DeleteFolderDialog from './DeleteFolderDialog.async';
-import Dialogs from './Dialogs';
 import DownloadManager from './DownloadManager';
 import DraftRecipientPicker from './DraftRecipientPicker.async';
 import FoldersSidebar from './FoldersSidebar';
@@ -532,7 +531,6 @@ const Main = ({
       <StoryViewer isOpen={isStoryViewerOpen} />
       <ForwardRecipientPicker isOpen={isForwardModalOpen} />
       <DraftRecipientPicker requestedDraft={requestedDraft} />
-      <Dialogs />
       <AudioPlayer noUi />
       <FloatingRoundVideo />
       <ModalContainer />

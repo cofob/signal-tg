@@ -83,6 +83,25 @@ each caller to find this out.
 
 `NO_QUEUE_BEFORE_INIT` in `src/api/worker/connector.ts` makes `callApi` and `callApiLocal` resolve these two calls to `undefined` when the worker is not initialized, which is the case on the lock screen of a passcode and in the first seconds after a load. That suited GramJS, which had nothing at rest in the worker. The Signal engine keeps the account, keys and messages in IndexedDB and the Cache API, so a `destroy` that never arrives leaves them (reproduced in Chrome on the demo account; the logout actions now clear the stores from the page with `clearSignalLocalData()`, see S-01 in `docs/signal/SECURITY.md`). A new method that has to act on the stores without a started engine needs the same page-side route, and nothing in the connector says so; whether `destroy` should start the worker and run, or the stores' clearing should be reachable from the page only, is undecided.
 
+## Backups cannot end DEFLATE blocks with a sync marker, since `fflate` 0.8.3 writes it wrong
+
+`src/lib/signal/backups/backupWriter.ts` ports the gzip of Signal Desktop `toPaddedGzipIterable`, which ends a DEFLATE
+block around the account data and recipients and at the offsets of `MessageBackupSizing_FlushInterval` with a zlib sync
+flush, then pads by `MessageBackupSizing_PaddingSize` for the largest block. `Gzip.flush(true)` of `fflate` 0.8.3 is
+that sync flush, and it writes a corrupt stream: `Deflate.prototype.flush` in `lib/index.cjs` puts `this.s.r >> 3`, the
+byte count, in the first byte of the marker where the pending bits of the block belong. Verified in a Node script that
+pushes four chunks of text and random bytes with a flush after each: 113 of 200 inputs gunzip with `flush(true)` and all
+200 with `flush()`. The writer uses `flush()`, which ends the block at the same uncompressed offset without the byte
+aligned marker. Readers do not need the marker, and the padding is computed from the same inputs as libsignal's (the
+uncompressed size of the largest block and the compressed length), so the files are valid and sized as the format
+asks, but the compressed length differs from a zlib stream by the markers. A fix needs a patch of `fflate` or another
+deflate implementation as a direct dependency (`pako` is installed only through other packages); `CompressionStream`
+cannot flush by hand.
+
+## The Cache API refuses the desktop app's `tauri://` requests on macOS and Linux
+
+`src/util/cacheApi.ts` builds every cache request from `self.location.origin` (`buildCacheRequest`), which is `tauri://localhost` in the bundled desktop app on macOS and Linux. In the WebKitGTK build, `cache.put(new Request('tauri://localhost/attachment/x'), ...)` rejects with "Request url is not HTTP/HTTPS", while the same call with an `http://` URL succeeds (verified under Xvfb with a scratch build of the app that ran the call from the page). `cacheApi.save` catches the error and returns `false`, so nothing is cached there: attachments, stickers and avatars are fetched from the CDN again on every view, and attachments that the CDN has dropped after its retention period cannot be shown again, while the web app and the Windows build (`http://tauri.localhost`) cache them. It also means `signalDev.seedDemo()` shows no pictures in the desktop app. A fixed `http://` base for the cache keys would likely avoid it; WKWebView on macOS was not tested.
+
 ## Five npm dependencies come from GitHub, so every install needs `git` and GitHub access
 
 Web K adds one more: `webk/package.json` takes `@ton/wallet-engine` (the TON wallet, a Telegram-only feature) from a

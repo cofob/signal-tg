@@ -5,9 +5,11 @@ import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
+import type { ConversionDirection } from './SecureIdbStore';
 
-import { IdbStore } from '../../../util/browser/idb';
 import { getEngineStoreName } from '../engineStoreName';
+
+import SecureIdbStore from './SecureIdbStore';
 
 export type KeyPairBytes = {
   privateKey: Uint8Array;
@@ -66,6 +68,43 @@ export type AccountRecord = {
   isDemo?: boolean;
   // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
   historyTransfer?: HistoryTransferState;
+  // Signal Secure Backups of this account, see `backups/BackupService.ts`
+  backups?: BackupSettings;
+};
+
+export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'manual';
+
+export type BackupSettings = {
+  // Backups run on the schedule and the backup service holds the latest one
+  isEnabled?: boolean;
+  frequency?: BackupFrequency;
+  // Milliseconds since the epoch on the server clock
+  lastBackupAt?: number;
+  lastRefreshAt?: number;
+  // The size of the encrypted file of the last backup that went up
+  lastBackupSize?: number;
+  // The size of the frames before compression, which the next backup takes as its estimate
+  uncompressedLength?: number;
+  // The level of the backup credential: 200 is the free tier, 201 the paid one
+  tier?: number;
+  // The service refused the file as too large, so the backups hold the messages of this many last days only
+  messageDays?: number;
+  // Why the last backup failed; `BackupService` clears it with the next success
+  lastError?: string;
+  // The failures in a row, which set how long the schedule waits (`nextAttemptAt`, milliseconds on the server clock)
+  failureCount?: number;
+  nextAttemptAt?: number;
+  // The last failure is one that waiting does not fix: the schedule stops until the user backs up
+  isStopped?: boolean;
+};
+
+/** The credentials of the backup service for the coming days and the public keys it knows, see `archiveApi.ts` */
+export type ArchiveCredentialsRecord = {
+  // The backup id of the key they were issued for: a new recovery key voids them
+  backupId: Uint8Array;
+  // `redemptionTime` is in seconds
+  credentials: { type: 'messages' | 'media'; redemptionTime: number; credential: Uint8Array }[];
+  publicKeysSet: Partial<Record<'messages' | 'media', boolean>>;
 };
 
 /**
@@ -167,6 +206,10 @@ type Items = {
   keyTransparencyDistinguished: Uint8Array<ArrayBuffer>;
   keyTransparencySelfHealth: KeyTransparencySelfHealth;
   keyTransparencyLastSelfCheck: number;
+  archiveCredentials: ArchiveCredentialsRecord;
+  // The state of the chain of forward secrecy of our backups on the service, from `svr/svrb.ts`: it is valid for the
+  // file that the last backup uploaded
+  svrbBackupData: Uint8Array;
 };
 
 /** `intermittent` is a first failed verification, which the self check repeats a day later before it reports `fail` */
@@ -276,6 +319,16 @@ export type SentProtoRecord = {
 };
 
 const DB_NAME = 'ts-signal';
+// The record that tells whether the stores are encrypted; it is the only one that is never encrypted
+const ENCRYPTION_STATE_KEY = 'meta:encryption';
+
+/** The state of encryption at rest, which tells a start without a key whether the stores can be read */
+export type EncryptionState = {
+  // `decrypting` while the stores are being decrypted before the passcode goes away
+  state: 'on' | 'decrypting';
+  // Whether every record has been rewritten since encryption turned on
+  isMigrated: boolean;
+};
 
 /**
  * Persistent protocol state of the linked device: account credentials, identity keys,
@@ -283,7 +336,7 @@ const DB_NAME = 'ts-signal';
  * Keys are namespaced inside one IndexedDB object store.
  */
 export default class SignalStore {
-  private db: IdbStore;
+  private db: SecureIdbStore;
 
   private exclusive = Promise.resolve();
 
@@ -292,7 +345,7 @@ export default class SignalStore {
 
   /** Opens the store of an account slot, by default the slot of this page or worker */
   constructor(slot?: number) {
-    this.db = new IdbStore(getEngineStoreName(DB_NAME, slot));
+    this.db = new SecureIdbStore(getEngineStoreName(DB_NAME, slot));
   }
 
   /**
@@ -463,12 +516,10 @@ export default class SignalStore {
   }
 
   async removeSentProtosBefore(time: number) {
-    const entries = await this.db.entries();
+    const entries = await this.db.entries('sentProto:');
     const keys = entries
-      .filter(([key, value]) => (
-        typeof key === 'string' && key.startsWith('sentProto:') && (value as SentProtoRecord).savedAt < time
-      ))
-      .map(([key]) => key as string);
+      .filter(([, value]) => (value as SentProtoRecord).savedAt < time)
+      .map(([key]) => key);
     await this.db.delMany(keys);
   }
 
@@ -481,11 +532,40 @@ export default class SignalStore {
   }
 
   async getAllUnprocessed() {
-    const entries = await this.db.entries();
+    const entries = await this.db.entries('unprocessed:');
     return entries
-      .filter(([key]) => typeof key === 'string' && key.startsWith('unprocessed:'))
       .map(([, value]) => value as UnprocessedEnvelope)
       .sort((a, b) => a.receivedAt - b.receivedAt);
+  }
+
+  getEncryptionState() {
+    return this.db.getPlain<EncryptionState>(ENCRYPTION_STATE_KEY);
+  }
+
+  setEncryptionState(state: EncryptionState) {
+    return this.db.setPlain(ENCRYPTION_STATE_KEY, state);
+  }
+
+  removeEncryptionState() {
+    return this.db.del(ENCRYPTION_STATE_KEY);
+  }
+
+  /**
+   * Rewrites every record encrypted or decrypted; records written meanwhile are already in the current mode. Returns
+   * the number of records that cannot be decrypted.
+   */
+  convertRecords(direction: ConversionDirection) {
+    return this.db.convertAll(direction, [ENCRYPTION_STATE_KEY]);
+  }
+
+  /** How many records are encrypted and how many are not, the marker excepted */
+  countRecords() {
+    return this.db.countRecords([ENCRYPTION_STATE_KEY]);
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  deleteUnreadableRecords() {
+    return this.db.deleteUnreadable([ENCRYPTION_STATE_KEY]);
   }
 
   clear() {

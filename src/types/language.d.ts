@@ -196,6 +196,10 @@ export interface LangPair {
   'SignalHistorySyncNote': undefined;
   'SignalHistorySyncFailed': undefined;
   'SignalPinnedLimit': undefined;
+  'SignalStartupFailed': undefined;
+  'SignalStorageLockedTitle': undefined;
+  'SignalStorageLocked': undefined;
+  'SignalStorageErase': undefined;
   'SignalDeviceUnlinked': undefined;
   'SignalDeviceDeregistered': undefined;
   'SignalRegisterLink': undefined;
@@ -247,6 +251,9 @@ export interface LangPair {
   'SignalPhoneLookupConfirm': undefined;
   'SignalLinkInvalid': undefined;
   'SignalLinkSearchOpen': undefined;
+  'SignalUsernameSearch': undefined;
+  'SignalUsernameSearchNotFound': undefined;
+  'SignalUsernameSearchFailed': undefined;
   'SignalProxyLinkTitle': undefined;
   'SignalCallLinkTitle': undefined;
   'SignalCallLinkText': undefined;
@@ -1017,6 +1024,8 @@ export interface LangPair {
   'PasscodeAutoLock5Min': undefined;
   'PasscodeAutoLock30Min': undefined;
   'PasscodeAutoLock1Hour': undefined;
+  'PasscodeCloseOtherAccounts': undefined;
+  'PasscodeStorageNotDecrypted': undefined;
   'PasscodeDataCorrupted': undefined;
   'PasscodeLogOutAllAccounts': undefined;
   'PasscodeLogOutAllConfirm': undefined;
@@ -1937,6 +1946,63 @@ export interface LangPair {
   'DesktopMenuSelectAll': undefined;
   'DesktopMenuWindow': undefined;
   'DesktopMenuMinimize': undefined;
+  'SettingsBackups': undefined;
+  'SettingsBackupsDesc': undefined;
+  'SettingsKeywordsBackups': undefined;
+  'BackupsAbout': undefined;
+  'BackupsTierFree': undefined;
+  'BackupsTierPaid': undefined;
+  'BackupsTurnOn': undefined;
+  'BackupsTurnOff': undefined;
+  'BackupsTurnOffText': undefined;
+  'BackupsTurnOffDelete': undefined;
+  'BackupsFrequency': undefined;
+  'BackupsFrequencyDaily': undefined;
+  'BackupsFrequencyWeekly': undefined;
+  'BackupsFrequencyMonthly': undefined;
+  'BackupsFrequencyManual': undefined;
+  'BackupsBackUpNow': undefined;
+  'BackupsCancel': undefined;
+  'BackupsLastBackup': undefined;
+  'BackupsNever': undefined;
+  'BackupsOnServer': undefined;
+  'BackupsOnServerNone': undefined;
+  'BackupsLastFailed': undefined;
+  'BackupsStepExporting': undefined;
+  'BackupsStepValidating': undefined;
+  'BackupsRecoveryKey': undefined;
+  'BackupsRecoveryKeyAbout': undefined;
+  'BackupsUnavailable': undefined;
+  'BackupsUnavailableNoRecoveryKey': undefined;
+  'BackupsUnavailableNoMediaKey': undefined;
+  'BackupsFile': undefined;
+  'BackupsExportFile': undefined;
+  'BackupsImportFile': undefined;
+  'BackupsFileAbout': undefined;
+  'BackupsImportText': undefined;
+  'BackupsImportChoose': undefined;
+  'BackupsErrorRateLimited': undefined;
+  'BackupsErrorNetwork': undefined;
+  'BackupsErrorNotEnabled': undefined;
+  'BackupsErrorInvalidBackup': undefined;
+  'BackupsErrorWrongKey': undefined;
+  'BackupsErrorInvalidKey': undefined;
+  'BackupsErrorForwardSecrecy': undefined;
+  'BackupsErrorRejected': undefined;
+  'BackupsErrorExistingBackup': undefined;
+  'BackupsReplaceText': undefined;
+  'BackupsReplaceConfirm': undefined;
+  'BackupsImportMergeNote': undefined;
+  'BackupsLinkedDevice': undefined;
+  'AuthRestoreTitle': undefined;
+  'AuthRestoreText': undefined;
+  'AuthRestoreKey': undefined;
+  'AuthRestoreButton': undefined;
+  'AuthRestoreFile': undefined;
+  'AuthRestoreSkip': undefined;
+  'AuthRestoreErrorNoBackup': undefined;
+  'AuthRestoreStepVerifying': undefined;
+  'AuthRestoreStepValidating': undefined;
   'ActionCallIncomingAudio': undefined;
   'ActionCallIncomingVideo': undefined;
   'ActionCallOutgoingAudio': undefined;
@@ -2808,6 +2874,19 @@ export interface LangPairWithVariables<V = LangVariable> {
   'DesktopMenuHide': {
     'app': V;
   };
+  'BackupsStepUploading': {
+    'percent': V;
+  };
+  'AuthRestoreFound': {
+    'date': V;
+    'size': V;
+  };
+  'AuthRestoreStepDownloading': {
+    'percent': V;
+  };
+  'AuthRestoreStepImporting': {
+    'percent': V;
+  };
   'ActionGiftBadgeReceived': {
     'user': V;
   };
@@ -3131,6 +3210,9 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'PageTitleNotifications': {
     'count': V;
   };
+  'BackupsImportDone': {
+    'count': V;
+  };
   'NotificationProfileChats': {
     'count': V;
   };
@@ -3260,7 +3342,10 @@ export interface LangKeyGroups {
   'percent': {
     keys:
       | 'SignalHistorySyncDownloading'
-      | 'SignalHistorySyncImporting';
+      | 'SignalHistorySyncImporting'
+      | 'BackupsStepUploading'
+      | 'AuthRestoreStepDownloading'
+      | 'AuthRestoreStepImporting';
     variables: 'percent';
   };
   'time': {
@@ -3726,6 +3811,11 @@ export interface LangKeyGroups {
       | 'DesktopMenuHide';
     variables: 'app';
   };
+  'date,size': {
+    keys:
+      | 'AuthRestoreFound';
+    variables: 'date' | 'size';
+  };
 }
 
 export interface LangPluralKeyGroups {
@@ -3820,6 +3910,7 @@ export interface LangPluralKeyGroups {
       | 'Voice'
       | 'SeenByUsers'
       | 'PageTitleNotifications'
+      | 'BackupsImportDone'
       | 'NotificationProfileChats';
     variables: 'count';
   };

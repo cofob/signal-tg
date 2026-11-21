@@ -10,6 +10,9 @@ export type MessageBackupKeys = {
 
 type OnProgress = (readLength: number, totalLength: number) => void;
 
+// Signal Android `EncryptedBackupWriter.MAGIC_NUMBER`: backups on the archive CDN start with it, followed by the
+// metadata of forward secrecy (with a varint length) that SVR-B needs to give the token for the keys
+export const FORWARD_SECRECY_MAGIC = new TextEncoder().encode('SBACKUP\x01');
 const IV_LENGTH = 16;
 const MAC_LENGTH = 32;
 const AES_BLOCK_SIZE = 16;
@@ -24,14 +27,31 @@ const MAX_VARINT_LENGTH = 5;
 const GZIP_SIZE_LENGTH = 4;
 const UINT32_RANGE = 2 ** 32;
 const MAX_BUFFERED_OUTPUT = 4 * 1024 * 1024;
+// libsignal `forward_secrecy.rs` `MAX_METADATA_LEN`: a valid metadata, two pairs and an IV, is a few hundred bytes
+const MAX_METADATA_LENGTH = 16 * 1024;
+// A frame is a chat item or a recipient, which are small next to this. These caps stop a corrupted or malicious file
+// from taking the memory of the tab: it is the length prefix that says how much a frame takes, and the compression
+// ratio of text that says how much a small file inflates to.
+const MAX_FRAME_LENGTH = 16 * 1024 * 1024;
+const MAX_UNCOMPRESSED_LENGTH = 2 * 1024 * 1024 * 1024;
+
+/** The forward secrecy header at the start of a backup is cut short or too large */
+export class BackupHeaderError extends Error {
+  constructor() {
+    super('Backup has an invalid forward secrecy header');
+  }
+}
 
 /**
  * Derives the keys of a backup from its backup key and our ACI; link and sync uses the ephemeral backup key
- * from the provisioning message (Signal Desktop `getMessageBackupKey` in `ts/services/backups/crypto.preload.ts`)
+ * from the provisioning message (Signal Desktop `getMessageBackupKey` in `ts/services/backups/crypto.preload.ts`).
+ * The backups on the archive CDN also take the token that SVR-B gives (`forwardSecrecyToken`).
  */
-export function deriveMessageBackupKeys(backupKey: Uint8Array, aci: string): MessageBackupKeys {
+export function deriveMessageBackupKeys(
+  backupKey: Uint8Array, aci: string, forwardSecrecyToken?: Uint8Array,
+): MessageBackupKeys {
   const backupId = wasm.BackupKey_DeriveBackupId(backupKey, wasm.ServiceId_ParseFromServiceIdString(aci));
-  const key = wasm.MessageBackupKey_FromBackupKeyAndBackupId(backupKey, backupId, undefined);
+  const key = wasm.MessageBackupKey_FromBackupKeyAndBackupId(backupKey, backupId, forwardSecrecyToken);
   return {
     hmacKey: new Uint8Array(wasm.MessageBackupKey_GetHmacKey(key)),
     aesKey: new Uint8Array(wasm.MessageBackupKey_GetAesKey(key)),
@@ -40,22 +60,50 @@ export function deriveMessageBackupKeys(backupKey: Uint8Array, aci: string): Mes
 
 /**
  * Reads the frames of an encrypted backup: `IV || AES-256-CBC(gzip(frames) || zero padding) || HMAC-SHA256` over
- * all bytes before the MAC (Signal Desktop `importBackup` in `ts/services/backups/index.preload.ts`, Signal Android
- * `EncryptedBackupWriter`). The MAC is checked before anything is decrypted. Each frame is a protobuf with a varint
- * length prefix; the first is `BackupInfo`. `onProgress` follows the decrypted bytes.
+ * the IV and the ciphertext (Signal Desktop `importBackup` in `ts/services/backups/index.preload.ts`, Signal Android
+ * `EncryptedBackupWriter`), after the forward secrecy header of a backup from the archive CDN if there is one. The MAC
+ * of a file without the header covers all bytes before it, as libsignal `FramesReader` reads that legacy format. The
+ * MAC is checked before anything is decrypted. Each frame is a protobuf with a varint length prefix; the first is
+ * `BackupInfo`. `onProgress` follows the decrypted bytes.
  */
 export async function* readBackupFrames(
   archive: Uint8Array<ArrayBuffer>, keys: MessageBackupKeys, onProgress?: OnProgress,
 ): AsyncGenerator<Uint8Array> {
-  if (archive.length < IV_LENGTH + AES_BLOCK_SIZE + MAC_LENGTH) throw new Error('Backup is too short');
+  const start = readForwardSecrecyHeader(archive)?.end ?? 0;
+  if (archive.length < start + IV_LENGTH + AES_BLOCK_SIZE + MAC_LENGTH) throw new Error('Backup is too short');
 
   const macOffset = archive.length - MAC_LENGTH;
-  await verifyHmacSha256(archive.subarray(0, macOffset), keys.hmacKey, archive.subarray(macOffset), MAC_LENGTH);
+  await verifyHmacSha256(archive.subarray(start, macOffset), keys.hmacKey, archive.subarray(macOffset), MAC_LENGTH);
 
-  const iv = archive.subarray(0, IV_LENGTH);
-  const ciphertext = archive.subarray(IV_LENGTH, macOffset);
+  const iv = archive.subarray(start, start + IV_LENGTH);
+  const ciphertext = archive.subarray(start + IV_LENGTH, macOffset);
   const decoder = new PaddedGzipDecoder(decryptAesCbcChunks(keys.aesKey, iv, ciphertext, onProgress));
   yield* readDelimitedFrames(decoder.read());
+}
+
+/**
+ * The forward secrecy metadata at the start of a backup from the archive CDN (`SBACKUP\x01`, the length as a varint
+ * and the bytes of the metadata), which SVR-B takes to give the token of the file. `undefined` for a file without it.
+ * `bytes` may be the start of the file, as long as it has the whole header.
+ */
+export function readForwardSecrecyMetadata(bytes: Uint8Array) {
+  const header = readForwardSecrecyHeader(bytes);
+  return header && bytes.subarray(header.metadataStart, header.end);
+}
+
+export function hasForwardSecrecyHeader(bytes: Uint8Array) {
+  return bytes.length >= FORWARD_SECRECY_MAGIC.length
+    && FORWARD_SECRECY_MAGIC.every((byte, index) => bytes[index] === byte);
+}
+
+/** `end` is where the IV starts; a header that is cut short or too large is an error */
+function readForwardSecrecyHeader(bytes: Uint8Array) {
+  if (!hasForwardSecrecyHeader(bytes)) return undefined;
+  const prefix = readVarint(bytes, FORWARD_SECRECY_MAGIC.length);
+  if (!prefix || prefix.value > MAX_METADATA_LENGTH || prefix.end + prefix.value > bytes.length) {
+    throw new BackupHeaderError();
+  }
+  return { metadataStart: prefix.end, end: prefix.end + prefix.value };
 }
 
 /** Decrypts AES-256-CBC in chunks, so the plaintext never exists in one piece */
@@ -188,6 +236,10 @@ class PaddedGzipDecoder {
         this.output.push(value);
         this.bufferedLength += value.length;
         this.outputLength += value.length;
+        if (this.outputLength > MAX_UNCOMPRESSED_LENGTH) {
+          this.finish(new Error('Backup is too large to import'));
+          return;
+        }
         this.wake();
       }
     } catch (err) {
@@ -242,6 +294,7 @@ async function* readDelimitedFrames(chunks: AsyncIterable<Uint8Array>) {
     let offset = 0;
     for (;;) {
       const prefix = readVarint(buffer, offset);
+      if (prefix && prefix.value > MAX_FRAME_LENGTH) throw new Error('Backup frame is too long');
       if (!prefix || prefix.end + prefix.value > buffer.length) break;
       offset = prefix.end + prefix.value;
       yield buffer.subarray(prefix.end, offset);

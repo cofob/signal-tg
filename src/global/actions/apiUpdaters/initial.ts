@@ -92,6 +92,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
+    case 'updateStorageLocked':
+      Object.values(global.byTabId).forEach(({ id: tabId }) => {
+        actions.showDialog({ data: { type: 'storageLocked' }, tabId });
+      });
+      break;
+
     case 'notSupportedInFrozenAccount': {
       actions.showNotification({
         title: {
@@ -142,6 +148,10 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
         qrCode: update.qrCode,
         historySync: update.historySync,
       });
+      setGlobal(global);
+      break;
+    case 'authorizationStateWaitBackupRestore':
+      global = updateAuth(global, { backupRestore: update.backupRestore });
       setGlobal(global);
       break;
     case 'authorizationStateReady': {

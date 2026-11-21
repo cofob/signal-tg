@@ -2,6 +2,16 @@
 
 Web client for the [Signal](https://signal.org) messenger, built on [Telegram Web A](https://github.com/Ajaxy/telegram-tt). It runs as a Signal linked device; all protocol logic and cryptography run in the browser. Work in progress: see [docs/signal/PLAN.md](docs/signal/PLAN.md).
 
+## Screenshots
+
+The screenshots show demo data (`signalDev.seedDemo()` in development builds).
+
+![Group chat with a poll and delivery states, light theme](docs/screenshots/light-group.png)
+
+![Direct chat with photos, a sticker and service messages, dark theme](docs/screenshots/dark-chat.png)
+
+![Story viewer, dark theme](docs/screenshots/dark-story.png)
+
 ## Setup
 
 ```sh

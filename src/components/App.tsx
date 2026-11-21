@@ -37,6 +37,7 @@ import Auth from './auth/Auth';
 import Notifications from './common/Notifications';
 import UiLoader from './common/UiLoader';
 import AppInactive from './main/AppInactive';
+import Dialogs from './main/Dialogs';
 import LockScreen from './main/LockScreen.async';
 import Main from './main/Main.async';
 // import Test from './test/demo/MessageTextStreamingTest';
@@ -156,6 +157,7 @@ const App = ({
         break;
       case 'authorizationStateWaitCaptcha':
       case 'authorizationStateWaitRegistration':
+      case 'authorizationStateWaitBackupRestore':
         activeKey = AppScreens.auth;
         break;
       case 'authorizationStateWaitQrCode':
@@ -261,6 +263,7 @@ const App = ({
         {renderContent}
       </Transition>
       <Notifications />
+      <Dialogs />
     </UiLoader>
   );
 };

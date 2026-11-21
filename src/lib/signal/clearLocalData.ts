@@ -1,12 +1,9 @@
 import * as cacheApi from '../../util/cacheApi';
-import { ACCOUNT_SLOT, getAccountSlots } from '../../util/multiaccount';
 import { ATTACHMENT_CACHE_NAME } from './attachments/attachmentCache';
+import { getEngineSlots } from './engineSlots';
 
 import MessageDb from './db/MessageDb';
 import SignalStore from './store/SignalStore';
-
-// The IndexedDB names of `SignalStore` and `MessageDb` with the suffix of `getEngineStoreName`
-const ENGINE_DB_NAME_REGEXP = /^ts-signal(?:-messages)?(?:-(\d+))?$/;
 
 /**
  * Removes the account, keys, messages and decrypted attachments of the engine in this page's account slot from
@@ -32,15 +29,4 @@ export async function clearAllSignalLocalData() {
     cacheApi.clearShared(ATTACHMENT_CACHE_NAME),
     cacheApi.clearAccountScopes(ATTACHMENT_CACHE_NAME),
   ]);
-}
-
-async function getEngineSlots() {
-  const slots = new Set([ACCOUNT_SLOT || 1, ...getAccountSlots()]);
-  // Not available in every browser; the slots of the sessions are the fallback
-  const databases = await indexedDB.databases?.().catch(() => undefined);
-  databases?.forEach(({ name }) => {
-    const match = name?.match(ENGINE_DB_NAME_REGEXP);
-    if (match) slots.add(Number(match[1] ?? 1));
-  });
-  return slots;
 }

@@ -39,7 +39,7 @@ never sees the connections without credentials, and the second never sees the ac
 ## Protocol
 
 - `GET /tunnel?host=<host>&port=443` with a WebSocket upgrade opens a tunnel. `host` must be one of
-  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy`, `sfu.voip` or `svr2` `.signal.org`, and
+  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy`, `sfu.voip`, `svr2` or `svrb` `.signal.org`, and
   `port` must be 443. Binary messages carry raw TCP bytes in both directions; the client sends
   messages of at most 64 KiB (`src/lib/signal/net/TlsTunnel.ts`).
 - The first bytes from the client must be a TLS ClientHello whose only server name is `host`.
@@ -164,12 +164,9 @@ signal.example.com {
 
 The app's Content-Security-Policy ships as a `<meta>` tag, which browsers do not apply to the Web Worker that runs the
 Signal engine (a worker takes its policy from its own response headers), and which cannot carry `frame-ancestors`. Send
-the same policy as a response header for every file of the app, with the headers that a `<meta>` tag cannot set. The
-build puts the policy in `dist/index.html`:
-
-```sh
-sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/index.html
-```
+the same policy as a response header for every file of the app, with the headers that a `<meta>` tag cannot set.
+`npm run csp:print` prints the policy that the build puts in `dist/index.html` (it reads `SIGNAL_TUNNEL_URL` from the
+environment, like the build).
 
 nginx, in the `server` block of the app (`<policy>` is that output):
 

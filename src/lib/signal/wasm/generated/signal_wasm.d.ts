@@ -1,11 +1,64 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function AccountEntropyPool_DeriveBackupKey(account_entropy: string): Uint8Array;
+
 export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8Array;
 
 export function AccountEntropyPool_Generate(): string;
 
+export function AccountEntropyPool_IsValid(account_entropy: string): boolean;
+
+export function BackupAuthCredentialRequestContext_GetRequest(context_bytes: Uint8Array): Uint8Array;
+
+/**
+ * Backup credentials: the context of a backup key and ACI requests a credential (`PUT /v1/archives/backupid`),
+ * receives the server's response (`GET /v1/archives/auth`) and presents the credential to the backup service
+ */
+export function BackupAuthCredentialRequestContext_New(backup_key: Uint8Array, uuid: Uint8Array): Uint8Array;
+
+/**
+ * `expected_redemption_time` is in seconds, as in `GET /v1/archives/auth`
+ */
+export function BackupAuthCredentialRequestContext_ReceiveResponse(context_bytes: Uint8Array, response_bytes: Uint8Array, expected_redemption_time: number, params_bytes: Uint8Array): Uint8Array;
+
+export function BackupAuthCredential_GetBackupLevel(credential_bytes: Uint8Array): number;
+
+export function BackupAuthCredential_PresentDeterministic(credential_bytes: Uint8Array, server_params_bytes: Uint8Array, randomness_bytes: Uint8Array): Uint8Array;
+
 export function BackupKey_DeriveBackupId(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): Uint8Array;
+
+export function BackupKey_DeriveEcKey(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): PrivateKey;
+
+/**
+ * What `restore_backup` gives for the pair of the metadata that the enclave could open
+ */
+export class BackupRestoreResponse {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function BackupRestoreResponse_GetForwardSecrecyToken(response: BackupRestoreResponse): Uint8Array;
+
+export function BackupRestoreResponse_GetNextBackupSecretData(response: BackupRestoreResponse): Uint8Array;
+
+/**
+ * What `store_backup` gives, before the request that uploads the previous backup is sent
+ */
+export class BackupStoreResponse {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function BackupStoreResponse_GetFinalizeRequest(response: BackupStoreResponse): Uint8Array;
+
+export function BackupStoreResponse_GetForwardSecrecyToken(response: BackupStoreResponse): Uint8Array;
+
+export function BackupStoreResponse_GetNextBackupSecretData(response: BackupStoreResponse): Uint8Array;
+
+export function BackupStoreResponse_GetOpaqueMetadata(response: BackupStoreResponse): Uint8Array;
 
 export function Cds2ClientState_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
 
@@ -216,6 +269,26 @@ export function MessageBackupKey_GetAesKey(key: MessageBackupKey): Uint8Array;
 
 export function MessageBackupKey_GetHmacKey(key: MessageBackupKey): Uint8Array;
 
+export function MessageBackupSizing_FlushInterval(uncompressed_len: bigint, estimated_total_uncompressed_len: bigint): bigint;
+
+export function MessageBackupSizing_PaddingSize(max_interval_bytes: bigint, compressed_len: bigint): bigint;
+
+/**
+ * Checks the frames of a backup as they are added, without holding them
+ * (upstream `OnlineBackupValidator` in `rust/bridge/shared/types/src/message_backup.rs`)
+ */
+export class OnlineBackupValidator {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function OnlineBackupValidator_AddFrame(backup: OnlineBackupValidator, frame: Uint8Array): void;
+
+export function OnlineBackupValidator_Finalize(backup: OnlineBackupValidator): void;
+
+export function OnlineBackupValidator_New(backup_info_frame: Uint8Array, purpose: number): OnlineBackupValidator;
+
 export class PinHash {
     private constructor();
     free(): void;
@@ -403,6 +476,29 @@ export function SealedSender_MultiRecipientEncrypt(recipients: ProtocolAddress[]
  * Extracts the only recipient's message from a multi-recipient sealed sender payload
  */
 export function SealedSender_MultiRecipientMessageForSingleRecipient(encoded: Uint8Array): Uint8Array;
+
+/**
+ * The data that starts the chain of backups, which the next `SecureValueRecoveryForBackups_PrepareStore` takes
+ */
+export function SecureValueRecoveryForBackups_CreateNewBackupChain(backup_key_bytes: Uint8Array): Uint8Array;
+
+/**
+ * Opens the token of the pair at `pair_index` with the salt that the enclave gave, and makes the data for the next
+ * backup: it keeps the enclave's key, so the next file's metadata can name it
+ */
+export function SecureValueRecoveryForBackups_FinishRestore(backup_key_bytes: Uint8Array, metadata: Uint8Array, pair_index: number, encryption_salt: Uint8Array): BackupRestoreResponse;
+
+/**
+ * The salts of the passwords of a backup file's metadata, 32 bytes each: every pair is a try at the key in the enclave
+ */
+export function SecureValueRecoveryForBackups_GetMetadataSalts(metadata: Uint8Array): Uint8Array;
+
+/**
+ * Starts a backup: gives the token for the file, the metadata to write at its start, the data for the next backup and
+ * the request that puts the previous backup's key into the enclave (`finalize_request`, empty when the previous data
+ * came from a restore, which left the enclave as it is)
+ */
+export function SecureValueRecoveryForBackups_PrepareStore(backup_key_bytes: Uint8Array, previous_secret_data: Uint8Array): BackupStoreResponse;
 
 export class SenderCertificate {
     private constructor();
@@ -609,6 +705,11 @@ export function SgxClientState_EstablishedRecv(cli: SgxClientState, received_cip
 
 export function SgxClientState_EstablishedSend(cli: SgxClientState, plaintext_to_send: Uint8Array): Uint8Array;
 
+/**
+ * The hash of the Noise handshake, which SVR-B binds a restore request to
+ */
+export function SgxClientState_GetHandshakeHash(cli: SgxClientState): Uint8Array;
+
 export function SgxClientState_InitialRequest(obj: SgxClientState): Uint8Array;
 
 export class SignalMessage {
@@ -658,6 +759,58 @@ export function SignedPreKeyRecord_New(id: number, timestamp_millis: number, pub
 export function SignedPreKeyRecord_Serialize(obj: SignedPreKeyRecord): Uint8Array;
 
 export function Svr2Client_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
+
+/**
+ * The handshake with a SVR-B enclave: the raft group of the build that has the MRENCLAVE is the one that attestation
+ * expects (libsignal-net `SvrBEnv`, `PROD`)
+ */
+export function SvrBClient_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
+
+export function SvrBQuery_Finalize(response: Uint8Array): number;
+
+/**
+ * The request for the tries that are left, which changes nothing in the enclave (`Query4`)
+ */
+export function SvrBQuery_GetRequest(): Uint8Array;
+
+/**
+ * The request that deletes the backup key from the enclave (`Remove4`)
+ */
+export function SvrBRemove_GetRequest(): Uint8Array;
+
+/**
+ * A started restore: its first request is out, and the enclave's answer finishes it
+ */
+export class SvrBRestore1 {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function SvrBRestore1_GetRequest(restore: SvrBRestore1): Uint8Array;
+
+/**
+ * Starts the restore of a pair's key: the password derives from the backup key and the pair's salt
+ */
+export function SvrBRestore1_New(backup_key_bytes: Uint8Array, password_salt: Uint8Array): SvrBRestore1;
+
+/**
+ * The second request: it proves that the client knows the password, and is bound to the connection's handshake
+ */
+export function SvrBRestore1_Restore2(restore: SvrBRestore1, response: Uint8Array, handshake_hash: Uint8Array): SvrBRestore2;
+
+export class SvrBRestore2 {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function SvrBRestore2_GetRequest(restore: SvrBRestore2): Uint8Array;
+
+/**
+ * The salt of the key that encrypts the token, which the enclave gave back
+ */
+export function SvrBRestore2_Restore(restore: SvrBRestore2, response: Uint8Array): Uint8Array;
 
 export function SvrKey_DeriveRegistrationLock(svr_key: Uint8Array): Uint8Array;
 
@@ -735,9 +888,23 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly AccountEntropyPool_DeriveBackupKey: (a: number, b: number) => [number, number, number, number];
     readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
     readonly AccountEntropyPool_Generate: () => [number, number];
+    readonly AccountEntropyPool_IsValid: (a: number, b: number) => number;
+    readonly BackupAuthCredentialRequestContext_GetRequest: (a: number, b: number) => [number, number, number, number];
+    readonly BackupAuthCredentialRequestContext_New: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly BackupAuthCredentialRequestContext_ReceiveResponse: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly BackupAuthCredential_GetBackupLevel: (a: number, b: number) => [number, number, number];
+    readonly BackupAuthCredential_PresentDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly BackupKey_DeriveEcKey: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly BackupRestoreResponse_GetForwardSecrecyToken: (a: number) => [number, number];
+    readonly BackupRestoreResponse_GetNextBackupSecretData: (a: number) => [number, number];
+    readonly BackupStoreResponse_GetFinalizeRequest: (a: number) => [number, number];
+    readonly BackupStoreResponse_GetForwardSecrecyToken: (a: number) => [number, number];
+    readonly BackupStoreResponse_GetNextBackupSecretData: (a: number) => [number, number];
+    readonly BackupStoreResponse_GetOpaqueMetadata: (a: number) => [number, number];
     readonly Cds2ClientState_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
@@ -797,6 +964,11 @@ export interface InitOutput {
     readonly MessageBackupKey_FromBackupKeyAndBackupId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly MessageBackupKey_GetAesKey: (a: number) => [number, number];
     readonly MessageBackupKey_GetHmacKey: (a: number) => [number, number];
+    readonly MessageBackupSizing_FlushInterval: (a: bigint, b: bigint) => bigint;
+    readonly MessageBackupSizing_PaddingSize: (a: bigint, b: bigint) => bigint;
+    readonly OnlineBackupValidator_AddFrame: (a: number, b: number, c: number) => [number, number];
+    readonly OnlineBackupValidator_Finalize: (a: number) => [number, number];
+    readonly OnlineBackupValidator_New: (a: number, b: number, c: number) => [number, number, number];
     readonly PinHash_DecodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
     readonly PinHash_EncodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
     readonly PinHash_FromUsernameMrenclave: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
@@ -843,6 +1015,10 @@ export interface InitOutput {
     readonly SealedSender_Encrypt: (a: number, b: number, c: any) => [number, number, number];
     readonly SealedSender_MultiRecipientEncrypt: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: any) => [number, number, number];
     readonly SealedSender_MultiRecipientMessageForSingleRecipient: (a: number, b: number) => [number, number, number, number];
+    readonly SecureValueRecoveryForBackups_CreateNewBackupChain: (a: number, b: number) => [number, number, number, number];
+    readonly SecureValueRecoveryForBackups_FinishRestore: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number];
+    readonly SecureValueRecoveryForBackups_GetMetadataSalts: (a: number, b: number) => [number, number, number, number];
+    readonly SecureValueRecoveryForBackups_PrepareStore: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly SenderCertificate_Deserialize: (a: number, b: number) => [number, number, number];
     readonly SenderCertificate_GetDeviceId: (a: number) => [number, number, number];
     readonly SenderCertificate_GetExpiration: (a: number) => [number, number, number];
@@ -900,6 +1076,7 @@ export interface InitOutput {
     readonly SgxClientState_CompleteHandshake: (a: number, b: number, c: number) => [number, number];
     readonly SgxClientState_EstablishedRecv: (a: number, b: number, c: number) => [number, number, number, number];
     readonly SgxClientState_EstablishedSend: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly SgxClientState_GetHandshakeHash: (a: number) => [number, number, number, number];
     readonly SgxClientState_InitialRequest: (a: number) => [number, number, number, number];
     readonly SignalMessage_Deserialize: (a: number, b: number) => [number, number, number];
     readonly SignalMessage_GetBody: (a: number) => [number, number];
@@ -915,6 +1092,15 @@ export interface InitOutput {
     readonly SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
     readonly Svr2Client_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly SvrBClient_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly SvrBQuery_Finalize: (a: number, b: number) => [number, number, number];
+    readonly SvrBQuery_GetRequest: () => [number, number];
+    readonly SvrBRemove_GetRequest: () => [number, number];
+    readonly SvrBRestore1_GetRequest: (a: number) => [number, number];
+    readonly SvrBRestore1_New: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly SvrBRestore1_Restore2: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+    readonly SvrBRestore2_GetRequest: (a: number) => [number, number];
+    readonly SvrBRestore2_Restore: (a: number, b: number, c: number) => [number, number, number, number];
     readonly SvrKey_DeriveRegistrationLock: (a: number, b: number) => [number, number, number, number];
     readonly SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
     readonly UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
@@ -931,6 +1117,8 @@ export interface InitOutput {
     readonly Username_Hash: (a: number, b: number) => [number, number, number, number];
     readonly Username_HashFromParts: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly Username_Proof: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly __wbg_backuprestoreresponse_free: (a: number, b: number) => void;
+    readonly __wbg_backupstoreresponse_free: (a: number, b: number) => void;
     readonly __wbg_ciphertextmessage_free: (a: number, b: number) => void;
     readonly __wbg_decryptionerrormessage_free: (a: number, b: number) => void;
     readonly __wbg_fingerprint_free: (a: number, b: number) => void;
@@ -938,6 +1126,7 @@ export interface InitOutput {
     readonly __wbg_kyberprekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_kyberpublickey_free: (a: number, b: number) => void;
     readonly __wbg_messagebackupkey_free: (a: number, b: number) => void;
+    readonly __wbg_onlinebackupvalidator_free: (a: number, b: number) => void;
     readonly __wbg_prekeybundle_free: (a: number, b: number) => void;
     readonly __wbg_prekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_prekeysignalmessage_free: (a: number, b: number) => void;
@@ -953,6 +1142,8 @@ export interface InitOutput {
     readonly __wbg_sessionrecord_free: (a: number, b: number) => void;
     readonly __wbg_sgxclientstate_free: (a: number, b: number) => void;
     readonly __wbg_signalmessage_free: (a: number, b: number) => void;
+    readonly __wbg_svrbrestore1_free: (a: number, b: number) => void;
+    readonly __wbg_svrbrestore2_free: (a: number, b: number) => void;
     readonly __wbg_tlsclient_free: (a: number, b: number) => void;
     readonly __wbg_unidentifiedsendermessagecontent_free: (a: number, b: number) => void;
     readonly decryptionerrormessage_cloneHandle: (a: number) => number;

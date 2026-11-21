@@ -26,6 +26,9 @@ export type BackupImportContext = {
   store: SignalStore;
   processor: MessageProcessor;
   account: AccountRecord;
+  // The account is in use: the backup fills what the account lacks, and the account's own settings, chat states and
+  // last messages stay
+  isMerge?: boolean;
   // Chat items an interrupted import stored already
   skipItemCount: number;
   updateAccount(update: Partial<AccountRecord>): Promise<void>;
@@ -143,7 +146,8 @@ class BackupImporter {
     if (!mediaRootBackupKey.length) throw new Error('Backup has no media root key');
     if (!ourKey) {
       await this.context.updateAccount({ mediaRootBackupKey });
-    } else if (!buffersEqual(ourKey, mediaRootBackupKey)) {
+    } else if (!this.context.isMerge && !buffersEqual(ourKey, mediaRootBackupKey)) {
+      // An account in use keeps its key, which a backup of another device of the account need not share
       throw new Error('Backup has a different media root key');
     }
   }
@@ -152,15 +156,20 @@ class BackupImporter {
     if (this.hasAccountData) throw new Error('Backup has more than one account data frame');
     this.hasAccountData = true;
 
-    const { account } = this.context;
+    const { account, isMerge } = this.context;
     const settings = data.accountSettings;
+    // A merge keeps the setting that the account has
+    const take = <T>(current: T | undefined, imported: T | undefined) => (isMerge ? current ?? imported : imported);
     await this.context.updateAccount({
       profileKey: account.profileKey ?? (data.profileKey.length ? data.profileKey : undefined),
-      isReadReceiptsEnabled: settings ? settings.readReceipts : account.isReadReceiptsEnabled,
-      isTypingIndicatorsEnabled: settings ? settings.typingIndicators : account.isTypingIndicatorsEnabled,
-      isLinkPreviewsEnabled: settings ? settings.linkPreviews : account.isLinkPreviewsEnabled,
-      defaultChatStyle: buildChatStyleRecord(settings?.defaultChatStyle),
-      customChatColors: buildCustomChatColors(settings?.customChatColors ?? []),
+      isReadReceiptsEnabled: settings ? take(account.isReadReceiptsEnabled, settings.readReceipts)
+        : account.isReadReceiptsEnabled,
+      isTypingIndicatorsEnabled: settings ? take(account.isTypingIndicatorsEnabled, settings.typingIndicators)
+        : account.isTypingIndicatorsEnabled,
+      isLinkPreviewsEnabled: settings ? take(account.isLinkPreviewsEnabled, settings.linkPreviews)
+        : account.isLinkPreviewsEnabled,
+      defaultChatStyle: take(account.defaultChatStyle, buildChatStyleRecord(settings?.defaultChatStyle)),
+      customChatColors: take(account.customChatColors, buildCustomChatColors(settings?.customChatColors ?? [])),
     });
     this.patchConversation({
       id: account.aci,
@@ -275,8 +284,8 @@ class BackupImporter {
     this.patchConversation({
       ...conversation,
       isArchived: chat.archived,
-      // Zero is not pinned; pinned chats show in ascending order
-      pinIndex: chat.pinnedOrder || undefined,
+      // Zero is not pinned; pinned chats show in ascending order from one, and the index from zero
+      pinIndex: chat.pinnedOrder ? chat.pinnedOrder - 1 : undefined,
       expireTimer: chat.expirationTimerMs ? Math.round(Number(chat.expirationTimerMs) / MS_PER_SECOND) : undefined,
       expireTimerVersion: chat.expireTimerVersion || undefined,
       mutedUntil: chat.muteUntilMs ? Number(chat.muteUntilMs) : undefined,
@@ -303,7 +312,9 @@ class BackupImporter {
   }
 
   private async flush() {
-    const batch: HistoryBatch = { conversations: [...this.conversations.values()], messages: this.messages };
+    const batch: HistoryBatch = {
+      conversations: [...this.conversations.values()], messages: this.messages, isMerge: this.context.isMerge,
+    };
     this.conversations = new Map();
     this.messages = [];
     if (batch.conversations.length || batch.messages.length) {

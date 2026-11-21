@@ -9,6 +9,8 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use wasm_bindgen::prelude::*;
 use zkgroup::auth::{AuthCredentialWithPni, AuthCredentialWithPniResponse};
+use zkgroup::backups::{BackupAuthCredential, BackupAuthCredentialRequestContext, BackupAuthCredentialResponse};
+use zkgroup::generic_server_params::GenericServerPublicParams;
 use zkgroup::groups::{
     GroupMasterKey, GroupPublicParams, GroupSecretParams, GroupSendEndorsement, GroupSendEndorsementsResponse,
     GroupSendToken, ProfileKeyCiphertext, UuidCiphertext,
@@ -413,4 +415,154 @@ pub fn GroupSendEndorsement_ToToken(endorsement: &[u8], group_params: &[u8]) -> 
 pub fn GroupSendToken_ToFullToken(token: &[u8], expiration: f64) -> JsResult<Vec<u8>> {
     let token: GroupSendToken = decode(token, "GroupSendToken_ToFullToken")?;
     Ok(encode(&token.into_full_token(Timestamp::from_epoch_seconds(expiration as u64))))
+}
+
+/// Backup credentials: the context of a backup key and ACI requests a credential (`PUT /v1/archives/backupid`),
+/// receives the server's response (`GET /v1/archives/auth`) and presents the credential to the backup service
+#[wasm_bindgen]
+pub fn BackupAuthCredentialRequestContext_New(backup_key: &[u8], uuid: &[u8]) -> JsResult<Vec<u8>> {
+    let operation = "BackupAuthCredentialRequestContext_New";
+    let backup_key: libsignal_account_keys::BackupKey = libsignal_account_keys::BackupKey(
+        backup_key.try_into().map_err(|_| generic_error("invalid backup key length", operation))?,
+    );
+    let uuid = uuid::Uuid::from_slice(uuid).map_err(|_| generic_error("invalid UUID length", operation))?;
+    Ok(encode(&BackupAuthCredentialRequestContext::new(&backup_key, uuid.into())))
+}
+
+#[wasm_bindgen]
+pub fn BackupAuthCredentialRequestContext_GetRequest(context_bytes: &[u8]) -> JsResult<Vec<u8>> {
+    let context: BackupAuthCredentialRequestContext =
+        decode(context_bytes, "BackupAuthCredentialRequestContext_GetRequest")?;
+    Ok(encode(&context.get_request()))
+}
+
+/// `expected_redemption_time` is in seconds, as in `GET /v1/archives/auth`
+#[wasm_bindgen]
+pub fn BackupAuthCredentialRequestContext_ReceiveResponse(
+    context_bytes: &[u8],
+    response_bytes: &[u8],
+    expected_redemption_time: f64,
+    params_bytes: &[u8],
+) -> JsResult<Vec<u8>> {
+    let operation = "BackupAuthCredentialRequestContext_ReceiveResponse";
+    let context: BackupAuthCredentialRequestContext = decode(context_bytes, operation)?;
+    let response: BackupAuthCredentialResponse = decode(response_bytes, operation)?;
+    let params = GenericServerPublicParams::try_from(params_bytes)
+        .map_err(|_| generic_error("invalid generic server public params", operation))?;
+    let credential = context
+        .receive(response, &params, Timestamp::from_epoch_seconds(expected_redemption_time as u64))
+        .map_err(verification_failure(operation))?;
+    Ok(encode(&credential))
+}
+
+#[wasm_bindgen]
+pub fn BackupAuthCredential_GetBackupLevel(credential_bytes: &[u8]) -> JsResult<u8> {
+    let credential: BackupAuthCredential = decode(credential_bytes, "BackupAuthCredential_GetBackupLevel")?;
+    Ok(credential.backup_level() as u8)
+}
+
+#[wasm_bindgen]
+pub fn BackupAuthCredential_PresentDeterministic(
+    credential_bytes: &[u8],
+    server_params_bytes: &[u8],
+    randomness_bytes: &[u8],
+) -> JsResult<Vec<u8>> {
+    let operation = "BackupAuthCredential_PresentDeterministic";
+    let credential: BackupAuthCredential = decode(credential_bytes, operation)?;
+    let server_params = GenericServerPublicParams::try_from(server_params_bytes)
+        .map_err(|_| generic_error("invalid generic server public params", operation))?;
+    Ok(encode(&credential.present(&server_params, randomness(randomness_bytes, operation)?)))
+}
+
+/// The server side of the backup credentials, for tests of the client against a fake server
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn GenericServerSecretParams_GenerateDeterministic(randomness_bytes: &[u8]) -> JsResult<Vec<u8>> {
+    let secret: zkgroup::generic_server_params::GenericServerSecretParams =
+        zkgroup::generic_server_params::GenericServerSecretParamsLegacy::generate(randomness(
+            randomness_bytes,
+            "GenericServerSecretParams_GenerateDeterministic",
+        )?)
+        .into();
+    Ok(encode(&secret))
+}
+
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn GenericServerSecretParams_GetPublicParams(params_bytes: &[u8]) -> JsResult<Vec<u8>> {
+    let operation = "GenericServerSecretParams_GetPublicParams";
+    let secret = zkgroup::generic_server_params::GenericServerSecretParams::try_from(params_bytes)
+        .map_err(|_| generic_error("invalid generic server secret params", operation))?;
+    Ok(encode(&secret.get_public_params()))
+}
+
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn BackupAuthCredentialRequest_IssueDeterministic(
+    request_bytes: &[u8],
+    redemption_time: f64,
+    backup_level: u8,
+    credential_type: u8,
+    params_bytes: &[u8],
+    randomness_bytes: &[u8],
+) -> JsResult<Vec<u8>> {
+    let operation = "BackupAuthCredentialRequest_IssueDeterministic";
+    let request: zkgroup::backups::BackupAuthCredentialRequest = decode(request_bytes, operation)?;
+    let params = zkgroup::generic_server_params::GenericServerSecretParams::try_from(params_bytes)
+        .map_err(|_| generic_error("invalid generic server secret params", operation))?;
+    let response = request.issue(
+        Timestamp::from_epoch_seconds(redemption_time as u64),
+        zkgroup::backups::BackupLevel::try_from(backup_level).map_err(|_| generic_error("invalid backup level", operation))?,
+        zkgroup::backups::BackupCredentialType::try_from(credential_type)
+            .map_err(|_| generic_error("invalid credential type", operation))?,
+        &params,
+        randomness(randomness_bytes, operation)?,
+    );
+    Ok(encode(&response))
+}
+
+#[cfg(test)]
+mod backup_credential_tests {
+    use zkgroup::backups::{BackupAuthCredentialPresentation, BackupAuthCredentialRequest, BackupCredentialType, BackupLevel};
+    use zkgroup::generic_server_params::{GenericServerSecretParams, GenericServerSecretParamsLegacy};
+
+    use super::*;
+
+    const BACKUP_KEY: [u8; 32] = [3; 32];
+    const ACI_UUID: [u8; 16] = [5; 16];
+    const REDEMPTION_DAY_SECONDS: u64 = 20_000 * 86_400;
+
+    /// The server side of `PUT /v1/archives/backupid` and `GET /v1/archives/auth`: issue a credential for the request
+    #[test]
+    fn a_backup_credential_is_issued_received_and_presented() {
+        let secret: GenericServerSecretParams = GenericServerSecretParamsLegacy::generate([1; RANDOMNESS_LEN]).into();
+        let public_bytes = zkgroup::serialize(&secret.get_public_params());
+
+        let context = BackupAuthCredentialRequestContext_New(&BACKUP_KEY, &ACI_UUID).expect("context");
+        let request_bytes = BackupAuthCredentialRequestContext_GetRequest(&context).expect("request");
+        let request: BackupAuthCredentialRequest = decode(&request_bytes, "test").expect("request decodes");
+        let response = request.issue(
+            Timestamp::from_epoch_seconds(REDEMPTION_DAY_SECONDS),
+            BackupLevel::Free,
+            BackupCredentialType::Messages,
+            &secret,
+            [2; RANDOMNESS_LEN],
+        );
+
+        let credential = BackupAuthCredentialRequestContext_ReceiveResponse(
+            &context,
+            &encode(&response),
+            REDEMPTION_DAY_SECONDS as f64,
+            &public_bytes,
+        )
+        .expect("credential");
+        assert_eq!(BackupAuthCredential_GetBackupLevel(&credential).expect("level"), BackupLevel::Free as u8);
+
+        let presentation_bytes =
+            BackupAuthCredential_PresentDeterministic(&credential, &public_bytes, &[9; RANDOMNESS_LEN]).expect("presentation");
+        let presentation: BackupAuthCredentialPresentation = decode(&presentation_bytes, "test").expect("decodes");
+        presentation
+            .verify(Timestamp::from_epoch_seconds(REDEMPTION_DAY_SECONDS), &secret)
+            .expect("the server accepts the presentation");
+    }
 }

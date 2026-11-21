@@ -24,6 +24,7 @@
     "fix:ts": "tsc && eslint --cache --cache-location .cache/.eslintcache --fix",
     "fix:css": "stylelint \"**/*.{css,scss}\" --cache --cache-location .cache/.stylelintcache --fix",
     "check:hosts": "tsx ./dev/checkNoTelegramHosts.ts",
+    "csp:print": "tsx ./dev/printCsp.ts",
     "check": "npm run check:ts && npm run check:css && npm run check:hosts",
     "fix": "npm run fix:ts && npm run fix:css",
     "signal:wasm": "bash ./rust/signal-wasm/build.sh",

@@ -1,3 +1,4 @@
+import BackupService from '../../lib/signal/backups/BackupService';
 import MessageDb from '../../lib/signal/db/MessageDb';
 import GroupManager from '../../lib/signal/groups/GroupManager';
 import KeyTransparency from '../../lib/signal/keytrans/KeyTransparency';
@@ -7,6 +8,7 @@ import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
 import { getLoggableError } from '../../util/maskSensitiveText';
+import { handleBackupChange } from './updaters/backups';
 import { handleCallChanges } from './updaters/calls';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
@@ -43,6 +45,17 @@ export const processor = new MessageProcessor(db, client, {
 });
 
 export const groups = new GroupManager(client, db, processor, logError);
+
+/** Signal Secure Backups: runs on the schedule while the chat connection is up */
+export const backups = new BackupService({
+  store,
+  db,
+  client,
+  appVersion: `TeleSignal ${APP_VERSION}`,
+  getIsConnected: () => client.isConnected,
+  onChange: () => void handleBackupChange().catch(logError),
+  onError: logError,
+});
 
 export const keyTransparency = new KeyTransparency(client, db, {
   syncStorage: () => processor.syncStorage(),

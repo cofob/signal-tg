@@ -15,6 +15,7 @@ interface ImportMetaEnv {
   readonly TG_APP_TITLE: string;
   readonly TG_PUBLIC_URL: string;
   readonly TG_SIGNAL_TUNNEL_URL?: string;
+  readonly TG_SIGNAL_BACKUPS?: string;
 }
 
 declare namespace React {

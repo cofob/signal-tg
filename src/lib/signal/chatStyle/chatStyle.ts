@@ -1,4 +1,8 @@
-import type { ChatStyle, ChatStyle_CustomChatColor } from '../proto/generated/Backup_pb';
+import type { MessageInitShape } from '@bufbuild/protobuf';
+
+import type {
+  ChatStyle, ChatStyle_CustomChatColor, ChatStyle_CustomChatColorSchema, ChatStyleSchema,
+} from '../proto/generated/Backup_pb';
 
 import {
   ChatStyle_BubbleColorPreset as BubblePreset,
@@ -128,6 +132,37 @@ export function buildChatStyleRecord(style?: ChatStyle): ChatStyleRecord | undef
   const customColorId = bubbleColor.case === 'customColorId' ? String(bubbleColor.value) : undefined;
   if (!wallpaperPreset && !bubbleColorPreset && !customColorId) return undefined;
   return { wallpaperPreset, bubbleColorPreset, customColorId };
+}
+
+/** The style for a backup (the reverse of `buildChatStyleRecord`); `undefined` when the style sets nothing */
+export function buildBackupChatStyle(style?: ChatStyleRecord): MessageInitShape<typeof ChatStyleSchema> | undefined {
+  if (!style) return undefined;
+  const { wallpaperPreset, bubbleColorPreset, customColorId } = style;
+  if (!wallpaperPreset && !bubbleColorPreset && !customColorId) return undefined;
+
+  let bubbleColor: MessageInitShape<typeof ChatStyleSchema>['bubbleColor'];
+  if (customColorId) {
+    bubbleColor = { case: 'customColorId', value: BigInt(customColorId) };
+  } else if (bubbleColorPreset) {
+    bubbleColor = { case: 'bubbleColorPreset', value: bubbleColorPreset };
+  }
+  return {
+    wallpaper: wallpaperPreset ? { case: 'wallpaperPreset', value: wallpaperPreset } : undefined,
+    bubbleColor,
+  };
+}
+
+/** The custom chat colors for a backup (the reverse of `buildCustomChatColors`) */
+export function buildBackupCustomChatColors(colors: Record<string, CustomChatColorRecord> | undefined) {
+  return Object.entries(colors ?? {}).map(([id, { solid, gradient: gradientColor }]) => {
+    let color: MessageInitShape<typeof ChatStyle_CustomChatColorSchema>['color'];
+    if (gradientColor) {
+      color = { case: 'gradient', value: gradientColor };
+    } else if (solid !== undefined) {
+      color = { case: 'solid', value: solid };
+    }
+    return { id: BigInt(id), color };
+  });
 }
 
 export function buildCustomChatColors(colors: ChatStyle_CustomChatColor[]) {

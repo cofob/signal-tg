@@ -5,7 +5,8 @@
   "identifier": "org.telesignal.desktop",
   "app": {
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' wss: ws://localhost:* ws://127.0.0.1:* blob: data: ipc: http://ipc.localhost; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob: data:; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none';",
+      "dangerousDisableAssetCspModification": ["style-src"]
     }
   },
   "build": {

@@ -1,6 +1,7 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import type ChatConnection from '../chat/ChatConnection';
+import type { TrafficClass } from '../config';
 import type { AttachmentPointerSchema } from '../proto/generated/SignalService_pb';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
@@ -18,13 +19,13 @@ export type AttachmentMetadata = Omit<
   'attachmentIdentifier' | 'cdnNumber' | 'key' | 'size' | 'digest' | 'uploadTimestamp' | '$typeName'
 >;
 
-type UploadAttachmentOptions = {
+export type UploadAttachmentOptions = {
   signal?: AbortSignal;
   // Follows the encrypted bytes sent
   onProgress?: (sentLength: number, totalLength: number) => void;
 };
 
-type UploadForm = {
+export type UploadForm = {
   cdn: number;
   key: string;
   headers: Record<string, string>;
@@ -71,13 +72,26 @@ export async function uploadAttachment(
 
 /** Gets an upload form and sends the encrypted attachment with it; returns the CDN key */
 async function putEncryptedAttachment(
-  connection: ChatConnection, encrypted: Uint8Array, { signal, onProgress }: UploadAttachmentOptions,
+  connection: ChatConnection, encrypted: Uint8Array, options: UploadAttachmentOptions,
 ) {
   const { status, json: form } = await connection.sendJsonRequest<UploadForm>(
     'GET', `/v4/attachments/form/upload?uploadLength=${encrypted.length}`,
   );
   if (status === HTTP_PAYLOAD_TOO_LARGE) throw new Error('Attachment is too large');
   if (status !== HTTP_OK || !form) throw new SendHttpError(status, `Upload form request failed with HTTP ${status}`);
+
+  // The form is issued to the account, so the upload takes the main tunnel
+  await putTusUpload(form, encrypted, 'authenticated', options);
+  return form.key;
+}
+
+/**
+ * Sends `data` to the upload location of an upload form with a TUS creation-with-upload request; the CDN of the form
+ * has to be CDN 3. The attachment forms and the forms of the backup service (`GET /v1/archives/upload/form`) take it.
+ */
+export async function putTusUpload(
+  form: UploadForm, data: Uint8Array, trafficClass: TrafficClass, { signal, onProgress }: UploadAttachmentOptions = {},
+) {
   if (form.cdn !== TUS_CDN_NUMBER) throw new Error(`Uploads to CDN ${form.cdn} are not supported`);
 
   const location = new URL(form.signedUploadLocation);
@@ -85,24 +99,22 @@ async function putEncryptedAttachment(
     throw new Error(`Unexpected upload location ${location.origin}`);
   }
 
-  // The form is issued to the account, so the upload takes the main tunnel
   const response = await sendHttpRequest(location.hostname, {
-    trafficClass: 'authenticated',
+    trafficClass,
     method: 'POST',
     path: `${location.pathname}${location.search}`,
     headers: {
       ...form.headers,
       'Tus-Resumable': '1.0.0',
-      'Upload-Length': String(encrypted.length),
+      'Upload-Length': String(data.length),
       'Upload-Metadata': `filename ${bufferToBase64(encodeUtf8(form.key))}`,
       'Content-Type': 'application/offset+octet-stream',
     },
-    body: encrypted,
+    body: data,
     signal,
     onSendProgress: onProgress,
   });
   if (response.status !== HTTP_CREATED && response.status !== HTTP_OK) {
-    throw new SendHttpError(response.status, `Attachment upload failed with HTTP ${response.status}`);
+    throw new SendHttpError(response.status, `Upload failed with HTTP ${response.status}`);
   }
-  return form.key;
 }

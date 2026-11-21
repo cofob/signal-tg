@@ -14,6 +14,9 @@ mod keytrans;
 mod messages;
 mod records;
 mod stores;
+mod svrb;
+#[cfg(feature = "test-server")]
+mod svrb_fake;
 mod tls;
 mod usernames;
 mod zkgroup;

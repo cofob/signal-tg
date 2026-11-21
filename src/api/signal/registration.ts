@@ -1,11 +1,15 @@
 import type { VerificationSession } from '../../lib/signal/account/register';
+import type { RestoreProgress } from '../../lib/signal/backups/restoreBackup';
 import type { Credentials } from '../../lib/signal/net/rest';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
 import type { SvrErrorReason } from '../../lib/signal/svr/svr2';
 import type { RegularLangKey } from '../../types/language';
 import type { RegularLangFnParameters } from '../../util/localization/types';
-import type { ApiAuthCodeTransport, ApiUpdateAuthorizationStateType } from '../types';
+import type { ApiAuthCodeTransport, ApiBackupRestoreState, ApiUpdateAuthorizationStateType } from '../types';
 
+import { IS_SIGNAL_BACKUPS_ENABLED } from '../../config';
+import { updateAccountAttributes } from '../../lib/signal/account/accountAttributes';
+import { normalizeRecoveryKey } from '../../lib/signal/account/recoveryKey';
 import {
   completeRegistration,
   createVerificationSession,
@@ -16,10 +20,13 @@ import {
   submitCaptcha,
   submitVerificationCode,
 } from '../../lib/signal/account/register';
+import {
+  adoptRecoveryKey, findRemoteBackup, restoreBackupFile, RestoreError,
+  restoreRemoteBackup } from '../../lib/signal/backups/restoreBackup';
 import { resetPinGuessCount } from '../../lib/signal/svr/accountPin';
 import { restoreMasterKey, SvrError } from '../../lib/signal/svr/svr2';
 import { formatMediaDuration } from '../../util/dates/duration';
-import { logError, processor, store } from './engine';
+import { db, logError, processor, store } from './engine';
 import { sendApiUpdate } from './updates';
 
 type RegistrationProfile = {
@@ -44,7 +51,19 @@ type RegistrationState = {
   };
   // Registered on the server, waiting for its profile
   account?: AccountRecord;
+  // The step that offers to restore a backup is waiting for the user
+  restore?: {
+    account: AccountRecord;
+    resolve(outcome: RestoreOutcome): void;
+    // The recovery key is being checked or restored: a second submission would start a second restore, and skipping
+    // would complete the registration under it
+    isRunning?: boolean;
+    // Aborts the restore when the registration is reset
+    abortController: AbortController;
+  };
 };
+
+type RestoreOutcome = 'skipped' | 'restored' | 'canceled';
 
 const CAPTCHA_PREFIX = 'signalcaptcha://';
 const MS_IN_SECOND = 1000;
@@ -84,6 +103,8 @@ export function resumeRegistration(account: AccountRecord) {
 
 export function resetRegistration() {
   generation++;
+  state.restore?.abortController.abort();
+  state.restore?.resolve('canceled');
   state = {};
 }
 
@@ -157,7 +178,7 @@ export async function submitRegistrationProfile(profile: RegistrationProfile) {
       };
       return () => sendAuthState('authorizationStateWaitPassword');
     }
-    completedAccount = await completeProfile(state.account, profile);
+    completedAccount = await restoreAndComplete(state.account, profile);
     return () => resetRegistration();
   });
   return completedAccount;
@@ -184,7 +205,7 @@ export async function submitRegistrationPin(pin: string) {
         isDiscoverableByPhoneNumber: Boolean(lock.profile.isDiscoverableByPhoneNumber),
         masterKey,
       });
-      completedAccount = await completeProfile(state.account, lock.profile);
+      completedAccount = await restoreAndComplete(state.account, lock.profile);
       try {
         await resetPinGuessCount(completedAccount, restoredPin, masterKey);
       } catch (err) {
@@ -200,12 +221,117 @@ export async function submitRegistrationPin(pin: string) {
   return completedAccount;
 }
 
+/**
+ * Offers to restore a backup of the account with its recovery key (Signal Android registration: the restore selection
+ * and the recovery key entry come after the account exists), then completes the profile. A restored backup brings the
+ * profile name along, which the account keeps instead of the one that was just typed.
+ */
+async function restoreAndComplete(account: AccountRecord, profile: RegistrationProfile) {
+  // Without the flag the registration has no restore step
+  const outcome = IS_SIGNAL_BACKUPS_ENABLED ? await offerRestore(account) : 'skipped';
+  if (outcome === 'canceled') throw new Error('Registration was reset');
+
+  const restoredAccount = state.account ?? account;
+  if (outcome !== 'restored') return completeProfile(restoredAccount, profile);
+
+  const self = await db.getConversation(restoredAccount.aci);
+  return completeProfile(restoredAccount, {
+    ...profile,
+    firstName: self?.profileName ?? profile.firstName,
+    lastName: self?.profileFamilyName ?? profile.lastName,
+  });
+}
+
 async function completeProfile(account: AccountRecord, { firstName, lastName }: RegistrationProfile) {
   const name = { givenName: firstName.trim(), familyName: lastName?.trim() || undefined };
   const completedAccount = await completeRegistration(store, account, name);
   // The first storage manifest, which the connection creates, has our name from our conversation
   await processor.updateOwnConversation({ profileName: name.givenName, profileFamilyName: name.familyName });
   return completedAccount;
+}
+
+/** Shows the restore step and waits until the user restored a backup or skipped it */
+function offerRestore(account: AccountRecord) {
+  return new Promise<RestoreOutcome>((resolve) => {
+    state.restore = { account, resolve, abortController: new AbortController() };
+    sendBackupRestoreState({});
+  });
+}
+
+/** Restores the backup of a recovery key from the backup service, or from a backup file the user chose */
+export async function submitRegistrationRestore(recoveryKey: string, file?: Uint8Array<ArrayBuffer>) {
+  const restore = state.restore;
+  if (!restore || restore.isRunning) return;
+
+  restore.isRunning = true;
+  const restoreGeneration = generation;
+  const accountEntropyPool = normalizeRecoveryKey(recoveryKey);
+  let found: { size: number; modifiedAt?: number } | undefined;
+  const options = {
+    store,
+    processor,
+    account: restore.account,
+    accountEntropyPool,
+    signal: restore.abortController.signal,
+    onProgress: ({ step, progress }: RestoreProgress) => {
+      if (restoreGeneration === generation) sendBackupRestoreState({ step, progress, found });
+    },
+  };
+  try {
+    sendBackupRestoreState({ step: 'verifying' });
+    if (!file) {
+      found = await findRemoteBackup(options);
+      sendBackupRestoreState({ step: 'verifying', found });
+      await restoreRemoteBackup(options);
+    } else {
+      await restoreBackupFile(file, options);
+    }
+
+    const account = await adoptRecoveryKey(store, accountEntropyPool);
+    state.account = account;
+    // The recovery password that the server holds is the one of the key that this registration made up
+    updateAccountAttributes(account).catch(logError);
+    restore.resolve('restored');
+  } catch (err) {
+    if (restoreGeneration !== generation) return;
+    if (!(err instanceof RestoreError)) logError(err);
+    sendBackupRestoreState({});
+    sendAuthError(getRestoreErrorKey(err));
+  } finally {
+    restore.isRunning = false;
+  }
+}
+
+/** Goes on without restoring: the account starts empty */
+export function skipRegistrationRestore() {
+  if (!state.restore || state.restore.isRunning) return;
+  state.restore.resolve('skipped');
+}
+
+function getRestoreErrorKey(err: unknown): RegularLangFnParameters {
+  if (!(err instanceof RestoreError)) return { key: 'ErrorUnexpected' };
+  switch (err.reason) {
+    case 'invalidKey':
+      return { key: 'BackupsErrorInvalidKey' };
+    case 'wrongKey':
+      return { key: 'BackupsErrorWrongKey' };
+    case 'noBackup':
+      return { key: 'AuthRestoreErrorNoBackup' };
+    case 'forwardSecrecyLost':
+      return { key: 'BackupsErrorForwardSecrecy' };
+    case 'invalidBackup':
+      return { key: 'BackupsErrorInvalidBackup' };
+    case 'rateLimited':
+      return { key: 'BackupsErrorRateLimited' };
+    default:
+      return { key: 'BackupsErrorNetwork' };
+  }
+}
+
+function sendBackupRestoreState(backupRestore: ApiBackupRestoreState) {
+  sendApiUpdate({
+    '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateWaitBackupRestore', backupRestore,
+  });
 }
 
 /** Moves to the step the session asks for; a session that allows a code request gets an SMS code right away */

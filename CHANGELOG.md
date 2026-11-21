@@ -7,6 +7,22 @@ TeleSignal is based, is in [docs/TELEGRAM_WEB_A_CHANGELOG.md](docs/TELEGRAM_WEB_
 
 ## [Unreleased]
 
+### Added
+
+- Find a Signal user by username: typing a username such as `alice.42` in the chat search or the contact list offers
+  a "Find by username" row, which asks the server only when you click it.
+- Local data is encrypted when a passcode is set: keys, messages, conversations, stories, calls and cached attachments
+  in every account of the browser. Turning the passcode off decrypts them first. If the data cannot be opened, the app
+  asks before erasing anything.
+- Signal secure backups in the format of the phone apps, with forward secrecy through SVR-B: back up daily or on
+  demand, restore during registration with the recovery key, and save or open a backup file. Turned off by default
+  (`SIGNAL_BACKUPS=1` at build time) until it is checked against the live service; a linked device can only read.
+
+### Fixed
+
+- Container image: the shipped scripts no longer point browser developer tools to source maps that the image does
+  not contain.
+
 ## [0.1.0] - 2026-11-21
 
 The conversion of Telegram Web A into a Signal client; the plan and its status are in

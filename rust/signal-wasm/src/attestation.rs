@@ -26,11 +26,11 @@ pub struct SgxClientState(State);
 #[wasm_bindgen]
 pub struct PinHash(LsPinHash);
 
-fn system_time(millis: f64) -> std::time::SystemTime {
+pub(crate) fn system_time(millis: f64) -> std::time::SystemTime {
     std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_millis(millis as u64)
 }
 
-fn new_client(handshake: enclave::Result<Handshake>, operation: &str) -> JsResult<SgxClientState> {
+pub(crate) fn new_client(handshake: enclave::Result<Handshake>, operation: &str) -> JsResult<SgxClientState> {
     handshake
         .map(|h| SgxClientState(State::ConnectionEstablishment(h)))
         .or_throw_generic(operation)
@@ -73,6 +73,15 @@ pub fn SgxClientState_CompleteHandshake(cli: &mut SgxClientState, handshake_rece
     result
         .map(|connection| cli.0 = State::Connection(connection))
         .or_throw_generic("SgxClientState_CompleteHandshake")
+}
+
+/// The hash of the Noise handshake, which SVR-B binds a restore request to
+#[wasm_bindgen]
+pub fn SgxClientState_GetHandshakeHash(cli: &SgxClientState) -> JsResult<Vec<u8>> {
+    match &cli.0 {
+        State::Connection(connection) => Ok(connection.handshake_hash.clone()),
+        _ => Err(enclave::Error::InvalidBridgeStateError).or_throw_generic("SgxClientState_GetHandshakeHash"),
+    }
 }
 
 #[wasm_bindgen]

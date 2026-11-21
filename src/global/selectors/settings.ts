@@ -1,6 +1,7 @@
 import type { GlobalState } from '../types';
 import { SettingsScreens, UPLOADING_WALLPAPER_SLUG } from '../../types';
 
+import { IS_SIGNAL_BACKUPS_ENABLED } from '../../config';
 import { IS_WEBAUTHN_SUPPORTED } from '../../util/browser/windowEnvironment';
 import memoized from '../../util/memoized';
 import { getThemeWallpaper } from '../../util/wallpaper';
@@ -62,6 +63,7 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   const lastSeenVisibility = privacy.lastSeen?.visibility;
 
   return {
+    hasBackups: IS_SIGNAL_BACKUPS_ENABLED,
     hasSignalPinSettings: Boolean(signalPin),
     hasKeyTransparency: Boolean(keyTransparencySelfStatus),
     hasPasscode,
