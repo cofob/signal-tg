@@ -4,7 +4,7 @@ import type { ApiAudio, ApiDocument, ApiFormattedText, ApiPhoto } from './messag
 import type { ApiPeerTheme, ApiWallpaper } from './misc';
 import type {
   ApiBotVerification,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
@@ -35,7 +35,7 @@ export interface ApiUser {
   canBotBeInvitedToGroup?: boolean;
   fakeType?: ApiFakeType;
   isAttachBot?: boolean;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
   areStoriesHidden?: boolean;
   hasStories?: boolean;
   hasUnreadStories?: boolean;

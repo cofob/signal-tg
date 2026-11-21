@@ -41,7 +41,7 @@ import type {
   ApiSessionData,
   ApiWallpaper,
 } from './misc';
-import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
+import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
 import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
@@ -534,7 +534,7 @@ export type ApiUpdateUserStatus = {
 export type ApiUpdateUserEmojiStatus = {
   '@type': 'updateUserEmojiStatus';
   userId: string;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
 };
 
 export type ApiUpdateRecentEmojiStatuses = {

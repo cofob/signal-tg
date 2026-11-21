@@ -32,7 +32,6 @@ export interface GramJsAppConfig {
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
   premium_bot_username: string;
-  premium_invoice_slug: string;
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
@@ -47,12 +46,10 @@ export interface GramJsAppConfig {
   // Boosts
   group_transcribe_level_min?: number;
   new_noncontact_peers_require_premium_without_ownpremium?: boolean;
-  channel_revenue_withdrawal_enabled?: boolean;
   // Upload premium notifications
   upload_premium_speedup_notify_period?: number;
   upload_premium_speedup_download?: number;
   upload_premium_speedup_upload?: number;
-  starref_start_param_prefixes?: string[];
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
   stars_usd_withdraw_rate_x1000?: number;
@@ -158,8 +155,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     bandwidthPremiumUploadSpeedup: appConfig.upload_premium_speedup_upload,
     bandwidthPremiumDownloadSpeedup: appConfig.upload_premium_speedup_download,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
-    isChannelRevenueWithdrawalEnabled: appConfig.channel_revenue_withdrawal_enabled,
-    starRefStartPrefixes: appConfig.starref_start_param_prefixes,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
     freezeSinceDate: appConfig.freeze_since_date,
     freezeUntilDate: appConfig.freeze_until_date,

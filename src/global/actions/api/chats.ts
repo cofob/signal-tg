@@ -3807,16 +3807,7 @@ async function openChatByUsername<T extends GlobalState>(
     actions.openChat({ id: TMP_CHAT_ID, tabId });
   }
 
-  const starRefStartPrefixes = global.appConfig.starRefStartPrefixes;
-  let referrer = ref;
-  if (startParam && starRefStartPrefixes?.length) {
-    const prefix = starRefStartPrefixes.find((p) => startParam.startsWith(p));
-    if (prefix) {
-      referrer = startParam.slice(prefix.length);
-    }
-  }
-
-  const chat = await fetchChatByUsername(global, username, referrer);
+  const chat = await fetchChatByUsername(global, username, ref);
   if (!chat) {
     if (!isCurrentChat) {
       actions.openPreviousChat({ tabId });
@@ -3837,7 +3828,7 @@ async function openChatByUsername<T extends GlobalState>(
     messageId: channelPostId,
     startParam,
     shouldStartBot,
-    referrer,
+    referrer: ref,
     startAttach,
     attach,
     text,

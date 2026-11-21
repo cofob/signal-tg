@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from '../../../lib/teact/teact';
 
 import type {
   ApiChat,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiPeerColorOption,
   ApiPeerPhotos,
   ApiPeerProfileColorSet,
@@ -85,8 +85,7 @@ type StateProps = {
   topic?: ApiTopic;
   messagesCount?: number;
   animationLevel: AnimationLevel;
-  emojiStatus?: ApiEmojiStatusType;
-  emojiStatusSlug?: string;
+  emojiStatus?: ApiEmojiStatus;
   profilePhotos?: ApiPeerPhotos;
   avatarPhoto?: ApiPhoto;
   profileColorOption?: ApiPeerColorOption<ApiPeerProfileColorSet>;
@@ -119,7 +118,6 @@ const ProfileInfo = ({
   messagesCount,
   animationLevel,
   emojiStatus,
-  emojiStatusSlug,
   profilePhotos,
   avatarPhoto,
   peerId,
@@ -154,23 +152,12 @@ const ProfileInfo = ({
   const isFirst = photos.length <= 1 || currentPhotoIndex === 0;
   const isLast = photos.length <= 1 || currentPhotoIndex === photos.length - 1;
 
-  const collectibleEmojiStatus = emojiStatus?.type === 'collectible' ? emojiStatus : undefined;
-
   const peer = user || chat;
   const { customEmoji: backgroundEmoji } = useCustomEmoji(
-    collectibleEmojiStatus?.patternDocumentId || peer?.profileColor?.backgroundEmojiId,
+    peer?.profileColor?.backgroundEmojiId,
   );
 
   const profileColorSet = useMemo(() => {
-    if (collectibleEmojiStatus) {
-      return {
-        bgColors: [collectibleEmojiStatus.centerColor, collectibleEmojiStatus.edgeColor],
-        storyColors: [collectibleEmojiStatus.textColor, collectibleEmojiStatus.textColor],
-        buttonBaseColor:
-          `color-mix(in srgb, ${collectibleEmojiStatus.edgeColor} 90%, ${collectibleEmojiStatus.centerColor})`,
-      };
-    }
-
     const colors = profileColorOption
       && (theme === 'dark' ? profileColorOption.darkColors : profileColorOption.colors);
     if (!colors) return undefined;
@@ -181,7 +168,7 @@ const ProfileInfo = ({
       storyColors: [...colors.storyColors].reverse(),
       buttonBaseColor: colors.bgColors[0],
     };
-  }, [profileColorOption, theme, collectibleEmojiStatus]);
+  }, [profileColorOption, theme]);
 
   const hasPatternBackground = profileColorSet?.bgColors || backgroundEmoji;
 
@@ -428,7 +415,7 @@ const ProfileInfo = ({
           backgroundColors={profileColorSet?.bgColors}
           patternIcon={backgroundEmoji}
           patternSize={16}
-          withLinearGradient={!collectibleEmojiStatus}
+          withLinearGradient
           className={styles.radialPatternBackground}
           yPosition={PATTERN_Y_SHIFT}
         />
@@ -559,7 +546,6 @@ export default memo(withGlobal<OwnProps>(
     const { animationLevel } = selectSharedSettings(global);
 
     const emojiStatus = peer?.emojiStatus;
-    const emojiStatusSlug = emojiStatus?.type === 'collectible' ? emojiStatus.slug : undefined;
 
     const profileColor = peer && selectPeerProfileColor(global, peer);
     const theme = selectTheme(global);
@@ -578,7 +564,6 @@ export default memo(withGlobal<OwnProps>(
       mediaIndex,
       avatarOwnerId,
       animationLevel,
-      emojiStatusSlug,
       emojiStatus,
       profilePhotos,
       avatarPhoto,

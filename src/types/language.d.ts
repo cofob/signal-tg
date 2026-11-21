@@ -1414,7 +1414,6 @@ export interface LangPair {
   'PrivacyMusicTitle': undefined;
   'PrivacyMusicInfo': undefined;
   'PrivacyValueBots': undefined;
-  'SendDisallowError': undefined;
   'AllChatsSearchContext': undefined;
   'PrivateChatsSearchContext': undefined;
   'GroupChatsSearchContext': undefined;
@@ -1575,7 +1574,6 @@ export interface LangPair {
   'CommunityJoinChatConfirm': undefined;
   'CommunityChatNotAccessible': undefined;
   'ActionHistoryCleared': undefined;
-  'CollectibleStatusesCategory': undefined;
   'PeerChannel': undefined;
   'WebAppCollapse': undefined;
   'ContactLinkInvalid': undefined;
@@ -2329,10 +2327,6 @@ export interface LangPair {
   'ErrorFreshAdmin': undefined;
   'ErrorSessionTooFresh': undefined;
   'ErrorInputUserDeactivated': undefined;
-  'ErrorBotPrecheckoutTimeout': undefined;
-  'ErrorProviderAccountTimeout': undefined;
-  'ErrorStargiftConvertTooOld': undefined;
-  'ErrorSubscriptionAlreadyActive': undefined;
   'ErrorPeersListEmpty': undefined;
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;

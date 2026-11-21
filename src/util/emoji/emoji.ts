@@ -99,11 +99,6 @@ export function uncompressEmoji(data: EmojiRawData): EmojiData {
 }
 
 export function isoToEmoji(iso: string) {
-  // Special case for collectible numbers from Fragment
-  if (iso === 'FT') {
-    return '\uD83D\uDC8E';
-  }
-
   const code = iso.toUpperCase();
 
   if (!/^[A-Z]{2}$/.test(code)) return iso;

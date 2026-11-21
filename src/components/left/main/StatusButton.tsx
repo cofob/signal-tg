@@ -1,7 +1,7 @@
 import { memo, useCallback, useRef } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiEmojiStatusCollectible, ApiEmojiStatusType, ApiSticker } from '../../../api/types';
+import type { ApiEmojiStatus, ApiSticker } from '../../../api/types';
 
 import { EMOJI_STATUS_LOOP_LIMIT } from '../../../config';
 import { selectIsCurrentUserFrozen, selectUser } from '../../../global/selectors';
@@ -19,15 +19,14 @@ import Button from '../../ui/Button';
 import StatusPickerMenu from './StatusPickerMenu.async';
 
 interface StateProps {
-  emojiStatus?: ApiEmojiStatusType;
-  collectibleStatuses?: ApiEmojiStatusType[];
+  emojiStatus?: ApiEmojiStatus;
   isAccountFrozen?: boolean;
 }
 
 const EFFECT_DURATION_MS = 1500;
 const EMOJI_STATUS_SIZE = 24;
 
-const StatusButton = ({ emojiStatus, collectibleStatuses, isAccountFrozen }: StateProps) => {
+const StatusButton = ({ emojiStatus, isAccountFrozen }: StateProps) => {
   const { setEmojiStatus, loadCurrentUser, openFrozenAccountModal } = getActions();
 
   const buttonRef = useRef<HTMLButtonElement>();
@@ -47,14 +46,11 @@ const StatusButton = ({ emojiStatus, collectibleStatuses, isAccountFrozen }: Sta
   }, [emojiStatus, shouldShowEffect, showEffect, unmarkShouldShowEffect]);
 
   const handleEmojiStatusSet = useCallback((sticker: ApiSticker) => {
-    const collectibleStatus = collectibleStatuses?.find(
-      (status) => 'collectibleId' in status && status.documentId === sticker.id,
-    ) as ApiEmojiStatusCollectible | undefined;
     markShouldShowEffect();
     setEmojiStatus({
-      emojiStatus: collectibleStatus || { type: 'regular', documentId: sticker.id },
+      emojiStatus: { type: 'regular', documentId: sticker.id },
     });
-  }, [markShouldShowEffect, setEmojiStatus, collectibleStatuses]);
+  }, [markShouldShowEffect, setEmojiStatus]);
 
   useTimeout(hideEffect, isEffectShown ? EFFECT_DURATION_MS : undefined);
 
@@ -106,12 +102,10 @@ const StatusButton = ({ emojiStatus, collectibleStatuses, isAccountFrozen }: Sta
 export default memo(withGlobal((global): Complete<StateProps> => {
   const { currentUserId } = global;
   const currentUser = currentUserId ? selectUser(global, currentUserId) : undefined;
-  const collectibleStatuses = global.collectibleEmojiStatuses?.statuses;
   const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
   return {
     emojiStatus: currentUser?.emojiStatus,
-    collectibleStatuses,
     isAccountFrozen,
   };
 })(StatusButton));

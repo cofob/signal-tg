@@ -346,8 +346,6 @@ export interface ApiAppConfig {
   bandwidthPremiumUploadSpeedup?: number;
   bandwidthPremiumDownloadSpeedup?: number;
   channelAutoTranslationLevelMin?: number;
-  isChannelRevenueWithdrawalEnabled?: boolean;
-  starRefStartPrefixes?: string[];
   tonExplorerUrl?: string;
   freezeSinceDate?: number;
   freezeUntilDate?: number;

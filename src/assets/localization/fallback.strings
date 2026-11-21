@@ -1723,7 +1723,6 @@
 "PrivacyMusicTitle" = "Who can see my saved music in profile?";
 "PrivacyMusicInfo" = "You can restrict who can see your saved music with granular precision.";
 "PrivacyValueBots" = "Mini Apps";
-"SendDisallowError" = "User is not accepting gifts";
 "AllChatsSearchContext" = "All Chats";
 "PrivateChatsSearchContext" = "Private Chats";
 "GroupChatsSearchContext" = "Group Chats";
@@ -1995,7 +1994,6 @@
 "CommunityWithChats_one" = "Community with {count} chat";
 "CommunityWithChats_other" = "Community with {count} chats";
 "ActionHistoryCleared" = "History was cleared";
-"CollectibleStatusesCategory" = "Collectibles";
 "PeerChannel" = "channel";
 "WebAppCollapse" = "Collapse";
 "ContactLinkInvalid" = "This contact link is invalid or has expired.";
@@ -2931,10 +2929,6 @@
 "ErrorFreshAdmin" = "You were just elected admin, you can't add or modify other admins yet";
 "ErrorSessionTooFresh" = "Session is fresh, please try again later";
 "ErrorInputUserDeactivated" = "Can't do this action to a deleted account";
-"ErrorBotPrecheckoutTimeout" = "The request for payment has expired";
-"ErrorProviderAccountTimeout" = "Request to the payment provider has expired";
-"ErrorStargiftConvertTooOld" = "This gift no longer can be converted to Stars";
-"ErrorSubscriptionAlreadyActive" = "You are already subscribed";
 "ErrorPeersListEmpty" = "No chats are added to the list";
 "ErrorChatWriteForbidden" = "You can't write in this chat";
 "ErrorChatAdminRequired" = "You must be an admin in this chat to do this";

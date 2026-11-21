@@ -62,9 +62,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   readDateExpiresAt: 604800,
   premiumBotUsername: 'PremiumBot',
   maxUniqueReactions: 11,
-  starRefStartPrefixes: [
-    '_tgr_',
-  ],
   starsUsdWithdrawRateX1000: 1300,
   storyChangelogUserId: '777000',
   maxPinnedStoriesCount: 3,

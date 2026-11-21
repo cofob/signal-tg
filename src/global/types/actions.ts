@@ -12,7 +12,7 @@ import type {
   ApiChatReactions,
   ApiChatType,
   ApiDraft,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiExportedInvite,
   ApiFormattedText,
   ApiGeoPoint,
@@ -1901,7 +1901,6 @@ export interface ActionPayloads {
   clearRecentCustomEmoji: undefined;
   loadFeaturedEmojiStickers: undefined;
   loadDefaultStatusIcons: undefined;
-  loadUserCollectibleStatuses: undefined;
   loadRecentEmojiStatuses: undefined;
 
   // Bots
@@ -2517,7 +2516,7 @@ export interface ActionPayloads {
   loadPremiumStickers: undefined;
 
   setEmojiStatus: {
-    emojiStatus: ApiEmojiStatusType;
+    emojiStatus: ApiEmojiStatus;
     referrerWebAppKey?: string;
   } & WithTabId;
   openSuggestedStatusModal: {

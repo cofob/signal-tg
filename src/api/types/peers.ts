@@ -17,25 +17,9 @@ export interface ApiBotVerification {
   description: string;
 }
 
-export type ApiEmojiStatusType = ApiEmojiStatus | ApiEmojiStatusCollectible;
-
 export interface ApiEmojiStatus {
   type: 'regular';
   documentId: string;
-  until?: number;
-}
-
-export interface ApiEmojiStatusCollectible {
-  type: 'collectible';
-  collectibleId: string;
-  documentId: string;
-  title: string;
-  slug: string;
-  patternDocumentId: string;
-  centerColor: string;
-  edgeColor: string;
-  patternColor: string;
-  textColor: string;
   until?: number;
 }
 

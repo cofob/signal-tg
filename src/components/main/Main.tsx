@@ -224,7 +224,6 @@ const Main = ({
     openThread,
     toggleLeftColumn,
     loadRecentEmojiStatuses,
-    loadUserCollectibleStatuses,
     updatePageTitle,
     loadTopReactions,
     loadRecentReactions,
@@ -321,7 +320,6 @@ const Main = ({
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
-      loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();

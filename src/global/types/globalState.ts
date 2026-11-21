@@ -13,7 +13,6 @@ import type {
   ApiCountry,
   ApiCountryCode,
   ApiEmojiGroup,
-  ApiEmojiStatusType,
   ApiGroupCall,
   ApiHistorySyncProgress,
   ApiMessage,
@@ -400,11 +399,6 @@ export type GlobalState = {
     groups?: ApiEmojiGroup[];
     stickerHash?: number;
     stickerGroups?: ApiEmojiGroup[];
-  };
-
-  collectibleEmojiStatuses?: {
-    statuses: ApiEmojiStatusType[];
-    hash?: string;
   };
 
   gifs: {

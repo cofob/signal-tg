@@ -5,7 +5,7 @@ import type {
 import type { ApiChatInviteImporter, ApiPeerTheme, ApiRestrictionReason, ApiWallpaper } from './misc';
 import type {
   ApiBotVerification,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
@@ -58,7 +58,7 @@ export interface ApiChat {
   fakeType?: ApiFakeType;
   color?: ApiTypePeerColor;
   profileColor?: ApiTypePeerColor;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
   isForum?: boolean;
   isForumAsMessages?: true;
   isMonoforum?: boolean;

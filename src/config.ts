@@ -262,7 +262,6 @@ export const EMOJI_SIZES = 7;
 export const TOP_SYMBOL_SET_ID = 'top';
 export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
-export const COLLECTIBLE_STATUS_SET_ID = 'collectibleStatus';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
 export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';

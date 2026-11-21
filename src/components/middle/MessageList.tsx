@@ -706,7 +706,7 @@ const MessageList = ({
     const viewportBottom = container.scrollTop + container.offsetHeight
       - getEffectiveMessageListBottomReserve(container);
     const triggerPosition = bottomTrigger.offsetTop;
-    // Scroll is near fab-trigger + threshold. Prevents snap on sponsored message
+    // Scroll is near fab-trigger + threshold
     const shouldSnapBeActive = triggerPosition - BOTTOM_SNAP_THRESHOLD <= viewportBottom
       && viewportBottom <= triggerPosition + BOTTOM_SNAP_THRESHOLD * 2;
 

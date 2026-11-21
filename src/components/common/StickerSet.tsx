@@ -10,7 +10,6 @@ import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
 
 import {
-  COLLECTIBLE_STATUS_SET_ID,
   DEFAULT_STATUS_ICON_ID,
   DEFAULT_TOPIC_ICON_STICKER_ID,
   EMOJI_SIZE_PICKER,
@@ -143,7 +142,6 @@ const StickerSet = ({
   const emojiMarginPx = isMobile ? 8 : 10;
   const emojiVerticalMarginPx = isMobile ? 8 : 4;
   const isRecent = stickerSet.id === RECENT_SYMBOL_SET_ID;
-  const isStatusCollectible = stickerSet.id === COLLECTIBLE_STATUS_SET_ID;
   const isFavorite = stickerSet.id === FAVORITE_SYMBOL_SET_ID;
   const isPopular = stickerSet.id === POPULAR_SYMBOL_SET_ID;
   const isEmoji = stickerSet.isEmoji;
@@ -245,7 +243,7 @@ const StickerSet = ({
   const favoriteStickerIdsSet = useMemo(() => (
     favoriteStickers ? new Set(favoriteStickers.map(({ id }) => id)) : undefined
   ), [favoriteStickers]);
-  const withAddSetButton = !noAddButton && !shouldHideHeader && !isRecent && !isStatusCollectible
+  const withAddSetButton = !noAddButton && !shouldHideHeader && !isRecent
     && isEmoji && !isPopular && !isChatEmojiSet
     && (!isInstalled || (!isCurrentUserPremium && !isSavedMessages));
   const addSetButtonText = useMemo(() => {

@@ -66,12 +66,7 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SESSION_TOO_FRESH: 'ErrorSessionTooFresh',
   SESSION_IS_FRESH: 'ErrorSessionTooFresh',
   INPUT_USER_DEACTIVATED: 'ErrorInputUserDeactivated',
-  BOT_PRECHECKOUT_TIMEOUT: 'ErrorBotPrecheckoutTimeout',
-  PROVIDER_ACCOUNT_TIMEOUT: 'ErrorProviderAccountTimeout',
-  STARGIFT_CONVERT_TOO_OLD: 'ErrorStargiftConvertTooOld',
-  SUBSCRIPTION_ALREADY_ACTIVE: 'ErrorSubscriptionAlreadyActive',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
-  USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
 };
 
 if (DEBUG) {

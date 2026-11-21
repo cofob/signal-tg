@@ -79,8 +79,7 @@
 
   .media.no-footer &,
   .message-content.widget-time-overlay &,
-  .Message .custom-shape &,
-  .Message .invoice:not(.has-reactions).has-photo & {
+  .Message .custom-shape & {
     --color-accent-own: var(--message-media-text);
     --color-accent: var(--message-media-text);
 
@@ -101,8 +100,7 @@
   }
 
   .media.no-footer &,
-  .message-content.widget-time-overlay &,
-  .Message .invoice:not(.has-reactions).has-photo & {
+  .message-content.widget-time-overlay & {
     background: rgba(0, 0, 0, 0.2);
   }
 

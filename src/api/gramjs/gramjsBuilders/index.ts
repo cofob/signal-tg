@@ -9,7 +9,7 @@ import type {
   ApiChatFolder,
   ApiChatReactions,
   ApiDocument,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiFormattedText,
   ApiGroupCall,
   ApiInputPrivacyRules,
@@ -677,14 +677,7 @@ export function buildInputChatReactions(chatReactions?: ApiChatReactions) {
   return new GramJs.ChatReactionsNone();
 }
 
-export function buildInputEmojiStatus(emojiStatus: ApiEmojiStatusType) {
-  if (emojiStatus.type === 'collectible') {
-    return new GramJs.InputEmojiStatusCollectible({
-      collectibleId: BigInt(emojiStatus.collectibleId),
-      until: emojiStatus.until,
-    });
-  }
-
+export function buildInputEmojiStatus(emojiStatus: ApiEmojiStatus) {
   if (emojiStatus.documentId === DEFAULT_STATUS_ICON_ID) {
     return new GramJs.EmojiStatusEmpty();
   }
