@@ -19,12 +19,14 @@ import { wasm } from '../wasm';
 import AttestedConnection from '../net/AttestedConnection';
 import { WebSocketConnectError } from '../net/WebSocketClient';
 
-export type SvrErrorReason = 'pinMismatch' | 'missing' | 'rateLimited' | 'protocolError';
+// `unavailable`: no enclave could be reached or attested, which uses up no guess: the tunnel may not allow
+// `svr2.signal.org`, the device clock may be off, or the configured enclaves may be retired
+export type SvrErrorReason = 'pinMismatch' | 'missing' | 'rateLimited' | 'unavailable' | 'protocolError';
 
 export class SvrError extends Error {
   // Guesses left after a wrong PIN
-  constructor(readonly reason: SvrErrorReason, readonly triesRemaining?: number) {
-    super(`SVR2 request failed: ${reason}`);
+  constructor(readonly reason: SvrErrorReason, readonly triesRemaining?: number, cause?: unknown) {
+    super(`SVR2 request failed: ${reason}`, { cause });
   }
 }
 
@@ -59,6 +61,7 @@ export function normalizePin(pin: string) {
  */
 export async function restoreMasterKey(credentials: Credentials, pin: string) {
   const normalizedPin = normalizePin(pin);
+  let isMissing = false;
   for (const mrenclave of [SIGNAL_SVR2_MRENCLAVE, SIGNAL_SVR2_PREVIOUS_MRENCLAVE]) {
     const pinHash = wasm.PinHash_FromUsernameMrenclave(normalizedPin, credentials.username, bufferFromHex(mrenclave));
     try {
@@ -67,7 +70,10 @@ export async function restoreMasterKey(credentials: Credentials, pin: string) {
       });
       if (response?.case !== 'restore') throw new SvrError('protocolError');
       const { status, data, tries } = response.value;
-      if (status === RestoreResponse_Status.MISSING) continue;
+      if (status === RestoreResponse_Status.MISSING) {
+        isMissing = true;
+        continue;
+      }
       if (status === RestoreResponse_Status.PIN_MISMATCH) throw new SvrError('pinMismatch', tries);
       if (status !== RestoreResponse_Status.OK) throw new SvrError('protocolError');
       return { masterKey: wasm.PinHash_DecodeMasterKey(pinHash, data), triesRemaining: tries };
@@ -78,7 +84,8 @@ export async function restoreMasterKey(credentials: Credentials, pin: string) {
       pinHash.free();
     }
   }
-  throw new SvrError('missing');
+  // Only an enclave that answered can tell that it has no data
+  throw new SvrError(isMissing ? 'missing' : 'unavailable');
 }
 
 /**
@@ -140,10 +147,13 @@ async function backupToEnclave(
   }
 }
 
-/** Sends one request on a new attested connection, as Signal Android `Svr2Socket` */
+/**
+ * Sends one request on a new attested connection, as Signal Android `Svr2Socket`. A 404 of a retired enclave stays
+ * a `WebSocketConnectError`; failures to connect, attest or get an answer are `unavailable`.
+ */
 async function exchange(credentials: Credentials, mrenclave: string, inner: RequestInner): Promise<ResponseInner> {
   const mrenclaveBytes = bufferFromHex(mrenclave);
-  let connection: AttestedConnection;
+  let connection: AttestedConnection | undefined;
   try {
     connection = await AttestedConnection.connect(
       SIGNAL_SVR2_HOST,
@@ -151,20 +161,18 @@ async function exchange(credentials: Credentials, mrenclave: string, inner: Requ
       credentials,
       (attestation, now) => wasm.Svr2Client_New(mrenclaveBytes, attestation, now),
     );
-  } catch (err) {
-    if (err instanceof WebSocketConnectError && err.status === HTTP_TOO_MANY_REQUESTS) {
-      throw new SvrError('rateLimited');
-    }
-    throw err;
-  }
-
-  try {
     connection.send(toBinary(RequestSchema, create(RequestSchema, { inner })));
     const response = await connection.receive();
     if (!response) throw new SvrError('protocolError');
     return fromBinary(ResponseSchema, response).inner;
+  } catch (err) {
+    if (err instanceof SvrError || isEnclaveNotFound(err)) throw err;
+    if (err instanceof WebSocketConnectError && err.status === HTTP_TOO_MANY_REQUESTS) {
+      throw new SvrError('rateLimited', undefined, err);
+    }
+    throw new SvrError('unavailable', undefined, err);
   } finally {
-    connection.close();
+    connection?.close();
   }
 }
 

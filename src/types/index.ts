@@ -177,6 +177,7 @@ export interface AccountSettings {
   hasPassword?: boolean;
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
+  isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;

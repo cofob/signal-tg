@@ -27,8 +27,9 @@ export type OwnProps = {
 
 // Separators people type in phone numbers
 const PHONE_SEPARATORS = /[\s().-]/g;
-// An international number: an optional `+`, a country code and at most 15 digits in all
-const PHONE_PATTERN = /^\+?[1-9]\d{6,14}$/;
+// An international number: `+`, a country code and at most 15 digits in all; digits without `+` may be a number
+// in national format, which would find someone else
+const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
 
 type StateProps = {
   usersById: Record<string, ApiUser>;

@@ -68,6 +68,7 @@ export default {
     "other": "No PIN attempts left. You can register this number without the PIN in {count} days"
   },
   "SignalPinErrorLockedNoTime": "This number is locked until its Registration Lock expires",
+  "SignalPinErrorUnavailable": "Cannot reach Signal's PIN service. Check that the proxy server allows svr2.signal.org and that the device clock is right, then try again.",
   "LoginPasskey": "Log in with Passkey",
   "YourName": "Your Name",
   "LoginRegisterDesc": "Enter your name and add a profile photo.",

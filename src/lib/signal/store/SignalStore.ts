@@ -42,6 +42,8 @@ export type AccountRecord = {
   hasSvrPin?: boolean;
   // Registered primary devices only: registering the number again needs the PIN
   isRegistrationLockEnabled?: boolean;
+  // Registered primary devices only: storage service contacts with only a number are looked up with CDSI
+  isContactDiscoveryEnabled?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out

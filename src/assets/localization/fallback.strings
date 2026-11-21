@@ -271,7 +271,15 @@
 "SignalPinErrorMismatch" = "PINs don't match";
 "SignalPinErrorSave" = "Could not update the PIN, try again";
 "SignalPhoneSearch" = "Find {phone} on Signal";
+"SignalPhoneLookupTitle" = "Find on Signal";
+"SignalPhoneLookupText" = "Look up {phone} on Signal? Signal's contact discovery service gets the number to find its account.";
+"SignalPhoneLookupConfirm" = "Look up";
+"SignalContactDiscovery" = "Find my contacts on Signal";
+"SignalContactDiscoveryAbout" = "Looks up the phone numbers of your synced contacts that are not yet linked to a Signal account.";
+"SignalPinErrorUnavailable" = "Cannot reach Signal's PIN service. Check that the proxy server allows svr2.signal.org and that the device clock is right, then try again.";
+"SignalPinErrorResetFailed" = "Could not reset your PIN attempts. Change your PIN in Settings > Privacy to reset them.";
 "ErrorPhoneLookupRateLimited" = "Too many number lookups, try again later";
+"ErrorPhoneLookupUnavailable" = "Cannot reach Signal's contact discovery service, try again later";
 "LoginPasskey" = "Log in with Passkey";
 "YourName" = "Your Name";
 "LoginRegisterDesc" = "Enter your name and add a profile photo.";

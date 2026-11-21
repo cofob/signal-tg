@@ -58,6 +58,7 @@ const INITIAL_KEYS: LangKey[] = [
   'SignalPinErrorRateLimited',
   'SignalPinErrorLocked',
   'SignalPinErrorLockedNoTime',
+  'SignalPinErrorUnavailable',
   'LoginPasskey',
   'YourName',
   'LoginRegisterDesc',

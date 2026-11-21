@@ -6,7 +6,7 @@ import { DEBUG } from '../config';
 
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
-  SIGNAL_PHONE_LOOKUP_RATE_LIMITED: 'ErrorPhoneLookupRateLimited',
+  SIGNAL_PIN_RESET_FAILED: 'SignalPinErrorResetFailed',
   CHAT_RESTRICTED: 'ErrorChatRestricted',
   CHAT_SEND_POLL_FORBIDDEN: 'ErrorChatSendPollForbidden',
   CHAT_SEND_STICKERS_FORBIDDEN: 'ErrorChatSendStickersForbidden',

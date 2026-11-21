@@ -279,6 +279,14 @@ export interface ActionPayloads {
   setSignalRegistrationLock: {
     isEnabled: boolean;
   } & WithTabId;
+  loadSignalContactDiscovery: undefined;
+  setSignalContactDiscovery: {
+    isEnabled: boolean;
+  } & WithTabId;
+  openPhoneNumberLookupModal: {
+    phoneNumber: string;
+  } & WithTabId;
+  closePhoneNumberLookupModal: WithTabId | undefined;
   startPasskeyRegistration: WithTabId | undefined;
   deletePasskey: {
     id: string;

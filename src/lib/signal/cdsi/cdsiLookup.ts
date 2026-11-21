@@ -25,12 +25,13 @@ export type CdsiRecord = {
   pni?: string;
 };
 
-export type CdsiErrorReason = 'rateLimited' | 'invalidArgument' | 'serverError' | 'protocolError';
+// `unavailable`: the enclave could not be reached or attested
+export type CdsiErrorReason = 'rateLimited' | 'invalidArgument' | 'serverError' | 'unavailable' | 'protocolError';
 
 export class CdsiError extends Error {
   // Seconds to wait before the next lookup, for `rateLimited`
-  constructor(readonly reason: CdsiErrorReason, readonly retryAfter?: number) {
-    super(`CDSI lookup failed: ${reason}`);
+  constructor(readonly reason: CdsiErrorReason, readonly retryAfter?: number, cause?: unknown) {
+    super(`CDSI lookup failed: ${reason}`, { cause });
   }
 }
 
@@ -44,6 +45,10 @@ type CachedAuth = {
   fetchedAt: number;
 };
 
+// A country code and at most 15 digits in all
+const E164_PATTERN = /^\+[1-9]\d{6,14}$/;
+// Numbers of a refresh per request; libsignal-net sends any number in one request, this keeps each one bounded
+const MAX_NEW_E164S_PER_REQUEST = 1000;
 const E164_LENGTH = 8;
 const UUID_LENGTH = 16;
 const RECORD_LENGTH = E164_LENGTH + UUID_LENGTH * 2;
@@ -65,33 +70,73 @@ let retryAfterAt = 0;
 
 /**
  * Finds the accounts of phone numbers in the contact discovery enclave, as libsignal-net `cdsi.rs`, which Signal
- * Desktop `cdsLookup` uses. Like Signal Android `ContactDiscoveryRefreshV2`, it sends the numbers of earlier lookups
- * with the token the server gave for them, so only new numbers count against the rate limit. `acisAndAccessKeys`
- * of known users let the enclave return ACIs for their numbers.
+ * Desktop `cdsLookup` uses. A lookup sends only the numbers asked for, without a token, as Desktop does.
+ * `acisAndAccessKeys` of known users let the enclave return ACIs for their numbers. Numbers that are not E.164 have
+ * no account.
  */
 export async function lookUpE164s(
+  connection: ChatConnection, e164s: string[], acisAndAccessKeys: AciAndAccessKey[] = [],
+) {
+  checkRetryAfter();
+  const valid = getValidE164s(e164s);
+  if (!valid.length) return buildResult(e164s, new Map());
+  const credentials = await getDirectoryAuth(connection);
+  const { records } = await requestLookup(credentials, valid, acisAndAccessKeys, undefined).catch((err) => {
+    throw toCdsiError(err);
+  });
+  return buildResult(e164s, records);
+}
+
+/**
+ * Looks up the numbers of a whole contact list in batches, like Signal Android `ContactDiscoveryRefreshV2`: each
+ * request sends the numbers of earlier refreshes again with the token that the server gave for them, so only new
+ * numbers count against the rate limit.
+ */
+export async function refreshE164s(
   connection: ChatConnection, store: SignalStore, e164s: string[], acisAndAccessKeys: AciAndAccessKey[] = [],
 ) {
+  checkRetryAfter();
+  const credentials = await getDirectoryAuth(connection);
+  const records = new Map<string, CdsiRecord>();
+  const valid = getValidE164s(e164s);
+  for (let offset = 0; offset < valid.length; offset += MAX_NEW_E164S_PER_REQUEST) {
+    const batch = valid.slice(offset, offset + MAX_NEW_E164S_PER_REQUEST);
+    let saved = await store.getItem('cdsiToken');
+    let result: LookupResult;
+    try {
+      result = await requestLookup(credentials, batch, acisAndAccessKeys, saved);
+    } catch (err) {
+      if (!saved || !(err instanceof AttestedCloseError) || err.code !== CLOSE_INVALID_TOKEN) throw toCdsiError(err);
+      // The token expired or the saved numbers no longer match it: they count as new again
+      saved = undefined;
+      result = await requestLookup(credentials, batch, acisAndAccessKeys, saved).catch((retryErr) => {
+        throw toCdsiError(retryErr);
+      });
+    }
+    result.records.forEach((record, e164) => records.set(e164, record));
+    const refreshed = new Set([...saved?.e164s ?? [], ...batch]);
+    await store.setItem('cdsiToken', { token: result.token, e164s: [...refreshed] });
+  }
+  return buildResult(e164s, records);
+}
+
+/** Forgets the directory credentials and the rate limit of the account that signed out */
+export function resetCdsiState() {
+  cachedAuth = undefined;
+  retryAfterAt = 0;
+}
+
+function checkRetryAfter() {
   const waitMs = retryAfterAt - Date.now();
   if (waitMs > 0) throw new CdsiError('rateLimited', Math.ceil(waitMs / MILLISECONDS_IN_SECOND));
+}
 
-  const credentials = await getDirectoryAuth(connection);
-  let saved = await store.getItem('cdsiToken');
-  let result: LookupResult;
-  try {
-    result = await requestLookup(credentials, e164s, acisAndAccessKeys, saved);
-  } catch (err) {
-    if (!saved || !(err instanceof AttestedCloseError) || err.code !== CLOSE_INVALID_TOKEN) throw toCdsiError(err);
-    // The token expired or the saved numbers no longer match it: they count as new again
-    saved = undefined;
-    result = await requestLookup(credentials, e164s, acisAndAccessKeys, saved).catch((retryErr) => {
-      throw toCdsiError(retryErr);
-    });
-  }
+function getValidE164s(e164s: string[]) {
+  return [...new Set(e164s.filter((e164) => E164_PATTERN.test(e164)))];
+}
 
-  const lookedUp = new Set([...saved?.e164s ?? [], ...e164s]);
-  await store.setItem('cdsiToken', { token: result.token, e164s: [...lookedUp] });
-  return new Map(e164s.map((e164) => [e164, result.records.get(e164) ?? {}]));
+function buildResult(e164s: string[], records: Map<string, CdsiRecord>) {
+  return new Map(e164s.map((e164) => [e164, records.get(e164) ?? {}]));
 }
 
 async function requestLookup(
@@ -147,7 +192,8 @@ function toCdsiError(err: unknown) {
   if (err instanceof WebSocketConnectError && err.status === HTTP_TOO_MANY_REQUESTS) {
     return new CdsiError('rateLimited');
   }
-  if (!(err instanceof AttestedCloseError)) return err;
+  if (err instanceof CdsiError) return err;
+  if (!(err instanceof AttestedCloseError)) return new CdsiError('unavailable', undefined, err);
 
   switch (err.code) {
     case CLOSE_RATE_LIMITED: {
@@ -163,7 +209,7 @@ function toCdsiError(err: unknown) {
     case CLOSE_SERVER_UNAVAILABLE:
       return new CdsiError('serverError');
     default:
-      return err;
+      return new CdsiError('protocolError', undefined, err);
   }
 }
 

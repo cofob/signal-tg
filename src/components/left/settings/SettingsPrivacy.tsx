@@ -32,6 +32,7 @@ type OwnProps = {
 type StateProps = {
   isCurrentUserPremium?: boolean;
   signalPin?: ApiSignalPinSettings;
+  isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
@@ -56,6 +57,7 @@ const SettingsPrivacy = ({
   isActive,
   isCurrentUserPremium,
   signalPin,
+  isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
   webAuthCount,
@@ -91,6 +93,8 @@ const SettingsPrivacy = ({
     loadPasskeys,
     openPasskeyModal,
     loadSignalPinSettings,
+    loadSignalContactDiscovery,
+    setSignalContactDiscovery,
   } = getActions();
 
   useEffect(() => {
@@ -101,6 +105,7 @@ const SettingsPrivacy = ({
       loadWebAuthorizations();
       loadPasskeys();
       loadSignalPinSettings();
+      loadSignalContactDiscovery();
     }
   }, [isCurrentUserFrozen]);
 
@@ -122,6 +127,10 @@ const SettingsPrivacy = ({
   useHistoryBack({
     isActive,
     onBack: onReset,
+  });
+
+  const handleContactDiscoveryChange = useLastCallback((isEnabled: boolean) => {
+    setSignalContactDiscovery({ isEnabled });
   });
 
   const handleArchiveAndMuteChange = useLastCallback((isEnabled: boolean) => {
@@ -295,6 +304,17 @@ const SettingsPrivacy = ({
           </ListItem>
         )}
       </Island>
+
+      {isContactDiscoveryEnabled !== undefined && (
+        <Island>
+          <Checkbox
+            label={lang('SignalContactDiscovery')}
+            subLabel={lang('SignalContactDiscoveryAbout')}
+            checked={isContactDiscoveryEnabled}
+            onCheck={handleContactDiscoveryChange}
+          />
+        </Island>
+      )}
 
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('PrivacyTitle')}</IslandTitle>
       <Island>
@@ -501,7 +521,8 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          signalPin, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
+          signalPin, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
+          shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
@@ -522,6 +543,7 @@ export default memo(withGlobal<OwnProps>(
     return {
       isCurrentUserPremium,
       signalPin,
+      isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
       webAuthCount: global.activeWebSessions.orderedHashes.length,

@@ -5,6 +5,7 @@ import type {
   ApiMessage,
   ApiPeer,
   ApiPeerNotifySettings,
+  ApiPhoneNumberLookup,
   ApiThreadInfo,
   ApiUser,
 } from '../../types';
@@ -36,8 +37,6 @@ import { collectShownMessages } from './messages';
 
 // E.164: a country code and at most 15 digits in all
 const E164_PATTERN = /^\+[1-9]\d{6,14}$/;
-// The error code of the notification, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
-const PHONE_LOOKUP_RATE_LIMITED_ERROR = 'SIGNAL_PHONE_LOOKUP_RATE_LIMITED';
 
 // The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
 const MAX_PINNED_CHATS = 4;
@@ -242,22 +241,20 @@ export async function searchChats({ query }: { query: string }) {
  * Finds the Signal user of a phone number, from the local chats or the contact discovery service. Each new number
  * counts against the server's lookup rate limit, so this runs for a number the user chose, not while typing.
  */
-export async function getChatByPhoneNumber(phoneNumber: string) {
+export async function lookUpPhoneNumber(phoneNumber: string): Promise<ApiPhoneNumberLookup | undefined> {
   const selfAci = getCurrentAccount()?.aci;
   const e164 = `+${phoneNumber.replace(/\D/g, '')}`;
-  if (!selfAci || !E164_PATTERN.test(e164)) return undefined;
+  if (!selfAci) return undefined;
+  if (!E164_PATTERN.test(e164)) return { error: 'notFound' };
 
   try {
     const conversation = await processor.lookUpPhoneNumber(e164);
-    if (!conversation) return undefined;
+    if (!conversation) return { error: 'notFound' };
     return { chat: buildApiChat(conversation, selfAci), user: buildApiUser(conversation, selfAci) };
   } catch (err) {
-    if (err instanceof CdsiError && err.reason === 'rateLimited') {
-      sendApiUpdate({ '@type': 'error', error: { message: PHONE_LOOKUP_RATE_LIMITED_ERROR, hasErrorKey: true } });
-    } else {
-      logError(err);
-    }
-    return undefined;
+    if (err instanceof CdsiError && err.reason === 'rateLimited') return { error: 'rateLimited' };
+    logError(err);
+    return { error: 'unavailable' };
   }
 }
 

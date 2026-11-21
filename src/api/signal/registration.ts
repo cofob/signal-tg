@@ -1,6 +1,8 @@
 import type { VerificationSession } from '../../lib/signal/account/register';
 import type { Credentials } from '../../lib/signal/net/rest';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
+import type { SvrErrorReason } from '../../lib/signal/svr/svr2';
+import type { RegularLangKey } from '../../types/language';
 import type { RegularLangFnParameters } from '../../util/localization/types';
 import type { ApiAuthCodeTransport, ApiUpdateAuthorizationStateType } from '../types';
 
@@ -14,7 +16,8 @@ import {
   submitCaptcha,
   submitVerificationCode,
 } from '../../lib/signal/account/register';
-import { backupMasterKey, restoreMasterKey, SvrError } from '../../lib/signal/svr/svr2';
+import { resetPinGuessCount } from '../../lib/signal/svr/accountPin';
+import { restoreMasterKey, SvrError } from '../../lib/signal/svr/svr2';
 import { formatMediaDuration } from '../../util/dates/duration';
 import { logError, store } from './engine';
 import { sendApiUpdate } from './updates';
@@ -35,6 +38,9 @@ type RegistrationState = {
     svr2Credentials: Credentials;
     // `Date.now()` when the lock expires
     expiresAt?: number;
+    // Kept once the PIN restored the master key, so a registration that fails afterwards retries without using up
+    // another guess; `resetRegistration` drops it
+    restored?: { masterKey: Uint8Array; pin: string };
   };
   // Registered on the server, waiting for its profile
   account?: AccountRecord;
@@ -43,11 +49,21 @@ type RegistrationState = {
 const CAPTCHA_PREFIX = 'signalcaptcha://';
 const MS_IN_SECOND = 1000;
 const MS_IN_DAY = 24 * 60 * 60 * MS_IN_SECOND;
+// The error code of the notification, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
+const PIN_RESET_FAILED_ERROR = 'SIGNAL_PIN_RESET_FAILED';
+// Errors that leave the guesses and the PIN screen as they are
+const PIN_ERROR_KEYS = {
+  rateLimited: 'SignalPinErrorRateLimited',
+  unavailable: 'SignalPinErrorUnavailable',
+  protocolError: 'ErrorUnexpected',
+} satisfies Record<Exclude<SvrErrorReason, 'pinMismatch' | 'missing'>, RegularLangKey>;
 
 let state: RegistrationState = {};
 let languages: string[] = [];
 // Changes when the flow restarts, so a step that finishes after a restart does not show its result
 let generation = 0;
+// A PIN is being checked: a second submission would use up a guess for nothing
+let isPinPending = false;
 
 /**
  * Registers a new account with this browser as its primary device: phone number, captcha, code, then the
@@ -153,20 +169,34 @@ export async function submitRegistrationProfile(profile: RegistrationProfile) {
  * Storing the key again afterwards resets the guess count (Signal Android `ResetSvrGuessCountJob`).
  */
 export async function submitRegistrationPin(pin: string) {
+  const lock = state.registrationLock;
+  if (!lock || isPinPending) return undefined;
+
+  isPinPending = true;
   let completedAccount: AccountRecord | undefined;
-  await runStep('authorizationStateWaitPassword', async () => {
-    const { profile, svr2Credentials } = state.registrationLock!;
-    const { masterKey } = await restoreMasterKey(svr2Credentials, pin);
-    state.account = await registerAccount(store, {
-      number: state.number!,
-      sessionId: state.session!.id,
-      isDiscoverableByPhoneNumber: Boolean(profile.isDiscoverableByPhoneNumber),
-      masterKey,
+  try {
+    await runStep('authorizationStateWaitPassword', async () => {
+      lock.restored ??= { masterKey: (await restoreMasterKey(lock.svr2Credentials, pin)).masterKey, pin };
+      const { masterKey, pin: restoredPin } = lock.restored;
+      state.account ??= await registerAccount(store, {
+        number: state.number!,
+        sessionId: state.session!.id,
+        isDiscoverableByPhoneNumber: Boolean(lock.profile.isDiscoverableByPhoneNumber),
+        masterKey,
+      });
+      completedAccount = await completeProfile(state.account, lock.profile);
+      try {
+        await resetPinGuessCount(completedAccount, restoredPin, masterKey);
+      } catch (err) {
+        // The account works; changing the PIN in the settings resets the guess count later
+        logError(err);
+        sendApiUpdate({ '@type': 'error', error: { message: PIN_RESET_FAILED_ERROR, hasErrorKey: true } });
+      }
+      return () => resetRegistration();
     });
-    backupMasterKey(svr2Credentials, pin, masterKey).catch(logError);
-    completedAccount = await completeProfile(state.account, profile);
-    return () => resetRegistration();
-  });
+  } finally {
+    isPinPending = false;
+  }
   return completedAccount;
 }
 
@@ -290,9 +320,10 @@ function showPinError(err: SvrError) {
     });
     return;
   }
-  if (err.reason === 'rateLimited' || err.reason === 'protocolError') {
+  if (err.reason !== 'pinMismatch' && err.reason !== 'missing') {
+    if (err.reason === 'unavailable') logError(err);
     sendAuthState('authorizationStateWaitPassword');
-    sendAuthError({ key: err.reason === 'rateLimited' ? 'SignalPinErrorRateLimited' : 'ErrorUnexpected' });
+    sendAuthError({ key: PIN_ERROR_KEYS[err.reason] });
     return;
   }
   // No guesses are left, so SVR2 deleted the data

@@ -357,6 +357,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['SettingsSensitiveTitle', 'SettingsSensitiveDisableFiltering'], {
     requires: 'canChangeSensitive',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalContactDiscovery'], { requires: 'hasSignalPinSettings' }),
   ...buildEntries(SettingsScreens.Privacy, ['NewChatsFromNonContacts'], {
     requires: 'canDisplayAutoarchiveSetting',
   }),

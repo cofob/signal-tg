@@ -15,8 +15,8 @@ export {
   fetchChats,
   fetchFullChat,
   fetchPeerSettings,
-  getChatByPhoneNumber,
   hidePeerSettingsBar,
+  lookUpPhoneNumber,
   requestChatUpdate,
   searchChats,
   toggleChatArchived,
@@ -54,7 +54,12 @@ export {
 } from './groups';
 export { downloadMedia } from './media';
 export {
-  fetchSignalPinSettings, removeSignalPin, setSignalPin, setSignalRegistrationLock,
+  fetchSignalContactDiscovery,
+  fetchSignalPinSettings,
+  removeSignalPin,
+  setSignalContactDiscovery,
+  setSignalPin,
+  setSignalRegistrationLock,
 } from './pin';
 export {
   closePoll,

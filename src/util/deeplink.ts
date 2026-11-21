@@ -22,7 +22,8 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     return true;
   }
   if (signalMeLink?.type === 'phoneNumber') {
-    actions.openChatByPhoneNumber({ phoneNumber: signalMeLink.phoneNumber });
+    // A link can come from anyone, and looking its number up tells the contact discovery service about it
+    actions.openPhoneNumberLookupModal({ phoneNumber: signalMeLink.phoneNumber });
     return true;
   }
 

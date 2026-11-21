@@ -1114,6 +1114,25 @@ addActionHandler('setSignalRegistrationLock', async (global, actions, payload): 
   await applySignalPinChange(await callApi('setSignalRegistrationLock', isEnabled), tabId);
 });
 
+addActionHandler('loadSignalContactDiscovery', async (global): Promise<void> => {
+  const isSignalContactDiscoveryEnabled = await callApi('fetchSignalContactDiscovery');
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled });
+  setGlobal(global);
+});
+
+addActionHandler('setSignalContactDiscovery', async (global, actions, payload): Promise<void> => {
+  const { isEnabled, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('setSignalContactDiscovery', isEnabled);
+  if (result === undefined) {
+    actions.showNotification({ message: { key: 'ErrorUnexpected' }, tabId });
+    return;
+  }
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled: result });
+  setGlobal(global);
+});
+
 addActionHandler('loadPasskeys', async (global): Promise<void> => {
   const result = await callApi('fetchPasskeys');
   if (!result) {
@@ -1194,10 +1213,10 @@ addActionHandler('deletePasskey', async (global, actions, payload): Promise<void
 addActionHandler('loadNestedSettingsData', async (global): Promise<void> => {
   const {
     loadPasswordInfo, loadAuthorizations, loadBlockedUsers, loadWebAuthorizations, loadPasskeys, loadDefaultHistoryTtl,
-    loadGlobalPrivacySettings, loadSignalPinSettings,
+    loadGlobalPrivacySettings, loadSignalPinSettings, loadSignalContactDiscovery,
   } = getPromiseActions();
 
-  const requests = [loadPasswordInfo(), loadAuthorizations(), loadSignalPinSettings()];
+  const requests = [loadPasswordInfo(), loadAuthorizations(), loadSignalPinSettings(), loadSignalContactDiscovery()];
   if (!selectIsCurrentUserFrozen(global)) {
     requests.push(
       loadBlockedUsers(), loadWebAuthorizations(), loadPasskeys(), loadDefaultHistoryTtl(),

@@ -232,7 +232,14 @@ export interface LangPair {
   'SignalPinErrorShort': undefined;
   'SignalPinErrorMismatch': undefined;
   'SignalPinErrorSave': undefined;
+  'SignalPhoneLookupTitle': undefined;
+  'SignalPhoneLookupConfirm': undefined;
+  'SignalContactDiscovery': undefined;
+  'SignalContactDiscoveryAbout': undefined;
+  'SignalPinErrorUnavailable': undefined;
+  'SignalPinErrorResetFailed': undefined;
   'ErrorPhoneLookupRateLimited': undefined;
+  'ErrorPhoneLookupUnavailable': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2727,6 +2734,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SignalPhoneSearch': {
     'phone': V;
   };
+  'SignalPhoneLookupText': {
+    'phone': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -4665,6 +4675,7 @@ export interface LangKeyGroups {
   'phone': {
     keys:
       | 'SignalPhoneSearch'
+      | 'SignalPhoneLookupText'
       | 'UsernameByPhoneNotFound';
     variables: 'phone';
   };
