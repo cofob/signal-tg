@@ -17,6 +17,7 @@ The screenshots show demo data (`signalDev.seedDemo()` in development builds).
 ```sh
 cp .env.example .env
 npx npm@11 ci
+npm run install:webk  # Web K's own dependencies (pnpm, through npx)
 ```
 
 ## Development
@@ -25,6 +26,10 @@ npx npm@11 ci
 npm run signal:proxy  # WebSocket-to-TCP tunnel to Signal servers, needs Rust; see proxy/README.md
 npm run dev           # http://localhost:1234
 ```
+
+`npm run dev` serves Web A at `/a/` and Web K at `/k/` on one port; `/` opens Web A. Web K's own server listens on the next
+port (`DEV_PORT`, `WEBK_DEV_PORT` change both). Both frontends use the same account and data; "Switch to K version" and
+"Switch to A version" in the More menu move between them.
 
 Regenerate after changes: `npm run signal:wasm` (libsignal WebAssembly, needs Rust) and `npm run signal:proto` (protobuf).
 
