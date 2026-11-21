@@ -10,7 +10,6 @@ import { uploadAttachment } from '../attachments/uploadAttachment';
 import { importBackupArchive } from '../backups/transferHistory';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { sendInitialSyncRequests } from '../sender/syncRequests';
-import { fetchStorageSnapshot } from '../storage/storageService';
 import { lookupUsername, resolveUsernameLink } from '../usernames/lookupUsername';
 import { initSignalWasm } from '../wasm';
 import { seedDemo } from './seedDemo';
@@ -72,16 +71,11 @@ const signalDev = {
     console.log('[signal] Connected to the chat socket');
   },
 
-  /** Reads the storage service and merges contacts, groups, pins and settings */
+  /** Merges contacts, groups, pins and settings from the storage service, and writes the changes made here */
   async syncStorage() {
-    const { account, connection } = getContext();
-    const snapshot = await fetchStorageSnapshot(account, connection);
-    if (!snapshot) {
-      console.log('[signal] Storage service has no manifest yet');
-      return;
-    }
-    await processor.applyStorageRecords([...snapshot.records.values()]);
-    console.log(`[signal] Merged storage manifest version ${snapshot.version} (${snapshot.records.size} records)`);
+    getContext();
+    await processor.syncStorage();
+    console.log('[signal] Storage service synced');
   },
 
   async conversations() {

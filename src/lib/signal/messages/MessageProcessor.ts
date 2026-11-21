@@ -1,5 +1,5 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
+import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type {
@@ -19,12 +19,14 @@ import type {
   SyncMessage_Sent,
   TypingMessage,
 } from '../proto/generated/SignalService_pb';
-import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
 import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
+import type { StorageChanges } from '../storage/storageRecords';
+import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
@@ -46,6 +48,16 @@ import {
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import {
+  ACCOUNT_KEY,
+  buildStorageWrite,
+  getAci,
+  getMutedUntil,
+  getStorageChanges,
+  mergeStorageChanges,
+  omitChangedFields,
+} from '../storage/storageRecords';
+import { syncStorageService } from '../storage/syncStorage';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
@@ -58,9 +70,11 @@ import {
   DataMessageSchema,
   GroupContextV2Schema,
   ReceiptMessage_Type,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
   TypingMessage_Action,
 } from '../proto/generated/SignalService_pb';
+import { ManifestRecordSchema, StorageRecordSchema } from '../proto/generated/StorageService_pb';
 
 export type MessageChanges = {
   conversations: ConversationRecord[];
@@ -117,7 +131,15 @@ type MessageSource = {
 
 type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 
+/** A storage service write with what `commitStorageWrite` needs to know about the changes it carries */
+type PendingStorageWrite = {
+  write: StorageWrite;
+  changeCount: number;
+};
+
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+// Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
+const STORAGE_SYNC_DELAY_MS = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Signal Desktop `ts/util/canEditMessage.dom.ts` and `ts/util/getDeleteMaxAgeMs.std.ts`
 const EDIT_MAX_AGE_MS = DAY_MS;
@@ -179,6 +201,16 @@ export default class MessageProcessor {
   // Receipts and syncs for local changes made without a connection, sent after the next one
   private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
 
+  // Storage service syncs run one at a time
+  private storageSync = Promise.resolve();
+
+  private storageSyncTimer?: ReturnType<typeof setTimeout>;
+
+  private isStorageSyncQueued = false;
+
+  // Counts local storage record changes, so a write clears only the changes it carried
+  private storageChangeCount = 0;
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -199,6 +231,7 @@ export default class MessageProcessor {
   stop() {
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
+    clearTimeout(this.storageSyncTimer);
   }
 
   /**
@@ -220,7 +253,9 @@ export default class MessageProcessor {
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
       if (!found) throw new Error(`Unknown conversation ${conversationId}`);
       // Writing accepts the message request, so the message carries our profile key
-      const accepted = found.isAccepted ? found : await this.putConversation({ ...found, isAccepted: true });
+      const accepted = found.isAccepted
+        ? found
+        : await this.putLocalConversation(found, { ...found, isAccepted: true });
       const outgoing = createOutgoingDataMessage(account, accepted, init, sentAt);
       const { message: added } = await this.addMessage(accepted, {
         conversationId,
@@ -449,7 +484,7 @@ export default class MessageProcessor {
    * Answers a message request here and on our other devices (`syncMessageRequestResponse` and
    * `applyMessageRequestResponse` in Signal Desktop `ts/models/conversations.preload.ts`). Accepting shares our
    * profile key with the contact; a spam report names the contact's latest messages. A changed block also sends
-   * the blocked list, since this device does not write the storage service yet.
+   * the blocked list, as Signal Desktop does besides the storage service write.
    */
   async respondToMessageRequest(conversationId: string, type: MessageRequestResponseType) {
     const account = await this.getAccount();
@@ -462,9 +497,11 @@ export default class MessageProcessor {
           !message.isOutgoing && message.authorAci === found.id && Boolean(message.serverGuid)
         ))
         : [];
+      const responded = await this.applyMessageRequestResponse(found, type);
+      await this.markStorageChanges(getStorageChanges(found, responded, account.aci));
       return {
         previous: found,
-        conversation: await this.applyMessageRequestResponse(found, type),
+        conversation: responded,
         spamServerGuids: reported.map(({ serverGuid }) => serverGuid!),
       };
     });
@@ -493,7 +530,7 @@ export default class MessageProcessor {
     const isChanged = await this.runSerial(async () => {
       const conversation = await this.db.getConversation(conversationId);
       if (!conversation?.isBlocked) return false;
-      await this.putConversation({ ...conversation, isBlocked: false });
+      await this.putLocalConversation(conversation, { ...conversation, isBlocked: false });
       const blockedE164s = await this.client.store.getItem('blockedE164s');
       if (conversation.e164 && blockedE164s?.includes(conversation.e164)) {
         await this.client.store.setItem('blockedE164s', blockedE164s.filter((e164) => e164 !== conversation.e164));
@@ -638,7 +675,7 @@ export default class MessageProcessor {
         });
       }
       const remaining = maxId !== undefined ? (await this.db.getUnreadMessages(conversationId)).length : 0;
-      await this.putConversation({ ...found, unreadCount: remaining, isMarkedUnread: false });
+      await this.putLocalConversation(found, { ...found, unreadCount: remaining, isMarkedUnread: false });
       this.scheduleExpiration();
       return { conversation: found, messages: unread };
     });
@@ -657,88 +694,94 @@ export default class MessageProcessor {
   }
 
   /**
-   * Merges storage service records: contacts and groups with their archive, mute, block and
-   * message request state, the order of pinned conversations and account settings
+   * Reads the storage service and writes the local changes of its records, one sync at a time
+   * (see `syncStorageService`)
    */
-  async applyStorageRecords(records: StorageRecord[]) {
-    const { store, account } = this.client.getSenderContext();
-    // Pins come only from the account record
-    let pinIndexById: Map<string, number> | undefined;
+  syncStorage() {
+    const sync = this.storageSync.then(() => syncStorageService(this.client.getSenderContext(), this));
+    this.storageSync = sync.catch(() => undefined);
+    return sync;
+  }
 
-    await this.runSerial(async () => {
-      const blockedE164s = new Set(await store.getItem('blockedE164s'));
-      const blockedE164Count = blockedE164s.size;
-      for (const { record } of records) {
-        if (record.case === 'contact') {
-          const contact = record.value;
-          const aci = contact.aci || (contact.aciBinary.length ? uuidToString(contact.aciBinary) : undefined);
-          // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
-          if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
-          if (!aci || aci === account.aci) continue;
-          if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+  /**
+   * Merges a newer storage manifest: records new to this device go into the local state, except for fields changed
+   * here since the last write, and are stored with the manifest for later writes
+   */
+  applyStorageManifest(manifest: ManifestRecord, records: Map<string, Uint8Array<ArrayBuffer>>) {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      const previousIds = new Set(stored && getManifestIds(fromBinary(ManifestRecordSchema, stored)));
+      const ids = new Set(getManifestIds(manifest));
 
-          const conversation = await this.ensurePrivateConversation(aci);
-          await this.putConversation({
-            ...conversation,
-            e164: contact.e164 || conversation.e164,
-            profileName: contact.givenName || conversation.profileName,
-            profileFamilyName: contact.familyName || conversation.profileFamilyName,
-            systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
-            nickname: [contact.nickname?.given, contact.nickname?.family].filter(Boolean).join(' ') || undefined,
-            username: contact.username || undefined,
-            isArchived: contact.archived,
-            isMarkedUnread: contact.markedUnread,
-            isBlocked: contact.blocked,
-            isAccepted: contact.whitelisted || conversation.isAccepted,
-            mutedUntil: Number(contact.mutedUntilTimestamp) || undefined,
-          });
-        } else if (record.case === 'groupV2' && record.value.masterKey.length) {
-          const group = record.value;
-          const conversation = await this.getOrCreateGroupConversation(group.masterKey, 0);
-          await this.putConversation({
-            ...conversation,
-            isArchived: group.archived,
-            isMarkedUnread: group.markedUnread,
-            isBlocked: group.blocked,
-            isAccepted: group.whitelisted || conversation.isAccepted,
-            mutedUntil: Number(group.mutedUntilTimestamp) || undefined,
-          });
-        } else if (record.case === 'account') {
-          const accountRecord = record.value;
-          pinIndexById = new Map();
-          accountRecord.pinnedConversations.forEach(({ identifier }, index) => {
-            if (identifier.case === 'contact') {
-              const { serviceId, serviceIdBinary } = identifier.value;
-              pinIndexById!.set(serviceId || uuidToString(serviceIdBinary), index);
-            } else if (identifier.case === 'groupMasterKey') {
-              pinIndexById!.set(getGroupId(identifier.value), index);
-            }
-          });
-          await this.client.updateAccount({
-            isReadReceiptsEnabled: accountRecord.readReceipts,
-            isTypingIndicatorsEnabled: accountRecord.typingIndicators,
-            isLinkPreviewsEnabled: accountRecord.linkPreviews,
-          });
-        }
-      }
-
-      if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
-
-      if (!pinIndexById) return;
-      for (const conversation of await this.db.getConversations()) {
-        const pinIndex = pinIndexById.get(conversation.id);
-        if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
-      }
+      await this.mergeStorageRecords([...records.values()].map((record) => fromBinary(StorageRecordSchema, record)));
+      await store.setStorageRecords(records);
+      await store.removeStorageRecords([...previousIds].filter((id) => !ids.has(id)));
+      // Ids the server has no record for are left out, so the next write drops them
+      const merged = clone(ManifestRecordSchema, manifest);
+      merged.identifiers = manifest.identifiers.filter(({ raw }) => {
+        const id = bufferToBase64(raw);
+        return records.has(id) || previousIds.has(id);
+      });
+      await store.setItem('storageManifest', toBinary(ManifestRecordSchema, merged));
     });
   }
 
-  /** Changes how this device lists a conversation; other devices learn it only through the storage service */
+  /** The write of local record changes on top of the stored manifest, see `buildStorageWrite` */
+  buildStorageWrite() {
+    return this.runSerial(async (): Promise<PendingStorageWrite | undefined> => {
+      const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      const changes = await store.getItem('storageChanges');
+      // The primary device creates the first manifest
+      if (!stored || !changes || !Object.keys(changes).length) return undefined;
+
+      const account = await this.getAccount();
+      const manifest = fromBinary(ManifestRecordSchema, stored);
+      const ids = getManifestIds(manifest);
+      const serialized = await store.getStorageRecords(ids);
+      const records = new Map<string, Uint8Array>();
+      ids.forEach((id, index) => {
+        if (serialized[index]) records.set(id, serialized[index]);
+      });
+      const profileKeys = new Map<string, Uint8Array>();
+      for (const id of Object.keys(changes)) {
+        const profileKey = id !== ACCOUNT_KEY ? (await store.getRecipient(id))?.profileKey : undefined;
+        if (profileKey) profileKeys.set(id, profileKey);
+      }
+
+      const write = buildStorageWrite({
+        manifest,
+        records,
+        changes,
+        conversations: await this.db.getConversations(),
+        profileKeys,
+        selfAci: account.aci,
+        deviceId: account.deviceId,
+      });
+      return write && { write, changeCount: this.storageChangeCount };
+    });
+  }
+
+  /** Stores the records of an accepted write and clears the changes it carried */
+  commitStorageWrite({ write, changeCount }: PendingStorageWrite) {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      await store.setStorageRecords(write.inserts);
+      await store.removeStorageRecords(write.deleteIds);
+      await store.setItem('storageManifest', toBinary(ManifestRecordSchema, write.manifest));
+      // Changes made while the write was on its way go out again with the next one
+      if (changeCount === this.storageChangeCount) await store.setItem('storageChanges', {});
+    });
+  }
+
+  /** Changes how a conversation is listed; other devices learn it through the storage service */
   updateConversationState(
     id: string, update: Partial<Pick<ConversationRecord, 'isArchived' | 'isMarkedUnread' | 'mutedUntil' | 'pinIndex'>>,
   ) {
     return this.runSerial(async () => {
       const conversation = await this.db.getConversation(id);
-      return conversation && this.putConversation({ ...conversation, ...update });
+      return conversation && this.putLocalConversation(conversation, { ...conversation, ...update });
     });
   }
 
@@ -834,6 +877,128 @@ export default class MessageProcessor {
   private async flushPendingSends() {
     for (const send of this.pendingSends.splice(0)) {
       await this.sendWhenConnected(send).catch(this.events.onError);
+    }
+  }
+
+  /** Runs a storage service sync after `STORAGE_SYNC_DELAY_MS`, or after the next connection while there is none */
+  private scheduleStorageSync() {
+    clearTimeout(this.storageSyncTimer);
+    this.storageSyncTimer = setTimeout(() => {
+      this.storageSyncTimer = undefined;
+      if (this.isStorageSyncQueued) return;
+      this.isStorageSyncQueued = true;
+      this.sendWhenConnected(() => {
+        this.isStorageSyncQueued = false;
+        return this.syncStorage();
+      }).catch(this.events.onError);
+    }, STORAGE_SYNC_DELAY_MS);
+  }
+
+  /** Stores a conversation changed on this device and marks the storage record fields that changed */
+  private async putLocalConversation(previous: ConversationRecord, next: ConversationRecord) {
+    const account = await this.getAccount();
+    await this.putConversation(next);
+    await this.markStorageChanges(getStorageChanges(previous, next, account.aci));
+    return next;
+  }
+
+  private async markStorageChanges(added: StorageChanges) {
+    if (!Object.keys(added).length) return;
+    const { store } = this.client;
+    await store.setItem('storageChanges', mergeStorageChanges(await store.getItem('storageChanges') ?? {}, added));
+    this.storageChangeCount++;
+    this.scheduleStorageSync();
+  }
+
+  /**
+   * Merges storage service records: contacts and groups with their archive, mute, block and message request state,
+   * and the account record with Note to Self, the order of pinned conversations and settings. Fields in
+   * `storageChanges` keep their local values.
+   */
+  private async mergeStorageRecords(records: StorageRecord[]) {
+    const { store } = this.client;
+    const account = await this.getAccount();
+    const changes = await store.getItem('storageChanges') ?? {};
+    const accountChanges = new Set(changes[ACCOUNT_KEY]);
+    const blockedE164s = new Set(await store.getItem('blockedE164s'));
+    const blockedE164Count = blockedE164s.size;
+    // Pins come only from the account record
+    let pinIndexById: Map<string, number> | undefined;
+
+    for (const { record } of records) {
+      if (record.case === 'contact') {
+        const contact = record.value;
+        const aci = getAci(contact.aci, contact.aciBinary);
+        // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
+        if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
+        if (!aci || aci === account.aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164 || conversation.e164,
+          profileName: contact.givenName || conversation.profileName,
+          profileFamilyName: contact.familyName || conversation.profileFamilyName,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+          nickname: [contact.nickname?.given, contact.nickname?.family].filter(Boolean).join(' ') || undefined,
+          username: contact.username || undefined,
+          ...omitChangedFields({
+            isArchived: contact.archived,
+            isMarkedUnread: contact.markedUnread,
+            isBlocked: contact.blocked,
+            isAccepted: contact.whitelisted || conversation.isAccepted,
+            mutedUntil: getMutedUntil(contact.mutedUntilTimestamp),
+          }, changes[aci]),
+        });
+      } else if (record.case === 'groupV2' && record.value.masterKey.length) {
+        const group = record.value;
+        const conversation = await this.getOrCreateGroupConversation(group.masterKey, 0);
+        await this.putConversation({
+          ...conversation,
+          ...omitChangedFields({
+            isArchived: group.archived,
+            isMarkedUnread: group.markedUnread,
+            isBlocked: group.blocked,
+            isAccepted: group.whitelisted || conversation.isAccepted,
+            mutedUntil: getMutedUntil(group.mutedUntilTimestamp),
+          }, changes[conversation.id]),
+        });
+      } else if (record.case === 'account') {
+        const accountRecord = record.value;
+        if (!accountChanges.has('pinnedConversations')) {
+          pinIndexById = new Map();
+          accountRecord.pinnedConversations.forEach(({ identifier }, index) => {
+            if (identifier.case === 'contact') {
+              const aci = getAci(identifier.value.serviceId, identifier.value.serviceIdBinary);
+              if (aci) pinIndexById!.set(aci, index);
+            } else if (identifier.case === 'groupMasterKey') {
+              pinIndexById!.set(getGroupId(identifier.value), index);
+            }
+          });
+        }
+        const self = await this.ensurePrivateConversation(account.aci);
+        await this.putConversation({
+          ...self,
+          isArchived: accountChanges.has('noteToSelfArchived') ? self.isArchived : accountRecord.noteToSelfArchived,
+          isMarkedUnread: accountChanges.has('noteToSelfMarkedUnread')
+            ? self.isMarkedUnread
+            : accountRecord.noteToSelfMarkedUnread,
+        });
+        await this.client.updateAccount({
+          isReadReceiptsEnabled: accountRecord.readReceipts,
+          isTypingIndicatorsEnabled: accountRecord.typingIndicators,
+          isLinkPreviewsEnabled: accountRecord.linkPreviews,
+        });
+      }
+    }
+
+    if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+
+    if (!pinIndexById) return;
+    for (const conversation of await this.db.getConversations()) {
+      const pinIndex = pinIndexById.get(conversation.id);
+      if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
     }
   }
 
@@ -1102,6 +1267,10 @@ export default class MessageProcessor {
         break;
       case 'deleteForMe':
         await this.applyDeleteForMeSync(content.value);
+        break;
+      case 'fetchLatest':
+        // Another device wrote the storage service (Signal Desktop `onFetchLatestSync` in `ts/background.preload.ts`)
+        if (content.value.type === SyncMessage_FetchLatest_Type.STORAGE_MANIFEST) this.scheduleStorageSync();
         break;
       default:
         break;
@@ -1783,4 +1952,8 @@ export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
   return bufferToBase64(wasm.GroupPublicParams_GetGroupIdentifier(publicParams));
+}
+
+function getManifestIds(manifest: ManifestRecord) {
+  return manifest.identifiers.map(({ raw }) => bufferToBase64(raw));
 }

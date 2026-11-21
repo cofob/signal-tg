@@ -9,7 +9,6 @@ import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
-import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
 import { buildApiUser } from './builders/users';
@@ -210,7 +209,7 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile and the storage service records
+ * succeed once for the account, then our profile and a storage service sync
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
@@ -222,8 +221,7 @@ async function syncAfterConnect() {
     await client.updateAccount({ isInitialSyncDone: true });
   }
   void processor.refreshProfile(context.account.aci).catch(logError);
-  const snapshot = await fetchStorageSnapshot(context.account, context.connection);
-  if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
+  await processor.syncStorage();
 }
 
 async function connect() {
