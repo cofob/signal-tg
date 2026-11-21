@@ -16,7 +16,8 @@ type Waiter = {
 };
 
 const CLOSE_NORMAL = 1000;
-// libsignal-net `RECOMMENDED_WS_CONFIG` disconnects after this long without a message from the enclave
+// libsignal-net `RECOMMENDED_WS_CONFIG` disconnects after this long without a frame from the enclave; its pings
+// during a long lookup restart the wait
 const RECEIVE_TIMEOUT_MS = 30000;
 const MILLISECONDS_IN_SECOND = 1000;
 
@@ -41,9 +42,14 @@ export default class AttestedConnection {
 
   private client?: SgxClientState;
 
+  private timeout?: ReturnType<typeof setTimeout>;
+
   private constructor(private socket: WebSocketClient) {
     socket.onMessage = (frame) => this.handleFrame(frame);
     socket.onClose = (code, reason) => this.handleClose(code, reason);
+    socket.onActivity = () => {
+      if (this.waiter) this.startTimeout();
+    };
   }
 
   static async connect(host: string, path: string, credentials: Credentials, createClient: CreateEnclaveClient) {
@@ -90,22 +96,28 @@ export default class AttestedConnection {
     }
 
     return new Promise<Uint8Array | undefined>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        this.waiter = undefined;
-        reject(new Error('The enclave did not respond'));
-        this.close();
-      }, RECEIVE_TIMEOUT_MS);
       this.waiter = {
         resolve: (received) => {
-          clearTimeout(timeout);
+          clearTimeout(this.timeout);
           resolve(received);
         },
         reject: (error) => {
-          clearTimeout(timeout);
+          clearTimeout(this.timeout);
           reject(error);
         },
       };
+      this.startTimeout();
     });
+  }
+
+  private startTimeout() {
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => {
+      const { waiter } = this;
+      this.waiter = undefined;
+      waiter?.reject(new Error('The enclave did not respond'));
+      this.close();
+    }, RECEIVE_TIMEOUT_MS);
   }
 
   private handleFrame(frame: Uint8Array) {
