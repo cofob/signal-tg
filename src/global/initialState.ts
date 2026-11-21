@@ -201,7 +201,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     },
     hasNext: true,
     hasNextInArchive: true,
-    stealthMode: {},
   },
 
   groupCalls: {

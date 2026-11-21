@@ -15,7 +15,6 @@ import {
   updatePeerStory,
   updatePeersWithStories,
   updatePoll,
-  updateStealthMode,
 } from '../../reducers';
 import { updateThreadInfo } from '../../reducers/threads';
 import {
@@ -241,8 +240,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateStealthMode':
-      global = updateStealthMode(global, update.stealthMode);
       setGlobal(global);
       break;
 

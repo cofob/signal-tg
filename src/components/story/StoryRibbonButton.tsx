@@ -6,9 +6,7 @@ import { StoryViewerOrigin } from '../../types';
 
 import { getPeerTitle } from '../../global/helpers/peers';
 import buildClassName from '../../util/buildClassName';
-import { formatMediaDuration } from '../../util/dates/duration';
 import { isUserId } from '../../util/entities/ids';
-import { getServerTime } from '../../util/serverTime';
 import { preventMessageInputBlurWithBubbling } from '../middle/helpers/preventMessageInputBlur';
 
 import useContextMenuHandlers from '../../hooks/useContextMenuHandlers';
@@ -25,19 +23,14 @@ import styles from './StoryRibbon.module.scss';
 interface OwnProps {
   peer: ApiPeer;
   isArchived?: boolean;
-  stealthModeActiveUntil?: number;
 }
 
-const STEALTH_MODE_NOTIFICATION_DURATION = 1000;
-
-function StoryRibbonButton({ peer, isArchived, stealthModeActiveUntil }: OwnProps) {
+function StoryRibbonButton({ peer, isArchived }: OwnProps) {
   const {
     openChat,
     openChatWithInfo,
     openStoryViewer,
     toggleStoriesHidden,
-    openStealthModal,
-    showNotification,
   } = getActions();
 
   const lang = useLang();
@@ -88,25 +81,6 @@ function StoryRibbonButton({ peer, isArchived, stealthModeActiveUntil }: OwnProp
 
   const handleArchivePeer = useLastCallback(() => {
     toggleStoriesHidden({ peerId: peer.id, isHidden: !isArchived });
-  });
-
-  const handleOpenStealth = useLastCallback(() => {
-    const diff = stealthModeActiveUntil ? stealthModeActiveUntil - getServerTime() : 0;
-    if (diff > 0) {
-      showNotification({
-        title: { key: 'StealthModeOnTitle' },
-        message: {
-          key: 'StealthModeOnHint',
-          variables: { time: formatMediaDuration(diff) },
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        },
-        duration: STEALTH_MODE_NOTIFICATION_DURATION,
-      });
-      openStoryViewer({ peerId: peer.id, origin: StoryViewerOrigin.StoryRibbon });
-      return;
-    }
-
-    openStealthModal({ targetPeerId: peer.id });
   });
 
   return (
@@ -166,11 +140,6 @@ function StoryRibbonButton({ peer, isArchived, stealthModeActiveUntil }: OwnProp
               ) : (
                 <MenuItem onClick={handleOpenProfile} icon="user">
                   {lang('StoryMenuViewProfile')}
-                </MenuItem>
-              )}
-              {!isChannel && (
-                <MenuItem onClick={handleOpenStealth} icon="eye-crossed-outline">
-                  {lang('StoryMenuOpenStealth')}
                 </MenuItem>
               )}
               <MenuItem

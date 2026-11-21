@@ -19,7 +19,6 @@ import type {
   ApiMessageEntity,
   ApiPeer,
   ApiReaction,
-  ApiStealthMode,
   ApiSticker,
   ApiTopic,
   ApiUser,
@@ -305,7 +304,6 @@ type StateProps = {
   canPlayAnimatedEmojis?: boolean;
   shouldCollectDebugLogs?: boolean;
   sentStoryReaction?: ApiReaction;
-  stealthMode?: ApiStealthMode;
   canSendOneTimeMedia?: boolean;
   webPagePreview?: ApiWebPage;
   noWebPage?: boolean;
@@ -423,7 +421,6 @@ const Composer = ({
   canPlayAnimatedEmojis,
   shouldCollectDebugLogs,
   sentStoryReaction,
-  stealthMode,
   canSendOneTimeMedia,
   webPagePreview,
   noWebPage,
@@ -2202,12 +2199,6 @@ const Composer = ({
       if (isBotKeyboardOpen && botKeyboardPlaceholder) return botKeyboardPlaceholder;
       if (inputPlaceholder) return inputPlaceholder;
 
-      if (stealthMode?.activeUntil && isInStoryViewer && stealthMode.activeUntil > getServerTime()) {
-        return lang('StealthModeComposerPlaceholder', {
-          timer: <TextTimer endsAt={stealthMode.activeUntil} onEnd={forceUpdate} />,
-        }, { withNodes: true });
-      }
-
       if (chat?.adminRights?.anonymous) {
         return lang('ComposerPlaceholderAnonymous');
       }
@@ -2233,7 +2224,7 @@ const Composer = ({
   }, [
     activeRecording, botKeyboardPlaceholder, chat, inputPlaceholder, isBotKeyboardOpen, isChannel, isComposerBlocked,
     isInStoryViewer, isSilentPosting, lang, replyToTopic, threadId, windowWidth,
-    slowModePlaceholder, stealthMode?.activeUntil, user?.canManageBotForumTopics,
+    slowModePlaceholder, user?.canManageBotForumTopics,
   ]);
 
   useEffect(() => {
@@ -3177,7 +3168,6 @@ export default memo(withGlobal<OwnProps>(
       canSendOneTimeMedia: !isChatWithSelf && isChatWithUser && !isChatWithBot && !isInScheduledList,
       shouldCollectDebugLogs,
       sentStoryReaction,
-      stealthMode: global.stories.stealthMode,
       replyToTopic,
       noWebPage,
       webPagePreview,

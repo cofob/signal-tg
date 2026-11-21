@@ -33,7 +33,6 @@ import type {
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
@@ -285,7 +284,6 @@ export type GlobalState = {
       active: string[];
       archived: string[];
     };
-    stealthMode: ApiStealthMode;
     albumsByPeerId: Record<string, ApiStoryAlbum[]>;
   };
 

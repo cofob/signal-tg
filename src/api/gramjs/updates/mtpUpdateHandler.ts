@@ -72,7 +72,7 @@ import {
   buildApiReaction,
   buildMessageReactions,
 } from '../apiBuilders/reactions';
-import { buildApiStealthMode, buildApiStory } from '../apiBuilders/stories';
+import { buildApiStory } from '../apiBuilders/stories';
 import { buildApiEmojiInteraction, buildStickerSet } from '../apiBuilders/symbols';
 import {
   buildApiPeerSettings,
@@ -1149,11 +1149,6 @@ export function updater(update: Update) {
       peerId: getApiChatIdFromMtpPeer(update.peer),
       storyId: update.storyId,
       reaction,
-    });
-  } else if (update instanceof GramJs.UpdateStoriesStealthMode) {
-    sendApiUpdate({
-      '@type': 'updateStealthMode',
-      stealthMode: buildApiStealthMode(update.stealthMode),
     });
   } else if (update instanceof GramJs.UpdateAttachMenuBots) {
     sendApiUpdate({

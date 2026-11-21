@@ -11,7 +11,6 @@ import {
   STORY_VIEWS_MIN_SEARCH,
 } from '../../config';
 import {
-  selectIsCurrentUserPremium,
   selectPeerStory,
   selectTabState,
 } from '../../global/selectors';
@@ -43,7 +42,6 @@ interface StateProps {
   views?: ApiTypeStoryView[];
   nextOffset?: string;
   viewersExpireDate?: number;
-  isCurrentUserPremium?: boolean;
 }
 
 const REFETCH_DEBOUNCE = 250;
@@ -54,7 +52,6 @@ function StoryViewModal({
   views,
   nextOffset,
   isLoading,
-  isCurrentUserPremium,
 }: StateProps) {
   const {
     loadStoryViewList, closeStoryViewModal, clearStoryViews,
@@ -196,7 +193,7 @@ function StoryViewModal({
       >
         {isExpired && !isLoading && !query && Boolean(!sortedViews?.length) && (
           <div className={buildClassName(styles.info, styles.centeredInfo)}>
-            {lang(isCurrentUserPremium ? 'ServerErrorViewers' : 'ExpiredViewsStub', undefined, {
+            {lang('ExpiredViewsStub', undefined, {
               withNodes: true, withMarkdown: true,
             })}
           </div>
@@ -279,6 +276,5 @@ export default memo(withGlobal((global): Complete<StateProps> => {
     story: story && 'content' in story ? story : undefined,
     nextOffset,
     isLoading,
-    isCurrentUserPremium: selectIsCurrentUserPremium(global),
   };
 })(StoryViewModal));

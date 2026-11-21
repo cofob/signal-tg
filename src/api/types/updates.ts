@@ -44,7 +44,7 @@ import type {
 import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
-import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
+import type { ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
 } from './users';
@@ -850,11 +850,6 @@ export type ApiUpdateSentStoryReaction = {
   reaction?: ApiReaction;
 };
 
-export type ApiUpdateStealthMode = {
-  '@type': 'updateStealthMode';
-  stealthMode: ApiStealthMode;
-};
-
 export type ApiRequestSync = {
   '@type': 'requestSync';
 };
@@ -971,7 +966,7 @@ export type ApiUpdate = (
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
-  ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
+  ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateBotCommands
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto

@@ -328,9 +328,6 @@ export type TabState = {
       storyIdsByPeerId: Record<string, number[]>;
     };
   };
-  storyStealthModal?: {
-    targetPeerId: string;
-  } | Record<string, never>;
 
   selectedStoryAlbumId?: number;
 
