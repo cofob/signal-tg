@@ -31,6 +31,8 @@ const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
 const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
+// The UI treats a session without a main data center as signed out (`onUpdateSession`)
+const SIGNAL_SESSION_DATA = { mainDcId: 1, keys: {} };
 
 let currentAccount: AccountRecord | undefined;
 let initialArgs: ApiInitialArgs | undefined;
@@ -198,6 +200,9 @@ export async function startSession(storedAccount: AccountRecord) {
     currentUserFullInfo: buildApiUserFullInfo(self, account.aci),
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
+  // The UI keeps its state and settings only for a stored session; the Signal account lives in the engine's own
+  // store, so this session holds no keys and only marks the account slot as signed in
+  sendApiUpdate({ '@type': 'updateSession', sessionData: SIGNAL_SESSION_DATA });
   if (hasHistoryTransferFailed) {
     sendApiUpdate({ '@type': 'error', error: { message: HISTORY_TRANSFER_FAILED_ERROR, hasErrorKey: true } });
   }
