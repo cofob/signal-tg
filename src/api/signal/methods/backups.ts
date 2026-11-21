@@ -2,7 +2,7 @@ import type { ApiBackupFrequency, ApiBackupRemoteStatus, ApiBackupSettings } fro
 
 import { normalizeRecoveryKey } from '../../../lib/signal/account/recoveryKey';
 import { ArchiveError } from '../../../lib/signal/backups/archiveApi';
-import BackupService from '../../../lib/signal/backups/BackupService';
+import BackupService, { getIsPrimaryDevice, NotPrimaryDeviceError } from '../../../lib/signal/backups/BackupService';
 import { restoreBackupFile, RestoreError } from '../../../lib/signal/backups/restoreBackup';
 import { BackupValidationError } from '../../../lib/signal/backups/validateBackup';
 import NetworkError from '../../../lib/signal/net/NetworkError';
@@ -12,7 +12,7 @@ import { buildBackupSettings } from '../updaters/backups';
 // The reasons that an action of the backup settings fails, which the app shows as a notification
 export type BackupErrorReason =
   | 'unavailable' | 'rateLimited' | 'network' | 'notEnabledOnPrimary' | 'invalidBackup' | 'wrongKey' | 'invalidKey'
-  | 'needsForwardSecrecy' | 'failed';
+  | 'forwardSecrecyLost' | 'rejected' | 'failed';
 
 const BACKUP_FILE_PREFIX = 'signal-backup';
 const ISO_DATE_LENGTH = 10;
@@ -29,8 +29,9 @@ export async function fetchBackupRemoteStatus(): Promise<ApiBackupRemoteStatus |
   try {
     const account = await store.getItem('account');
     if (!account || BackupService.getUnavailableReason(account)) return undefined;
-    // An account that never had a backup has no backup id for the service to find
-    if (!account.backups?.isEnabled) return undefined;
+    // An account that never had a backup has no backup id for the service to find; a linked device reads what the
+    // primary device made
+    if (!account.backups?.isEnabled && getIsPrimaryDevice(account)) return undefined;
     return await backups.fetchRemoteStatus();
   } catch (err) {
     logError(err);
@@ -74,13 +75,16 @@ export async function exportBackupFile() {
   }
 }
 
-/** Imports a backup file that the recovery key opens into this account; resolves with the number of messages */
+/**
+ * Adds the messages of a backup file that the recovery key opens to this account, which keeps its own chats and
+ * settings (the app asks for a confirmation first); resolves with the number of messages
+ */
 export async function importBackupFile(data: Uint8Array<ArrayBuffer>, recoveryKey: string) {
   try {
     const account = await store.getItem('account');
     if (!account) return { error: 'failed' as const };
     const result = await restoreBackupFile(data, {
-      store, processor, account, accountEntropyPool: normalizeRecoveryKey(recoveryKey),
+      store, processor, account, accountEntropyPool: normalizeRecoveryKey(recoveryKey), isMerge: true,
     });
     return { messageCount: result.messageCount };
   } catch (err) {
@@ -106,9 +110,11 @@ async function runAction(action: () => Promise<unknown>): Promise<ApiBackupSetti
 function getErrorReason(err: unknown): BackupErrorReason {
   if (err instanceof RestoreError) return err.reason === 'noBackup' ? 'failed' : err.reason;
   if (err instanceof BackupValidationError) return 'invalidBackup';
+  if (err instanceof NotPrimaryDeviceError) return 'notEnabledOnPrimary';
   if (err instanceof ArchiveError) {
     if (err.kind === 'rateLimited') return 'rateLimited';
     if (err.kind === 'notFound') return 'notEnabledOnPrimary';
+    if (err.kind === 'unauthorized' || err.kind === 'verificationFailed') return 'rejected';
     return 'network';
   }
   if (err instanceof NetworkError) return 'network';

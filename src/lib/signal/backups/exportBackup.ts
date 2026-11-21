@@ -21,6 +21,7 @@ import type { AccountRecord, StoryDistributionList } from '../store/SignalStore'
 
 import { bufferFromHex, bufferToBase64 } from '../../../util/encoding/buffer';
 import { getServerTime } from '../../../util/serverTime';
+import { buildBackupChatStyle, buildBackupCustomChatColors } from '../chatStyle/chatStyle';
 import { getIsConversationAccepted } from '../messages/messageRequests';
 import { uuidToBytes, uuidToString } from '../serviceId';
 import { sortInstalledStickerPacks } from '../stickers/stickerPacks';
@@ -279,6 +280,8 @@ class BackupExporter {
         phoneNumberSharingMode: account.isPhoneNumberShared
           ? AccountData_PhoneNumberSharingMode.EVERYBODY : AccountData_PhoneNumberSharingMode.NOBODY,
         backupTier: backupTier !== undefined ? BigInt(backupTier) : undefined,
+        defaultChatStyle: buildBackupChatStyle(account.defaultChatStyle),
+        customChatColors: buildBackupCustomChatColors(account.customChatColors),
         allowAutomaticKeyVerification: true,
         // The validator wants these enums to have a known value
         defaultSentMediaQuality: AccountData_SentMediaQuality.STANDARD,
@@ -474,6 +477,7 @@ class BackupExporter {
             ?? (conversation.expireTimer ? INITIAL_EXPIRE_TIMER_VERSION : 0),
           muteUntilMs: getMuteUntil(conversation.mutedUntil, this.now),
           markedUnread: Boolean(conversation.isMarkedUnread),
+          style: buildBackupChatStyle(conversation.chatStyle),
         },
       });
     }
@@ -876,8 +880,9 @@ class BackupExporter {
     const cdnKey = attachmentIdentifier.case === 'cdnKey' ? attachmentIdentifier.value : undefined;
     const uploadedAt = Number(attachment.uploadTimestamp);
     const hasKeys = attachment.key.length === ATTACHMENT_KEY_LENGTH && attachment.digest.length === DIGEST_LENGTH;
-    const isOnCdn = !isUnavailable && hasKeys && Boolean(cdnKey)
-      && (!uploadedAt || this.now - uploadedAt < FREE_TIER_MEDIA_DAYS * DAY_MS);
+    // An attachment without an upload time is not known to be on the CDN
+    const isOnCdn = !isUnavailable && hasKeys && Boolean(cdnKey) && Boolean(uploadedAt)
+      && this.now - uploadedAt < FREE_TIER_MEDIA_DAYS * DAY_MS;
 
     return {
       contentType: attachment.contentType || undefined,

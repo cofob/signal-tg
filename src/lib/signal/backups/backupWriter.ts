@@ -7,11 +7,12 @@ import type { MessageBackupKeys } from './backupStream';
 import { concat } from '../../../util/encoding/buffer';
 import { getRandomBytes, hmacSha256 } from '../crypto';
 import { wasm } from '../wasm';
+import { FORWARD_SECRECY_MAGIC } from './backupStream';
 
 import { FrameSchema } from '../proto/generated/Backup_pb';
 
 export type BackupFileResult = {
-  // `IV || AES-256-CBC(gzip(frames) || zero padding) || HMAC-SHA256`
+  // `[SBACKUP\x01 || metadata] || IV || AES-256-CBC(gzip(frames) || zero padding) || HMAC-SHA256`
   file: Uint8Array<ArrayBuffer>;
   // The size of the delimited frames, which the next backup takes as its estimate
   uncompressedLength: number;
@@ -20,6 +21,9 @@ export type BackupFileResult = {
 type WriteOptions = {
   // The `uncompressedLength` of the previous backup; the flush intervals of the compression follow it
   estimatedUncompressedLength?: number;
+  // The metadata of SVR-B for a backup on the archive CDN, which goes at the start of the file; the keys then derive
+  // from its token. A local file has none.
+  forwardSecrecyMetadata?: Uint8Array;
   // Called with the frames written so far
   onProgress?: (frameCount: number) => void;
 };
@@ -36,8 +40,8 @@ const VARINT_CONTINUATION_BIT = 0x80;
 
 /**
  * Writes the encrypted backup file (Signal Desktop `toPaddedGzipIterable` in `ts/services/backups/encoding.node.ts`
- * and `#runExport` in `ts/services/backups/index.preload.ts`, Signal Android `EncryptedBackupWriter`). `info` is the
- * serialized `BackupInfo`. Each frame goes in with a varint length prefix, the
+ * and `#runExport` in `ts/services/backups/index.preload.ts`, Signal Android `EncryptedBackupWriter`, whose
+ * `createForSignalBackup` writes `SBACKUP\x01` and the metadata first). `info` is the serialized `BackupInfo`. Each frame goes in with a varint length prefix, the
  * whole is gzipped with a block boundary around the account data and the recipients and at the flush intervals of
  * libsignal inside the chat items, followed by zero padding sized by libsignal, then encrypted with AES-256-CBC
  * under a random IV, and a MAC over the IV and the ciphertext ends the file.
@@ -52,11 +56,16 @@ export async function writeBackupFile(
   const iv = getRandomBytes(IV_LENGTH);
   const ciphertext = await encryptAesCbcInChunks(compressed, keys.aesKey, iv);
 
-  const file = new Uint8Array(iv.length + ciphertext.length + MAC_LENGTH);
-  file.set(iv, 0);
-  file.set(ciphertext, iv.length);
-  const mac = await hmacSha256(keys.hmacKey, file.subarray(0, iv.length + ciphertext.length));
-  file.set(mac, iv.length + ciphertext.length);
+  // The MAC covers the IV and the ciphertext, not the header
+  const header = options.forwardSecrecyMetadata
+    ? concat(FORWARD_SECRECY_MAGIC, delimit(options.forwardSecrecyMetadata)) : new Uint8Array(0);
+  const macStart = header.length;
+  const macOffset = macStart + iv.length + ciphertext.length;
+  const file = new Uint8Array(macOffset + MAC_LENGTH);
+  file.set(header, 0);
+  file.set(iv, macStart);
+  file.set(ciphertext, macStart + iv.length);
+  file.set(await hmacSha256(keys.hmacKey, file.subarray(macStart, macOffset)), macOffset);
   return { file, uncompressedLength };
 }
 

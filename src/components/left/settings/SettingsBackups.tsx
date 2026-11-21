@@ -3,6 +3,7 @@ import { memo, useEffect, useMemo, useRef, useState } from '../../../lib/teact/t
 import { getActions, getPromiseActions, withGlobal } from '../../../global';
 
 import type { ApiBackupFrequency, ApiBackupRemoteStatus, ApiBackupSettings } from '../../../api/types';
+import type { RegularLangKey } from '../../../types/language';
 
 import { formatDateTime } from '../../../util/localization/dateFormat';
 import { formatFileSize } from '../../../util/text/textFormat';
@@ -147,7 +148,7 @@ const SettingsBackups = ({
             <span className="subtitle">{lang(ERROR_KEYS[lastError] ?? 'ErrorUnexpected')}</span>
           </ListItem>
         )}
-        {backups!.isRunning ? (
+        {backups!.isPrimary && (backups!.isRunning ? (
           <ListItem icon="close" narrow destructive onClick={() => cancelBackup()}>
             {lang('BackupsCancel')}
           </ListItem>
@@ -155,7 +156,7 @@ const SettingsBackups = ({
           <ListItem icon="reload" narrow disabled={isUpdating} onClick={() => backUpNow()}>
             {lang('BackupsBackUpNow')}
           </ListItem>
-        )}
+        ))}
       </Island>
     );
   }
@@ -194,6 +195,16 @@ const SettingsBackups = ({
           </ListItem>
         </Island>
         {backups!.isPrimary && <IslandDescription dir="auto">{lang('BackupsRecoveryKeyAbout')}</IslandDescription>}
+      </>
+    );
+  }
+
+  // A linked device does not write backups, as it could replace the backup that its phone needs
+  function renderLinked() {
+    return (
+      <>
+        <IslandDescription dir="auto">{lang('BackupsLinkedDevice')}</IslandDescription>
+        {renderStatus()}
       </>
     );
   }
@@ -245,7 +256,8 @@ const SettingsBackups = ({
       )}
       {backups && !backups.unavailableReason && (
         <>
-          {backups.isEnabled ? renderEnabled() : renderDisabled()}
+          {!backups.isPrimary && renderLinked()}
+          {backups.isPrimary && (backups.isEnabled ? renderEnabled() : renderDisabled())}
           {renderFile()}
         </>
       )}
@@ -274,6 +286,7 @@ const SettingsBackups = ({
         onClose={closeImportDialog}
       >
         <p>{lang('BackupsImportText')}</p>
+        <p>{lang('BackupsImportMergeNote')}</p>
         <InputText
           value={recoveryKey}
           placeholder={lang('BackupsRecoveryKey')}
@@ -294,11 +307,16 @@ const FREQUENCY_KEYS = {
 } as const;
 
 // The reasons of `BackupService.noteFailure`, as the strings that explain them
-const ERROR_KEYS: Record<string, 'BackupsErrorRateLimited' | 'BackupsErrorNetwork'> = {
+const ERROR_KEYS: Record<string, RegularLangKey> = {
   rateLimited: 'BackupsErrorRateLimited',
   server: 'BackupsErrorNetwork',
   unexpected: 'BackupsErrorNetwork',
   tooLarge: 'BackupsErrorNetwork',
+  svrb: 'BackupsErrorNetwork',
+  unauthorized: 'BackupsErrorRejected',
+  verificationFailed: 'BackupsErrorRejected',
+  notFound: 'BackupsErrorNotEnabled',
+  validation: 'BackupsErrorInvalidBackup',
 };
 
 export default memo(withGlobal<OwnProps>(

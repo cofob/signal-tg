@@ -1,6 +1,7 @@
 import type MessageProcessor from '../messages/MessageProcessor';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, HistoryTransferState } from '../store/SignalStore';
+import type { MessageBackupKeys } from './backupStream';
 import type { BackupImportResult } from './importBackup';
 
 import { pause } from '../../../util/schedulers';
@@ -81,7 +82,7 @@ async function runTransfer(
   if (!archive) return { type: 'skipped' };
 
   onProgress({ step: 'importing', progress: 0 });
-  const result = await importBackupArchive(archive, account.ephemeralBackupKey!, {
+  const result = await importBackupArchive(archive, deriveMessageBackupKeys(account.ephemeralBackupKey!, account.aci), {
     store,
     processor,
     account,
@@ -96,28 +97,30 @@ async function runTransfer(
   return { type: 'imported', result };
 }
 
-/** Decrypts and imports a backup encrypted with `backupKey`; `signalDev.importHistory` uses it directly */
+/** Decrypts and imports a backup that `keys` open; `signalDev.importHistory` uses it directly */
 export async function importBackupArchive(
   archive: Uint8Array<ArrayBuffer>,
-  backupKey: Uint8Array,
+  keys: MessageBackupKeys,
   options: {
     store: SignalStore;
     processor: MessageProcessor;
     account: AccountRecord;
+    // The account is in use: the backup adds to it and does not overwrite what it has
+    isMerge?: boolean;
     skipItemCount?: number;
     onProgress?: (progress: number) => void;
     onBatchStored?: (importedItemCount: number) => Promise<void>;
   },
 ) {
   const {
-    store, processor, account, skipItemCount, onProgress, onBatchStored,
+    store, processor, account, isMerge, skipItemCount, onProgress, onBatchStored,
   } = options;
-  const keys = deriveMessageBackupKeys(backupKey, account.aci);
   const frames = readBackupFrames(archive, keys, (readLength, totalLength) => onProgress?.(readLength / totalLength));
   return importBackupFrames(frames, {
     store,
     processor,
     account,
+    isMerge,
     skipItemCount: skipItemCount ?? 0,
     updateAccount: async (update) => {
       await updateStoredAccount(store, update);

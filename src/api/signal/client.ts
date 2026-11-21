@@ -2,7 +2,7 @@ import type { HistoryTransferProgress } from '../../lib/signal/backups/transferH
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
 import type { ApiInitialArgs, ApiSessionData, ApiUpdateDeviceDeauthorized } from '../types';
 
-import { DEBUG } from '../../config';
+import { DEBUG, IS_SIGNAL_BACKUPS_ENABLED } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { resumePendingRegistration } from '../../lib/signal/account/register';
@@ -373,7 +373,7 @@ async function attemptConnection() {
 /** Backups run while the app is open and connected, once the account has backups turned on */
 async function startBackupSchedule() {
   const account = await store.getItem('account');
-  if (account?.backups?.isEnabled) backups.start();
+  if (IS_SIGNAL_BACKUPS_ENABLED && account?.backups?.isEnabled) backups.start();
 }
 
 /**

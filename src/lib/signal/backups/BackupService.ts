@@ -7,22 +7,25 @@ import type { BackupExportStats } from './exportBackup';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { getServerTime } from '../../../util/serverTime';
+import { createNewBackupChain, removeBackup, restoreBackup, storeBackup, SvrBError } from '../svr/svrb';
 import { wasm } from '../wasm';
 import {
   ArchiveError,
+  clearArchiveCredentials,
   deleteArchive,
   ensureArchivePublicKey,
   getArchiveAuth,
   getArchiveFileInfo,
   getArchiveInfo,
   getArchiveReadHeaders,
+  getSvrBCredentials,
   refreshArchive,
   uploadArchive,
 } from './archiveApi';
-import { deriveMessageBackupKeys } from './backupStream';
+import { deriveMessageBackupKeys, readForwardSecrecyMetadata } from './backupStream';
 import { writeBackupFile } from './backupWriter';
 import { createBackupExport } from './exportBackup';
-import { validateBackupFile } from './validateBackup';
+import { BackupValidationError, validateBackupFile } from './validateBackup';
 
 export type BackupUnavailableReason =
   // The account has no account entropy pool, which the keys of a backup come from: a registration that a PIN restored
@@ -31,6 +34,13 @@ export type BackupUnavailableReason =
   | 'noMediaRootKey';
 
 export type BackupStep = 'exporting' | 'validating' | 'uploading';
+
+/** The account is not the primary device, which alone turns backups on and writes them */
+export class NotPrimaryDeviceError extends Error {
+  constructor() {
+    super('Backups are turned on from the primary device');
+  }
+}
 
 export type BackupProgress = {
   step: BackupStep;
@@ -76,9 +86,21 @@ const FREQUENCY_INTERVALS: Record<BackupFrequency, number | undefined> = {
   manual: undefined,
 };
 export const DEFAULT_BACKUP_FREQUENCY: BackupFrequency = 'daily';
+// The failure of a run that is not stated again by another: the schedule resumes with a success
+const CLEARED_FAILURE = {
+  lastError: undefined, failureCount: undefined, nextAttemptAt: undefined, isStopped: undefined,
+} satisfies Partial<BackupSettings>;
+// A credential that does not fit the key, a refused signature after the key was told again, and a file that the
+// validator rejects: waiting does not change them
+const STOPPING_FAILURES = ['unauthorized', 'verificationFailed', 'validation'];
+// The reasons of `SvrBError` that say that the enclaves cannot open what the service has
+const PERMANENT_SVRB_REASONS = ['dataMissing', 'restoreFailed', 'invalidData', 'decryptionFailed'];
 // Signal Android `BackupMessagesJob.TOO_LARGE_MESSAGE_CUTTOFF_DURATION`
 const TOO_LARGE_MESSAGE_DAYS = 365;
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
+// After a failed run the next one waits this long, and twice as long after each further failure, up to a day
+const BACKOFF_BASE_MS = 5 * 60 * MS_PER_SECOND;
+const BACKOFF_MAX_MS = MS_PER_DAY;
 const FIRST_CHECK_DELAY_MS = 30 * MS_PER_SECOND;
 // Signal Desktop `BACKUP_REFRESH_INTERVAL`: the backup is refreshed daily, so the service does not delete it as unused
 const REFRESH_INTERVAL_MS = MS_PER_DAY;
@@ -97,6 +119,9 @@ export default class BackupService {
   private firstCheckTimer?: ReturnType<typeof setTimeout>;
 
   private abortController?: AbortController;
+
+  // The run in progress, which `disable` waits for
+  private runPromise?: Promise<unknown>;
 
   private currentProgress?: BackupProgress;
 
@@ -123,11 +148,11 @@ export default class BackupService {
    * enabled backups already, as in Signal Desktop), tells the service the public keys, and makes a first backup.
    */
   async enable(frequency: BackupFrequency = DEFAULT_BACKUP_FREQUENCY) {
-    const { account, keys } = await this.getKeys();
-    const messagesAuth = await this.getAuth(account, keys, 'messages');
+    const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
+    const messagesAuth = await this.getAuth(account, keys, 'messages', true);
     const tier = await this.getTier(account, keys, messagesAuth);
     await this.options.client.updateAccount({
-      backups: { ...account.backups, isEnabled: true, frequency, tier, lastError: undefined },
+      backups: { ...account.backups, ...CLEARED_FAILURE, isEnabled: true, frequency, tier },
     });
     this.options.onChange();
     this.start();
@@ -137,13 +162,24 @@ export default class BackupService {
   /** Turns backups off; with `shouldDeleteBackup`, the backup on the service goes too */
   async disable(shouldDeleteBackup?: boolean) {
     this.stop();
-    const { account, keys } = await this.getKeys();
+    // A backup that is running ends before the settings change, or it would write its result over them
+    await this.runPromise?.catch(() => undefined);
+
+    const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
+    const { store } = this.options;
     if (shouldDeleteBackup) {
       const auth = await this.getAuth(account, keys, 'messages');
+      // The credentials of SVR-B come from the backup, which is gone after the delete. The key of the backup in the
+      // enclaves is of no use without the backup, and a failure of the enclaves leaves a key that opens nothing.
+      await getSvrBCredentials(auth).then(removeBackup).catch(this.options.onError);
       await deleteArchive(auth);
+      await store.removeItem('svrbBackupData');
+      await clearArchiveCredentials(store);
     }
     await this.options.client.updateAccount({
-      backups: { ...account.backups, isEnabled: false, lastBackupAt: undefined, lastBackupSize: undefined },
+      backups: {
+        ...account.backups, ...CLEARED_FAILURE, isEnabled: false, lastBackupAt: undefined, lastBackupSize: undefined,
+      },
     });
     this.options.onChange();
   }
@@ -174,15 +210,17 @@ export default class BackupService {
     };
 
     try {
-      const result = await this.runBackup(signal, onProgress);
+      const run = this.runBackup(signal, onProgress);
+      this.runPromise = run;
+      const result = await run;
       const account = await this.getAccount();
       await this.options.client.updateAccount({
         backups: {
           ...account.backups,
+          ...CLEARED_FAILURE,
           lastBackupAt: getServerTime() * MS_PER_SECOND,
           lastRefreshAt: getServerTime() * MS_PER_SECOND,
           lastBackupSize: result.size,
-          lastError: undefined,
         },
       });
       return result;
@@ -190,6 +228,7 @@ export default class BackupService {
       if (!signal.aborted) await this.noteFailure(err);
       throw err;
     } finally {
+      this.runPromise = undefined;
       this.isRunning = false;
       this.abortController = undefined;
       this.currentProgress = undefined;
@@ -202,11 +241,19 @@ export default class BackupService {
    * need not be turned on, but the account needs its recovery key, which opens the file.
    */
   async exportToFile(options: { signal?: AbortSignal; onProgress?(progress: BackupProgress): void } = {}) {
+    if (this.isRunning) throw new Error('A backup is already running');
     const { account } = await this.getKeys();
-    const { file, stats } = await this.buildFile(
-      account, account.backups?.messageDays, options.signal ?? new AbortController().signal, options.onProgress,
-    );
-    return { file, stats };
+    this.isRunning = true;
+    this.options.onChange();
+    try {
+      const { file, stats } = await this.buildFile(
+        account, account.backups?.messageDays, options.signal ?? new AbortController().signal, options.onProgress,
+      );
+      return { file, stats };
+    } finally {
+      this.isRunning = false;
+      this.options.onChange();
+    }
   }
 
   cancelBackup() {
@@ -215,7 +262,7 @@ export default class BackupService {
 
   /** Marks the backup as in use, so the service keeps it (`POST /v1/archives`) */
   async refresh() {
-    const { account, keys } = await this.getKeys();
+    const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
     await refreshArchive(await this.getAuth(account, keys, 'messages'));
     await this.options.client.updateAccount({
       backups: { ...account.backups, lastRefreshAt: getServerTime() * MS_PER_SECOND },
@@ -238,8 +285,9 @@ export default class BackupService {
     };
   }
 
-  /** Starts the schedule: a check shortly after the start and then hourly */
+  /** Starts the schedule, unless it runs: a check shortly after the start and then hourly */
   start() {
+    if (this.timer) return;
     this.clearTimers();
     this.firstCheckTimer = setTimeout(() => void this.check(), FIRST_CHECK_DELAY_MS);
     this.timer = setInterval(() => void this.check(), CHECK_INTERVAL_MS);
@@ -264,14 +312,21 @@ export default class BackupService {
     try {
       const account = await this.getAccount();
       const settings = account.backups;
-      if (!settings?.isEnabled) return;
+      // A failure that only the user can fix, or a failure that waits out its backoff, stops the schedule meanwhile
+      if (!settings?.isEnabled || settings.isStopped || !getIsPrimaryDevice(account)) return;
+
+      const now = getServerTime() * MS_PER_SECOND;
+      if (settings.nextAttemptAt && now < settings.nextAttemptAt) return;
 
       const interval = FREQUENCY_INTERVALS[settings.frequency ?? DEFAULT_BACKUP_FREQUENCY];
-      const now = getServerTime() * MS_PER_SECOND;
       if (interval !== undefined && now - (settings.lastBackupAt ?? 0) >= interval) {
+        // `backUp` notes its failures
         await this.backUp();
       } else if (now - Math.max(settings.lastBackupAt ?? 0, settings.lastRefreshAt ?? 0) >= REFRESH_INTERVAL_MS) {
-        await this.refresh();
+        await this.refresh().catch(async (err) => {
+          await this.noteFailure(err);
+          throw err;
+        });
       }
     } catch (err) {
       this.options.onError(err);
@@ -279,18 +334,24 @@ export default class BackupService {
   }
 
   private async runBackup(signal: AbortSignal, onProgress?: (progress: BackupProgress) => void) {
-    const { account, keys } = await this.getKeys();
+    const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
     const { store } = this.options;
 
     let messageDays = account.backups?.messageDays;
     for (;;) {
-      const { file, uncompressedLength, stats } = await this.buildFile(account, messageDays, signal, onProgress);
+      signal.throwIfAborted();
+      const auth = await this.getAuth(account, keys, 'messages', true);
+      await ensureArchivePublicKey(auth);
+      // The key of the file comes first: the enclaves take the key of the previous backup, and the file is made with
+      // the token of this one
+      const forwardSecrecy = await this.prepareForwardSecrecy(auth, keys);
+      const { file, uncompressedLength, stats } = await this.buildFile(
+        account, messageDays, signal, onProgress, forwardSecrecy,
+      );
 
       signal.throwIfAborted();
       onProgress?.({ step: 'uploading', progress: 0 });
       try {
-        const auth = await this.getAuth(account, keys, 'messages');
-        await ensureArchivePublicKey(store, keys, auth);
         await uploadArchive(auth, file, {
           signal,
           onProgress: (sent, total) => onProgress?.({ step: 'uploading', progress: total ? sent / total : 1 }),
@@ -305,10 +366,58 @@ export default class BackupService {
         throw err;
       }
 
+      // The data of the next backup is valid for the file that went up (`BackupMessagesJob`)
+      await store.setItem('svrbBackupData', forwardSecrecy.nextBackupData);
       await this.options.client.updateAccount({
         backups: { ...(await this.getAccount()).backups, uncompressedLength, messageDays },
       });
       return { size: file.length, stats } satisfies BackupResult;
+    }
+  }
+
+  /**
+   * Stores the key of the backup in SVR-B and gives the token for the file (Signal Android `BackupMessagesJob`). A device
+   * that has no chain of its own looks at the backup on the service first: if it holds the header of a chain, the
+   * chain continues from its key, and the enclaves are not overwritten before it is known that they hold nothing of
+   * use. Only a backup that cannot be opened, or none, starts a new chain.
+   */
+  private async prepareForwardSecrecy(auth: ArchiveAuth, keys: ArchiveKeys) {
+    const { store } = this.options;
+    const credentials = await getSvrBCredentials(auth);
+    let chain = await store.getItem('svrbBackupData');
+    chain ??= await this.restoreChain(auth, keys, credentials) ?? createNewBackupChain(keys.backupKey);
+
+    try {
+      return await storeBackup(credentials, keys.backupKey, chain);
+    } catch (err) {
+      if (!(err instanceof SvrBError) || err.reason !== 'invalidData') throw err;
+      // The state cannot be used: a new chain starts, and the next file is the first of it
+      return storeBackup(credentials, keys.backupKey, createNewBackupChain(keys.backupKey));
+    }
+  }
+
+  /** The chain of the backup on the service, from its header; `undefined` when there is none to continue */
+  private async restoreChain(
+    auth: ArchiveAuth, keys: ArchiveKeys, credentials: { username: string; password: string },
+  ) {
+    let metadata;
+    try {
+      const info = await getArchiveInfo(auth);
+      const file = await getArchiveFileInfo(info, await getArchiveReadHeaders(auth, info.cdn));
+      metadata = file && readForwardSecrecyMetadata(file.start);
+    } catch (err) {
+      // The service has no backup of this id yet
+      if (err instanceof ArchiveError && err.kind === 'notFound') return undefined;
+      throw err;
+    }
+    if (!metadata) return undefined;
+
+    try {
+      return (await restoreBackup(credentials, keys.backupKey, metadata)).nextBackupData;
+    } catch (err) {
+      // A chain that the enclaves cannot open anymore is not worth keeping, but one that could not be asked is
+      if (err instanceof SvrBError && PERMANENT_SVRB_REASONS.includes(err.reason)) return undefined;
+      throw err;
     }
   }
 
@@ -318,9 +427,12 @@ export default class BackupService {
     messageDays: number | undefined,
     signal: AbortSignal,
     onProgress?: (progress: BackupProgress) => void,
+    forwardSecrecy?: { forwardSecrecyToken: Uint8Array; metadata: Uint8Array },
   ) {
     const { store, db, appVersion } = this.options;
-    const messageKeys = deriveMessageBackupKeys(getArchiveKeys(account).backupKey, account.aci);
+    const messageKeys = deriveMessageBackupKeys(
+      getArchiveKeys(account).backupKey, account.aci, forwardSecrecy?.forwardSecrecyToken,
+    );
 
     signal.throwIfAborted();
     onProgress?.({ step: 'exporting' });
@@ -335,6 +447,7 @@ export default class BackupService {
     });
     const { file, uncompressedLength } = await writeBackupFile(exported.info, exported.frames, messageKeys, {
       estimatedUncompressedLength: account.backups?.uncompressedLength,
+      forwardSecrecyMetadata: forwardSecrecy?.metadata,
     });
 
     // The validator is the one that the clients of the service run on a restore
@@ -350,14 +463,32 @@ export default class BackupService {
     return (await this.getAuth(account, keys, 'media')).level;
   }
 
-  private getAuth(account: AccountRecord, keys: ArchiveKeys, type: 'messages' | 'media') {
-    return getArchiveAuth(this.options.store, account, keys, type);
+  private getAuth(
+    account: AccountRecord, keys: ArchiveKeys, type: 'messages' | 'media', shouldReserveBackupId?: boolean,
+  ) {
+    return getArchiveAuth(this.options.store, account, keys, type, { shouldReserveBackupId });
   }
 
+  /**
+   * Notes why a run failed and when the schedule may try again: after a wait that doubles with each failure, or
+   * the one that the service asked for. Failures that a retry cannot fix stop the schedule until the user acts.
+   */
   private async noteFailure(err: unknown) {
-    const message = err instanceof ArchiveError ? err.kind : 'failed';
     const account = await this.getAccount();
-    const backups: BackupSettings = { ...account.backups, lastError: message };
+    const failureCount = (account.backups?.failureCount ?? 0) + 1;
+    let delay = Math.min(BACKOFF_BASE_MS * 2 ** (failureCount - 1), BACKOFF_MAX_MS);
+    if (err instanceof ArchiveError && err.retryAfterSeconds) {
+      delay = Math.max(delay, err.retryAfterSeconds * MS_PER_SECOND);
+    }
+
+    const lastError = getFailureKind(err);
+    const backups: BackupSettings = {
+      ...account.backups,
+      lastError,
+      failureCount,
+      nextAttemptAt: getServerTime() * MS_PER_SECOND + delay,
+      isStopped: STOPPING_FAILURES.includes(lastError) || undefined,
+    };
     await this.options.client.updateAccount({ backups });
   }
 
@@ -367,12 +498,22 @@ export default class BackupService {
     return account;
   }
 
-  private async getKeys() {
+  private async getKeys({ isPrimaryRequired }: { isPrimaryRequired?: boolean } = {}) {
     const account = await this.getAccount();
     const reason = BackupService.getUnavailableReason(account);
     if (reason) throw new Error(`Backups are not available: ${reason}`);
+    // A linked device could overwrite the backup of the phone, which a restore of the phone needs
+    if (isPrimaryRequired && !getIsPrimaryDevice(account)) throw new NotPrimaryDeviceError();
     return { account, keys: getArchiveKeys(account) };
   }
+}
+
+/** The kind of a failure, which the settings explain: an `ArchiveError` kind, `validation`, or `failed` */
+function getFailureKind(err: unknown) {
+  if (err instanceof ArchiveError) return err.kind;
+  if (err instanceof BackupValidationError) return 'validation';
+  if (err instanceof SvrBError) return err.reason === 'rateLimited' ? 'rateLimited' : 'svrb';
+  return 'failed';
 }
 
 /** The keys of the account's archive from its recovery key, which is the account entropy pool */

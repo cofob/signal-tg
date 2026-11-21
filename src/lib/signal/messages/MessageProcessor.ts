@@ -179,6 +179,8 @@ export type PinnedMessage = Omit<NonNullable<ConversationRecord['pinnedMessages'
 export type HistoryBatch = {
   conversations: ConversationPatch[];
   messages: { record: NewMessageRecord; pin?: PinnedMessage }[];
+  // The conversations are in use: the patches fill fields that are absent, and the last message never moves back
+  isMerge?: boolean;
 };
 
 export type TypingEvent = {
@@ -1915,7 +1917,7 @@ export default class MessageProcessor {
    * so an interrupted import can run again. Nothing goes to `onChanges`: the import ends before the app lists chats,
    * and the app loads them from the database. Returns the number of stored messages.
    */
-  importHistory({ conversations, messages }: HistoryBatch) {
+  importHistory({ conversations, messages, isMerge }: HistoryBatch) {
     return this.runSerial(async () => {
       const updated = new Map<string, ConversationRecord>();
       let nextLocalId: number | undefined;
@@ -1926,7 +1928,7 @@ export default class MessageProcessor {
         if (!existing) nextLocalId ??= await this.db.allocateLocalId();
         updated.set(patch.id, {
           ...existing ?? { localId: nextLocalId!++, unreadCount: 0 },
-          ...patch,
+          ...isMerge && existing ? getAbsentFields(existing, patch) : patch,
         });
       }
 
@@ -1937,10 +1939,11 @@ export default class MessageProcessor {
         if (!conversation) throw new Error(`Imported message of unknown conversation ${message.conversationId}`);
         const { pin } = messages[index];
         const isUnread = !message.isOutgoing && !message.readAt && message.kind === 'message';
+        const isNewest = !isMerge || !conversation.lastMessageAt || message.sentAt >= conversation.lastMessageAt;
         updated.set(conversation.id, {
           ...conversation,
-          lastMessageId: message.id,
-          lastMessageAt: message.sentAt,
+          lastMessageId: isNewest ? message.id : conversation.lastMessageId,
+          lastMessageAt: isNewest ? message.sentAt : conversation.lastMessageAt,
           unreadCount: conversation.unreadCount + (isUnread ? 1 : 0),
           pinnedMessages: pin
             ? [...conversation.pinnedMessages ?? [], { ...pin, messageId: message.id }]
@@ -4361,6 +4364,15 @@ function getIsGroupAccessDenied(err: unknown) {
 }
 
 /** The conversation id of a group: its base64 group identifier */
+/** The fields of `patch` that `existing` has no value for */
+function getAbsentFields(existing: ConversationRecord, patch: ConversationPatch): ConversationPatch {
+  const absent = { id: patch.id, type: patch.type } as ConversationPatch;
+  for (const key of Object.keys(patch) as (keyof ConversationRecord)[]) {
+    if (existing[key] === undefined && patch[key] !== undefined) (absent as Record<string, unknown>)[key] = patch[key];
+  }
+  return absent;
+}
+
 export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);

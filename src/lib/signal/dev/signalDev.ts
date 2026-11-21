@@ -7,6 +7,7 @@ import { createStyledQrCode } from '../../../util/qrCode/buildStyledQrCode';
 import { linkDevice } from '../account/linkDevice';
 import { startDeviceLink } from '../account/provisioning';
 import { uploadAttachment } from '../attachments/uploadAttachment';
+import { deriveMessageBackupKeys } from '../backups/backupStream';
 import { importBackupArchive } from '../backups/transferHistory';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { getAccessKey } from '../sender/sealedSender';
@@ -167,7 +168,8 @@ const signalDev = {
     await initSignalWasm();
     const account = await store.getItem('account');
     if (!account) throw new Error('No account: link or call signalDev.seedDemo() first');
-    const result = await importBackupArchive(new Uint8Array(await archive.arrayBuffer()), bufferFromBase64(backupKey), {
+    const keys = deriveMessageBackupKeys(bufferFromBase64(backupKey), account.aci);
+    const result = await importBackupArchive(new Uint8Array(await archive.arrayBuffer()), keys, {
       store, processor, account,
     });
     console.log('[signal] Imported message history; reload the page', result);

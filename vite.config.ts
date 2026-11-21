@@ -176,6 +176,7 @@ export default defineConfig(({ mode }): UserConfig => {
     TG_APPLE_ICON: appleIcon,
     TG_SOCIAL_IMAGE_URL: socialImageUrl,
     TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
+    TG_SIGNAL_BACKUPS: env.SIGNAL_BACKUPS || '',
   });
 
   return {

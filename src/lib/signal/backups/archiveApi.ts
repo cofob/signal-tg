@@ -2,7 +2,9 @@ import type { TrafficClass } from '../config';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, ArchiveCredentialsRecord } from '../store/SignalStore';
 
-import { SIGNAL_BACKUP_SERVER_PUBLIC_PARAMS, SIGNAL_CDN_HOSTS, SIGNAL_CHAT_HOST } from '../config';
+import {
+  SIGNAL_BACKUP_SERVER_PUBLIC_PARAMS, SIGNAL_CDN_HOSTS, SIGNAL_CHAT_HOST, SIGNAL_PRIMARY_DEVICE_ID,
+} from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import { getServerTime } from '../../../util/serverTime';
 import { getAccountCredentials } from '../account/linkDevice';
@@ -29,6 +31,15 @@ export type ArchiveAuth = {
   signingKey: wasm.PrivateKey;
   // 200 for the free tier and 201 for the paid one (zkgroup `BackupLevel`)
   level: number;
+  // Tells the service the public key of `signingKey`, unless it was told already (`force` tells it again); resolves
+  // with whether it did. Only the primary device tells it: another device reads the backup of the primary device.
+  publishPublicKey(force?: boolean): Promise<boolean>;
+};
+
+type ArchiveAuthOptions = {
+  // A device that is not the primary device never reserves the backup id, and the restore of a registration looks
+  // for the backup of an id that exists already: only a backup that the user turns on reserves one
+  shouldReserveBackupId?: boolean;
 };
 
 export type ArchiveErrorKind =
@@ -49,6 +60,8 @@ export type ArchiveFileInfo = {
   size: number;
   // Milliseconds since the epoch
   modifiedAt?: number;
+  // The first bytes of the file: the forward secrecy header of a backup from the archive CDN is in them
+  start: Uint8Array;
 };
 
 export type UploadForm = {
@@ -73,6 +86,9 @@ export class ArchiveError extends Error {
 const SECONDS_PER_DAY = 24 * 60 * 60;
 // Signal Desktop `BackupCredentials.#doFetch` in `ts/services/backups/credentials.preload.ts`: a week of credentials
 const CREDENTIAL_DAYS = 6;
+// The forward secrecy metadata is a few hundred bytes (libsignal allows 16 KiB), and the magic number and the length
+// come before it
+const FILE_START_LENGTH = 16 * 1024 + 16;
 const RANDOMNESS_LENGTH = 32;
 const HTTP_OK = 200;
 const HTTP_PARTIAL_CONTENT = 206;
@@ -100,12 +116,13 @@ export function deriveBackupId({ aci, backupKey }: ArchiveKeys) {
  */
 export async function getArchiveAuth(
   store: SignalStore, account: AccountRecord, keys: ArchiveKeys, type: ArchiveCredentialType,
+  { shouldReserveBackupId }: ArchiveAuthOptions = {},
 ): Promise<ArchiveAuth> {
   const today = getToday();
   let record = await readCache(store, keys);
   let credential = record.credentials.find((item) => item.type === type && item.redemptionTime === today);
   if (!credential) {
-    record = await fetchCredentials(store, account, keys, record);
+    record = await fetchCredentials(store, account, keys, record, shouldReserveBackupId);
     credential = record.credentials.find((item) => item.type === type && item.redemptionTime === today);
     if (!credential) throw new ArchiveError('unexpected', HTTP_OK);
   }
@@ -113,26 +130,43 @@ export async function getArchiveAuth(
   const signingKey = wasm.BackupKey_DeriveEcKey(
     getTypeKey(keys, type), wasm.ServiceId_ParseFromServiceIdString(keys.aci),
   );
-  return {
+  const auth: ArchiveAuth = {
     type,
     credential: credential.credential,
     signingKey,
     level: wasm.BackupAuthCredential_GetBackupLevel(credential.credential),
+    async publishPublicKey(force) {
+      if (account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID) return false;
+      const cached = await readCache(store, keys);
+      if (cached.publicKeysSet[type] && !force) return false;
+
+      const publicKey = wasm.PrivateKey_GetPublicKey(signingKey);
+      await sendArchiveRequest(auth, {
+        method: 'PUT',
+        path: '/v1/archives/keys',
+        json: { backupIdPublicKey: bufferToBase64(wasm.PublicKey_Serialize(publicKey)) },
+      }, { isRetryAllowed: false });
+      // Read again: the credentials may have changed while the request went
+      const latest = await readCache(store, keys);
+      await writeCache(store, { ...latest, publicKeysSet: { ...latest.publicKeysSet, [type]: true } });
+      return true;
+    },
   };
+  return auth;
 }
 
 /** Tells the service the public key that checks our signed requests, once per type (`PUT /v1/archives/keys`) */
-export async function ensureArchivePublicKey(store: SignalStore, keys: ArchiveKeys, auth: ArchiveAuth) {
-  const record = await readCache(store, keys);
-  if (record.publicKeysSet[auth.type]) return;
+export function ensureArchivePublicKey(auth: ArchiveAuth) {
+  return auth.publishPublicKey();
+}
 
-  const publicKey = wasm.PrivateKey_GetPublicKey(auth.signingKey);
-  await sendArchiveRequest(auth, {
-    method: 'PUT',
-    path: '/v1/archives/keys',
-    json: { backupIdPublicKey: bufferToBase64(wasm.PublicKey_Serialize(publicKey)) },
-  });
-  await writeCache(store, { ...record, publicKeysSet: { ...record.publicKeysSet, [auth.type]: true } });
+/**
+ * The credentials that open the SVR-B enclaves, which last a day (`GET /v1/archives/auth/svrb`; Signal Android
+ * `ArchiveApiV2.getSvrBAuthorization`)
+ */
+export async function getSvrBCredentials(auth: ArchiveAuth) {
+  const response = await sendArchiveRequest(auth, { method: 'GET', path: '/v1/archives/auth/svrb' });
+  return parseJson<{ username: string; password: string }>(response.body);
 }
 
 /** Where the backup is stored on the CDN (`GET /v1/archives`) */
@@ -170,7 +204,10 @@ export async function getArchiveReadHeaders(auth: ArchiveAuth, cdn: number) {
   return parseJson<{ headers: Record<string, string> }>(response.body).headers;
 }
 
-/** The size and time of the backup file: a request for its first byte, since the CDN answers it with both */
+/**
+ * The size and time of the backup file, and its start: a request for the first bytes, since the CDN answers it with all
+ * three, so that a file can be told apart without downloading it
+ */
 export async function getArchiveFileInfo(
   { cdn, backupDir, backupName }: ArchiveInfo, readHeaders: Record<string, string>,
 ): Promise<ArchiveFileInfo | undefined> {
@@ -178,7 +215,7 @@ export async function getArchiveFileInfo(
     trafficClass: 'unauthenticated',
     method: 'GET',
     path: getBackupPath(backupDir, backupName),
-    headers: { ...readHeaders, Range: 'bytes=0-0' },
+    headers: { ...readHeaders, Range: `bytes=0-${FILE_START_LENGTH - 1}` },
   });
   if (response.status === HTTP_NOT_FOUND) return undefined;
   if (response.status !== HTTP_OK && response.status !== HTTP_PARTIAL_CONTENT) {
@@ -188,7 +225,11 @@ export async function getArchiveFileInfo(
   const range = /\/(\d+)$/.exec(response.headers.get('content-range') ?? '');
   const size = range ? Number(range[1]) : Number(response.headers.get('content-length') ?? response.body.length);
   const modified = Date.parse(response.headers.get('last-modified') ?? '');
-  return { size, modifiedAt: Number.isNaN(modified) ? undefined : modified };
+  return {
+    size,
+    modifiedAt: Number.isNaN(modified) ? undefined : modified,
+    start: response.body.slice(0, FILE_START_LENGTH),
+  };
 }
 
 /** Downloads the encrypted backup file; `undefined` when the CDN has none */
@@ -210,7 +251,7 @@ export async function downloadArchive(
   return response.body;
 }
 
-/** Forgets the credentials, such as after the recovery key changed */
+/** Forgets the credentials and the public keys that the service was told, such as after the backup was deleted */
 export function clearArchiveCredentials(store: SignalStore) {
   return store.removeItem('archiveCredentials');
 }
@@ -222,6 +263,7 @@ export function clearArchiveCredentials(store: SignalStore) {
  */
 async function fetchCredentials(
   store: SignalStore, account: AccountRecord, keys: ArchiveKeys, cached: ArchiveCredentialsRecord,
+  shouldReserveBackupId?: boolean,
 ) {
   const start = getToday();
   const end = start + CREDENTIAL_DAYS * SECONDS_PER_DAY;
@@ -229,7 +271,7 @@ async function fetchCredentials(
   const credentials = getAccountCredentials(account);
 
   let response = await sendAuthenticatedRequest({ method: 'GET', path }, credentials);
-  if (response.status === HTTP_NOT_FOUND && account.deviceId === 1) {
+  if (response.status === HTTP_NOT_FOUND && shouldReserveBackupId && account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) {
     await reserveBackupId(keys, credentials);
     response = await sendAuthenticatedRequest({ method: 'GET', path }, credentials);
   }
@@ -288,8 +330,16 @@ async function reserveBackupId(keys: ArchiveKeys, credentials: { username: strin
   if (response.status >= HTTP_MULTIPLE_CHOICES) throw buildError(response.status, response.headers);
 }
 
-/** An anonymous request that the presentation of the credential and its signature authorize */
-async function sendArchiveRequest(auth: ArchiveAuth, request: { method: string; path: string; json?: unknown }) {
+/**
+ * An anonymous request that the presentation of the credential and its signature authorize. The service forgets the
+ * public key when the backup is deleted, from any device, and then refuses the signature with 401 or 403: the key is
+ * told again and the request repeats once.
+ */
+async function sendArchiveRequest(
+  auth: ArchiveAuth,
+  request: { method: string; path: string; json?: unknown },
+  { isRetryAllowed = true } = {},
+): Promise<Awaited<ReturnType<typeof sendJson>>> {
   const presentation = wasm.BackupAuthCredential_PresentDeterministic(
     auth.credential, serverPublicParams, getRandomBytes(RANDOMNESS_LENGTH),
   );
@@ -298,6 +348,10 @@ async function sendArchiveRequest(auth: ArchiveAuth, request: { method: string; 
     'X-Signal-ZK-Auth': bufferToBase64(presentation),
     'X-Signal-ZK-Auth-Signature': bufferToBase64(wasm.PrivateKey_Sign(auth.signingKey, presentation)),
   }, 'unauthenticated');
+  const isRejected = response.status === HTTP_UNAUTHORIZED || response.status === HTTP_FORBIDDEN;
+  if (isRejected && isRetryAllowed && await auth.publishPublicKey(true)) {
+    return sendArchiveRequest(auth, request, { isRetryAllowed: false });
+  }
   if (response.status >= HTTP_MULTIPLE_CHOICES) throw buildError(response.status, response.headers);
   return response;
 }

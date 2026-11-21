@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import { SettingsScreens } from '../../../types';
 
 import {
-  PRIVACY_URL, SUPPORT_URL,
+  IS_SIGNAL_BACKUPS_ENABLED, PRIVACY_URL, SUPPORT_URL,
 } from '../../../config';
 import { IS_ANDROID, IS_IOS } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
@@ -143,16 +143,18 @@ const SettingsMain = ({
             <span className="subtitle">{lang('SettingsFoldersDesc')}</span>
           </ListItem>
 
-          <ListItem
-            icon="archive-filled"
-            iconBg="orange"
-            multiline
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.Backups })}
-          >
-            <span className="title">{lang('SettingsBackups')}</span>
-            <span className="subtitle">{lang('SettingsBackupsDesc')}</span>
-          </ListItem>
+          {IS_SIGNAL_BACKUPS_ENABLED && (
+            <ListItem
+              icon="archive-filled"
+              iconBg="orange"
+              multiline
+              narrow
+              onClick={() => openSettingsScreen({ screen: SettingsScreens.Backups })}
+            >
+              <span className="title">{lang('SettingsBackups')}</span>
+              <span className="subtitle">{lang('SettingsBackupsDesc')}</span>
+            </ListItem>
+          )}
 
           <ListItem
             icon="devices-filled"

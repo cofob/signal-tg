@@ -7,6 +7,7 @@ import type { RegularLangKey } from '../../types/language';
 import type { RegularLangFnParameters } from '../../util/localization/types';
 import type { ApiAuthCodeTransport, ApiBackupRestoreState, ApiUpdateAuthorizationStateType } from '../types';
 
+import { IS_SIGNAL_BACKUPS_ENABLED } from '../../config';
 import { updateAccountAttributes } from '../../lib/signal/account/accountAttributes';
 import { normalizeRecoveryKey } from '../../lib/signal/account/recoveryKey';
 import {
@@ -54,8 +55,11 @@ type RegistrationState = {
   restore?: {
     account: AccountRecord;
     resolve(outcome: RestoreOutcome): void;
-    // The recovery key is being checked or restored: a second submission would start a second restore
+    // The recovery key is being checked or restored: a second submission would start a second restore, and skipping
+    // would complete the registration under it
     isRunning?: boolean;
+    // Aborts the restore when the registration is reset
+    abortController: AbortController;
   };
 };
 
@@ -99,6 +103,7 @@ export function resumeRegistration(account: AccountRecord) {
 
 export function resetRegistration() {
   generation++;
+  state.restore?.abortController.abort();
   state.restore?.resolve('canceled');
   state = {};
 }
@@ -222,7 +227,8 @@ export async function submitRegistrationPin(pin: string) {
  * profile name along, which the account keeps instead of the one that was just typed.
  */
 async function restoreAndComplete(account: AccountRecord, profile: RegistrationProfile) {
-  const outcome = await offerRestore(account);
+  // Without the flag the registration has no restore step
+  const outcome = IS_SIGNAL_BACKUPS_ENABLED ? await offerRestore(account) : 'skipped';
   if (outcome === 'canceled') throw new Error('Registration was reset');
 
   const restoredAccount = state.account ?? account;
@@ -247,7 +253,7 @@ async function completeProfile(account: AccountRecord, { firstName, lastName }: 
 /** Shows the restore step and waits until the user restored a backup or skipped it */
 function offerRestore(account: AccountRecord) {
   return new Promise<RestoreOutcome>((resolve) => {
-    state.restore = { account, resolve };
+    state.restore = { account, resolve, abortController: new AbortController() };
     sendBackupRestoreState({});
   });
 }
@@ -266,6 +272,7 @@ export async function submitRegistrationRestore(recoveryKey: string, file?: Uint
     processor,
     account: restore.account,
     accountEntropyPool,
+    signal: restore.abortController.signal,
     onProgress: ({ step, progress }: RestoreProgress) => {
       if (restoreGeneration === generation) sendBackupRestoreState({ step, progress, found });
     },
@@ -280,7 +287,7 @@ export async function submitRegistrationRestore(recoveryKey: string, file?: Uint
       await restoreBackupFile(file, options);
     }
 
-    const account = await adoptRecoveryKey(store, restore.account, accountEntropyPool);
+    const account = await adoptRecoveryKey(store, accountEntropyPool);
     state.account = account;
     // The recovery password that the server holds is the one of the key that this registration made up
     updateAccountAttributes(account).catch(logError);
@@ -297,7 +304,8 @@ export async function submitRegistrationRestore(recoveryKey: string, file?: Uint
 
 /** Goes on without restoring: the account starts empty */
 export function skipRegistrationRestore() {
-  state.restore?.resolve('skipped');
+  if (!state.restore || state.restore.isRunning) return;
+  state.restore.resolve('skipped');
 }
 
 function getRestoreErrorKey(err: unknown): RegularLangFnParameters {
@@ -309,7 +317,7 @@ function getRestoreErrorKey(err: unknown): RegularLangFnParameters {
       return { key: 'BackupsErrorWrongKey' };
     case 'noBackup':
       return { key: 'AuthRestoreErrorNoBackup' };
-    case 'needsForwardSecrecy':
+    case 'forwardSecrecyLost':
       return { key: 'BackupsErrorForwardSecrecy' };
     case 'invalidBackup':
       return { key: 'BackupsErrorInvalidBackup' };

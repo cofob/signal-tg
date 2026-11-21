@@ -108,6 +108,7 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsBackups',
     icon: 'archive-filled',
     iconBg: 'orange',
+    requires: 'hasBackups',
   },
   {
     screen: SettingsScreens.SignalDevices,

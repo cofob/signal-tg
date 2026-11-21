@@ -89,6 +89,11 @@ export type BackupSettings = {
   messageDays?: number;
   // Why the last backup failed; `BackupService` clears it with the next success
   lastError?: string;
+  // The failures in a row, which set how long the schedule waits (`nextAttemptAt`, milliseconds on the server clock)
+  failureCount?: number;
+  nextAttemptAt?: number;
+  // The last failure is one that waiting does not fix: the schedule stops until the user backs up
+  isStopped?: boolean;
 };
 
 /** The credentials of the backup service for the coming days and the public keys it knows, see `archiveApi.ts` */
@@ -200,6 +205,9 @@ type Items = {
   keyTransparencySelfHealth: KeyTransparencySelfHealth;
   keyTransparencyLastSelfCheck: number;
   archiveCredentials: ArchiveCredentialsRecord;
+  // The state of the chain of forward secrecy of our backups on the service, from `svr/svrb.ts`: it is valid for the
+  // file that the last backup uploaded
+  svrbBackupData: Uint8Array;
 };
 
 /** `intermittent` is a first failed verification, which the self check repeats a day later before it reports `fail` */

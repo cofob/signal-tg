@@ -1,8 +1,10 @@
 import type { ApiBackupSettings } from '../../../api/types';
 import type { RegularLangKey } from '../../../types/language';
 
+import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import download from '../../../util/download';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
+import { saveFile } from '../../../util/tauri/nativeFiles';
 import { callApi } from '../../../api';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
@@ -17,7 +19,8 @@ const BACKUP_ERROR_KEYS = {
   invalidBackup: 'BackupsErrorInvalidBackup',
   wrongKey: 'BackupsErrorWrongKey',
   invalidKey: 'BackupsErrorInvalidKey',
-  needsForwardSecrecy: 'BackupsErrorForwardSecrecy',
+  forwardSecrecyLost: 'BackupsErrorForwardSecrecy',
+  rejected: 'BackupsErrorRejected',
   failed: 'ErrorUnexpected',
 } satisfies Record<string, RegularLangKey>;
 const REVOKE_URL_DELAY_MS = 60 * 1000;
@@ -70,6 +73,13 @@ addActionHandler('exportBackupFile', async (global, actions, payload): Promise<v
   }
 
   const url = URL.createObjectURL(new Blob([result.data], { type: 'application/octet-stream' }));
+  if (IS_TAURI) {
+    // The desktop app writes the file with its save flow (`tauri/src/files.rs`), which can wait for a save dialog for
+    // as long as the user takes, so the URL stays until the save ends
+    void saveFile(url, result.fileName).finally(() => URL.revokeObjectURL(url));
+    return;
+  }
+
   download(url, result.fileName);
   setTimeout(() => URL.revokeObjectURL(url), REVOKE_URL_DELAY_MS);
 });
