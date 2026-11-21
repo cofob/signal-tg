@@ -28,7 +28,7 @@ import {
 
 type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
-  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber';
+  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath';
 type StorageField = ConversationStorageField | AccountStorageField;
 
 /** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
@@ -286,6 +286,16 @@ function setAccountFields(
         break;
       case 'username':
         record.username = self?.username ?? '';
+        break;
+      // Signal Desktop `toAccountRecord` in `ts/services/storageRecordOps.preload.ts`
+      case 'givenName':
+        record.givenName = self?.profileName ?? '';
+        break;
+      case 'familyName':
+        record.familyName = self?.profileFamilyName ?? '';
+        break;
+      case 'avatarUrlPath':
+        record.avatarUrlPath = self?.avatarPath ?? '';
         break;
       case 'usernameLink':
         if (!usernameLink) {

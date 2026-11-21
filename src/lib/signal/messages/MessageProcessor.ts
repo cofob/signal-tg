@@ -156,6 +156,8 @@ type PendingStorageWrite = {
 /** Account record fields that this device changes; each one present is written to the storage service */
 export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
 
+// The account record fields that our profile fills, see `updateOwnConversation`
+const PROFILE_STORAGE_FIELDS: AccountStorageField[] = ['givenName', 'familyName', 'avatarUrlPath'];
 const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
   username: 'username',
   usernameLink: 'usernameLink',
@@ -829,14 +831,19 @@ export default class MessageProcessor {
     });
   }
 
-  /** Stores what this device changed in our profile, which the profile itself carries to other devices */
+  /**
+   * Stores what this device changed in our profile. The profile itself carries it to other devices, and the
+   * account record of the storage service gets our names and the avatar path (Signal Desktop `toAccountRecord`).
+   */
   updateOwnConversation(update: Partial<Pick<
     ConversationRecord, 'profileName' | 'profileFamilyName' | 'about' | 'aboutEmoji' | 'avatarPath'
   >>) {
     return this.runSerial(async () => {
       const account = await this.getAccount();
       const conversation = await this.ensurePrivateConversation(account.aci);
-      return this.putConversation({ ...conversation, ...update });
+      const updated = await this.putConversation({ ...conversation, ...update });
+      await this.markStorageChanges({ [ACCOUNT_KEY]: PROFILE_STORAGE_FIELDS });
+      return updated;
     });
   }
 
@@ -1122,12 +1129,23 @@ export default class MessageProcessor {
           });
         }
         const self = await this.ensurePrivateConversation(account.aci);
+        // Signal Android `AccountRecordProcessor`: the names and the avatar of the record win unless they are empty
+        const hasRemoteName = Boolean(accountRecord.givenName || accountRecord.familyName);
         await this.putConversation({
           ...self,
           isArchived: accountChanges.has('noteToSelfArchived') ? self.isArchived : accountRecord.noteToSelfArchived,
           isMarkedUnread: accountChanges.has('noteToSelfMarkedUnread')
             ? self.isMarkedUnread
             : accountRecord.noteToSelfMarkedUnread,
+          profileName: hasRemoteName && !accountChanges.has('givenName')
+            ? accountRecord.givenName || undefined
+            : self.profileName,
+          profileFamilyName: hasRemoteName && !accountChanges.has('familyName')
+            ? accountRecord.familyName || undefined
+            : self.profileFamilyName,
+          avatarPath: accountRecord.avatarUrlPath && !accountChanges.has('avatarUrlPath')
+            ? accountRecord.avatarUrlPath
+            : self.avatarPath,
         });
         const { usernameLink } = accountRecord;
         await this.client.updateAccount({
