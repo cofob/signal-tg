@@ -987,7 +987,7 @@ export default class MessageProcessor {
     const identity = await store.runExclusive(async () => {
       const current = await store.getIdentity(aci);
       if (!current) throw new Error(`No identity key of ${aci}`);
-      if ((current.verified === Verified_State.VERIFIED) === isVerified) return undefined;
+      if ((current.verified ?? Verified_State.DEFAULT) === state) return undefined;
       await store.setIdentity(aci, { ...current, verified: state });
       return current;
     });
@@ -997,6 +997,46 @@ export default class MessageProcessor {
     await this.sendWhenConnected(async (context) => {
       await sendVerifiedSync(context, { destinationAci: aci, identityKey: identity.publicKey, state });
     });
+  }
+
+  /**
+   * The recipients that a failed message did not reach because their safety number changed: sends to them fail
+   * until their identity is verified or set to default again (see `isTrustedIdentity`)
+   */
+  async getUnverifiedRecipients(messageId: number) {
+    const message = await this.db.getMessage(messageId);
+    const unverified: string[] = [];
+    for (const [aci, status] of Object.entries(message?.recipientStatus ?? {})) {
+      if (status === 'failed' && (await this.client.store.getIdentity(aci))?.verified === Verified_State.UNVERIFIED) {
+        unverified.push(aci);
+      }
+    }
+    return unverified;
+  }
+
+  /**
+   * Accepts the new safety numbers of the recipients a message failed to reach and sends it to the failed ones again
+   * (Signal Desktop `verifyConversationsStoppingSend`): an unverified identity becomes default, which our other
+   * devices learn, and a verified one stays verified.
+   */
+  async sendMessageAnyway(messageId: number) {
+    for (const aci of await this.getUnverifiedRecipients(messageId)) await this.setVerified(aci, false);
+
+    const message = await this.db.getMessage(messageId);
+    const conversation = message && await this.db.getConversation(message.conversationId);
+    if (!message?.isOutgoing || !message.dataMessage || !conversation) {
+      throw new Error('The message cannot be sent again');
+    }
+
+    const failed = Object.entries(message.recipientStatus ?? {})
+      .filter(([, status]) => status === 'failed')
+      .map(([aci]) => aci);
+    return this.sendStoredMessage(conversation, message, {
+      case: 'dataMessage', value: fromBinary(DataMessageSchema, message.dataMessage),
+    }, {
+      timestamp: message.sentAt,
+      expirationStartTimestamp: message.expireTimer ? message.sentAt : undefined,
+    }, failed);
   }
 
   /**
@@ -1277,8 +1317,8 @@ export default class MessageProcessor {
     message: MessageRecord,
     content: OutgoingMessage,
     options: { timestamp: number; expirationStartTimestamp?: number },
+    recipients = Object.keys(message.recipientStatus ?? {}),
   ) {
-    const recipients = Object.keys(message.recipientStatus ?? {});
     const results = await this.sendContentTo(conversation, recipients, content, options);
     return this.runSerial(async () => {
       const current = await this.db.getMessage(message.id);
