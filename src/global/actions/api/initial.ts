@@ -8,6 +8,7 @@ import {
   MEDIA_PROGRESSIVE_CACHE_NAME,
 } from '../../../config';
 import { updateAppBadge } from '../../../util/appBadge';
+import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
 import { PLATFORM_ENV } from '../../../util/browser/windowEnvironment';
 import * as cacheApi from '../../../util/cacheApi';
@@ -28,6 +29,7 @@ import {
   clearStoredSession,
   storeSession,
 } from '../../../util/sessions';
+import { forgetSavedFiles } from '../../../util/tauri/nativeFiles';
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
 import {
   callApi, callApiLocal, initApi, reconnectApi, setShouldEnableDebugLog,
@@ -247,6 +249,7 @@ addActionHandler('reset', async (global, actions): Promise<void> => {
     await clearPasscodeStore();
     localStorage.removeItem(IS_SCREEN_LOCKED_CACHE_KEY);
     await clearWallpaperBlobs();
+    if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
   }
 
   updateAppBadge(0);
@@ -325,6 +328,8 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
   } catch (err) {
     // Do nothing
   }
+
+  if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
 
   broadcastPasscodeReset();
   window.location.reload();

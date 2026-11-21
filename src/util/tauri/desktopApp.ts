@@ -28,6 +28,11 @@ export function quitApp() {
   return invoke<void>('quit_app');
 }
 
+/** Opens a link in the system browser or mail app; the app refuses schemes other than http, https, mailto and tel */
+export function openExternalUrl(url: string) {
+  return invoke<void>('open_external_url', { url });
+}
+
 /**
  * Shows a system notification. With `chatId`, a click brings the window forward and the app emits
  * `notification-clicked` to the page (`setupTauriListeners`).

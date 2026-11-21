@@ -6,8 +6,9 @@ use std::sync::{
 
 use tauri::{
   LogicalPosition, Manager,
-  webview::{DownloadEvent, PageLoadEvent},
+  webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
 };
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_window_state::StateFlags;
 use url::Url;
 use uuid::Uuid;
@@ -127,7 +128,6 @@ pub fn run() {
     }))
     .plugin(tauri_plugin_os::init())
     .plugin(tauri_plugin_fs::init())
-    .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
     // The page gets no permission for the plugin's commands; `files.rs` calls it
     .plugin(
@@ -267,6 +267,7 @@ pub fn run() {
     save_current_url,
     set_menu_translations,
     quit_app,
+    open_external_url,
     settings::get_desktop_settings,
     settings::set_desktop_settings,
     notifications::show_notification,
@@ -281,7 +282,8 @@ pub fn run() {
     files::abort_file_save,
     files::list_saved_files,
     files::open_saved_file,
-    files::reveal_saved_file
+    files::reveal_saved_file,
+    files::forget_saved_files
   ]);
 
   app
@@ -392,6 +394,28 @@ fn quit_app(app: tauri::AppHandle) {
   app.exit(0);
 }
 
+/// Opens a link from a message in the default browser or mail app. The page can name any URL, so only the schemes
+/// of links that the app shows are opened: `file:` and the schemes of installed apps would run something else.
+#[tauri::command]
+fn open_external_url(window: tauri::WebviewWindow, url: String) -> Result<(), String> {
+  let url = Url::parse(&url).map_err(|err| err.to_string())?;
+  if !is_external_url_allowed(&url) {
+    return Err(format!("Disallowed URL scheme: {}", url.scheme()));
+  }
+  window
+    .opener()
+    .open_url(url.as_str(), None::<&str>)
+    .map_err(|err| err.to_string())
+}
+
+fn is_external_url_allowed(url: &Url) -> bool {
+  match url.scheme() {
+    "http" | "https" => url.has_host(),
+    "mailto" | "tel" => true,
+    _ => false,
+  }
+}
+
 #[tauri::command]
 fn set_window_title(window: tauri::WebviewWindow, title: String) {
   if let Ok(mut states) = WINDOW_STATES.lock()
@@ -446,6 +470,9 @@ pub(crate) fn open_new_window(
     has_updater(&app),
   ))
   .on_navigation(move |url| is_allowed_app_url(url, &base_url))
+  // Links open in the system browser through `open_external_url`; a page-opened window would hold a site next to
+  // the app, and on Windows the webview opens one by default
+  .on_new_window(|_, _| NewWindowResponse::Deny)
   // The page saves files through `files.rs`; a download that the webview starts on its own has no
   // sanitized name or checked destination, so none is allowed
   .on_download(|_, event| {
@@ -569,4 +596,42 @@ fn is_allowed_app_url(url: &Url, base_url: &Url) -> bool {
     && url.host() == base_url.host()
     && url.port_or_known_default() == base_url.port_or_known_default()
     && url.path().trim_end_matches('/') == base_url.path().trim_end_matches('/')
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// What `open_external_url` accepts: a URL that parses, with an allowed scheme
+  fn is_allowed(url: &str) -> bool {
+    Url::parse(url).is_ok_and(|url| is_external_url_allowed(&url))
+  }
+
+  #[test]
+  fn opens_only_web_mail_and_phone_links_outside_the_app() {
+    for url in [
+      "https://signal.org/",
+      "http://example.com/a?b=c#d",
+      "mailto:someone@example.com",
+      "tel:+123456789",
+    ] {
+      assert!(is_allowed(url), "{url}");
+    }
+    for url in [
+      "file:///etc/passwd",
+      "file://host/share/run.exe",
+      "javascript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "blob:https://example.com/id",
+      "ms-msdt:/id",
+      "ssh://host",
+      "smb://host/share",
+      "vscode://file/x",
+      "tauri://localhost/",
+      "sgnl://signal.me/#p/+1",
+      "http:///",
+    ] {
+      assert!(!is_allowed(url), "{url}");
+    }
+  }
 }
