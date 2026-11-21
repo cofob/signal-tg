@@ -61,9 +61,7 @@ export function buildTitleChange(title: string): GroupChangeBuilder {
 export function buildDescriptionChange(description: string): GroupChangeBuilder {
   return (state, { secretParams }) => {
     if ((state.description ?? '') === description) return undefined;
-    if (countGraphemes(description) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
-      throw new GroupChangeRefusedError('descriptionTooLong');
-    }
+    checkGroupDescription(description);
     const encrypted = encryptGroupAttribute(secretParams, { case: 'descriptionText', value: description });
     if (encrypted.length > GROUP_DESCRIPTION_MAX_ENCRYPTED_BYTES) throw new Error('Group description is too long');
     return { modifyDescription: { description: encrypted } };
@@ -295,6 +293,12 @@ export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupCha
 /** Group titles are limited in grapheme clusters, as Signal Android counts them */
 export function checkGroupTitle(title: string) {
   if (countGraphemes(title) > GROUP_TITLE_MAX_GRAPHEMES) throw new GroupChangeRefusedError('titleTooLong');
+}
+
+export function checkGroupDescription(description: string) {
+  if (countGraphemes(description) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
+    throw new GroupChangeRefusedError('descriptionTooLong');
+  }
 }
 
 function countGraphemes(text: string) {
