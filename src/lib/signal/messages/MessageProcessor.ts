@@ -909,8 +909,10 @@ export default class MessageProcessor {
       if (listStory) sent.push(listStory);
     }
     for (const group of groups) {
-      // Signal Desktop `sendStoryMessage` skips groups where only admins may send
+      // Signal Desktop `sendStoryMessage` skips groups where only admins may send. Stories carry our profile key, so
+      // they do not go to groups that are blocked or that we have not accepted.
       if (group.isAnnouncementsOnly && !group.adminAcis?.includes(account.aci)) continue;
+      if (group.isBlocked || !getIsConversationAccepted(group, account.aci)) continue;
       sent.push(await this.sendGroupStory(account, story, group));
     }
 
