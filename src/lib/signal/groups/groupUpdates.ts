@@ -13,9 +13,15 @@ export type GroupUpdate =
   // An actor that removes itself left
   | { type: 'memberRemoved'; aci: string }
   | { type: 'invited'; count: number }
+  // Invitations an admin took back; an invited user who removes the own invitation declined it
+  | { type: 'inviteRevoked'; count: number }
+  | { type: 'inviteDeclined' }
   // The actor asked to join through the group link
   | { type: 'joinRequested' }
   | { type: 'joinApproved'; aci: string }
+  // An admin denied the request of a user; a user who removes the own request canceled it
+  | { type: 'joinDenied'; aci: string }
+  | { type: 'joinCanceled' }
   | { type: 'adminChanged'; aci: string; isAdmin: boolean }
   | { type: 'access'; target: 'info' | 'members'; isAdminOnly: boolean }
   | { type: 'inviteLink'; state: 'on' | 'onWithApproval' | 'off' | 'reset' }
@@ -59,6 +65,14 @@ export function buildGroupNotices(change: DecryptedGroupChange): GroupNotice[] {
   for (const { aci } of change.addRequestingMembers) add({ type: 'joinRequested' }, aci);
   change.deleteMembers.forEach((aci) => add({ type: 'memberRemoved', aci }));
   if (change.addPendingMembers.length) add({ type: 'invited', count: change.addPendingMembers.length });
+  const revoked = change.deletePendingMembers.filter((serviceId) => serviceId !== actorAci);
+  if (revoked.length < change.deletePendingMembers.length) add({ type: 'inviteDeclined' });
+  if (revoked.length) add({ type: 'inviteRevoked', count: revoked.length });
+  // Users who were added in the same change were not denied
+  const addedAcis = new Set(change.addMembers.map(({ aci }) => aci));
+  for (const aci of change.deleteRequestingMembers.filter((requester) => !addedAcis.has(requester))) {
+    add(aci === actorAci ? { type: 'joinCanceled' } : { type: 'joinDenied', aci });
+  }
   for (const { aci, role } of change.modifyMemberRoles) {
     add({ type: 'adminChanged', aci, isAdmin: role === Member_Role.ADMINISTRATOR });
   }

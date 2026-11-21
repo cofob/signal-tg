@@ -6,7 +6,11 @@
 use std::time::SystemTime;
 
 use boring_signal::asn1::Asn1Time;
+#[cfg(not(target_arch = "wasm32"))]
 use libc::time_t;
+#[cfg(target_arch = "wasm32")]
+#[allow(non_camel_case_types)]
+type time_t = i64;
 
 use crate::constants::{ACCEPTABLE_SW_ADVISORIES, DEFAULT_SW_ADVISORIES};
 

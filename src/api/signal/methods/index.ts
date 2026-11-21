@@ -1,6 +1,7 @@
 export {
   provideAuthCaptcha,
   provideAuthCode,
+  provideAuthPassword,
   provideAuthPhoneNumber,
   provideAuthRegistration,
   requestAuthCode,
@@ -15,6 +16,7 @@ export {
   fetchFullChat,
   fetchPeerSettings,
   hidePeerSettingsBar,
+  lookUpPhoneNumber,
   requestChatUpdate,
   searchChats,
   toggleChatArchived,
@@ -52,6 +54,14 @@ export {
 } from './groups';
 export { downloadMedia } from './media';
 export {
+  fetchSignalContactDiscovery,
+  fetchSignalPinSettings,
+  removeSignalPin,
+  setSignalContactDiscovery,
+  setSignalPin,
+  setSignalRegistrationLock,
+} from './pin';
+export {
   closePoll,
   deleteMessages,
   editMessage,
@@ -59,9 +69,7 @@ export {
   fetchMessageReactionsList,
   fetchMessages,
   fetchMessagesById,
-  forwardApiMessages,
   forwardMessages,
-  forwardMessagesLocal,
   loadPollOptionResults,
   markMessageListRead,
   markMessagesRead,
@@ -80,7 +88,6 @@ export {
   fetchRecoveryKey,
   fetchSafetyNumber,
   fetchUsernameLink,
-  getChatByPhoneNumber,
   getChatByUsername,
   reserveUsername,
   resetUsernameLink,
@@ -99,5 +106,15 @@ export {
   updateNotificationSettings,
 } from './settings';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
+  clearRecentStickers,
+  fetchFeaturedStickers,
+  fetchRecentStickers,
+  fetchStickers,
+  fetchStickerSets,
+  installStickerSet,
+  removeRecentSticker,
+  uninstallStickerSet,
+} from './stickers';
+export {
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchProfilePhotos, fetchUsers, getChatByAci, reportSpam,
 } from './users';

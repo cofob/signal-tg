@@ -107,19 +107,7 @@ The reference column describes the initialized defaults. In particular, matching
 | <a id="color-forum-hover-unread-topic-hover"></a>`--color-forum-hover-unread-topic-hover` | Forum hover unread topic hover | `#e2e2e2` | `#3f3f3f` | No; literal or Sass-computed value |
 | <a id="color-deleted-account"></a>`--color-deleted-account` | Deleted account | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-archive"></a>`--color-archive` | Archive | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
-| <a id="stars-gradient"></a>`--stars-gradient` | Stars gradient | `linear-gradient(90deg, #FFAA00 0%, #FFCD3A 100%)` | `linear-gradient(90deg, #FFAA00 0%, #FFCD3A 100%)` | No; literal or Sass-computed value |
-| <a id="color-stars"></a>`--color-stars` | Stars | `#FFAA00` | `#FFAA00` | No; literal or Sass-computed value |
 | <a id="color-heart"></a>`--color-heart` | Heart | `#ff3c32` | `#ff3c32` | No; literal or Sass-computed value |
-| <a id="color-gift-uncommon"></a>`--color-gift-uncommon` | Gift uncommon | `#40A920` | `#40A920` | No; literal or Sass-computed value |
-| <a id="color-gift-uncommon-bg"></a>`--color-gift-uncommon-bg` | Gift uncommon bg | `rgba(64, 169, 32, 0.15)` | `rgba(64, 169, 32, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-rare"></a>`--color-gift-rare` | Gift rare | `#11AABE` | `#11AABE` | No; literal or Sass-computed value |
-| <a id="color-gift-rare-bg"></a>`--color-gift-rare-bg` | Gift rare bg | `rgba(17, 170, 190, 0.15)` | `rgba(17, 170, 190, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-epic"></a>`--color-gift-epic` | Gift epic | `#955CDB` | `#955CDB` | No; literal or Sass-computed value |
-| <a id="color-gift-epic-bg"></a>`--color-gift-epic-bg` | Gift epic bg | `rgba(149, 92, 219, 0.15)` | `rgba(149, 92, 219, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-legendary"></a>`--color-gift-legendary` | Gift legendary | `#BF7600` | `#BF7600` | No; literal or Sass-computed value |
-| <a id="color-gift-legendary-bg"></a>`--color-gift-legendary-bg` | Gift legendary bg | `rgba(191, 118, 0, 0.15)` | `rgba(191, 118, 0, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-negative-progress"></a>`--color-negative-progress` | Negative progress | `#CE4C47` | `#CE4C47` | No; literal or Sass-computed value |
-| <a id="premium-gradient"></a>`--premium-gradient` | Premium gradient | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | No; literal or Sass-computed value |
 | <a id="color-web-app-browser"></a>`--color-web-app-browser` | Web app browser | `#FFFFFFBB` | `#0303038F` | No; literal or Sass-computed value |
 | <a id="color-chat-active-greyed"></a>`--color-chat-active-greyed` | Chat active greyed | `#2973bd` | `#6c5db4` | No CSS alias; [--color-primary](#color-primary) mixed 20% toward the selected neutral |
 | <a id="color-topic-blue"></a>`--color-topic-blue` | Topic blue | `#2F7772` | `#6ff9f0` | No; literal or Sass-computed value |
@@ -279,8 +267,6 @@ These older shared variables remain available globally. Their global defaults ar
 | <a id="color-poll-check-own"></a>`--color-poll-check-own` | Outgoing poll check foreground | `#ffffff` | `#000000` | No CSS alias after initialization; outgoing accent foreground ([--message-outgoing-accent-foreground](#message-outgoing-accent-foreground)) |
 | <a id="color-webpage-initial-background"></a>`--color-webpage-initial-background` | Unloaded web-page image placeholder | `#2e3939` | `#2e3939` | No; literal or Sass-computed value |
 | <a id="color-composer-button"></a>`--color-composer-button` | Unfilled composer icons | `#000000` | `#FFFFFF` | No; literal or Sass-computed value |
-| <a id="color-voice-transcribe-button"></a>`--color-voice-transcribe-button` | Voice transcribe button | `#e8f3ff` | `#2a2a3c` | No; literal or Sass-computed value |
-| <a id="color-voice-transcribe-button-own"></a>`--color-voice-transcribe-button-own` | Voice transcribe button own | `#cceebf` | `#8373d3` | No; literal or Sass-computed value |
 | <a id="color-own-links"></a>`--color-own-links` | Outgoing links | `#3390EC` | `#ffffff` | No CSS alias; copies outgoing links ([--message-outgoing-links](#message-outgoing-links)) |
 | <a id="color-code"></a>`--color-code` | Legacy inline-code text | `#4a729a` | `#8774E1` | No; literal or Sass-computed value |
 | <a id="color-code-bg"></a>`--color-code-bg` | Inline-code background | `#70757914` | `#00000080` | No; literal or Sass-computed value |
@@ -353,7 +339,6 @@ These are the actual CSS aliases declared on `.Message` in addition to the direc
 | <a id="message-alias-accent-background-color"></a>`--accent-background-color` | `var(--message-tint)` | CSS alias / dependency: [--message-tint](#message-tint) |
 | <a id="message-alias-accent-background-active-color"></a>`--accent-background-active-color` | `var(--message-tint-hover)` | CSS alias / dependency: [--message-tint-hover](#message-tint-hover) |
 | <a id="secondary-color"></a>`--secondary-color` | `var(--message-secondary)` | CSS alias / dependency: [--message-secondary](#message-secondary) |
-| <a id="color-voice-transcribe"></a>`--color-voice-transcribe` | `var(--message-tint)` | CSS alias / dependency: [--message-tint](#message-tint) |
 | <a id="thumbs-background"></a>`--thumbs-background` | `var(--message-background)` | CSS alias / dependency: [--message-background](#message-background) |
 
 Outgoing bubbles override [--color-text-selection](#color-text-selection) with [--message-outgoing-text-selection](#message-outgoing-text-selection) and [--color-selection-highlight-emoji](#color-selection-highlight-emoji) with [--message-outgoing-text-selection-emoji](#message-outgoing-text-selection-emoji); incoming bubbles keep the accent-based global values. Selected bubbles override [--background-color](#background-color) with [--message-selected](#message-selected); story-mention service content uses [--message-service-background](#message-service-background). Peer-color wrappers can supply author accents. Outgoing content with `noUserColors` uses the outgoing message accents. Outgoing document file tiles override [--color-primary](#message-alias-color-primary) with [--message-incoming-control](#message-incoming-control) and [--color-primary-foreground](#message-alias-color-primary-foreground) with [--message-incoming-control-foreground](#message-incoming-control-foreground), so they match incoming tiles. Reactions outside bubbles use [--message-service-background](#message-service-background) and [--message-service-text](#message-service-text), with fixed colors when chosen; paid reactions use fixed colors in their component styles.
@@ -377,7 +362,7 @@ Outgoing bubbles override [--color-text-selection](#color-text-selection) with [
 | `.Message` | [--color-reaction-chosen](#color-reaction-chosen) / [--text-color-reaction-chosen](#text-color-reaction-chosen) | `transparent` / `#000` |
 | Custom-shape content (stickers, round videos) | [--message-media-text](#message-media-text) | `#555`, since badges sit on the cleared service surface |
 
-The cleared [--message-incoming-control](#message-incoming-control) also clears its [--color-primary](#message-alias-color-primary) alias, so diff insertions, incoming voice durations and embed sources get explicit print colors. Exceptions keep their screen colors: the unique gift card keeps its backdrop and sets [--message-service-text](#message-service-text) back to `#fff`, and media metadata and duration overlays keep [--message-media-background](#message-media-background) and [--message-media-text](#message-media-text) with exact color printing.
+The cleared [--message-incoming-control](#message-incoming-control) also clears its [--color-primary](#message-alias-color-primary) alias, so diff insertions, incoming voice durations and embed sources get explicit print colors. Exceptions keep their screen colors: media metadata and duration overlays keep [--message-media-background](#message-media-background) and [--message-media-text](#message-media-text) with exact color printing.
 
 ### Wallpaper inputs
 

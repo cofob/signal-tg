@@ -3,7 +3,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
 import type { GroupUpdate } from '../../../lib/signal/groups/groupUpdates';
 import type {
-  BodyRange, DataMessage_PollCreate, DataMessage_Quote,
+  BodyRange, DataMessage_Contact, DataMessage_PollCreate, DataMessage_Quote,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type {
   ApiMessage,
@@ -14,6 +14,7 @@ import type {
   ApiReactions,
   ApiReplyInfo,
   ApiUser,
+  ApiWebPageFull,
   MediaContent,
 } from '../../types';
 import type { ApiMessageAction, ApiMessageActionGroupUpdate } from '../../types/messageActions';
@@ -27,7 +28,7 @@ import { getCurrentAccount } from '../client';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
 import { buildApiFormattedText, getMentionAci } from './bodyRanges';
-import { buildMessageMedia } from './media';
+import { buildMessageMedia, buildWebPage } from './media';
 import { buildApiUser } from './users';
 
 type UserResolver = ReturnType<typeof createUserResolver>;
@@ -40,6 +41,8 @@ const INVITE_LINK_UPDATES = {
   reset: 'linkReset',
 } as const;
 const DELIVERED_STATUSES = new Set<SendStatus>(['delivered', 'read', 'viewed']);
+const UUID_BYTE_LENGTH = 16;
+const NON_DIGIT_REGEX = /\D/g;
 
 /** Builds the app message of a stored Signal message; `conversation` is the one it belongs to */
 export async function buildApiMessage(message: MessageRecord, conversation: ConversationRecord): Promise<ApiMessage> {
@@ -47,12 +50,12 @@ export async function buildApiMessage(message: MessageRecord, conversation: Conv
 }
 
 /**
- * Builds the app message and, for polls, its poll. `users` resolves the people the message refers to
- * (sender, mentions, reactions, votes), so callers can send those users along.
+ * Builds the app message and, for polls, its poll, and for link previews, its web page. `users` resolves the people
+ * the message refers to (sender, mentions, reactions, votes, shared contacts), so callers can send those users along.
  */
 export async function buildApiMessageWithPoll(
   message: MessageRecord, conversation: ConversationRecord, users: UserResolver,
-): Promise<{ message: ApiMessage; poll?: ApiMessagePoll }> {
+): Promise<{ message: ApiMessage; poll?: ApiMessagePoll; webPage?: ApiWebPageFull }> {
   const selfAci = getCurrentAccount()?.aci;
   const senderAci = message.authorAci || message.actorAci;
   const base = {
@@ -117,6 +120,7 @@ export async function buildApiMessageWithPoll(
 
   const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
   const media = buildMessageMedia(message, dataMessage);
+  if (media.contact) media.contact = { ...media.contact, ...await resolveContact(dataMessage.contact[0], users) };
   // View-once media stays out of the chat and opens once in the media viewer; outgoing media cannot be opened,
   // as in Signal Desktop
   if (dataMessage.isViewOnce) {
@@ -130,10 +134,12 @@ export async function buildApiMessageWithPoll(
     ? await buildApiPoll(message, dataMessage.pollCreate, selfAci, users)
     : undefined;
   const { body, bodyRanges } = dataMessage;
+  const webPage = !Object.keys(media).length ? buildWebPage(message, dataMessage) : undefined;
   const content: MediaContent = omitUndefined({
     ...media,
     text: body ? buildApiFormattedText(body, bodyRanges, mentionedUsers) : undefined,
     pollId: poll?.summary.id,
+    webPage: webPage && { id: webPage.id },
   });
   if (content.text) content.text.emojiOnlyCount = getEmojiOnlyCountForMessage(content);
   // Gift badges, payments and other content without a counterpart in the app
@@ -158,6 +164,7 @@ export async function buildApiMessageWithPoll(
       isForwardingAllowed: true,
     },
     poll,
+    webPage,
   };
 }
 
@@ -202,6 +209,14 @@ async function buildGroupUpdateAction(
       return groupAction({ update: 'joinRequested' });
     case 'invited':
       return groupAction({ update: 'invited', count: update.count });
+    case 'inviteRevoked':
+      return groupAction({ update: 'inviteRevoked', count: update.count });
+    case 'inviteDeclined':
+      return groupAction({ update: 'inviteDeclined' });
+    case 'joinDenied':
+      return groupAction({ update: 'joinDenied', userId: await users.getUserId(update.aci) });
+    case 'joinCanceled':
+      return groupAction({ update: 'joinCanceled' });
     case 'adminChanged':
       return groupAction({
         update: update.isAdmin ? 'adminAdded' : 'adminRemoved', userId: await users.getUserId(update.aci),
@@ -255,6 +270,26 @@ export function createUserResolver() {
       )));
     },
   };
+}
+
+/**
+ * How to message a shared contact (Signal Desktop `resolveSharedContact` in `ts/util/sharedContact.std.ts`): the
+ * existing chat with its ACI or one of its numbers, or its ACI, which gets a chat only when messaged
+ */
+async function resolveContact(
+  { aciBinary, number }: DataMessage_Contact, users: UserResolver,
+): Promise<{ userId?: string; aci?: string }> {
+  if (aciBinary.length === UUID_BYTE_LENGTH) {
+    const aci = uuidToString(aciBinary);
+    return await db.getConversation(aci) ? { userId: await users.getUserId(aci) } : { aci };
+  }
+
+  const e164s = new Set(number.map(({ value }) => `+${value.replace(NON_DIGIT_REGEX, '')}`));
+  if (!e164s.size) return {};
+  const conversation = (await db.getConversations()).find(({ type, e164 }) => (
+    type === 'private' && e164 && e164s.has(e164)
+  ));
+  return conversation ? { userId: await users.getUserId(conversation.id) } : {};
 }
 
 async function resolveMentionedUsers(bodyRanges: BodyRange[], users: UserResolver) {

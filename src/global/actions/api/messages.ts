@@ -9,7 +9,6 @@ import type {
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputStoryReplyInfo,
-  ApiInputSuggestedPostInfo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessageReadMetric,
@@ -23,7 +22,6 @@ import type {
 import type {
   ForwardMessagesParams,
   SendMessageParams,
-  TextSummary,
   ThreadId,
 } from '../../../types';
 import type { MessageKey } from '../../../util/keys/messageKey';
@@ -45,6 +43,7 @@ import {
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
 } from '../../../config';
+import { parseStickerPackLink } from '../../../lib/signal/stickers/stickerPackLinks';
 import { revokeAttachmentUrls } from '../../../util/attachments';
 import { ensureProtocol } from '../../../util/browser/url';
 import { IS_IOS } from '../../../util/browser/windowEnvironment';
@@ -52,7 +51,6 @@ import buildUploadingMedia from '../../../util/buildUploadingMedia';
 import { copyTextToClipboardFromPromise } from '../../../util/clipboard';
 import { isDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import generateUniqueId from '../../../util/generateUniqueId';
 import {
   areSortedArraysIntersecting,
   buildCollectionByKey,
@@ -63,7 +61,6 @@ import {
   uniqueByField,
 } from '../../../util/iteratees';
 import { getMessageKey, isLocalMessageId } from '../../../util/keys/messageKey';
-import { parseTranslationCacheKey } from '../../../util/keys/translationKey';
 import { getTranslationFn } from '../../../util/localization';
 import { debounce, onTickEnd, rafPromise } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
@@ -91,12 +88,9 @@ import {
 import { scheduleEphemeralExpiration } from '../../intervals';
 import {
   addChatMessagesById,
-  clearMessageSummary,
   removeOutlyingList,
-  removeRequestedMessageTranslation,
   removeUnreadMentions,
   removeUnreadPollVotes,
-  replaceSettings,
   replaceUserStatuses,
   safeReplacePinnedIds,
   safeReplaceViewportIds,
@@ -105,11 +99,8 @@ import {
   updateChatMessage,
   updateEphemeralMessage,
   updateListedIds,
-  updateMessageSummary,
-  updateMessageTranslation,
   updateOutlyingLists,
   updatePeerFullInfo,
-  updateRequestedMessageTranslation,
   updateScheduledMessage,
   updateScheduledMessages,
   updateTopicWithState,
@@ -147,8 +138,6 @@ import {
   selectIsChatRestricted,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
-  selectLanguageCode,
   selectListedIds,
   selectMessageIdsByGroupId,
   selectMessageReplyInfo,
@@ -163,7 +152,6 @@ import {
   selectSendAs,
   selectStoppableTypingDraftId,
   selectTabState,
-  selectTranslationLanguage,
   selectUser,
   selectUserFullInfo,
   selectUserStatus,
@@ -176,14 +164,13 @@ import {
   selectEditingId,
   selectEditingScheduledId,
   selectNoWebPage,
-  selectSavedDialogIdFromMessage,
   selectThreadIdFromMessage,
   selectThreadInfo,
   selectThreadLocalStateParam,
   selectThreadReadState,
 } from '../../selectors/threads';
 import {
-  deleteEphemeralMessagesWithAnimation, deleteMessages, updateWithLocalMedia,
+  deleteEphemeralMessagesWithAnimation, deleteMessages,
 } from '../apiUpdaters/messages';
 
 type SendEphemeralMessagesParams = {
@@ -537,8 +524,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const isForwarding = selectTabState(global, tabId).forwardMessages?.messageIds?.length;
 
   const draftReplyInfo = !isForwarding && !isStoryReply ? draft?.replyInfo : undefined;
-  const draftSuggestedPostInfo = !isForwarding && !isStoryReply
-    ? draft?.suggestedPostInfo : undefined;
 
   const ephemeralCommand = draftReplyInfo?.type !== 'ephemeral' && payload.text
     ? resolveEphemeralCommand(global, { chat, commandText: payload.text }) : undefined;
@@ -609,13 +594,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const lastMessageId = threadId === MAIN_THREAD_ID
     ? selectChatLastMessageId(global, chatId!) : threadInfo?.lastMessageId;
 
-  const suggestedMessage = draftReplyInfo && draftSuggestedPostInfo
-    ? selectChatMessage(global, chatId!, draftReplyInfo.replyToMsgId) : undefined;
-  let suggestedMedia: MediaContent | undefined;
-  if (draftSuggestedPostInfo && suggestedMessage?.content) {
-    suggestedMedia = suggestedMessage.content;
-  }
-
   if (chat.isBotForum && threadId === MAIN_THREAD_ID && replyInfo?.type === 'message'
     && user?.canManageBotForumTopics) {
     const replyMessage = selectChatMessage(global, chatId!, replyInfo.replyToMsgId);
@@ -639,8 +617,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     ...payload,
     chat,
     replyInfo,
-    suggestedPostInfo: draftSuggestedPostInfo,
-    suggestedMedia,
     noWebPage: selectNoWebPage(global, chatId!, threadId!),
     sendAs: selectSendAs(global, chatId!),
     lastMessageId,
@@ -649,7 +625,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     text: !dice && !payload.richMessage ? payload.text : undefined,
     entities: payload.richMessage ? undefined : payload.entities,
     richMessage: payload.richMessage,
-    ...suggestedMessage && { isInvertedMedia: suggestedMessage?.isInvertedMedia },
   };
 
   if (!isStoryReply) {
@@ -885,24 +860,6 @@ addActionHandler('editMessage', (global, actions, payload): ActionReturnType => 
   })();
 });
 
-addActionHandler('editTodo', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, todo, messageId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!chat || !message) {
-    return;
-  }
-
-  callApi('editTodo', {
-    chat,
-    message,
-    todo,
-  });
-});
-
 addActionHandler('cancelUploadMedia', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId } = payload;
 
@@ -938,7 +895,7 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
 
   const currentDraft = selectDraft(global, chatId, threadId);
 
-  if (chat.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
+  if (chat.isMonoforum && !currentDraft?.replyInfo) {
     return; // Monoforum doesn't support drafts outside threads
   }
 
@@ -946,7 +903,6 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
     text: richMessage ? undefined : text,
     richMessage,
     replyInfo: currentDraft?.replyInfo,
-    suggestedPostInfo: currentDraft?.suggestedPostInfo,
   };
 
   saveDraft({
@@ -956,7 +912,7 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
 
 addActionHandler('clearDraft', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, threadId = MAIN_THREAD_ID, isLocalOnly, shouldKeepReply, shouldKeepSuggestedPost,
+    chatId, threadId = MAIN_THREAD_ID, isLocalOnly, shouldKeepReply,
   } = payload;
   const currentDraft = selectDraft(global, chatId, threadId);
   if (!currentDraft) {
@@ -965,11 +921,9 @@ addActionHandler('clearDraft', (global, actions, payload): ActionReturnType => {
 
   const currentReplyInfo = currentDraft.replyInfo;
 
-  const newDraft: ApiDraft | undefined = (shouldKeepReply && currentReplyInfo)
-    || (shouldKeepSuggestedPost && currentDraft.suggestedPostInfo) ? {
-      replyInfo: shouldKeepReply ? currentReplyInfo : undefined,
-      suggestedPostInfo: shouldKeepSuggestedPost ? currentDraft.suggestedPostInfo : undefined,
-    } : undefined;
+  const newDraft: ApiDraft | undefined = shouldKeepReply && currentReplyInfo ? {
+    replyInfo: currentReplyInfo,
+  } : undefined;
 
   saveDraft({
     global,
@@ -1004,7 +958,7 @@ addActionHandler('updateDraftReplyInfo', (global, actions, payload): ActionRetur
     const isNewTarget = update.replyToMsgId !== undefined;
     const baseReplyInfo = currentReplyInfo && isNewTarget
       ? omit(currentReplyInfo, [
-        'replyToPeerId', 'quoteText', 'quoteRich', 'quoteOffset', 'todoItemId', 'pollOption',
+        'replyToPeerId', 'quoteText', 'quoteRich', 'quoteOffset', 'pollOption',
       ]) : currentReplyInfo;
 
     updatedReplyInfo = {
@@ -1018,7 +972,6 @@ addActionHandler('updateDraftReplyInfo', (global, actions, payload): ActionRetur
   const newDraft: ApiDraft = {
     ...currentDraft,
     replyInfo: updatedReplyInfo,
-    suggestedPostInfo: undefined,
   };
 
   saveDraft({
@@ -1031,7 +984,7 @@ addActionHandler('resetDraftReplyInfo', (global, actions, payload): ActionReturn
   const chat = selectChat(global, chatId);
 
   const currentDraft = selectDraft(global, chatId, threadId);
-  if (chat?.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
+  if (chat?.isMonoforum && !currentDraft?.replyInfo) {
     return; // Monoforum doesn't support drafts outside threads
   }
   const newDraft: ApiDraft | undefined = !currentDraft?.text && !currentDraft?.richMessage ? undefined : {
@@ -1045,92 +998,6 @@ addActionHandler('resetDraftReplyInfo', (global, actions, payload): ActionReturn
     threadId,
     draft: newDraft,
     isLocalOnly: Boolean(newDraft) || currentDraft?.replyInfo?.type === 'ephemeral',
-  });
-});
-
-addActionHandler('updateDraftSuggestedPostInfo', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId(), ...update } = payload;
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-
-  const { chatId, threadId } = currentMessageList;
-
-  const currentDraft = selectDraft(global, chatId, threadId);
-
-  const updatedSuggestedPostInfo = {
-    ...currentDraft?.suggestedPostInfo,
-    ...update,
-  } satisfies ApiInputSuggestedPostInfo;
-
-  const newDraft: ApiDraft = {
-    ...currentDraft,
-    suggestedPostInfo: updatedSuggestedPostInfo,
-  };
-
-  saveDraft({
-    global, chatId, threadId, draft: newDraft, isLocalOnly: true, noLocalTimeUpdate: true,
-  });
-});
-
-addActionHandler('resetDraftSuggestedPostInfo', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-  const { chatId, threadId } = currentMessageList;
-
-  saveDraft({
-    global, chatId, threadId, draft: undefined, isLocalOnly: false,
-  });
-});
-
-addActionHandler('initDraftFromSuggestedMessage', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message) {
-    return;
-  }
-
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-
-  const { threadId } = currentMessageList;
-
-  actions.clearDraft({
-    chatId,
-    threadId,
-    isLocalOnly: true,
-  });
-
-  actions.updateDraftReplyInfo({
-    replyToMsgId: messageId,
-    monoforumPeerId: selectSavedDialogIdFromMessage(global, message),
-    tabId,
-  });
-
-  if (message.suggestedPostInfo) {
-    const { scheduleDate, ...messageSuggestedPost } = message.suggestedPostInfo;
-    const now = getServerTime();
-    const futureMin = global.appConfig.starsSuggestedPostFutureMin;
-
-    const validScheduleDate = scheduleDate && scheduleDate > now + futureMin ? scheduleDate : undefined;
-
-    actions.updateDraftSuggestedPostInfo({
-      ...messageSuggestedPost,
-      scheduleDate: validScheduleDate,
-      tabId,
-    });
-  }
-
-  actions.saveDraft({
-    chatId,
-    threadId,
-    text: message.content.text,
   });
 });
 
@@ -1713,71 +1580,6 @@ addActionHandler('appendPollAnswer', async (global, actions, payload): Promise<v
   await callApi('appendPollAnswer', { chat, messageId, text });
 });
 
-addActionHandler('toggleTodoCompleted', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, completedIds, incompletedIds } = payload;
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  const currentUserId = global.currentUserId;
-
-  const currentTodo = message?.content.todo;
-  if (!currentTodo || !currentUserId || !chat) {
-    return;
-  }
-
-  const currentCompletions = currentTodo.completions || [];
-  const currentCompletionIds = currentCompletions.map((c) => c.itemId);
-
-  const newCompletions = [...currentCompletions];
-  const now = getServerTime();
-
-  completedIds.forEach((itemId) => {
-    if (!currentCompletionIds.includes(itemId)) {
-      newCompletions.push({
-        itemId,
-        completedBy: currentUserId,
-        completedAt: now,
-      });
-    }
-  });
-
-  const finalCompletions = newCompletions.filter((c) => !incompletedIds.includes(c.itemId));
-
-  const newContent = {
-    ...message.content,
-    todo: {
-      ...currentTodo,
-      completions: finalCompletions,
-    },
-  };
-
-  const messageUpdate: Partial<ApiMessage> = {
-    ...message,
-    content: newContent,
-  };
-
-  global = updateWithLocalMedia(global, chatId, message.id, false, messageUpdate);
-  setGlobal(global);
-
-  callApi('toggleTodoCompleted', { chat, messageId: message.id, completedIds, incompletedIds });
-});
-addActionHandler('appendTodoList', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, items, messageId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!chat || !message) {
-    return;
-  }
-
-  callApi('appendTodoList', {
-    chat,
-    message,
-    items,
-  });
-});
-
 addActionHandler('cancelPollVote', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId } = payload;
   const chat = selectChat(global, chatId);
@@ -1896,7 +1698,7 @@ addActionHandler('sendScheduledMessages', (global, actions, payload): ActionRetu
 
 addActionHandler('rescheduleMessage', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, messageId, scheduledAt, scheduleRepeatPeriod,
+    chatId, messageId, scheduledAt,
   } = payload;
 
   const chat = selectChat(global, chatId);
@@ -1909,7 +1711,6 @@ addActionHandler('rescheduleMessage', (global, actions, payload): ActionReturnTy
     chat,
     message,
     scheduledAt,
-    scheduleRepeatPeriod,
   });
 });
 
@@ -1928,30 +1729,6 @@ addActionHandler('saveVoiceWaveform', (global, actions, payload): ActionReturnTy
       voice: { ...voice, waveform },
     },
   });
-});
-
-addActionHandler('transcribeAudio', async (global, actions, payload): Promise<void> => {
-  const { messageId, chatId } = payload;
-
-  const chat = selectChat(global, chatId);
-
-  if (!chat) return;
-
-  global = updateChatMessage(global, chatId, messageId, {
-    transcriptionId: '',
-  });
-
-  setGlobal(global);
-
-  const result = await callApi('transcribeAudio', { chat, messageId });
-
-  global = getGlobal();
-  global = updateChatMessage(global, chatId, messageId, {
-    transcriptionId: result,
-    isTranscriptionError: !result,
-  });
-
-  setGlobal(global);
 });
 
 addActionHandler('loadCustomEmojis', async (global, actions, payload): Promise<void> => {
@@ -1979,7 +1756,7 @@ addActionHandler('loadCustomEmojis', async (global, actions, payload): Promise<v
 
 addActionHandler('forwardMessages', (global, actions, payload): ActionReturnType => {
   const {
-    isSilent, scheduledAt, scheduleRepeatPeriod, tabId = getCurrentTabId(),
+    isSilent, scheduledAt, tabId = getCurrentTabId(),
   } = payload;
   const { toChatId, toThreadId = MAIN_THREAD_ID } = selectTabState(global, tabId).forwardMessages;
   const toChat = toChatId ? selectChat(global, toChatId) : undefined;
@@ -1990,7 +1767,7 @@ addActionHandler('forwardMessages', (global, actions, payload): ActionReturnType
     actions.animateMessageSending({ chatId: toChat.id, threadId: toThreadId, tabId });
   }
 
-  executeForwardMessages(global, { chat: toChat, isSilent, scheduledAt, scheduleRepeatPeriod }, tabId);
+  executeForwardMessages(global, { chat: toChat, isSilent, scheduledAt }, tabId);
 });
 
 function executeForwardMessages(global: GlobalState, sendParams: SendMessageParams, tabId: number) {
@@ -1998,9 +1775,8 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
   const {
     fromChatId, messageIds, toChatId, withMyScore, noAuthors, noCaptions, toThreadId = MAIN_THREAD_ID,
   } = forwardMessages;
-  const { isSilent, scheduledAt, scheduleRepeatPeriod } = sendParams;
+  const { isSilent, scheduledAt } = sendParams;
 
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const isToMainThread = toThreadId === MAIN_THREAD_ID;
 
   const fromChat = fromChatId ? selectChat(global, fromChatId) : undefined;
@@ -2038,14 +1814,12 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
         messages: slice,
         isSilent,
         scheduledAt,
-        scheduleRepeatPeriod,
         sendAs,
         withMyScore,
         // A widget always shows which bot it is from: the server keeps its forward header (widget-sandbox sdk-v1 §5.11)
         noAuthors: noAuthors && !slice.some((message) => message.content.widget),
         noCaptions,
         privateForwardName,
-        isCurrentUserPremium,
         wasDrafted: Boolean(draft),
         lastMessageId,
       };
@@ -2068,7 +1842,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
       sticker,
       isSilent,
       scheduledAt,
-      scheduleRepeatPeriod,
       sendAs,
       lastMessageId,
     };
@@ -2797,46 +2570,6 @@ addActionHandler('loadUnreadPollVotes', async (global, actions, payload): Promis
   setGlobal(global);
 });
 
-addActionHandler('approveSuggestedPost', async (global, actions, payload): Promise<void> => {
-  const { chatId, messageId, scheduleDate, tabId = getCurrentTabId() } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleSuggestedPostApproval', {
-    chat,
-    messageId,
-    reject: false,
-    scheduleDate,
-  });
-
-  if (!result) return;
-
-  actions.showNotification({
-    message: { key: 'SuggestedPostApproved' },
-    tabId,
-  });
-});
-
-addActionHandler('rejectSuggestedPost', async (global, actions, payload): Promise<void> => {
-  const { chatId, messageId, rejectComment, tabId = getCurrentTabId() } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleSuggestedPostApproval', {
-    chat,
-    messageId,
-    reject: true,
-    rejectComment,
-  });
-
-  if (!result) return;
-
-  actions.showNotification({
-    message: { key: 'SuggestedPostRejectedNotification' },
-    tabId,
-  });
-});
-
 addActionHandler('markMentionsRead', (global, actions, payload): ActionReturnType => {
   const { chatId, messageIds } = payload;
   const chat = selectChat(global, chatId);
@@ -2944,6 +2677,12 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
 
   if (!ignoreDeepLinks && RE_SIGNAL_GROUP_LINK.test(urlWithProtocol)) {
     actions.checkChatInvite({ hash: urlWithProtocol, tabId });
+    return;
+  }
+
+  const stickerPack = !ignoreDeepLinks ? parseStickerPackLink(urlWithProtocol) : undefined;
+  if (stickerPack) {
+    actions.openStickerSet({ stickerSetInfo: { id: stickerPack.id, accessHash: stickerPack.key }, tabId });
     return;
   }
 
@@ -3173,7 +2912,6 @@ interface ForwardToChatOptions {
   withMyScore?: boolean;
   noAuthors?: boolean;
   noCaptions?: boolean;
-  isCurrentUserPremium: boolean;
 }
 
 function forwardMessagesToChat({
@@ -3187,7 +2925,6 @@ function forwardMessagesToChat({
   withMyScore,
   noAuthors,
   noCaptions,
-  isCurrentUserPremium,
 }: ForwardToChatOptions) {
   const privateForwardName = selectUserFullInfo(global, fromChat.id)?.privateForwardName;
   const sendAs = selectSendAs(global, toChat.id);
@@ -3232,7 +2969,6 @@ function forwardMessagesToChat({
           noAuthors,
           noCaptions,
           privateForwardName,
-          isCurrentUserPremium,
           wasDrafted: false,
           lastMessageId,
         };
@@ -3267,7 +3003,6 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
   } = selectTabState(global, tabId).forwardMessages;
 
   const fromChat = fromChatId ? selectChat(global, fromChatId) : undefined;
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
   const messages = fromChatId && messageIds
     ? messageIds
@@ -3301,7 +3036,6 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
       withMyScore,
       noAuthors,
       noCaptions,
-      isCurrentUserPremium,
     });
   }
 
@@ -3408,123 +3142,6 @@ addActionHandler('sendAudioToSavedMessages', (global, actions, payload): ActionR
     message: { key: 'AudioForwardedToNoteToSelf', options: { withNodes: true, withMarkdown: true } },
     tabId,
   });
-});
-
-addActionHandler('requestMessageTranslation', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, id, toLanguageCode = selectTranslationLanguage(global), tone, tabId = getCurrentTabId(),
-  } = payload;
-
-  global = updateRequestedMessageTranslation(global, chatId, id, toLanguageCode, tone, tabId);
-
-  if (!tone) {
-    global = replaceSettings(global, {
-      translationLanguage: toLanguageCode,
-    });
-  }
-
-  return global;
-});
-
-addActionHandler('showOriginalMessage', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, id, tabId = getCurrentTabId(),
-  } = payload;
-
-  global = removeRequestedMessageTranslation(global, chatId, id, tabId);
-
-  return global;
-});
-
-addActionHandler('markMessagesTranslationPending', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageIds, requestId, toLanguageCode = selectLanguageCode(global), tone,
-  } = payload;
-
-  messageIds.forEach((id) => {
-    global = updateMessageTranslation(global, chatId, id, toLanguageCode, {
-      isPending: true,
-      requestId,
-    }, tone);
-  });
-
-  return global;
-});
-
-addActionHandler('translateMessages', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageIds, toLanguageCode = selectLanguageCode(global), tone,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  const requestId = generateUniqueId();
-  actions.markMessagesTranslationPending({ chatId, messageIds, requestId, toLanguageCode, tone });
-
-  const [richMessageIds, textMessageIds] = partition(
-    messageIds, (id) => Boolean(selectChatMessage(global, chatId, id)?.content.richMessage),
-  );
-
-  if (textMessageIds.length) {
-    callApi('translateText', {
-      chat,
-      messageIds: textMessageIds,
-      requestId,
-      toLanguageCode,
-      tone,
-    });
-  }
-  if (richMessageIds.length) {
-    callApi('translateRichMessage', {
-      chat,
-      messageIds: richMessageIds,
-      requestId,
-      toLanguageCode,
-      tone,
-    });
-  }
-
-  return global;
-});
-
-addActionHandler('summarizeMessage', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, id, toLanguageCode, onError,
-  } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const { languageCode, tone } = toLanguageCode
-    ? parseTranslationCacheKey(toLanguageCode)
-    : { languageCode: undefined, tone: undefined };
-  const apiTone = tone === 'neutral' ? undefined : tone;
-
-  const placeholderSummary: TextSummary = {
-    isPending: true,
-    text: undefined,
-  };
-
-  global = updateMessageSummary(global, chatId, id, placeholderSummary, toLanguageCode);
-  setGlobal(global);
-
-  const result = await callApi('fetchMessageSummary', { chat, id, toLanguageCode: languageCode, tone: apiTone });
-  if (!result) {
-    global = getGlobal();
-    global = clearMessageSummary(global, chatId, id, toLanguageCode);
-    setGlobal(global);
-    onError?.();
-    return;
-  }
-
-  const summary: TextSummary = {
-    isPending: false,
-    text: result,
-  };
-
-  global = getGlobal();
-  global = updateMessageSummary(global, chatId, id, summary, toLanguageCode);
-  setGlobal(global);
 });
 
 // https://github.com/telegramdesktop/tdesktop/blob/11906297d82b6ff57b277da5251d2e6eb3d8b6d0/Telegram/SourceFiles/api/api_views.cpp#L22

@@ -466,6 +466,12 @@ const MediaViewer = ({
 
     const { message: fromMessage, mediaIndex: fromMediaIndex } = from;
 
+    const albumItems = fromMessage.content.album?.items;
+    const nextAlbumIndex = (fromMediaIndex || 0) + direction;
+    if (albumItems && nextAlbumIndex >= 0 && nextAlbumIndex < albumItems.length) {
+      return { type: 'message', message: fromMessage, mediaIndex: nextAlbumIndex };
+    }
+
     const index = mediaKeys?.indexOf(getSharedMediaKey(fromMessage, fromMediaIndex));
     if (index === undefined || index === -1) return undefined;
     const nextKey = mediaKeys![index + direction];

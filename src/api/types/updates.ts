@@ -5,7 +5,7 @@ import type {
   VideoRotation,
   VideoState,
 } from '../../lib/vibecalls';
-import type { ThreadId, ThreadReadState, TranslationTone } from '../../types';
+import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { ApiBotCommand, ApiBotMenuButton } from './bots';
 import type {
@@ -41,10 +41,10 @@ import type {
   ApiSessionData,
   ApiWallpaper,
 } from './misc';
-import type { ApiEmojiStatusType, ApiPeerSettings } from './peers';
+import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
 import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
-import type { ApiStealthMode, ApiStory, ApiStorySkipped } from './stories';
+import type { ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
 } from './users';
@@ -554,7 +554,7 @@ export type ApiUpdateUserStatus = {
 export type ApiUpdateUserEmojiStatus = {
   '@type': 'updateUserEmojiStatus';
   userId: string;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
 };
 
 export type ApiUpdateRecentEmojiStatuses = {
@@ -591,10 +591,6 @@ export type ApiUpdateNotSupportedInFrozenAccountError = {
 
 export type ApiUpdateConfig = {
   '@type': 'updateConfig';
-};
-
-export type ApiUpdateAiComposeTones = {
-  '@type': 'updateAiComposeTones';
 };
 
 export type ApiUpdateResetContacts = {
@@ -790,13 +786,6 @@ export type ApiUpdateBotMenuButton = {
   button: ApiBotMenuButton;
 };
 
-export type ApiUpdateTranscribedAudio = {
-  '@type': 'updateTranscribedAudio';
-  transcriptionId: string;
-  text: string;
-  isPending?: boolean;
-};
-
 export type ApiUpdatePinnedTopic = {
   '@type': 'updatePinnedTopic';
   topicId: number;
@@ -840,28 +829,6 @@ export type ApiUpdateViewForumAsMessages = {
   isEnabled?: true;
 };
 
-export type ApiUpdateMessageTranslations = {
-  '@type': 'updateMessageTranslations';
-  requestId: string;
-  chatId: string;
-  messageIds: number[];
-  translations: {
-    text?: ApiFormattedText;
-    richMessage?: ApiRichMessage;
-  }[];
-  toLanguageCode: string;
-  tone?: TranslationTone;
-};
-
-export type ApiUpdateFailedMessageTranslations = {
-  '@type': 'failedMessageTranslations';
-  requestId: string;
-  chatId: string;
-  messageIds: number[];
-  toLanguageCode: string;
-  tone?: TranslationTone;
-};
-
 export type ApiUpdateFetchingDifference = {
   '@type': 'updateFetchingDifference';
   isFetching: boolean;
@@ -896,11 +863,6 @@ export type ApiUpdateSentStoryReaction = {
   reaction?: ApiReaction;
 };
 
-export type ApiUpdateStealthMode = {
-  '@type': 'updateStealthMode';
-  stealthMode: ApiStealthMode;
-};
-
 export type ApiRequestSync = {
   '@type': 'requestSync';
 };
@@ -925,11 +887,6 @@ export type ApiUpdateGroupInvitePrivacyForbidden = {
 
 export type ApiUpdateSavedReactionTags = {
   '@type': 'updateSavedReactionTags';
-};
-
-export type ApiUpdatePremiumFloodWait = {
-  '@type': 'updatePremiumFloodWait';
-  isUpload?: boolean;
 };
 
 export type ApiUpdateDeleteProfilePhoto = {
@@ -1002,8 +959,8 @@ export type ApiUpdate = (
   ApiUpdateFavoriteStickers | ApiUpdateStickerSet | ApiUpdateStickerSets | ApiUpdateStickerSetsOrder |
   ApiUpdateRecentStickers | ApiUpdateSavedGifs | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
   ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage |
-  ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
-  ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateChatTypingDraftStopped
+  ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateWebPage | ApiUpdateChatTypingDraft
+  | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
   ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode | ApiUpdateWebViewResultSent |
   ApiUpdateJoinChatWebViewDecision |
@@ -1013,18 +970,17 @@ export type ApiUpdate = (
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
-  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
+  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateUserEmojiStatus |
   ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
-  ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
+  ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory | ApiUpdateBotCommands
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
-  | ApiUpdateAiComposeTones
 );
 
 export type OnApiUpdate = (update: ApiUpdate) => void;

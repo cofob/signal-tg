@@ -21,7 +21,6 @@ import {
 import { selectPeerStory, selectPollFromMessage, selectWebPageFromMessage } from '../../global/selectors';
 import trimText from '../../util/text/trimText';
 import renderText from './helpers/renderText';
-import { renderTextWithEntities } from './helpers/renderTextWithEntities';
 
 import useLang from '../../hooks/useLang';
 
@@ -82,24 +81,11 @@ function MessageSummary({
     const description = getMessageSummaryDescription(lang, message, statefulContent);
 
     if (typeof description !== 'string') {
-      const { todo } = message.content;
-      const formattedSummaryText = todo?.todo.title;
-      const renderedDescription = formattedSummaryText
-        ? renderFormattedSummaryText({
-          formattedText: formattedSummaryText,
-          truncateLength,
-          emojiSize,
-          observeIntersectionForLoading,
-          observeIntersectionForPlaying,
-          withTranslucentThumbs,
-        })
-        : description;
-
       return (
         <span>
           {[
             emoji ? renderText(`${emoji} `) : undefined,
-            renderedDescription,
+            description,
           ].flat().filter(Boolean)}
         </span>
       );
@@ -160,29 +146,3 @@ export default memo(withGlobal<OwnProps>(
     };
   },
 )(MessageSummary));
-
-function renderFormattedSummaryText({
-  formattedText,
-  truncateLength,
-  emojiSize,
-  observeIntersectionForLoading,
-  observeIntersectionForPlaying,
-  withTranslucentThumbs,
-}: {
-  formattedText: ApiFormattedText;
-  truncateLength?: number;
-  emojiSize?: number;
-  observeIntersectionForLoading?: ObserveFn;
-  observeIntersectionForPlaying?: ObserveFn;
-  withTranslucentThumbs?: boolean;
-}) {
-  return renderTextWithEntities({
-    text: trimText(formattedText.text, truncateLength),
-    entities: formattedText.entities,
-    emojiSize,
-    asPreview: true,
-    observeIntersectionForLoading,
-    observeIntersectionForPlaying,
-    withTranslucentThumbs,
-  });
-}

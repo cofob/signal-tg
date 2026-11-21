@@ -1,5 +1,7 @@
 import type { LastResortPreKeys } from '../account/preKeys';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
+import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
 
@@ -37,6 +39,12 @@ export type AccountRecord = {
   isPhoneNumberUnlisted?: boolean;
   // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
   usernameLink?: UsernameLink;
+  // Registered primary devices only: SVR2 stores the master key under a PIN
+  hasSvrPin?: boolean;
+  // Registered primary devices only: registering the number again needs the PIN
+  isRegistrationLockEnabled?: boolean;
+  // Registered primary devices only: storage service contacts with only a number are looked up with CDSI
+  isContactDiscoveryEnabled?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
   // Set at registration until the user confirms to have saved the recovery key, which is the account entropy pool
@@ -60,7 +68,9 @@ export type PendingRegistration = {
   registrationId: number;
   pniRegistrationId: number;
   profileKey: Uint8Array;
-  accountEntropyPool: string;
+  // An account that a PIN restored from SVR2 has a master key and no account entropy pool
+  accountEntropyPool?: string;
+  masterKey?: Uint8Array;
   mediaRootBackupKey: Uint8Array;
   aciIdentityKeyPair: KeyPairBytes;
   pniIdentityKeyPair: KeyPairBytes;
@@ -118,6 +128,19 @@ type Items = {
   pendingRegistration: PendingRegistration;
   // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
   unlinkedAci: string;
+  // Storage record types this device has merged from records it stored before supporting them (`MessageProcessor`)
+  storageMergedRecordTypes: NonNullable<StorageRecord['record']['case']>[];
+  // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
+  stickerPacks: Record<string, StickerPackRecord>;
+  // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
+  recentStickers: string[];
+  cdsiToken: CdsiToken;
+};
+
+/** The contact discovery token for the numbers of earlier contact refreshes, which later refreshes send again */
+export type CdsiToken = {
+  token: Uint8Array;
+  e164s: string[];
 };
 
 export type NotificationDefaults = {
@@ -333,6 +356,15 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Decrypted manifests of sticker packs by hex pack id; they never change, so they are kept for any pack seen */
+  getStickerPackManifest(id: string) {
+    return this.db.get<StickerPackManifest>(`stickerPackManifest:${id}`);
+  }
+
+  setStickerPackManifest(id: string, manifest: StickerPackManifest) {
+    return this.db.set(`stickerPackManifest:${id}`, manifest);
   }
 
   /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */

@@ -30,7 +30,6 @@ import {
   selectChatFullInfo,
   selectIsChatRestricted,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectPeer,
   selectPeerPhotos,
   selectTabState,
@@ -472,24 +471,6 @@ addActionHandler('setEmojiStatus', async (global, actions, payload): Promise<voi
     emojiStatus, referrerWebAppKey, tabId = getCurrentTabId(),
   } = payload;
 
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (!isCurrentUserPremium) {
-    if (referrerWebAppKey) {
-      actions.sendWebAppEvent({
-        webAppKey: referrerWebAppKey,
-        event: {
-          eventType: 'emoji_status_failed',
-          eventData: {
-            error: 'USER_DECLINED',
-          },
-        },
-        tabId,
-      });
-    }
-
-    return;
-  }
-
   const result = await callApi('updateEmojiStatus', emojiStatus);
 
   if (referrerWebAppKey) {
@@ -689,8 +670,8 @@ addActionHandler('openRecoveryKeyModal', async (global, actions, payload): Promi
   const result = await callApi('fetchRecoveryKey');
   if (shouldSkipConfirmed && !result?.isUnconfirmed) return;
   if (!result) {
-    // Linked devices do not have the key to show
-    actions.showNotification({ message: { key: 'RecoveryKeyPrimaryOnly' }, tabId });
+    // Linked devices and accounts that a PIN restored have no key to show
+    actions.showNotification({ message: { key: 'RecoveryKeyUnavailable' }, tabId });
     return;
   }
 

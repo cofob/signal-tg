@@ -3,10 +3,6 @@ import type { Entity } from '../../../lib/gramjs/types';
 import { strippedPhotoToJpg } from '../../../lib/gramjs/Utils';
 
 import type {
-  ApiAiComposeTone,
-  ApiAiComposeToneDefault,
-  ApiAiComposeToneExample,
-  ApiComposedMessageWithAI,
   ApiFormattedText,
   ApiMessageEntity,
   ApiMessageEntityDefault,
@@ -169,7 +165,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
   let allowChatIds: string[] | undefined;
   let blockUserIds: string[] | undefined;
   let blockChatIds: string[] | undefined;
-  let shouldAllowPremium: true | undefined;
   let botsPrivacy: BotsPrivacyType = 'none';
 
   const localChats = localDb.chats;
@@ -204,8 +199,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
         if (localChats[dialogId]) return dialogId;
         return channelId;
       });
-    } else if (rule instanceof GramJs.PrivacyValueAllowPremium) {
-      shouldAllowPremium = true;
     } else if (rule instanceof GramJs.PrivacyValueAllowBots) {
       botsPrivacy = 'allow';
     } else if (rule instanceof GramJs.PrivacyValueDisallowBots) {
@@ -226,7 +219,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
     allowChatIds: allowChatIds || [],
     blockUserIds: blockUserIds || [],
     blockChatIds: blockChatIds || [],
-    shouldAllowPremium,
     botsPrivacy,
   };
 }
@@ -334,49 +326,5 @@ export function buildApiMessageEntity(entity: GramJs.TypeMessageEntity): ApiMess
     type: type as `${ApiMessageEntityDefault['type']}`,
     offset,
     length,
-  };
-}
-
-export function buildApiAiComposeToneExample(
-  example: GramJs.AiComposeToneExample,
-): ApiAiComposeToneExample {
-  return {
-    from: buildApiFormattedText(example.from),
-    to: buildApiFormattedText(example.to),
-  };
-}
-
-export function buildApiAiComposeTone(
-  tone: GramJs.TypeAiComposeTone,
-): ApiAiComposeTone | ApiAiComposeToneDefault {
-  if (tone instanceof GramJs.AiComposeToneDefault) {
-    return {
-      tone: tone.tone,
-      emojiId: tone.emojiId.toString(),
-      title: tone.title,
-    };
-  }
-
-  return {
-    id: tone.id.toString(),
-    accessHash: tone.accessHash.toString(),
-    slug: tone.slug,
-    title: tone.title,
-    isCreator: tone.creator || undefined,
-    emojiId: tone.emojiId?.toString(),
-    prompt: tone.prompt,
-    installsCount: tone.installsCount,
-    authorId: tone.authorId?.toString(),
-    exampleEnglish: tone.exampleEnglish
-      ? buildApiAiComposeToneExample(tone.exampleEnglish) : undefined,
-  };
-}
-
-export function buildApiComposedMessageWithAI(
-  result: GramJs.messages.ComposedMessageWithAI,
-): ApiComposedMessageWithAI {
-  return {
-    resultText: buildApiFormattedText(result.resultText),
-    diffText: result.diffText ? buildApiFormattedText(result.diffText) : undefined,
   };
 }

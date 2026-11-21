@@ -14,7 +14,6 @@ import {
   selectChat,
   selectCurrentMessageList,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectShouldSchedule,
   selectStickerSet,
   selectTopic,
@@ -55,11 +54,11 @@ type StateProps = {
   canScheduleUntilOnline?: boolean;
   shouldSchedule?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   shouldUpdateStickerSetOrder?: boolean;
 };
 
 const INTERSECTION_THROTTLE = 200;
+const STICKER_PACK_LINK_PREFIX = 'https://signal.art/addstickers';
 
 const StickerSetModal = ({
   isOpen,
@@ -70,7 +69,6 @@ const StickerSetModal = ({
   canScheduleUntilOnline,
   shouldSchedule,
   isSavedMessages,
-  isCurrentUserPremium,
   shouldUpdateStickerSetOrder,
   currentMessageList,
   onClose,
@@ -120,9 +118,9 @@ const StickerSetModal = ({
     }
 
     if (shouldSchedule || isScheduleRequested) {
-      requestCalendar((scheduledAt, scheduleRepeatPeriod) => {
+      requestCalendar((scheduledAt) => {
         sendMessage({
-          messageList: currentMessageList, sticker, isSilent, scheduledAt, scheduleRepeatPeriod,
+          messageList: currentMessageList, sticker, isSilent, scheduledAt,
         });
         onClose();
       });
@@ -146,14 +144,13 @@ const StickerSetModal = ({
 
   const handleCopyLink = useCallback(() => {
     if (!renderingStickerSet) return;
-    const { shortName } = renderingStickerSet;
-    const suffix = isEmoji ? 'addemoji' : 'addstickers';
-    const url = `tg://${suffix}?set=${encodeURIComponent(shortName)}`;
-    copyTextToClipboard(url);
+    // Signal packs are shared by id and key (Signal Desktop `addStickersRoute` in `ts/util/signalRoutes.std.ts`)
+    const { id, accessHash } = renderingStickerSet;
+    copyTextToClipboard(`${STICKER_PACK_LINK_PREFIX}#pack_id=${id}&pack_key=${accessHash}`);
     showNotification({
       message: lang('LinkCopied'),
     });
-  }, [isEmoji, lang, renderingStickerSet, showNotification]);
+  }, [lang, renderingStickerSet, showNotification]);
 
   const renderButtonText = () => {
     if (!renderingStickerSet) return lang('Loading');
@@ -231,7 +228,6 @@ const StickerSetModal = ({
                     onClick={canSendStickers && !isEmoji ? handleSelect : undefined}
                     clickArg={sticker}
                     isSavedMessages={isSavedMessages}
-                    isCurrentUserPremium={isCurrentUserPremium}
                   />
                 ))}
               </SharedCanvas>
@@ -285,7 +281,6 @@ export default memo(withGlobal<OwnProps>(
       isSavedMessages,
       shouldSchedule: selectShouldSchedule(global),
       stickerSet,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldUpdateStickerSetOrder: global.settings.byKey.shouldUpdateStickerSetOrder,
       currentMessageList,
     };

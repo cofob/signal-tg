@@ -6,6 +6,7 @@ import { DEBUG } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { resumePendingRegistration } from '../../lib/signal/account/register';
+import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
 import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
@@ -109,6 +110,7 @@ export async function stopClient(shouldForget: boolean) {
   historyTransferController?.abort();
   processor.stop();
   client.close();
+  resetCdsiState();
   currentAccount = undefined;
   if (shouldForget) {
     await store.clear();

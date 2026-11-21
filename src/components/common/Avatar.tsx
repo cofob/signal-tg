@@ -84,7 +84,6 @@ type OwnProps = {
   isSavedDialog?: boolean;
   withVideo?: boolean;
   withStory?: boolean;
-  forPremiumPromo?: boolean;
   withStoryGap?: boolean;
   storyGapPercent?: number;
   withStorySolid?: boolean;
@@ -119,7 +118,6 @@ const Avatar = ({
   isSavedDialog,
   withVideo,
   withStory,
-  forPremiumPromo,
   withStoryGap,
   storyGapPercent,
   withStorySolid,
@@ -319,7 +317,6 @@ const Avatar = ({
   const isRoundedRect = (isCustomPeer && peer.isAvatarSquare)
     || isCommunity
     || (isForum && !forceRound && !((withStory || withStorySolid) && realPeer?.hasStories));
-  const isPremiumGradient = isCustomPeer && peer.withPremiumGradient;
   const customColor = isCustomPeer && peer.customPeerAvatarColor;
 
   const fullClassName = buildClassName(
@@ -332,12 +329,11 @@ const Avatar = ({
     isAnonymousForwards && 'anonymous-forwards',
     isDeleted && 'deleted-account',
     isReplies && 'replies-bot-account',
-    isPremiumGradient && 'premium-gradient-bg',
     isRoundedRect && 'forum',
     isCommunity && 'community',
     asMessageBubble && 'message-bubble',
     (photo || webPhoto) && styles.forceFit,
-    ((withStory && realPeer?.hasStories) || forPremiumPromo) && 'with-story-circle',
+    withStory && realPeer?.hasStories && 'with-story-circle',
     withStorySolid && realPeer?.hasStories && 'with-story-solid',
     withStorySolid && forceFriendStorySolid && 'close-friend',
     withStorySolid && (realPeer?.hasUnreadStories || forceUnreadStorySolid) && 'has-unread-story',

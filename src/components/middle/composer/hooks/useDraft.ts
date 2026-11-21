@@ -5,12 +5,11 @@ import type { ApiDraft, ApiMessage } from '../../../../api/types';
 import type { ThreadId } from '../../../../types';
 import { ApiMessageEntityTypes } from '../../../../api/types';
 
-import { DRAFT_DEBOUNCE, EDITABLE_INPUT_CSS_SELECTOR } from '../../../../config';
+import { DRAFT_DEBOUNCE } from '../../../../config';
 import {
-  requestMeasure, requestNextMutation,
+  requestMeasure,
 } from '../../../../lib/fasterdom/fasterdom';
 import { areDeepEqual } from '../../../../util/areDeepEqual';
-import focusEditableElement from '../../../../util/focusEditableElement';
 import {
   buildRichMessageFromFormatted,
   getRichInputAsFormatted,
@@ -101,7 +100,6 @@ const useDraft = ({
         chatId: prevState.chatId ?? chatId,
         threadId: prevState.threadId ?? threadId,
         shouldKeepReply: true,
-        shouldKeepSuggestedPost: true,
       });
     }
   });
@@ -114,7 +112,6 @@ const useDraft = ({
       return;
     }
     const isTouched = isTouchedRef.current;
-    const shouldUpdateSuggestedPost = draft?.suggestedPostInfo && !prevDraft?.suggestedPostInfo;
 
     if (chatId === prevChatId && threadId === prevThreadId) {
       // Saved drafts omit unfinished media, so restoring them would discard local uploads
@@ -124,7 +121,7 @@ const useDraft = ({
         replaceRichMessage(undefined);
       }
 
-      if (isTouched && !shouldUpdateSuggestedPost) return;
+      if (isTouched) return;
     }
 
     if (editedMessage || !draft) {
@@ -135,15 +132,6 @@ const useDraft = ({
       replaceRichMessage(draft.richMessage);
     } else {
       replaceRichMessage(buildRichMessageFromFormatted(draft.text));
-    }
-
-    if (shouldUpdateSuggestedPost) {
-      requestNextMutation(() => {
-        const messageInput = document.querySelector<HTMLDivElement>(EDITABLE_INPUT_CSS_SELECTOR);
-        if (messageInput) {
-          focusEditableElement(messageInput, true);
-        }
-      });
     }
 
     if (draft.richMessage) {

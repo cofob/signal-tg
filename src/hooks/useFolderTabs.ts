@@ -124,7 +124,6 @@ const useFolderTabs = (params: Params) => {
                 return;
               }
 
-              // Greater amount can be after premium downgrade
               if (folderInvitesById![id]?.length >= LIMITS.chatlistInvites) {
                 openLimitReachedModal({
                   limit: 'chatlistInvites',

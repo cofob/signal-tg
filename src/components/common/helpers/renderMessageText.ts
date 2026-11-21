@@ -117,12 +117,7 @@ function getFormattedSummaryText(
   message: ApiMessage,
   statefulContent: StatefulMediaContent | undefined,
 ): ApiFormattedText | undefined {
-  const { todo } = message.content;
   const { poll } = statefulContent || {};
-
-  if (todo) {
-    return todo.todo.title;
-  }
 
   if (poll) {
     return poll.summary.question;

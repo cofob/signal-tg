@@ -58,7 +58,6 @@ import {
   selectBot,
   selectChat,
   selectChatLastMessageId,
-  selectChatMessage,
   selectChatMessageOrEphemeral,
   selectCurrentChat,
   selectEphemeralMessage,
@@ -86,23 +85,6 @@ let botFatherId: string | null;
 function canUseInlineBots<T extends GlobalState>(global: T, chat: ApiChat) {
   return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 }
-
-addActionHandler('clickSuggestedMessageButton', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageId, button, tabId = getCurrentTabId(),
-  } = payload;
-
-  const { buttonType } = button.action;
-  const message = selectChatMessage(global, chatId, messageId);
-
-  switch (buttonType) {
-    case 'suggestChanges':
-      if (!message) break;
-
-      actions.initDraftFromSuggestedMessage({ chatId, messageId, tabId });
-      break;
-  }
-});
 
 addActionHandler('clickBotInlineButton', (global, actions, payload): ActionReturnType => {
   const {
@@ -174,7 +156,6 @@ addActionHandler('clickBotInlineButton', (global, actions, payload): ActionRetur
         chatId,
         threadId,
         messageListType: 'thread',
-        isQuiz: button.action.isQuiz,
         tabId,
       });
       break;

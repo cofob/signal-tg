@@ -1,14 +1,13 @@
 import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPrivacySettings } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalPinSettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
 import { ACCOUNT_TTL_OPTIONS } from '../../../config';
 import {
   selectCanSetPasscode, selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
 } from '../../../global/selectors';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { formatCountdown } from '../../../util/dates/duration';
@@ -18,7 +17,6 @@ import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import StarIcon from '../../common/icons/StarIcon';
 import Island, { IslandTitle } from '../../gili/layout/Island';
 import Button from '../../ui/Button';
 import Checkbox from '../../ui/Checkbox';
@@ -30,8 +28,8 @@ type OwnProps = {
 };
 
 type StateProps = {
-  isCurrentUserPremium?: boolean;
-  hasPassword?: boolean;
+  signalPin?: ApiSignalPinSettings;
+  isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
@@ -54,8 +52,8 @@ const DAYS_PER_MONTH = 30;
 
 const SettingsPrivacy = ({
   isActive,
-  isCurrentUserPremium,
-  hasPassword,
+  signalPin,
+  isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
   webAuthCount,
@@ -91,6 +89,9 @@ const SettingsPrivacy = ({
     loadPasskeys,
     openPasskeyModal,
     openRecoveryKeyModal,
+    loadSignalPinSettings,
+    loadSignalContactDiscovery,
+    setSignalContactDiscovery,
   } = getActions();
 
   useEffect(() => {
@@ -100,6 +101,8 @@ const SettingsPrivacy = ({
       loadPhoneNumberPrivacy();
       loadWebAuthorizations();
       loadPasskeys();
+      loadSignalPinSettings();
+      loadSignalContactDiscovery();
     }
   }, [isCurrentUserFrozen]);
 
@@ -121,6 +124,10 @@ const SettingsPrivacy = ({
   useHistoryBack({
     isActive,
     onBack: onReset,
+  });
+
+  const handleContactDiscoveryChange = useLastCallback((isEnabled: boolean) => {
+    setSignalContactDiscovery({ isEnabled });
   });
 
   const handleArchiveAndMuteChange = useLastCallback((isEnabled: boolean) => {
@@ -176,7 +183,7 @@ const SettingsPrivacy = ({
   function getVisibilityValue(setting?: ApiPrivacySettings) {
     if (!setting) return lang('Loading');
 
-    const { visibility, shouldAllowPremium, botsPrivacy } = setting;
+    const { visibility, botsPrivacy } = setting;
 
     const isAllowBots = botsPrivacy === 'allow';
     const isVisibilityEverybody = visibility === 'everybody';
@@ -193,10 +200,6 @@ const SettingsPrivacy = ({
 
     const exceptionString = [botPrivacyString, totalString].filter(Boolean).join(' ');
     if (shouldShowBotsString && !isVisibilityEverybody) return exceptionString;
-
-    if (shouldAllowPremium) {
-      return lang(exceptionString ? 'ContactsAndPremium' : 'PrivacyPremium');
-    }
 
     switch (visibility) {
       case 'everybody':
@@ -241,21 +244,21 @@ const SettingsPrivacy = ({
             </div>
           </ListItem>
         )}
-        <ListItem
-          icon="2fa-filled"
-          iconBg="green"
-          narrow
-          onClick={() => openSettingsScreen({
-            screen: hasPassword ? SettingsScreens.TwoFaEnabled : SettingsScreens.TwoFaDisabled,
-          })}
-        >
-          <div className="multiline-item">
-            <span className="title">{lang('TwoStepVerification')}</span>
-            <span className="subtitle" dir="auto">
-              {lang(hasPassword ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-            </span>
-          </div>
-        </ListItem>
+        {signalPin && (
+          <ListItem
+            icon="2fa-filled"
+            iconBg="green"
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.SignalPin })}
+          >
+            <div className="multiline-item">
+              <span className="title">{lang('SignalPinSettings')}</span>
+              <span className="subtitle" dir="auto">
+                {lang(signalPin.hasPin ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
+              </span>
+            </div>
+          </ListItem>
+        )}
         {arePasskeysAvailable && (
           <ListItem
             icon="key-filled"
@@ -306,6 +309,17 @@ const SettingsPrivacy = ({
           </ListItem>
         )}
       </Island>
+
+      {isContactDiscoveryEnabled !== undefined && (
+        <Island>
+          <Checkbox
+            label={lang('SignalContactDiscovery')}
+            subLabel={lang('SignalContactDiscoveryAbout')}
+            checked={isContactDiscoveryEnabled}
+            onCheck={handleContactDiscoveryChange}
+          />
+        </Island>
+      )}
 
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('PrivacyTitle')}</IslandTitle>
       <Island>
@@ -408,7 +422,6 @@ const SettingsPrivacy = ({
         <ListItem
           narrow
           allowDisabledClick
-          rightElement={isCurrentUserPremium && <StarIcon size="big" type="premium" />}
           className="no-icon"
           onClick={() => openSettingsScreen({ screen: SettingsScreens.PrivacyVoiceMessages })}
         >
@@ -512,7 +525,8 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          hasPassword, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
+          signalPin, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
+          shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
@@ -528,16 +542,15 @@ export default memo(withGlobal<OwnProps>(
 
     const { canDisplayChatInTitle } = selectSharedSettings(global);
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
     return {
-      isCurrentUserPremium,
-      hasPassword,
+      signalPin,
+      isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
       webAuthCount: global.activeWebSessions.orderedHashes.length,
       isSensitiveEnabled,
-      canDisplayAutoarchiveSetting: appConfig.canDisplayAutoarchiveSetting || isCurrentUserPremium,
+      canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting),
       shouldArchiveAndMuteNewNonContact,
       canChangeSensitive,
       needAgeVideoVerification: Boolean(appConfig.needAgeVideoVerification),

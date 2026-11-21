@@ -4,7 +4,7 @@ import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, KeyPairBytes, PendingRegistration } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST, SIGNAL_PRIMARY_DEVICE_ID } from '../config';
-import { bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { encodeUtf8, generateRegistrationId, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
 import { getBasicAuthorization, HttpError, sendJsonRequest } from '../net/rest';
@@ -51,6 +51,12 @@ type SessionResponse = Omit<VerificationSession, 'id' | 'requestedInformation'> 
 type CodeNotDeliverableResponse = {
   reason?: string;
   permanentFailure?: boolean;
+};
+
+type RegistrationLockResponse = {
+  // Milliseconds until the lock expires and the number can be registered without the PIN
+  timeRemaining?: number;
+  svr2Credentials?: Credentials;
 };
 
 type RegistrationResponse = {
@@ -104,6 +110,18 @@ const HTTP_NOT_DELIVERABLE = 440;
 
 const textDecoder = new TextDecoder();
 
+/** The number has Registration Lock (423): the PIN restores the master key from SVR2 with `svr2Credentials` */
+export class RegistrationLockError extends RegistrationError {
+  constructor(
+    // Milliseconds until the lock expires
+    readonly timeRemaining: number | undefined,
+    // Absent when the lock has no SVR2 data, so only waiting for its expiry helps
+    readonly svr2Credentials: Credentials | undefined,
+  ) {
+    super('registrationLock', HTTP_LOCKED);
+  }
+}
+
 /**
  * Starts phone number verification (`POST /v1/verification/session`). Without a push token the session
  * asks for a captcha before it allows a code request. The flow follows libsignal-net
@@ -152,29 +170,32 @@ export function submitVerificationCode(sessionId: string, code: string) {
  * Creates the account of a verified session with this browser as its primary device (`POST /v1/registration`)
  * and stores it as `isRegistrationPending` until `completeRegistration`. Port of Signal Desktop
  * `AccountManager.registerAsPrimaryDevice` and `WebAPI.createAccount` with the request shape of libsignal-net
- * `RegisterChatRequest`. The keys are stored as a pending registration before the request, so an account that the
- * server created while the answer got lost is not lost with them: a pending registration is resolved first
- * (`resumePendingRegistration`), and its keys are never replaced while its outcome is unknown.
+ * `RegisterChatRequest`. A number with Registration Lock needs `masterKey`, which SVR2 restores with the PIN: the
+ * account keeps it and its lock, as in Signal Desktop `standaloneInstaller` `verifyPIN`. The keys are stored as a
+ * pending registration before the request, so an account that the server created while the answer got lost is not
+ * lost with them: a pending registration is resolved first (`resumePendingRegistration`), and its keys are never
+ * replaced while its outcome is unknown.
  */
 export async function registerAccount(store: SignalStore, {
-  number, sessionId, isDiscoverableByPhoneNumber,
+  number, sessionId, isDiscoverableByPhoneNumber, masterKey,
 }: {
   number: string;
   sessionId: string;
   isDiscoverableByPhoneNumber: boolean;
+  masterKey?: Uint8Array;
 }) {
   const resumedAccount = await resumePendingRegistration(store).catch(() => {
     throw new RegistrationError('network', 0);
   });
   if (resumedAccount) return resumedAccount;
 
-  const pending = createPendingRegistration(number, !isDiscoverableByPhoneNumber);
+  const pending = createPendingRegistration(number, !isDiscoverableByPhoneNumber, masterKey);
   await store.setItem('pendingRegistration', pending);
   const {
     aciIdentityKeyPair, pniIdentityKeyPair, aciLastResortPreKeys, pniLastResortPreKeys, registrationId,
     pniRegistrationId, password, accountEntropyPool, profileKey,
   } = pending;
-  const svrKey = wasm.AccountEntropyPool_DeriveSvrKey(accountEntropyPool);
+  const svrKey = masterKey ?? wasm.AccountEntropyPool_DeriveSvrKey(accountEntropyPool!);
 
   // A request that never gets an answer leaves the registration pending
   const response = await sendRegistrationRequest('POST', '/v1/registration', {
@@ -186,8 +207,9 @@ export async function registerAccount(store: SignalStore, {
       recoveryPassword: bufferToBase64(wasm.SvrKey_DeriveRegistrationRecoveryPassword(svrKey)),
       unidentifiedAccessKey: bufferToBase64(wasm.ProfileKey_DeriveAccessKey(profileKey)),
       unrestrictedUnidentifiedAccess: false,
-      capabilities: getDeviceCapabilities(true),
+      capabilities: getDeviceCapabilities(true, Boolean(masterKey)),
       discoverableByPhoneNumber: isDiscoverableByPhoneNumber,
+      registrationLock: masterKey ? bufferToHex(wasm.SvrKey_DeriveRegistrationLock(masterKey)) : undefined,
     },
     skipDeviceTransfer: true,
     aciIdentityKey: bufferToBase64(aciIdentityKeyPair.publicKey),
@@ -202,8 +224,11 @@ export async function registerAccount(store: SignalStore, {
   // A refusal means that there is no account: nothing is left to resume. A server error may have created one.
   if (status >= HTTP_MULTIPLE_CHOICES && status < HTTP_SERVER_ERROR) await store.removeItem('pendingRegistration');
   if (status === HTTP_UNAUTHORIZED) throw new RegistrationError('sessionNotFound', status);
-  // Signal Desktop cannot continue without the PIN either when the server sends no SVR credentials
-  if (status === HTTP_LOCKED) throw new RegistrationError('registrationLock', status);
+  if (status === HTTP_LOCKED) {
+    const json = parseJson<RegistrationLockResponse>(response);
+    const credentials = json?.svr2Credentials;
+    throw new RegistrationLockError(json?.timeRemaining, credentials?.username ? credentials : undefined);
+  }
   // 409 asks for a device transfer, which `skipDeviceTransfer` declines
   if (status === HTTP_BAD_REQUEST || status === HTTP_FORBIDDEN || status === HTTP_CONFLICT) {
     throw new RegistrationError('rejected', status);
@@ -242,7 +267,9 @@ export async function resumePendingRegistration(store: SignalStore) {
   return saveRegisteredAccount(store, pending, { ...json, uuid: json.uuid, pni: json.pni });
 }
 
-function createPendingRegistration(number: string, isPhoneNumberUnlisted: boolean): PendingRegistration {
+function createPendingRegistration(
+  number: string, isPhoneNumberUnlisted: boolean, masterKey?: Uint8Array,
+): PendingRegistration {
   const aciIdentityKeyPair = generateIdentityKeyPair();
   const pniIdentityKeyPair = generateIdentityKeyPair();
   return {
@@ -253,7 +280,8 @@ function createPendingRegistration(number: string, isPhoneNumberUnlisted: boolea
     registrationId: generateRegistrationId(),
     pniRegistrationId: generateRegistrationId(),
     profileKey: getRandomBytes(PROFILE_KEY_LENGTH),
-    accountEntropyPool: wasm.AccountEntropyPool_Generate(),
+    accountEntropyPool: masterKey ? undefined : wasm.AccountEntropyPool_Generate(),
+    masterKey,
     mediaRootBackupKey: getRandomBytes(MEDIA_ROOT_BACKUP_KEY_LENGTH),
     aciIdentityKeyPair,
     pniIdentityKeyPair,
@@ -283,13 +311,16 @@ async function saveRegisteredAccount(
     pniRegistrationId: pending.pniRegistrationId,
     profileKey: pending.profileKey,
     accountEntropyPool: pending.accountEntropyPool,
+    masterKey: pending.masterKey,
     mediaRootBackupKey: pending.mediaRootBackupKey,
     isPhoneNumberUnlisted: pending.isPhoneNumberUnlisted,
+    hasSvrPin: pending.masterKey ? true : undefined,
+    isRegistrationLockEnabled: pending.masterKey ? true : undefined,
     isReadReceiptsEnabled: true,
     // A primary device has no other device to ask for contacts, groups and keys
     isInitialSyncDone: true,
     isRegistrationPending: true,
-    isRecoveryKeyUnconfirmed: true,
+    isRecoveryKeyUnconfirmed: pending.accountEntropyPool ? true : undefined,
   };
   await store.setItem('account', account);
   await store.removeItem('pendingRegistration');

@@ -1,24 +1,27 @@
 import type { API_CHAT_TYPES } from '../../config';
 import type { ApiBotInfo } from './bots';
+import type { ApiChat } from './chats';
 import type { ApiAudio, ApiDocument, ApiFormattedText, ApiPhoto } from './messages';
 import type { ApiPeerTheme, ApiWallpaper } from './misc';
 import type {
   ApiBotVerification,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
   ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
-import type { ApiStarsRating } from './stars';
+
+/** A Signal user found by phone number, or why none was */
+export type ApiPhoneNumberLookup = { chat: ApiChat; user: ApiUser }
+  | { error: 'notFound' | 'rateLimited' | 'unavailable' };
 
 export interface ApiUser {
   id: string;
   isMin: boolean;
   isSelf?: true;
   isVerified?: true;
-  isPremium?: boolean;
   isCloseFriend?: boolean;
   isContact?: true;
   isSupport?: true;
@@ -36,7 +39,7 @@ export interface ApiUser {
   canBotBeInvitedToGroup?: boolean;
   fakeType?: ApiFakeType;
   isAttachBot?: boolean;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
   areStoriesHidden?: boolean;
   hasStories?: boolean;
   hasUnreadStories?: boolean;
@@ -68,14 +71,10 @@ export interface ApiUserFullInfo {
   personalPhoto?: ApiPhoto;
   noVoiceMessages?: boolean;
   hasPinnedStories?: boolean;
-  isContactRequirePremium?: boolean;
   birthday?: ApiBirthday;
   personalChannelId?: string;
   personalChannelMessageId?: number;
   privateForwardName?: string;
-  starsRating?: ApiStarsRating;
-  starsMyPendingRating?: ApiStarsRating;
-  starsMyPendingRatingDate?: number;
   isBotCanManageEmojiStatus?: boolean;
   isBotAccessEmojiGranted?: boolean;
   hasScheduledMessages?: boolean;

@@ -9,7 +9,6 @@ import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiTypeCurrencyAmount } from './stars';
 import type {
   ApiMessageStoryData, ApiStory, ApiWebPageStickerData, ApiWebPageStoryData,
 } from './stories';
@@ -196,6 +195,10 @@ export interface ApiContact {
   lastName: string;
   phoneNumber: string;
   userId: string;
+  // Signal: the shared contact as a vCard, which the message offers to save
+  vcard?: string;
+  // Signal: the contact's ACI when no chat with it exists yet; messaging it creates one
+  aci?: string;
 }
 
 export interface ApiPollAnswer {
@@ -208,7 +211,6 @@ export interface ApiPollAnswer {
 
 export interface ApiPollResult {
   isChosen?: true;
-  isCorrect?: true;
   option: string;
   votersCount: number;
   recentVoterIds?: string[];
@@ -220,7 +222,6 @@ export interface ApiPoll {
   isClosed?: true;
   isPublic?: true;
   isMultipleChoice?: true;
-  isQuiz?: true;
   canAddAnswers?: true;
   isRevoteDisabled?: true;
   shouldShuffleAnswers?: true;
@@ -239,9 +240,6 @@ export interface ApiPollResults {
   resultByOption?: Record<string, ApiPollResult>;
   totalVoters?: number;
   recentVoterIds?: string[];
-  solution?: string;
-  solutionEntities?: ApiMessageEntity[];
-  solutionMedia?: MediaContent;
 }
 
 export interface ApiMessagePoll {
@@ -301,36 +299,8 @@ export type ApiDice = {
 
 export type ApiNewPoll = {
   summary: ApiPoll;
-  correctAnswers?: number[];
-  solution?: string;
-  solutionEntities?: ApiMessageEntity[];
   attachedMedia?: ApiAttachment;
-  solutionMedia?: ApiAttachment;
 };
-
-export interface ApiTodoItem {
-  id: number;
-  title: ApiFormattedText;
-}
-
-export interface ApiTodoList {
-  title: ApiFormattedText;
-  items: ApiTodoItem[];
-  othersCanAppend?: boolean;
-  othersCanComplete?: boolean;
-}
-
-export interface ApiTodoCompletion {
-  itemId: number;
-  completedBy: string;
-  completedAt: number;
-}
-
-export interface ApiMediaTodo {
-  mediaType: 'todo';
-  todo: ApiTodoList;
-  completions?: ApiTodoCompletion[];
-}
 
 export interface ApiWidget {
   mediaType: 'widget';
@@ -345,10 +315,6 @@ export interface ApiWidget {
   publicDataHash?: string;
   widgetId?: string;
 }
-
-export type ApiNewMediaTodo = {
-  todo: ApiTodoList;
-};
 
 export interface ApiWebPagePending {
   mediaType: 'webpage';
@@ -386,7 +352,6 @@ export interface ApiWebPageFull {
   stickers?: ApiWebPageStickerData;
   cachedPage?: ApiInstantViewPage;
   cachedPageAudioById?: Record<string, ApiAudio>;
-  aiComposeToneEmojiId?: string;
   hasLargeMedia?: boolean;
 }
 
@@ -412,7 +377,6 @@ export interface ApiMessageReplyInfo {
   replyToTopId?: number;
   isForumTopic?: true;
   isQuote?: true;
-  todoItemId?: number;
   pollOption?: string;
   replyOptionText?: ApiFormattedText;
   quoteText?: ApiFormattedText;
@@ -440,7 +404,6 @@ export interface ApiInputMessageReplyInfo {
   quoteText?: ApiFormattedText;
   quoteRich?: ApiRichText[];
   quoteOffset?: number;
-  todoItemId?: number;
   pollOption?: string;
 }
 
@@ -449,24 +412,10 @@ export interface ApiInputEphemeralReplyInfo {
   replyToMsgId: number;
 }
 
-export interface ApiSuggestedPost {
-  isAccepted?: true;
-  isRejected?: true;
-  price?: ApiTypeCurrencyAmount;
-  scheduleDate?: number;
-}
-
 export interface ApiInputStoryReplyInfo {
   type: 'story';
   peerId: string;
   storyId: number;
-}
-
-export interface ApiInputSuggestedPostInfo {
-  price?: ApiTypeCurrencyAmount;
-  scheduleDate?: number;
-  isAccepted?: true;
-  isRejected?: true;
 }
 
 export type ApiInputDraftReplyInfo = ApiInputMessageReplyInfo | ApiInputEphemeralReplyInfo;
@@ -622,50 +571,13 @@ export interface ApiFormattedTextWithEmojiOnlyCount extends ApiFormattedText {
   emojiOnlyCount?: number;
 }
 
-export type ApiInputAiComposeTone = {
-  type: 'default';
-  tone: string;
-} | {
-  type: 'id';
-  id: string;
-  accessHash: string;
-} | {
-  type: 'slug';
-  slug: string;
-} | {
-  type: 'singleUse';
-  customPrompt: string;
-};
-
-export interface ApiAiComposeToneExample {
-  from: ApiFormattedText;
-  to: ApiFormattedText;
-}
-
-export interface ApiAiComposeTone {
-  id: string;
-  accessHash: string;
-  slug: string;
-  title: string;
-  isCreator?: true;
-  emojiId?: string;
-  prompt?: string;
-  installsCount?: number;
-  authorId?: string;
-  exampleEnglish?: ApiAiComposeToneExample;
-}
-
-export interface ApiAiComposeToneDefault {
-  tone: string;
-  emojiId: string;
-  title: string;
-}
-
-export type ApiAiComposeToneType = ApiAiComposeTone | ApiAiComposeToneDefault;
-
-export interface ApiComposedMessageWithAI {
-  resultText: ApiFormattedText;
-  diffText?: ApiFormattedText;
+/**
+ * Signal: the photos and videos of one message, which it shows as an album. The message's `photo` or `video` is the
+ * first of them.
+ */
+export interface ApiMessageAlbum {
+  mediaType: 'album';
+  items: Pick<MediaContent, 'photo' | 'video'>[];
 }
 
 export type MediaContent = {
@@ -673,11 +585,11 @@ export type MediaContent = {
   richMessage?: ApiRichMessage;
   photo?: ApiPhoto;
   video?: ApiVideo;
+  album?: ApiMessageAlbum;
   document?: ApiDocument;
   sticker?: ApiSticker;
   contact?: ApiContact;
   pollId?: string;
-  todo?: ApiMediaTodo;
   widget?: ApiWidget;
   action?: ApiMessageAction;
   webPage?: ApiMessageWebPage;
@@ -723,7 +635,6 @@ export interface ApiMessage {
   ttlPeriod?: number;
   senderId?: string;
   replyInfo?: ApiReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   sendingState?: 'messageSendingStatePending' | 'messageSendingStateFailed';
   // Signal: a recipient's device received the message
   isDelivered?: true;
@@ -749,7 +660,6 @@ export interface ApiMessage {
   guestChatViaId?: string;
   postAuthorTitle?: string;
   isScheduled?: boolean;
-  scheduleRepeatPeriod?: number;
   shouldHideKeyboardButtons?: boolean;
   isHideKeyboardSelective?: boolean;
   isFromScheduled?: boolean;
@@ -758,8 +668,6 @@ export interface ApiMessage {
   seenByDates?: Record<string, number>;
   isProtected?: boolean;
   isForwardingAllowed?: boolean;
-  transcriptionId?: string;
-  isTranscriptionError?: boolean;
   reactors?: {
     nextOffset?: string;
     count: number;
@@ -775,7 +683,6 @@ export interface ApiMessage {
   areReactionsPossible?: true;
   reportDeliveryUntilDate?: number;
   restrictionReasons?: ApiRestrictionReason[];
-  summaryLanguageCode?: string;
   fromRank?: string;
 
   isTypingDraft?: boolean; // Local field
@@ -829,7 +736,6 @@ export interface ApiAvailableReaction {
   reaction: ApiReactionEmoji;
   title: string;
   isInactive?: boolean;
-  isPremium?: boolean;
   isLocalCache?: true;
 }
 
@@ -936,7 +842,7 @@ export type ApiRequestPeerType = {
 
 export type ApiReplyButtonAction =
   { type: 'command' | 'requestPhone' | 'unsupported' }
-  | { type: 'requestPoll'; isQuiz?: boolean }
+  | { type: 'requestPoll' }
   | { type: 'requestPeer'; buttonId: number; maxQuantity: number; peerType: ApiRequestPeerType }
   | { type: 'simpleWebView'; url: string };
 
@@ -950,9 +856,8 @@ export type ApiInlineButtonAction =
   | { type: 'urlAuth'; url: string; buttonId: number; forwardText?: string }
   | { type: 'copy'; copyText: string };
 
-export type ApiLocalButtonAction =
-  { type: 'suggestedMessage'; buttonType: 'approve' | 'decline' | 'suggestChanges'; disabled?: boolean }
-  | { type: 'openThread' }
+type ApiLocalButtonAction =
+  { type: 'openThread' }
   | { type: 'noForwardsRequest'; buttonType: 'accept' | 'reject' };
 
 export type ApiKeyboardButton = {
@@ -961,9 +866,6 @@ export type ApiKeyboardButton = {
   action: ApiReplyButtonAction | ApiInlineButtonAction | ApiLocalButtonAction;
 };
 
-export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
-  action: Extract<ApiLocalButtonAction, { type: 'suggestedMessage' }>;
-};
 export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'noForwardsRequest' }>;
 };
@@ -976,16 +878,10 @@ export type ApiReplyKeyboard = {
   isKeyboardFullHeight?: boolean;
 } & Partial<Record<'inlineButtons' | 'keyboardButtons', ApiKeyboardButtons>>;
 
-export type ApiTranscription = {
-  text: string;
-  isPending?: boolean;
-  transcriptionId: string;
-};
-
 export type ApiMessageSearchType = 'text' | 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif'
   | 'polls' | 'profilePhoto';
 export type ApiGlobalMessageSearchType = 'text' |
-  'channels' | 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'publicPosts';
+  'channels' | 'media' | 'documents' | 'links' | 'audio' | 'voice';
 export type ApiMessageSearchContext = 'all' | 'users' | 'groups' | 'channels';
 
 export type ApiReportReason = 'spam' | 'violence' | 'pornography' | 'childAbuse'
@@ -1042,15 +938,6 @@ export type ApiPreparedInlineMessage = {
   result: ApiBotInlineResult | ApiBotInlineMediaResult;
   peerTypes: ApiInlineQueryPeerType[];
   cacheTime: number;
-};
-
-export type ApiSearchPostsFlood = {
-  query?: string;
-  queryIsFree?: boolean;
-  totalDaily: number;
-  remains: number;
-  waitTill?: number;
-  starsAmount: number;
 };
 
 export type LinkContextMessage = {

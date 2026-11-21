@@ -2,10 +2,9 @@ import type MTProtoSender from '../network/MTProtoSender';
 import type TelegramClient from './TelegramClient';
 
 import { getDcBandwidthManager } from '../../../util/dcBandwithManager';
-import { FloodPremiumWaitError, FloodWaitError } from '../errors';
+import { FloodWaitError } from '../errors';
 import Api from '../tl/api';
 
-import LocalUpdatePremiumFloodWait from '../../../api/gramjs/updates/UpdatePremiumFloodWait';
 import { generateRandomBytes, readBigIntFromBuffer, sleep } from '../Helpers';
 import { getUploadPartSize } from '../Utils';
 
@@ -59,8 +58,6 @@ export async function uploadFile(
     onProgress(progress);
   }
 
-  // Limit updates to one per file
-  let isPremiumFloodWaitSent = false;
   let hasFailed = false;
 
   const promises: Promise<any>[] = [];
@@ -131,10 +128,6 @@ export async function uploadFile(
             }
 
             if (err instanceof FloodWaitError) {
-              if (err instanceof FloodPremiumWaitError && !isPremiumFloodWaitSent) {
-                sender?._updateCallback(new LocalUpdatePremiumFloodWait(true));
-                isPremiumFloodWaitSent = true;
-              }
               retryDelay = err.seconds * 1000;
             } else if (isTimeout || (sender && !sender.isConnected())) {
               failedAttempts += 1;

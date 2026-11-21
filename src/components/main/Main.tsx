@@ -20,7 +20,6 @@ import {
   selectChatMessage,
   selectCurrentMessageList,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsForwardModalOpen,
   selectIsMediaViewerOpen,
   selectIsReactionPickerOpen,
@@ -117,7 +116,6 @@ type StateProps = {
   wasTimeFormatSetManually?: boolean;
   isPhoneCallActive?: boolean;
   addedSetIds?: string[];
-  addedCustomEmojiIds?: string[];
   newContactUserId?: string;
   newContactByPhoneNumber?: boolean;
   openedGame?: TabState['openedGame'];
@@ -132,7 +130,6 @@ type StateProps = {
   deleteFolderDialog?: ApiChatFolder;
   isReactionPickerOpen: boolean;
   isDeleteMessageModalOpen?: boolean;
-  isCurrentUserPremium?: boolean;
   noRightColumnAnimation?: boolean;
   withInterfaceAnimations?: boolean;
   isSynced?: boolean;
@@ -166,7 +163,6 @@ const Main = ({
   withInterfaceAnimations,
   wasTimeFormatSetManually,
   addedSetIds,
-  addedCustomEmojiIds,
   isPhoneCallActive,
   newContactUserId,
   newContactByPhoneNumber,
@@ -180,7 +176,6 @@ const Main = ({
   requestedDraft,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
-  isCurrentUserPremium,
   deleteFolderDialog,
   isMasterTab,
   noRightColumnAnimation,
@@ -209,8 +204,6 @@ const Main = ({
     loadDiceStickers,
     loadDefaultTopicIcons,
     loadAddedStickers,
-    loadFavoriteStickers,
-    loadDefaultStatusIcons,
     ensureTimeFormat,
     closeStickerSetModal,
     closeCustomEmojiSets,
@@ -223,8 +216,6 @@ const Main = ({
     checkAppVersion,
     openThread,
     toggleLeftColumn,
-    loadRecentEmojiStatuses,
-    loadUserCollectibleStatuses,
     updatePageTitle,
     loadTopReactions,
     loadRecentReactions,
@@ -234,7 +225,6 @@ const Main = ({
     loadPeerColors,
     loadSavedReactionTags,
     openRecoveryKeyModal,
-    loadAiComposeTones,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -331,11 +321,9 @@ const Main = ({
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
-      loadUserCollectibleStatuses();
       loadGenericEmojiEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
-      loadAiComposeTones();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 
@@ -345,14 +333,6 @@ const Main = ({
       loadAllChats({ listType: 'saved' });
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen, hasCurrentUser]);
-
-  // Initial Premium API calls
-  useEffect(() => {
-    if (isMasterTab && isCurrentUserPremium && isAppConfigLoaded && !isAccountFrozen) {
-      loadDefaultStatusIcons();
-      loadRecentEmojiStatuses();
-    }
-  }, [isCurrentUserPremium, isMasterTab, isAppConfigLoaded, isAccountFrozen]);
 
   // Language-based API calls
   useEffect(() => {
@@ -375,19 +355,15 @@ const Main = ({
     }
   }, [isMasterTab]);
 
-  // Sticker sets
+  // Installed Signal sticker packs, which need no app config
   useEffect(() => {
-    if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen) {
-      if (!addedSetIds || !addedCustomEmojiIds) {
-        loadStickerSets();
-        loadFavoriteStickers();
-      }
-
-      if (addedSetIds && addedCustomEmojiIds) {
-        loadAddedStickers();
-      }
+    if (!isMasterTab || !isSynced) return;
+    if (addedSetIds) {
+      loadAddedStickers();
+    } else {
+      loadStickerSets();
     }
-  }, [addedSetIds, addedCustomEmojiIds, isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
+  }, [addedSetIds, isMasterTab, isSynced]);
 
   useEffect(() => {
     if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen && diceEmojies) {
@@ -709,7 +685,6 @@ export default memo(withGlobal<OwnProps>(
       wasTimeFormatSetManually,
       isPhoneCallActive: isMasterTab ? Boolean(global.phoneCall) : undefined,
       addedSetIds: global.stickers.added.setIds,
-      addedCustomEmojiIds: global.customEmojis.added.setIds,
       newContactUserId: newContact?.userId,
       newContactByPhoneNumber: newContact?.isByPhoneNumber,
       openedGame,
@@ -719,7 +694,6 @@ export default memo(withGlobal<OwnProps>(
       botTrustRequestBot: botTrustRequest && selectUser(global, botTrustRequest.botId),
       requestedAttachBotInChat,
       requestedBotStartGroup,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

@@ -33,7 +33,6 @@ export function selectPeerHasProfileBackground<T extends GlobalState>(global: T,
   if (!peer) return false;
   const profileColor = selectPeerProfileColor(global, peer);
 
-  if (peer.emojiStatus?.type === 'collectible') return true;
   return Boolean(profileColor);
 }
 

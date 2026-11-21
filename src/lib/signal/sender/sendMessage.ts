@@ -15,11 +15,14 @@ import type { RecipientResult, SenderContext, SendOptions, SendResult } from './
 import type { GroupTarget } from './sendToGroup';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
+import { bufferFromHex } from '../../../util/encoding/buffer';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
 import { sendWithSenderKey } from './sendToGroup';
 
-import { ContentSchema, SyncMessageSchema, TypingMessage_Action } from '../proto/generated/SignalService_pb';
+import {
+  ContentSchema, SyncMessage_StickerPackOperation_Type, SyncMessageSchema, TypingMessage_Action,
+} from '../proto/generated/SignalService_pb';
 
 export type OutgoingMessage =
   | { case: 'dataMessage'; value: MessageInitShape<typeof DataMessageSchema> }
@@ -29,6 +32,8 @@ type MessageOptions = {
   timestamp: number;
   group?: GroupTarget;
   expirationStartTimestamp?: number;
+  // Messages that need no push notification, such as group updates, are not urgent
+  isUrgent?: boolean;
 };
 
 const SENT_PROTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -49,7 +54,7 @@ export async function sendMessage(
   const content = { content: message };
   const groupId = options.group?.id;
   const results = await sendToRecipients(context, others, content, {
-    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId,
+    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId, isUrgent: options.isUrgent,
   }, options.group);
 
   await store.addSentProto({
@@ -58,7 +63,7 @@ export async function sendMessage(
     contentHint: ContentHint.Resendable,
     recipients: others,
     groupId,
-    isUrgent: true,
+    isUrgent: options.isUrgent ?? true,
     savedAt: Date.now(),
   });
 
@@ -80,7 +85,7 @@ export async function sendMessage(
           })),
         },
       },
-    }, options.timestamp);
+    }, options.timestamp, options.isUrgent);
   }
 
   if (Date.now() - lastSentProtoPruneAt > SENT_PROTO_PRUNE_INTERVAL_MS) {
@@ -161,6 +166,19 @@ export function sendFetchLatestSync(context: SenderContext, type: SyncMessage_Fe
   return syncToOtherDevices(context, { content: { case: 'fetchLatest', value: { type } } }, Date.now());
 }
 
+/** Tells our other devices which sticker packs were installed or removed here (Signal Desktop `getStickerPackSync`) */
+export function sendStickerPackSync(
+  context: SenderContext, operations: { id: string; key: string; isInstalled: boolean }[],
+) {
+  return syncToOtherDevices(context, {
+    stickerPackOperation: operations.map(({ id, key, isInstalled }) => ({
+      packId: bufferFromHex(id),
+      packKey: bufferFromHex(key),
+      type: isInstalled ? SyncMessage_StickerPackOperation_Type.INSTALL : SyncMessage_StickerPackOperation_Type.REMOVE,
+    })),
+  }, Date.now());
+}
+
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */
 export function sendDeleteForMeSync(
   context: SenderContext, deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>,
@@ -205,7 +223,7 @@ async function sendToRecipients(
 }
 
 async function syncToOtherDevices(
-  context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number,
+  context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number, isUrgent?: boolean,
 ): Promise<SendResult> {
   // A primary device without linked devices has nobody to sync with (Signal Android
   // `SignalServiceMessageSender.sendSyncMessage`); linked devices become known from their sessions with us
@@ -219,5 +237,5 @@ async function syncToOtherDevices(
   syncMessage.padding = getRandomPadding();
   return sendContent(context, context.account.aci, {
     content: { case: 'syncMessage', value: syncMessage },
-  }, { timestamp, contentHint: ContentHint.Resendable });
+  }, { timestamp, contentHint: ContentHint.Resendable, isUrgent });
 }

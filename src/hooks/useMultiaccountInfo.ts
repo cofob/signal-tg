@@ -42,14 +42,13 @@ export default function useMultiaccountInfo(currentUser?: ApiUser) {
       lastName: currentUser.lastName,
       emojiStatusId: currentUser.emojiStatus?.documentId,
       color,
-      isPremium: currentUser.isPremium,
       phone: currentUser.phoneNumber,
     });
 
     refresh();
   }, [
     isUpdater, currentUser?.emojiStatus?.documentId, currentUser?.firstName, currentUser?.id, currentUser?.lastName,
-    currentUser?.color, currentUser?.isPremium, currentUser?.phoneNumber, refresh, isSynced,
+    currentUser?.color, currentUser?.phoneNumber, refresh, isSynced,
   ]);
 
   const updateAvatar = useLastCallback(async (url: string, abortSignal?: AbortSignal) => {

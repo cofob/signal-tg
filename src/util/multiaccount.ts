@@ -65,7 +65,7 @@ export function getFirstLoggedInAccountSlot(accounts = getAccountsInfo()) {
 function getAccountInfo(slot: number): AccountInfo | undefined {
   const sessionData = loadSlotSession(slot);
   const {
-    userId, avatarUri, color, emojiStatusId, firstName, lastName, isPremium, isTest, phone,
+    userId, avatarUri, color, emojiStatusId, firstName, lastName, isTest, phone,
   } = sessionData || {};
 
   if (!userId) return undefined;
@@ -77,7 +77,6 @@ function getAccountInfo(slot: number): AccountInfo | undefined {
     emojiStatusId,
     firstName,
     lastName,
-    isPremium,
     isTest,
     phone,
   };

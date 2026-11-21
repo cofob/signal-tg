@@ -2,7 +2,7 @@ import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type {
-  ApiMessage, ApiPhoto, ApiVideo,
+  ApiMessage, ApiPhoto, ApiVideo, MediaContent,
 } from '../../../api/types';
 import type { GlobalState, TabState } from '../../../global/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
@@ -41,6 +41,8 @@ type OwnProps = {
   onMediaClick: (messageId: number, index?: number) => void;
 };
 
+type AlbumMediaItem = Pick<MediaContent, 'photo' | 'video'> & { message: ApiMessage };
+
 type StateProps = {
   theme: ThemeKey;
   uploadsByKey: GlobalState['fileUploads']['byMessageKey'];
@@ -60,10 +62,15 @@ const Album = ({
 }: OwnProps & StateProps) => {
   const { cancelUploadMedia } = getActions();
 
-  const mediaCount = album.messages.length;
+  const items = useMemo(() => getAlbumItems(album), [album]);
+  const mediaCount = items.length;
 
   const handleAlbumMessageClick = useLastCallback((messageId: number) => {
     onMediaClick(messageId);
+  });
+
+  const handleAlbumIndexClick = useLastCallback((index: number) => {
+    onMediaClick(album.mainMessage.id, index);
   });
 
   const handleCancelUpload = useLastCallback((messageId: number) => {
@@ -71,17 +78,17 @@ const Album = ({
   });
 
   const albumLayout = useMemo(() => {
-    const ratios = getAlbumMedia(album).map((media) => {
+    const ratios = getAlbumMedia(items).map((media) => {
       const { width, height } = getMediaDimensions(media);
       return width / height;
     });
 
     return calculateAlbumLayout(ratios);
-  }, [album]);
+  }, [items]);
 
-  function renderAlbumMessage(message: ApiMessage, index: number) {
-    const photo = getMessagePhoto(message);
-    const video = getMessageContent(message).video;
+  function renderAlbumItem({ message, photo, video }: AlbumMediaItem, index: number) {
+    const { isSingleMessage } = album;
+    const htmlId = `album-media-${getMessageHtmlId(message.id, isSingleMessage ? index : undefined)}`;
 
     const fileUpload = uploadsByKey[getMessageKey(message)];
     const uploadProgress = fileUpload?.progress;
@@ -101,7 +108,7 @@ const Album = ({
 
       mediaElement = (
         <PhotoWithSelect
-          id={`album-media-${getMessageHtmlId(message.id)}`}
+          id={htmlId}
           photo={photo}
           isOwn={isOwn}
           observeIntersection={observeIntersection}
@@ -110,8 +117,8 @@ const Album = ({
           uploadProgress={uploadProgress}
           layout="fill"
           isProtected={isProtected}
-          clickArg={message.id}
-          onClick={handleAlbumMessageClick}
+          clickArg={isSingleMessage ? index : message.id}
+          onClick={isSingleMessage ? handleAlbumIndexClick : handleAlbumMessageClick}
           onCancelUpload={handleCancelUpload}
           isDownloading={getIsDownloading(activeDownloads, photo)}
           theme={theme}
@@ -120,7 +127,7 @@ const Album = ({
     } else if (video) {
       mediaElement = (
         <VideoWithSelect
-          id={`album-media-${getMessageHtmlId(message.id)}`}
+          id={htmlId}
           video={video}
           observeIntersectionForLoading={observeIntersection}
           canAutoLoad={canAutoLoad}
@@ -128,8 +135,8 @@ const Album = ({
           uploadProgress={uploadProgress}
           layout="fill"
           isProtected={isProtected}
-          clickArg={message.id}
-          onClick={handleAlbumMessageClick}
+          clickArg={isSingleMessage ? index : message.id}
+          onClick={isSingleMessage ? handleAlbumIndexClick : handleAlbumMessageClick}
           onCancelUpload={handleCancelUpload}
           isDownloading={getIsDownloading(activeDownloads, video)}
         />
@@ -140,7 +147,7 @@ const Album = ({
 
     return (
       <AlbumItem
-        key={message.id}
+        key={isSingleMessage ? index : message.id}
         item={layoutItem}
         className="album-item"
       >
@@ -154,15 +161,24 @@ const Album = ({
       className="Album"
       style={`--album-aspect-ratio: ${albumLayout.aspectRatio}`}
     >
-      {album.messages.map(renderAlbumMessage)}
+      {items.map(renderAlbumItem)}
     </div>
   );
 };
 
 type AlbumMedia = ApiPhoto | ApiVideo;
 
-function getAlbumMedia(album: IAlbum) {
-  const media = album.messages.map((message) => getMessagePhoto(message) || getMessageContent(message).video);
+function getAlbumItems(album: IAlbum): AlbumMediaItem[] {
+  const { mainMessage, isSingleMessage } = album;
+  if (isSingleMessage) return mainMessage.content.album!.items.map((item) => ({ ...item, message: mainMessage }));
+
+  return album.messages.map((message) => ({
+    message, photo: getMessagePhoto(message), video: getMessageContent(message).video,
+  }));
+}
+
+function getAlbumMedia(items: AlbumMediaItem[]) {
+  const media = items.map(({ photo, video }) => photo || video);
 
   return media.filter((item): item is AlbumMedia => Boolean(item));
 }

@@ -57,6 +57,7 @@ export default class GroupManager {
     private client: SignalClient,
     private db: MessageDb,
     private processor: MessageProcessor,
+    private onError: (error: Error) => void,
   ) {}
 
   /** Applies a change to the group of conversation `id`; resolves without a change when `build` finds none */
@@ -100,7 +101,10 @@ export default class GroupManager {
    * Creates a group with us as its admin (Signal Desktop `createGroupV2`). Users whose profile key credential we
    * cannot get are invited; the server rejecting a credential fetches all of them once more.
    */
-  async createGroup({ title, memberAcis, expireTimer }: { title: string; memberAcis: string[]; expireTimer?: number }) {
+  async createGroup({ title: rawTitle, memberAcis, expireTimer }: {
+    title: string; memberAcis: string[]; expireTimer?: number;
+  }) {
+    const title = rawTitle.trim();
     checkGroupTitle(title);
     const { store, account, connection } = this.client.getSenderContext();
     const others = [...new Set(memberAcis)].filter((aci) => aci !== account.aci);
@@ -203,7 +207,8 @@ export default class GroupManager {
       }
 
       const { state } = await fetchGroup(account, connection, masterKey);
-      const conversation = await this.processor.applyGroupState(masterKey, state, { change });
+      // The state brings the profile keys of the members, which we need to send to them
+      const conversation = await this.processor.applyGroupState(masterKey, state, { change, isFetched: true });
       await this.saveEndorsements(groupId, masterKey, state, sendEndorsementsResponse);
       await this.processor.sendGroupUpdate(groupId, toBinary(GroupChangeSchema, groupChange));
       return conversation;
@@ -286,16 +291,24 @@ export default class GroupManager {
     return conversation;
   }
 
-  private saveEndorsements(id: string, masterKey: Uint8Array, state: GroupState, response?: Uint8Array) {
-    const { store, account } = this.client.getSenderContext();
-    return saveGroupSendEndorsements(
-      store,
-      account.aci,
-      id,
-      wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-      state.members.map(({ aci }) => aci),
-      response,
-    );
+  /**
+   * Endorsements only let sends to the group go as one message, so failing to save them must not keep us from
+   * telling the members about a change the server accepted
+   */
+  private async saveEndorsements(id: string, masterKey: Uint8Array, state: GroupState, response?: Uint8Array) {
+    try {
+      const { store, account } = this.client.getSenderContext();
+      await saveGroupSendEndorsements(
+        store,
+        account.aci,
+        id,
+        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+        state.members.map(({ aci }) => aci),
+        response,
+      );
+    } catch (err) {
+      this.onError(err as Error);
+    }
   }
 
   private async getGroupConversation(id: string) {

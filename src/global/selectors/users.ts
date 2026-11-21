@@ -46,12 +46,6 @@ export function selectCurrentUserId<T extends GlobalState>(global: T) {
   return global.currentUserId;
 }
 
-export function selectIsCurrentUserPremium<T extends GlobalState>(global: T) {
-  if (!global.currentUserId) return false;
-
-  return Boolean(global.users.byId[global.currentUserId].isPremium);
-}
-
 export function selectIsCurrentUserFrozen<T extends GlobalState>(global: T) {
   return Boolean(global.appConfig.freezeUntilDate);
 }

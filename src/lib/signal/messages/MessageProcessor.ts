@@ -23,7 +23,7 @@ import type {
   TypingMessage,
   Verified,
 } from '../proto/generated/SignalService_pb';
-import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
@@ -34,18 +34,20 @@ import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
-import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
-import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
+import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
+import { decryptGroupState, fetchGroup, GroupRequestError } from '../groups/fetchGroup';
 import {
   applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
 } from '../groups/groupChange';
 import { fetchGroupLog } from '../groups/groupLog';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
-import { fetchProfile } from '../profiles/fetchProfile';
+import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
+import { UnregisteredUserError } from '../sender/sendContent';
 import {
   sendBlockedSync,
   sendDeleteForMeSync,
@@ -53,12 +55,15 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStickerPackSync,
   sendTyping,
   sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
+import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
   ACCOUNT_KEY,
   buildNewStorageWrite,
@@ -66,6 +71,7 @@ import {
   countPinnedConversations,
   getAci,
   getMutedUntil,
+  getStickerPackStorageKey,
   getStorageChanges,
   mergeStorageChanges,
   omitChangedFields,
@@ -86,6 +92,7 @@ import {
   ReceiptMessage_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
   Verified_State,
 } from '../proto/generated/SignalService_pb';
@@ -106,6 +113,13 @@ export type MessageEdit = {
   bodyRanges: MessageInitShape<typeof BodyRangeSchema>[];
   // The full text of a long body, uploaded as a `LONG_TEXT_CONTENT_TYPE` attachment
   bodyAttachment?: MessageInitShape<typeof AttachmentPointerSchema>;
+};
+
+// The group after a refresh; `members` are the full members to take send endorsements for
+type GroupRefreshResult = {
+  conversation?: ConversationRecord;
+  members?: string[];
+  sendEndorsementsResponse?: Uint8Array;
 };
 
 export type ConversationPatch = Partial<ConversationRecord> & Pick<ConversationRecord, 'id' | 'type'>;
@@ -130,7 +144,11 @@ type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
   onTyping(event: TypingEvent): void;
   onError(error: Error): void;
+  // Ids of sticker packs installed or removed here or on another device
+  onStickerPacksChange?(ids: string[]): void;
 };
+
+type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
 
 type MessageSource = {
   authorAci: string;
@@ -171,8 +189,13 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+// Signal Desktop `ts/util/expirationTimer.std.ts` and `ts/models/conversations.preload.ts`
+const INITIAL_EXPIRE_TIMER_VERSION = 1;
+const MAX_EXPIRE_TIMER_VERSION = 0xffffffff;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
+// Storage record cases supported after earlier versions stored such records without reading them
+const STORAGE_RECORD_TYPES_ADDED_LATER: NonNullable<StorageRecord['record']['case']>[] = ['installedStickerPack'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Signal Desktop `ts/routineProfileRefresh.preload.ts`
 const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
@@ -257,8 +280,9 @@ export default class MessageProcessor {
   ) {}
 
   /** Handles one decrypted envelope; `SignalClient.connect` passes it as `onContent` */
-  processContent(decrypted: DecryptedEnvelope) {
-    return this.runSerial(() => this.handleContent(decrypted));
+  async processContent(decrypted: DecryptedEnvelope) {
+    await this.loadMessageGroup(decrypted);
+    await this.runSerial(() => this.handleContent(decrypted));
   }
 
   /** Starts the disappearing messages timer for messages stored earlier */
@@ -328,6 +352,47 @@ export default class MessageProcessor {
       timestamp: sentAt,
       expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
     });
+  }
+
+  /**
+   * Sets the disappearing messages timer of a private conversation, with a notice, and tells the contact and our
+   * other devices in a message that only carries the timer (Signal Desktop `updateExpirationTimer` and
+   * `ts/jobs/helpers/sendDirectExpirationTimerUpdate.preload.ts`). Each change counts the timer version up, so
+   * that the latest change wins on every device. Groups keep the timer in their state instead.
+   */
+  async setExpireTimer(conversationId: string, seconds: number) {
+    const account = await this.getAccount();
+    const timestamp = this.allocateTimestamp();
+    const timer = seconds || undefined;
+
+    const updated = await this.runSerial(async () => {
+      const found = await this.db.getConversation(conversationId);
+      if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
+      if (found.expireTimer === timer) return undefined;
+
+      const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
+      const withTimer = await this.putConversation({
+        ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
+      });
+      const { conversation } = await this.addMessage(withTimer, {
+        conversationId,
+        kind: 'timerUpdate',
+        authorAci: '',
+        actorAci: account.aci,
+        sentAt: timestamp,
+        receivedAt: timestamp,
+        isOutgoing: true,
+        expireTimer: timer,
+        readAt: timestamp,
+      });
+      return conversation;
+    });
+    if (!updated) return;
+
+    const message = createOutgoingDataMessage(
+      account, updated, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
+    );
+    await this.sendWithRetry(updated, [conversationId], { case: 'dataMessage', value: message }, timestamp);
   }
 
   /**
@@ -765,6 +830,30 @@ export default class MessageProcessor {
   }
 
   /**
+   * Merges stored storage records of types this device learned to handle after storing them, once per type. Records
+   * are fetched only when new, so a type supported later would otherwise stay unread until another device rewrites it
+   * (Signal Desktop reprocesses its unknown records after an upgrade the same way).
+   */
+  mergeStoredRecordsOfNewTypes() {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const merged = new Set(await store.getItem('storageMergedRecordTypes'));
+      const types = STORAGE_RECORD_TYPES_ADDED_LATER.filter((type) => !merged.has(type));
+      if (!types.length) return;
+
+      const stored = await store.getItem('storageManifest');
+      if (stored) {
+        const records = (await store.getStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored))))
+          .filter(Boolean)
+          .map((record) => fromBinary(StorageRecordSchema, record))
+          .filter(({ record }) => record.case && types.includes(record.case));
+        if (records.length) await this.mergeStorageRecords(records, false);
+      }
+      await store.setItem('storageMergedRecordTypes', [...merged, ...types]);
+    });
+  }
+
+  /**
    * Merges a newer storage manifest: records new to this device go into the local state, except for fields changed
    * here since the last write, and are stored with the manifest for later writes
    */
@@ -813,6 +902,7 @@ export default class MessageProcessor {
         records,
         changes,
         conversations: await this.db.getConversations(),
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
@@ -859,6 +949,7 @@ export default class MessageProcessor {
         version,
         shouldClearAll,
         conversations,
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
@@ -942,6 +1033,23 @@ export default class MessageProcessor {
   }
 
   /**
+   * Installs or removes a sticker pack on this device. Other devices learn it from a `stickerPackOperation` sync and
+   * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
+   */
+  async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
+    const isChanged = await this.runSerial(async () => {
+      const state: StickerPackState = isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() };
+      if (!await this.applyStickerPackState(id, key, state)) return false;
+      await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+      return true;
+    });
+    if (!isChanged) return;
+    await this.sendWhenConnected(async (context) => {
+      await sendStickerPackSync(context, [{ id, key, isInstalled }]);
+    });
+  }
+
+  /**
    * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
    * is in the account, other profile keys are in their recipients.
    */
@@ -950,7 +1058,20 @@ export default class MessageProcessor {
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, profileKey);
+    let profile;
+    try {
+      profile = await fetchProfile(connection, aci, profileKey);
+    } catch (err) {
+      if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
+      // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
+      // try again after the usual interval instead of on every connection
+      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
+      await this.runSerial(async () => {
+        await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });
+      });
+      return;
+    }
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
@@ -1316,6 +1437,19 @@ export default class MessageProcessor {
           await this.client.updateAccount({ profileKey });
           isProfileKeyChanged = true;
         }
+      } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
+        // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
+        const { packId, packKey, position, deletedAtTimestamp } = record.value;
+        const id = bufferToHex(packId);
+        if (changes[getStickerPackStorageKey(id)]) continue;
+        await this.applyStickerPackState(
+          id,
+          packKey.length ? bufferToHex(packKey) : undefined,
+          // An unset position reads as 0 and leaves the local one (Signal Desktop keeps it when the field is absent)
+          deletedAtTimestamp
+            ? { uninstalledAt: Number(deletedAtTimestamp) }
+            : { isInstalled: true, position: position || undefined },
+        );
       }
     }
 
@@ -1323,12 +1457,99 @@ export default class MessageProcessor {
     await this.markStorageChanges(profileKeyChanges);
     // The profile under the new key has our current name and avatar; the queue runs it after this merge
     if (isProfileKeyChanged) this.queueProfileRefresh(account.aci);
+    if (getIsContactDiscoveryEnabled(account)) {
+      const numberOnlyContacts = getNumberOnlyContacts(records);
+      if (numberOnlyContacts.length) this.resolveContactNumbers(numberOnlyContacts).catch(this.events.onError);
+    }
 
     if (!pinIndexById) return;
     for (const conversation of await this.db.getConversations()) {
       const pinIndex = pinIndexById.get(conversation.id);
       if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
     }
+  }
+
+  /**
+   * Looks up the numbers of all stored storage service contacts without an ACI, once contact discovery is turned on.
+   * Only a primary device does it: a linked device gets contacts with ACIs from the primary device.
+   */
+  async discoverStorageContacts() {
+    const { store } = this.client;
+    if (!getIsContactDiscoveryEnabled(await this.getAccount())) return;
+    const manifest = await store.getItem('storageManifest');
+    if (!manifest) return;
+    const ids = getManifestIds(fromBinary(ManifestRecordSchema, manifest));
+    const records = (await store.getStorageRecords(ids))
+      .filter(Boolean)
+      .map((record) => fromBinary(StorageRecordSchema, record));
+    const contacts = getNumberOnlyContacts(records);
+    if (contacts.length) await this.resolveContactNumbers(contacts);
+  }
+
+  /**
+   * Creates conversations for the storage service contacts whose numbers turn out to have Signal accounts. Their
+   * records stay as they are: the conversations change only locally.
+   */
+  private async resolveContactNumbers(contacts: ContactRecord[]) {
+    const { store, connection } = this.client.getSenderContext();
+    const records = await refreshE164s(
+      connection, store, contacts.map(({ e164 }) => e164), await this.getAcisAndAccessKeys(),
+    );
+    await this.runSerial(async () => {
+      for (const contact of contacts) {
+        const aci = records.get(contact.e164)?.aci;
+        if (!aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(this.client.store, aci, contact.profileKey);
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+        });
+      }
+    });
+    this.flush();
+  }
+
+  /** The ACIs and access keys of the other users whose numbers we know, which let CDSI return their ACIs */
+  private async getAcisAndAccessKeys() {
+    const { store, account } = this.client.getSenderContext();
+    const acisAndAccessKeys = [];
+    for (const { id, type, e164 } of await this.db.getConversations()) {
+      if (type !== 'private' || !e164 || id === account.aci) continue;
+      const profileKey = (await store.getRecipient(id))?.profileKey;
+      if (profileKey) acisAndAccessKeys.push({ aci: id, accessKey: wasm.ProfileKey_DeriveAccessKey(profileKey) });
+    }
+    return acisAndAccessKeys;
+  }
+
+  /**
+   * Stores whether a sticker pack is installed and returns whether that changed. A pack installed without a position
+   * goes after the others; a removal of a pack this device never had needs no record.
+   */
+  private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
+    const { store } = this.client;
+    const packs = await store.getItem('stickerPacks') ?? {};
+    const current = packs[id];
+    const packKey = key ?? current?.key;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return false;
+
+    const wasInstalled = current?.installedAt !== undefined;
+    if ('isInstalled' in state) {
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return false;
+      packs[id] = {
+        id,
+        key: packKey,
+        installedAt: current?.installedAt ?? Date.now(),
+        position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
+      };
+    } else {
+      if (!wasInstalled) return false;
+      packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
+    }
+    await store.setItem('stickerPacks', packs);
+    this.events.onStickerPacksChange?.([id]);
+    return true;
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1390,7 +1611,7 @@ export default class MessageProcessor {
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
-    options: { timestamp: number; expirationStartTimestamp?: number },
+    options: { timestamp: number; expirationStartTimestamp?: number; isUrgent?: boolean },
   ): Promise<RecipientResult[]> {
     try {
       return await sendMessage(this.client.getSenderContext(), recipients, content, {
@@ -1446,8 +1667,10 @@ export default class MessageProcessor {
     switch (body.case) {
       case 'dataMessage': {
         const sentAt = Number(body.value.timestamp) || source.sentAt;
-        await this.handleDataMessage({ ...source, sentAt }, body.value);
-        this.queueDeliveryReceipt(senderServiceId, sentAt);
+        // Dropped messages are not acknowledged with a receipt
+        if (await this.handleDataMessage({ ...source, sentAt }, body.value)) {
+          this.queueDeliveryReceipt(senderServiceId, sentAt);
+        }
         break;
       }
       case 'editMessage':
@@ -1471,9 +1694,15 @@ export default class MessageProcessor {
     }
   }
 
+  /** Returns `false` for a message of a group that is dropped, see `getIsGroupMessageDropped` */
   private async handleDataMessage(source: MessageSource, message: DataMessage) {
     const conversation = await this.getConversationForMessage(source, message);
-    if (!conversation) return;
+    if (!conversation) return false;
+    await this.applyDataMessage(source, message, conversation);
+    return true;
+  }
+
+  private async applyDataMessage(source: MessageSource, message: DataMessage, conversation: ConversationRecord) {
     if (!source.isOutgoing && conversation.isBlocked) return;
 
     if (message.reaction) {
@@ -1569,6 +1798,13 @@ export default class MessageProcessor {
         viewed.senderAci || uuidToString(viewed.senderAciBinary), Number(viewed.timestamp),
       );
       if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
+    }
+    for (const { packId, packKey, type } of sync.stickerPackOperation) {
+      await this.applyStickerPackState(
+        bufferToHex(packId),
+        bufferToHex(packKey),
+        type === SyncMessage_StickerPackOperation_Type.REMOVE ? { uninstalledAt: Date.now() } : { isInstalled: true },
+      );
     }
 
     const { content } = sync;
@@ -1733,6 +1969,29 @@ export default class MessageProcessor {
     return this.runSerial(() => this.ensurePrivateConversation(aci));
   }
 
+  /**
+   * Finds the Signal user of a phone number in the contact discovery enclave and returns their private conversation,
+   * which gets the number. Signal Desktop looks up a number that the user typed in the same way
+   * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
+   */
+  async lookUpPhoneNumber(e164: string) {
+    const known = (await this.db.getConversations()).find((conversation) => (
+      conversation.type === 'private' && conversation.e164 === e164
+    ));
+    if (known) return known;
+
+    const { connection } = this.client.getSenderContext();
+    const records = await lookUpE164s(connection, [e164], await this.getAcisAndAccessKeys());
+    const aci = records.get(e164)?.aci;
+    if (!aci) return undefined;
+    const conversation = await this.runSerial(async () => {
+      const existing = await this.ensurePrivateConversation(aci);
+      return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
+    });
+    this.flush();
+    return conversation;
+  }
+
   private async ensurePrivateConversation(aci: string) {
     const existing = await this.db.getConversation(aci);
     if (existing) return existing;
@@ -1747,20 +2006,69 @@ export default class MessageProcessor {
   private async getOrCreateGroupConversation(masterKey: Uint8Array, revision: number) {
     const id = getGroupId(masterKey);
     const existing = await this.db.getConversation(id);
-    const conversation = existing ?? await this.putConversation({
-      id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
-    });
+    const conversation = existing ?? await this.ensureGroupConversation(masterKey);
     if (!existing || (existing.revision ?? -1) < revision) void this.refreshGroup(id, masterKey);
     return conversation;
   }
 
+  private async ensureGroupConversation(masterKey: Uint8Array) {
+    const id = getGroupId(masterKey);
+    return await this.db.getConversation(id) ?? this.putConversation({
+      id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
+    });
+  }
+
+  /**
+   * Brings the group of a data message to the revision of the message before the message is handled, as
+   * `maybeUpdateGroup` of Signal Desktop does (`ts/messages/handleDataMessage.preload.ts`): the membership checks
+   * of `getIsGroupMessageDropped` need the state the message was sent with. A group we are not part of leaves no
+   * conversation. A change of the next revision in the message is applied by `getGroupConversationForMessage`
+   * instead. This runs outside the serial queue, which refreshes use.
+   */
+  private async loadMessageGroup({ content: { content: body } }: DecryptedEnvelope) {
+    const sentMessage = body.case === 'syncMessage' && body.value.content.case === 'sent'
+      ? body.value.content.value.message
+      : undefined;
+    const context = (body.case === 'dataMessage' ? body.value : sentMessage)?.groupV2;
+    if (!context?.masterKey.length) return;
+
+    const { masterKey, revision, groupChange } = context;
+    const id = getGroupId(masterKey);
+    const getIsBehind = async () => {
+      const state = (await this.db.getConversation(id))?.groupState;
+      return !state || (revision > state.revision && !(groupChange.length && revision === state.revision + 1));
+    };
+
+    let isFailed = false;
+    try {
+      if (!await getIsBehind()) return;
+      const isRunning = this.groupRefreshes.has(id);
+      await this.refreshGroup(id, masterKey);
+      // A refresh that was running began before the message came, so its state may lack the message's revision
+      if (isRunning && await getIsBehind()) await this.refreshGroup(id, masterKey);
+    } catch (err) {
+      isFailed = true;
+      this.events.onError(err as Error);
+    }
+    // Without a state to check the message against, the message is let through, and a later refresh fills it in
+    if (isFailed) await this.runSerial(() => this.ensureGroupConversation(masterKey));
+  }
+
   /**
    * A group message at the next revision with its signed change applies the change and adds its notices
-   * (Signal Desktop `updateGroupViaSingleChange`); other new revisions fetch the whole state
+   * (Signal Desktop `updateGroupViaSingleChange`); `loadMessageGroup` fetched the state for other new revisions.
+   * Returns `undefined` for a message that is dropped.
    */
   private async getGroupConversationForMessage(source: MessageSource, context: GroupContextV2) {
+    const conversation = await this.updateGroupForMessage(source, context);
+    return conversation && !(await this.getIsGroupMessageDropped(conversation, source)) ? conversation : undefined;
+  }
+
+  private async updateGroupForMessage(source: MessageSource, context: GroupContextV2) {
     const { masterKey, revision, groupChange } = context;
     const existing = await this.db.getConversation(getGroupId(masterKey));
+    // Groups we are not part of have no conversation, except for messages of our other devices
+    if (!existing && !source.isOutgoing) return undefined;
     const state = existing?.groupState;
     if (!existing || !state || !groupChange.length || revision !== state.revision + 1) {
       return this.getOrCreateGroupConversation(masterKey, revision);
@@ -1779,6 +2087,21 @@ export default class MessageProcessor {
     return updated;
   }
 
+  /**
+   * Whether a group message is dropped (Signal Desktop `handleDataMessage`): an incoming one when we or the sender
+   * are not members of the group, and any when the group is announcements-only and the sender is no admin. Groups
+   * with no known state let messages through.
+   */
+  private async getIsGroupMessageDropped(conversation: ConversationRecord, source: MessageSource) {
+    const state = conversation.groupState;
+    if (!state) return false;
+
+    const { aci: selfAci } = await this.getAccount();
+    const isMember = (aci: string) => state.members.some((member) => member.aci === aci);
+    if (!source.isOutgoing && (!isMember(selfAci) || !isMember(source.authorAci))) return true;
+    return Boolean(state.isAnnouncementsOnly) && !conversation.adminAcis?.includes(source.authorAci);
+  }
+
   /** The decrypted change of a group message, or `undefined` when it is invalid or of a later change epoch */
   private readGroupChange(conversation: ConversationRecord, groupChange: Uint8Array) {
     try {
@@ -1793,17 +2116,21 @@ export default class MessageProcessor {
 
   /**
    * Stores a group state that this device led to: after our change, whose notices are ours, or of a group we
-   * created (`isCreated` adds its notice) or joined, whose conversation starts here
+   * created (`isCreated` adds its notice) or joined, whose conversation starts here. `isFetched` marks a state
+   * that was fetched after the change, rather than made from it.
    */
   applyGroupState(
     masterKey: Uint8Array,
     state: GroupState,
-    { change, isCreated }: { change?: DecryptedGroupChange; isCreated?: boolean },
+    { change, isCreated, isFetched }: { change?: DecryptedGroupChange; isCreated?: boolean; isFetched?: boolean },
   ) {
     return this.runSerial(async () => {
       const id = getGroupId(masterKey);
       const { aci: selfAci } = await this.getAccount();
       const existing = await this.db.getConversation(id);
+      // A newer state comes from the group log, which added the notices of the change as well
+      const storedRevision = existing?.groupState?.revision ?? -1;
+      if (storedRevision > state.revision || (change && storedRevision === state.revision)) return existing!;
       // Groups we create, join or ask to join are past the message request (`messageRequests.ts`)
       const isJoining = !existing || isCreated || [
         ...change?.addMembers ?? [], ...change?.promotePendingMembers ?? [], ...change?.addRequestingMembers ?? [],
@@ -1815,7 +2142,9 @@ export default class MessageProcessor {
       const updated = await this.storeGroupState(
         isJoining ? { ...conversation, isAccepted: true } : conversation,
         state,
-        change && { change, isOutgoing: true, sentAt },
+        change && {
+          change, isOutgoing: true, sentAt, isFetched,
+        },
       );
       if (!isCreated) return updated;
 
@@ -1836,7 +2165,8 @@ export default class MessageProcessor {
 
   /**
    * Tells the members, and invited users with an ACI, about a new revision. `groupChange` is the signed change
-   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group
+   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group. The update is
+   * not urgent, and recipients it does not reach get it again after the next connection
    * (Signal Desktop `ts/jobs/helpers/sendGroupUpdate.preload.ts`).
    */
   async sendGroupUpdate(id: string, groupChange?: Uint8Array, extraRecipients: string[] = []) {
@@ -1854,13 +2184,34 @@ export default class MessageProcessor {
     const timestamp = this.allocateTimestamp();
     const message = createOutgoingDataMessage(account, conversation, {}, timestamp, false);
     if (groupChange) message.groupV2!.groupChange = groupChange;
-    return this.sendContentTo(conversation, [...recipients], { case: 'dataMessage', value: message }, { timestamp });
+
+    return this.sendWithRetry(conversation, [...recipients], { case: 'dataMessage', value: message }, timestamp);
+  }
+
+  /**
+   * Sends a message that is not urgent and has no record of its own, such as a group update or a timer change,
+   * and sends it once more to the recipients it did not reach after the next connection
+   */
+  private async sendWithRetry(
+    conversation: ConversationRecord, recipients: string[], content: OutgoingMessage, timestamp: number,
+  ) {
+    const results = await this.sendContentTo(conversation, recipients, content, { timestamp, isUrgent: false });
+    // Users that left the registry do not come back
+    const failed = results.filter(({ error }) => error && !(error instanceof UnregisteredUserError))
+      .map(({ serviceId }) => serviceId);
+    if (failed.length) {
+      this.pendingSends.push(async () => {
+        await this.sendContentTo(conversation, failed, content, { timestamp, isUrgent: false });
+      });
+    }
+    return results;
   }
 
   /**
    * Brings a group to its current revision outside the envelope queue, with its send endorsements, when one
    * change does not reach it. Members apply each change of the group log with its notices; others, and members
-   * whose log cannot be applied, fetch the state. Concurrent refreshes of a group share one request.
+   * whose log cannot be applied, fetch the state. A group we have no conversation with starts one. Concurrent
+   * refreshes of a group share one request.
    */
   refreshGroup(id: string, masterKey: Uint8Array) {
     const running = this.groupRefreshes.get(id);
@@ -1871,13 +2222,26 @@ export default class MessageProcessor {
       const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
       const known = (await this.db.getConversation(id))?.groupState;
       const isMember = known?.members.some(({ aci }) => aci === account.aci);
-      const caughtUp = isMember
-        ? await this.applyGroupLog(id, secretParams, known!.revision).catch(this.events.onError)
-        : undefined;
-      const result = caughtUp ?? await this.storeFetchedGroup(id, masterKey);
+
+      let result: GroupRefreshResult;
+      try {
+        const caughtUp = isMember
+          ? await this.applyGroupLog(id, secretParams, known!.revision).catch((err) => {
+            // The state request below tells whether we lost access
+            if (!getIsGroupAccessDenied(err)) this.events.onError(err);
+          })
+          : undefined;
+        result = caughtUp ?? await this.storeFetchedGroup(id, masterKey);
+      } catch (err) {
+        if (!getIsGroupAccessDenied(err)) throw err;
+        result = await this.storeLeftGroup(id);
+      }
+
       const { conversation, members, sendEndorsementsResponse } = result;
       if (members) {
-        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse);
+        // Without endorsements, group sends go to each member, so the refresh still counts
+        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse)
+          .catch(this.events.onError);
       }
       return conversation;
     })();
@@ -1890,15 +2254,49 @@ export default class MessageProcessor {
   /** Stores the fetched group state unless a change applied meanwhile is newer; returns the members it stored */
   private async storeFetchedGroup(id: string, masterKey: Uint8Array) {
     const { account, connection } = this.client.getSenderContext();
+    // The server answers only members and invited users, so the group is ours
     const { state, sendEndorsementsResponse } = await fetchGroup(account, connection, masterKey);
     return this.runSerial(async () => {
-      const conversation = await this.db.getConversation(id);
-      if (!conversation || (conversation.groupState?.revision ?? -1) > state.revision) return { conversation };
+      const existing = await this.db.getConversation(id);
+      if ((existing?.groupState?.revision ?? -1) > state.revision) return { conversation: existing };
+      const conversation = existing ?? await this.putConversation({
+        id, localId: await this.db.allocateLocalId(), type: 'group', masterKey, unreadCount: 0,
+      });
       return {
         conversation: await this.storeGroupState(conversation, state),
         members: state.members.map(({ aci }) => aci),
         sendEndorsementsResponse,
       };
+    });
+  }
+
+  /**
+   * Stores that we lost access to a group we were in, as the server answers 403: the state without us and a notice
+   * that we were removed (Signal Desktop `generateLeftGroupChanges`)
+   */
+  private async storeLeftGroup(id: string) {
+    return this.runSerial(async () => {
+      const { aci } = await this.getAccount();
+      const conversation = await this.db.getConversation(id);
+      const state = conversation?.groupState;
+      if (!conversation || !state?.members.some((member) => member.aci === aci)) return { conversation };
+
+      const stored = await this.storeGroupState(conversation, {
+        ...state,
+        members: state.members.filter((member) => member.aci !== aci),
+      });
+      const now = Date.now();
+      const { conversation: updated } = await this.addMessage(stored, {
+        conversationId: id,
+        kind: 'groupUpdate',
+        authorAci: '',
+        groupUpdate: { type: 'memberRemoved', aci },
+        sentAt: now,
+        receivedAt: now,
+        isOutgoing: false,
+        readAt: now,
+      });
+      return { conversation: updated, members: [] };
     });
   }
 
@@ -1940,16 +2338,27 @@ export default class MessageProcessor {
     });
   }
 
-  /** Stores a group state and the profile keys it brings; a change adds its notices */
+  /**
+   * Stores a group state and the profile keys it brings; a change adds its notices. A fetched state, which is
+   * not made by applying `applied.change`, only fills in profile keys we lack, as Signal Desktop `applyGroupState`
+   * does: a key of a change is new, but one in the state may be older than what a member sent us directly.
+   */
   private async storeGroupState(
     conversation: ConversationRecord,
     state: GroupState,
-    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number },
+    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number; isFetched?: boolean },
   ) {
     const { aci: selfAci } = await this.getAccount();
-    const profileKeys = applied ? getChangeProfileKeys(applied.change) : state.members;
-    for (const { aci, profileKey } of profileKeys) {
-      if (profileKey && aci !== selfAci) await saveProfileKey(this.client.store, aci, profileKey);
+    const { store } = this.client;
+    for (const { aci, profileKey } of applied ? getChangeProfileKeys(applied.change) : []) {
+      if (aci !== selfAci) await saveProfileKey(store, aci, profileKey);
+    }
+    if (!applied || applied.isFetched) {
+      for (const { aci, profileKey } of [...state.members, ...state.requestingMembers]) {
+        if (profileKey && aci !== selfAci && !(await store.getRecipient(aci))?.profileKey) {
+          await saveProfileKey(store, aci, profileKey);
+        }
+      }
     }
 
     let updated = await this.putConversation({
@@ -2525,6 +2934,10 @@ function groupTimestampsByAuthor(messages: MessageRecord[]) {
   return byAuthor;
 }
 
+function getIsGroupAccessDenied(err: unknown) {
+  return err instanceof GroupRequestError && err.isAccessDenied;
+}
+
 /** The conversation id of a group: its base64 group identifier */
 export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
@@ -2543,4 +2956,17 @@ function omitAccountChanges(update: OwnAccountUpdate, changedFields: { has(field
     if (changedFields.has(field)) delete result[key];
   }
   return result;
+}
+
+/** Contact discovery of storage service contacts is off by default: Signal Desktop never looks up numbers in bulk */
+function getIsContactDiscoveryEnabled(account: AccountRecord) {
+  return account.deviceId === SIGNAL_PRIMARY_DEVICE_ID && Boolean(account.isContactDiscoveryEnabled);
+}
+
+function getNumberOnlyContacts(records: StorageRecord[]) {
+  return records
+    .map(({ record }) => (record.case === 'contact' ? record.value : undefined))
+    .filter((contact): contact is ContactRecord => (
+      Boolean(contact?.e164 && !contact.blocked && !getAci(contact.aci, contact.aciBinary))
+    ));
 }

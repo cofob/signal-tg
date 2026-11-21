@@ -35,12 +35,13 @@ const AuthPassword = ({
     <div id="auth-password-form" className="custom-scroll">
       <div className="auth-form">
         <MonkeyPassword isPasswordVisible={showPassword} />
-        <h1>{lang('LoginHeaderPassword')}</h1>
-        <p className="note">{lang('LoginEnterPasswordDescription')}</p>
+        <h1>{lang('SignalPinTitle')}</h1>
+        <p className="note">{lang('SignalPinDescription')}</p>
         <PasswordForm
           onClearError={clearAuthErrorKey}
           error={errorKey && lang.withRegular(errorKey)}
           hint={hint}
+          placeholder={lang('SignalPinPlaceholder')}
           isLoading={isLoading}
           isPasswordVisible={showPassword}
           onChangePasswordVisibility={handleChangePasswordVisibility}

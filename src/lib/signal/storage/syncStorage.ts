@@ -32,6 +32,7 @@ export async function syncStorageService(context: SenderContext, processor: Mess
   const storageKey = await getStorageKey(context.account);
   const credentials = await getStorageCredentials(context.connection);
   const isPrimary = context.account.deviceId === SIGNAL_PRIMARY_DEVICE_ID;
+  await processor.mergeStoredRecordsOfNewTypes();
 
   for (let attempt = 1; ; attempt++) {
     const stored = await context.store.getItem('storageManifest');

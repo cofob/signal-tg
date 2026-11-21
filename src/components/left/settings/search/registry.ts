@@ -192,12 +192,11 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     screenWhen: { flag: 'hasPasscode', screen: SettingsScreens.PasscodeEnabled },
   },
   {
-    screen: SettingsScreens.TwoFaDisabled,
+    screen: SettingsScreens.SignalPin,
     parent: SettingsScreens.Privacy,
-    titleKey: 'TwoStepVerification',
-    keywordsKey: 'SettingsKeywordsTwoStep',
-    requires: 'isPasswordStateKnown',
-    screenWhen: { flag: 'hasPassword', screen: SettingsScreens.TwoFaEnabled },
+    titleKey: 'SignalPinSettings',
+    keywordsKey: 'SettingsKeywordsSignalPin',
+    requires: 'hasSignalPinSettings',
   },
   {
     screen: SettingsScreens.Passkeys,
@@ -338,11 +337,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Stickers, ['ChooseStickerMyStickerSets'], { requires: 'areStickerSetsLoaded' }),
   ...buildEntries(SettingsScreens.CustomEmoji, ['SuggestAnimatedEmoji'], { requires: 'areCustomEmojiSetsLoaded' }),
 
-  ...buildEntries(SettingsScreens.Language, [
-    'ShowTranslateButton', 'LocalizationInterfaceLanguage',
-  ]),
+  ...buildEntries(SettingsScreens.Language, ['LocalizationInterfaceLanguage']),
 
-  ...buildEntries(SettingsScreens.Folders, ['ShowFolderTags']),
   ...buildEntries(SettingsScreens.Folders, ['TabsPosition', 'TabsPositionLeft', 'TabsPositionTop'], {
     requires: 'isDesktopLayout',
   }),
@@ -358,6 +354,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['SettingsSensitiveTitle', 'SettingsSensitiveDisableFiltering'], {
     requires: 'canChangeSensitive',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalContactDiscovery'], { requires: 'hasSignalPinSettings' }),
   ...buildEntries(SettingsScreens.Privacy, ['NewChatsFromNonContacts'], {
     requires: 'canDisplayAutoarchiveSetting',
   }),

@@ -31,7 +31,7 @@ Checks: `cargo build --release`, `cargo clippy --all-targets -- -D warnings`, `c
 ## Protocol
 
 - `GET /tunnel?host=<host>&port=443` with a WebSocket upgrade opens a tunnel. `host` must be one of
-  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy` or `sfu.voip` `.signal.org`, and
+  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy`, `sfu.voip` or `svr2` `.signal.org`, and
   `port` must be 443. Binary messages carry raw TCP bytes in both directions; the client sends
   messages of at most 64 KiB (`src/lib/signal/net/TlsTunnel.ts`).
 - The first bytes from the client must be a TLS ClientHello whose only server name is `host`.
@@ -160,6 +160,19 @@ and bans apply to everyone together.
 
 The build web app reaches the tunnel at `/tunnel` on its own origin unless `SIGNAL_TUNNEL_URL` is
 set at build time.
+
+### Container image
+
+Releases publish `ghcr.io/<owner>/telesignal-tunnel` (`linux/amd64` and `linux/arm64`): the static binary on an
+empty image that runs as an unprivileged user. It listens on `0.0.0.0:8787` inside the container, so publish the
+port only to the reverse proxy and set the origin:
+
+```sh
+docker run --rm -p 127.0.0.1:8787:8787 -e ALLOWED_ORIGINS=https://signal.example.com -e TRUST_PROXY=1 \
+  ghcr.io/<owner>/telesignal-tunnel:<version>
+```
+
+The image has no shell, so check `GET /health` from outside. `docker build proxy` compiles the tunnel from source.
 
 ## Threat model
 

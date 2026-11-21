@@ -21,7 +21,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 import Button from '../ui/Button';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
-import Icon from './icons/Icon';
 import SelectionOrderBadge from './SelectionOrderBadge';
 import StickerView from './StickerView';
 
@@ -39,13 +38,9 @@ type OwnProps<T> = {
   canViewSet?: boolean;
   isSelected?: boolean;
   selectionOrder?: number;
-  isCurrentUserPremium?: boolean;
-  shouldIgnorePremium?: boolean;
   withTranslucentThumb?: boolean;
   withInstantThumb?: boolean;
   forcePlayback?: boolean;
-  noShowPremium?: boolean;
-  noIcons?: boolean;
   clickArg: T;
   onClick?: (arg: OwnProps<T>['clickArg'], isSilent?: boolean, shouldSchedule?: boolean) => void;
   observeIntersection: ObserveFn;
@@ -76,13 +71,9 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   canViewSet,
   isSelected,
   selectionOrder,
-  isCurrentUserPremium,
-  shouldIgnorePremium,
-  noShowPremium,
   withTranslucentThumb,
   withInstantThumb,
   forcePlayback,
-  noIcons,
   clickArg,
   onClick,
   observeIntersection,
@@ -92,7 +83,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   onRemoveRecentClick,
   onDismiss,
 }: OwnProps<T>) => {
-  const { openStickerSet, setEmojiStatus, showNotification } = getActions();
+  const { openStickerSet, setEmojiStatus } = getActions();
   const ref = useRef<HTMLDivElement>();
   const menuRef = useRef<HTMLDivElement>();
   const lang = useLang();
@@ -103,10 +94,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
     id, stickerSetInfo,
   } = sticker;
 
-  const isPremium = !sticker.isFree || sticker.hasEffect;
   const isCustomEmoji = sticker.isCustomEmoji;
-  const isPremiumSticker = !isCustomEmoji && isPremium;
-  const isLocked = !isCurrentUserPremium && isPremium && !shouldIgnorePremium && !isSavedMessages;
 
   const isIntersecting = useIsIntersecting(ref, observeIntersection);
   const shouldLoad = isIntersecting;
@@ -134,14 +122,6 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
 
   const handleClick = () => {
     if (isContextMenuOpen) return;
-    if (isLocked) {
-      showNotification({
-        message: { key: isCustomEmoji
-          ? 'PremiumUnlockEmoji'
-          : 'PremiumUnlockStickers' },
-      });
-      return;
-    }
     onClick?.(clickArg);
   };
 
@@ -235,7 +215,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
       );
     }
 
-    if (!isLocked && onClick) {
+    if (onClick) {
       if (!isSavedMessages) {
         items.push(<MenuItem onClick={handleSendQuiet} icon="muted">{lang('SendWithoutSound')}</MenuItem>);
       }
@@ -262,7 +242,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
     }
     return items;
   }, [
-    shouldRenderContextMenu, noContextMenu, isCustomEmoji, isStatusPicker, onUnfaveClick, onFaveClick, isLocked,
+    shouldRenderContextMenu, noContextMenu, isCustomEmoji, isStatusPicker, onUnfaveClick, onFaveClick,
     onClick, canViewSet, onRemoveRecentClick, handleEmojiStatusExpiresClick, lang, handleContextUnfave,
     handleContextFave, isSavedMessages, handleSendScheduled, handleSendQuiet, handleOpenSet, handleContextRemoveRecent,
   ]);
@@ -301,18 +281,6 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
           draggable={false}
         />
       ))}
-      {!noIcons && !noShowPremium && isLocked && (
-        <div
-          className="sticker-locked"
-        >
-          <Icon name="lock-filled" />
-        </div>
-      )}
-      {!noIcons && !noShowPremium && isPremiumSticker && !isLocked && (
-        <div className="sticker-premium">
-          <Icon name="star" />
-        </div>
-      )}
       {selectionOrder !== undefined && <SelectionOrderBadge order={selectionOrder} />}
       {shouldShowCloseButton && (
         <Button

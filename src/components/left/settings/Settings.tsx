@@ -44,6 +44,8 @@ import SettingsPrivacyPhoneNumber from './SettingsPrivacyPhoneNumber';
 import SettingsPrivacyVisibility from './SettingsPrivacyVisibility';
 import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityExceptionList';
 import SettingsQuickReaction from './SettingsQuickReaction';
+import SettingsSignalPin from './SettingsSignalPin';
+import SettingsSignalPinForm from './SettingsSignalPinForm';
 import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
 import SettingsUsername from './SettingsUsername';
@@ -96,6 +98,9 @@ const PRIVACY_SCREENS = [
   SettingsScreens.PrivacyBlockedUsers,
   SettingsScreens.ActiveWebsites,
   SettingsScreens.Passkeys,
+  SettingsScreens.SignalPin,
+  SettingsScreens.SignalPinNew,
+  SettingsScreens.SignalPinConfirm,
 ];
 
 const PRIVACY_PHONE_NUMBER_SCREENS = [
@@ -196,6 +201,8 @@ const Settings = ({
 
   const [twoFaState, twoFaDispatch] = useTwoFaReducer();
   const [privacyPasscode, setPrivacyPasscode] = useState<string>('');
+  // The new Signal PIN between its entry and its confirmation
+  const [newSignalPin, setNewSignalPin] = useState<string | undefined>();
 
   useScrollNotch({
     containerRef,
@@ -335,6 +342,31 @@ const Settings = ({
         return (
           <SettingsSignalProxy isActive={isScreenActive} onReset={handleReset} />
         );
+      case SettingsScreens.SignalPin:
+        return (
+          <SettingsSignalPin
+            isActive={isScreenActive || activeScreen === SettingsScreens.SignalPinNew
+              || activeScreen === SettingsScreens.SignalPinConfirm}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.SignalPinNew:
+        return (
+          <SettingsSignalPinForm
+            isActive={isScreenActive || activeScreen === SettingsScreens.SignalPinConfirm}
+            onNewPin={setNewSignalPin}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.SignalPinConfirm:
+        return (
+          <SettingsSignalPinForm
+            isActive={isScreenActive}
+            newPin={newSignalPin}
+            onNewPin={setNewSignalPin}
+            onReset={handleReset}
+          />
+        );
       case SettingsScreens.Privacy:
         return (
           <SettingsPrivacy
@@ -434,7 +466,6 @@ const Settings = ({
         return (
           <SettingsPrivacyVisibilityExceptionList
             isAllowList
-            withPremiumCategory={currentScreen === SettingsScreens.PrivacyGroupChatsAllowedContacts}
             screen={currentScreen}
             isActive={isScreenActive || privacyAllowScreens[currentScreen]}
             onReset={handleReset}

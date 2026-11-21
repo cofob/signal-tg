@@ -6,14 +6,16 @@ import type {
   AccountRecord_PinnedConversation,
   ContactRecord,
   GroupV2Record,
+  InstalledStickerPackRecord,
   ManifestRecord,
   ManifestRecord_Identifier,
   StorageRecord,
 } from '../proto/generated/StorageService_pb';
+import type { StickerPackRecord } from '../stickers/stickerPacks';
 import type { AccountRecord as LocalAccount } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
-import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
 import { uuidToBytes, uuidToString } from '../serviceId';
 
@@ -33,12 +35,16 @@ type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestam
 type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
   | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath';
-type StorageField = ConversationStorageField | AccountStorageField;
+// Sticker pack records are written whole
+type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack';
 
 /** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
 export type LocalAccountFields = Pick<LocalAccount, 'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted'>;
 
-/** Record fields changed on this device and not written yet, by conversation id or `ACCOUNT_KEY` */
+/**
+ * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY` or the key of a sticker
+ * pack (`getStickerPackStorageKey`)
+ */
 export type StorageChanges = Record<string, StorageField[]>;
 
 /** What a write starts from: the stored manifest, its records and the local state */
@@ -48,6 +54,7 @@ type StorageWriteSource = {
   records: Map<string, Uint8Array>;
   changes: StorageChanges;
   conversations: ConversationRecord[];
+  stickerPacks: Record<string, StickerPackRecord>;
   // Profile keys of the private conversations with changes
   profileKeys: Map<string, Uint8Array>;
   selfAci: string;
@@ -57,6 +64,7 @@ type StorageWriteSource = {
 
 // Conversation ids are ACIs and base64 group ids, so they never equal this key
 export const ACCOUNT_KEY = 'account';
+const STICKER_PACK_KEY_PREFIX = 'stickerPack:';
 
 const ACI_BINARY_LENGTH = 16;
 // Signal Desktop `generateStorageID` and `RECORD_IKM_LENGTH` in `ts/services/storage.preload.ts`
@@ -103,6 +111,11 @@ export function getStorageChanges(previous: ConversationRecord, next: Conversati
   return changes;
 }
 
+/** The `StorageChanges` key of a sticker pack's record */
+export function getStickerPackStorageKey(packId: string) {
+  return `${STICKER_PACK_KEY_PREFIX}${packId}`;
+}
+
 export function mergeStorageChanges(changes: StorageChanges, added: StorageChanges) {
   const merged = { ...changes };
   for (const [key, fields] of Object.entries(added)) {
@@ -139,7 +152,7 @@ export function getMutedUntil(timestamp: bigint) {
  * `changes` it carries: changes of records that cannot be written yet stay marked.
  */
 export function buildStorageWrite({
-  manifest, records, changes, conversations, profileKeys, selfAci, deviceId, localAccount,
+  manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount,
 }: StorageWriteSource): { write: StorageWrite; writtenKeys: string[] } | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storedRecords = indexRecords(records);
@@ -150,12 +163,17 @@ export function buildStorageWrite({
 
   for (const [key, fields] of Object.entries(changes)) {
     const conversation = conversationsById.get(key);
-    const recordKey = key === ACCOUNT_KEY ? key : conversation && getRecordKey(conversation);
+    const stickerPack = key.startsWith(STICKER_PACK_KEY_PREFIX)
+      ? stickerPacks[key.slice(STICKER_PACK_KEY_PREFIX.length)]
+      : undefined;
+    const recordKey = key === ACCOUNT_KEY || stickerPack ? key : conversation && getRecordKey(conversation);
     if (!recordKey) continue;
     const stored = storedRecords.get(recordKey);
 
     let record: StorageRecord;
-    if (stored?.record.record.case === 'account') {
+    if (stickerPack) {
+      record = buildStickerPackRecord(stickerPack, stored?.record);
+    } else if (stored?.record.record.case === 'account') {
       record = stored.record;
       setAccountFields(stored.record.record.value, fields, conversations, selfAci, localAccount);
     } else if (conversation) {
@@ -198,17 +216,18 @@ export function countPinnedConversations(records: Map<string, Uint8Array>, conve
 }
 
 /**
- * A manifest with a record for the account and for each conversation that has a message request answer, all under new
- * storage ids and a new `recordIkm` (Signal Desktop `createNewManifest` and `resetWithNewKey` in
+ * A manifest with a record for the account, for each conversation that has a message request answer and for each
+ * sticker pack that was installed or removed here, all under new storage ids and a new `recordIkm` (Signal Desktop `createNewManifest` and `resetWithNewKey` in
  * `ts/services/storage.preload.ts`). A primary device writes it as its first manifest, and with `shouldClearAll`
  * in place of one that its storage key cannot open. Returns the write and the keys of `changes` it carries.
  */
 export function buildNewStorageWrite({
-  version, shouldClearAll, conversations, profileKeys, selfAci, deviceId, localAccount,
+  version, shouldClearAll, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount,
 }: {
   version: bigint;
   shouldClearAll: boolean;
   conversations: ConversationRecord[];
+  stickerPacks: Record<string, StickerPackRecord>;
   profileKeys: Map<string, Uint8Array>;
   selfAci: string;
   deviceId: number;
@@ -244,6 +263,10 @@ export function buildNewStorageWrite({
     addRecord(record);
     writtenKeys.push(conversation.id);
   }
+  for (const pack of Object.values(stickerPacks)) {
+    addRecord(buildStickerPackRecord(pack));
+    writtenKeys.push(getStickerPackStorageKey(pack.id));
+  }
 
   const manifest = create(ManifestRecordSchema, {
     version, sourceDevice: deviceId, identifiers, recordIkm: getRandomBytes(RECORD_IKM_LENGTH),
@@ -270,6 +293,8 @@ function getStoredRecordKey({ record }: StorageRecord) {
       return record.value.masterKey.length ? getGroupKey(record.value.masterKey) : undefined;
     case 'account':
       return ACCOUNT_KEY;
+    case 'installedStickerPack':
+      return record.value.packId.length ? getStickerPackStorageKey(bufferToHex(record.value.packId)) : undefined;
     default:
       return undefined;
   }
@@ -290,6 +315,8 @@ function getItemType({ record }: StorageRecord) {
       return ItemType.CONTACT;
     case 'groupV2':
       return ItemType.GROUPV2;
+    case 'installedStickerPack':
+      return ItemType.STICKER_PACK;
     default:
       return ItemType.ACCOUNT;
   }
@@ -312,6 +339,24 @@ function createConversationRecord(conversation: ConversationRecord, profileKey?:
       },
     },
   });
+}
+
+/**
+ * The record of an installed pack, or of a removed one with its removal time and without key and position
+ * (Signal Desktop `toInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`). Unknown fields of
+ * the stored record stay.
+ */
+function buildStickerPackRecord(pack: StickerPackRecord, stored?: StorageRecord) {
+  const record = stored?.record.case === 'installedStickerPack'
+    ? stored
+    : create(StorageRecordSchema, { record: { case: 'installedStickerPack', value: {} } });
+  const value = record.record.value as InstalledStickerPackRecord;
+  const isInstalled = pack.installedAt !== undefined;
+  value.packId = bufferFromHex(pack.id);
+  value.packKey = isInstalled ? bufferFromHex(pack.key) : new Uint8Array();
+  value.position = isInstalled ? pack.position ?? 0 : 0;
+  value.deletedAtTimestamp = isInstalled ? 0n : BigInt(pack.uninstalledAt ?? Date.now());
+  return record;
 }
 
 function setConversationFields(

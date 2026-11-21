@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type {
   ApiAttachment, ApiChatMember, ApiMessage, ApiSticker,
 } from '../../../api/types';
-import type { GlobalState, TabState } from '../../../global/types';
+import type { GlobalState } from '../../../global/types';
 import type { MessageListType, ThreadId } from '../../../types';
 import type { RichEditorTooltipsConfig } from '../../common/tooltips/types';
 import type { RichEditor } from './richEditorTypes';
@@ -16,15 +16,14 @@ import {
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
 } from '../../../config';
-import { requestMeasure, requestMutation } from '../../../lib/fasterdom/fasterdom';
+import { requestMutation } from '../../../lib/fasterdom/fasterdom';
 import { getAttachmentMediaType } from '../../../global/helpers';
 import {
-  selectCanSetVideoCover, selectChatFullInfo, selectIsChatWithSelf, selectIsCurrentUserPremium, selectTabState,
+  selectCanSetVideoCover, selectChatFullInfo, selectIsChatWithSelf, selectTabState,
 } from '../../../global/selectors';
 import { selectLanguageCode } from '../../../global/selectors/settings';
 import buildClassName from '../../../util/buildClassName';
 import captureEscKeyListener from '../../../util/captureEscKeyListener';
-import calcTextLineHeightAndCount from '../../../util/element/calcTextLineHeightAndCount';
 import { validateFiles } from '../../../util/files';
 import { removeAllSelections } from '../../../util/selection';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
@@ -33,10 +32,8 @@ import { getAttachedStickers } from '../../ui/mediaEditor/editDocument';
 import { checkCanEncodeVideo } from '../../ui/mediaEditor/export/videoCapabilities';
 import { fetchVideoProbe } from '../../ui/mediaEditor/export/videoProbe';
 import { getGifLevel, getOutputSize } from '../../ui/mediaEditor/export/videoQuality';
-import { buildRichMessageFromFormatted, getRichInputAsFormatted } from '../../ui/textInput/richText';
 import buildAttachment, { applyVideoEdit } from './helpers/buildAttachment';
 import getFilesFromDataTransferItems from './helpers/getFilesFromDataTransferItems';
-import { getRichMessageText } from './helpers/richEditorComposer';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
@@ -85,7 +82,7 @@ export type OwnProps = {
   onSendSilent: (sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true) => void;
   onSendScheduled: (
     sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true,
-    scheduledAt?: number, scheduleRepeatPeriod?: number,
+    scheduledAt?: number,
   ) => void;
   onSendWhenOnline?: NoneToVoidFunction;
 };
@@ -103,8 +100,6 @@ type StateProps = {
   shouldSaveAttachmentsCompression?: boolean;
   shouldOpenMessageMediaEditor?: boolean;
   messageMediaEditorVideoTime?: number;
-  aiMessageEditorPendingResult?: TabState['aiMessageEditorPendingResult'];
-  isCurrentUserPremium?: boolean;
   canSetVideoCover?: boolean;
 };
 
@@ -128,7 +123,6 @@ const AttachmentModal = ({
   recentEmojis,
   baseEmojiKeywords,
   emojiKeywords,
-  isCurrentUserPremium,
   isForMessage,
   shouldSchedule,
   shouldSuggestCustomEmoji,
@@ -143,7 +137,6 @@ const AttachmentModal = ({
   canSendGifs,
   shouldOpenMessageMediaEditor,
   messageMediaEditorVideoTime,
-  aiMessageEditorPendingResult,
   canSetVideoCover,
   onAttachmentsUpdate,
   onSend,
@@ -157,11 +150,10 @@ const AttachmentModal = ({
   const svgRef = useRef<SVGSVGElement>();
   const {
     addRecentCustomEmoji, addRecentEmoji, updateAttachmentSettings, resetMessageMediaEditorRequest,
-    updateShouldSaveAttachmentsCompression, openAiMessageEditorModal, clearAiMessageEditorPendingResult,
+    updateShouldSaveAttachmentsCompression,
   } = getActions();
 
   const lang = useLang();
-  const richValue = richEditor.value;
 
   const mainButtonRef = useRef<HTMLButtonElement>();
   const inputRef = useRef<HTMLDivElement>();
@@ -186,8 +178,6 @@ const AttachmentModal = ({
   // `true` when the modal was opened straight into the editor (from the Media Viewer / reply), so the
   // attachment only exists to be edited — cancelling the editor should dismiss the whole modal.
   const wasOpenedAsEditorRef = useRef(false);
-  const [shouldShowAiButton, setShouldShowAiButton] = useState(false);
-  const richText = useMemo(() => getRichMessageText(richValue), [richValue]);
   const editingAttachment = editingAttachmentIndex !== undefined
     ? attachments[editingAttachmentIndex] : undefined;
   const editorSource = useMemo(() => (editingAttachment ? {
@@ -311,7 +301,6 @@ const AttachmentModal = ({
     recentEmojiIds: recentEmojis,
     baseEmojiKeywords,
     emojiKeywords,
-    isCurrentUserPremium,
   }));
   const getIsCaptionTooltipEnabled = useLastCallback(() => Boolean(
     isReady && (isForCurrentMessageList || !isForMessage) && renderingIsOpen,
@@ -378,39 +367,15 @@ const AttachmentModal = ({
     mainButtonRef, !canShowCustomSendMenu || !isOpen || hasPreparingAttachments,
   );
 
-  useEffect(() => {
-    requestMeasure(() => {
-      const input = inputRef.current;
-      if (!isForMessage || !richText || !input) {
-        setShouldShowAiButton(false);
-        return;
-      }
-      const { totalLines } = calcTextLineHeightAndCount(input, true);
-      setShouldShowAiButton(totalLines >= 3);
-    });
-  }, [isForMessage, richText, isOpen]);
-
-  const handleOpenAiEditor = useLastCallback(() => {
-    if (!isForMessage) return;
-    const { text, entities } = richValue ? getRichInputAsFormatted(richValue) || { text: '' } : { text: '' };
-    openAiMessageEditorModal({
-      chatId,
-      threadId,
-      content: { type: 'text', text: { text, entities } },
-      isFromAttachment: true,
-      isEditing: Boolean(editingMessage),
-    });
-  });
-
   const sendAttachments = useLastCallback((
-    isSilent?: boolean, scheduledAt?: number | true, scheduleRepeatPeriod?: number,
+    isSilent?: boolean, scheduledAt?: number | true,
   ) => {
     if (!isOpen || hasPreparingAttachments) return;
 
     const shouldSendScheduled = (shouldSchedule || scheduledAt) && isForMessage && !editingMessage;
     if (shouldSendScheduled) {
       const actualScheduledAt = typeof scheduledAt === 'number' ? scheduledAt : undefined;
-      onSendScheduled(isSendingCompressed, shouldSendGrouped, isInvertedMedia, actualScheduledAt, scheduleRepeatPeriod);
+      onSendScheduled(isSendingCompressed, shouldSendGrouped, isInvertedMedia, actualScheduledAt);
     } else if (isSilent) {
       onSendSilent(isSendingCompressed, shouldSendGrouped, isInvertedMedia);
     } else {
@@ -426,25 +391,6 @@ const AttachmentModal = ({
       shouldSendInHighQuality,
     });
   });
-
-  const handleSendWithAiResult = useLastCallback(() => {
-    if (!isForMessage || !aiMessageEditorPendingResult?.shouldSendWithAttachments
-      || !isOpen || hasPreparingAttachments) return;
-    if (aiMessageEditorPendingResult.chatId !== chatId || aiMessageEditorPendingResult.threadId !== threadId) return;
-
-    const { content, isSilent, scheduledAt, scheduleRepeatPeriod } = aiMessageEditorPendingResult;
-
-    if (content.type === 'text') {
-      richEditor.setValue(buildRichMessageFromFormatted(content.text));
-    }
-
-    sendAttachments(isSilent, scheduledAt, scheduleRepeatPeriod);
-    clearAiMessageEditorPendingResult();
-  });
-
-  useEffect(() => {
-    handleSendWithAiResult();
-  }, [aiMessageEditorPendingResult, hasPreparingAttachments, handleSendWithAiResult]);
 
   const handleSendSilent = useLastCallback(() => {
     sendAttachments(true);
@@ -889,16 +835,6 @@ const AttachmentModal = ({
             styles.captionWrapper,
           )}
         >
-          <Button
-            round
-            size="tiny"
-            color="translucent"
-            tabIndex={shouldShowAiButton ? 0 : -1}
-            className={buildClassName(styles.aiButton, !shouldShowAiButton && styles.aiButtonHidden)}
-            onClick={handleOpenAiEditor}
-            ariaLabel={lang('AiMessageEditor')}
-            iconName="ai"
-          />
           <div className={styles.caption}>
             <SymbolMenuButton
               chatId={chatId}
@@ -996,7 +932,6 @@ export default memo(withGlobal<OwnProps>(
     const {
       shouldSaveAttachmentsCompression,
       messageMediaEditorRequest,
-      aiMessageEditorPendingResult,
     } = selectTabState(global);
     const chatFullInfo = selectChatFullInfo(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
@@ -1013,14 +948,12 @@ export default memo(withGlobal<OwnProps>(
       recentEmojis,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,
       emojiKeywords: emojiKeywords?.keywords,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldSuggestCustomEmoji,
       attachmentSettings,
       shouldSaveAttachmentsCompression,
       shouldOpenMessageMediaEditor: messageMediaEditorRequest?.chatId === chatId,
       messageMediaEditorVideoTime: messageMediaEditorRequest?.chatId === chatId
         ? messageMediaEditorRequest.videoTime : undefined,
-      aiMessageEditorPendingResult,
       canSetVideoCover: selectCanSetVideoCover(global, chatId),
     };
   },
