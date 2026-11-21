@@ -17,3 +17,13 @@ harness: when anyone changes the group after the request, canceling it through `
 every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revision, and fails with "The group change
 conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
 is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
+
+## The app cannot tell whether this device is the primary device of the account
+
+Features that only a primary device has, such as the recovery key (`fetchRecoveryKey` in
+`src/api/signal/methods/profile.ts`), cannot be hidden from linked devices: no part of the global state carries the
+device kind, and `global.config` and `global.appConfig` are cached and loaded independently of the account. The
+Settings > Privacy row "Recovery key" therefore shows on every device and a linked device answers with a notification.
+Verified by reading the code: `AccountRecord.deviceId` lives only in `SignalStore`, behind the API layer. A flag that
+the API sends with the current user, or an app config field that follows the account, would let the row and its search
+entry follow `requires` like `arePasskeysAvailable`.
