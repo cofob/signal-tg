@@ -71,7 +71,7 @@ const REMOVED_MESSAGE_FIELDS = [
   'inlineButtons', 'keyboardButtons', 'keyboardPlaceholder', 'isKeyboardSingleUse', 'isKeyboardSelective',
   'isKeyboardFullHeight', 'shouldHideKeyboardButtons', 'isHideKeyboardSelective', 'viaBotId', 'guestChatViaId',
 ];
-const REMOVED_MESSAGE_CONTENT_FIELDS = ['game', 'location'];
+const REMOVED_MESSAGE_CONTENT_FIELDS = ['game', 'location', 'widget'];
 
 // `patternColor` values the cache migration recognizes as defaults and replaces with the
 // wallpaper-derived ones
@@ -83,6 +83,7 @@ const SHARED_STATE_PATTERN_COLORS_CACHE_VERSION = 3;
 const SHARED_STATE_V1_LIGHT_PATTERN_COLOR = '#77854b66';
 const SHARED_STATE_V1_DARK_PATTERN_COLOR = '#27308a66';
 const SHARED_STATE_HEX_PATTERN_COLORS_CACHE_VERSION = 5;
+const SHARED_STATE_REMOVED_SETTINGS_CACHE_VERSION = 6;
 const updateCacheThrottled = throttle(() => onFullyIdle(() => updateCache()), UPDATE_THROTTLE, false);
 const updateCacheForced = () => updateCache(true);
 
@@ -350,6 +351,18 @@ export function migrateSharedCache(
     };
   }
 
+  if (cacheVersion < SHARED_STATE_REMOVED_SETTINGS_CACHE_VERSION) {
+    // Settings of the removed Instant View and browser tabs
+    const {
+      instantViewFontSizeAdjust, shouldSkipBrowserCloseConfirmation, ...settingsWithoutRemoved
+    } = migrated.settings as AnyLiteral;
+
+    migrated = {
+      ...migrated,
+      settings: settingsWithoutRemoved as SharedState['settings'],
+    };
+  }
+
   return migrated;
 }
 
@@ -395,7 +408,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   delete untypedCached.trustedBotIds;
   delete untypedCached.users.botAppPermissionsById;
   delete untypedCached.settings.botVerificationShownPeerIds;
-  delete untypedCached.sharedState?.settings?.shouldSkipBrowserCloseConfirmation;
   Object.values(cached.chats.fullInfoById).forEach((fullInfo) => {
     fullInfo.isCache = true;
   });
@@ -511,7 +523,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
       delete (webPage as AnyLiteral).cachedPage;
       delete (webPage as AnyLiteral).cachedPageAudioById;
     });
-    delete untypedCached.sharedState?.settings?.instantViewFontSizeAdjust;
     // Cloud password and Telegram passkeys
     delete untypedCached.auth?.hint;
     delete untypedCached.auth?.passkeyOption;
