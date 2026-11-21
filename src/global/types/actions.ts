@@ -222,7 +222,7 @@ export interface ActionPayloads {
   skipAuthRestore: undefined;
   loadBackupSettings: undefined;
   loadBackupRemoteStatus: undefined;
-  enableBackups: { frequency: ApiBackupFrequency } & WithTabId;
+  enableBackups: { frequency: ApiBackupFrequency; shouldReplaceBackup?: boolean } & WithTabId;
   disableBackups: { shouldDeleteBackup?: boolean } & WithTabId;
   setBackupFrequency: { frequency: ApiBackupFrequency } & WithTabId;
   backUpNow: WithTabId | undefined;

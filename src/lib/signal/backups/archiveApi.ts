@@ -211,11 +211,20 @@ export async function getArchiveReadHeaders(auth: ArchiveAuth, cdn: number) {
 export async function getArchiveFileInfo(
   { cdn, backupDir, backupName }: ArchiveInfo, readHeaders: Record<string, string>,
 ): Promise<ArchiveFileInfo | undefined> {
+  // A CDN that ignores the range sends the whole file, which the tab must not buffer
+  const controller = new AbortController();
   const response = await sendHttpRequest(getCdnHost(cdn), {
     trafficClass: 'unauthenticated',
     method: 'GET',
     path: getBackupPath(backupDir, backupName),
     headers: { ...readHeaders, Range: `bytes=0-${FILE_START_LENGTH - 1}` },
+    signal: controller.signal,
+    onReceiveProgress: (receivedLength) => {
+      if (receivedLength > FILE_START_LENGTH) controller.abort();
+    },
+  }).catch((err) => {
+    if (controller.signal.aborted) throw new ArchiveError('unexpected', HTTP_OK);
+    throw err;
   });
   if (response.status === HTTP_NOT_FOUND) return undefined;
   if (response.status !== HTTP_OK && response.status !== HTTP_PARTIAL_CONTENT) {

@@ -21,6 +21,7 @@ const BACKUP_ERROR_KEYS = {
   invalidKey: 'BackupsErrorInvalidKey',
   forwardSecrecyLost: 'BackupsErrorForwardSecrecy',
   rejected: 'BackupsErrorRejected',
+  existingBackup: 'BackupsErrorExistingBackup',
   failed: 'ErrorUnexpected',
 } satisfies Record<string, RegularLangKey>;
 const REVOKE_URL_DELAY_MS = 60 * 1000;
@@ -40,8 +41,8 @@ addActionHandler('loadBackupRemoteStatus', async (global): Promise<void> => {
 });
 
 addActionHandler('enableBackups', async (global, actions, payload): Promise<void> => {
-  const { frequency, tabId = getCurrentTabId() } = payload;
-  await applyBackupResult(await callApi('enableBackups', frequency), tabId);
+  const { frequency, shouldReplaceBackup, tabId = getCurrentTabId() } = payload;
+  await applyBackupResult(await callApi('enableBackups', frequency, shouldReplaceBackup), tabId);
 });
 
 addActionHandler('disableBackups', async (global, actions, payload): Promise<void> => {

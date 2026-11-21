@@ -35,6 +35,13 @@ const MAX_METADATA_LENGTH = 16 * 1024;
 const MAX_FRAME_LENGTH = 16 * 1024 * 1024;
 const MAX_UNCOMPRESSED_LENGTH = 2 * 1024 * 1024 * 1024;
 
+/** The forward secrecy header at the start of a backup is cut short or too large */
+export class BackupHeaderError extends Error {
+  constructor() {
+    super('Backup has an invalid forward secrecy header');
+  }
+}
+
 /**
  * Derives the keys of a backup from its backup key and our ACI; link and sync uses the ephemeral backup key
  * from the provisioning message (Signal Desktop `getMessageBackupKey` in `ts/services/backups/crypto.preload.ts`).
@@ -94,7 +101,7 @@ function readForwardSecrecyHeader(bytes: Uint8Array) {
   if (!hasForwardSecrecyHeader(bytes)) return undefined;
   const prefix = readVarint(bytes, FORWARD_SECRECY_MAGIC.length);
   if (!prefix || prefix.value > MAX_METADATA_LENGTH || prefix.end + prefix.value > bytes.length) {
-    throw new Error('Backup has an invalid forward secrecy header');
+    throw new BackupHeaderError();
   }
   return { metadataStart: prefix.end, end: prefix.end + prefix.value };
 }

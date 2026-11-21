@@ -125,9 +125,9 @@ export async function restoreBackup(
           response.free();
         }
       } catch (err) {
-        const error = toSvrBError(err);
-        // A retired enclave that is still configured answers 404
-        if (!isEnclaveNotFound(err)) failure = prioritize(failure, error);
+        // An enclave that answers 404 is `unavailable` as well: it may be the one that holds the key, so a chain must not
+        // start over it (libsignal-net `restore_backup` counts every connection failure)
+        failure = prioritize(failure, toSvrBError(err));
       }
     }
   }

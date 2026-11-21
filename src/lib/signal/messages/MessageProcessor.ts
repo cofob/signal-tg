@@ -4363,7 +4363,6 @@ function getIsGroupAccessDenied(err: unknown) {
   return err instanceof GroupRequestError && err.isAccessDenied;
 }
 
-/** The conversation id of a group: its base64 group identifier */
 /** The fields of `patch` that `existing` has no value for */
 function getAbsentFields(existing: ConversationRecord, patch: ConversationPatch): ConversationPatch {
   const absent = { id: patch.id, type: patch.type } as ConversationPatch;
@@ -4373,6 +4372,7 @@ function getAbsentFields(existing: ConversationRecord, patch: ConversationPatch)
   return absent;
 }
 
+/** The conversation id of a group: its base64 group identifier */
 export function getGroupId(masterKey: Uint8Array) {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);

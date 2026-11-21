@@ -337,6 +337,13 @@ fn read_metadata(metadata: &[u8]) -> Result<([u8; IV_LENGTH], Vec<Pair>), &'stat
     if metadata.pair.len() > MAX_PAIRS {
         return Err("too many pairs");
     }
+    // The lengths that libsignal checks before it reads a backup, so that a pair never asks the enclave for a bad salt
+    if metadata.pair.iter().any(|pair| pair.pw_salt.len() != SALT_LENGTH) {
+        return Err("bad salt length");
+    }
+    if metadata.pair.iter().any(|pair| pair.ct.len() != BACKUP_FORWARD_SECRECY_TOKEN_LEN + MAC_LENGTH) {
+        return Err("bad token length");
+    }
     let iv = <[u8; IV_LENGTH]>::try_from(metadata.iv).map_err(|_| "iv failure")?;
     Ok((iv, metadata.pair))
 }
@@ -463,6 +470,18 @@ mod tests {
         assert!(read_metadata(&with(0, 12)).is_err());
         assert!(read_metadata(&with(3, 12)).is_err());
         assert!(read_metadata(&with(1, 11)).is_err());
+        let with_pair = |pair: Pair| {
+            MetadataPb { iv: vec![0; 12], pair: vec![pair], ..Default::default() }.write_to_bytes().expect("encodes")
+        };
+        assert!(
+            read_metadata(&with_pair(Pair { ct: vec![1; 48], pw_salt: vec![2; 31], ..Default::default() })).is_err()
+        );
+        assert!(
+            read_metadata(&with_pair(Pair { ct: vec![1; 47], pw_salt: vec![2; 32], ..Default::default() })).is_err()
+        );
+        assert!(
+            read_metadata(&with_pair(Pair { ct: vec![1; 48], pw_salt: vec![2; 32], ..Default::default() })).is_ok()
+        );
     }
 
     #[test]

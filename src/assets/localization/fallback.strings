@@ -2434,6 +2434,9 @@
 "BackupsErrorInvalidKey" = "Enter the 64-character recovery key.";
 "BackupsErrorForwardSecrecy" = "The key of this backup is no longer on Signal's servers, so it cannot be opened. A newer backup may have replaced it.";
 "BackupsErrorRejected" = "Signal's backup service refused the request. Backups stay paused until you back up again.";
+"BackupsErrorExistingBackup" = "Signal's servers hold a backup of this account. Turn on backups again and confirm to replace it.";
+"BackupsReplaceText" = "Signal's servers already hold a backup of this account, made earlier or on another device. Turning on backups replaces it with a backup of the messages on this device.";
+"BackupsReplaceConfirm" = "Replace the backup";
 "BackupsImportMergeNote" = "The messages of the backup are added to this account. Your chats and settings stay as they are.";
 "BackupsLinkedDevice" = "Backups are turned on and managed on your primary device. This device shows their state and can save a file.";
 "AuthRestoreTitle" = "Restore your messages";

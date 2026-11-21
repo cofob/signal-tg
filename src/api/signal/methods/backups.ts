@@ -2,7 +2,7 @@ import type { ApiBackupFrequency, ApiBackupRemoteStatus, ApiBackupSettings } fro
 
 import { normalizeRecoveryKey } from '../../../lib/signal/account/recoveryKey';
 import { ArchiveError } from '../../../lib/signal/backups/archiveApi';
-import BackupService, { getIsPrimaryDevice, NotPrimaryDeviceError } from '../../../lib/signal/backups/BackupService';
+import BackupService, { ExistingBackupError, getIsPrimaryDevice, NotPrimaryDeviceError } from '../../../lib/signal/backups/BackupService';
 import { restoreBackupFile, RestoreError } from '../../../lib/signal/backups/restoreBackup';
 import { BackupValidationError } from '../../../lib/signal/backups/validateBackup';
 import NetworkError from '../../../lib/signal/net/NetworkError';
@@ -12,7 +12,7 @@ import { buildBackupSettings } from '../updaters/backups';
 // The reasons that an action of the backup settings fails, which the app shows as a notification
 export type BackupErrorReason =
   | 'unavailable' | 'rateLimited' | 'network' | 'notEnabledOnPrimary' | 'invalidBackup' | 'wrongKey' | 'invalidKey'
-  | 'forwardSecrecyLost' | 'rejected' | 'failed';
+  | 'forwardSecrecyLost' | 'rejected' | 'existingBackup' | 'failed';
 
 const BACKUP_FILE_PREFIX = 'signal-backup';
 const ISO_DATE_LENGTH = 10;
@@ -29,19 +29,18 @@ export async function fetchBackupRemoteStatus(): Promise<ApiBackupRemoteStatus |
   try {
     const account = await store.getItem('account');
     if (!account || BackupService.getUnavailableReason(account)) return undefined;
-    // An account that never had a backup has no backup id for the service to find; a linked device reads what the
-    // primary device made
-    if (!account.backups?.isEnabled && getIsPrimaryDevice(account)) return undefined;
     return await backups.fetchRemoteStatus();
   } catch (err) {
+    // An account that never had a backup has no backup id for the service to find
+    if (err instanceof ArchiveError && err.kind === 'notFound') return undefined;
     logError(err);
     return undefined;
   }
 }
 
 /** Turns backups on and makes the first backup; resolves with the reason when it failed */
-export function enableBackups(frequency: ApiBackupFrequency) {
-  return runAction(() => backups.enable(frequency));
+export function enableBackups(frequency: ApiBackupFrequency, shouldReplaceBackup?: boolean) {
+  return runAction(() => backups.enable(frequency, shouldReplaceBackup));
 }
 
 export function disableBackups(shouldDeleteBackup?: boolean) {
@@ -111,6 +110,7 @@ function getErrorReason(err: unknown): BackupErrorReason {
   if (err instanceof RestoreError) return err.reason === 'noBackup' ? 'failed' : err.reason;
   if (err instanceof BackupValidationError) return 'invalidBackup';
   if (err instanceof NotPrimaryDeviceError) return 'notEnabledOnPrimary';
+  if (err instanceof ExistingBackupError) return 'existingBackup';
   if (err instanceof ArchiveError) {
     if (err.kind === 'rateLimited') return 'rateLimited';
     if (err.kind === 'notFound') return 'notEnabledOnPrimary';

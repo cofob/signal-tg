@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from '../../../lib/teact/teact';
-import { getActions, getPromiseActions, withGlobal } from '../../../global';
+import { getActions, getGlobal, getPromiseActions, withGlobal } from '../../../global';
 
 import type { ApiBackupFrequency, ApiBackupRemoteStatus, ApiBackupSettings } from '../../../api/types';
 import type { RegularLangKey } from '../../../types/language';
@@ -50,6 +50,7 @@ const SettingsBackups = ({
   const fileInputRef = useRef<HTMLInputElement>();
   const [isTurnOffDialogOpen, openTurnOffDialog, closeTurnOffDialog] = useFlag();
   const [isImportDialogOpen, openImportDialog, closeImportDialog] = useFlag();
+  const [isReplaceDialogOpen, openReplaceDialog, closeReplaceDialog] = useFlag();
   const [isUpdating, startUpdating, stopUpdating] = useFlag();
   const [recoveryKey, setRecoveryKey] = useState('');
 
@@ -69,10 +70,27 @@ const SettingsBackups = ({
     label: lang(FREQUENCY_KEYS[value]),
   })), [lang]);
 
+  const turnOn = useLastCallback(async (shouldReplaceBackup?: boolean) => {
+    startUpdating();
+    await getPromiseActions().enableBackups({ frequency: backups?.frequency ?? 'daily', shouldReplaceBackup });
+    stopUpdating();
+  });
+
+  // The first backup replaces the one on the service, so the user confirms that first
   const handleTurnOn = useLastCallback(async () => {
     startUpdating();
-    await getPromiseActions().enableBackups({ frequency: backups?.frequency ?? 'daily' });
+    await getPromiseActions().loadBackupRemoteStatus();
     stopUpdating();
+    if (getGlobal().settings.byKey.backupRemote?.hasBackup) {
+      openReplaceDialog();
+      return;
+    }
+    await turnOn();
+  });
+
+  const handleReplace = useLastCallback(() => {
+    closeReplaceDialog();
+    return turnOn(true);
   });
 
   const handleTurnOff = useLastCallback(async (shouldDeleteBackup: boolean) => {
@@ -267,6 +285,15 @@ const SettingsBackups = ({
         className="hidden"
         accept=".backup,application/octet-stream"
         onChange={handleFileChange}
+      />
+      <ConfirmDialog
+        isOpen={isReplaceDialogOpen}
+        title={lang('BackupsTurnOn')}
+        text={lang('BackupsReplaceText')}
+        confirmLabel={lang('BackupsReplaceConfirm')}
+        confirmIsDestructive
+        confirmHandler={handleReplace}
+        onClose={closeReplaceDialog}
       />
       <ConfirmDialog
         isOpen={isTurnOffDialogOpen}

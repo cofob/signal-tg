@@ -1988,6 +1988,9 @@ export interface LangPair {
   'BackupsErrorInvalidKey': undefined;
   'BackupsErrorForwardSecrecy': undefined;
   'BackupsErrorRejected': undefined;
+  'BackupsErrorExistingBackup': undefined;
+  'BackupsReplaceText': undefined;
+  'BackupsReplaceConfirm': undefined;
   'BackupsImportMergeNote': undefined;
   'BackupsLinkedDevice': undefined;
   'AuthRestoreTitle': undefined;

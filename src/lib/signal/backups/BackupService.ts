@@ -22,7 +22,7 @@ import {
   refreshArchive,
   uploadArchive,
 } from './archiveApi';
-import { deriveMessageBackupKeys, readForwardSecrecyMetadata } from './backupStream';
+import { BackupHeaderError, deriveMessageBackupKeys, readForwardSecrecyMetadata } from './backupStream';
 import { writeBackupFile } from './backupWriter';
 import { createBackupExport } from './exportBackup';
 import { BackupValidationError, validateBackupFile } from './validateBackup';
@@ -34,6 +34,13 @@ export type BackupUnavailableReason =
   | 'noMediaRootKey';
 
 export type BackupStep = 'exporting' | 'validating' | 'uploading';
+
+/** The service holds a backup of the account that turning backups on would replace, which the user has to confirm */
+export class ExistingBackupError extends Error {
+  constructor() {
+    super('A backup exists');
+  }
+}
 
 /** The account is not the primary device, which alone turns backups on and writes them */
 export class NotPrimaryDeviceError extends Error {
@@ -147,9 +154,13 @@ export default class BackupService {
    * Turns backups on: reserves the backup id (a primary device does; a linked device needs a primary device that has
    * enabled backups already, as in Signal Desktop), tells the service the public keys, and makes a first backup.
    */
-  async enable(frequency: BackupFrequency = DEFAULT_BACKUP_FREQUENCY) {
+  async enable(frequency: BackupFrequency = DEFAULT_BACKUP_FREQUENCY, shouldReplaceBackup?: boolean) {
     const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
     const messagesAuth = await this.getAuth(account, keys, 'messages', true);
+    // The first backup replaces the one that the service holds, such as the backup of a phone that was turned in
+    if (!shouldReplaceBackup && !account.backups?.isEnabled && await this.hasRemoteBackup(messagesAuth)) {
+      throw new ExistingBackupError();
+    }
     const tier = await this.getTier(account, keys, messagesAuth);
     await this.options.client.updateAccount({
       backups: { ...account.backups, ...CLEARED_FAILURE, isEnabled: true, frequency, tier },
@@ -157,6 +168,17 @@ export default class BackupService {
     this.options.onChange();
     this.start();
     await this.backUp();
+  }
+
+  /** Whether the service holds a file for the backup id; an id without a backup or without a public key has none */
+  private async hasRemoteBackup(auth: ArchiveAuth) {
+    try {
+      const info = await getArchiveInfo(auth);
+      return Boolean(await getArchiveFileInfo(info, await getArchiveReadHeaders(auth, info.cdn)));
+    } catch (err) {
+      if (err instanceof ArchiveError && (err.kind === 'notFound' || err.kind === 'unauthorized')) return false;
+      throw err;
+    }
   }
 
   /** Turns backups off; with `shouldDeleteBackup`, the backup on the service goes too */
@@ -169,10 +191,12 @@ export default class BackupService {
     const { store } = this.options;
     if (shouldDeleteBackup) {
       const auth = await this.getAuth(account, keys, 'messages');
-      // The credentials of SVR-B come from the backup, which is gone after the delete. The key of the backup in the
-      // enclaves is of no use without the backup, and a failure of the enclaves leaves a key that opens nothing.
-      await getSvrBCredentials(auth).then(removeBackup).catch(this.options.onError);
+      // The credentials of SVR-B come from the backup, so they are fetched before it goes; the key leaves the enclaves
+      // only once the backup is deleted, as a backup that stays on the service without its key cannot be opened. The
+      // key is of no use without the backup, and a failure of the enclaves leaves a key that opens nothing.
+      const svrbCredentials = await getSvrBCredentials(auth).catch((err) => this.options.onError(err));
       await deleteArchive(auth);
+      if (svrbCredentials) await removeBackup(svrbCredentials).catch((err) => this.options.onError(err));
       await store.removeItem('svrbBackupData');
       await clearArchiveCredentials(store);
     }
@@ -265,7 +289,9 @@ export default class BackupService {
     const { account, keys } = await this.getKeys({ isPrimaryRequired: true });
     await refreshArchive(await this.getAuth(account, keys, 'messages'));
     await this.options.client.updateAccount({
-      backups: { ...account.backups, lastRefreshAt: getServerTime() * MS_PER_SECOND },
+      backups: {
+        ...account.backups, lastRefreshAt: getServerTime() * MS_PER_SECOND, failureCount: undefined, nextAttemptAt: undefined,
+      },
     });
     this.options.onChange();
   }
@@ -511,7 +537,7 @@ export default class BackupService {
 /** The kind of a failure, which the settings explain: an `ArchiveError` kind, `validation`, or `failed` */
 function getFailureKind(err: unknown) {
   if (err instanceof ArchiveError) return err.kind;
-  if (err instanceof BackupValidationError) return 'validation';
+  if (err instanceof BackupValidationError || err instanceof BackupHeaderError) return 'validation';
   if (err instanceof SvrBError) return err.reason === 'rateLimited' ? 'rateLimited' : 'svrb';
   return 'failed';
 }
