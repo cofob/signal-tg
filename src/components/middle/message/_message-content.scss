@@ -55,8 +55,7 @@
     padding-bottom: 1.375rem;
   }
 
-  .text-content,
-  .transcription {
+  .text-content {
     position: relative;
 
     unicode-bidi: plaintext;
@@ -76,69 +75,10 @@
     }
   }
 
-  .transcription {
-    & + .text-content {
-      margin-top: 0.5rem;
-    }
-
-    .DotAnimation {
-      display: inline;
-
-      .ellipsis {
-        display: inline-flex;
-      }
-    }
-
-    &.transcription-error {
-      font-size: 0.875rem;
-      color: var(--color-text-meta);
-    }
-
-    .own &.transcription-error {
-      color: var(--color-message-meta-own);
-    }
-  }
-
-  .translation-animation {
-    pointer-events: none;
-
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-  }
-
-  .text-loading {
-    --background-gradient-size: 20rem;
-    --animation-color: var(--color-skeleton-background);
-
-    display: inline;
-
-    border-radius: 0.25rem;
-
-    color: transparent;
-
-    background-image: linear-gradient(to right, transparent 10%, var(--animation-color) 50%, transparent 90%);
-    background-size: var(--background-gradient-size);
-    box-decoration-break: clone;
-
-    animation: text-loading 1.5s linear infinite;
-
-    .theme-dark & {
-      --animation-color: var(--color-skeleton-foreground);
-    }
-
-    .emoji {
-      opacity: 0;
-    }
-  }
-
   .text-entity-link {
     unicode-bidi: plaintext;
   }
 
-  &.with-voice-transcription,
   &:not(.custom-shape) .text-content,
   &:not(.web-page).document {
     & > .MessageMeta {
@@ -224,19 +164,12 @@
     }
   }
 
-  &.with-voice-transcription,
   &.document:not(.text) {
     &::after {
       content: "";
       clear: both;
       display: block;
     }
-  }
-
-  &.with-voice-transcription .MessageMeta[dir="rtl"] {
-    float: left;
-    margin-right: 0.4375rem;
-    margin-left: -0.5rem;
   }
 
   &.document:not(.text) > .MessageMeta {
@@ -1142,20 +1075,4 @@ blockquote, .blockquote {
 .blockquote {
   display: block;
   width: fit-content;
-}
-
-@keyframes text-loading {
-  0% {
-    opacity: 1;
-    background-position-x: 0;
-  }
-
-  50% {
-    opacity: 0.8;
-  }
-
-  100% {
-    opacity: 1;
-    background-position-x: var(--background-gradient-size);
-  }
 }

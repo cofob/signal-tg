@@ -81,13 +81,11 @@ export type OwnProps = {
   shouldSuppressFocus?: boolean;
   canSendPlainText?: boolean;
   isRichInputExpanded?: boolean;
-  isNeedPremium?: boolean;
   isRichOnlyContent?: boolean;
   messageListType?: MessageListType;
   maxLength?: number;
   onRichInputCollapse?: NoneToVoidFunction;
   onRichInputExpand?: NoneToVoidFunction;
-  onOpenAiEditor?: NoneToVoidFunction;
   onSuppressedFocus?: () => void;
   onMediaEdit?: RichEditorMediaEditHandler;
   onMediaFiles?: RichEditorMediaFilesHandler;
@@ -132,12 +130,10 @@ const MessageInput = ({
   replyInfo,
   isSelectModeActive,
   messageSendKeyCombo,
-  isNeedPremium,
   isRichOnlyContent,
   messageListType,
   onRichInputCollapse,
   onRichInputExpand,
-  onOpenAiEditor,
   onSuppressedFocus,
   onMediaEdit,
   onMediaFiles,
@@ -188,7 +184,7 @@ const MessageInput = ({
     shouldSuppressFocus && 'focus-disabled',
     !isRichInputExpanded && tiptapStyles.regularInput,
   );
-  const inputScrollerContentClass = buildClassName('input-scroller-content', isNeedPremium && 'is-need-premium');
+  const inputScrollerContentClass = 'input-scroller-content';
   const placeholderAriaLabel = typeof placeholder === 'string' ? placeholder : undefined;
   const canRenderRichEditor = Boolean(isAttachmentModalInput || canSendPlainText);
   const isMainInput = !isAttachmentModalInput && !isStoryInput;
@@ -505,7 +501,7 @@ const MessageInput = ({
     }
 
     syncEditorElementAttributes(inputRef.current);
-  }, [canRenderRichEditor, className, editableInputId, isCollapsedRichOnlyPreview, isNeedPremium,
+  }, [canRenderRichEditor, className, editableInputId, isCollapsedRichOnlyPreview,
     isRichEditorEditable, placeholderAriaLabel, syncEditorElementAttributes]);
 
   const chatIdRef = useRef(chatId);
@@ -516,7 +512,6 @@ const MessageInput = ({
       || !canRenderRichEditor
       || !isRichEditorReady
       || isCollapsedRichOnlyPreview
-      || isNeedPremium
     ) {
       return;
     }
@@ -642,7 +637,7 @@ const MessageInput = ({
   }
 
   function handleClick() {
-    if (isAttachmentModalInput || canSendPlainText || (isStoryInput && isNeedPremium)) return;
+    if (isAttachmentModalInput || canSendPlainText) return;
     showAllowedMessageTypesNotification({ chatId });
   }
 
@@ -764,7 +759,6 @@ const MessageInput = ({
           className={buildClassName(
             'custom-scroll',
             SCROLLER_CLASS,
-            isNeedPremium && 'is-need-premium',
             isCollapsedRichOnlyPreview && 'rich-only-preview',
           )}
           onScroll={onScroll}
@@ -794,14 +788,13 @@ const MessageInput = ({
               onMouseDown={handleMouseDown}
               onContextMenu={IS_ANDROID ? handleAndroidContextMenu : undefined}
               aria-label={placeholderAriaLabel}
-              onFocus={!isNeedPremium ? onFocusRef.current : undefined}
-              onBlur={!isNeedPremium ? onBlurRef.current : undefined}
+              onFocus={onFocusRef.current}
+              onBlur={onBlurRef.current}
             />
             <span
               className={buildClassName(
                 'placeholder-text',
                 isMainInputLocked && 'with-icon',
-                isNeedPremium && 'is-need-premium',
               )}
               dir="auto"
             >
@@ -816,8 +809,7 @@ const MessageInput = ({
         aria-hidden
         className={buildClassName('custom-scroll',
           SCROLLER_CLASS,
-          'clone',
-          isNeedPremium && 'is-need-premium')}
+          'clone')}
       >
         <div className={inputScrollerContentClass} data-stricterdom-ignore>
           <div ref={cloneRef} className={buildClassName(className, 'clone', tiptapStyles.clone)} dir="auto" />
@@ -832,7 +824,7 @@ const MessageInput = ({
         </div>
       )}
       {isMainInput && canRenderRichEditor && (
-        <RichEditorToolbar editor={editor} isEnabled={isRichInputExpanded} onOpenAiEditor={onOpenAiEditor} />
+        <RichEditorToolbar editor={editor} isEnabled={isRichInputExpanded} />
       )}
       {dateEditTarget?.type === 'date' && (
         <CalendarModal

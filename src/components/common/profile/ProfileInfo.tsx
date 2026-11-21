@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState } from '../../../lib/teact/teact';
 
 import type {
   ApiChat,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiPeerColorOption,
   ApiPeerPhotos,
   ApiPeerProfileColorSet,
@@ -12,7 +12,6 @@ import type {
   ApiUserFullInfo,
   ApiUserStatus,
 } from '../../../api/types/index';
-import type { IconName } from '../../../types/icons/index';
 import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
@@ -58,7 +57,6 @@ import usePhotosPreload from '../hooks/usePhotosPreload';
 import Transition from '../../ui/Transition.tsx';
 import Avatar from '../Avatar.tsx';
 import FullNameTitle from '../FullNameTitle.tsx';
-import Icon from '../icons/Icon.tsx';
 import TopicIcon from '../TopicIcon.tsx';
 import ProfileMusicStrip from './ProfileMusicStrip';
 import ProfilePhoto from './ProfilePhoto';
@@ -87,8 +85,7 @@ type StateProps = {
   topic?: ApiTopic;
   messagesCount?: number;
   animationLevel: AnimationLevel;
-  emojiStatus?: ApiEmojiStatusType;
-  emojiStatusSlug?: string;
+  emojiStatus?: ApiEmojiStatus;
   profilePhotos?: ApiPeerPhotos;
   avatarPhoto?: ApiPhoto;
   profileColorOption?: ApiPeerColorOption<ApiPeerProfileColorSet>;
@@ -97,8 +94,6 @@ type StateProps = {
   hasAvatar?: boolean;
   isSystemAccount?: boolean;
 };
-
-const MAX_LEVEL_ICON = 90;
 
 const EMOJI_STATUS_SIZE = 24;
 const EMOJI_TOPIC_SIZE = 120;
@@ -123,7 +118,6 @@ const ProfileInfo = ({
   messagesCount,
   animationLevel,
   emojiStatus,
-  emojiStatusSlug,
   profilePhotos,
   avatarPhoto,
   peerId,
@@ -139,7 +133,6 @@ const ProfileInfo = ({
     openMediaViewer,
     openPrivacySettingsNoticeModal,
     loadMoreProfilePhotos,
-    openProfileRatingModal,
   } = getActions();
 
   const savedMusic = userFullInfo?.savedMusic;
@@ -159,23 +152,12 @@ const ProfileInfo = ({
   const isFirst = photos.length <= 1 || currentPhotoIndex === 0;
   const isLast = photos.length <= 1 || currentPhotoIndex === photos.length - 1;
 
-  const collectibleEmojiStatus = emojiStatus?.type === 'collectible' ? emojiStatus : undefined;
-
   const peer = user || chat;
   const { customEmoji: backgroundEmoji } = useCustomEmoji(
-    collectibleEmojiStatus?.patternDocumentId || peer?.profileColor?.backgroundEmojiId,
+    peer?.profileColor?.backgroundEmojiId,
   );
 
   const profileColorSet = useMemo(() => {
-    if (collectibleEmojiStatus) {
-      return {
-        bgColors: [collectibleEmojiStatus.centerColor, collectibleEmojiStatus.edgeColor],
-        storyColors: [collectibleEmojiStatus.textColor, collectibleEmojiStatus.textColor],
-        buttonBaseColor:
-          `color-mix(in srgb, ${collectibleEmojiStatus.edgeColor} 90%, ${collectibleEmojiStatus.centerColor})`,
-      };
-    }
-
     const colors = profileColorOption
       && (theme === 'dark' ? profileColorOption.darkColors : profileColorOption.colors);
     if (!colors) return undefined;
@@ -186,7 +168,7 @@ const ProfileInfo = ({
       storyColors: [...colors.storyColors].reverse(),
       buttonBaseColor: colors.bgColors[0],
     };
-  }, [profileColorOption, theme, collectibleEmojiStatus]);
+  }, [profileColorOption, theme]);
 
   const hasPatternBackground = profileColorSet?.bgColors || backgroundEmoji;
 
@@ -248,12 +230,6 @@ const ProfileInfo = ({
 
   const handleOpenGetReadDateModal = useLastCallback(() => {
     openPrivacySettingsNoticeModal({ chatId: chat!.id, isReadDate: false });
-  });
-
-  const handleRatingClick = useLastCallback((level: number) => {
-    if (user) {
-      openProfileRatingModal({ userId: user.id, level });
-    }
   });
 
   const handleMinimizedAvatarClick = useLastCallback(() => {
@@ -356,43 +332,6 @@ const ProfileInfo = ({
     );
   }
 
-  function renderUserRating() {
-    if (!userFullInfo?.starsRating) return undefined;
-
-    const level = userFullInfo.starsRating.level;
-    const isNegative = level < 0;
-
-    const onRatingClick = () => handleRatingClick(level);
-
-    if (isNegative) {
-      return (
-        <span role="button" tabIndex={0} className={styles.userRatingNegativeWrapper} onClick={onRatingClick}>
-          <Icon
-            name="rating-icons-negative"
-            className={styles.ratingNegativeIcon}
-          />
-          <span className={styles.ratingLevel}>!</span>
-        </span>
-      );
-    }
-
-    const safeLevel = Math.max(level, 1);
-    const iconLevel = Math.min(safeLevel, MAX_LEVEL_ICON);
-    const iconName = (iconLevel < 10
-      ? `rating-icons-level${iconLevel}`
-      : `rating-icons-level${Math.floor(iconLevel / 10) * 10}`) as IconName;
-
-    return (
-      <span role="button" tabIndex={0} className={styles.userRatingWrapper} onClick={onRatingClick}>
-        <Icon
-          name={iconName}
-          className={styles.ratingIcon}
-        />
-        <span className={styles.ratingLevel}>{level}</span>
-      </span>
-    );
-  }
-
   function renderStatus() {
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
     const isSystemBotChat = isSystemBot(peerId);
@@ -420,7 +359,6 @@ const ProfileInfo = ({
           )}
           style={createVtnStyle('status', true)}
         >
-          {renderUserRating()}
           <span className={styles.userStatus} dir="auto">
             {getUserStatus(lang, user, userStatus)}
           </span>
@@ -467,8 +405,6 @@ const ProfileInfo = ({
         savedMusic && styles.hasMusic,
       )}
       style={buildStyle(
-        profileColorSet && `--rating-outline-color: ${isExpanded ? 'transparent' : profileColorSet?.bgColors[0]}`,
-        profileColorSet && !isExpanded && `--rating-text-color: ${profileColorSet?.bgColors[0]}`,
         profileColorSet && `--profile-button-base: ${profileColorSet.buttonBaseColor}`,
         createVtnStyle('profileInfo', true),
       )}
@@ -479,7 +415,7 @@ const ProfileInfo = ({
           backgroundColors={profileColorSet?.bgColors}
           patternIcon={backgroundEmoji}
           patternSize={16}
-          withLinearGradient={!collectibleEmojiStatus}
+          withLinearGradient
           className={styles.radialPatternBackground}
           yPosition={PATTERN_Y_SHIFT}
         />
@@ -610,7 +546,6 @@ export default memo(withGlobal<OwnProps>(
     const { animationLevel } = selectSharedSettings(global);
 
     const emojiStatus = peer?.emojiStatus;
-    const emojiStatusSlug = emojiStatus?.type === 'collectible' ? emojiStatus.slug : undefined;
 
     const profileColor = peer && selectPeerProfileColor(global, peer);
     const theme = selectTheme(global);
@@ -629,7 +564,6 @@ export default memo(withGlobal<OwnProps>(
       mediaIndex,
       avatarOwnerId,
       animationLevel,
-      emojiStatusSlug,
       emojiStatus,
       profilePhotos,
       avatarPhoto,

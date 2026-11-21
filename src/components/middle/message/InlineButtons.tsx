@@ -54,17 +54,6 @@ const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnPr
         return <Icon className={styles.cornerIcon} name="webapp" />;
       case 'copy':
         return <Icon className={styles.cornerIcon} name="copy" />;
-      case 'suggestedMessage':
-        if (button.action.buttonType === 'suggestChanges') {
-          return <Icon className={styles.leftIcon} name="edit" />;
-        }
-        if (button.action.buttonType === 'approve') {
-          return <Icon className={styles.leftIcon} name="check" />;
-        }
-        if (button.action.buttonType === 'decline') {
-          return <Icon className={styles.leftIcon} name="close" />;
-        }
-        break;
     }
 
     return;
@@ -91,8 +80,7 @@ const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnPr
               ripple
               noForcedUpperCase
               disabled={isButtonUnsupported(button.action)
-                || (isEphemeral && isKeyboardButtonUnsupportedForEphemeral(button))
-                || (button.action.type === 'suggestedMessage' && button.action.disabled)}
+                || (isEphemeral && isKeyboardButtonUnsupportedForEphemeral(button))}
               onClick={() => onClick(button)}
             >
               {renderIcon(button)}

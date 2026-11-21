@@ -13,30 +13,24 @@ import type {
   ApiInputMessageReplyInfo,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
-  ApiMediaTodo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessageForwardInfo,
   ApiMessagePoll,
   ApiMessageReportResult,
   ApiMessageThreadInfo,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiPeer,
-  ApiPollResult,
   ApiPreparedInlineMessage,
   ApiReplyInfo,
-  ApiSearchPostsFlood,
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
-  ApiSuggestedPost,
   ApiThreadInfo,
   ApiVideo,
 } from '../../types';
 import type { ApiMessageAction } from '../../types/messageActions';
-import { ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../types';
+import { MAIN_THREAD_ID } from '../../types';
 
 import {
   DELETED_COMMENTS_CHANNEL_ID,
@@ -48,11 +42,7 @@ import buildUploadingMedia from '../../../util/buildUploadingMedia';
 import { addTimestampEntities } from '../../../util/dates/timestamp';
 import { omitUndefined } from '../../../util/iteratees';
 import { getEphemeralMessageId } from '../../../util/keys/messageKey';
-import { toJSNumber } from '../../../util/numbers';
 import { getServerTime } from '../../../util/serverTime';
-import {
-  buildApiCurrencyAmount,
-} from '../apiBuilders/payments';
 import { buildPeer, getEntityTypeById } from '../gramjsBuilders';
 import {
   addDocumentToLocalDb,
@@ -249,13 +239,11 @@ export function buildApiMessageWithChatId(
     viewsCount: mtpMessage.views,
     forwardsCount: mtpMessage.forwards,
     isScheduled,
-    scheduleRepeatPeriod: mtpMessage.scheduleRepeatPeriod,
     isFromScheduled: mtpMessage.fromScheduled,
     isSilent: mtpMessage.silent,
     isPinned: mtpMessage.pinned,
     reactions: mtpMessage.reactions && buildMessageReactions(mtpMessage.reactions),
     ...(mtpMessage.replyTo && { replyInfo: buildApiReplyInfo(mtpMessage.replyTo, mtpMessage) }),
-    ...(mtpMessage.suggestedPost && { suggestedPostInfo: buildApiSuggestedPost(mtpMessage.suggestedPost) }),
     forwardInfo,
     isEdited,
     editDate: mtpMessage.editDate,
@@ -283,7 +271,6 @@ export function buildApiMessageWithChatId(
     isVideoProcessingPending,
     reportDeliveryUntilDate: mtpMessage.reportDeliveryUntilDate,
     restrictionReasons,
-    summaryLanguageCode: mtpMessage.summaryFromLanguage,
     fromRank: mtpMessage.fromRank,
     guestChatViaId: mtpMessage.guestchatViaFrom && getApiChatIdFromMtpPeer(mtpMessage.guestchatViaFrom),
   };
@@ -295,7 +282,7 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
   }
 
   const {
-    message, entities, replyTo, date, suggestedPost, richMessage,
+    message, entities, replyTo, date, richMessage,
   } = draft;
 
   const replyInfo = replyTo instanceof GramJs.InputReplyToMessage ? {
@@ -307,32 +294,14 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
     quoteText: replyTo.quoteText ? buildMessageTextContent(replyTo.quoteText, replyTo.quoteEntities) : undefined,
     quoteRich: replyTo.quoteRich?.map((text) => buildApiRichText(text, { photosById: {}, documentsById: {} })),
     quoteOffset: replyTo.quoteOffset,
-    todoItemId: replyTo.todoItemId,
     pollOption: replyTo.pollOption && serializeBytes(replyTo.pollOption),
   } satisfies ApiInputMessageReplyInfo : undefined;
-
-  const suggestedPostInfo = suggestedPost instanceof GramJs.SuggestedPost ? {
-    isAccepted: suggestedPost.accepted,
-    isRejected: suggestedPost.rejected,
-    price: suggestedPost.price ? buildApiCurrencyAmount(suggestedPost.price) : undefined,
-    scheduleDate: suggestedPost.scheduleDate,
-  } satisfies ApiInputSuggestedPostInfo : undefined;
 
   return {
     text: richMessage ? undefined : message ? buildMessageTextContent(message, entities) : undefined,
     richMessage: richMessage ? buildApiRichMessage(richMessage) : undefined,
     replyInfo,
-    suggestedPostInfo,
     date,
-  };
-}
-
-function buildApiSuggestedPost(suggestedPost: GramJs.SuggestedPost): ApiSuggestedPost {
-  return {
-    isAccepted: suggestedPost.accepted,
-    isRejected: suggestedPost.rejected,
-    price: suggestedPost.price ? buildApiCurrencyAmount(suggestedPost.price) : undefined,
-    scheduleDate: suggestedPost.scheduleDate,
   };
 }
 
@@ -386,7 +355,6 @@ function buildApiReplyInfo(
       quoteRich,
       quoteOffset,
       replyToEphemeral,
-      todoItemId,
       pollOption,
     } = replyHeader;
 
@@ -412,7 +380,6 @@ function buildApiReplyInfo(
       replyToPeerId: replyToPeerId && getApiChatIdFromMtpPeer(replyToPeerId),
       replyMedia: replyMedia && buildMessageMediaContent(replyMedia, context),
       isQuote: quote,
-      todoItemId,
       pollOption: serializedPollOption,
       replyOptionText: replyPollAnswer && buildApiFormattedText(replyPollAnswer.text),
       quoteText: quoteText ? buildMessageTextContent(quoteText, quoteEntities) : undefined,
@@ -434,37 +401,11 @@ export function buildApiFactCheck(factCheck: GramJs.FactCheck): ApiFactCheck {
 }
 
 function buildNewLocalPoll(poll: ApiNewPoll): ApiMessagePoll {
-  const resultByOption = poll.correctAnswers?.length
-    ? poll.summary.answers.reduce((acc, answer, index) => {
-      const isCorrect = poll.correctAnswers?.includes(index);
-
-      acc[answer.option] = {
-        option: answer.option,
-        votersCount: 0,
-        isCorrect: isCorrect ? true : undefined,
-      };
-
-      return acc;
-    }, {} as Record<string, ApiPollResult>)
-    : undefined;
-
   return {
     mediaType: 'poll',
     summary: poll.summary,
-    results: {
-      resultByOption,
-      solution: poll.solution,
-      solutionEntities: poll.solutionEntities,
-      solutionMedia: poll.solutionMedia ? buildUploadingMedia(poll.solutionMedia) : undefined,
-    },
+    results: {},
     attachedMedia: poll.attachedMedia ? buildUploadingMedia(poll.attachedMedia) : undefined,
-  };
-}
-
-function buildNewLocalTodo(todo: ApiNewMediaTodo): ApiMediaTodo {
-  return {
-    mediaType: 'todo',
-    todo: todo.todo,
   };
 }
 
@@ -475,17 +416,14 @@ export function buildLocalMessage({
   entities,
   richMessage,
   replyInfo,
-  suggestedPostInfo,
   attachment,
   sticker,
   gif,
   audio,
   poll,
-  todo,
   contact,
   groupedId,
   scheduledAt,
-  scheduleRepeatPeriod,
   sendAs,
   story,
   isInvertedMedia,
@@ -499,17 +437,14 @@ export function buildLocalMessage({
   entities?: ApiMessageEntity[];
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   attachment?: ApiAttachment;
   sticker?: ApiSticker;
   gif?: ApiVideo;
   audio?: ApiAudio;
   poll?: ApiNewPoll;
-  todo?: ApiNewMediaTodo;
   contact?: ApiContact;
   groupedId?: string;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   sendAs?: ApiPeer;
   story?: ApiStory | ApiStorySkipped;
   isInvertedMedia?: true;
@@ -524,7 +459,6 @@ export function buildLocalMessage({
   const resultReplyInfo = replyInfo && buildReplyInfo(replyInfo, chat.isForum);
 
   const localPoll = poll && buildNewLocalPoll(poll);
-  const localTodo = todo && buildNewLocalTodo(todo);
 
   const localDice = dice ? {
     mediaType: 'dice',
@@ -549,7 +483,6 @@ export function buildLocalMessage({
       contact,
       storyData: story && { mediaType: 'storyData', ...story },
       pollId: localPoll?.summary.id,
-      todo: localTodo,
       dice: localDice,
       action,
     }),
@@ -557,13 +490,11 @@ export function buildLocalMessage({
     isOutgoing: !isChannel,
     senderId: chat.type !== 'chatTypePrivate' ? (sendAs?.id || currentUserId) : undefined,
     replyInfo: resultReplyInfo,
-    suggestedPostInfo,
     ...(groupedId && {
       groupedId,
       ...(media && (media.photo || media.video) && { isInAlbum: true }),
     }),
     ...(scheduledAt && { isScheduled: true }),
-    scheduleRepeatPeriod,
     isForwardingAllowed: true,
     isInvertedMedia,
     ...(isPending && { sendingState: 'messageSendingStatePending' }),
@@ -583,11 +514,9 @@ export function buildLocalForwardedMessage({
   toThreadId,
   message,
   scheduledAt,
-  scheduleRepeatPeriod,
   noAuthors,
   noCaptions,
   privateForwardName,
-  isCurrentUserPremium,
   lastMessageId,
   sendAs,
 }: {
@@ -595,11 +524,9 @@ export function buildLocalForwardedMessage({
   toThreadId?: number;
   message: ApiMessage;
   scheduledAt?: number;
-  scheduleRepeatPeriod?: number;
   noAuthors?: boolean;
   noCaptions?: boolean;
   privateForwardName?: string;
-  isCurrentUserPremium?: boolean;
   lastMessageId?: number;
   sendAs?: ApiPeer;
 }): ApiMessage {
@@ -616,12 +543,7 @@ export function buildLocalForwardedMessage({
     toChat.id === currentUserId && (fromChatId !== toChat.id || message.forwardInfo)
   );
   const shouldHideText = Object.keys(content).length > 1 && content.text && noCaptions;
-  const shouldDropCustomEmoji = !isCurrentUserPremium;
-  const strippedText = content.text?.entities && shouldDropCustomEmoji ? {
-    text: content.text.text,
-    entities: content.text.entities.filter((entity) => entity.type !== ApiMessageEntityTypes.CustomEmoji),
-  } : content.text;
-  const textWithTimestamps = strippedText && addTimestampEntities(strippedText);
+  const textWithTimestamps = content.text && addTimestampEntities(content.text);
   const emojiOnlyCount = getEmojiOnlyCountForMessage(content, groupedId);
   if (emojiOnlyCount && textWithTimestamps) textWithTimestamps.emojiOnlyCount = emojiOnlyCount;
   const forwardInfo = buildLocalForwardInfo(message, privateForwardName, noAuthors);
@@ -653,7 +575,6 @@ export function buildLocalForwardedMessage({
     chatId: toChat.id,
     content: updatedContent,
     date: scheduledAt || getServerTime(),
-    scheduleRepeatPeriod,
     isOutgoing: !asIncomingInChatWithSelf && toChat.type !== 'chatTypeChannel',
     senderId: toChat.type !== 'chatTypePrivate' ? (sendAs?.id || currentUserId) : undefined,
     sendingState: 'messageSendingStatePending',
@@ -721,7 +642,6 @@ function buildReplyInfo(inputInfo: ApiInputReplyInfo, isForum?: boolean): ApiRep
     quoteText: inputInfo.quoteText,
     quoteRich: inputInfo.quoteRich,
     quoteOffset: inputInfo.quoteOffset,
-    todoItemId: inputInfo.todoItemId,
     pollOption: inputInfo.pollOption,
     isForumTopic: isForum && inputInfo.replyToTopId ? true : undefined,
     isQuote: inputInfo.quoteText || inputInfo.quoteRich?.length ? true : undefined,
@@ -850,19 +770,5 @@ export function buildPreparedInlineMessage(
     result: processInlineBotResult(queryId, result.result),
     peerTypes: result.peerTypes?.map(buildApiInlineQueryPeerType),
     cacheTime: result.cacheTime,
-  };
-}
-
-export function buildApiSearchPostsFlood(
-  searchFlood: GramJs.SearchPostsFlood,
-  query?: string,
-): ApiSearchPostsFlood {
-  return {
-    query,
-    queryIsFree: searchFlood.queryIsFree,
-    totalDaily: searchFlood.totalDaily,
-    remains: searchFlood.remains,
-    waitTill: searchFlood.waitTill,
-    starsAmount: toJSNumber(searchFlood.starsAmount),
   };
 }

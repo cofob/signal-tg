@@ -5,13 +5,10 @@ import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 
 import {
   GENERAL_TOPIC_ID,
-  STARS_CURRENCY_CODE,
-  TON_CURRENCY_CODE,
   USERNAME_LINK_PREFIX,
 } from '../../../config';
 import {
   getMainUsername,
-  getMessageContent,
   getMessageTextWithFallback,
   isChatBasicGroup,
   isChatChannel,
@@ -22,7 +19,6 @@ import { getMessageReplyInfo } from '../../../global/helpers/replies';
 import {
   selectChat,
   selectChatMessage,
-  selectMonoforumChannel,
   selectPeer,
   selectSender,
   selectTopic,
@@ -30,11 +26,8 @@ import {
 import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
 import { ensureProtocol } from '../../../util/browser/url';
 import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
-import { formatCalendarDate, formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
-import { formatStarsAsText, formatTonAsText,
-} from '../../../util/localization/format';
+import { formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
-import { getServerTime } from '../../../util/serverTime';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 import {
@@ -118,7 +111,6 @@ const ActionMessageText = ({
 
     const userFallbackText = lang('ActionFallbackUser');
     const chatFallbackText = lang('ActionFallbackChat');
-    const channelFallbackText = lang('ActionFallbackChannel');
 
     const senderLink = renderPeerLink(sender?.id, senderTitle || userFallbackText, asPreview);
     const chatLink = renderPeerLink(chat?.id, chatTitle || chatFallbackText, asPreview);
@@ -658,240 +650,6 @@ const ActionMessageText = ({
 
       case 'customAction':
         return action.message;
-
-      case 'suggestedPostSuccess': {
-        const { amount: price } = action;
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const formattedAmount = price?.currency === TON_CURRENCY_CODE
-          ? formatTonAsText(lang, price.amount)
-          : formatStarsAsText(lang, price?.amount || 0);
-
-        return lang('ActionSuggestedPostSuccess', {
-          channel: channelLink,
-          amount: formattedAmount,
-        }, { withNodes: true });
-      }
-      case 'suggestedPostRefund': {
-        const { payerInitiated } = action;
-
-        const postSender = replyMessage ? selectSender(global, replyMessage) : sender;
-        const postSenderTitle = postSender && getPeerTitle(lang, postSender);
-        const postSenderLink = renderPeerLink(postSender?.id, postSenderTitle || userFallbackText, asPreview);
-
-        const price = replyMessage?.suggestedPostInfo?.price;
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const formattedAmount = price?.currency === TON_CURRENCY_CODE
-          ? formatTonAsText(lang, price.amount)
-          : formatStarsAsText(lang, price?.amount || 0);
-
-        if (payerInitiated) {
-          return lang('SuggestedPostRefundedByUser', {
-            amount: formattedAmount,
-            user: postSenderLink,
-            channel: channelLink,
-          }, { withNodes: true, withMarkdown: true });
-        }
-
-        return lang('SuggestedPostRefundedByChannel', {
-          amount: formattedAmount,
-          peer: postSenderLink,
-          channel: channelLink,
-        }, { withNodes: true, withMarkdown: true });
-      }
-      case 'suggestedPostApproval': {
-        const { isRejected, isBalanceTooLow, rejectComment } = action;
-
-        if (isRejected) {
-          return translateWithYou(
-            lang,
-            rejectComment ? 'SuggestedPostRejectedWithReason' : 'SuggestedPostRejected',
-            isOutgoing,
-            { peer: senderLink },
-            { withMarkdown: true },
-          );
-        }
-
-        if (isBalanceTooLow) {
-          const replyMessageSender = replyMessage ? selectSender(global, replyMessage) : sender;
-          const replyPeerTitle = replyMessageSender && getPeerTitle(lang, replyMessageSender);
-          const userLink = renderPeerLink(replyMessageSender?.id, replyPeerTitle || userFallbackText, asPreview);
-
-          const currency = replyMessage?.suggestedPostInfo?.price?.currency || STARS_CURRENCY_CODE;
-          const currencyName = currency === TON_CURRENCY_CODE ? lang('CurrencyGram') : lang('CurrencyStars');
-
-          return lang('SuggestedPostBalanceTooLow', {
-            peer: userLink,
-            currency: currencyName,
-          }, { withNodes: true, withMarkdown: true });
-        }
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const { scheduleDate } = action;
-        if (scheduleDate) {
-          const publishDate = formatCalendarDate(lang, secondsToDate(scheduleDate), { isShort: true, withTime: true });
-          const isPostPublished = scheduleDate <= getServerTime();
-
-          return translateWithYou(
-            lang,
-            isPostPublished ? 'SuggestedPostPublished' : 'SuggestedPostPublishSchedule',
-            isOutgoing,
-            { peer: channelLink, date: publishDate },
-            { withMarkdown: true },
-          );
-        }
-
-        return lang(UNSUPPORTED_LANG_KEY);
-      }
-      case 'todoCompletions': {
-        const { completedIds, incompletedIds } = action;
-
-        let completedItem;
-        let incompletedItem;
-        const { todo } = replyMessage ? getMessageContent(replyMessage) : {};
-        if (todo) {
-          const todoItems = todo.todo.items;
-          completedItem = todoItems.find((item) => completedIds.includes(item.id));
-          incompletedItem = todoItems.find((item) => incompletedIds.includes(item.id));
-        }
-
-        if (incompletedItem) {
-          const incompletedTaskTitle = incompletedItem.title;
-
-          const incompletedTaskLink = renderMessageLink(
-            replyMessage,
-            renderTextWithEntities({
-              text: incompletedTaskTitle.text,
-              entities: incompletedTaskTitle.entities,
-              asPreview: true,
-            }),
-            asPreview,
-          );
-
-          return translateWithYou(lang, 'MessageActionTodoCompletionsAsNotDone', isOutgoing, {
-            peer: senderLink,
-            task: incompletedTaskLink,
-          });
-        }
-
-        if (completedItem) {
-          const completedTaskTitle = completedItem.title;
-          const completedTaskLink = renderMessageLink(
-            replyMessage,
-            renderTextWithEntities({
-              text: completedTaskTitle.text,
-              entities: completedTaskTitle.entities,
-              asPreview: true,
-            }),
-            asPreview,
-          );
-
-          return translateWithYou(lang, 'MessageActionTodoCompletionsAsDone', isOutgoing, {
-            peer: senderLink,
-            task: completedTaskLink,
-          });
-        }
-
-        if (completedIds) {
-          const completedText = lang('MessageActionTodoTaskCount', {
-            count: completedIds.length,
-          }, { pluralValue: completedIds.length });
-          const completedLink = renderMessageLink(
-            replyMessage,
-            renderTextWithEntities({
-              text: completedText,
-              asPreview: true,
-            }),
-            asPreview,
-            { noEllipsis: true },
-          );
-          return translateWithYou(lang, 'MessageActionTodoCompletionsAsDone', isOutgoing, {
-            peer: senderLink,
-            task: completedLink,
-          });
-        }
-
-        const incompletedText = lang('MessageActionTodoTaskCount', {
-          count: incompletedIds.length,
-        }, { pluralValue: incompletedIds.length });
-        const incompletedLink = renderMessageLink(
-          replyMessage,
-          renderTextWithEntities({
-            text: incompletedText,
-            asPreview: true,
-          }),
-          asPreview,
-          { noEllipsis: true },
-        );
-
-        return translateWithYou(lang, 'MessageActionTodoCompletionsAsNotDone', isOutgoing, {
-          peer: senderLink,
-          task: incompletedLink,
-        });
-      }
-
-      case 'todoAppendTasks': {
-        const { items } = action;
-        const { todo } = replyMessage ? getMessageContent(replyMessage) : {};
-
-        const listTitle = todo?.todo.title.text || '';
-        const listLink = renderMessageLink(
-          replyMessage,
-          renderTextWithEntities({
-            text: listTitle,
-            asPreview: true,
-          }),
-          asPreview,
-        );
-
-        if (items.length === 1) {
-          const taskTitle = items[0].title;
-          const taskLink = renderMessageLink(
-            replyMessage,
-            renderTextWithEntities({
-              text: taskTitle.text,
-              entities: taskTitle.entities,
-              asPreview: true,
-            }),
-            asPreview,
-          );
-
-          return translateWithYou(lang, 'MessageActionAppendTodo', isOutgoing, {
-            peer: senderLink,
-            task: taskLink,
-            list: listLink,
-          });
-        }
-
-        const tasksText = lang('MessageActionTodoTaskCount', {
-          count: items.length,
-        }, { pluralValue: items.length });
-        const tasksLink = renderMessageLink(
-          replyMessage,
-          renderTextWithEntities({
-            text: tasksText,
-            asPreview: true,
-          }),
-          asPreview,
-          { noEllipsis: true },
-        );
-
-        return translateWithYou(lang, 'MessageActionAppendTodoMultiple', isOutgoing, {
-          peer: senderLink,
-          tasks: tasksLink,
-          list: listLink,
-        });
-      }
 
       case 'pollAppendAnswer':
       case 'pollDeleteAnswer': {

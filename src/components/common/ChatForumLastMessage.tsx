@@ -26,7 +26,6 @@ import TopicIcon from './TopicIcon';
 type OwnProps = {
   chat: ApiChat;
   topicIds?: number[];
-  hasTags?: boolean;
   renderLastMessage: () => TeactNode | undefined;
   observeIntersection?: ObserveFn;
 };
@@ -36,7 +35,6 @@ const MAX_TOPICS = 3;
 const ChatForumLastMessage = ({
   chat,
   topicIds,
-  hasTags,
   renderLastMessage,
   observeIntersection,
 }: OwnProps) => {
@@ -99,7 +97,6 @@ const ChatForumLastMessage = ({
   return (
     <ChatGroupedLastMessage
       items={items}
-      hasTags={hasTags}
       renderLastMessage={renderLastMessage}
       onMainItemClick={handleMainItemClick}
     />

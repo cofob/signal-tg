@@ -31,16 +31,13 @@ import type {
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 import type {
   ActiveEmojiInteraction,
-  ChatTranslatedMessages,
   FocusDirection,
   IAlbum,
   IDocumentGroup,
   MessageListType,
   ScrollTargetPosition,
-  TextSummary,
   ThemeKey,
   ThreadId,
-  TranslationTone,
 } from '../../../types';
 import type { Signal } from '../../../util/signals';
 import { MAIN_THREAD_ID } from '../../../api/types';
@@ -69,7 +66,6 @@ import {
   isGeoLiveExpired,
   isMessageLocal,
   isMessageLocalOnly,
-  isMessageTranslatable,
   isMessageUnsupported,
   isOwnMessage,
   isReplyToMessage,
@@ -87,7 +83,6 @@ import {
   selectChat,
   selectChatFullInfo,
   selectChatMessage,
-  selectChatTranslations,
   selectCurrentMiddleSearch,
   selectDefaultReaction,
   selectEphemeralOutgoingStatus,
@@ -97,22 +92,17 @@ import {
   selectIsChatWithBot,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsDocumentGroupSelected,
   selectIsInSelectMode,
   selectIsMessageFocused,
   selectIsMessageProtected,
   selectIsMessageSelected,
-  selectMessageSummary,
   selectOutgoingStatus,
   selectPeer,
   selectPeerStory,
   selectPerformanceSettingsValue,
   selectPollFromMessage,
   selectReplyMessage,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedChatTranslationTone,
-  selectRequestedMessageTranslationLanguage,
   selectSender,
   selectSenderFromHeader,
   selectShouldLoopStickers,
@@ -131,13 +121,11 @@ import {
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { selectThreadInfo, selectThreadReadState } from '../../../global/selectors/threads';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
-import { IS_ANDROID, IS_TRANSLATION_SUPPORTED } from '../../../util/browser/windowEnvironment';
+import { IS_ANDROID } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import buildStyle from '../../../util/buildStyle';
 import { isUserId } from '../../../util/entities/ids';
 import { getMessageKey } from '../../../util/keys/messageKey';
-import { parseTranslationCacheKey } from '../../../util/keys/translationKey';
-import { getServerTime } from '../../../util/serverTime';
 import stopEvent from '../../../util/stopEvent';
 import { getRichQuoteTexts } from '../../../util/text/richQuote';
 import { isElementInViewport } from '../../../util/visibility/isElementInViewport';
@@ -148,7 +136,6 @@ import { buildContentClassName } from './helpers/buildContentClassName';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
-import useEffectWithPrevDeps from '../../../hooks/useEffectWithPrevDeps';
 import useEnsureMessage from '../../../hooks/useEnsureMessage';
 import useEnsureStory from '../../../hooks/useEnsureStory';
 import useFlag from '../../../hooks/useFlag';
@@ -156,13 +143,11 @@ import { useOnIntersect } from '../../../hooks/useIntersectionObserver';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import usePeerColor from '../../../hooks/usePeerColor';
-import usePreviousDeprecated from '../../../hooks/usePreviousDeprecated';
 import useShowTransition from '../../../hooks/useShowTransition';
 import useTextHighlight from '../../../hooks/useTextHighlight';
 import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 import useInnerHandlers from './hooks/useInnerHandlers';
 import useMessageReadMetrics from './hooks/useMessageReadMetrics';
-import useMessageTranslation from './hooks/useMessageTranslation';
 import useOuterHandlers from './hooks/useOuterHandlers';
 
 import Audio from '../../common/Audio';
@@ -170,22 +155,16 @@ import Avatar from '../../common/Avatar';
 import BadgeButton from '../../common/BadgeButton';
 import CustomEmoji from '../../common/CustomEmoji';
 import Document from '../../common/Document';
-import DotAnimation from '../../common/DotAnimation';
 import EmbeddedMessage from '../../common/embedded/EmbeddedMessage';
 import EmbeddedStory from '../../common/embedded/EmbeddedStory';
 import FakeIcon from '../../common/FakeIcon';
 import Icon from '../../common/icons/Icon';
-import StarIcon from '../../common/icons/StarIcon';
 import MessageRichText from '../../common/MessageRichText';
 import MessageText from '../../common/MessageText';
-import PeerColorWrapper from '../../common/PeerColorWrapper';
 import RankBadge from '../../common/RankBadge';
 import ReactionStaticEmoji from '../../common/reactions/ReactionStaticEmoji';
-import Sparkles from '../../common/Sparkles';
 import UnsupportedPlate from '../../common/UnsupportedPlate';
 import Button from '../../ui/Button';
-import ConfirmDialog from '../../ui/ConfirmDialog';
-import InputText from '../../ui/InputText';
 import Album from './Album';
 import AnimatedCustomEmoji from './AnimatedCustomEmoji';
 import AnimatedEmoji from './AnimatedEmoji';
@@ -207,7 +186,6 @@ import RoundVideo from './RoundVideo';
 import Sticker from './Sticker';
 import Story from './Story';
 import StoryMention from './StoryMention';
-import TodoList from './TodoList';
 import Video from './Video';
 import WebPage from './WebPage';
 import Widget from './Widget';
@@ -275,7 +253,6 @@ type StateProps = {
   focusDirection?: FocusDirection;
   focusedQuote?: string;
   focusedQuoteOffset?: number;
-  focusedTodoItemId?: number;
   focusedPollOption?: string;
   noFocusHighlight?: boolean;
   scrollTargetPosition?: ScrollTargetPosition;
@@ -312,16 +289,8 @@ type StateProps = {
   activeEmojiInteractions?: ActiveEmojiInteraction[];
   hasUnreadReaction?: boolean;
   hasUnreadPollVote?: boolean;
-  isTranscribing?: boolean;
-  transcribedText?: string;
-  isPremium: boolean;
   senderChatMember?: ApiChatMember;
   messageTopic?: ApiTopic;
-  chatTranslations?: ChatTranslatedMessages;
-  areTranslationsEnabled?: boolean;
-  requestedTranslationLanguage?: string;
-  requestedChatTranslationLanguage?: string;
-  requestedTranslationTone?: TranslationTone;
   withAnimatedEffects?: boolean;
   canAnimateTextStreaming?: boolean;
   webPageStory?: ApiTypeStory;
@@ -329,7 +298,6 @@ type StateProps = {
   isLoadingComments?: boolean;
   shouldWarnAboutFiles?: boolean;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
-  canTranscribeVoice?: boolean;
   guestFromSender?: ApiPeer;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
@@ -337,10 +305,8 @@ type StateProps = {
   lastPlaybackTimestamp?: number;
   isChatWithUser?: boolean;
   isAccountFrozen?: boolean;
-  minFutureTime?: number;
   isMediaNsfw?: boolean;
   isReplyMediaNsfw?: boolean;
-  summary?: TextSummary;
   canSendStickers?: boolean;
 };
 
@@ -358,7 +324,6 @@ type QuickReactionPosition =
 
 const NBSP = '\u00A0';
 const QUICK_REACTION_SIZE = 1.75 * REM;
-const MAX_REASON_LENGTH = 200;
 const MIN_MESSAGE_LENGTH_FOR_WIDE_MEDIA = 40;
 
 const Message = ({
@@ -373,12 +338,9 @@ const Message = ({
   appearanceOrder,
   isJustAdded,
   isFirstInGroup,
-  isPremium,
   isLastInGroup,
   isFirstInDocumentGroup,
   isLastInDocumentGroup,
-  isTranscribing,
-  transcribedText,
   isLastInList,
   theme,
   forceSenderName,
@@ -406,7 +368,6 @@ const Message = ({
   focusDirection,
   focusedQuote,
   focusedQuoteOffset,
-  focusedTodoItemId,
   focusedPollOption,
   noFocusHighlight,
   scrollTargetPosition,
@@ -447,11 +408,6 @@ const Message = ({
   memoFirstUnreadIdRef,
   senderChatMember,
   messageTopic,
-  chatTranslations,
-  areTranslationsEnabled,
-  requestedTranslationLanguage,
-  requestedChatTranslationLanguage,
-  requestedTranslationTone,
   withAnimatedEffects,
   canAnimateTextStreaming,
   webPageStory,
@@ -460,7 +416,6 @@ const Message = ({
   containerRef,
   shouldWarnAboutFiles,
   tags,
-  canTranscribeVoice,
   guestFromSender,
   poll,
   maxTimestamp,
@@ -469,9 +424,7 @@ const Message = ({
   isReplyMediaNsfw,
   isChatWithUser,
   isAccountFrozen,
-  minFutureTime,
   webPage,
-  summary,
   canSendStickers,
   observeIntersectionForBottom,
   observeIntersectionForLoading,
@@ -483,18 +436,13 @@ const Message = ({
   const {
     toggleMessageSelection,
     clickBotInlineButton,
-    clickSuggestedMessageButton,
-    rejectSuggestedPost,
-    openSuggestedPostApprovalModal,
     disableContextMenuHint,
     animateUnreadReaction,
-    focusMessage,
     markTypingDraftDone,
     markMessageListRead,
     markMentionsRead,
     markPollVotesRead,
     openThread,
-    summarizeMessage,
   } = getActions();
 
   const ref = useRef<HTMLDivElement>();
@@ -503,19 +451,15 @@ const Message = ({
 
   const lang = useLang();
   const {
-    id: messageId, chatId, forwardInfo, viaBotId, guestChatViaId, isTranscriptionError, factCheck,
+    id: messageId, chatId, forwardInfo, viaBotId, guestChatViaId, factCheck,
     isTypingDraft, previousLocalId, fromRank,
   } = message;
 
   const isLocalOnly = isMessageLocalOnly(message);
 
-  const [isTranscriptionHidden, setIsTranscriptionHidden] = useState(false);
   const [isPlayingDeleteAnimation, setIsPlayingDeleteAnimation] = useState(false);
   const [shouldPlayEffect, requestEffect, hideEffect] = useFlag();
   const [shouldPlayDiceEffect, requestDiceEffect, hideDiceEffect] = useFlag();
-  const [isDeclineDialogOpen, openDeclineDialog, closeDeclineDialog] = useFlag();
-  const [isShowingSummary, showSummary, hideSummary] = useFlag();
-  const [declineReason, setDeclineReason] = useState('');
   const { isMobile, isTouchScreen } = useAppLayout();
 
   useOnIntersect(bottomMarkerRef, isTypingDraft || isLocalOnly ? undefined : observeIntersectionForBottom);
@@ -564,8 +508,6 @@ const Message = ({
     onMessageUnmount?.(messageId);
   });
 
-  const hasSummary = Boolean(message.summaryLanguageCode);
-
   const isLocal = isMessageLocal(message);
   const isOwn = isOwnMessage(message);
   const isScheduled = messageListType === 'scheduled' || message.isScheduled;
@@ -596,15 +538,13 @@ const Message = ({
     photo, video, audio,
     voice, document, sticker, contact,
     location,
-    action, game, storyData, todo, dice, widget,
+    action, game, storyData, dice, widget,
   } = getMessageContent(message);
-
-  const withVoiceTranscription = Boolean(!isTranscriptionHidden && (isTranscriptionError || transcribedText));
 
   const hasStoryReply = Boolean(storyReplyInfo);
   const hasThread = Boolean(repliesThreadInfo) && messageListType === 'thread';
   const isUnsupported = isMessageUnsupported(message);
-  const isCustomShape = !withVoiceTranscription && getMessageCustomShape(message);
+  const isCustomShape = getMessageCustomShape(message);
   const hasAnimatedEmoji = isCustomShape && (animatedEmoji || animatedCustomEmoji);
   const hasReactions = reactionMessage?.reactions && !areReactionsEmpty(reactionMessage.reactions);
   const hasViaSender = Boolean(viaBotId || guestChatViaId);
@@ -640,8 +580,7 @@ const Message = ({
 
   const hasForwardedCustomShape = asForwarded && isCustomShape;
   const hasSubheader = message.isEphemeral
-    || hasMessageReply || hasStoryReply || hasForwardedCustomShape
-    || Boolean(isShowingSummary && summary?.text);
+    || hasMessageReply || hasStoryReply || hasForwardedCustomShape;
 
   const selectMessage = useLastCallback((e?: React.MouseEvent<HTMLDivElement, MouseEvent>, groupedId?: string) => {
     if (isAccountFrozen || message.isEphemeral) return;
@@ -706,7 +645,6 @@ const Message = ({
     handlePhotoMediaClick,
     handleVideoMediaClick,
     handleMetaClick,
-    handleTranslationClick,
     handleOpenThread,
     handleReadMedia,
     handleCancelUpload,
@@ -730,44 +668,12 @@ const Message = ({
     senderPeer,
     botSender,
     guestFromSender,
-    isTranslatingChat: Boolean(requestedChatTranslationLanguage),
     story: replyStory && 'content' in replyStory ? replyStory : undefined,
     isReplyPrivate,
     isRepliesChat,
     isSavedMessages: isChatWithSelf,
     lastPlaybackTimestamp,
   });
-
-  useEffect(() => {
-    if (hasSummary && isShowingSummary && !summary) {
-      summarizeMessage({
-        chatId,
-        id: messageId,
-        toLanguageCode: requestedTranslationLanguage,
-        onError: hideSummary,
-      });
-    }
-  }, [hasSummary, chatId, messageId, requestedTranslationLanguage, isShowingSummary, summary, hideSummary]);
-
-  const handleFocusSelf = useLastCallback(() => {
-    focusMessage({
-      chatId,
-      threadId,
-      messageId,
-      scrollTargetPosition: 'start',
-      noHighlight: true,
-    });
-  });
-
-  useEffect(() => {
-    if (!isLastInList) {
-      return;
-    }
-
-    if (withVoiceTranscription && transcribedText) {
-      handleFocusSelf();
-    }
-  }, [isLastInList, transcribedText, withVoiceTranscription]);
 
   useEffect(() => {
     const isPartialAlbumDelete = message.isInAlbum && album?.messages.some((msg) => !msg.isDeleting);
@@ -842,49 +748,16 @@ const Message = ({
   }, [dice, memoFirstUnreadIdRef, messageId, isLocal]);
 
   const textForLanguageDetection = useMemo(() => textMessage && extractMessageText(textMessage)?.text, [textMessage]);
-  const shouldTranslate = isMessageTranslatable(message, !requestedChatTranslationLanguage);
-
-  const isManualMessageTranslation = !requestedChatTranslationLanguage && requestedTranslationLanguage;
-  const parsedManualTranslation = isManualMessageTranslation
-    ? parseTranslationCacheKey(requestedTranslationLanguage) : undefined;
-  const translationLanguageForHook = parsedManualTranslation?.languageCode || requestedChatTranslationLanguage;
-  const translationToneForHook = parsedManualTranslation?.tone || requestedTranslationTone;
-
-  const { isPending: isTranslationPending, translatedText, translatedRichMessage } = useMessageTranslation(
-    chatTranslations, chatId, shouldTranslate ? messageId : undefined, translationLanguageForHook,
-    translationToneForHook,
-  );
-  const isSummaryPending = Boolean(summary?.isPending);
-  const isNewTextPending = isTranslationPending || isSummaryPending;
-  const previousTranslatedText = usePreviousDeprecated(translatedText, Boolean(shouldTranslate));
-  const previousTranslatedRichMessage = usePreviousDeprecated(translatedRichMessage, Boolean(shouldTranslate));
-
-  useEffectWithPrevDeps(([prevIsShowingSummary]) => {
-    if (summary?.text || (prevIsShowingSummary && !isShowingSummary)) {
-      handleFocusSelf();
-    }
-  }, [isShowingSummary, summary?.text]);
-
-  const currentTranslatedText = shouldTranslate ? translatedText || previousTranslatedText : undefined;
-  const currentTranslatedRichMessage = shouldTranslate
-    ? translatedRichMessage || (isTranslationPending !== false ? previousTranslatedRichMessage : undefined) : undefined;
-  const forcedText = (isShowingSummary && summary?.text)
-    || (requestedTranslationLanguage ? currentTranslatedText : undefined);
-  const forcedRichMessage = requestedTranslationLanguage ? currentTranslatedRichMessage : undefined;
-  // Quote offsets refer to the original text, not a summary or translation
-  const quoteToHighlight = forcedText || forcedRichMessage ? undefined : focusedQuote;
+  const quoteToHighlight = focusedQuote;
   const textRef = useRef<HTMLDivElement>();
-  const richMessage = forcedRichMessage || textMessage?.content.richMessage;
+  const richMessage = textMessage?.content.richMessage;
   const shouldHighlight = Boolean(highlight || quoteToHighlight);
   const richQuoteTexts = useMemo(
     () => shouldHighlight && richMessage ? getRichQuoteTexts(richMessage.blocks) : undefined,
     [richMessage, shouldHighlight],
   );
-  const quoteSelector = focusedTodoItemId !== undefined
-    ? `.todo-list .Checkbox:has(input[value="${focusedTodoItemId}"]) .label, `
-    + `.todo-list [data-todo-item-id="${focusedTodoItemId}"]`
-    : focusedPollOption !== undefined ? `[data-poll-option="${btoa(focusedPollOption)}"]` : undefined;
-  const highlightedText = forcedText?.text ?? textForLanguageDetection;
+  const quoteSelector = focusedPollOption !== undefined ? `[data-poll-option="${btoa(focusedPollOption)}"]` : undefined;
+  const highlightedText = textForLanguageDetection;
   useTextHighlight(textRef, { text: highlightedText, richTexts: richQuoteTexts, search: highlight });
   const getQuoteRange = useTextHighlight(quoteSelector ? ref : textRef, {
     text: highlightedText,
@@ -910,7 +783,7 @@ const Message = ({
     && !isTouchScreen && !phoneCall && !isInSelectMode && defaultReaction
     && !isInDocumentGroupNotLast && !isStoryMention && !hasTtl && !isAccountFrozen;
 
-  const hasOutsideReactions = !withVoiceTranscription && hasReactions
+  const hasOutsideReactions = hasReactions
     && (isCustomShape || (
       (photo || video || storyData || (location?.mediaType === 'geo')) && (!hasText || isInvertedMedia))
     );
@@ -941,7 +814,6 @@ const Message = ({
     hasActionButton: canForward || canFocus || (withCommentButton && isCustomShape),
     hasReactions,
     isGeoLiveActive: location?.mediaType === 'geoLive' && !isGeoLiveExpired(message),
-    withVoiceTranscription,
     peerColorClass,
     hasOutsideReactions,
   }), hasWideMedia && 'with-wide-media', hasWidgetTimeOverlay && 'widget-time-overlay',
@@ -1095,14 +967,13 @@ const Message = ({
     markTypingDraftDone({ chatId, messageId });
   });
 
-  function renderMessageText(isForAnimation?: boolean) {
+  function renderMessageText() {
     if (!textMessage) return undefined;
 
     if (textMessage.content.richMessage) {
       return (
         <MessageRichText
           message={textMessage}
-          forcedRichMessage={forcedRichMessage}
           focusedQuote={quoteToHighlight}
           focusedQuoteOffset={focusedQuoteOffset}
           isOwn={isOwn}
@@ -1121,8 +992,6 @@ const Message = ({
     return (
       <MessageText
         messageOrStory={textMessage}
-        forcedText={forcedText}
-        isForAnimation={isForAnimation}
         emojiSize={emojiSize}
         isProtected={isProtected}
         observeIntersectionForLoading={observeIntersectionForLoading}
@@ -1137,20 +1006,6 @@ const Message = ({
         canAnimateTextStreaming={canAnimateTextStreaming}
         onTypingAnimationEnd={handleTypingAnimationEnd}
       />
-    );
-  }
-
-  function renderMessageTextAnimation() {
-    if (textMessage?.content.richMessage) {
-      return undefined;
-    }
-
-    return (
-      <div className="translation-animation">
-        <div className="text-loading">
-          {renderMessageText(true)}
-        </div>
-      </div>
     );
   }
 
@@ -1196,9 +1051,7 @@ const Message = ({
           withQuickReactionButton && quickReactionPosition === 'in-meta' ? renderQuickReactionButton : undefined
         }
         availableReactions={availableReactions}
-        isTranslated={Boolean(requestedTranslationLanguage && (currentTranslatedText || currentTranslatedRichMessage))}
         onClick={handleMetaClick}
-        onTranslationClick={handleTranslationClick}
         onOpenThread={handleOpenThread}
       />
     );
@@ -1215,7 +1068,6 @@ const Message = ({
         observeIntersection={observeIntersectionForPlaying}
         noRecentReactors={isChannel}
         tags={tags}
-        isCurrentUserPremium={isPremium}
         isAccountFrozen={isAccountFrozen}
       />
     );
@@ -1280,10 +1132,7 @@ const Message = ({
                 sender={replyMessageSender}
                 senderChat={replyMessageChat}
                 forwardSender={replyMessageForwardSender}
-                chatTranslations={chatTranslations}
                 isMediaNsfw={isReplyMediaNsfw}
-                requestedChatTranslationLanguage={requestedChatTranslationLanguage}
-                requestedChatTranslationTone={requestedTranslationTone}
                 observeIntersectionForLoading={observeIntersectionForLoading}
                 observeIntersectionForPlaying={observeIntersectionForPlaying}
                 onClick={message.isEphemeral ? undefined : handleReplyClick}
@@ -1299,20 +1148,6 @@ const Message = ({
                 observeIntersectionForPlaying={observeIntersectionForPlaying}
                 onClick={handleStoryClick}
               />
-            )}
-            {hasSummary && isShowingSummary && !summary?.isPending && (
-              <PeerColorWrapper
-                className="message-summary"
-                onClick={hideSummary}
-              >
-                <Sparkles preset="button" className="message-summary-sparkles" />
-                <span className="message-summary-title">
-                  {lang('MessageSummaryTitle')}
-                </span>
-                <span className="message-summary-description">
-                  {lang('MessageSummaryDescription')}
-                </span>
-              </PeerColorWrapper>
             )}
           </div>
         )}
@@ -1362,22 +1197,15 @@ const Message = ({
         {!isAlbum && isRoundVideo && (
           <RoundVideo
             message={message}
-            className={withVoiceTranscription ? 'under-transcription' : undefined}
             threadId={threadId}
             isInScheduled={isScheduled}
             observeIntersection={observeIntersectionForLoading}
             canAutoLoad={canAutoLoadMedia}
             isDownloading={isDownloading}
             onReadMedia={shouldReadMedia ? handleReadMedia : undefined}
-            onHideTranscription={setIsTranscriptionHidden}
-            isTranscriptionError={isTranscriptionError}
-            isTranscribed={Boolean(transcribedText)}
-            canTranscribe={canTranscribeVoice && !hasTtl}
-            isTranscriptionHidden={isTranscriptionHidden}
-            isTranscribing={isTranscribing}
           />
         )}
-        {(audio || voice || withVoiceTranscription) && (
+        {(audio || voice) && (
           <Audio
             theme={theme}
             message={message}
@@ -1393,13 +1221,7 @@ const Message = ({
             onReadMedia={voice && shouldReadMedia ? handleReadMedia : undefined}
             onCancelUpload={handleCancelUpload}
             isDownloading={isDownloading}
-            isTranscribing={isTranscribing}
-            isTranscriptionHidden={isTranscriptionHidden}
-            isTranscribed={Boolean(transcribedText)}
-            isTranscriptionError={isTranscriptionError}
             canDownload={!isProtected}
-            onHideTranscription={setIsTranscriptionHidden}
-            canTranscribe={canTranscribeVoice && !hasTtl}
           />
         )}
         {document && (
@@ -1441,9 +1263,6 @@ const Message = ({
             observeIntersectionForPlaying={observeIntersectionForPlaying}
           />
         )}
-        {todo && (
-          <TodoList message={message} todoList={todo} />
-        )}
         {game && (
           <Game
             message={message}
@@ -1461,19 +1280,6 @@ const Message = ({
             onEffectPlayed={hideDiceEffect}
           />
         )}
-        {withVoiceTranscription && (
-          <p
-            className={buildClassName(
-              'transcription',
-              !isTranscriptionHidden && isTranscriptionError && 'transcription-error',
-            )}
-            dir="auto"
-          >
-            {(isTranscriptionError ? lang('NoWordsRecognized') : (
-              isTranscribing && transcribedText ? <DotAnimation content={transcribedText} /> : transcribedText
-            ))}
-          </p>
-        )}
 
         {isInvertedMedia && renderInvertedMediaContent(hasCustomAppendix)}
 
@@ -1490,7 +1296,6 @@ const Message = ({
             {hasText && !hasAnimatedEmoji && !isUnsupported && (
               <div className={textContentClass} dir="auto" ref={textRef}>
                 {renderMessageText()}
-                {isNewTextPending && renderMessageTextAnimation()}
                 {hasFactCheck && (
                   <FactCheck factCheck={factCheck} isToggleDisabled={isInSelectMode} />
                 )}
@@ -1536,7 +1341,6 @@ const Message = ({
         {hasText && !hasAnimatedEmoji && (
           <div className={textContentClass} dir="auto" ref={textRef}>
             {renderMessageText()}
-            {isNewTextPending && renderMessageTextAnimation()}
             {!hasContentAfterText && isMetaInText && renderReactionsAndMeta()}
           </div>
         )}
@@ -1695,42 +1499,6 @@ const Message = ({
       });
       return;
     }
-
-    if (button.action.type === 'suggestedMessage') {
-      if (button.action.buttonType === 'approve') {
-        openSuggestedPostApprovalModal({
-          chatId,
-          messageId: message.id,
-        });
-        return;
-      }
-
-      if (button.action.buttonType === 'decline') {
-        openDeclineDialog();
-        return;
-      }
-
-      clickSuggestedMessageButton({
-        chatId,
-        messageId: message.id,
-        button: { ...button, action: button.action },
-      });
-      return;
-    }
-  });
-
-  const handleDeclineReasonChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setDeclineReason(e.target.value);
-  });
-
-  const handleDeclineConfirm = useLastCallback(() => {
-    rejectSuggestedPost({
-      chatId,
-      messageId: message.id,
-      rejectComment: declineReason.trim() || undefined,
-    });
-    closeDeclineDialog();
-    setDeclineReason('');
   });
 
   function renderSenderName(
@@ -1745,7 +1513,6 @@ const Message = ({
       senderTitle = getPeerFullTitle(lang, originSender);
     }
     const senderEmojiStatus = senderPeer && 'emojiStatus' in senderPeer && senderPeer.emojiStatus;
-    const senderIsPremium = senderPeer && 'isPremium' in senderPeer && senderPeer.isPremium;
     const guestFromSenderTitle = guestFromSender ? getPeerTitle(lang, guestFromSender) : undefined;
 
     const shouldRenderForwardAvatar = asForwarded && senderPeer;
@@ -1800,7 +1567,6 @@ const Message = ({
                   observeIntersectionForPlaying={observeIntersectionForPlaying}
                 />
               )}
-              {!asForwarded && !senderEmojiStatus && senderIsPremium && <StarIcon />}
               {senderPeer?.fakeType && <FakeIcon fakeType={senderPeer.fakeType} />}
             </span>
           </span>
@@ -1840,37 +1606,6 @@ const Message = ({
   }
 
   const forwardAuthor = isGroup && asForwarded ? message.postAuthorTitle : undefined;
-  const shouldRenderSuggestedPostButtons = message.suggestedPostInfo
-    && !message.isOutgoing && !message.suggestedPostInfo.isAccepted && !message.suggestedPostInfo.isRejected;
-
-  const isSuggestedPostExpired = (() => {
-    if (!message.suggestedPostInfo?.scheduleDate || !minFutureTime) return false;
-    const now = getServerTime();
-    return message.suggestedPostInfo.scheduleDate <= now + minFutureTime;
-  })();
-
-  const suggestedPostButtons: ApiKeyboardButton[][] | undefined = useMemo(() => {
-    if (!shouldRenderSuggestedPostButtons) return undefined;
-    return [
-      [
-        {
-          action: { type: 'suggestedMessage', buttonType: 'decline' },
-          text: lang('SuggestedPostDecline'),
-        },
-        {
-          action: { type: 'suggestedMessage', buttonType: 'approve', disabled: isSuggestedPostExpired },
-          text: lang('SuggestedPostApprove'),
-        },
-      ],
-      [
-        {
-          action: { type: 'suggestedMessage', buttonType: 'suggestChanges' },
-          text: lang('SuggestedPostSuggestChanges'),
-        },
-      ],
-    ];
-  }, [isSuggestedPostExpired, lang, shouldRenderSuggestedPostButtons]);
-
   const openThreadButtons: ApiKeyboardButton[][] | undefined = useMemo(() => {
     if (!isBotForum || message.inlineButtons || !messageTopic || !isLastInList ||
       threadId !== MAIN_THREAD_ID
@@ -1884,7 +1619,7 @@ const Message = ({
     ];
   }, [isBotForum, lang, message.inlineButtons, messageTopic, isLastInList, threadId]);
 
-  const additionalInlineButtons = suggestedPostButtons || openThreadButtons;
+  const additionalInlineButtons = openThreadButtons;
 
   return (
     <div
@@ -1949,21 +1684,6 @@ const Message = ({
           {!isInDocumentGroupNotLast && metaPosition === 'standalone' && !isStoryMention && renderReactionsAndMeta()}
           {canShowActionButton && (
             <div className="message-action-buttons-container">
-              <div className="message-action-buttons-sticky-zone">
-                <div className="message-action-buttons message-action-button-sticky">
-                  {hasSummary && (
-                    <Button
-                      className="message-action-button action-summary"
-                      color="translucent-white"
-                      round
-                      withSparkleEffect
-                      ariaLabel={isShowingSummary ? lang('AriaHideSummary') : lang('AriaShowSummary')}
-                      onClick={isShowingSummary ? hideSummary : showSummary}
-                      iconName={isShowingSummary ? 'expand' : 'collapse'}
-                    />
-                  )}
-                </div>
-              </div>
               <div className={buildClassName(
                 'message-action-buttons',
                 isLoadingComments && 'message-action-buttons-shown',
@@ -2029,7 +1749,6 @@ const Message = ({
             message={reactionMessage!}
             threadId={threadId}
             isOutside
-            isCurrentUserPremium={isPremium}
             observeIntersection={observeIntersectionForPlaying}
             noRecentReactors={isChannel}
             tags={tags}
@@ -2052,28 +1771,6 @@ const Message = ({
           noReplies={noReplies}
         />
       )}
-      {isDeclineDialogOpen && (
-        <ConfirmDialog
-          isOpen={isDeclineDialogOpen}
-          onClose={closeDeclineDialog}
-          title={lang('SuggestedPostDecline')}
-          confirmLabel={lang('SuggestedPostDecline')}
-          confirmHandler={handleDeclineConfirm}
-          confirmIsDestructive
-        >
-          <div className="decline-dialog-question">
-            {renderText(lang('DeclinePostDialogQuestion', {
-              sender: sender ? getPeerFullTitle(lang, sender) : '',
-            }, { withNodes: true, withMarkdown: true }))}
-          </div>
-          <InputText
-            placeholder={lang('DeclineReasonPlaceholder')}
-            value={declineReason}
-            onChange={handleDeclineReasonChange}
-            maxLength={MAX_REASON_LENGTH}
-          />
-        </ConfirmDialog>
-      )}
     </div>
   );
 };
@@ -2089,7 +1786,7 @@ export default memo(withGlobal<OwnProps>(
       isLastInDocumentGroup, shouldIgnoreSendFocus,
     } = ownProps;
     const {
-      id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
+      id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, isPinned,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2163,7 +1860,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       direction: focusDirection, noHighlight: noFocusHighlight, isResizingContainer,
       quote: focusedQuote, quoteOffset: focusedQuoteOffset, scrollTargetPosition,
-      todoItemId: focusedTodoItemId, pollOption: focusedPollOption,
+      pollOption: focusedPollOption,
     } = (isFocused && focusedMessage) || {};
 
     const middleSearch = selectCurrentMiddleSearch(global);
@@ -2203,25 +1900,9 @@ export default memo(withGlobal<OwnProps>(
 
     const messageTopic = selectTopicFromMessage(global, message);
 
-    const chatTranslations = selectChatTranslations(global, chatId);
-
-    const requestedTranslationLanguage = selectRequestedMessageTranslationLanguage(global, chatId, message.id);
-    const requestedChatTranslationLanguage = selectRequestedChatTranslationLanguage(global, chatId);
-    const requestedTranslationTone = selectRequestedChatTranslationTone(global, chatId);
-
-    const areTranslationsEnabled = IS_TRANSLATION_SUPPORTED && global.settings.byKey.canTranslate
-      && !requestedChatTranslationLanguage; // Stop separate language detection if chat translation is requested
-
     const isConnected = global.connectionState === 'connectionStateReady';
 
     const hasActiveReactions = Boolean(reactionMessage && activeReactions[getMessageKey(reactionMessage)]?.length);
-
-    const isPremium = selectIsCurrentUserPremium(global);
-
-    const chatLevel = chat?.level || 0;
-    const transcribeMinLevel = global.appConfig.groupTranscribeLevelMin;
-    const canTranscribeVoice = !message.isEphemeral
-      && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
 
     const poll = selectPollFromMessage(global, message);
 
@@ -2230,13 +1911,8 @@ export default memo(withGlobal<OwnProps>(
     const lastPlaybackTimestamp = selectMessageLastPlaybackTimestamp(global, chatId, message.id);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
-    const minFutureTime = global.appConfig.starsSuggestedPostFutureMin;
-
     const isMediaNsfw = selectIsMediaNsfw(global, message);
     const isReplyMediaNsfw = replyMessage && selectIsMediaNsfw(global, replyMessage);
-
-    const summary = !message.isEphemeral
-      ? selectMessageSummary(global, chatId, message.id, requestedTranslationLanguage) : undefined;
 
     const allowedAttachmentOptions = getAllowedAttachmentOptions(chat, isChatWithBot);
 
@@ -2299,16 +1975,8 @@ export default memo(withGlobal<OwnProps>(
       activeEmojiInteractions,
       hasUnreadReaction,
       hasUnreadPollVote,
-      isTranscribing: transcriptionId !== undefined && global.transcriptions[transcriptionId]?.isPending,
-      transcribedText: transcriptionId !== undefined ? global.transcriptions[transcriptionId]?.text : undefined,
-      isPremium,
       senderChatMember,
       messageTopic,
-      chatTranslations,
-      areTranslationsEnabled,
-      requestedTranslationLanguage,
-      requestedChatTranslationLanguage,
-      requestedTranslationTone,
       hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
       withAnimatedEffects: selectPerformanceSettingsValue(global, 'stickerEffects'),
       canAnimateTextStreaming: selectPerformanceSettingsValue(global, 'textStreaming'),
@@ -2329,12 +1997,9 @@ export default memo(withGlobal<OwnProps>(
       isResizingContainer: isFocused ? isResizingContainer : undefined,
       focusedQuote: isFocused ? focusedQuote : undefined,
       focusedQuoteOffset: isFocused ? focusedQuoteOffset : undefined,
-      focusedTodoItemId: isFocused ? focusedTodoItemId : undefined,
       focusedPollOption: isFocused ? focusedPollOption : undefined,
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
       tags: global.savedReactionTags?.byKey,
-      canTranscribeVoice,
-      minFutureTime,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,
@@ -2343,7 +2008,6 @@ export default memo(withGlobal<OwnProps>(
       isMediaNsfw,
       isReplyMediaNsfw,
       webPage,
-      summary,
       canSendStickers: allowedAttachmentOptions.canSendStickers,
     };
   },

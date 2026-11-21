@@ -44,7 +44,6 @@ export type OwnProps = {
     inlineResult: ApiBotInlineMediaResult | ApiBotInlineResult, isSilent?: boolean, shouldSchedule?: boolean,
   ) => void;
   loadMore: NoneToVoidFunction;
-  isCurrentUserPremium?: boolean;
 };
 
 const InlineBotTooltip = ({ isOpen, ...props }: OwnProps) => {
@@ -59,7 +58,6 @@ const InlineBotTooltip = ({ isOpen, ...props }: OwnProps) => {
     canSendGifs,
     loadMore,
     onSelectResult,
-    isCurrentUserPremium,
   } = useFrozenProps(props, !isOpen);
 
   const {
@@ -173,7 +171,6 @@ const InlineBotTooltip = ({ isOpen, ...props }: OwnProps) => {
               observeIntersection={observeIntersection}
               onClick={onSelectResult}
               isSavedMessages={isSavedMessages}
-              isCurrentUserPremium={isCurrentUserPremium}
             />
           );
 

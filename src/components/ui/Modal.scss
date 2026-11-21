@@ -120,16 +120,6 @@
           border-radius: 0;
         }
       }
-
-      @media (max-width: 600px) {
-        &.premium-main-modal-dialog {
-          width: 100% !important;
-          max-width: 100% !important;
-          height: 100%;
-          margin: 0;
-          border-radius: 0;
-        }
-      }
     }
 
     &.open .modal-dialog {

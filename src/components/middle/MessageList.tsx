@@ -110,7 +110,6 @@ import ContactGreeting from './ContactGreeting';
 import MessageListAccountInfo from './MessageListAccountInfo';
 import MessageListContent from './MessageListContent';
 import NoMessages from './NoMessages';
-import RequirementToContactMessage from './RequirementToContactMessage';
 
 import './MessageList.scss';
 
@@ -124,7 +123,6 @@ type OwnProps = {
   isReady: boolean;
   withBottomShift?: boolean;
   withDefaultBg: boolean;
-  isContactRequirePremium?: boolean;
   isQuickPreview?: boolean;
   onScrollDownToggle?: BooleanToVoidFunction;
   onIntersectPinnedMessage?: OnIntersectPinnedMessage;
@@ -189,7 +187,6 @@ enum Content {
   // eslint-disable-next-line @typescript-eslint/no-shadow
   Loading,
   Restricted,
-  PremiumRequired,
   AccountInfo,
   // eslint-disable-next-line @typescript-eslint/no-shadow
   ContactGreeting,
@@ -282,7 +279,6 @@ const MessageList = ({
   noMessageSendingAnimation,
   isServiceNotificationsChat,
   currentUserId,
-  isContactRequirePremium,
   channelJoinInfo,
   isChatProtected,
   isAccountFrozen,
@@ -706,7 +702,7 @@ const MessageList = ({
     const viewportBottom = container.scrollTop + container.offsetHeight
       - getEffectiveMessageListBottomReserve(container);
     const triggerPosition = bottomTrigger.offsetTop;
-    // Scroll is near fab-trigger + threshold. Prevents snap on sponsored message
+    // Scroll is near fab-trigger + threshold
     const shouldSnapBeActive = triggerPosition - BOTTOM_SNAP_THRESHOLD <= viewportBottom
       && viewportBottom <= triggerPosition + BOTTOM_SNAP_THRESHOLD * 2;
 
@@ -1364,8 +1360,6 @@ const MessageList = ({
 
   const activeKey = isRestricted ? (
     Content.Restricted
-  ) : isContactRequirePremium && !hasMessages ? (
-    Content.PremiumRequired
   ) : (isBot || isNonContact) && !hasMessages && threadId === MAIN_THREAD_ID ? (
     Content.AccountInfo
   ) : shouldRenderGreeting ? (
@@ -1390,8 +1384,6 @@ const MessageList = ({
           )}
         </span>
       </div>
-    ) : activeKey === Content.PremiumRequired ? (
-      <RequirementToContactMessage peerId={chatId} />
     ) : activeKey === Content.AccountInfo ? (
       <MessageListAccountInfo chatId={chatId} hasMessages={hasMessages} />
     ) : activeKey === Content.ContactGreeting ? (

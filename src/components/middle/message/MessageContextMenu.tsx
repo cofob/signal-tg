@@ -18,7 +18,7 @@ import type {
   ApiWebPage,
 } from '../../../api/types';
 import type {
-  IAnchorPosition, MessageListType, ThreadId, TranslationTone,
+  IAnchorPosition, MessageListType, ThreadId,
 } from '../../../types';
 import type { ClipboardTextFormat, MessageCopyRequest } from '../../../types/messageCopy';
 
@@ -43,7 +43,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import AvatarList from '../../common/AvatarList';
-import Icon from '../../common/icons/Icon';
 import Menu from '../../ui/Menu';
 import MenuItem, { MenuItemSubtitle, MenuItemTitle } from '../../ui/MenuItem';
 import MenuSeparator from '../../ui/MenuSeparator';
@@ -85,19 +84,13 @@ type OwnProps = {
   canShowReactionsCount?: boolean;
   canShowReactionList?: boolean;
   canEdit?: boolean;
-  canAppendTodoList?: boolean;
   canForward?: boolean;
   canFaveSticker?: boolean;
   canUnfaveSticker?: boolean;
   canCopy?: boolean;
   canCopyLink?: boolean;
   canSelect?: boolean;
-  canTranslate?: boolean;
-  canShowOriginal?: boolean;
-  canSelectLanguage?: boolean;
-  currentTranslationTone?: TranslationTone;
   isPrivate?: boolean;
-  isCurrentUserPremium?: boolean;
   canDownload?: boolean;
   canSaveGif?: boolean;
   canManageMusicInProfile?: boolean;
@@ -119,7 +112,6 @@ type OwnProps = {
   onReply?: NoneToVoidFunction;
   onOpenThread?: VoidFunction;
   onEdit?: NoneToVoidFunction;
-  onAppendTodoList?: NoneToVoidFunction;
   onPin?: NoneToVoidFunction;
   onUnpin?: NoneToVoidFunction;
   onForward?: NoneToVoidFunction;
@@ -142,10 +134,6 @@ type OwnProps = {
   onClosePoll?: NoneToVoidFunction;
   onShowSeenBy?: NoneToVoidFunction;
   onShowReactors?: NoneToVoidFunction;
-  onTranslate?: NoneToVoidFunction;
-  onTranslateWithTone?: (tone: TranslationTone) => void;
-  onShowOriginal?: NoneToVoidFunction;
-  onSelectLanguage?: NoneToVoidFunction;
   onToggleReaction?: (reaction: ApiReaction) => void;
   onReactionPickerOpen?: (position: IAnchorPosition) => void;
   noForwardsNotice?: string;
@@ -169,7 +157,6 @@ const MessageContextMenu = ({
   webPage,
   story,
   isPrivate,
-  isCurrentUserPremium,
   enabledReactions,
   reactionsLimit,
   anchor,
@@ -179,7 +166,6 @@ const MessageContextMenu = ({
   canReply,
   canQuote,
   canEdit,
-  canAppendTodoList,
   noReplies,
   canPin,
   canUnpin,
@@ -199,10 +185,6 @@ const MessageContextMenu = ({
   isMusicSaved,
   canRevote,
   canClosePoll,
-  canTranslate,
-  canShowOriginal,
-  canSelectLanguage,
-  currentTranslationTone,
   isDownloading,
   repliesThreadInfo,
   canShowSeenBy,
@@ -218,7 +200,6 @@ const MessageContextMenu = ({
   onReply,
   onOpenThread,
   onEdit,
-  onAppendTodoList,
   onPin,
   onUnpin,
   onForward,
@@ -243,10 +224,6 @@ const MessageContextMenu = ({
   onToggleReaction,
   onCopyMessages,
   onReactionPickerOpen,
-  onTranslate,
-  onTranslateWithTone,
-  onShowOriginal,
-  onSelectLanguage,
   noForwardsNotice,
 }: OwnProps) => {
   const {
@@ -411,7 +388,6 @@ const MessageContextMenu = ({
           onToggleReaction={onToggleReaction!}
           isPrivate={isPrivate}
           isReady={isReady}
-          isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isInSavedMessages}
           canPlayAnimatedEmojis={canPlayAnimatedEmojis}
           onShowMore={handleOpenMessageReactionPicker}
@@ -442,60 +418,11 @@ const MessageContextMenu = ({
           </MenuItem>
         )}
         {canEdit && <MenuItem icon="edit" onClick={onEdit}>{lang('Edit')}</MenuItem>}
-        {canAppendTodoList && (
-          <MenuItem icon="add" onClick={onAppendTodoList}>
-            {lang('MenuButtonAppendTodoList')}
-          </MenuItem>
-        )}
         {canFaveSticker && (
           <MenuItem icon="star-regular" onClick={onFaveSticker}>{lang('AddToFavorites')}</MenuItem>
         )}
         {canUnfaveSticker && (
           <MenuItem icon="star-regular" onClick={onUnfaveSticker}>{lang('StickersRemoveFromFavorites')}</MenuItem>
-        )}
-        {canTranslate && (
-          <MenuItem icon="language" onClick={() => onTranslate?.()}>{lang('AiMessageEditorTranslate')}</MenuItem>
-        )}
-        {canShowOriginal && (
-          <MenuItem icon="language" onClick={onShowOriginal}>
-            {lang('ShowOriginalButton')}
-          </MenuItem>
-        )}
-        {canShowOriginal && (
-          <NestedMenuItem
-            icon="tone"
-            submenuClassName="translation-tone-menu"
-            submenu={(
-              <>
-                <MenuItem
-                  icon={currentTranslationTone === 'neutral' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'neutral' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('neutral')}
-                >
-                  {lang('TranslationToneNeutral')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTranslationTone === 'formal' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'formal' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('formal')}
-                >
-                  {lang('TranslationToneFormal')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTranslationTone === 'casual' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'casual' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('casual')}
-                >
-                  {lang('TranslationToneCasual')}
-                </MenuItem>
-              </>
-            )}
-          >
-            {lang('TranslationTone')}
-          </NestedMenuItem>
-        )}
-        {canSelectLanguage && (
-          <MenuItem icon="web" onClick={onSelectLanguage}>{lang('Language')}</MenuItem>
         )}
         {copyOptions.map((option) => (
           isExtendedMenu && option.canCopyWithFormat ? (

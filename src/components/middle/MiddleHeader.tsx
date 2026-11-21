@@ -84,7 +84,6 @@ type StateProps = {
   isSyncing?: boolean;
   isFetchingDifference?: boolean;
   emojiStatusSticker?: ApiSticker;
-  emojiStatusSlug?: string;
 };
 
 const MiddleHeader = ({
@@ -107,7 +106,6 @@ const MiddleHeader = ({
   getCurrentPinnedIndex,
   getLoadingPinnedId,
   emojiStatusSticker,
-  emojiStatusSlug,
   isSavedDialog,
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
@@ -405,7 +403,6 @@ export default memo(withGlobal<OwnProps>(
 
     const emojiStatus = peer?.emojiStatus;
     const emojiStatusSticker = emojiStatus && selectCustomEmoji(global, emojiStatus.documentId);
-    const emojiStatusSlug = emojiStatus?.type === 'collectible' ? emojiStatus.slug : undefined;
 
     return {
       typingStatusByPeerId,
@@ -421,7 +418,6 @@ export default memo(withGlobal<OwnProps>(
       isSyncing: global.isSyncing,
       isFetchingDifference: global.isFetchingDifference,
       emojiStatusSticker,
-      emojiStatusSlug,
       isSavedDialog,
     };
   },

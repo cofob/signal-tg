@@ -143,7 +143,6 @@ export function fetchChatFolders() {
   return Promise.resolve({
     byId: {},
     orderedIds: [ALL_FOLDER_ID],
-    areTagsEnabled: undefined,
   });
 }
 

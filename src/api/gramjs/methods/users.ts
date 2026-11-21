@@ -1,7 +1,7 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiBirthday, ApiEmojiStatusType, ApiFormattedText, ApiPeer, ApiUser,
+  ApiBirthday, ApiEmojiStatus, ApiFormattedText, ApiPeer, ApiUser,
 } from '../../types';
 
 import { buildApiChatFromPreview } from '../apiBuilders/chats';
@@ -347,7 +347,7 @@ export function reportSpam(userOrChat: ApiPeer) {
   });
 }
 
-export function updateEmojiStatus(emojiStatus: ApiEmojiStatusType) {
+export function updateEmojiStatus(emojiStatus: ApiEmojiStatus) {
   return invokeRequest(new GramJs.account.UpdateEmojiStatus({
     emojiStatus: buildInputEmojiStatus(emojiStatus),
   }), {

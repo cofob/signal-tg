@@ -1,7 +1,6 @@
 import type { OwnProps } from './MessageInput';
 
 import { EDITABLE_INPUT_ID } from '../../../config';
-import buildClassName from '../../../util/buildClassName';
 import { Bundles } from '../../../util/moduleLoader';
 
 import useModuleLoader from '../../../hooks/useModuleLoader';
@@ -12,7 +11,6 @@ const MessageInputAsync = (props: OwnProps) => {
     id,
     editableInputId,
     placeholder,
-    isNeedPremium,
   } = props;
   const MessageInput = useModuleLoader(Bundles.Editor, 'MessageInput');
 
@@ -25,8 +23,8 @@ const MessageInputAsync = (props: OwnProps) => {
   return (
     <div id={id} aria-busy>
       <div className="shared-canvas-container">
-        <div className={buildClassName('custom-scroll', 'input-scroller', isNeedPremium && 'is-need-premium')}>
-          <div className={buildClassName('input-scroller-content', isNeedPremium && 'is-need-premium')}>
+        <div className="custom-scroll input-scroller">
+          <div className="input-scroller-content">
             <div
               ref={ref}
               id={editableInputId || EDITABLE_INPUT_ID}
@@ -38,7 +36,7 @@ const MessageInputAsync = (props: OwnProps) => {
             />
             <span
               id={placeholderId}
-              className={buildClassName('placeholder-text', isNeedPremium && 'is-need-premium')}
+              className="placeholder-text"
               dir="auto"
             >
               {placeholder}

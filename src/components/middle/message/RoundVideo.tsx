@@ -66,12 +66,6 @@ type OwnProps = {
   observeIntersection?: ObserveFn;
   onStop?: NoneToVoidFunction;
   onReadMedia?: NoneToVoidFunction;
-  onHideTranscription?: (isHidden: boolean) => void;
-  isTranscriptionError?: boolean;
-  canTranscribe?: boolean;
-  isTranscribed?: boolean;
-  isTranscriptionHidden?: boolean;
-  isTranscribing?: boolean;
 };
 
 const PROGRESS_CENTER = ROUND_VIDEO_DIMENSIONS_PX / 2;
@@ -91,15 +85,9 @@ const RoundVideo = ({
   observeIntersection,
   onStop,
   onReadMedia,
-  isTranscriptionError,
-  isTranscribed,
-  canTranscribe,
-  onHideTranscription,
-  isTranscriptionHidden,
-  isTranscribing,
 }: OwnProps) => {
   const {
-    cancelMediaDownload, openOneTimeMediaModal, transcribeAudio,
+    cancelMediaDownload, openOneTimeMediaModal,
     openAudioPlayer, setRoundVideoMode,
   } = getActions();
 
@@ -351,10 +339,6 @@ const RoundVideo = ({
   }, [isInOneTimeModal]);
 
   const handleClick = useLastCallback((event) => {
-    if (event.target.closest('.transcribe-button')) {
-      return;
-    }
-
     if (isDetached) {
       setRoundVideoMode({ mode: undefined });
       return;
@@ -398,10 +382,6 @@ const RoundVideo = ({
     if (isActivated) markOneTimePaused();
   });
 
-  const handleTranscribe = useLastCallback(() => {
-    transcribeAudio({ chatId: message.chatId, messageId: message.id });
-  });
-
   const handleUpscale = useLastCallback(() => {
     setRoundVideoMode({ mode: 'large' });
   });
@@ -422,14 +402,6 @@ const RoundVideo = ({
       </div>
     );
   }
-
-  const handleButtonClick = useLastCallback(() => {
-    if ((isTranscribed || isTranscriptionError) && onHideTranscription) {
-      onHideTranscription(!isTranscriptionHidden);
-    } else if (!isTranscribing) {
-      handleTranscribe();
-    }
-  });
 
   return (
     <div
@@ -572,31 +544,6 @@ const RoundVideo = ({
           onClick={handleUpscale}
         >
           <Icon name="fullscreen" />
-        </Button>
-      )}
-      {canTranscribe && (
-        <Button
-          onClick={handleButtonClick}
-          className="transcribe-button"
-        >
-          {isTranscribed || isTranscriptionError ? <Icon name="down" /> : <Icon name="transcribe" />}
-          {isTranscribing && (
-            <svg viewBox="0 0 32 24" className="loading-svg">
-              <rect
-                className="loading-rect"
-                fill="transparent"
-                width="32"
-                height="24"
-                stroke-width="3"
-                stroke-linejoin="round"
-                rx="6"
-                ry="6"
-                stroke="white"
-                stroke-dashoffset="1"
-                stroke-dasharray="32,68"
-              />
-            </svg>
-          )}
         </Button>
       )}
     </div>

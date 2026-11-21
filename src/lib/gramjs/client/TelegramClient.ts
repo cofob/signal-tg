@@ -1,4 +1,3 @@
-import type LocalUpdatePremiumFloodWait from '../../../api/gramjs/updates/UpdatePremiumFloodWait';
 import type { UpdatePts } from '../../../api/gramjs/updates/UpdatePts';
 import type { AuthKey } from '../crypto/AuthKey';
 import type {
@@ -87,7 +86,7 @@ type TimeoutId = number;
 export type Update = (
     Api.TypeUpdate | Api.TypeUpdates
     | UpdateServerTimeOffset | UpdateConnectionState | UpdateSessionGap
-    | UpdatePts | LocalUpdatePremiumFloodWait
+    | UpdatePts
 ) & { _entities?: (Api.TypeUser | Api.TypeChat)[] };
 type EventBuilder = {
   build: (update: Update) => Update;

@@ -201,7 +201,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     },
     hasNext: true,
     hasNextInArchive: true,
-    stealthMode: {},
   },
 
   groupCalls: {
@@ -224,7 +223,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
   chatFolders: {
     byId: {},
     invites: {},
-    areTagsEnabled: false,
   },
 
   fileUploads: {
@@ -251,9 +249,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       stickers: [],
     },
     greeting: {
-      stickers: [],
-    },
-    premium: {
       stickers: [],
     },
     featured: {
@@ -318,8 +313,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       shouldUpdateStickerSetOrder: true,
       shouldArchiveAndMuteNewNonContact: false,
       shouldHideReadMarks: false,
-      canTranslate: false,
-      translationTone: 'neutral',
     },
     privacy: {},
     botVerificationShownPeerIds: [],
@@ -328,11 +321,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
 
   serviceNotifications: [],
   trustedBotIds: [],
-
-  transcriptions: {},
-  translations: {
-    byChatId: {},
-  },
 
   byTabId: {},
   sharedState: INITIAL_SHARED_STATE,
@@ -423,7 +411,4 @@ export const INITIAL_TAB_STATE: TabState = {
 
   activeDownloads: {},
 
-  requestedTranslations: {
-    byChatId: {},
-  },
 };

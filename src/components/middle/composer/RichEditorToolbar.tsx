@@ -42,7 +42,6 @@ import RichEditorLinkModal from './RichEditorLinkModal';
 type OwnProps = {
   editor?: Editor;
   isEnabled?: boolean;
-  onOpenAiEditor?: NoneToVoidFunction;
 };
 
 type RichEditorToolbarAvailability = {
@@ -124,7 +123,7 @@ const EMPTY_TOOLBAR_AVAILABILITY: RichEditorToolbarAvailability = {
   canInsertEquation: false,
 };
 
-const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
+const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
   const [availability, setAvailability] = useState(EMPTY_TOOLBAR_AVAILABILITY);
   const [isLinkModalOpen, openLinkModal, closeLinkModal] = useFlag();
   const lang = useLang();
@@ -345,13 +344,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
   return (
     <div className="rich-editor-toolbar-viewport" aria-hidden={!isEnabled} inert={!isEnabled}>
       <div className="rich-editor-toolbar">
-        <Button
-          color="translucent"
-          iconName="ai"
-          ariaLabel={lang('AiMessageEditor')}
-          disabled={!onOpenAiEditor}
-          onClick={onOpenAiEditor}
-        />
         <DropdownMenu
           className="rich-editor-toolbar-menu"
           positionX="left"
@@ -370,7 +362,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
         >
           <NestedMenuItem
             icon="heading"
-            hasIconPremiumBadge
             disabled={!canOpenHeadingMenu}
             submenu={(
               <>
@@ -390,7 +381,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           </NestedMenuItem>
           <MenuItem
             icon="footer"
-            hasIconPremiumBadge
             disabled={!availability.canToggleFooter}
             onClick={handleToggleFooter}
           >
@@ -405,7 +395,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="pullquote"
-            hasIconPremiumBadge
             disabled={!availability.canTogglePullquote}
             onClick={handleTogglePullquote}
           >
@@ -413,7 +402,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="details-block"
-            hasIconPremiumBadge
             disabled={!availability.canSetDetails}
             onClick={handleSetDetails}
           >
@@ -421,7 +409,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="remove"
-            hasIconPremiumBadge
             disabled={!availability.canSetHorizontalRule}
             onClick={handleSetHorizontalRule}
           >
@@ -429,7 +416,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="button"
-            hasIconPremiumBadge
             disabled={!availability.canInsertButtonRow}
             onClick={handleInsertButtonRow}
           >
@@ -447,7 +433,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
               className={isOpen ? 'active' : undefined}
               iconName="bullet-list"
               ariaLabel={lang('RichEditorListMenu')}
-              iconHasPremiumBadge
               disabled={!canOpenListMenu}
               onClick={onTrigger}
             />
@@ -457,7 +442,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
             <MenuItem
               key={option.label}
               icon={option.icon}
-              hasIconPremiumBadge
               disabled={!availability[option.availability]}
               onClick={() => handleInsertList(option.type, option.isChecklist)}
             >
@@ -522,7 +506,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           color="translucent"
           iconName="table"
           ariaLabel={lang('RichEditorTable')}
-          iconHasPremiumBadge
           disabled={!availability.canInsertTable}
           onClick={handleInsertTable}
         />
@@ -544,7 +527,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
           color="translucent"
           iconName="formula"
           ariaLabel={lang('RichEditorFormula')}
-          iconHasPremiumBadge
           disabled={!availability.canInsertEquation}
           onClick={handleInsertEquation}
         />

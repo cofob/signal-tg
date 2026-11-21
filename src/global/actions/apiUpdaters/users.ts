@@ -16,7 +16,7 @@ import {
   updateUserFullInfo,
 } from '../../reducers';
 import {
-  selectChatFullInfo, selectIsChatWithSelf, selectIsCurrentUserPremium, selectPeerFullInfo,
+  selectChatFullInfo, selectPeerFullInfo,
   selectUser, selectUserFullInfo,
 } from '../../selectors';
 
@@ -43,16 +43,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     }
 
     case 'updateUser': {
-      if (selectIsChatWithSelf(global, update.id) && update.user.isPremium !== selectIsCurrentUserPremium(global)) {
-        // Reset translation cache cause premium provides additional formatting
-        global = {
-          ...global,
-          translations: {
-            byChatId: {},
-          },
-        };
-      }
-
       const localUser = selectUser(global, update.id);
 
       global = updateUser(global, update.id, update.user);

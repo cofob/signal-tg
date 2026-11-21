@@ -4,7 +4,6 @@ import { copyTextToClipboard } from '../../../util/clipboard';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { omit } from '../../../util/iteratees';
 import { callApi } from '../../../api/gramjs';
-import { addTabStateResetterAction } from '../../helpers/meta';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { addStoriesForPeer } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
@@ -314,18 +313,6 @@ addActionHandler('closeStoryPrivacyEditor', (global, actions, payload): ActionRe
     },
   }, tabId);
 });
-
-addActionHandler('openStealthModal', (global, actions, payload): ActionReturnType => {
-  const { targetPeerId, tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    storyStealthModal: {
-      targetPeerId,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeStealthModal', 'storyStealthModal');
 
 addActionHandler('clearStoryViews', (global, actions, payload): ActionReturnType => {
   const { isLoading, tabId = getCurrentTabId() } = payload || {};

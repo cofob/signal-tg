@@ -6,7 +6,7 @@ import type { TabState } from '../../../global/types';
 import type { RegularLangKey } from '../../../types/language';
 
 import { getUserFullName } from '../../../global/helpers';
-import { selectIsCurrentUserPremium, selectUser } from '../../../global/selectors';
+import { selectUser } from '../../../global/selectors';
 import {
   isUsernameValid, MAX_USERNAME_LENGTH, MIN_UPDATE_USERNAME_LENGTH,
 } from '../../../util/entities/username';
@@ -37,7 +37,6 @@ export type OwnProps = {
 type StateProps = {
   manager?: ApiUser;
   botAllowedSuffixes?: string[];
-  isPremium?: boolean;
 };
 
 enum UsernameStatus {
@@ -59,7 +58,7 @@ const USERNAME_ERROR_KEYS: Record<string, RegularLangKey> = {
 };
 
 const BotCreationModal = ({
-  modal, isOpen, manager, botAllowedSuffixes, isPremium,
+  modal, isOpen, manager, botAllowedSuffixes,
 }: OwnProps & StateProps) => {
   const { closeBotCreationModal, openChatWithInfo } = getActions();
   const { createBot } = getPromiseActions();
@@ -72,7 +71,7 @@ const BotCreationModal = ({
   const [isCreating, markCreating, unmarkCreating] = useFlag();
 
   const usernameSuffix = findUsernameSuffix(username, premiumSuffixes);
-  const premiumSuffix = !isPremium && usernameSuffix !== BOT_USERNAME_SUFFIX ? usernameSuffix : undefined;
+  const premiumSuffix = usernameSuffix !== BOT_USERNAME_SUFFIX ? usernameSuffix : undefined;
   const localErrorKey = getLocalUsernameErrorKey();
   const canCheckUsername = Boolean(username && !localErrorKey && usernameSuffix && !premiumSuffix);
 
@@ -248,7 +247,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       manager: selectUser(global, modal.managerId),
       botAllowedSuffixes: global.appConfig.botAllowedSuffixes,
-      isPremium: selectIsCurrentUserPremium(global),
     };
   },
 )(BotCreationModal));

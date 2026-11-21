@@ -470,7 +470,6 @@ export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFi
       hasMyInvites: filter.hasMyInvites,
       isChatList: true,
       noTitleAnimations: filter.titleNoanimate,
-      color: filter.color,
       title: buildApiFormattedText(filter.title),
     };
   }
@@ -484,7 +483,6 @@ export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFi
     pinnedChatIds: filter.pinnedPeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
     includedChatIds: filter.includePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
     excludedChatIds: filter.excludePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-    color: filter.color,
     title: buildApiFormattedText(filter.title),
     noTitleAnimations: filter.titleNoanimate,
   };
@@ -583,7 +581,6 @@ export function buildApiChatReactions(chatReactions?: GramJs.TypeChatReactions):
 export function buildApiSendAsPeerId(sendAs: GramJs.SendAsPeer): ApiSendAsPeerId {
   return {
     id: getApiChatIdFromMtpPeer(sendAs.peer),
-    isPremium: sendAs.premiumRequired,
   };
 }
 
@@ -635,8 +632,6 @@ export function buildApiMissingInvitedUser(
 ): ApiMissingInvitedUser {
   return {
     id: user.userId.toString(),
-    isRequiringPremiumToMessage: user.premiumRequiredForPm,
-    isRequiringPremiumToInvite: user.premiumWouldAllowInvite,
   };
 }
 
