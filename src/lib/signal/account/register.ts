@@ -221,7 +221,7 @@ export async function registerAccount(store: SignalStore, {
     profileKey,
     accountEntropyPool,
     mediaRootBackupKey: getRandomBytes(MEDIA_ROOT_BACKUP_KEY_LENGTH),
-    isDiscoverableByPhoneNumber,
+    isPhoneNumberUnlisted: !isDiscoverableByPhoneNumber,
     isReadReceiptsEnabled: true,
     // A primary device has no other device to ask for contacts, groups and keys
     isInitialSyncDone: true,

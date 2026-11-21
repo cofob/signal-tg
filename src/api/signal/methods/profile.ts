@@ -234,10 +234,7 @@ export async function fetchPhoneNumberPrivacy() {
   if (!account) return undefined;
   return {
     phoneNumber: buildPrivacySettings(account.isPhoneNumberShared ? 'everybody' : 'nobody'),
-    // A primary device registered here knows its choice before the storage service has an account record
-    addByPhone: buildPrivacySettings(
-      account.isPhoneNumberUnlisted ?? account.isDiscoverableByPhoneNumber === false ? 'nobody' : 'everybody',
-    ),
+    addByPhone: buildPrivacySettings(account.isPhoneNumberUnlisted ? 'nobody' : 'everybody'),
   };
 }
 

@@ -30,14 +30,12 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
-  // Phone number privacy from the storage service account record: who sees the number on our profile, and whether
-  // people can find us by it
+  // Phone number privacy, as in the storage service account record: who sees the number on our profile, and whether
+  // people can find us by it. A primary device registered here sets the latter with the account attribute.
   isPhoneNumberShared?: boolean;
   isPhoneNumberUnlisted?: boolean;
   // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
   usernameLink?: UsernameLink;
-  // Registered primary devices only: the account attribute that lets people find us by phone number
-  isDiscoverableByPhoneNumber?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out
