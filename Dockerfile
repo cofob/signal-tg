@@ -17,22 +17,28 @@ WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 # The install scripts only clear the local cache directory of the repository
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
+# Web K (`webk/`, the frontend at `/k/`) has dependencies of its own, locked by pnpm
+COPY webk/package.json webk/pnpm-lock.yaml webk/pnpm-workspace.yaml ./webk/
+COPY webk/patches ./webk/patches
+COPY webk/src/vendor/widget-sandbox-quickjs ./webk/src/vendor/widget-sandbox-quickjs
+RUN --mount=type=cache,target=/root/.npm npm run install:webk -- --ignore-scripts
 COPY index.html vite.config.ts tsconfig.json tsconfig.base.json postcss.config.ts ./
 COPY dev ./dev
 COPY plugins ./plugins
 COPY public ./public
 COPY src ./src
+COPY webk ./webk
 # The page's own policy comes from `buildCsp` in `vite.config.ts`. nginx sends it as a header too (a worker takes its
 # policy from its own response headers, and `frame-ancestors` cannot be in a `<meta>` tag), so the policy is read back
 # from the built page and cannot drift from the source. The image ships no source maps.
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build:production \
   && mkdir -p /out \
-  && sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/index.html > /out/csp.txt \
+  && sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/a/index.html > /out/csp.txt \
   && test -s /out/csp.txt \
   && grep -q "connect-src 'self'" /out/csp.txt \
   && find dist -name '*.map' -delete
-# Precompressed copies for `gzip_static` and `brotli_static`. `index.html` stays plain because nginx edits it on the fly
-# when `PUBLIC_URL` or `CSP_CONNECT_SRC` is set.
+# Precompressed copies for `gzip_static` and `brotli_static`. The pages (`index.html` of each frontend) stay plain because
+# nginx edits them on the fly when `PUBLIC_URL` or `CSP_CONNECT_SRC` is set.
 # hadolint ignore=DL4006,SC2016
 RUN find dist -type f -size +512c ! -name index.html \
     \( -name '*.js' -o -name '*.css' -o -name '*.wasm' -o -name '*.svg' -o -name '*.json' -o -name '*.webmanifest' \

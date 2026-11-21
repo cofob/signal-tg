@@ -51,6 +51,7 @@ jobs:
           filters: |
             web:
               - 'src/**'
+              - 'webk/**'
               - 'public/**'
               - 'plugins/**'
               - 'dev/**'
@@ -93,6 +94,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install Web K dependencies
+        run: npm run install:webk
 
       - name: Check types and lint
         run: npm run check:ts
@@ -195,8 +199,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Web K dependencies
+        run: npm run install:webk
+
       - name: Build
         run: npm run build:production
+
+      # Web K's vendored sources keep Telegram code that the build leaves out, so its bundle is what is checked
+      - name: Check Telegram hosts in the bundle
+        run: npm run check:hosts
 
       - name: Upload web app
         uses: actions/upload-artifact@v7.0.2

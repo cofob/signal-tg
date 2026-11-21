@@ -112,8 +112,13 @@ request_tunnel() {
 
 check_page() {
   local status policy
-  status=$(fetch page / -H 'Accept-Encoding: identity')
-  expect_equal 'GET / is served' "$status" 200
+  # `/` opens Web K, the default frontend; Web A is at `/a/`
+  expect_equal 'GET / redirects' "$(fetch root /)" 302
+  expect_equal 'GET / opens Web K' "$(get_header location root)" '/k/'
+  expect_equal 'Web K is served' "$(fetch page_k /k/ -H 'Accept-Encoding: identity')" 200
+  expect_contains 'Web K is the app' "$(cat "$WORK_DIR/page_k.body")" '<div id="main-columns"'
+  status=$(fetch page /a/ -H 'Accept-Encoding: identity')
+  expect_equal 'GET /a/ is served' "$status" 200
   expect_contains 'page content type' "$(get_header content-type page)" 'text/html'
   expect_contains 'page cache' "$(get_header cache-control page)" 'no-cache'
   expect_contains 'page is the app' "$(cat "$WORK_DIR/page.body")" '<div id="portals">'
@@ -133,13 +138,13 @@ check_page() {
   expect_empty 'no HSTS by default' "$(get_header strict-transport-security page)"
   expect_empty 'no server version' "$(get_header server page | grep -E '[0-9]' || true)"
 
-  expect_equal 'missing files are 404' "$(fetch missing /assets/missing-12345678.js)" 404
+  expect_equal 'missing files are 404' "$(fetch missing /a/assets/missing-12345678.js)" 404
   expect_contains '404 keeps the headers' "$(get_header x-content-type-options missing)" nosniff
 }
 
 # The first file of the built app that matches a glob, as a path on the site
 find_asset() {
-  docker exec "$NAME" sh -c "cd /srv/telesignal && ls $1 2> /dev/null | head -1"
+  docker exec "$NAME" sh -c "cd /srv/telesignal && ls a/$1 2> /dev/null | head -1"
 }
 
 check_assets() {
@@ -164,19 +169,19 @@ check_assets() {
   fetch js "/${script}" -H 'Accept-Encoding: identity' > /dev/null
   expect_contains 'script content type' "$(get_header content-type js)" 'javascript'
 
-  fetch manifest /site.webmanifest > /dev/null
+  fetch manifest /a/site.webmanifest > /dev/null
   expect_contains 'manifest content type' "$(get_header content-type manifest)" 'application/manifest+json'
   expect_contains 'manifest is revalidated' "$(get_header cache-control manifest)" 'no-cache'
 
   # Hashed worker bundles at the top level are immutable; the service worker, which has a hashed name too, is not
-  worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- *worker-*.js 2> /dev/null | grep -v service | head -1')
+  worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- a/*worker-*.js 2> /dev/null | grep -v service | head -1')
   if [[ -n "$worker" ]]; then
     fetch worker "/${worker}" > /dev/null
     expect_contains "worker bundle (${worker}) cache" "$(get_header cache-control worker)" 'immutable'
   else
     fail 'no worker bundle at the top level of the app'
   fi
-  service_worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- *service.worker-*.js assets/*service.worker-*.js 2> /dev/null | head -1')
+  service_worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- a/*service.worker-*.js a/assets/*service.worker-*.js 2> /dev/null | head -1')
   if [[ -n "$service_worker" ]]; then
     fetch service_worker "/${service_worker}" > /dev/null
     expect_equal "service worker (${service_worker}) cache" "$(get_header cache-control service_worker)" no-cache
@@ -186,13 +191,13 @@ check_assets() {
 
   # Fixed names that the app regenerates must never be cached for long
   for snapshot in skeleton-snapshot.css wallpaper-snapshot.css; do
-    expect_equal "${snapshot} is served" "$(fetch snapshot "/${snapshot}")" 200
+    expect_equal "${snapshot} is served" "$(fetch snapshot "/a/${snapshot}")" 200
     expect_equal "${snapshot} cache" "$(get_header cache-control snapshot)" no-cache
   done
 
   local etag
   etag=$(get_header etag page)
-  expect_equal 'conditional request for the page' "$(fetch conditional / -H "If-None-Match: ${etag}")" 304
+  expect_equal 'conditional request for the page' "$(fetch conditional /a/ -H "If-None-Match: ${etag}")" 304
 }
 
 check_tunnel() {
@@ -257,8 +262,8 @@ check_settings() {
   start_container -e PUBLIC_URL=HTTPS://Signal.Example.Test:443/ -e ENABLE_HSTS=1 \
     -e CSP_CONNECT_SRC='wss://tunnel.example.test' -e NGINX_ACCESS_LOG=on
   wait_until_healthy || { fail 'settings: not healthy'; return; }
-  status=$(fetch page / -H 'Accept-Encoding: identity')
-  expect_equal 'GET / with settings' "$status" 200
+  status=$(fetch page /a/ -H 'Accept-Encoding: identity')
+  expect_equal 'GET /a/ with settings' "$status" 200
   expect_contains 'HSTS header' "$(get_header strict-transport-security page)" 'max-age=63072000'
   expect_contains 'CSP header has the extra source' "$(get_header content-security-policy page)" "connect-src 'self' wss://tunnel.example.test"
   policy=$(get_meta_policy page)
@@ -271,7 +276,7 @@ check_settings() {
   check_upgrade 'tunnel accepts the public origin' https://signal.example.test
   expect_equal 'tunnel refuses the loopback origin' \
     "$(request_tunnel loopback "http://localhost:${PORT}" '/tunnel?host=chat.signal.org&port=443')" 403
-  expect_equal 'the compressed page is served' "$(fetch gz / -H 'Accept-Encoding: gzip')" 200
+  expect_equal 'the compressed page is served' "$(fetch gz /a/ -H 'Accept-Encoding: gzip')" 200
   expect_equal 'the page is compressed on the fly' "$(get_header content-encoding gz)" gzip
 }
 
