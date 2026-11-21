@@ -195,6 +195,7 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           case ManagementScreens.Reactions:
           case ManagementScreens.JoinRequests:
           case ManagementScreens.ChannelRemovedUsers:
+          case ManagementScreens.GroupInvitedUsers:
             setManagementScreen(ManagementScreens.Initial);
             break;
           case ManagementScreens.GroupUserPermissionsCreate:

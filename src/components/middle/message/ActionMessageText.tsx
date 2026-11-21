@@ -74,6 +74,7 @@ const GROUP_UPDATE_LANG_KEYS = {
   linkReset: 'ActionGroupLinkReset',
   announcementsOn: 'ActionGroupAnnouncementsOn',
   announcementsOff: 'ActionGroupAnnouncementsOff',
+  terminated: 'ActionGroupTerminated',
 } as const;
 
 const ActionMessageText = ({
@@ -184,6 +185,8 @@ const ActionMessageText = ({
             return translateWithYou(lang, 'ActionGroupInfoAccess', isSenderSelf, { from: senderLink, access });
           case 'membersAccess':
             return translateWithYou(lang, 'ActionGroupMembersAccess', isSenderSelf, { from: senderLink, access });
+          case 'labelAccess':
+            return translateWithYou(lang, 'ActionGroupLabelAccess', isSenderSelf, { from: senderLink, access });
           default:
             return translateWithYou(lang, GROUP_UPDATE_LANG_KEYS[action.update], isSenderSelf, { from: senderLink });
         }

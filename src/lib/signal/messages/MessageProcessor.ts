@@ -67,7 +67,7 @@ import {
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
-import { uuidToBytes, uuidToString } from '../serviceId';
+import { toPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
 import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
 import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
@@ -2705,21 +2705,43 @@ export default class MessageProcessor {
    * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
    */
   async lookUpPhoneNumber(e164: string) {
+    return (await this.resolvePhoneNumber(e164))?.conversation;
+  }
+
+  /** The numbers of users invited to groups by PNI, by PNI service id */
+  async getInvitedNumbers() {
+    return await this.client.store.getItem('invitedNumbers') ?? {};
+  }
+
+  /**
+   * Like `lookUpPhoneNumber`, but a number whose account the enclave knows by PNI only, because the user does not
+   * share the ACI, comes back as `pniServiceId`. Such a user can be invited to a group (Signal Desktop
+   * `lookupConversationWithoutServiceId`, which keeps such a user as a conversation with a PNI). The number is
+   * kept for the invitation, since the group lists the PNI alone.
+   */
+  async resolvePhoneNumber(
+    e164: string,
+  ): Promise<{ conversation?: ConversationRecord; pniServiceId?: string } | undefined> {
     const known = (await this.db.getConversations()).find((conversation) => (
       conversation.type === 'private' && conversation.e164 === e164
     ));
-    if (known) return known;
+    if (known) return { conversation: known };
 
     const { connection } = this.client.getSenderContext();
     const records = await lookUpE164s(connection, [e164], await this.getAcisAndAccessKeys());
-    const aci = records.get(e164)?.aci;
-    if (!aci) return undefined;
+    const { aci, pni } = records.get(e164) ?? {};
+    if (!aci) {
+      if (!pni) return undefined;
+      const pniServiceId = toPniServiceId(pni);
+      await this.client.store.setItem('invitedNumbers', { ...await this.getInvitedNumbers(), [pniServiceId]: e164 });
+      return { pniServiceId };
+    }
     const conversation = await this.runSerial(async () => {
       const existing = await this.ensurePrivateConversation(aci);
       return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
     });
     this.flush();
-    return conversation;
+    return { conversation };
   }
 
   private async ensurePrivateConversation(aci: string) {

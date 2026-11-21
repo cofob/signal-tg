@@ -123,6 +123,8 @@ type Items = {
   nextKeyIds: Record<string, { preKey: number; signedPreKey: number; kyberPreKey: number }>;
   // Blocked phone numbers without a known ACI, kept so the blocked list we sync does not unblock them
   blockedE164s: string[];
+  // The numbers of users invited to groups by PNI, by PNI service id; the group state lists only the PNI
+  invitedNumbers: Record<string, string>;
   // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
   notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record

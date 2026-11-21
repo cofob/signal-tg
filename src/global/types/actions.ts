@@ -685,6 +685,9 @@ export interface ActionPayloads {
     targetIndexDelta: number;
   } & WithTabId;
   deleteChat: { chatId: string } & WithTabId;
+  terminateChat: { chatId: string } & WithTabId;
+  revokeChatInvite: { chatId: string; serviceId: string } & WithTabId;
+  addChatMemberByPhoneNumber: { chatId: string; phoneNumber: string } & WithTabId;
 
   // chat creation
   createChannel: {

@@ -27,6 +27,7 @@ export {
 export { destroy, disconnect } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
+  addChatMemberByPhoneNumber,
   addChatMembers,
   checkChatInvite,
   createGroupChat,
@@ -35,6 +36,7 @@ export {
   deleteChatUser,
   deleteExportedChatInvite,
   deleteRevokedExportedChatInvites,
+  editChatParticipantRank,
   editChatPhoto,
   editExportedChatInvite,
   exportChatInvite,
@@ -44,7 +46,9 @@ export {
   hideChatJoinRequest,
   importChatInvite,
   joinChannel,
+  revokeChatInvite,
   setHistoryTtl,
+  terminateChat,
   toggleJoinRequest,
   updateChatAbout,
   updateChatAdmin,

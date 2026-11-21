@@ -11,6 +11,7 @@ import { ManagementProgress, ManagementScreens } from '../../../types';
 import {
   getChatAvatarHash,
   getHasAdminRight,
+  isChatAdmin,
   isChatBasicGroup,
   isChatPublic,
 } from '../../../global/helpers';
@@ -55,6 +56,7 @@ type StateProps = {
   canChangeInfo?: boolean;
   canBanUsers?: boolean;
   canInvite?: boolean;
+  canTerminate?: boolean;
   canEditForum?: boolean;
   exportedInvites?: ApiExportedInvite[];
   isChannelsPremiumLimitReached: boolean;
@@ -96,6 +98,7 @@ const ManageGroup = ({
   canChangeInfo,
   canBanUsers,
   canInvite,
+  canTerminate,
   canEditForum,
   isActive,
   exportedInvites,
@@ -108,6 +111,7 @@ const ManageGroup = ({
     togglePreHistoryHidden,
     updateChat,
     deleteChat,
+    terminateChat,
     leaveChannel,
     deleteChannel,
     closeManagement,
@@ -118,6 +122,7 @@ const ManageGroup = ({
   } = getActions();
 
   const [isDeleteDialogOpen, openDeleteDialog, closeDeleteDialog] = useFlag();
+  const [isTerminateDialogOpen, openTerminateDialog, closeTerminateDialog] = useFlag();
   const currentTitle = chat.title;
   const currentAbout = chatFullInfo?.about || '';
 
@@ -221,6 +226,10 @@ const ManageGroup = ({
     onScreenSelect(ManagementScreens.GroupMembers);
   });
 
+  const handleClickInvitedUsers = useLastCallback(() => {
+    onScreenSelect(ManagementScreens.GroupInvitedUsers);
+  });
+
   const handleTogglePreHistory = useLastCallback(() => {
     if (!chatFullInfo) {
       return;
@@ -308,6 +317,12 @@ const ManageGroup = ({
     closeDeleteDialog();
     closeManagement();
     openChat({ id: undefined });
+  });
+
+  const handleTerminateGroup = useLastCallback(() => {
+    terminateChat({ chatId: chat.id });
+    closeTerminateDialog();
+    closeManagement();
   });
 
   const isRestricted = selectIsChatRestricted(getGlobal(), chatId);
@@ -441,6 +456,13 @@ const ManageGroup = ({
             <span className="subtitle">{formatInteger(chat.membersCount ?? 0)}</span>
           </ListItem>
 
+          {Boolean(chatFullInfo?.pendingInvites?.length) && (
+            <ListItem icon="add-user" multiline onClick={handleClickInvitedUsers}>
+              <span className="title">{lang('GroupPendingInvites')}</span>
+              <span className="subtitle">{formatInteger(chatFullInfo.pendingInvites.length)}</span>
+            </ListItem>
+          )}
+
           {!isPublicGroup && !hasLinkedChannel && Boolean(chatFullInfo) && (
             <div className="ListItem narrow" ref={isPreHistoryHiddenCheckboxRef}>
               <Checkbox
@@ -456,6 +478,11 @@ const ManageGroup = ({
           )}
         </Island>
         <Island>
+          {isBasicGroup && canTerminate && (
+            <ListItem icon="stop" ripple destructive onClick={openTerminateDialog}>
+              {lang('GroupEndGroup')}
+            </ListItem>
+          )}
           <ListItem icon="delete" ripple destructive onClick={openDeleteDialog}>
             {lang('DeleteMega')}
           </ListItem>
@@ -468,6 +495,15 @@ const ManageGroup = ({
         ariaLabel={lang('Save')}
         iconName="check"
         isLoading={isLoading}
+      />
+      <ConfirmDialog
+        isOpen={isTerminateDialogOpen}
+        onClose={closeTerminateDialog}
+        title={lang('GroupEndGroupTitle', { group: chat.title })}
+        text={lang('GroupEndGroupText')}
+        confirmLabel={lang('GroupEndGroup')}
+        confirmHandler={handleTerminateGroup}
+        confirmIsDestructive
       />
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
@@ -499,6 +535,8 @@ export default memo(withGlobal<OwnProps>(
     const canChangeInfo = getHasAdminRight(chat, 'changeInfo');
     const canBanUsers = selectCanBanUsers(global, chatId);
     const canInvite = getHasAdminRight(chat, 'inviteUsers');
+    // Signal admins can end a group
+    const canTerminate = isChatAdmin(chat);
 
     return {
       chat,
@@ -510,6 +548,7 @@ export default memo(withGlobal<OwnProps>(
       canChangeInfo,
       canBanUsers,
       canInvite,
+      canTerminate,
       exportedInvites: invites,
       isChannelsPremiumLimitReached: limitReachedModal?.limit === 'channels',
       availableReactions: global.reactions.availableReactions,

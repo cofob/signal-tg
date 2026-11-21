@@ -3,6 +3,7 @@ import { create, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type { ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
+import type { GroupMember, GroupState } from '../groups/fetchGroup';
 import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/generated/SignalService_pb';
 import type SignalStore from '../store/SignalStore';
 
@@ -12,11 +13,13 @@ import { buildStickerPackLink } from '../../../util/signalLinks';
 import { STORY_BACKGROUNDS } from '../../../util/storyBackgrounds';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
+import { buildAccessControl } from '../groups/fetchGroup';
 import { buildGroupInviteLink } from '../groups/inviteLinks';
 import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
 import { wasm } from '../wasm';
 
+import { Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
   BodyRange_Style,
@@ -97,6 +100,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
   const frank = crypto.randomUUID();
   const linda = crypto.randomUUID();
   const now = Date.now();
+  const demoPni = `PNI:${crypto.randomUUID()}`;
 
   await store.setItem('account', {
     aci: me,
@@ -209,8 +213,25 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       unreadCount: 0,
       isAccepted: true,
     },
+    // A group we administer, with member labels and invitations, and one an admin ended
+    buildDemoGroup(11, 'Book club', me, [
+      { aci: me, role: Member_Role.ADMINISTRATOR, label: 'Organizer', labelEmoji: '📚' },
+      { aci: alice, role: Member_Role.ADMINISTRATOR },
+      { aci: bob, label: 'Poetry' },
+      { aci: carol, label: 'Snacks', labelEmoji: '🍪' },
+    ], now - 30 * MINUTE, [
+      { serviceId: dave, addedBy: me },
+      { serviceId: demoPni, addedBy: me },
+    ]),
+    buildDemoGroup(12, 'Old project', me, [
+      { aci: me },
+      { aci: alice, role: Member_Role.ADMINISTRATOR },
+    ], now - 50 * MINUTE, [], true),
   ];
-  const [self, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat] = conversations;
+  const [
+    self, aliceChat, bobChat, carolChat, daveChat, group, requestGroup, , eveChat, lindaChat, bookClub, oldProject,
+  ] = conversations;
+  await store.setItem('invitedNumbers', { [demoPni]: '+15550100077' });
 
   const messages: [ConversationRecord, DemoMessage][] = [
     [aliceChat, {
@@ -481,6 +502,37 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     [group, {
       authorAci: carol, sentAt: now - 5 * MINUTE, isOutgoing: false, dataMessage: { body: 'Count me in!' },
     }],
+    [bookClub, {
+      authorAci: bob,
+      sentAt: now - 20 * MINUTE,
+      isOutgoing: false,
+      dataMessage: { body: 'I found a new poetry collection' },
+    }],
+    [bookClub, {
+      authorAci: carol, sentAt: now - 19 * MINUTE, isOutgoing: false, dataMessage: { body: 'I will bring the cookies' },
+    }],
+    [bookClub, {
+      kind: 'groupUpdate',
+      authorAci: '',
+      actorAci: me,
+      groupUpdate: { type: 'access', target: 'memberLabel', isAdminOnly: false },
+      sentAt: now - 18 * MINUTE, isOutgoing: true, readAt: now,
+    }],
+    [bookClub, {
+      kind: 'groupUpdate', authorAci: '', actorAci: me, groupUpdate: { type: 'invited', count: 2 },
+      sentAt: now - 17 * MINUTE, isOutgoing: true, readAt: now,
+    }],
+    [oldProject, {
+      authorAci: alice,
+      sentAt: now - 60 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      dataMessage: { body: 'Shipping on Friday' },
+    }],
+    [oldProject, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'terminated' },
+      sentAt: now - 50 * MINUTE, isOutgoing: false, readAt: now,
+    }],
     [requestGroup, {
       authorAci: frank, sentAt: now - 3 * MINUTE, isOutgoing: false,
       dataMessage: { body: 'Double your coins today, limited offer!' },
@@ -608,6 +660,40 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       storyMessage: toBinary(StoryMessageSchema, create(StoryMessageSchema, storyMessage)),
     });
   }
+}
+
+function buildDemoGroup(
+  localId: number,
+  title: string,
+  selfAci: string,
+  members: GroupMember[],
+  invitedAt: number,
+  pendingMembers: { serviceId: string; addedBy: string }[],
+  isTerminated?: boolean,
+): ConversationRecord {
+  const state: GroupState = {
+    revision: 5,
+    title,
+    accessControl: buildAccessControl(),
+    members,
+    pendingMembers: pendingMembers.map((member) => ({ ...member, timestamp: invitedAt })),
+    requestingMembers: [],
+    bannedMembers: [],
+    isTerminated,
+  };
+  return {
+    id: btoa(String.fromCharCode(...getRandomBytes(32))),
+    localId,
+    type: 'group',
+    masterKey: getRandomBytes(32),
+    revision: state.revision,
+    title,
+    memberAcis: members.map(({ aci }) => aci),
+    adminAcis: members.filter(({ role }) => role === Member_Role.ADMINISTRATOR).map(({ aci }) => aci),
+    groupState: state,
+    unreadCount: 0,
+    isAccepted: true,
+  };
 }
 
 function createTextAttachment(text: string, backgroundIndex: number, textStyle: TextAttachment_Style) {

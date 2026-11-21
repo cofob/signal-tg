@@ -13,6 +13,7 @@ import type {
   ApiUser,
 } from '../../types';
 
+import { CdsiError } from '../../../lib/signal/cdsi/cdsiLookup';
 import {
   buildAcceptInvitationChange,
   buildAccessChange,
@@ -23,8 +24,10 @@ import {
   buildInviteLinkChange,
   buildJoinRequestChange,
   buildLeaveChange,
+  buildMemberLabelChange,
   buildRemoveMemberChange,
   buildRoleChange,
+  buildTerminateChange,
   buildTitleChange,
   buildUnbanChange,
   checkGroupDescription,
@@ -33,7 +36,9 @@ import {
   GroupChangeRefusedError,
 } from '../../../lib/signal/groups/buildGroupChange';
 import { GroupRequestError } from '../../../lib/signal/groups/fetchGroup';
+import { parseMemberLabel } from '../../../lib/signal/groups/memberLabels';
 import { AccessControl_AccessRequired } from '../../../lib/signal/proto/generated/Groups_pb';
+import { isPniServiceId } from '../../../lib/signal/serviceId';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { buildApiChat, getGroupInviteLink } from '../builders/chats';
 import { buildApiUser } from '../builders/users';
@@ -51,7 +56,9 @@ const REFUSED_CHANGE_ERRORS = {
   titleTooLong: 'SIGNAL_GROUP_TITLE_TOO_LONG',
   descriptionTooLong: 'SIGNAL_GROUP_DESCRIPTION_TOO_LONG',
   lastAdmin: 'SIGNAL_GROUP_LAST_ADMIN',
+  labelTooLong: 'SIGNAL_GROUP_LABEL_TOO_LONG',
 } as const;
+const E164_PATTERN = /^\+[1-9]\d{6,14}$/;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 
@@ -120,6 +127,33 @@ export async function addChatMembers(chat: ApiChat, users: ApiUser[]) {
   return isChanged ? [] as ApiMissingInvitedUser[] : undefined;
 }
 
+/**
+ * Adds the user of a phone number to the group, or invites them when they have no profile key we know. A user the
+ * contact discovery service knows by PNI only is invited by PNI; the invitation turns into a membership when they
+ * accept. Each new number counts against the lookup rate limit, so this runs for a number the user chose.
+ */
+export async function addChatMemberByPhoneNumber({ chat, phoneNumber }: { chat: ApiChat; phoneNumber: string }) {
+  const e164 = `+${phoneNumber.replace(/\D/g, '')}`;
+  if (!E164_PATTERN.test(e164)) return { error: 'notFound' as const };
+
+  try {
+    const resolved = await processor.resolvePhoneNumber(e164);
+    const serviceId = resolved?.conversation?.id ?? resolved?.pniServiceId;
+    if (!serviceId) return { error: 'notFound' as const };
+    const isChanged = await changeGroup(chat, buildAddMembersChange([serviceId]));
+    return isChanged ? { status: isPniServiceId(serviceId) ? 'invited' as const : 'added' as const } : undefined;
+  } catch (err) {
+    if (err instanceof CdsiError && err.reason === 'rateLimited') return { error: 'rateLimited' as const };
+    logError(err);
+    return { error: 'unavailable' as const };
+  }
+}
+
+/** Takes back an invitation, by the ACI or PNI it names */
+export function revokeChatInvite({ chat, serviceId }: { chat: ApiChat; serviceId: string }) {
+  return changeGroup(chat, buildRemoveMemberChange(serviceId));
+}
+
 /** Removing a member also bans them from joining through the group link, as Signal clients do */
 export async function deleteChatMember(chat: ApiChat, user: ApiUser) {
   const [aci] = await getAcis([user]);
@@ -139,6 +173,21 @@ export async function deleteChat({ chatId }: { chatId: string }) {
   return changeGroup({ id: chatId }, buildLeaveChange());
 }
 
+/** Ends the group for everyone; it stays in the list with its history (Signal Desktop `terminateGroup`) */
+export function terminateChat({ chat }: { chat: ApiChat }) {
+  return changeGroup(chat, buildTerminateChange());
+}
+
+/**
+ * Sets our own label in the group, which Signal shows beside the name; no `rank` removes it. Signal clients set
+ * only their own label, so `peer` must be us. A leading emoji is the emoji of the label.
+ */
+export async function editChatParticipantRank({ chat, peer, rank }: { chat: ApiChat; peer: ApiPeer; rank: string }) {
+  const selfAci = getCurrentAccount()?.aci;
+  if (!selfAci || peer.id !== await getUserPeerId(selfAci)) return undefined;
+  return changeGroup(chat, buildMemberLabelChange(selfAci, parseMemberLabel(rank)));
+}
+
 /** Signal admins have every admin right, so any right makes the member an admin and none makes them a member */
 export async function updateChatAdmin({
   chat, user, adminRights,
@@ -150,7 +199,7 @@ export async function updateChatAdmin({
 
 /**
  * Maps the default rights to Signal's: banned sending makes the group announcement-only, and banned info
- * changes or invites leave them to admins. Other rights have no Signal counterpart.
+ * changes, invites or labels leave them to admins. Other rights have no Signal counterpart.
  */
 export function updateChatDefaultBannedRights({
   chat, bannedRights,
@@ -160,6 +209,7 @@ export function updateChatDefaultBannedRights({
     buildAccessChange({
       isInfoAdminOnly: Boolean(bannedRights.changeInfo),
       isMembersAdminOnly: Boolean(bannedRights.inviteUsers),
+      isLabelAdminOnly: Boolean(bannedRights.editRank),
     }),
   ));
 }

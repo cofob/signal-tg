@@ -895,6 +895,13 @@ export interface LangPair {
   'GroupMembers': undefined;
   'ChatHistory': undefined;
   'DeleteMega': undefined;
+  'GroupPendingInvites': undefined;
+  'GroupPendingInvitesDescription': undefined;
+  'GroupInvitedByNumber': undefined;
+  'GroupInvitedContact': undefined;
+  'GroupRevokeInvite': undefined;
+  'GroupEndGroup': undefined;
+  'GroupEndGroupText': undefined;
   'AreYouSureDeleteAndExit': undefined;
   'DeleteGroupForAll': undefined;
   'EditAdminWhatCanDo': undefined;
@@ -1463,6 +1470,7 @@ export interface LangPair {
   'ActionGroupLinkOnWithApprovalYou': undefined;
   'ActionGroupLinkOffYou': undefined;
   'ActionGroupLinkResetYou': undefined;
+  'ActionGroupTerminatedYou': undefined;
   'ActionGroupAccessAdmins': undefined;
   'ActionGroupAccessMembers': undefined;
   'ActionGroupAnnouncementsOnYou': undefined;
@@ -2182,6 +2190,7 @@ export interface LangPair {
   'ErrorGroupChangeFailed': undefined;
   'ErrorGroupTitleTooLong': undefined;
   'ErrorGroupDescriptionTooLong': undefined;
+  'ErrorGroupLabelTooLong': undefined;
   'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
@@ -2536,6 +2545,21 @@ export interface LangPairWithVariables<V = LangVariable> {
   'DiscussionUnlinkGroupAlert': {
     'channel': V;
   };
+  'GroupPhoneInvited': {
+    'phone': V;
+  };
+  'GroupPhoneAdded': {
+    'phone': V;
+  };
+  'GroupInviteByPhone': {
+    'phone': V;
+  };
+  'GroupInvitedBy': {
+    'user': V;
+  };
+  'GroupEndGroupTitle': {
+    'group': V;
+  };
   'AreYouSureDeleteThisChatWithGroup': {
     'chat': V;
   };
@@ -2768,6 +2792,16 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ActionGroupMembersAccessYou': {
     'access': V;
+  };
+  'ActionGroupLabelAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupLabelAccessYou': {
+    'access': V;
+  };
+  'ActionGroupTerminated': {
+    'from': V;
   };
   'ActionGroupAnnouncementsOn': {
     'from': V;
@@ -3540,6 +3574,7 @@ export interface LangKeyGroups {
       | 'PeerInfoConfirmRemovePeer'
       | 'EditAdminPromotedBy'
       | 'UserRemovedBy'
+      | 'GroupInvitedBy'
       | 'VoipPeerIncompatible'
       | 'ActionAddUserYou'
       | 'ActionKickUserYou'
@@ -3669,6 +3704,9 @@ export interface LangKeyGroups {
     keys:
       | 'SignalPhoneSearch'
       | 'SignalPhoneLookupText'
+      | 'GroupPhoneInvited'
+      | 'GroupPhoneAdded'
+      | 'GroupInviteByPhone'
       | 'UsernameByPhoneNotFound';
     variables: 'phone';
   };
@@ -3776,6 +3814,7 @@ export interface LangKeyGroups {
       | 'ActionGroupLinkOnWithApproval'
       | 'ActionGroupLinkOff'
       | 'ActionGroupLinkReset'
+      | 'ActionGroupTerminated'
       | 'ActionGroupAnnouncementsOn'
       | 'ActionGroupAnnouncementsOff'
       | 'ActionUserRegistered'
@@ -3853,6 +3892,11 @@ export interface LangKeyGroups {
       | 'ChatPrivateMessageEditTimestampDate'
       | 'MessageReadAt';
     variables: 'date';
+  };
+  'group': {
+    keys:
+      | 'GroupEndGroupTitle';
+    variables: 'group';
   };
   'name': {
     keys:
@@ -3979,13 +4023,15 @@ export interface LangKeyGroups {
   'access,from': {
     keys:
       | 'ActionGroupInfoAccess'
-      | 'ActionGroupMembersAccess';
+      | 'ActionGroupMembersAccess'
+      | 'ActionGroupLabelAccess';
     variables: 'access' | 'from';
   };
   'access': {
     keys:
       | 'ActionGroupInfoAccessYou'
-      | 'ActionGroupMembersAccessYou';
+      | 'ActionGroupMembersAccessYou'
+      | 'ActionGroupLabelAccessYou';
     variables: 'access';
   };
   'from,theme': {

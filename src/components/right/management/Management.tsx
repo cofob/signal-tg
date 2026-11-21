@@ -14,6 +14,7 @@ import ManageChatRemovedUsers from './ManageChatRemovedUsers';
 import ManageDiscussion from './ManageDiscussion';
 import ManageGroup from './ManageGroup';
 import ManageGroupAdminRights from './ManageGroupAdminRights';
+import ManageGroupInvitedUsers from './ManageGroupInvitedUsers';
 import ManageGroupMembers from './ManageGroupMembers';
 import ManageGroupPermissions from './ManageGroupPermissions';
 import ManageGroupUserPermissions from './ManageGroupUserPermissions';
@@ -77,6 +78,7 @@ const Management: FC<OwnProps & StateProps> = ({
                 ManagementScreens.GroupPermissions,
                 ManagementScreens.ChatAdministrators,
                 ManagementScreens.GroupRemovedUsers,
+                ManagementScreens.GroupInvitedUsers,
                 ManagementScreens.GroupUserPermissionsCreate,
                 ManagementScreens.GroupUserPermissions,
                 ManagementScreens.ChatAdminRights,
@@ -147,6 +149,15 @@ const Management: FC<OwnProps & StateProps> = ({
     case ManagementScreens.GroupRemovedUsers:
       return (
         <ManageChatRemovedUsers
+          chatId={chatId}
+          isActive={isActive}
+          onClose={onClose}
+        />
+      );
+
+    case ManagementScreens.GroupInvitedUsers:
+      return (
+        <ManageGroupInvitedUsers
           chatId={chatId}
           isActive={isActive}
           onClose={onClose}

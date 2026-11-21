@@ -23,9 +23,11 @@ export type GroupUpdate =
   | { type: 'joinDenied'; aci: string }
   | { type: 'joinCanceled' }
   | { type: 'adminChanged'; aci: string; isAdmin: boolean }
-  | { type: 'access'; target: 'info' | 'members'; isAdminOnly: boolean }
+  | { type: 'access'; target: 'info' | 'members' | 'memberLabel'; isAdminOnly: boolean }
   | { type: 'inviteLink'; state: 'on' | 'onWithApproval' | 'off' | 'reset' }
-  | { type: 'announcementsOnly'; isEnabled: boolean };
+  | { type: 'announcementsOnly'; isEnabled: boolean }
+  // The group ended: nobody can send to it or change it
+  | { type: 'terminated' };
 
 export type GroupNotice = { actorAci?: string; update: GroupUpdate };
 
@@ -33,7 +35,7 @@ const ADMIN_ONLY = AccessControl_AccessRequired.ADMINISTRATOR;
 
 /**
  * The notices that a change adds to the history, in the order of Signal Desktop `extractDiffs`. Changes that
- * are not shown, such as new profile keys, member labels and bans, add none; the disappearing timer has its
+ * are not shown, such as new profile keys, labels of members and bans, add none; the disappearing timer has its
  * own notice kind.
  */
 export function buildGroupNotices(change: DecryptedGroupChange): GroupNotice[] {
@@ -46,6 +48,9 @@ export function buildGroupNotices(change: DecryptedGroupChange): GroupNotice[] {
   }
   if (change.membersAccess) {
     add({ type: 'access', target: 'members', isAdminOnly: change.membersAccess === ADMIN_ONLY });
+  }
+  if (change.memberLabelAccess) {
+    add({ type: 'access', target: 'memberLabel', isAdminOnly: change.memberLabelAccess === ADMIN_ONLY });
   }
   const linkState = getInviteLinkState(change);
   if (linkState) add({ type: 'inviteLink', state: linkState });
@@ -76,6 +81,7 @@ export function buildGroupNotices(change: DecryptedGroupChange): GroupNotice[] {
   for (const { aci, role } of change.modifyMemberRoles) {
     add({ type: 'adminChanged', aci, isAdmin: role === Member_Role.ADMINISTRATOR });
   }
+  if (change.isTerminated) add({ type: 'terminated' });
   return updates;
 }
 
