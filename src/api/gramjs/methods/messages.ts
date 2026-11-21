@@ -2587,28 +2587,6 @@ export async function fetchUnreadPollVotes({
   };
 }
 
-export async function transcribeAudio({
-  chat, messageId,
-}: {
-  chat: ApiChat; messageId: number;
-}) {
-  const result = await invokeRequest(new GramJs.messages.TranscribeAudio({
-    msgId: messageId,
-    peer: buildInputPeer(chat.id, chat.accessHash),
-  }));
-
-  if (!result) return undefined;
-
-  sendApiUpdate({
-    '@type': 'updateTranscribedAudio',
-    isPending: result.pending,
-    transcriptionId: result.transcriptionId.toString(),
-    text: result.text,
-  });
-
-  return result.transcriptionId.toString();
-}
-
 function handleMultipleLocalMessagesUpdate(
   localMessages: Record<string, ApiMessage>, update: GramJs.TypeUpdates,
 ) {

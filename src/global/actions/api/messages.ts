@@ -1730,30 +1730,6 @@ addActionHandler('saveVoiceWaveform', (global, actions, payload): ActionReturnTy
   });
 });
 
-addActionHandler('transcribeAudio', async (global, actions, payload): Promise<void> => {
-  const { messageId, chatId } = payload;
-
-  const chat = selectChat(global, chatId);
-
-  if (!chat) return;
-
-  global = updateChatMessage(global, chatId, messageId, {
-    transcriptionId: '',
-  });
-
-  setGlobal(global);
-
-  const result = await callApi('transcribeAudio', { chat, messageId });
-
-  global = getGlobal();
-  global = updateChatMessage(global, chatId, messageId, {
-    transcriptionId: result,
-    isTranscriptionError: !result,
-  });
-
-  setGlobal(global);
-});
-
 addActionHandler('loadCustomEmojis', async (global, actions, payload): Promise<void> => {
   const { ids, ignoreCache } = payload;
   const newCustomEmojiIds = ignoreCache ? ids

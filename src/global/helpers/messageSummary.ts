@@ -9,7 +9,7 @@ import { type LangFn } from '../../util/localization';
 import trimText from '../../util/text/trimText';
 import { renderTextWithEntities } from '../../components/common/helpers/renderTextWithEntities';
 import {
-  getMessageTextWithFallback, getMessageTranscription,
+  getMessageTextWithFallback,
 } from './messages';
 import { getRichMessagePreviewText } from './richMessage';
 
@@ -39,23 +39,21 @@ export function getMessageTextWithSpoilers(
   statefulContent: StatefulMediaContent | undefined,
   truncateLength?: number,
 ) {
-  const transcription = getMessageTranscription(message);
-
   const richMessageText = message.content.richMessage
     ? getRichMessagePreviewText(message.content.richMessage, truncateLength)
     : undefined;
-  const textWithoutTranscription = richMessageText
+  const messageText = richMessageText
     || getMessageTextWithFallback(lang, statefulContent?.story || message)?.text;
-  if (!textWithoutTranscription) {
-    return transcription;
+  if (!messageText) {
+    return undefined;
   }
 
   const { entities } = message.content.text || {};
   if (richMessageText || !entities?.length) {
-    return transcription ? `${transcription}\n${textWithoutTranscription}` : textWithoutTranscription;
+    return messageText;
   }
 
-  const text = entities.reduce((accText, {
+  return entities.reduce((accText, {
     type,
     offset,
     length,
@@ -67,9 +65,7 @@ export function getMessageTextWithSpoilers(
     const spoiler = generateBrailleSpoiler(length);
 
     return `${accText.slice(0, offset)}${spoiler}${accText.slice(offset + length)}`;
-  }, textWithoutTranscription);
-
-  return transcription ? `${transcription}\n${text}` : text;
+  }, messageText);
 }
 
 export function getMessageSummaryEmoji(message: ApiMessage) {

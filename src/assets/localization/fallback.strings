@@ -908,7 +908,6 @@
 "LeaveAComment" = "Leave a comment";
 "PollsStopWarning" = "If you stop this poll now, nobody will be able to vote in it anymore. This action cannot be undone.";
 "PollsStopSure" = "Stop";
-"NoWordsRecognized" = "No words recognized.";
 "ViaBot" = "via";
 "ForBot" = "for";
 "DiscussChannel" = "channel";

@@ -37,7 +37,6 @@ import type {
   ApiStickerSet,
   ApiStoryAlbum,
   ApiTopPeerCategory,
-  ApiTranscription,
   ApiUpdateAuthorizationStateType,
   ApiUpdateConnectionStateType,
   ApiUser,
@@ -439,7 +438,6 @@ export type GlobalState = {
     passkeys?: ApiPasskey[];
   };
 
-  transcriptions: Record<string, ApiTranscription>;
   trustedBotIds: string[];
 
   serviceNotifications: ServiceNotification[];

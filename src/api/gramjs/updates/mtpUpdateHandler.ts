@@ -1085,13 +1085,6 @@ export function updater(update: Update) {
       botId: id,
       commands: commandsArray.length ? commandsArray : undefined,
     });
-  } else if (update instanceof GramJs.UpdateTranscribedAudio) {
-    sendApiUpdate({
-      '@type': 'updateTranscribedAudio',
-      transcriptionId: update.transcriptionId.toString(),
-      text: update.text,
-      isPending: update.pending,
-    });
   } else if (update instanceof GramJs.UpdateConfig) {
     sendApiUpdate({ '@type': 'updateConfig' });
   } else if (update instanceof GramJs.UpdatePinnedForumTopic) {

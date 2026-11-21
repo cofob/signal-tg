@@ -655,8 +655,6 @@ export interface ApiMessage {
   seenByDates?: Record<string, number>;
   isProtected?: boolean;
   isForwardingAllowed?: boolean;
-  transcriptionId?: string;
-  isTranscriptionError?: boolean;
   reactors?: {
     nextOffset?: string;
     count: number;
@@ -867,12 +865,6 @@ export type ApiReplyKeyboard = {
   isKeyboardSelective?: boolean;
   isKeyboardFullHeight?: boolean;
 } & Partial<Record<'inlineButtons' | 'keyboardButtons', ApiKeyboardButtons>>;
-
-export type ApiTranscription = {
-  text: string;
-  isPending?: boolean;
-  transcriptionId: string;
-};
 
 export type ApiMessageSearchType = 'text' | 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif'
   | 'polls' | 'profilePhoto';

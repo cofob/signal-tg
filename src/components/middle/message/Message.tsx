@@ -92,7 +92,6 @@ import {
   selectIsChatWithBot,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsDocumentGroupSelected,
   selectIsInSelectMode,
   selectIsMessageFocused,
@@ -156,7 +155,6 @@ import Avatar from '../../common/Avatar';
 import BadgeButton from '../../common/BadgeButton';
 import CustomEmoji from '../../common/CustomEmoji';
 import Document from '../../common/Document';
-import DotAnimation from '../../common/DotAnimation';
 import EmbeddedMessage from '../../common/embedded/EmbeddedMessage';
 import EmbeddedStory from '../../common/embedded/EmbeddedStory';
 import FakeIcon from '../../common/FakeIcon';
@@ -292,9 +290,6 @@ type StateProps = {
   activeEmojiInteractions?: ActiveEmojiInteraction[];
   hasUnreadReaction?: boolean;
   hasUnreadPollVote?: boolean;
-  isTranscribing?: boolean;
-  transcribedText?: string;
-  isPremium: boolean;
   senderChatMember?: ApiChatMember;
   messageTopic?: ApiTopic;
   withAnimatedEffects?: boolean;
@@ -304,7 +299,6 @@ type StateProps = {
   isLoadingComments?: boolean;
   shouldWarnAboutFiles?: boolean;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
-  canTranscribeVoice?: boolean;
   guestFromSender?: ApiPeer;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
@@ -345,12 +339,9 @@ const Message = ({
   appearanceOrder,
   isJustAdded,
   isFirstInGroup,
-  isPremium,
   isLastInGroup,
   isFirstInDocumentGroup,
   isLastInDocumentGroup,
-  isTranscribing,
-  transcribedText,
   isLastInList,
   theme,
   forceSenderName,
@@ -426,7 +417,6 @@ const Message = ({
   containerRef,
   shouldWarnAboutFiles,
   tags,
-  canTranscribeVoice,
   guestFromSender,
   poll,
   maxTimestamp,
@@ -449,7 +439,6 @@ const Message = ({
     clickBotInlineButton,
     disableContextMenuHint,
     animateUnreadReaction,
-    focusMessage,
     markTypingDraftDone,
     markMessageListRead,
     markMentionsRead,
@@ -463,13 +452,12 @@ const Message = ({
 
   const lang = useLang();
   const {
-    id: messageId, chatId, forwardInfo, viaBotId, guestChatViaId, isTranscriptionError, factCheck,
+    id: messageId, chatId, forwardInfo, viaBotId, guestChatViaId, factCheck,
     isTypingDraft, previousLocalId, fromRank,
   } = message;
 
   const isLocalOnly = isMessageLocalOnly(message);
 
-  const [isTranscriptionHidden, setIsTranscriptionHidden] = useState(false);
   const [isPlayingDeleteAnimation, setIsPlayingDeleteAnimation] = useState(false);
   const [shouldPlayEffect, requestEffect, hideEffect] = useFlag();
   const [shouldPlayDiceEffect, requestDiceEffect, hideDiceEffect] = useFlag();
@@ -554,12 +542,10 @@ const Message = ({
     action, game, storyData, dice, widget,
   } = getMessageContent(message);
 
-  const withVoiceTranscription = Boolean(!isTranscriptionHidden && (isTranscriptionError || transcribedText));
-
   const hasStoryReply = Boolean(storyReplyInfo);
   const hasThread = Boolean(repliesThreadInfo) && messageListType === 'thread';
   const isUnsupported = isMessageUnsupported(message);
-  const isCustomShape = !withVoiceTranscription && getMessageCustomShape(message);
+  const isCustomShape = getMessageCustomShape(message);
   const hasAnimatedEmoji = isCustomShape && (animatedEmoji || animatedCustomEmoji);
   const hasReactions = reactionMessage?.reactions && !areReactionsEmpty(reactionMessage.reactions);
   const hasViaSender = Boolean(viaBotId || guestChatViaId);
@@ -690,26 +676,6 @@ const Message = ({
     lastPlaybackTimestamp,
   });
 
-  const handleFocusSelf = useLastCallback(() => {
-    focusMessage({
-      chatId,
-      threadId,
-      messageId,
-      scrollTargetPosition: 'start',
-      noHighlight: true,
-    });
-  });
-
-  useEffect(() => {
-    if (!isLastInList) {
-      return;
-    }
-
-    if (withVoiceTranscription && transcribedText) {
-      handleFocusSelf();
-    }
-  }, [isLastInList, transcribedText, withVoiceTranscription]);
-
   useEffect(() => {
     const isPartialAlbumDelete = message.isInAlbum && album?.messages.some((msg) => !msg.isDeleting);
     if (isPartialAlbumDelete) return;
@@ -818,7 +784,7 @@ const Message = ({
     && !isTouchScreen && !phoneCall && !isInSelectMode && defaultReaction
     && !isInDocumentGroupNotLast && !isStoryMention && !hasTtl && !isAccountFrozen;
 
-  const hasOutsideReactions = !withVoiceTranscription && hasReactions
+  const hasOutsideReactions = hasReactions
     && (isCustomShape || (
       (photo || video || storyData || (location?.mediaType === 'geo')) && (!hasText || isInvertedMedia))
     );
@@ -849,7 +815,6 @@ const Message = ({
     hasActionButton: canForward || canFocus || (withCommentButton && isCustomShape),
     hasReactions,
     isGeoLiveActive: location?.mediaType === 'geoLive' && !isGeoLiveExpired(message),
-    withVoiceTranscription,
     peerColorClass,
     hasOutsideReactions,
   }), hasWideMedia && 'with-wide-media', hasWidgetTimeOverlay && 'widget-time-overlay',
@@ -1233,22 +1198,15 @@ const Message = ({
         {!isAlbum && isRoundVideo && (
           <RoundVideo
             message={message}
-            className={withVoiceTranscription ? 'under-transcription' : undefined}
             threadId={threadId}
             isInScheduled={isScheduled}
             observeIntersection={observeIntersectionForLoading}
             canAutoLoad={canAutoLoadMedia}
             isDownloading={isDownloading}
             onReadMedia={shouldReadMedia ? handleReadMedia : undefined}
-            onHideTranscription={setIsTranscriptionHidden}
-            isTranscriptionError={isTranscriptionError}
-            isTranscribed={Boolean(transcribedText)}
-            canTranscribe={canTranscribeVoice && !hasTtl}
-            isTranscriptionHidden={isTranscriptionHidden}
-            isTranscribing={isTranscribing}
           />
         )}
-        {(audio || voice || withVoiceTranscription) && (
+        {(audio || voice) && (
           <Audio
             theme={theme}
             message={message}
@@ -1264,13 +1222,7 @@ const Message = ({
             onReadMedia={voice && shouldReadMedia ? handleReadMedia : undefined}
             onCancelUpload={handleCancelUpload}
             isDownloading={isDownloading}
-            isTranscribing={isTranscribing}
-            isTranscriptionHidden={isTranscriptionHidden}
-            isTranscribed={Boolean(transcribedText)}
-            isTranscriptionError={isTranscriptionError}
             canDownload={!isProtected}
-            onHideTranscription={setIsTranscriptionHidden}
-            canTranscribe={canTranscribeVoice && !hasTtl}
           />
         )}
         {document && (
@@ -1328,19 +1280,6 @@ const Message = ({
             canPlayWinEffect={shouldPlayDiceEffect}
             onEffectPlayed={hideDiceEffect}
           />
-        )}
-        {withVoiceTranscription && (
-          <p
-            className={buildClassName(
-              'transcription',
-              !isTranscriptionHidden && isTranscriptionError && 'transcription-error',
-            )}
-            dir="auto"
-          >
-            {(isTranscriptionError ? lang('NoWordsRecognized') : (
-              isTranscribing && transcribedText ? <DotAnimation content={transcribedText} /> : transcribedText
-            ))}
-          </p>
         )}
 
         {isInvertedMedia && renderInvertedMediaContent(hasCustomAppendix)}
@@ -1850,7 +1789,7 @@ export default memo(withGlobal<OwnProps>(
       isLastInDocumentGroup, shouldIgnoreSendFocus,
     } = ownProps;
     const {
-      id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
+      id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, isPinned,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -1968,13 +1907,6 @@ export default memo(withGlobal<OwnProps>(
 
     const hasActiveReactions = Boolean(reactionMessage && activeReactions[getMessageKey(reactionMessage)]?.length);
 
-    const isPremium = selectIsCurrentUserPremium(global);
-
-    const chatLevel = chat?.level || 0;
-    const transcribeMinLevel = global.appConfig.groupTranscribeLevelMin;
-    const canTranscribeVoice = !message.isEphemeral
-      && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
-
     const poll = selectPollFromMessage(global, message);
 
     const maxTimestamp = selectMessageTimestampableDuration(global, message);
@@ -2046,9 +1978,6 @@ export default memo(withGlobal<OwnProps>(
       activeEmojiInteractions,
       hasUnreadReaction,
       hasUnreadPollVote,
-      isTranscribing: transcriptionId !== undefined && global.transcriptions[transcriptionId]?.isPending,
-      transcribedText: transcriptionId !== undefined ? global.transcriptions[transcriptionId]?.text : undefined,
-      isPremium,
       senderChatMember,
       messageTopic,
       hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
@@ -2074,7 +2003,6 @@ export default memo(withGlobal<OwnProps>(
       focusedPollOption: isFocused ? focusedPollOption : undefined,
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
       tags: global.savedReactionTags?.byKey,
-      canTranscribeVoice,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,

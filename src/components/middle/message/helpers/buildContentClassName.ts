@@ -21,7 +21,6 @@ export function buildContentClassName(
     hasActionButton,
     hasReactions,
     isGeoLiveActive,
-    withVoiceTranscription,
     peerColorClass,
     hasOutsideReactions,
   }: {
@@ -38,7 +37,6 @@ export function buildContentClassName(
     hasActionButton?: boolean;
     hasReactions?: boolean;
     isGeoLiveActive?: boolean;
-    withVoiceTranscription?: boolean;
     peerColorClass?: string;
     hasOutsideReactions?: boolean;
   } = {},
@@ -110,7 +108,7 @@ export function buildContentClassName(
       classNames.push('has-comment-counter');
     }
   }
-  if (isMedia && !withVoiceTranscription) {
+  if (isMedia) {
     classNames.push('media');
     // Custom-shape media (round video) has fixed dimensions and must not stretch to the message width
     if (!isCustomShape) {
@@ -122,9 +120,6 @@ export function buildContentClassName(
     classNames.push('audio');
   } else if (voice) {
     classNames.push('voice');
-    if (withVoiceTranscription) {
-      classNames.push('with-voice-transcription');
-    }
   } else if (document) {
     classNames.push('document');
   } else if (contact) {
@@ -189,7 +184,7 @@ export function buildContentClassName(
     }
 
     if (hasSubheader || asForwarded || isViaBot || !isMediaWithNoText
-      || forceSenderName || hasFactCheck || withVoiceTranscription) {
+      || forceSenderName || hasFactCheck) {
       classNames.push('has-solid-background');
     }
 

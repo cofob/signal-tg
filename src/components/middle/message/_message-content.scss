@@ -55,8 +55,7 @@
     padding-bottom: 1.375rem;
   }
 
-  .text-content,
-  .transcription {
+  .text-content {
     position: relative;
 
     unicode-bidi: plaintext;
@@ -76,34 +75,10 @@
     }
   }
 
-  .transcription {
-    & + .text-content {
-      margin-top: 0.5rem;
-    }
-
-    .DotAnimation {
-      display: inline;
-
-      .ellipsis {
-        display: inline-flex;
-      }
-    }
-
-    &.transcription-error {
-      font-size: 0.875rem;
-      color: var(--color-text-meta);
-    }
-
-    .own &.transcription-error {
-      color: var(--color-message-meta-own);
-    }
-  }
-
   .text-entity-link {
     unicode-bidi: plaintext;
   }
 
-  &.with-voice-transcription,
   &:not(.custom-shape) .text-content,
   &:not(.web-page).document {
     & > .MessageMeta {
@@ -189,19 +164,12 @@
     }
   }
 
-  &.with-voice-transcription,
   &.document:not(.text) {
     &::after {
       content: "";
       clear: both;
       display: block;
     }
-  }
-
-  &.with-voice-transcription .MessageMeta[dir="rtl"] {
-    float: left;
-    margin-right: 0.4375rem;
-    margin-left: -0.5rem;
   }
 
   &.document:not(.text) > .MessageMeta {

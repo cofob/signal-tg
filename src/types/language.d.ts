@@ -764,7 +764,6 @@ export interface LangPair {
   'LeaveAComment': undefined;
   'PollsStopWarning': undefined;
   'PollsStopSure': undefined;
-  'NoWordsRecognized': undefined;
   'ViaBot': undefined;
   'ForBot': undefined;
   'DiscussChannel': undefined;

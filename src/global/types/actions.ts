@@ -2491,10 +2491,6 @@ export interface ActionPayloads {
     peerId: string;
   };
 
-  transcribeAudio: {
-    chatId: string;
-    messageId: number;
-  };
   saveVoiceWaveform: {
     chatId: string;
     messageId: number;

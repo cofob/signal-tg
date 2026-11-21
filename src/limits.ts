@@ -55,7 +55,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   seenByMaxChatMembers: 100,
   defaultEmojiStatusesStickerSetId: '773947703670341676',
   emojiSounds: {},
-  groupTranscribeLevelMin: 6,
   hiddenMembersMinCount: 100,
   ignoreRestrictionReasons: [],
   canLimitNewMessagesWithoutPremium: false,

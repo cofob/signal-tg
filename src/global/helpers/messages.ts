@@ -35,7 +35,6 @@ import { areSortedArraysIntersecting, unique } from '../../util/iteratees';
 import { isLocalMessageId } from '../../util/keys/messageKey';
 import { MEMO_EMPTY_ARRAY } from '../../util/memo';
 import { getServerTime } from '../../util/serverTime';
-import { getGlobal } from '../index';
 import {
   selectChatMessage,
   selectPollFromMessage,
@@ -81,13 +80,6 @@ export function getBlockingRestrictionReasons(
 
 export function getMessageOriginalId(message: ApiMessage) {
   return message.previousLocalId || message.id;
-}
-
-export function getMessageTranscription(message: ApiMessage) {
-  const { transcriptionId } = message;
-  const global = getGlobal();
-
-  return transcriptionId && global.transcriptions[transcriptionId]?.text;
 }
 
 export function hasMessageText(message: MediaContainer) {

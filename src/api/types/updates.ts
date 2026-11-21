@@ -766,13 +766,6 @@ export type ApiUpdateBotMenuButton = {
   button: ApiBotMenuButton;
 };
 
-export type ApiUpdateTranscribedAudio = {
-  '@type': 'updateTranscribedAudio';
-  transcriptionId: string;
-  text: string;
-  isPending?: boolean;
-};
-
 export type ApiUpdatePinnedTopic = {
   '@type': 'updatePinnedTopic';
   topicId: number;
@@ -956,7 +949,7 @@ export type ApiUpdate = (
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
-  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
+  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateUserEmojiStatus |
   ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |

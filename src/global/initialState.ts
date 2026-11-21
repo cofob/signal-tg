@@ -326,8 +326,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
   serviceNotifications: [],
   trustedBotIds: [],
 
-  transcriptions: {},
-
   byTabId: {},
   sharedState: INITIAL_SHARED_STATE,
 

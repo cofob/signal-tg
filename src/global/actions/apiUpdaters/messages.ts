@@ -1123,25 +1123,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateTranscribedAudio': {
-      const { transcriptionId, text, isPending } = update;
-
-      global = {
-        ...global,
-        transcriptions: {
-          ...global.transcriptions,
-          [transcriptionId]: {
-            ...(global.transcriptions[transcriptionId] || {}),
-            transcriptionId,
-            text,
-            isPending,
-          },
-        },
-      };
-      setGlobal(global);
-      break;
-    }
-
     case 'updateMessageSendFailed': {
       const { chatId, localId, error } = update;
 
