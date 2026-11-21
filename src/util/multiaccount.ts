@@ -84,12 +84,25 @@ function getAccountInfo(slot: number): AccountInfo | undefined {
 
 export function loadSlotSession(slot: number | undefined): SharedSessionData | undefined {
   try {
-    const data = JSON.parse(readSessionValue(`${SESSION_ACCOUNT_PREFIX}${slot || 1}`) || '{}') as SharedSessionData;
-    if (!data.dcId) return undefined;
-    return data;
+    const data = JSON.parse(readSessionValue(`${SESSION_ACCOUNT_PREFIX}${slot || 1}`) || '{}') as SharedSessionData
+      & { dcId?: number };
+    if (data.isLinked) return data;
+
+    return data.dcId ? normalizeLegacySlotSession(data) : undefined;
   } catch (e) {
     return undefined;
   }
+}
+
+// Slots saved before the session became a marker hold Telegram data center keys next to the account info
+export function normalizeLegacySlotSession(data: Omit<SharedSessionData, 'isLinked'>): SharedSessionData {
+  const {
+    pushKey, date, isTest, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
+  } = data;
+
+  return {
+    isLinked: true, pushKey, date, isTest, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
+  };
 }
 
 export function storeAccountData(slot: number | undefined, data: Partial<SessionUserInfo>) {

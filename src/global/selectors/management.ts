@@ -1,13 +1,11 @@
 import type { ApiChat } from '../../api/types';
 import type { GlobalState, TabArgs } from '../types';
 
-import { SERVICE_NOTIFICATIONS_USER_ID } from '../../config';
 import { isUserId } from '../../util/entities/ids';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
 import {
   getCanAddContact,
   getHasAdminRight,
-  isAnonymousForwardsChat,
   isChatAdmin, isChatGroup, isDeletedUser, isUserRightBanned,
 } from '../helpers';
 import { selectChat, selectIsChatRestricted, selectIsChatWithSelf } from './chats';
@@ -81,7 +79,6 @@ export function selectCanManage<T extends GlobalState>(
     !canAddContact
     && chat
     && !selectIsChatWithSelf(global, chat.id)
-    && !isAnonymousForwardsChat(chat.id)
     && (isUserId(chat.id) || (isChatAdmin(chat) && !chat.isNotJoined)),
   );
 }
@@ -93,11 +90,7 @@ export function selectCanManageAutoDelete<T extends GlobalState>(
   const chat = selectChat(global, chatId);
   if (!chat || selectIsChatRestricted(global, chatId) || chat.isMonoforum) return false;
 
-  if (
-    selectIsChatWithSelf(global, chatId)
-    || isAnonymousForwardsChat(chatId)
-    || chatId === SERVICE_NOTIFICATIONS_USER_ID
-  ) {
+  if (selectIsChatWithSelf(global, chatId)) {
     return false;
   }
 

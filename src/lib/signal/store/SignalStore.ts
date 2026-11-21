@@ -141,6 +141,18 @@ type Items = {
   recentStickers: string[];
   cdsiToken: CdsiToken;
   storyDistributionLists: StoryDistributionList[];
+  // Receipts for messages and stories of ours that are not stored yet, oldest first (`MessageProcessor`)
+  earlyReceipts: EarlyReceiptRecord[];
+};
+
+/** A delivery, read or viewed receipt that arrived before the message or story it names */
+export type EarlyReceiptRecord = {
+  senderAci: string;
+  // The Signal timestamp of the message or story
+  sentAt: number;
+  status: 'delivered' | 'read' | 'viewed';
+  // The device clock, which sets how long the receipt is kept
+  receivedAt: number;
 };
 
 /** The contact discovery token for the numbers of earlier contact refreshes, which later refreshes send again */

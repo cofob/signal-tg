@@ -3,7 +3,7 @@ import type { ActionReturnType } from '../../types';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { omit } from '../../../util/iteratees';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addTabStateResetterAction } from '../../helpers/meta';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { addStoriesForPeer } from '../../reducers';

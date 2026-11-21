@@ -1,6 +1,6 @@
 import type { HistoryTransferProgress } from '../../lib/signal/backups/transferHistory';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
-import type { ApiInitialArgs } from '../types';
+import type { ApiInitialArgs, ApiSessionData } from '../types';
 
 import { DEBUG } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
@@ -31,8 +31,7 @@ const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
 const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
-// The UI treats a session without a main data center as signed out (`onUpdateSession`)
-const SIGNAL_SESSION_DATA = { mainDcId: 1, keys: {} };
+const SIGNAL_SESSION_DATA: ApiSessionData = { isLinked: true };
 
 let currentAccount: AccountRecord | undefined;
 let initialArgs: ApiInitialArgs | undefined;
@@ -205,7 +204,7 @@ export async function startSession(storedAccount: AccountRecord) {
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
   // The UI keeps its state and settings only for a stored session; the Signal account lives in the engine's own
-  // store, so this session holds no keys and only marks the account slot as signed in
+  // store, so this session holds no keys and only marks the account slot as linked
   sendApiUpdate({ '@type': 'updateSession', sessionData: SIGNAL_SESSION_DATA });
   if (hasHistoryTransferFailed) {
     sendApiUpdate({ '@type': 'error', error: { message: HISTORY_TRANSFER_FAILED_ERROR, hasErrorKey: true } });
@@ -281,20 +280,34 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles
+ * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles.
+ * A failed step does not stop the others, and the next connection runs them all again.
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
   hasSyncedThisSession = true;
 
+  let isComplete = true;
+  const runStep = async (step: () => Promise<unknown>) => {
+    try {
+      await step();
+    } catch (err) {
+      isComplete = false;
+      logError(err);
+    }
+  };
+
   const context = client.getSenderContext();
-  if (!context.account.isInitialSyncDone) {
+  await runStep(async () => {
+    if (context.account.isInitialSyncDone) return;
     await sendInitialSyncRequests(context);
     await client.updateAccount({ isInitialSyncDone: true });
-  }
+  });
   void processor.refreshProfile(context.account.aci).catch(logError);
-  await processor.syncStorage();
+  await runStep(() => processor.syncStorage());
   void processor.refreshStaleProfiles().catch(logError);
+
+  if (!isComplete) hasSyncedThisSession = false;
 }
 
 async function connect() {

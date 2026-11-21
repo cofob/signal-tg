@@ -17,7 +17,6 @@ import {
   getMessageOriginalId,
   isActionMessage,
   isOwnMessage,
-  isServiceNotificationMessage,
 } from '../../global/helpers';
 import { getMessageForumTopicId } from '../../global/helpers/replies';
 import buildClassName from '../../util/buildClassName';
@@ -303,15 +302,13 @@ const MessageListContent = ({
           const isOwn = isOwnMessage(message);
           const originalId = getMessageOriginalId(message);
           const isInLiveTail = liveTailStartOriginalId !== undefined && originalId >= liveTailStartOriginalId;
-          const key = isServiceNotificationMessage(message)
-            ? `${message.date}_${originalId}` : originalId;
           const isJustAdded = addedMessageIdSet?.has(message.id)
             || Boolean(album?.messages.some(({ id }) => addedMessageIdSet?.has(id)));
 
           return compact([
             message.id === memoUnreadDividerBeforeIdRef.current && unreadDivider,
             <Message
-              key={key}
+              key={originalId}
               message={message}
               containerRef={containerRef}
               observeIntersectionForBottom={observeIntersectionForReading}

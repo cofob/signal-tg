@@ -26,9 +26,6 @@ env:
   RUST_TOOLCHAIN: 1.98.1
   # `tsc` and the bundler outgrow the default heap of Node.js
   NODE_OPTIONS: --max-old-space-size=8192
-  # GramJS still reads these at build time until plan stage 3 removes it; the app never connects to Telegram
-  TELEGRAM_API_ID: '1'
-  TELEGRAM_API_HASH: unused
 
 jobs:
   changes:

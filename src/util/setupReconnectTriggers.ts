@@ -1,4 +1,4 @@
-import { callApi } from '../api/gramjs';
+import { callApi } from '../api';
 import { isCurrentTabMaster } from './establishMultitabRole';
 
 const SLEEP_CHECK_INTERVAL_MS = 10 * 1000;

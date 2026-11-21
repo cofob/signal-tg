@@ -2,7 +2,6 @@ import type { ApiChat, ApiPeer, ApiUser } from '../../api/types';
 import type { CustomPeer } from '../../types';
 import type { RegularLangKey } from '../../types/language';
 
-import { SERVICE_NOTIFICATIONS_USER_ID } from '../../config';
 import { isUserId } from '../../util/entities/ids';
 import { getTranslationFn, type LangFn } from '../../util/localization';
 import { prepareSearchWordsForNeedle } from '../../util/text/searchWords';
@@ -72,10 +71,6 @@ export function getPeerTypeKey(peer: ApiPeer): RegularLangKey | undefined {
     }
 
     return undefined;
-  }
-
-  if (peer.id === SERVICE_NOTIFICATIONS_USER_ID) {
-    return 'ServiceNotifications';
   }
 
   if (peer.isSupport) {

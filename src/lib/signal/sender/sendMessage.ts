@@ -20,7 +20,8 @@ import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromHex } from '../../../util/encoding/buffer';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
-import { sendWithSenderKey } from './sendToGroup';
+import { NotGroupMemberError } from './sendErrors';
+import { dropFormerMembers, sendWithSenderKey } from './sendToGroup';
 
 import {
   ContentSchema, SyncMessage_StickerPackOperation_Type, SyncMessageSchema, TypingMessage_Action,
@@ -97,7 +98,13 @@ async function followUpSend(
     timestamp: options.timestamp,
     content: toBinary(ContentSchema, create(ContentSchema, content)),
     contentHint: ContentHint.Resendable,
-    recipients: [...new Set([...sentBefore?.recipients ?? [], ...others])],
+    // Members who left the group before the send got nothing, so they cannot ask for a resend
+    recipients: [...new Set([
+      ...sentBefore?.recipients ?? [],
+      ...others.filter((serviceId) => !results.some((result) => (
+        result.serviceId === serviceId && result.error instanceof NotGroupMemberError
+      ))),
+    ])],
     groupId,
     isUrgent: options.isUrgent ?? true,
     savedAt: Date.now(),
@@ -319,7 +326,8 @@ async function sendToRecipients(
   const { results, remaining } = await sendWithSenderKey(
     context, { type: 'group', group }, recipients, content, options,
   );
-  return [...results, ...await sendToEach(context, remaining, content, options)];
+  const { kept, dropped } = await dropFormerMembers(group, remaining);
+  return [...results, ...dropped, ...await sendToEach(context, kept, content, options)];
 }
 
 async function syncToOtherDevices(

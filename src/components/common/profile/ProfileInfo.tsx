@@ -15,9 +15,8 @@ import type {
 import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
-import { REPLIES_USER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
 import {
-  getUserStatus, isAnonymousForwardsChat, isChatChannel, isUserOnline,
+  getUserStatus, isChatChannel, isUserOnline,
 } from '../../../global/helpers/index';
 import { getActions, withGlobal } from '../../../global/index';
 import {
@@ -92,7 +91,6 @@ type StateProps = {
   theme: ThemeKey;
   isPlain?: boolean;
   hasAvatar?: boolean;
-  isSystemAccount?: boolean;
 };
 
 const EMOJI_STATUS_SIZE = 24;
@@ -126,7 +124,6 @@ const ProfileInfo = ({
   theme,
   isPlain,
   hasAvatar,
-  isSystemAccount,
   onExpand,
 }: OwnProps & StateProps) => {
   const {
@@ -333,9 +330,6 @@ const ProfileInfo = ({
   }
 
   function renderStatus() {
-    const isAnonymousForwards = isAnonymousForwardsChat(peerId);
-    if (isAnonymousForwards || peerId === REPLIES_USER_ID) return undefined;
-
     if (isForMonoforum) {
       return (
         <span
@@ -361,7 +355,7 @@ const ProfileInfo = ({
           <span className={styles.userStatus} dir="auto">
             {getUserStatus(lang, user, userStatus)}
           </span>
-          {userStatus?.isReadDateRestrictedByMe && !isSystemAccount && (
+          {userStatus?.isReadDateRestrictedByMe && (
             <span className={styles.getStatus} onClick={handleOpenGetReadDateModal}>
               <span>{lang('StatusHiddenShow')}</span>
             </span>
@@ -552,10 +546,6 @@ export default memo(withGlobal<OwnProps>(
     const hasBackground = selectPeerHasProfileBackground(global, peerId);
     const hasAvatar = Boolean(peer?.avatarPhotoId);
 
-    const isAnonymousForwards = isAnonymousForwardsChat(peerId);
-    const isSystemAccount = peerId === REPLIES_USER_ID || isAnonymousForwards
-      || peer?.id === SERVICE_NOTIFICATIONS_USER_ID;
-
     return {
       user,
       userFullInfo,
@@ -573,7 +563,6 @@ export default memo(withGlobal<OwnProps>(
       theme,
       isPlain: !hasBackground,
       hasAvatar,
-      isSystemAccount,
     };
   },
 )(ProfileInfo));

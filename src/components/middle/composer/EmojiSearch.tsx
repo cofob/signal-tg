@@ -141,7 +141,7 @@ const EmojiSearch = ({
   });
 
   const handleSurfaceClick = useLastCallback(() => {
-    requestMutation(() => inputRef.current?.focus());
+    requestMeasure(() => inputRef.current?.focus());
   });
 
   const handleChipsScroll = useLastCallback((e: React.UIEvent<HTMLDivElement>) => {

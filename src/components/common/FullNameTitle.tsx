@@ -11,8 +11,6 @@ import { EMOJI_STATUS_LOOP_LIMIT } from '../../config';
 import {
   getChatTitle,
   getUserFullName,
-  isAnonymousForwardsChat,
-  isChatWithRepliesBot,
 } from '../../global/helpers';
 import { isApiPeerUser } from '../../global/helpers/peers';
 import buildClassName from '../../util/buildClassName';
@@ -106,16 +104,8 @@ const FullNameTitle = ({
       return lang(isSavedDialog ? 'MyNotes' : 'NoteToSelf');
     }
 
-    if (isAnonymousForwardsChat(realPeer!.id)) {
-      return lang('AnonymousForward');
-    }
-
-    if (isChatWithRepliesBot(realPeer!.id)) {
-      return lang('RepliesTitle');
-    }
-
     return undefined;
-  }, [customPeer, isSavedDialog, isSavedMessages, lang, realPeer]);
+  }, [customPeer, isSavedDialog, isSavedMessages, lang]);
   const renderedTitle = useMemo(() => specialTitle || renderText(title || ''), [specialTitle, title]);
 
   return (

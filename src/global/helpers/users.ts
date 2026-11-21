@@ -1,7 +1,6 @@
 import type { ApiPeer, ApiUser, ApiUserStatus } from '../../api/types';
 import type { LangFn } from '../../util/localization';
 
-import { ANONYMOUS_USER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../config';
 import { DAY } from '../../util/dates/units';
 import { orderBy } from '../../util/iteratees';
 import { formatRecentTimestamp, secondsToDate } from '../../util/localization/dateFormat';
@@ -65,10 +64,6 @@ export function getUserFullName(lang: LangFn, user?: ApiUser) {
 export function getUserStatus(
   lang: LangFn, user: ApiUser, userStatus: ApiUserStatus | undefined,
 ) {
-  if (user.id === SERVICE_NOTIFICATIONS_USER_ID) {
-    return lang('ServiceNotifications');
-  }
-
   if (user.isSupport) {
     return lang('SupportStatus');
   }
@@ -112,13 +107,7 @@ export function getUserStatus(
 }
 
 export function isUserOnline(user: ApiUser, userStatus?: ApiUserStatus, withSelfOnline = false) {
-  const { id } = user;
-
   if (!userStatus) {
-    return false;
-  }
-
-  if (id === SERVICE_NOTIFICATIONS_USER_ID) {
     return false;
   }
 
@@ -130,12 +119,11 @@ export function isUserOnline(user: ApiUser, userStatus?: ApiUserStatus, withSelf
 }
 
 export function isDeletedUser(user: ApiUser) {
-  return (user.type === 'userTypeDeleted' || user.type === 'userTypeUnknown')
-    && user.id !== SERVICE_NOTIFICATIONS_USER_ID;
+  return user.type === 'userTypeDeleted' || user.type === 'userTypeUnknown';
 }
 
 export function getCanAddContact(user: ApiUser) {
-  return !user.isSelf && !user.isContact && user.id !== ANONYMOUS_USER_ID;
+  return !user.isSelf && !user.isContact;
 }
 
 export function sortUserIds(

@@ -9,6 +9,13 @@ export class UnregisteredUserError extends Error {
   }
 }
 
+/** The recipient left the group, or was removed from it, before the message was encrypted for them */
+export class NotGroupMemberError extends Error {
+  constructor(readonly serviceId: string) {
+    super(`${serviceId} is not a member of the group`);
+  }
+}
+
 /** The server answered a send, or a prekey fetch for it, with an error status */
 export class SendHttpError extends Error {
   constructor(readonly status: number, message: string) {

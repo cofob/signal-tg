@@ -101,7 +101,7 @@ function getCommonGroups(conversations: ConversationRecord[], aci: string, selfA
 }
 
 /** Signal keeps one avatar per user or group, so the profile photo list holds at most the current avatar */
-export async function fetchProfilePhotos({ peer }: { peer: ApiPeer }) {
+export async function fetchProfilePhotos({ peer }: { peer: ApiPeer; offset?: number; limit?: number }) {
   const conversation = await getConversationByPeerId(peer.id);
   const photo = conversation && buildAvatarPhoto(conversation);
   const photos = photo ? [photo] : [];

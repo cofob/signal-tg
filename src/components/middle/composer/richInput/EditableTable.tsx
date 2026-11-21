@@ -22,7 +22,7 @@ import type {
   RichEditorTableSelection,
 } from '../helpers/richEditorTableCommands';
 
-import { requestMeasure, requestMutation } from '../../../../lib/fasterdom/fasterdom';
+import { requestMeasure } from '../../../../lib/fasterdom/fasterdom';
 import buildClassName from '../../../../util/buildClassName';
 import captureEscKeyListener from '../../../../util/captureEscKeyListener';
 import { TABLE_CELL_HIGHLIGHT_ATTR } from '../../../../util/tiptap/constants';
@@ -588,16 +588,15 @@ const EditableTable = ({
         return;
       }
 
-      requestMutation(() => {
-        if (horizontalDelta) {
-          scroller.scrollBy({ left: horizontalDelta });
-        }
-        if (verticalDelta) {
-          verticalScroller?.scrollBy({ top: verticalDelta });
-        }
-        updateLayout();
-        scheduleAutoScroll();
-      });
+      // Scrolling is a layout operation, so it belongs to the measure phase
+      if (horizontalDelta) {
+        scroller.scrollBy({ left: horizontalDelta });
+      }
+      if (verticalDelta) {
+        verticalScroller?.scrollBy({ top: verticalDelta });
+      }
+      updateLayout();
+      scheduleAutoScroll();
     });
   }
 

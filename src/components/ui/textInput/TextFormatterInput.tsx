@@ -4,7 +4,7 @@ import {
 
 import type { IconName } from '../../../types/icons';
 
-import { requestMutation } from '../../../lib/fasterdom/fasterdom';
+import { requestMeasure } from '../../../lib/fasterdom/fasterdom';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import captureEscKeyListener from '../../../util/captureEscKeyListener';
@@ -65,7 +65,8 @@ const TextFormatterInput = ({
       return undefined;
     }
 
-    requestMutation(() => {
+    // Focusing measures layout
+    requestMeasure(() => {
       const input = inputRef.current!;
       input.focus();
       input.setSelectionRange(input.value.length, input.value.length);

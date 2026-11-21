@@ -17,8 +17,7 @@ import type { LangFn } from '../../util/localization';
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
-  ANONYMOUS_USER_ID,
-  ARCHIVED_FOLDER_ID, GENERAL_TOPIC_ID, REPLIES_USER_ID, USERNAME_LINK_PREFIX,
+  ARCHIVED_FOLDER_ID, GENERAL_TOPIC_ID, USERNAME_LINK_PREFIX,
 } from '../../config';
 import { getPeerIdDividend, isUserId } from '../../util/entities/ids';
 import { formatDateTime, secondsToDate } from '../../util/localization/dateFormat';
@@ -59,14 +58,6 @@ export function isChatMonoforum(chat: ApiChat) {
 
 export function isCommonBoxChat(chat: ApiChat) {
   return chat.type === 'chatTypePrivate' || chat.type === 'chatTypeBasicGroup';
-}
-
-export function isChatWithRepliesBot(chatId: string) {
-  return chatId === REPLIES_USER_ID;
-}
-
-export function isAnonymousForwardsChat(chatId: string) {
-  return chatId === ANONYMOUS_USER_ID;
 }
 
 export function getChatTypeLangKey(chat: ApiChat): RegularLangKey {
@@ -152,8 +143,7 @@ export function getCanPostInChat(chat: ApiChat, topic?: ApiTopic, isMessageThrea
   const global = getGlobal();
   const isRestricted = selectIsChatRestricted(global, chat.id);
   if (isRestricted || chat.isForbidden || chat.migratedTo
-    || (chat.isNotJoined && !isChatMonoforum(chat) && !isMessageThread)
-    || isAnonymousForwardsChat(chat.id)) {
+    || (chat.isNotJoined && !isChatMonoforum(chat) && !isMessageThread)) {
     return false;
   }
 

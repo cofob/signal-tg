@@ -9,7 +9,7 @@ import type {
 } from '../../types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import { ARCHIVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
+import { ARCHIVED_FOLDER_ID } from '../../../config';
 import { areDeepEqual } from '../../../util/areDeepEqual';
 import { makeMessageTrackKey, makeScheduledMessageTrackKey } from '../../../util/audioPlayback/mediaPool';
 import * as playbackController from '../../../util/audioPlayback/playbackController';
@@ -22,7 +22,7 @@ import { buildSearchResultKey } from '../../../util/keys/searchResultKey';
 import { notifyAboutMessage } from '../../../util/notifications';
 import { onTickEnd } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import {
   checkIfHasUnreadReactions,
   createApiMessageFromTypingDraft,
@@ -93,7 +93,6 @@ import {
   selectIsChatListed,
   selectIsChatWithSelf,
   selectIsMessageInCurrentMessageList,
-  selectIsServiceChatReady,
   selectIsViewportNewest,
   selectListedIds,
   selectPerformanceSettingsValue,
@@ -940,17 +939,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'deleteHistory': {
       const { chatId } = update;
       const chatMessages = global.messages.byChatId[chatId];
-      if (chatId === SERVICE_NOTIFICATIONS_USER_ID) {
-        global = {
-          ...global,
-          serviceNotifications: global.serviceNotifications.map((notification) => ({
-            ...notification,
-            isDeleted: true,
-          })),
-        };
-        setGlobal(global);
-      }
-
       if (chatMessages) {
         const ids = Object.keys(chatMessages.byId).map(Number);
         global = getGlobal();
@@ -1051,16 +1039,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
       global = addUnreadPollVotes({ global, chatId, ids: [messageId] });
       setGlobal(global);
-
-      break;
-    }
-
-    case 'updateServiceNotification': {
-      const { message } = update;
-
-      if (selectIsServiceChatReady(global)) {
-        actions.createServiceNotification({ message });
-      }
 
       break;
     }

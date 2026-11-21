@@ -1053,7 +1053,6 @@ export interface LangPair {
   'NoAudioFilesInfo': undefined;
   'AttachContact': undefined;
   'AttachStory': undefined;
-  'ServiceNotifications': undefined;
   'Bot': undefined;
   'ALongTimeAgo': undefined;
   'WithinAMonth': undefined;
@@ -1827,7 +1826,6 @@ export interface LangPair {
   'AccDescrTopic': undefined;
   'AllReactions': undefined;
   'AllViewers': undefined;
-  'AnonymousForward': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
   'August': undefined;
@@ -2114,9 +2112,6 @@ export interface LangPair {
   'SettingsStartWave': undefined;
   'SettingsVaporizeButton': undefined;
   'DebugDownloadLog': undefined;
-  'SettingsAllowHttp': undefined;
-  'SettingsForceHttp': undefined;
-  'DebugExportedSenders': undefined;
   'TestServer': undefined;
   'CodeLanguagePlainText': undefined;
   'ErrorChatRestricted': undefined;

@@ -21,9 +21,7 @@ import {
   getVideoProfilePhotoMediaHash,
   getVideoProfilePhotoStartTs,
   getWebDocumentHash,
-  isAnonymousForwardsChat,
   isChatCommunity,
-  isChatWithRepliesBot,
   isDeletedUser,
 } from '../../global/helpers';
 import { isApiPeerChat, isApiPeerUser } from '../../global/helpers/peers';
@@ -146,8 +144,6 @@ const Avatar = ({
   const user = realPeer && isApiPeerUser(realPeer) ? realPeer : undefined;
   const chat = realPeer && isApiPeerChat(realPeer) ? realPeer : undefined;
   const isDeleted = user && isDeletedUser(user);
-  const isReplies = realPeer && isChatWithRepliesBot(realPeer.id);
-  const isAnonymousForwards = realPeer && isAnonymousForwardsChat(realPeer.id);
   const isForum = chat?.isForum;
   const isCommunity = Boolean(chat && isChatCommunity(chat));
 
@@ -191,16 +187,8 @@ const Avatar = ({
       return 'avatar-deleted-account';
     }
 
-    if (isReplies) {
-      return 'reply-filled';
-    }
-
-    if (isAnonymousForwards) {
-      return 'author-hidden';
-    }
-
     return undefined;
-  }, [isCustomPeer, isSavedMessages, isDeleted, isReplies, isAnonymousForwards, peer, isSavedDialog]);
+  }, [isCustomPeer, isSavedMessages, isDeleted, peer, isSavedDialog]);
 
   const imgBlobUrl = useMedia(imageHash, false, ApiMediaFormat.BlobUrl);
   const videoBlobUrl = useMedia(videoHash, !shouldLoadVideo, ApiMediaFormat.BlobUrl);
@@ -326,9 +314,7 @@ const Avatar = ({
     peerColorClass,
     !peer && text && 'hidden-user',
     isSavedMessages && 'saved-messages',
-    isAnonymousForwards && 'anonymous-forwards',
     isDeleted && 'deleted-account',
-    isReplies && 'replies-bot-account',
     isRoundedRect && 'forum',
     isCommunity && 'community',
     asMessageBubble && 'message-bubble',

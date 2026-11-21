@@ -33,7 +33,7 @@ import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { AccountStorageField, LocalAccountFields, StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
-import type { AccountRecord, StoryDistributionList } from '../store/SignalStore';
+import type { AccountRecord, EarlyReceiptRecord, StoryDistributionList } from '../store/SignalStore';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
@@ -50,7 +50,9 @@ import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
-import { describeSendError, getSendErrorKind, UnregisteredUserError } from '../sender/sendErrors';
+import {
+  describeSendError, getSendErrorKind, NotGroupMemberError, UnregisteredUserError,
+} from '../sender/sendErrors';
 import {
   sendBlockedSync,
   sendDeleteForMeSync,
@@ -93,6 +95,7 @@ import {
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
+import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './sendRetry';
 import { getFailedRecipients } from './sendState';
 
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
@@ -240,6 +243,9 @@ const DELETE_FOR_EVERYONE_MAX_AGE_MS = DAY_MS;
 export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+const MIN_SEND_RETRY_TIMER_MS = 1000;
+const EARLY_RECEIPT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_EARLY_RECEIPTS = 500;
 // Signal Desktop `ts/util/isConversationUnregistered.std.ts`: group sends skip a member for this long after a send
 // found their account gone
 const UNREGISTERED_SKIP_MS = 6 * 60 * 60 * 1000;
@@ -263,7 +269,7 @@ const SPAM_RESPONSES = new Set<MessageRequestResponseType>([
   SyncMessage_MessageRequestResponse_Type.SPAM,
   SyncMessage_MessageRequestResponse_Type.BLOCK_AND_SPAM,
 ]);
-const STATUS_BY_RECEIPT_TYPE: Record<ReceiptMessage_Type, SendStatus> = {
+const STATUS_BY_RECEIPT_TYPE: Record<ReceiptMessage_Type, EarlyReceiptRecord['status']> = {
   [ReceiptMessage_Type.DELIVERY]: 'delivered',
   [ReceiptMessage_Type.READ]: 'read',
   [ReceiptMessage_Type.VIEWED]: 'viewed',
@@ -299,6 +305,15 @@ export default class MessageProcessor {
   // Receipts and syncs for local changes made without a connection, sent after the next one
   private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
 
+  // Messages whose send is running, with the number of running sends (an edit can start during the first send);
+  // a retry pass leaves them alone
+  private sendsInFlight = new Map<number, number>();
+
+  // Retry passes run one at a time
+  private retryPass = Promise.resolve();
+
+  private retryTimer?: ReturnType<typeof setTimeout>;
+
   // Storage service syncs run one at a time
   private storageSync = Promise.resolve();
 
@@ -321,10 +336,14 @@ export default class MessageProcessor {
     await this.runSerial(() => this.handleContent(decrypted));
   }
 
-  /** Starts the disappearing messages timer for messages stored earlier */
+  /**
+   * Starts the disappearing messages timer for messages stored earlier and sends the messages again that earlier
+   * sends left undelivered, which runs after each connection
+   */
   start() {
-    void this.runSerial(() => this.deleteExpiredMessages());
+    this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
     void this.flushPendingSends();
+    this.retryUnsentMessages(true);
   }
 
   /** Stops the timers and drops the queued sends, storage syncs and profile fetches of the current account */
@@ -333,6 +352,10 @@ export default class MessageProcessor {
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
     clearTimeout(this.storageSyncTimer);
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.sendsInFlight.clear();
+    this.retryPass = Promise.resolve();
     this.deliveryReceiptTimer = undefined;
     this.storageSyncTimer = undefined;
     this.isStorageSyncQueued = false;
@@ -379,8 +402,15 @@ export default class MessageProcessor {
         expiresAt: accepted.expireTimer ? sentAt + accepted.expireTimer * 1000 : undefined,
         readAt: sentAt,
         recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
+        sendRetry: { startedAt: sentAt, attempt: 0, at: sentAt },
       });
-      onStored?.(added);
+      this.markSendStarted(added.id);
+      try {
+        onStored?.(added);
+      } catch (err) {
+        this.markSendEnded(added.id);
+        throw err;
+      }
       return { conversation: accepted, message: added, dataMessage: outgoing };
     });
 
@@ -468,7 +498,10 @@ export default class MessageProcessor {
         editedAt,
         // Like Signal Desktop, the message shows the send state of its latest edit
         recipientStatus: buildPendingStatus(getRecipientAcis(found, account.aci)),
+        recipientErrors: undefined,
+        sendRetry: { startedAt: editedAt, attempt: 0, at: editedAt },
       });
+      this.markSendStarted(updated.id);
       return {
         conversation: found,
         message: updated,
@@ -1458,7 +1491,7 @@ export default class MessageProcessor {
   /**
    * Sends an outgoing message again to the recipients it failed for, as pending until the send ends (Signal Desktop
    * `retryMessageSend`). Members of a group whose accounts are gone are not tried again. Returns `undefined` when no
-   * recipient is left to try.
+   * recipient is left to try, or the message is being sent.
    */
   async resendMessage(messageId: number) {
     const prepared = await this.runSerial(async () => {
@@ -1467,24 +1500,108 @@ export default class MessageProcessor {
       if (!message?.isOutgoing || !message.dataMessage || !conversation) {
         throw new Error('The message cannot be sent again');
       }
+      if (this.sendsInFlight.has(messageId)) return undefined;
 
       const failed = getFailedRecipients(message, conversation);
-      if (!failed.length) return undefined;
-      const recipientStatus = { ...message.recipientStatus };
-      const recipientErrors = { ...message.recipientErrors };
-      for (const aci of failed) {
-        recipientStatus[aci] = 'pending';
-        delete recipientErrors[aci];
-      }
-      const pending = await this.putMessage({
-        ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
-      });
-      return { conversation, message: pending, dataMessage: message.dataMessage, failed };
+      return failed.length ? this.prepareResend(message, conversation, failed) : undefined;
     });
-    if (!prepared) return undefined;
+    return prepared && this.sendPrepared(prepared);
+  }
 
-    const { conversation, message, failed } = prepared;
-    const dataMessage = fromBinary(DataMessageSchema, prepared.dataMessage);
+  /**
+   * Sends the messages again that earlier sends left undelivered: recipients that are still pending after a reload or
+   * a crash, and those that failed for lack of a connection (Signal Desktop `sendNormalMessage` runs in a job that
+   * `ts/jobs/conversationJobQueue.preload.ts` retries with a growing pause for a day). The messages keep their
+   * timestamps, so recipients that got one already ignore it. After the day, pending recipients fail. A pass with
+   * `isForced` ignores the pauses, as after a connection; the others run when the pause of the first message ends.
+   */
+  private retryUnsentMessages(isForced?: boolean) {
+    const { generation } = this;
+    this.retryPass = this.retryPass
+      .then(() => this.runRetryPass(generation, isForced))
+      .catch(this.events.onError);
+  }
+
+  private async runRetryPass(generation: number, isForced?: boolean) {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+
+    for (const { id, sendRetry } of await this.db.getMessagesToRetry()) {
+      if (generation !== this.generation) return;
+      // The send of a message in flight sets its next retry; a message waits for the connection otherwise
+      if (this.sendsInFlight.has(id)) continue;
+      if (!isForced && sendRetry!.at > Date.now()) continue;
+      if (!this.client.isConnected) return;
+      await this.retryMessage(id, isForced).catch(this.events.onError);
+    }
+    if (generation === this.generation) await this.scheduleSendRetry();
+  }
+
+  private async retryMessage(messageId: number, isForced?: boolean) {
+    const prepared = await this.runSerial(async () => {
+      // The pass chose the message before this ran: a send may have started or finished meanwhile
+      if (this.sendsInFlight.has(messageId)) return undefined;
+      const message = await this.db.getMessage(messageId);
+      if (!message?.sendRetry || (!isForced && message.sendRetry.at > Date.now())) return undefined;
+
+      const conversation = await this.db.getConversation(message.conversationId);
+      const recipients = conversation && message.isOutgoing && message.dataMessage && !message.deletedAt
+        ? getRetryRecipients(message, conversation)
+        : [];
+      if (!conversation || !recipients.length || Date.now() - message.sendRetry.startedAt > SEND_RETRY_MAX_AGE_MS) {
+        await this.finishSendRetry(message);
+        return undefined;
+      }
+      return this.prepareResend(message, conversation, recipients);
+    });
+    if (prepared) await this.sendPrepared(prepared);
+  }
+
+  /** Gives up on a message: the recipients it is still pending for failed for lack of a connection */
+  private async finishSendRetry(message: MessageRecord) {
+    const recipientStatus = { ...message.recipientStatus };
+    const recipientErrors = { ...message.recipientErrors };
+    for (const [aci, status] of Object.entries(recipientStatus)) {
+      if (status !== 'pending') continue;
+      recipientStatus[aci] = 'failed';
+      recipientErrors[aci] = 'network';
+    }
+    await this.putMessage({
+      ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+      sendRetry: undefined,
+    });
+  }
+
+  private markSendStarted(messageId: number) {
+    this.sendsInFlight.set(messageId, (this.sendsInFlight.get(messageId) ?? 0) + 1);
+  }
+
+  private markSendEnded(messageId: number) {
+    const count = (this.sendsInFlight.get(messageId) ?? 0) - 1;
+    if (count > 0) this.sendsInFlight.set(messageId, count);
+    else this.sendsInFlight.delete(messageId);
+  }
+
+  /** Marks `recipients` pending and the message as being sent; `sendPrepared` sends it */
+  private async prepareResend(message: MessageRecord, conversation: ConversationRecord, recipients: string[]) {
+    const recipientStatus = { ...message.recipientStatus };
+    const recipientErrors = { ...message.recipientErrors };
+    for (const aci of recipients) {
+      recipientStatus[aci] = 'pending';
+      delete recipientErrors[aci];
+    }
+    const pending = await this.putMessage({
+      ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+    });
+    this.markSendStarted(message.id);
+    return { conversation, message: pending, recipients };
+  }
+
+  private sendPrepared(
+    { conversation, message, recipients }:
+    { conversation: ConversationRecord; message: MessageRecord; recipients: string[] },
+  ) {
+    const dataMessage = fromBinary(DataMessageSchema, message.dataMessage!);
     // An edited message shows the send state of its latest edit, so that edit goes again
     const content: OutgoingMessage = message.editedAt
       ? { case: 'editMessage', value: { targetSentTimestamp: BigInt(message.sentAt), dataMessage } }
@@ -1492,7 +1609,18 @@ export default class MessageProcessor {
     return this.sendStoredMessage(conversation, message, content, {
       timestamp: message.editedAt ?? message.sentAt,
       expirationStartTimestamp: message.expireTimer ? message.sentAt : undefined,
-    }, failed);
+    }, recipients);
+  }
+
+  /** Runs the next retry pass when the earliest pause of a message ends */
+  private async scheduleSendRetry() {
+    const [next] = (await this.db.getMessagesToRetry()).filter(({ id }) => !this.sendsInFlight.has(id));
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    if (!next) return;
+    // The minimum keeps a pass that cannot change a message from running over and over
+    const delay = Math.max(next.sendRetry!.at - Date.now(), MIN_SEND_RETRY_TIMER_MS);
+    this.retryTimer = setTimeout(() => this.retryUnsentMessages(), Math.min(delay, MAX_TIMEOUT_MS));
   }
 
   /**
@@ -1896,26 +2024,46 @@ export default class MessageProcessor {
     options: { timestamp: number; expirationStartTimestamp?: number },
     recipients = Object.keys(message.recipientStatus ?? {}),
   ) {
-    const results = await this.sendContentTo(conversation, recipients, content, options);
-    return this.runSerial(async () => {
-      const current = await this.db.getMessage(message.id);
-      if (!current) return message;
-      const recipientStatus = { ...current.recipientStatus };
-      const recipientErrors = { ...current.recipientErrors };
-      for (const serviceId of recipients) {
-        const error = getResultError(results, serviceId);
-        if (error) {
-          recipientStatus[serviceId] = 'failed';
-          recipientErrors[serviceId] = getSendErrorKind(error);
-        } else {
-          recipientStatus[serviceId] = maxStatus(recipientStatus[serviceId], 'sent');
-          delete recipientErrors[serviceId];
-        }
+    let sent: MessageRecord;
+    try {
+      const results = await this.sendContentTo(conversation, recipients, content, options);
+      sent = await this.runSerial(() => this.storeSendResults(conversation, message, recipients, results));
+    } finally {
+      this.markSendEnded(message.id);
+    }
+    if (sent.sendRetry) await this.scheduleSendRetry().catch(this.events.onError);
+    return sent;
+  }
+
+  private async storeSendResults(
+    conversation: ConversationRecord, message: MessageRecord, recipients: string[], results: RecipientResult[],
+  ) {
+    const current = await this.db.getMessage(message.id);
+    if (!current) return message;
+
+    const recipientStatus = { ...current.recipientStatus };
+    const recipientErrors = { ...current.recipientErrors };
+    for (const serviceId of recipients) {
+      const error = getResultError(results, serviceId);
+      if (error instanceof NotGroupMemberError) {
+        // Not a recipient any more: a member who joins again is not offered a resend of the message
+        delete recipientStatus[serviceId];
+        delete recipientErrors[serviceId];
+      } else if (error) {
+        recipientStatus[serviceId] = 'failed';
+        recipientErrors[serviceId] = getSendErrorKind(error);
+      } else {
+        recipientStatus[serviceId] = maxStatus(recipientStatus[serviceId], 'sent');
+        delete recipientErrors[serviceId];
       }
-      this.logFailedSends(message.id, conversation, recipients, results);
-      return this.putMessage({
-        ...current, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
-      });
+    }
+    this.logFailedSends(message.id, conversation, recipients, results);
+    const nextErrors = Object.keys(recipientErrors).length ? recipientErrors : undefined;
+    return this.putMessage({
+      ...current,
+      recipientStatus,
+      recipientErrors: nextErrors,
+      sendRetry: getNextSendRetry(current.sendRetry, { recipientStatus, recipientErrors: nextErrors }, conversation),
     });
   }
 
@@ -1925,8 +2073,9 @@ export default class MessageProcessor {
   ) {
     const reasons = new Map<string, { kind: SendErrorKind; count: number }>();
     for (const { error } of results) {
-      // Members of a group whose accounts are gone are no failure, and they are skipped without a request for hours
-      if (!error || (conversation.type === 'group' && error instanceof UnregisteredUserError)) continue;
+      // Members of a group whose accounts are gone, or who left it, are no failure
+      if (!error || (conversation.type === 'group'
+        && (error instanceof UnregisteredUserError || error instanceof NotGroupMemberError))) continue;
       const reason = describeSendError(error);
       const entry = reasons.get(reason) ?? { kind: getSendErrorKind(error), count: 0 };
       entry.count++;
@@ -1971,7 +2120,14 @@ export default class MessageProcessor {
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
-    options: { timestamp: number; expirationStartTimestamp?: number; isStory?: boolean; isUrgent?: boolean },
+    options: {
+      timestamp: number;
+      expirationStartTimestamp?: number;
+      isStory?: boolean;
+      isUrgent?: boolean;
+      // A group update also goes to the members it removed
+      shouldIncludeFormerMembers?: boolean;
+    },
   ): Promise<RecipientResult[]> {
     const { store } = this.client;
     const discoveredTimes = await Promise.all(recipients.map(async (serviceId) => (
@@ -1992,7 +2148,7 @@ export default class MessageProcessor {
       const context = this.client.getSenderContext();
       const outcome = await sendMessage(context, sendable, content, {
         ...options,
-        group: this.getGroupTarget(conversation),
+        group: this.getGroupTarget(conversation, options.shouldIncludeFormerMembers),
       });
       results = outcome.results;
       if (outcome.followUpError) {
@@ -2029,7 +2185,9 @@ export default class MessageProcessor {
   }
 
   /** Group sends renew the send endorsements of the group through its state */
-  private getGroupTarget(conversation: ConversationRecord): GroupTarget | undefined {
+  private getGroupTarget(
+    conversation: ConversationRecord, shouldIncludeFormerMembers?: boolean,
+  ): GroupTarget | undefined {
     if (conversation.type !== 'group' || !conversation.masterKey) return undefined;
     const { id, masterKey } = conversation;
     return {
@@ -2038,6 +2196,9 @@ export default class MessageProcessor {
       refresh: async () => {
         await this.refreshGroup(id, masterKey);
       },
+      getMemberAcis: shouldIncludeFormerMembers
+        ? undefined
+        : async () => (await this.db.getConversation(id))?.memberAcis,
     };
   }
 
@@ -2056,7 +2217,12 @@ export default class MessageProcessor {
         || (envelope.serverGuidBinary.length ? uuidToString(envelope.serverGuidBinary) : undefined),
     };
 
-    if (senderServiceId !== selfAci) {
+    // A data message that another device of ours sends in an envelope instead of a transcript is our own message,
+    // outgoing and read; outside a group it is a note to ourselves
+    const isFromSelf = senderServiceId === selfAci;
+    const ownDevice: Partial<MessageSource> = isFromSelf ? { isOutgoing: true, destinationAci: selfAci } : {};
+
+    if (!isFromSelf) {
       const sender = await this.db.getConversation(senderServiceId);
       // Signal Desktop `ts/textsecure/MessageReceiver.preload.ts` drops everything from blocked senders
       if (sender?.isBlocked) return;
@@ -2078,14 +2244,14 @@ export default class MessageProcessor {
       case 'dataMessage': {
         const sentAt = Number(body.value.timestamp) || source.sentAt;
         // Dropped messages are not acknowledged with a receipt
-        if (await this.handleDataMessage({ ...source, sentAt }, body.value)) {
-          this.queueDeliveryReceipt(senderServiceId, sentAt);
+        if (await this.handleDataMessage({ ...source, sentAt, ...ownDevice }, body.value)) {
+          if (!isFromSelf) this.queueDeliveryReceipt(senderServiceId, sentAt);
         }
         break;
       }
       case 'editMessage':
-        await this.handleEditMessage(source, body.value);
-        this.queueDeliveryReceipt(senderServiceId, source.sentAt);
+        await this.handleEditMessage({ ...source, ...ownDevice }, body.value);
+        if (!isFromSelf) this.queueDeliveryReceipt(senderServiceId, source.sentAt);
         break;
       case 'syncMessage':
         if (senderServiceId === selfAci) {
@@ -2169,7 +2335,7 @@ export default class MessageProcessor {
   private async addDataMessage(conversation: ConversationRecord, source: MessageSource, message: DataMessage) {
     const expireTimer = message.expireTimer || undefined;
     const expirationStart = source.isOutgoing ? source.expirationStartTimestamp ?? source.sentAt : undefined;
-    await this.addMessage(conversation, {
+    const { message: added } = await this.addMessage(conversation, {
       conversationId: conversation.id,
       kind: 'message',
       authorAci: source.authorAci,
@@ -2189,6 +2355,7 @@ export default class MessageProcessor {
       isSealedSender: source.isSealedSender,
       serverGuid: source.serverGuid,
     });
+    if (source.isOutgoing && added.recipientStatus) await this.applyEarlyReceipts(source.sentAt);
   }
 
   private async handleEditMessage(source: MessageSource, edit: EditMessage) {
@@ -2425,6 +2592,7 @@ export default class MessageProcessor {
       viewedAt: sentAt,
       recipients,
     });
+    await this.applyEarlyReceipts(sentAt);
   }
 
   /**
@@ -2482,7 +2650,7 @@ export default class MessageProcessor {
   private async applyStoryReceipt(senderAci: string, sentAt: number, status: SendStatus) {
     const story = await this.db.findStory((await this.getAccount()).aci, sentAt);
     const recipient = story?.recipients?.[senderAci];
-    if (!story || !recipient) return;
+    if (!story || !recipient) return Boolean(story);
     await this.putStory({
       ...story,
       recipients: {
@@ -2494,6 +2662,7 @@ export default class MessageProcessor {
         },
       },
     });
+    return true;
   }
 
   /** Sends a story to the members of distribution lists, each once, and tells our other devices */
@@ -2652,15 +2821,20 @@ export default class MessageProcessor {
   }
 
   private async handleReceipt(senderAci: string, receipt: ReceiptMessage) {
-    const { account } = this.client.getSenderContext();
     const status = STATUS_BY_RECEIPT_TYPE[receipt.type];
     for (const timestamp of receipt.timestamp) {
-      const message = await this.db.findMessage(account.aci, Number(timestamp));
-      if (!message) {
-        await this.applyStoryReceipt(senderAci, Number(timestamp), status);
-        continue;
-      }
-      if (!message.recipientStatus || !(senderAci in message.recipientStatus)) continue;
+      const sentAt = Number(timestamp);
+      if (!await this.applyReceipt(senderAci, sentAt, status)) await this.addEarlyReceipt(senderAci, sentAt, status);
+    }
+  }
+
+  /** Returns whether a message or story of ours at `sentAt` exists; receipts for it from non-recipients change nothing */
+  private async applyReceipt(senderAci: string, sentAt: number, status: SendStatus) {
+    const { account } = this.client.getSenderContext();
+    const message = await this.db.findMessage(account.aci, sentAt);
+    if (!message) return this.applyStoryReceipt(senderAci, sentAt, status);
+
+    if (message.recipientStatus && senderAci in message.recipientStatus) {
       await this.putMessage({
         ...message,
         recipientStatus: {
@@ -2668,6 +2842,39 @@ export default class MessageProcessor {
           [senderAci]: maxStatus(message.recipientStatus[senderAci], status),
         },
       });
+    }
+    return true;
+  }
+
+  /**
+   * Keeps a receipt for a message or story that is not stored yet, as can happen for one that another device of ours
+   * sent, whose copy reaches us after the recipient's receipt (Signal Desktop `ts/messageModifiers/MessageReceipts.preload.ts`
+   * keeps such receipts for `forMessage`). The store is small and keeps receipts for a day.
+   */
+  private async addEarlyReceipt(senderAci: string, sentAt: number, status: EarlyReceiptRecord['status']) {
+    const { store } = this.client;
+    // A receipt for something older than all our messages names a message we no longer have
+    const oldestSentAt = await this.db.getOldestSentAt(this.client.getSenderContext().account.aci);
+    if (oldestSentAt !== undefined && sentAt < oldestSentAt) return;
+    const now = Date.now();
+    const receipts = (await store.getItem('earlyReceipts') ?? []).filter(({ receivedAt }) => (
+      now - receivedAt < EARLY_RECEIPT_MAX_AGE_MS
+    ));
+    receipts.push({ senderAci, sentAt, status, receivedAt: now });
+    await store.setItem('earlyReceipts', receipts.slice(-MAX_EARLY_RECEIPTS));
+  }
+
+  /** Applies the early receipts for the message or story of ours that was just stored at `sentAt` */
+  private async applyEarlyReceipts(sentAt: number) {
+    const { store } = this.client;
+    const receipts = await store.getItem('earlyReceipts');
+    if (!receipts?.some((receipt) => receipt.sentAt === sentAt)) return;
+
+    const now = Date.now();
+    await store.setItem('earlyReceipts', receipts.filter((receipt) => receipt.sentAt !== sentAt));
+    for (const receipt of receipts) {
+      if (receipt.sentAt !== sentAt || now - receipt.receivedAt >= EARLY_RECEIPT_MAX_AGE_MS) continue;
+      await this.applyReceipt(receipt.senderAci, sentAt, receipt.status);
     }
   }
 
@@ -2927,13 +3134,14 @@ export default class MessageProcessor {
   private async sendWithRetry(
     conversation: ConversationRecord, recipients: string[], content: OutgoingMessage, timestamp: number,
   ) {
-    const results = await this.sendContentTo(conversation, recipients, content, { timestamp, isUrgent: false });
+    const options = { timestamp, isUrgent: false, shouldIncludeFormerMembers: true };
+    const results = await this.sendContentTo(conversation, recipients, content, options);
     // Users that left the registry do not come back
     const failed = results.filter(({ error }) => error && !(error instanceof UnregisteredUserError))
       .map(({ serviceId }) => serviceId);
     if (failed.length) {
       this.pendingSends.push(async () => {
-        await this.sendContentTo(conversation, failed, content, { timestamp, isUrgent: false });
+        await this.sendContentTo(conversation, failed, content, options);
       });
     }
     return results;

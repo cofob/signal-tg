@@ -1,6 +1,6 @@
 # Project instructions
 
-TeleSignal is a web client for the Signal messenger, built on the Telegram Web A codebase in TypeScript and Teact, a custom React-like UI library. It runs as a Signal linked device: all protocol logic and cryptography run in the browser. Telegram-only features and GramJS are being removed; the migration plan and its status are in [docs/signal/PLAN.md](docs/signal/PLAN.md). Follow nearby code and the repository's ESLint and Stylelint configurations; the rules below capture project-specific constraints and review feedback.
+TeleSignal is a web client for the Signal messenger, built on the Telegram Web A codebase in TypeScript and Teact, a custom React-like UI library. It runs as a Signal linked device: all protocol logic and cryptography run in the browser. GramJS and the Telegram API are removed and Telegram-only features are being removed from the UI; the migration plan and its status are in [docs/signal/PLAN.md](docs/signal/PLAN.md). Follow nearby code and the repository's ESLint and Stylelint configurations; the rules below capture project-specific constraints and review feedback.
 
 ## Scope and workflow
 
@@ -134,8 +134,10 @@ Teact and Fasterdom separate DOM measurement from mutation. The frame order is e
 
 - Code lives in `src/lib/signal/` (`net`, `account`, `chat`, `receiver`, `sender`, `store`, `storage`, `groups`, `profiles`, `attachments`, `sync`, `usernames`, `db`, `messages`, `backups`), the WebAssembly bridge and TLS client in `rust/signal-wasm/`, vendored libsignal crates in `rust/libsignal/`, and the tunnel in `proxy/`.
 - `SignalClient` owns the connections and protocol-level handling (retry requests, account keys, profile keys); `MessageProcessor` turns content into `MessageDb` records and sends receipts. Run protocol store operations through `SignalStore.runExclusive` and database changes through `MessageProcessor`, which serializes them.
+- UI and global state use plain `Api*` objects from `src/api/types`. The engine runs in a web worker (`src/api/worker`), and global actions reach it only through `callApi` from `src/api`. Implement a method in `src/api/signal/methods/` and export it from `index.ts`; its signature is the type of `callApi`. Pass full `ApiPeer`, `ApiChat` or `ApiUser` objects, return `undefined` when the work cannot be done, and check for `undefined` before updating state. Updates reach the UI through `sendApiUpdate` (`src/api/signal/updates.ts`) and merge through `src/global/actions/apiUpdaters/`; update types live in `src/api/types/updates.ts`.
+- `src/api/signal/methods/types.ts` lists removed Telegram methods that UI actions still call; they resolve to `undefined`. Do not add names to the list: delete the caller instead.
 - Keep protocol logic and key material in the browser. The tunnel in `proxy/` (Rust; transport-independent policy in `proxy/src/lib.rs`, WebSocket server in `proxy/src/main.rs`) relays bytes and must never terminate TLS or read request contents beyond the ClientHello check; add a host to `ALLOWED_HOSTS` only when the client needs it.
-- The app sends no requests to Telegram or other third parties: only its own origin and the tunnel. Do not add Telegram hosts, push services, remote language packs, analytics or remote assets; internal links use `tg:`, and help links point to Signal. `npm run check:hosts` (part of `npm run check`) fails on Telegram host names outside GramJS and comments citing `core.telegram.org`; the CSP in `vite.config.ts` (`buildCsp`) is the runtime backstop.
+- The app sends no requests to Telegram or other third parties: only its own origin and the tunnel. Do not add Telegram hosts, push services, remote language packs, analytics or remote assets; internal links use `tg:`, and help links point to Signal. `npm run check:hosts` (part of `npm run check`) fails on Telegram host names in `src`, `public`, `index.html` and `vite.config.ts`, except in comments citing `core.telegram.org`; the CSP in `vite.config.ts` (`buildCsp`) is the runtime backstop.
 - Reach Signal hosts through `src/lib/signal/net/` (`TlsTunnel`, `sendHttpRequest`, `ResourceSocket`); they trust only Signal's certificate authority (`SIGNAL_CA_PEM`). Browser `fetch` and `WebSocket` cannot reach Signal hosts.
 - The desktop app (`tauri/`) carries `TlsTunnel` bytes over native TCP (`tauri/src/transport.rs`) unless the proxy setting names a tunnel. Its commands reuse `proxy/src/lib.rs` for the allowlist, address and ClientHello checks: change that policy in the library, not in one front end. The engine's worker reaches the commands only through the page (`src/util/tauri/serveNativeTransport.ts`).
 - Port behavior from Signal Desktop (`ts/textsecure`, `ts/services`) and check behavior and limits against Signal Android. Reference the source path in a comment on ported logic.
@@ -145,16 +147,6 @@ Teact and Fasterdom separate DOM measurement from mutation. The frame order is e
 - Schemas in `src/lib/signal/proto/schema` are copied unchanged from Signal Android; record the source commit in its `README.md`. Use `create`, `toBinary` and `fromBinary` from `@bufbuild/protobuf`. Proto2 scalar fields hold default values (`''`, `0`, `0n`, empty bytes) instead of `undefined`, so test `length` or truthiness; oneofs are `{ case, value }`. Keep unknown fields when re-encoding storage service records.
 - Persist an incoming envelope before acknowledging it, and process envelopes in arrival order (`ChatConnection`).
 - Support accounts without a phone number: the PNI, its keys and the number may be absent, and group credentials then use `authCredentialSalt` (plan section 2a).
-
-## Telegram API
-
-- GramJS and the Telegram API are being removed (plan stages 1–3): do not add Telegram API methods. Until then, existing code follows the rules below.
-- GramJS runs in a web worker; UI and global state use plain `Api*` objects from `src/api/types`.
-- Read the TL schema in `src/lib/gramjs/tl/static/api.tl`; do not edit it without receiving updated schema beforehand. Add needed method names to `src/lib/gramjs/tl/static/api.json` and run `npm run gramjs:tl` to regenerate `src/lib/gramjs/tl/api.d.ts` and schema modules.
-- Implement methods under `src/api/gramjs/methods/` using destructured parameter objects and `invokeRequest(new GramJs.namespace.MethodName(...))`. Name TL `get*` fetchers `fetch*`.
-- Convert results using `apiBuilders` (`buildApi*`) and inputs using `gramjsBuilders` (`buildInput*`). Return `undefined` when `invokeRequest` returns `undefined`.
-- Global actions call methods through `callApi` and check for `undefined` before updating state. Pass full `ApiPeer`, `ApiChat`, or `ApiUser` objects across this boundary; do not add separate `id`/`accessHash` method parameters. Extract fields for `buildInput*` inside the GramJS method.
-- Server updates enter through `src/api/gramjs/updates/mtpUpdateHandler.ts` and merge through `src/global/actions/apiUpdaters/`; update types live in `src/api/types/updates.ts`.
 
 ## Commits and PRs
 

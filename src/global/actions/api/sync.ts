@@ -1,17 +1,18 @@
 import { addCallback } from '../../../lib/teact/teactn';
 
+import type { ApiMessage } from '../../../api/types';
 import type { ThreadId } from '../../../types';
 import type { RequiredGlobalActions } from '../../index';
 import type { ActionReturnType, GlobalState } from '../../types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import { DEBUG, MESSAGE_LIST_SLICE, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
+import { DEBUG, MESSAGE_LIST_SLICE } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { init as initFolderManager } from '../../../util/folderManager';
 import {
   buildCollectionByKey, omitUndefined, pick, pickTruthy, unique,
 } from '../../../util/iteratees';
-import { callApi, reconnectApi } from '../../../api/gramjs';
+import { callApi, reconnectApi } from '../../../api';
 import { getIsSavedDialog } from '../../helpers';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
@@ -167,9 +168,6 @@ async function loadAndReplaceMessages<T extends GlobalState>(global: T, actions:
 
       if (result && newCurrentChatId === currentChatId) {
         const currentChatMessages = selectChatMessages(global, currentChatId);
-        const localMessages = currentChatId === SERVICE_NOTIFICATIONS_USER_ID
-          ? global.serviceNotifications.filter(({ isDeleted }) => !isDeleted).map(({ message }) => message)
-          : [];
         const topics = selectTopics(global, currentChatId);
         const topicLastMessages = topics ? Object.values(topics)
           .map(({ id }) => {
@@ -184,9 +182,9 @@ async function loadAndReplaceMessages<T extends GlobalState>(global: T, actions:
 
         const isDiscussionStartLoaded = !result.messages.length
           || result.messages.some(({ id }) => id === resultDiscussion?.firstMessageId);
-        const threadStartMessages = (isDiscussionStartLoaded && resultDiscussion?.topMessages) || [];
+        const threadStartMessages: ApiMessage[] = (isDiscussionStartLoaded && resultDiscussion?.topMessages) || [];
         const refreshedViewportIds = refreshedViewportMessages?.map(({ id }) => id) || [];
-        const allMessages = threadStartMessages.concat(result.messages, refreshedViewportMessages || [], localMessages);
+        const allMessages = threadStartMessages.concat(result.messages, refreshedViewportMessages || []);
         const allMessagesWithTopicLastMessages = allMessages.concat(topicLastMessages);
         const byId = buildCollectionByKey(allMessagesWithTopicLastMessages, 'id');
         const listedIds = unique(refreshedViewportIds.concat(allMessages.map(({ id }) => id)));

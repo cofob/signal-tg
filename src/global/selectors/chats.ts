@@ -6,7 +6,7 @@ import type { GlobalState, TabArgs } from '../types';
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
-  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MEMBERS_LOAD_SLICE, SAVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID,
+  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MEMBERS_LOAD_SLICE, SAVED_FOLDER_ID,
 } from '../../config';
 import { isUserId } from '../../util/entities/ids';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
@@ -162,10 +162,6 @@ export function selectChatByUsername<T extends GlobalState>(global: T, username:
   return Object.values(global.chats.byId).find(
     (chat) => chat.usernames?.some((c) => c.username.toLowerCase() === usernameLowered),
   );
-}
-
-export function selectIsServiceChatReady<T extends GlobalState>(global: T) {
-  return Boolean(selectChat(global, SERVICE_NOTIFICATIONS_USER_ID));
 }
 
 export function selectSendAs<T extends GlobalState>(global: T, chatId: string) {
