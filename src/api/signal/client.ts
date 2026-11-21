@@ -3,9 +3,9 @@ import type { AccountRecord } from '../../lib/signal/store/SignalStore';
 import type { ApiInitialArgs } from '../types';
 
 import { DEBUG } from '../../config';
-import { linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
+import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
-import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
+import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
@@ -25,10 +25,10 @@ const LINK_RETRY_DELAY_MS = 3000;
 const RECONNECT_MIN_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 60 * 1000;
 const HTTP_UNAUTHORIZED = 401;
-const HTTP_FORBIDDEN = 403;
 const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
+const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
 
 let currentAccount: AccountRecord | undefined;
 let initialArgs: ApiInitialArgs | undefined;
@@ -159,6 +159,8 @@ async function runDeviceLink(platform?: string) {
 
 /** Shows the account's chats and connects it; registration calls it once the new account is complete */
 export async function startSession(storedAccount: AccountRecord) {
+  await discardMessagesOfOtherAccount(storedAccount);
+
   let account = storedAccount;
   currentAccount = account;
   let hasHistoryTransferFailed = false;
@@ -193,6 +195,18 @@ export async function startSession(storedAccount: AccountRecord) {
 
   hasSyncedThisSession = false;
   await connect();
+}
+
+/** Messages of an account that unlinked this browser stay only for the next link of that same account */
+async function discardMessagesOfOtherAccount({ aci }: AccountRecord) {
+  const unlinkedAci = await store.getItem('unlinkedAci');
+  if (!unlinkedAci) return;
+
+  if (unlinkedAci !== aci) {
+    await db.clear();
+    await clearAttachmentCache();
+  }
+  await store.removeItem('unlinkedAci');
 }
 
 /**
@@ -270,8 +284,8 @@ async function connect() {
       onError: logError,
     });
   } catch (err) {
-    if (err instanceof WebSocketConnectError && (err.status === HTTP_UNAUTHORIZED || err.status === HTTP_FORBIDDEN)) {
-      await handleUnlinked();
+    if (err instanceof WebSocketConnectError && err.status === HTTP_UNAUTHORIZED) {
+      await handleUnauthorized();
       return;
     }
     logError(err);
@@ -293,9 +307,48 @@ function scheduleReconnect() {
   reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_DELAY_MS);
 }
 
-/** The server no longer accepts this device: the phone unlinked it. Local data goes and a new link starts. */
-async function handleUnlinked() {
-  await stopClient(true);
+/**
+ * The chat socket refused our credentials. One authenticated request confirms it before anything is removed: a
+ * request that fails otherwise, or one that the server accepts, leaves the account alone and tries again later.
+ */
+async function handleUnauthorized() {
+  const account = currentAccount!;
+  try {
+    if (await checkAccountAuthorized(account)) {
+      scheduleReconnect();
+      return;
+    }
+  } catch (err) {
+    logError(err);
+    scheduleReconnect();
+    return;
+  }
+
+  if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) {
+    handlePrimaryDeregistered();
+    return;
+  }
+  await handleUnlinked(account);
+}
+
+/**
+ * Our number was registered on another device. Nothing is deleted here: the user decides what happens with the
+ * messages, and logging out removes them.
+ */
+function handlePrimaryDeregistered() {
+  processor.stop();
+  client.close();
+  sendApiUpdate({ '@type': 'error', error: { message: PRIMARY_UNAUTHORIZED_ERROR, hasErrorKey: true } });
+}
+
+/**
+ * The phone unlinked this device. The account and its keys go and a new link starts; the conversations and messages
+ * stay (Signal Desktop `unlinkAndDisconnect`), until another account links (see `startSession`).
+ */
+async function handleUnlinked(account: AccountRecord) {
+  await stopClient(false);
+  await store.clear();
+  await store.setItem('unlinkedAci', account.aci);
   isDestroyed = false;
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateLoggingOut' });
   void runDeviceLink().catch(logError);

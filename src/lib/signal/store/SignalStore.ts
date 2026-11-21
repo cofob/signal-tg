@@ -92,6 +92,8 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
+  unlinkedAci: string;
 };
 
 export type NotificationDefaults = {
@@ -197,6 +199,10 @@ export default class SignalStore {
 
   setItem<K extends keyof Items>(key: K, value: Items[K]) {
     return this.db.set(`item:${key}`, value);
+  }
+
+  removeItem(key: keyof Items) {
+    return this.db.del(`item:${key}`);
   }
 
   getRecipient(aci: string) {

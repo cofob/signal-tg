@@ -219,6 +219,7 @@
 "SignalHistorySyncImporting" = "Finalizing message transfer {percent}...";
 "SignalHistorySyncNote" = "This may take a few minutes";
 "SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
+"SignalPrimaryUnauthorized" = "Signal no longer accepts this device, for example because your number is registered on another device. Your messages stay here until you log out.";
 "SignalRegisterLink" = "Register with a phone number";
 "SignalLinkExisting" = "Link to an existing account";
 "SignalRegisterTitle" = "New Signal account";
