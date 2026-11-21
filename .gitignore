@@ -4,13 +4,13 @@ node_modules
 .env
 src/lib/gramjs/build/
 build-contest/
-tests/
+# Local test scratch files; the Vitest setup file is tracked
+tests/*
+!tests/init.ts
 .idea
 *.iml
 dev/perf/screenshot*
 .DS_store
-.github/workflows/*
-!.github/workflows/desktop.yml
 
 # Rust build output
 rust/*/target/
