@@ -1,10 +1,11 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
+import type { CallHistoryHost } from '../calls/CallHistory';
 import type MessageDb from '../db/MessageDb';
 import type {
-  ConversationRecord, MessageRecord, NewMessageRecord, NewStoryRecord, SendErrorKind, SendStatus, StoryRecipient,
-  StoryRecord, StoryReply,
+  CallRecord, ConversationRecord, MessageRecord, NewMessageRecord, NewStoryRecord, SendErrorKind, SendStatus,
+  StoryRecipient, StoryRecord, StoryReply,
 } from '../db/MessageDb';
 import type { GroupState } from '../groups/fetchGroup';
 import type { DecryptedGroupChange } from '../groups/groupChange';
@@ -39,6 +40,7 @@ import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getAttachmentCacheKey, removeAttachmentBlob } from '../attachments/attachmentCache';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { getCallEvent, getCallLogEvent } from '../calls/callDisposition';
 import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup, GroupRequestError } from '../groups/fetchGroup';
 import {
@@ -55,6 +57,7 @@ import {
 } from '../sender/sendErrors';
 import {
   sendBlockedSync,
+  sendCallLogEventSync,
   sendConfigurationSync,
   sendDeleteForMeSync,
   sendMessage,
@@ -99,6 +102,7 @@ import { getIsConversationAccepted } from './messageRequests';
 import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './sendRetry';
 import { getFailedRecipients } from './sendState';
 
+import { applyCallEvent, applyCallLogEvent, applyGroupCallUpdate, clearCallLog } from '../calls/CallHistory';
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
@@ -108,6 +112,7 @@ import {
   GroupContextV2Schema,
   ReceiptMessage_Type,
   StoryMessageSchema,
+  SyncMessage_CallLogEvent_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
   SyncMessage_Request_Type,
@@ -127,6 +132,8 @@ export type MessageChanges = {
   deletedMessages: { conversationId: string; id: number }[];
   stories: StoryRecord[];
   deletedStories: StoryRecord[];
+  // Calls added, changed and deleted (with status `deleted`)
+  calls: CallRecord[];
 };
 
 /** What a story from this device shows: a text story or an uploaded photo or video, with its caption ranges */
@@ -336,11 +343,25 @@ export default class MessageProcessor {
   // Counts local storage record changes, so a write clears only the changes it carried
   private storageChangeCount = 0;
 
+  // What call history changes in messages and chats goes through the processor, which serializes it
+  private callHistory: CallHistoryHost;
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
     private events: MessageProcessorEvents,
-  ) {}
+  ) {
+    this.callHistory = {
+      db,
+      addMessage: (conversation, record) => this.addMessage(conversation, record),
+      putMessage: (record) => this.putMessage(record),
+      removeMessage: (message) => this.removeMessage(message),
+      updateLastMessage: (conversationId) => this.updateLastMessage(conversationId),
+      addChangedCall: (call) => {
+        this.changes.calls.push(call);
+      },
+    };
+  }
 
   /** Handles one decrypted envelope; `SignalClient.connect` passes it as `onContent` */
   async processContent(decrypted: DecryptedEnvelope) {
@@ -934,6 +955,30 @@ export default class MessageProcessor {
       }
       const reads = messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt }));
       await sendReadSync(context, reads);
+    });
+  }
+
+  /** The calls of the call history that were not cleared, newest first */
+  getCallLog(limit: number) {
+    return this.db.getCallLog(limit);
+  }
+
+  /**
+   * Clears the call history here and on our other devices (Signal Desktop `clearCallHistoryDataAndSync` in
+   * `ts/util/callDisposition.preload.ts`). The sync names the newest call, which the other devices clear up to.
+   */
+  clearCallLog() {
+    return this.runSerial(async () => {
+      const newest = await clearCallLog(this.callHistory);
+      if (!newest) return;
+      await this.sendWhenConnected(async (context) => {
+        await sendCallLogEventSync(context, {
+          type: SyncMessage_CallLogEvent_Type.CLEAR,
+          timestamp: BigInt(newest.timestamp),
+          conversationId: newest.mode === 'group' ? bufferFromBase64(newest.peerId) : uuidToBytes(newest.peerId),
+          callId: BigInt(newest.callId),
+        });
+      }).catch(this.events.onError);
     });
   }
 
@@ -2349,6 +2394,10 @@ export default class MessageProcessor {
   private async applyDataMessage(source: MessageSource, message: DataMessage, conversation: ConversationRecord) {
     if (!source.isOutgoing && conversation.isBlocked) return;
 
+    if (message.groupCallUpdate) {
+      await this.applyGroupCallUpdate(conversation, source, message.groupCallUpdate.eraId);
+      return;
+    }
     if (message.storyContext) {
       await this.applyStoryReply(conversation, source, message);
       return;
@@ -2439,6 +2488,18 @@ export default class MessageProcessor {
     });
   }
 
+  /**
+   * Signal Desktop `handleGroupCallUpdateMessage` in `ts/messages/handleDataMessage.preload.ts`: a call that someone
+   * started adds to the call history, unless the group is a message request or only admins may write and the sender
+   * is none
+   */
+  private async applyGroupCallUpdate(conversation: ConversationRecord, source: MessageSource, eraId: string) {
+    const selfAci = this.client.getSenderContext().account.aci;
+    const canCreate = !source.isOutgoing && getIsConversationAccepted(conversation, selfAci)
+      && (!conversation.isAnnouncementsOnly || Boolean(conversation.adminAcis?.includes(source.authorAci)));
+    await applyGroupCallUpdate(this.callHistory, conversation, eraId, source.sentAt, canCreate);
+  }
+
   private async handleSyncMessage(source: MessageSource, sync: SyncMessage) {
     const ownSource = { ...source, isOutgoing: true };
 
@@ -2510,6 +2571,16 @@ export default class MessageProcessor {
         // Another device changed our username and wrote it to the storage service
         this.scheduleStorageSync();
         break;
+      case 'callEvent': {
+        const event = getCallEvent(content.value);
+        if (event) await applyCallEvent(this.callHistory, event);
+        break;
+      }
+      case 'callLogEvent': {
+        const event = getCallLogEvent(content.value);
+        if (event) await applyCallLogEvent(this.callHistory, event);
+        break;
+      }
       case 'request':
         await this.answerSyncRequest(content.value.type);
         break;
@@ -3909,7 +3980,7 @@ export default class MessageProcessor {
   private flush() {
     const { changes } = this;
     if (!changes.conversations.length && !changes.messages.length && !changes.deletedMessages.length
-      && !changes.stories.length && !changes.deletedStories.length) {
+      && !changes.stories.length && !changes.deletedStories.length && !changes.calls.length) {
       return;
     }
     this.changes = createChanges();
@@ -3921,13 +3992,20 @@ export default class MessageProcessor {
       deletedMessages: changes.deletedMessages,
       stories: dedupeById(changes.stories).filter(({ id }) => !deletedStoryIds.has(id)),
       deletedStories: changes.deletedStories,
+      calls: changes.calls,
     });
   }
 }
 
 function createChanges(): MessageChanges {
   return {
-    conversations: [], messages: [], addedMessageIds: [], deletedMessages: [], stories: [], deletedStories: [],
+    conversations: [],
+    messages: [],
+    addedMessageIds: [],
+    deletedMessages: [],
+    stories: [],
+    deletedStories: [],
+    calls: [],
   };
 }
 

@@ -7,6 +7,7 @@ import type {
   ReceiptMessage_Type,
   StoryMessageSchema,
   SyncMessage_BlockedSchema,
+  SyncMessage_CallLogEventSchema,
   SyncMessage_ConfigurationSchema,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_FetchLatest_Type,
@@ -290,6 +291,13 @@ export function sendStickerPackSync(
       type: isInstalled ? SyncMessage_StickerPackOperation_Type.INSTALL : SyncMessage_StickerPackOperation_Type.REMOVE,
     })),
   }, Date.now());
+}
+
+/** Tells our other devices that we cleared or read the call log here (Signal Desktop `getClearCallHistoryMessage`) */
+export function sendCallLogEventSync(
+  context: SenderContext, callLogEvent: MessageInitShape<typeof SyncMessage_CallLogEventSchema>,
+) {
+  return syncToOtherDevices(context, { content: { case: 'callLogEvent', value: callLogEvent } }, Date.now());
 }
 
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */
