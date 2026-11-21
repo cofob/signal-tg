@@ -1,12 +1,12 @@
 import { memo, useMemo } from '../../../lib/teact/teact';
 
 import type { ApiUser } from '../../../api/types';
-import type { AccountInfo, CustomPeer } from '../../../types';
+import type { CustomPeer } from '../../../types';
 
 import { temporarilySuspendCacheUpdate } from '../../../global/cache';
 import { getCurrentProdAccountCount } from '../../../global/helpers';
 import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
-import { getAccountSlotUrl } from '../../../util/multiaccount';
+import { ACCOUNT_SLOT, getAccountSlotUrl } from '../../../util/multiaccount';
 import { LIMITS } from '../../../limits';
 import { REM } from '../../common/helpers/mediaDimensions';
 
@@ -35,12 +35,12 @@ const AccountMenuItems = ({
 
   const currentCount = getCurrentProdAccountCount();
 
-  const currentAccountInfo = useMemo(() => {
-    return Object.values(accounts).find((account) => account.userId === currentUser.id);
-  }, [accounts, currentUser.id]);
+  // Signal user ids are local numbers, so different accounts can share an id: the slot tells the accounts apart
+  const currentSlot = ACCOUNT_SLOT || 1;
+  const currentAccountInfo = accounts[currentSlot];
 
-  const handleAccountClick = useLastCallback((account: AccountInfo, e: React.SyntheticEvent<HTMLElement>) => {
-    if (account.userId === currentUser.id) {
+  const handleAccountClick = useLastCallback((slot: number, e: React.SyntheticEvent<HTMLElement>) => {
+    if (slot === currentSlot) {
       onSelectCurrent?.();
       return;
     }
@@ -83,8 +83,9 @@ const AccountMenuItems = ({
 
   return (
     <>
-      {Object.entries(accounts || {})
-        .sort(([, account]) => (account.userId === currentUser.id ? -1 : 1))
+      {Object.entries(accounts)
+        .map(([slotKey, account]) => [Number(slotKey), account] as const)
+        .sort(([first], [second]) => Number(second === currentSlot) - Number(first === currentSlot) || first - second)
         .map(([slot, account], index, arr) => {
           const isSameServer = account.isTest === currentAccountInfo?.isTest;
           const mockUser: CustomPeer = {
@@ -94,7 +95,7 @@ const AccountMenuItems = ({
             emojiStatusId: isSameServer ? account.emojiStatusId : undefined,
           };
 
-          const hasSeparator = account.userId === currentUser.id && (newAccountUrl || arr.length > 1);
+          const hasSeparator = slot === currentSlot && (newAccountUrl || arr.length > 1);
 
           return (
             <>
@@ -108,8 +109,8 @@ const AccountMenuItems = ({
                     previewUrl={account.avatarUri}
                   />
                 )}
-                onClick={(e) => handleAccountClick(account, e)}
-                href={account.userId !== currentUser.id ? getAccountSlotUrl(Number(slot)) : undefined}
+                onClick={(e) => handleAccountClick(slot, e)}
+                href={slot !== currentSlot ? getAccountSlotUrl(slot) : undefined}
               >
                 {account.isTest && <span className="account-menu-item-test">T</span>}
                 <FullNameTitle peer={mockUser} withEmojiStatus emojiStatusSize={REM} />
