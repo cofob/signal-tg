@@ -90,7 +90,10 @@ export default defineConfig(({ command, mode }): UserConfig => {
   const isProductionApp = appEnv === 'production';
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';
   const publicUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
-  const socialImageUrl = new URL(isProductionApp ? 'icon-512x512.png' : 'icon-dev-512x512.png', publicUrl).href;
+  // Web A's files are in its directory of the build
+  const socialImageUrl = new URL(
+    `${WEB_A_PATH.slice(1)}${isProductionApp ? 'icon-512x512.png' : 'icon-dev-512x512.png'}`, publicUrl,
+  ).href;
   const csp = buildCsp(appEnv, env.SIGNAL_TUNNEL_URL);
   const responseHeaders = {
     'Content-Security-Policy': csp,

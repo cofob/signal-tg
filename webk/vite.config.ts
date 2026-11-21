@@ -36,6 +36,9 @@ const signalAppDir = path.join(repositoryDir, 'src');
 const repositoryEnv = loadEnv(process.env.NODE_ENV === 'development' ? 'development' : 'production', repositoryDir, '');
 const appEnv = repositoryEnv.APP_ENV || process.env.APP_ENV || (process.env.NODE_ENV === 'development' ? 'development' : 'production');
 const appName = repositoryEnv.APP_NAME || 'TeleSignal';
+// * the default of the repository's `BASE_URL` (`../vite.config.ts`), which the image's nginx replaces with the address
+// * the users open (`docker/entrypoint.sh`)
+const publicUrl = repositoryEnv.BASE_URL || 'http://localhost:1234/';
 const appTitle = repositoryEnv.APP_TITLE || `${appName}${appEnv !== 'production' ? ' Beta' : ''}`;
 const csp = buildCsp(appEnv, repositoryEnv.SIGNAL_TUNNEL_URL);
 // * Web A's code reads these (`../src/config.ts`); the VITE_ ones replace upstream's `.env`, which held Telegram's keys
@@ -43,7 +46,7 @@ const SIGNAL_APP_ENV: Record<string, string> = {
   TG_APP_ENV: appEnv,
   TG_APP_NAME: repositoryEnv.APP_NAME || '',
   TG_APP_TITLE: appTitle,
-  TG_PUBLIC_URL: repositoryEnv.BASE_URL || '',
+  TG_PUBLIC_URL: publicUrl,
   TG_SIGNAL_TUNNEL_URL: repositoryEnv.SIGNAL_TUNNEL_URL || '',
   VITE_VERSION: rootPackageJson.version,
   VITE_VERSION_FULL: rootPackageJson.version,
@@ -102,8 +105,8 @@ const handlebarsPlugin = handlebars({
   context: {
     title: appTitle,
     description: 'A web client for Signal',
-    url: repositoryEnv.BASE_URL ? new URL('k/', repositoryEnv.BASE_URL).href : '',
-    origin: repositoryEnv.BASE_URL || '',
+    url: new URL('k/', publicUrl).href,
+    origin: publicUrl,
     csp
   }
 });
