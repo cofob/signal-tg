@@ -81,5 +81,22 @@ export {
   updateNotificationSettings,
 } from './settings';
 export {
+  deleteStory,
+  deleteStoryDistributionList,
+  fetchAllStories,
+  fetchPeerStories,
+  fetchPeerStoriesByIds,
+  fetchStoriesViews,
+  fetchStoryDistributionLists,
+  fetchStorySettings,
+  fetchStoryViewList,
+  markStoryRead,
+  saveStoryDistributionList,
+  sendStory,
+  sendStoryReaction,
+  toggleStoriesHidden,
+  updateStorySettings,
+} from './stories';
+export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
 } from './users';

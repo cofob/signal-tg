@@ -5,6 +5,7 @@ import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
+import { handleStoryChanges } from './updaters/stories';
 
 /** The Signal engine of this worker: protocol store, message database, connections and processing */
 export const store = new SignalStore();
@@ -19,6 +20,7 @@ export const processor = new MessageProcessor(db, client, {
     updateChain = updateChain
       .then(() => handleMessageChanges(changes))
       .then(() => handleChatChanges(changes))
+      .then(() => handleStoryChanges(changes))
       .catch(logError);
   },
   onTyping: (event) => void handleTyping(event).catch(logError),

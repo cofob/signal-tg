@@ -843,12 +843,20 @@ export default class MessageProcessor {
       body: reply.body, bodyRanges: reply.bodyRanges, storyContext, reaction,
     };
 
+    const account = await this.getAccount();
     if (conversation.type !== 'group') {
-      await this.sendDataMessage(conversation.id, init);
+      const message = await this.sendDataMessage(conversation.id, init);
+      await this.runSerial(async () => {
+        const current = await this.db.getStory(story.id);
+        if (current) {
+          await this.addStoryReply(current, {
+            authorAci: account.aci, sentAt: message.sentAt, body: reply.body, emoji: reply.emoji,
+          });
+        }
+      });
       return;
     }
 
-    const account = await this.getAccount();
     const sentAt = this.allocateTimestamp();
     await this.runSerial(() => this.addStoryReply(story, {
       authorAci: account.aci, sentAt, body: reply.body, emoji: reply.emoji,
@@ -1659,7 +1667,8 @@ export default class MessageProcessor {
       ? await this.db.findStory(storyAuthorAci, Number(storyContext!.sentTimestamp))
       : undefined;
 
-    if (story && (conversation.type === 'group' || story.isOutgoing)) {
+    // Our own replies are kept too, so the story shows our reaction
+    if (story && (conversation.type === 'group' || story.isOutgoing || source.isOutgoing)) {
       await this.addStoryReply(story, {
         authorAci: source.authorAci,
         sentAt: source.sentAt,

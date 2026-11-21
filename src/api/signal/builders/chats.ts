@@ -77,6 +77,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
     isJoinToSend: isInvited || undefined,
     adminRights: adminAcis?.includes(selfAci) ? GROUP_ADMIN_RIGHTS : undefined,
     defaultBannedRights: buildGroupBannedRights(conversation),
+    areStoriesHidden: conversation.isStoryHidden || undefined,
   };
 }
 

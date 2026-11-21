@@ -141,6 +141,11 @@ export function sendMessageLocal(params: SendMessageParams) {
  * attachment, and content Signal has no counterpart for fails.
  */
 export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnProgress) {
+  if (params.replyInfo?.type === 'story') {
+    await sendStoryReply(params);
+    return;
+  }
+
   const localMessage = params.localMessage ?? await sendMessageLocal(params);
   if (!localMessage) return;
 
@@ -385,6 +390,23 @@ async function sendWithLocalMessage(conversation: ConversationRecord, init: Data
   }
 }
 
+/**
+ * Replies to the story open in the story viewer, or reacts to it with the emoji of a reaction message. Private replies
+ * arrive in the chat as stored messages; group story replies stay with the story.
+ */
+async function sendStoryReply({
+  replyInfo, text, entities, isReaction,
+}: SendMessageParams) {
+  if (replyInfo?.type !== 'story' || !text) return;
+  try {
+    const reply = isReaction ? { emoji: text } : await buildOutgoingBody({ text, entities });
+    await processor.sendStoryReply(replyInfo.storyId, reply);
+  } catch (err) {
+    logError(err);
+    sendError(SEND_ERROR);
+  }
+}
+
 async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnProgress): Promise<DataMessageInit> {
   const {
     text, entities, replyInfo, attachment, poll,
@@ -417,7 +439,7 @@ async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnPro
 }
 
 /** Mention entities of users become Signal mentions by ACI */
-async function buildOutgoingBody(text: ApiFormattedText) {
+export async function buildOutgoingBody(text: ApiFormattedText) {
   const aciByUserId = new Map<string, string>();
   for (const entity of text.entities ?? []) {
     if (entity.type !== ApiMessageEntityTypes.MentionName) continue;

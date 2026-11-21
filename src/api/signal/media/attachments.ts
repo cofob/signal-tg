@@ -5,10 +5,10 @@ import type { ApiOnProgress } from '../../types';
 
 import { ATTACHMENT_CACHE_NAME, getAttachmentCacheKey } from '../../../lib/signal/attachments/attachmentCache';
 import { AttachmentUnavailableError, downloadAttachment } from '../../../lib/signal/attachments/downloadAttachment';
-import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
+import { DataMessageSchema, StoryMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import * as cacheApi from '../../../util/cacheApi';
 import { getSafeMimeType } from '../../../util/media/safeMimeType';
-import { parseAttachmentMediaId, STICKER_SLOT } from '../builders/media';
+import { parseAttachmentMediaId, parseStoryMediaId, STICKER_SLOT } from '../builders/media';
 import { db } from '../engine';
 
 type DownloadState = {
@@ -34,6 +34,13 @@ let lastDownloaded: { key: string; blob: Blob } | undefined;
  * when the CDN no longer has the attachment.
  */
 export async function getAttachmentPointer(mediaId: string) {
+  const storyId = parseStoryMediaId(mediaId);
+  if (storyId !== undefined) {
+    const story = await db.getStory(storyId);
+    const { attachment } = story ? fromBinary(StoryMessageSchema, story.storyMessage) : {};
+    return attachment?.case === 'fileAttachment' ? attachment.value : undefined;
+  }
+
   const parsed = parseAttachmentMediaId(mediaId);
   if (!parsed) return undefined;
   const message = await db.getMessage(parsed.messageId);

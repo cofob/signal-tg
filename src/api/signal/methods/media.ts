@@ -79,9 +79,10 @@ async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgre
   if (!pointer) throw new Error(`Attachment ${mediaId} is not found`);
   if (!isThumbnail || pointer.contentType.startsWith('image/')) {
     return fetchAttachmentBlob(pointer, onProgress).catch(async (err: unknown) => {
-      // The message then shows the media as unavailable and stops asking for it
-      const { messageId, slot } = parseAttachmentMediaId(mediaId)!;
-      if (err instanceof AttachmentUnavailableError) {
+      // The message then shows the media as unavailable and stops asking for it; stories expire anyway
+      const parsed = parseAttachmentMediaId(mediaId);
+      if (parsed && err instanceof AttachmentUnavailableError) {
+        const { messageId, slot } = parsed;
         await processor.markAttachmentUnavailable(messageId, slot === STICKER_SLOT ? 'sticker' : slot);
       }
       throw err;
