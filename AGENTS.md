@@ -27,7 +27,7 @@ TeleSignal is a web client for the Signal messenger, built on the Telegram Web A
 - After changing `proxy/`, run `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` in it.
 - After changing `tauri/`, run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` in it; `proxy/` must still build without the desktop app.
 - After changing `rust/signal-wasm` or the vendored libsignal crates, run `npm run signal:wasm`; after changing a schema in `src/lib/signal/proto/schema`, run `npm run signal:proto`. Commit the regenerated output.
-- For browser verification, reuse `localhost:1234` if running; otherwise run `npm run dev`. If a sandboxed check fails, confirm through the browser or an approved check outside the sandbox before starting another server.
+- For browser verification, reuse `localhost:1234` if running; otherwise run `npm run dev`, which serves Web A at `/a/` and proxies `/k/` to Web K's own server on the next port (`DEV_PORT`, `WEBK_DEV_PORT`). If a sandboxed check fails, confirm through the browser or an approved check outside the sandbox before starting another server.
 - Signal hosts are reachable only through the tunnel: run `npm run signal:proxy` (Rust) and set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` in `.env`. That is the build default; the Proxy server setting (Data and Storage, or the link screen) overrides it at runtime. In development builds, `signalDev` in the browser console links a device and prints decrypted messages.
 - Do not modify account state (send messages, change settings, etc.) unless directly prompted.
 
