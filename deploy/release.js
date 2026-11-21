@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CHANGELOG_PATH = 'CHANGELOG.md';
-const REPOSITORY_URL = 'https://github.com/cofob/signal-tg';
+const REPOSITORY_URL = 'https://github.com/cofob/telesignal';
 const TAG_PREFIX = 'v';
 const UNRELEASED = 'Unreleased';
 const TUNNEL_PACKAGE = 'telesignal-tunnel';

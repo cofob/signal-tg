@@ -79,5 +79,5 @@ The conversion of Telegram Web A into a Signal client; the plan and its status a
 - Desktop app: no shell access for the page, external links limited to web, mail and phone links, new windows blocked,
   and the TLS libraries and the updater's ZIP reader updated to versions that fix published advisories.
 
-[Unreleased]: https://github.com/cofob/signal-tg/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/cofob/signal-tg/releases/tag/v0.1.0
+[Unreleased]: https://github.com/cofob/telesignal/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/cofob/telesignal/releases/tag/v0.1.0
