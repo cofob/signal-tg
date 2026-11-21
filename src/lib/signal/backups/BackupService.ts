@@ -290,7 +290,10 @@ export default class BackupService {
     await refreshArchive(await this.getAuth(account, keys, 'messages'));
     await this.options.client.updateAccount({
       backups: {
-        ...account.backups, lastRefreshAt: getServerTime() * MS_PER_SECOND, failureCount: undefined, nextAttemptAt: undefined,
+        ...account.backups,
+        lastRefreshAt: getServerTime() * MS_PER_SECOND,
+        failureCount: undefined,
+        nextAttemptAt: undefined,
       },
     });
     this.options.onChange();

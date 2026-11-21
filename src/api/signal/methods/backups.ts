@@ -2,7 +2,9 @@ import type { ApiBackupFrequency, ApiBackupRemoteStatus, ApiBackupSettings } fro
 
 import { normalizeRecoveryKey } from '../../../lib/signal/account/recoveryKey';
 import { ArchiveError } from '../../../lib/signal/backups/archiveApi';
-import BackupService, { ExistingBackupError, getIsPrimaryDevice, NotPrimaryDeviceError } from '../../../lib/signal/backups/BackupService';
+import BackupService, {
+  ExistingBackupError, NotPrimaryDeviceError,
+} from '../../../lib/signal/backups/BackupService';
 import { restoreBackupFile, RestoreError } from '../../../lib/signal/backups/restoreBackup';
 import { BackupValidationError } from '../../../lib/signal/backups/validateBackup';
 import NetworkError from '../../../lib/signal/net/NetworkError';
