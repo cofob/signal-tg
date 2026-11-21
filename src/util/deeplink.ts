@@ -15,6 +15,8 @@ import { tryParseDeepLink } from './deepLinkParser';
 import { parseSignalLink } from './signalLinks';
 
 const RE_NON_DIGIT = /\D/g;
+// E.164 numbers have 7 to 15 digits and no leading zero, as in `signal.me/#p/` links (`signalLinks.ts`)
+const RE_E164_DIGITS = /^[1-9]\d{6,14}$/;
 
 /**
  * Opens a link inside the app: a Signal link (`signal.me`, `signal.group`, `signal.art`, `signal.link`, `signal.tube`
@@ -161,7 +163,12 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
           });
         } else if (phone) {
           // The lookup tells the contact discovery service about the number, so the user confirms it first
-          openPhoneNumberLookupModal({ phoneNumber: phone.replace(RE_NON_DIGIT, '') });
+          const phoneNumber = phone.replace(RE_NON_DIGIT, '');
+          if (RE_E164_DIGITS.test(phoneNumber)) {
+            openPhoneNumberLookupModal({ phoneNumber });
+          } else {
+            getActions().showNotification({ message: { key: 'SignalLinkInvalid' } });
+          }
         } else if (story) {
           openStoryViewerByUsername({ username: domain, storyId: Number(story) });
         } else {
