@@ -18,24 +18,16 @@ every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revisi
 conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
 is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
 
-## Desktop notifications cannot open the chat that they announce
+## The desktop app cannot switch on spell checking in WebKitGTK
 
-`src/util/notifications.tsx` shows the desktop app's notifications with `sendNotification({ title, body })` of
-`@tauri-apps/plugin-notification`. On desktop the plugin shows the notification through `notify-rust` and drops the
-handle (`tauri-plugin-notification` 2.5.1, `src/desktop.rs`), and `onAction` exists on mobile only, so a click reaches
-the page as nothing, and the plugin offers no inline reply or grouping either. Verified by reading the plugin's source;
-not tried on macOS or Windows. Opening the chat needs native code per system (a `notify-rust` handle on Linux, a
-`UNUserNotificationCenter` delegate on macOS, a toast activation on Windows), or a heuristic: remember the last
-notified chat and open it when the window gains focus soon after.
-
-## The desktop app ships the webview inspector, so production turns off the context menu
-
-`tauri/Cargo.toml` enables the `devtools` feature of `tauri`, which keeps the inspector in release builds, and
-`src/util/tauri/setupTauriListeners.ts` cancels every `contextmenu` event outside `DEBUG` to hide it. The same line
-removes the system menu of text fields (cut, copy, paste, select all, spellcheck suggestions), and the inputs turn
-spellcheck off (`spellCheck={IS_TAURI ? false : undefined}`). Verified by reading both places; the inspector in a
-release build is not tried. Either dropping the feature or showing the system menu on editable targets only, with
-the inspector off, would restore text field menus.
+The composer sets `spellcheck` (`MessageInput.tsx`) and the system context menu is allowed in text fields
+(`setupTauriListeners.ts`), but on Linux the webview decides whether to spell-check, through
+`webkit_web_context_set_spell_checking_enabled`, which neither `wry` 0.57 nor the app calls (a search for "spell" in the
+`wry` and `tauri` sources finds nothing). Verified under Xvfb with WebKitGTK 2.52: misspelled words in the composer got
+no underline and the context menu had no suggestions, though the system may lack dictionaries there. Calling it from
+`Webview::with_webview` needs the `webkit2gtk` crate as a direct dependency, which the tree has through `wry` but
+`tauri/Cargo.toml` does not list. Whether WKWebView (macOS) and WebView2 (Windows) spell-check the composer is not
+tried.
 
 ## The demo account has no downloadable document and no file with a risky name
 

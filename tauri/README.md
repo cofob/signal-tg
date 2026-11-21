@@ -5,11 +5,12 @@ Linux. It bundles the web app, so it loads no remote code, and it reaches Signal
 TCP connections instead of the WebSocket tunnel (`proxy/`). The Signal engine and TLS still run in the
 page's worker, in WebAssembly.
 
-- Closing the window hides it; the engine keeps running, and the tray icon or a second launch shows the
-  window again. The tray menu quits the app. The unread count appears on the tray icon, the Dock icon
-  (macOS), the taskbar button (Windows) and the launcher icon (Linux desktops with the Unity launcher API).
-- New messages show system notifications through the Tauri notification plugin when the window is not
-  focused and web notifications are on in Settings, Notifications.
+- Closing the window hides it (Settings, General, Desktop app, "Close to tray", on by default); the engine keeps
+  running, and the tray icon or a second launch shows the window again. The tray menu quits the app. The unread
+  count appears on the tray icon, the Dock icon (macOS), the taskbar button (Windows) and the launcher icon (Linux
+  desktops with the Unity launcher API).
+- New messages show system notifications when the window is not focused and web notifications are on in Settings,
+  Notifications; a click opens the chat. See [Desktop integration](#desktop-integration).
 - `sgnl://` links open the app and the page handles them like the links in messages (`src/util/signalLinks.ts`):
   `signal.me` (username and phone number), `signal.group` and `joingroup` (group), `addstickers` (sticker pack),
   `signal.tube` (proxy), `signal.link` (call), `linkdevice` and `rereg`. The app forwards only these hosts, so
@@ -157,7 +158,7 @@ request bodies, one at a time, so a large video builds no JSON array and does no
 | `finish_file_save(id)` | Moves the file to its final name (`name (1).ext` when the name is taken, the picked path for the dialog), marks it as downloaded from the Internet (quarantine attribute on macOS, Mark of the Web on Windows), records it under `key` and emits `saved-files-changed` to every window. Returns the final file and folder names for the toast |
 | `abort_file_save(id)` | Removes the temporary file. A window that closes or reloads ends its unfinished saves the same way, and the exit of the app ends all of them |
 | `list_saved_files` | Returns the keys of the recorded files that still exist and drops the records of the others |
-| `open_saved_file(key)` | Opens a recorded file with the default app, after a confirmation when its type is dangerous |
+| `open_saved_file(key, langCode)` | Opens a recorded file with the default app, after a confirmation in the language that `langCode` names when its type is dangerous |
 | `reveal_saved_file(key)` | Shows a recorded file in Finder, Explorer or the file manager |
 
 The page names a file by a key, the media hash for an attachment, and keeps the keys that `saved-files-changed` and
@@ -179,11 +180,72 @@ the page says so.
 - Opening a file of a dangerous type (`DANGEROUS_EXTENSIONS`: Signal Desktop's list from
   `ts/util/isFileDangerous.std.ts` plus the types of macOS, Linux and Windows packages, disk images, scripts and Office
   macros that it lacks; the text after the last dot counts, so `.exe` is dangerous) asks in a native dialog. Rust builds
-  the dialog, in English, with the real file name and extension; the page passes no text for it and cannot skip it.
+  the dialog with the real file name and extension, in the page's language: `OPEN_WARNING_TEXTS` holds the words for
+  each shipped language (English, Russian), and the page passes only its language code (`langCode` of
+  `open_saved_file`), which picks a set, English for an unknown one. The page passes no text for it and cannot skip it.
 - The `dialog` and `opener` plugins are registered without permissions for the page; only the commands above are in
   `capabilities/default.json`. The opener's reveal uses Finder on macOS, `SHOpenFolderAndSelectItems` on Windows and the
   `org.freedesktop.FileManager1` D-Bus interface on Linux; when that fails, the app opens the folder with the default
   app (`xdg-open`).
+
+## Desktop integration
+
+Settings, menus and notifications that need the operating system live in Rust, so they work before the page loads
+and without the page's permission for plugins.
+
+### Settings
+
+Settings, General, "Desktop app" (only in the app; `SettingsDesktopApp.tsx`) shows the settings that Rust keeps:
+
+| Setting | Stored in | Effect |
+| --- | --- | --- |
+| Close to tray (default on) | `desktop_settings.json` in the app data directory | On: closing the last window hides it, as the tray icon does; off: closing it quits the app |
+| Launch at login | The system's entry (`tauri-plugin-autostart`: `~/.config/autostart` on Linux, a Launch Agent on macOS, the `Run` registry key on Windows) | The entry starts the app with `--autostart`, which opens the window hidden in the tray; a second launch with it does not bring a running window forward |
+| Hide content from screenshots (macOS and Windows only) | `desktop_settings.json` | `content_protected` on every window, also on the ones that open later |
+
+`get_desktop_settings` and `set_desktop_settings` (`src/settings.rs`) read and change them; the page keeps no copy.
+The window state plugin does not restore whether a window was visible (`StateFlags::VISIBLE` is off), so a hidden
+start stays hidden.
+
+### Notifications
+
+The page asks for a notification with `show_notification(title, body, chatId?, messageId?)` (`src/notifications.rs`,
+`notify-rust`, which the notification plugin already pulls in). The command shows it and waits for the user on a
+thread of its own (at most 16 at once; the others are shown without waiting): the D-Bus `ActionInvoked` signal of the
+`default` action on Linux, the toast activation on Windows and the notification center on macOS. A click brings the
+window forward (`bring_window_forward`) and emits `notification-clicked` with `{ chatId, messageId }`, which
+`setupTauriListeners.ts` turns into `focusMessage`. The page passes no chat while the screen is locked, and the
+title and body already follow the "message preview" setting, so a click reveals nothing that the notification did
+not. The notification plugin remains for the permission check only.
+
+### Menus and shortcuts
+
+- macOS: the menu bar (`src/menu.rs`) has the app menu (Settings, Cmd+,; Hide; Quit), Edit (undo, redo, cut, copy,
+  paste, select all) and Window (minimize; Close, Cmd+W, which hides the last window like the close button). A click
+  on the Dock icon (`RunEvent::Reopen`) shows the window. The page sends the labels with `set_menu_translations`
+  when its language changes; the tray menu takes them too.
+- Windows and Linux: no menu bar. Ctrl+Q quits through `quit_app`; the shortcut is `quitApp` in the page's
+  keyboard shortcut registry.
+- macOS keeps the app out of App Nap for as long as it runs (`begin_background_activity`), so that a hidden window
+  does not delay the engine's timers and network callbacks.
+
+### Connection and theme
+
+- The page asks the engine to reconnect at once (`reconnectNow`, `src/util/setupReconnectTriggers.ts`) on the `online`
+  event and when a timer fires 90 s or more after it was due, which is how a sleeping computer looks. This applies to
+  the browser build too. Only the master tab asks.
+- The page follows `prefers-color-scheme` and needs no help from the app: WebKitGTK 2.52 updates it live when the GTK
+  theme changes (tried with XSettings), WKWebView and WebView2 are expected to (not tried), and `tao` reports
+  `ThemeChanged` on Linux only for a theme that the app sets itself, so the window's `onThemeChanged` would add
+  nothing.
+
+### Context menu and spelling
+
+The webview's context menu is cut off outside development (`setupTauriListeners.ts`), except in text fields, where
+the system menu offers cut, copy, paste and the spelling suggestions. The `devtools` feature of `tauri` is off, so a
+release build has no inspector item in it; `tauri dev` and debug builds keep it. The composer sets `spellcheck`.
+Whether the webview then spell-checks depends on the system: WKWebView and WebView2 follow the user's settings, and
+`wry` never switches spell checking on in WebKitGTK.
 
 ## Releases
 
