@@ -73,3 +73,12 @@ every screenshot with a focused `input` adds two such errors (verified on the de
 opening a chat and after typing; 2 more after each default screenshot, none with `caret: 'initial'`). The error text
 names no element, so these reports look like a component bug. Browser verification scripts should pass
 `caret: 'initial'`; `stricterdom` could name the target element and ignore `caret-color`.
+
+## `ListItem` acts on the press, so a control in `rightElement` also opens the row
+
+On pointer devices `ListItem` (`src/components/ui/ListItem.tsx`) runs `onClick` from the `mousedown` of its button
+(`handleMouseDown`), not from the click. A `Switcher` or `Button` in `rightElement` therefore triggers the row's own
+`onClick` unless the wrapper stops both `mousedown` and `click` (`SettingsNotificationProfiles.tsx` does). Verified in
+the demo account by toggling a profile, which opened its editor until `mousedown` was stopped as well. A prop of
+`ListItem` for controls that must not open the row, or `Switcher` stopping the press itself, would remove the need for
+each caller to find this out.
