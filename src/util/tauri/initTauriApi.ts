@@ -23,6 +23,11 @@ export default function initTauriApi() {
     return core.invoke<void>('set_window_title', { title });
   }
 
+  async function takeDeepLinks() {
+    const core = await corePromise;
+    return core.invoke<string[]>('take_deep_links');
+  }
+
   // @ts-expect-error
   window.tauri ??= {};
   Object.assign(window.tauri, {
@@ -33,5 +38,6 @@ export default function initTauriApi() {
     checkUpdate: () => import('@tauri-apps/plugin-updater').then(({ check }) => check()),
     getCurrentWindow: () => import('@tauri-apps/api/window').then(({ getCurrentWindow }) => getCurrentWindow()),
     setWindowTitle,
+    takeDeepLinks,
   });
 }

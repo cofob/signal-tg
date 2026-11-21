@@ -6,6 +6,7 @@ import type { ApiAttachment, ApiDimensions, ApiOnProgress } from '../types';
 import { saveAttachmentBlob } from '../../lib/signal/attachments/attachmentCache';
 import { uploadAttachment } from '../../lib/signal/attachments/uploadAttachment';
 import { AttachmentPointer_Flags } from '../../lib/signal/proto/generated/SignalService_pb';
+import { AttachmentUploadError } from '../../lib/signal/sender/sendErrors';
 import { bufferFromHex } from '../../util/encoding/buffer';
 import { fetchBlob } from '../../util/files';
 import { getSafeMimeType } from '../../util/media/safeMimeType';
@@ -23,8 +24,19 @@ const APP_WAVEFORM_MAX = 31;
 const SIGNAL_WAVEFORM_MAX = 255;
 const UUID_SEPARATOR_REGEX = /-/g;
 
-/** Uploads an attachment that the composer prepared and returns its pointer for `DataMessage.attachments` */
-export async function uploadMessageAttachment(
+/**
+ * Uploads an attachment that the composer prepared and returns its pointer for `DataMessage.attachments`. A failure
+ * is an `AttachmentUploadError`, so that a message that did not send tells it apart from other failures.
+ */
+export async function uploadMessageAttachment(attachment: ApiAttachment, onProgress?: ApiOnProgress) {
+  try {
+    return await prepareAndUploadAttachment(attachment, onProgress);
+  } catch (err) {
+    throw new AttachmentUploadError(err);
+  }
+}
+
+async function prepareAndUploadAttachment(
   attachment: ApiAttachment, onProgress?: ApiOnProgress,
 ): Promise<MessageInitShape<typeof AttachmentPointerSchema>> {
   const {

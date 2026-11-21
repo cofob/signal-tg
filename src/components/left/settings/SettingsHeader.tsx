@@ -176,6 +176,8 @@ const SettingsHeader = ({
         return <h3>{lang('OtherWebSessions')}</h3>;
       case SettingsScreens.PrivacyBlockedUsers:
         return <h3>{lang('BlockedUsers')}</h3>;
+      case SettingsScreens.Stories:
+        return <h3>{lang('StoriesSettingTitle')}</h3>;
 
       case SettingsScreens.TwoFaDisabled:
       case SettingsScreens.TwoFaEnabled:

@@ -1,6 +1,5 @@
 import type { LastResortPreKeys } from '../account/preKeys';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
-import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
@@ -33,6 +32,9 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Stories settings of the account record; view receipts follow read receipts until set
+  isStoriesDisabled?: boolean;
+  isStoryViewReceiptsEnabled?: boolean;
   // Phone number privacy, as in the storage service account record: who sees the number on our profile, and whether
   // people can find us by it. A primary device registered here sets the latter with the account attribute.
   isPhoneNumberShared?: boolean;
@@ -130,19 +132,36 @@ type Items = {
   pendingRegistration: PendingRegistration;
   // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
   unlinkedAci: string;
-  // Storage record types this device has merged from records it stored before supporting them (`MessageProcessor`)
-  storageMergedRecordTypes: NonNullable<StorageRecord['record']['case']>[];
+  // Merges of stored storage records that this device has done after learning to read more of them
+  // (`MessageProcessor`)
+  storageMergedRecordTypes: string[];
   // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
   stickerPacks: Record<string, StickerPackRecord>;
   // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
   recentStickers: string[];
   cdsiToken: CdsiToken;
+  storyDistributionLists: StoryDistributionList[];
 };
 
 /** The contact discovery token for the numbers of earlier contact refreshes, which later refreshes send again */
 export type CdsiToken = {
   token: Uint8Array;
   e164s: string[];
+};
+
+/** A story distribution list of the storage service; My Story has `MY_STORY_ID` (`stories/storyLists.ts`) */
+export type StoryDistributionList = {
+  // UUID string, also the distribution id of the list's sender key
+  id: string;
+  name: string;
+  // With `isBlockList`, the people My Story leaves out; otherwise the people the list goes to
+  memberAcis: string[];
+  // Binary service ids of members that are no ACIs, such as PNIs, which the storage service record keeps as they are
+  otherMemberIds?: Uint8Array[];
+  areRepliesAllowed: boolean;
+  isBlockList: boolean;
+  // Deleted lists stay until the storage service drops them
+  deletedAt?: number;
 };
 
 export type NotificationDefaults = {

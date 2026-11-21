@@ -259,6 +259,15 @@ export interface LangPair {
   'SignalPinErrorSave': undefined;
   'SignalPhoneLookupTitle': undefined;
   'SignalPhoneLookupConfirm': undefined;
+  'SignalLinkInvalid': undefined;
+  'SignalLinkSearchOpen': undefined;
+  'SignalProxyLinkTitle': undefined;
+  'SignalCallLinkTitle': undefined;
+  'SignalCallLinkText': undefined;
+  'SignalDeviceLinkTitle': undefined;
+  'SignalDeviceLinkText': undefined;
+  'SignalReRegisterTitle': undefined;
+  'SignalReRegisterText': undefined;
   'SignalContactDiscovery': undefined;
   'SignalContactDiscoveryAbout': undefined;
   'SignalPinErrorUnavailable': undefined;
@@ -1846,13 +1855,42 @@ export interface LangPair {
   'InviteViaLinkButton': undefined;
   'StoryUnsupported': undefined;
   'StoryRibbonMyStory': undefined;
-  'StoryMenuSavedStories': undefined;
-  'StoryMenuArchivedStories': undefined;
   'StoryMenuSendMessage': undefined;
   'StoryMenuViewProfile': undefined;
-  'StoryMenuViewChannel': undefined;
   'StoryMenuArchivePeer': undefined;
   'StoryMenuUnarchivePeer': undefined;
+  'StoryMenuViewGroup': undefined;
+  'StoryNew': undefined;
+  'StoryModeText': undefined;
+  'StoryModeMedia': undefined;
+  'StoryTextPlaceholder': undefined;
+  'StoryChooseMedia': undefined;
+  'StoryMediaUnsupported': undefined;
+  'StoryCaption': undefined;
+  'StorySendTo': undefined;
+  'StorySend': undefined;
+  'StorySent': undefined;
+  'StorySendFailed': undefined;
+  'StoryGroupStory': undefined;
+  'StoryDeleteFailed': undefined;
+  'StoryDeletePartial': undefined;
+  'StoryMyStoryAllConnections': undefined;
+  'StoryListName': undefined;
+  'StoriesSettingTitle': undefined;
+  'StoriesSettingEnable': undefined;
+  'StoriesSettingEnableInfo': undefined;
+  'StoriesSettingViewReceipts': undefined;
+  'StoriesSettingViewReceiptsInfo': undefined;
+  'StoriesSettingAllExcept': undefined;
+  'StoriesSettingOnlyShare': undefined;
+  'StoriesSettingChoosePeople': undefined;
+  'StoriesSettingAllowReplies': undefined;
+  'StoriesSettingMyStoryInfo': undefined;
+  'StoriesSettingCustomLists': undefined;
+  'StoriesSettingCustomList': undefined;
+  'StoriesSettingNewList': undefined;
+  'StoriesSettingDeleteList': undefined;
+  'SettingsKeywordsStories': undefined;
   'StarGift': undefined;
   'SettingsItemPrivacyPasskeys': undefined;
   'SettingsItemPrivacyOn': undefined;
@@ -2006,7 +2044,6 @@ export interface LangPair {
   'AllReactions': undefined;
   'AllViewers': undefined;
   'AnonymousForward': undefined;
-  'ArchiveStory': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
   'August': undefined;
@@ -2100,7 +2137,6 @@ export interface LangPair {
   'English': undefined;
   'ExpiredStory': undefined;
   'ExpiredStoryMention': undefined;
-  'ExpiredViewsStub': undefined;
   'FactCheck': undefined;
   'February': undefined;
   'SearchFilterByUser': undefined;
@@ -2195,7 +2231,6 @@ export interface LangPair {
   'ReactionsAll': undefined;
   'ReactionsOff': undefined;
   'RecoveryEmailSubtitle': undefined;
-  'RemoveFromPosts': undefined;
   'RemoveQuote': undefined;
   'Replace': undefined;
   'ReplyPrivate': undefined;
@@ -2209,7 +2244,6 @@ export interface LangPair {
   'ReportStory': undefined;
   'CallMicrophoneAccessNeeded': undefined;
   'Reset': undefined;
-  'SaveToPosts': undefined;
   'Saved': undefined;
   'SavedTagFilterByTag': undefined;
   'SavedTagLabelTag': undefined;
@@ -2242,7 +2276,6 @@ export interface LangPair {
   'StoryToastSavedToProfileText': undefined;
   'StoryTooltipVideoHasNoSound': undefined;
   'StoryViewListEmptyTextSearch': undefined;
-  'StoryViewListNotFullyRecorded': undefined;
   'StoryExpiredSubtitle': undefined;
   'StoryKeep': undefined;
   'StoryListArchivedEmptyStateTitle': undefined;
@@ -2262,7 +2295,6 @@ export interface LangPair {
   'StoryPrivacyOptionSelectedContacts': undefined;
   'StoryPrivacyOptionSelectedContactsDetail': undefined;
   'StoryReactionsHint': undefined;
-  'StorySave': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
   'TopicClosedByAdmin': undefined;
@@ -2565,6 +2597,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalPhoneLookupText': {
     'phone': V;
+  };
+  'SignalProxyLinkText': {
+    'host': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -3411,6 +3446,12 @@ export interface LangPairWithVariables<V = LangVariable> {
     'currentSize': V;
     'totalSize': V;
   };
+  'StoryBackground': {
+    'index': V;
+  };
+  'StoriesSettingDeleteListInfo': {
+    'name': V;
+  };
   'GiftAuctionRoundValue': {
     'current': V;
     'total': V;
@@ -3570,12 +3611,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ReplyToQuote': {
     'senderTitle': V;
   };
-  'StoryCloseFriendsHint': {
-    'user': V;
-  };
-  'StoryContactsHint': {
-    'user': V;
-  };
   'StoryHideFrom': {
     'user': V;
   };
@@ -3583,9 +3618,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'peer': V;
   };
   'StoryPrivacyOptionExcludePerson': {
-    'user': V;
-  };
-  'StorySelectedContactsHint': {
     'user': V;
   };
   'StorySharedTo': {
@@ -3929,6 +3961,15 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'InviteRestrictedUsers': {
     'count': V;
   };
+  'StoryMyStoryExcept': {
+    'count': V;
+  };
+  'StoryMyStoryOnly': {
+    'count': V;
+  };
+  'StoryListMembers': {
+    'count': V;
+  };
   'AttachmentReplacePhoto': {
     'count': V;
   };
@@ -4099,11 +4140,8 @@ export interface LangKeyGroups {
       | 'ExpiredStoryMentioned'
       | 'PremiumLastSeenText1Locked'
       | 'PremiumReadText1'
-      | 'StoryCloseFriendsHint'
-      | 'StoryContactsHint'
       | 'StoryHideFrom'
       | 'StoryPrivacyOptionExcludePerson'
-      | 'StorySelectedContactsHint'
       | 'StorySharedTo'
       | 'StoryShowBackTo'
       | 'StoryYouMentionedTitle'
@@ -4222,6 +4260,11 @@ export interface LangKeyGroups {
       | 'UsernameByPhoneNotFound';
     variables: 'phone';
   };
+  'host': {
+    keys:
+      | 'SignalProxyLinkText';
+    variables: 'host';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -4292,7 +4335,8 @@ export interface LangKeyGroups {
       | 'MediaAccessCameraText'
       | 'MediaAccessMicrophoneText'
       | 'MediaAccessCameraMicrophoneText'
-      | 'ContextMenuNoForwardsPeer';
+      | 'ContextMenuNoForwardsPeer'
+      | 'StoriesSettingDeleteListInfo';
     variables: 'name';
   };
   'date,time': {
@@ -4779,6 +4823,11 @@ export interface LangKeyGroups {
       | 'FileTransferProgress';
     variables: 'currentSize' | 'totalSize';
   };
+  'index': {
+    keys:
+      | 'StoryBackground';
+    variables: 'index';
+  };
   'current,total': {
     keys:
       | 'GiftAuctionRoundValue'
@@ -4958,6 +5007,9 @@ export interface LangPluralKeyGroups {
       | 'CommunityWithChats'
       | 'TextAgeVerificationModal'
       | 'InviteRestrictedUsers'
+      | 'StoryMyStoryExcept'
+      | 'StoryMyStoryOnly'
+      | 'StoryListMembers'
       | 'AttachmentReplacePhoto'
       | 'AttachmentReplaceVideo'
       | 'AttachmentReplaceAudio'

@@ -44,6 +44,8 @@ export type ConversationRecord = {
   isAccepted?: boolean;
   // We reported the conversation as spam
   isReported?: boolean;
+  // Stories of the contact or group show in the hidden list (`hideStory` in storage)
+  isStoryHidden?: boolean;
   // The last `reportSpamToken` of an envelope from the contact, sent with spam reports
   reportingToken?: Uint8Array;
   mutedUntil?: number;
@@ -112,17 +114,57 @@ export type MessageRecord = {
 
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;
 
+/** A reply or reaction to a story; group story replies are kept only here, as in Signal Desktop */
+export type StoryReply = {
+  authorAci: string;
+  sentAt: number;
+  body?: string;
+  emoji?: string;
+};
+
+/** Who an outgoing story went to, whether they may reply, and when they viewed it */
+export type StoryRecipient = {
+  status: SendStatus;
+  isAllowedToReply: boolean;
+  // Distribution lists that include the recipient; empty for group stories
+  distributionListIds: string[];
+  viewedAt?: number;
+};
+
+export type StoryRecord = {
+  id: number;
+  // The author's private conversation, the group of a group story, or our ACI for our distribution list stories
+  conversationId: string;
+  authorAci: string;
+  authorDeviceId?: number;
+  // The Signal timestamp: with `authorAci` it identifies the story
+  sentAt: number;
+  receivedAt: number;
+  serverTimestamp?: number;
+  expiresAt: number;
+  isOutgoing: boolean;
+  // Serialized `StoryMessage`
+  storyMessage: Uint8Array;
+  viewedAt?: number;
+  // Outgoing stories
+  recipients?: Record<string, StoryRecipient>;
+  replies?: StoryReply[];
+};
+
+export type NewStoryRecord = Omit<StoryRecord, 'id'>;
+
 const DB_NAME = 'ts-signal-messages';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
+const STORIES = 'stories';
 const BY_CONVERSATION = 'byConversation';
 const BY_AUTHOR_SENT_AT = 'byAuthorSentAt';
 const BY_EXPIRES_AT = 'byExpiresAt';
 const BY_LOCAL_ID = 'byLocalId';
 
 /**
- * Conversations and messages of the linked device in IndexedDB. Message ids grow in arrival order,
+ * Conversations, messages and stories of the linked device in IndexedDB. Message ids grow in arrival order,
  * which is the order Signal Desktop shows messages in.
  */
 export default class MessageDb {
@@ -321,14 +363,69 @@ export default class MessageDb {
     return message?.expiresAt;
   }
 
+  getStory(id: number) {
+    return this.request<StoryRecord | undefined>(STORIES, 'readonly', (store) => store.get(id));
+  }
+
+  async addStory(record: NewStoryRecord): Promise<StoryRecord> {
+    const id = await this.request<IDBValidKey>(STORIES, 'readwrite', (store) => store.add(record));
+    return { ...record, id: id as number };
+  }
+
+  async putStory(record: StoryRecord) {
+    await this.request(STORIES, 'readwrite', (store) => store.put(record));
+    return record;
+  }
+
+  deleteStory(id: number) {
+    return this.request(STORIES, 'readwrite', (store) => store.delete(id));
+  }
+
+  /** Finds a story by its author and Signal timestamp */
+  findStory(authorAci: string, sentAt: number) {
+    return this.request<StoryRecord | undefined>(
+      STORIES, 'readonly', (store) => store.index(BY_AUTHOR_SENT_AT).get([authorAci, sentAt]),
+    );
+  }
+
+  /** Every stored story in arrival order; stories last a day, so there are few */
+  getStories() {
+    return this.request<StoryRecord[]>(STORIES, 'readonly', (store) => store.getAll());
+  }
+
+  /** Stories whose day ran out by `time` */
+  getExpiredStories(time: number) {
+    return this.request<StoryRecord[]>(
+      STORIES, 'readonly', (store) => store.index(BY_EXPIRES_AT).getAll(IDBKeyRange.upperBound(time)),
+    );
+  }
+
+  /** The earliest time a story expires */
+  async getNextStoryExpiresAt() {
+    const story = await this.request<StoryRecord | undefined>(
+      STORIES, 'readonly', (store) => store.index(BY_EXPIRES_AT).get(IDBKeyRange.lowerBound(0)),
+    );
+    return story?.expiresAt;
+  }
+
   async clear() {
     await this.request(CONVERSATIONS, 'readwrite', (store) => store.clear());
     await this.request(MESSAGES, 'readwrite', (store) => store.clear());
+    await this.request(STORIES, 'readwrite', (store) => store.clear());
   }
 
   private open() {
-    this.db ??= new Promise((resolve, reject) => {
+    if (this.db) return this.db;
+
+    const opening = new Promise<IDBDatabase>((resolve, reject) => {
       const openRequest = indexedDB.open(DB_NAME, DB_VERSION);
+      let isFailed = false;
+      // A failed open is not kept, so that the next request opens the database again
+      const fail = (err: unknown) => {
+        isFailed = true;
+        if (this.db === opening) this.db = undefined;
+        reject(err);
+      };
       openRequest.onupgradeneeded = ({ oldVersion }) => {
         const db = openRequest.result;
         if (oldVersion < 1) {
@@ -350,11 +447,32 @@ export default class MessageDb {
             cursor.continue();
           };
         }
+        if (oldVersion < 3) {
+          const stories = db.createObjectStore(STORIES, { keyPath: 'id', autoIncrement: true });
+          stories.createIndex(BY_AUTHOR_SENT_AT, ['authorAci', 'sentAt']);
+          stories.createIndex(BY_EXPIRES_AT, 'expiresAt');
+        }
       };
-      openRequest.onsuccess = () => resolve(openRequest.result);
-      openRequest.onerror = () => reject(openRequest.error);
+      // An older version of the app in another tab keeps the upgrade waiting until that tab closes
+      openRequest.onblocked = () => fail(new Error('Close the other tabs of the app to update its database'));
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        // A request that failed meanwhile opens its own connection
+        if (isFailed) {
+          db.close();
+          return;
+        }
+        // A newer version of the app in another tab upgrades the database once this connection is closed
+        db.onversionchange = () => {
+          db.close();
+          if (this.db === opening) this.db = undefined;
+        };
+        resolve(db);
+      };
+      openRequest.onerror = () => fail(openRequest.error);
     });
-    return this.db;
+    this.db = opening;
+    return opening;
   }
 
   private async request<T>(

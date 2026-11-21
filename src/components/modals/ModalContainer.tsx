@@ -11,6 +11,7 @@ import useShowTransition from '../../hooks/useShowTransition';
 
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
+import StoryComposerModal from '../story/StoryComposerModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
@@ -51,6 +52,7 @@ import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
+import SignalLinkModal from './signalLink/SignalLinkModal';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
@@ -87,6 +89,7 @@ type ModalKey = keyof Pick<TabState,
   'messageDetailsModal' |
   'recoveryKeyModal' |
   'quickPreview' |
+  'storyComposerModal' |
   'isAudioPlaylistModalOpen' |
   'isPasskeyModalOpen' |
   'birthdaySetupModal' |
@@ -101,11 +104,12 @@ type ModalKey = keyof Pick<TabState,
   'settingsConfirmation' |
   'mediaAccessModal' |
   'joinGroupCallModal' |
-  'phoneNumberLookupModal'
+  'phoneNumberLookupModal' |
+  'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'mapModal' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
   | 'botCreationModal' | 'settingsConfirmation' | 'mediaAccessModal' | 'joinGroupCallModal'
-  | 'phoneNumberLookupModal';
+  | 'phoneNumberLookupModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
 type ModalStateProps = {
@@ -188,6 +192,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   messageDetailsModal: MessageDetailsModal,
   recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
+  storyComposerModal: StoryComposerModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
   isPasskeyModalOpen: PasskeyModal,
   birthdaySetupModal: BirthdaySetupModal,
@@ -209,6 +214,7 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   mediaAccessModal: MediaAccessModal,
   joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
+  signalLinkModal: SignalLinkModal,
 };
 
 const LEGACY_MODAL_KEYS = Object.keys(LEGACY_MODALS) as LegacyModalKey[];

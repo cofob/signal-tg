@@ -1118,7 +1118,8 @@ const Composer = ({
       return MainButtonState.Stop;
     }
 
-    if ((IS_VOICE_RECORDING_SUPPORTED || IS_VIDEO_RECORDING_SUPPORTED)
+    // Signal story replies are text only
+    if ((IS_VOICE_RECORDING_SUPPORTED || IS_VIDEO_RECORDING_SUPPORTED) && !isInStoryViewer
       && !activeVoiceRecording && !activeVideoRecording && !isForwarding && !isRichInputExpansionActive
       && !(hasInputContent && !hasAttachments)) {
       return MainButtonState.Record;
@@ -1132,7 +1133,7 @@ const Composer = ({
   }, [
     activeVoiceRecording, activeVideoRecording, editingMessage, hasAttachments, isForwarding, isComposerEngaged,
     onForward, shouldForceShowEditing, isInScheduledList, hasInputContent, isRichInputExpansionActive,
-    isInMessageList, stoppableTypingDraftId,
+    isInMessageList, stoppableTypingDraftId, isInStoryViewer,
   ]);
   const canShowCustomSendMenu = !isInScheduledList;
 
@@ -2584,7 +2585,7 @@ const Composer = ({
             editingMessage={editingMessage}
             canEditMedia={canMediaBeReplaced}
             isRichInputExpanded={isRichInputExpansionActive}
-            isButtonVisible={!activeRecording}
+            isButtonVisible={!activeRecording && !isInStoryViewer}
             canAttachMedia={canAttachMedia}
             canAttachFiles={isRichInputExpansionActive || !hasRichOnlyContent}
             canAttachPolls={canAttachPolls}

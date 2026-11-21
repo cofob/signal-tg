@@ -45,7 +45,6 @@ interface OwnProps {
   isOpen?: boolean;
   isDeleteModalOpen?: boolean;
   onDelete: (story: ApiTypeStory) => void;
-  onReport: NoneToVoidFunction;
   onClose: NoneToVoidFunction;
 }
 
@@ -83,7 +82,6 @@ function StorySlides({
   isDeleteModalOpen,
   onDelete,
   onClose,
-  onReport,
 }: OwnProps & StateProps) {
   const { stopActiveReaction } = getActions();
   const containerRef = useRef<HTMLDivElement>();
@@ -382,7 +380,6 @@ function StorySlides({
             isSingleStory={isSingleStory}
             getIsAnimating={getIsAnimating}
             onClose={onClose}
-            onReport={onReport}
           />
         </div>
       </div>
@@ -439,7 +436,6 @@ function StorySlides({
           isSingleStory={isSingleStory}
           getIsAnimating={getIsAnimating}
           onClose={onClose}
-          onReport={onReport}
         />
       </div>
     );

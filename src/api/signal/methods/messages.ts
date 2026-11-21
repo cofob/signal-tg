@@ -32,7 +32,7 @@ import { LONG_TEXT_CONTENT_TYPE } from '../../../lib/signal/messages/MessageProc
 import {
   DataMessage_Contact_Phone_Type, DataMessage_Quote_Type, DataMessageSchema,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
-import { getSendErrorKind } from '../../../lib/signal/sender/sendErrors';
+import { AttachmentUploadError, describeSendError, getSendErrorKind } from '../../../lib/signal/sender/sendErrors';
 import { uuidToBytes } from '../../../lib/signal/serviceId';
 import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
@@ -169,6 +169,11 @@ export function sendMessageLocal(params: SendMessageParams) {
  * clients send them; other grouped files go one per message.
  */
 export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnProgress) {
+  if (params.replyInfo?.type === 'story') {
+    await sendStoryReply(params);
+    return;
+  }
+
   // The composer sends the items of an album one after another, so each joins the album before its upload starts
   const albumItem = getIsAlbumItem(params) ? joinAlbum(params) : undefined;
   let localMessage: ApiMessage | undefined;
@@ -195,7 +200,7 @@ export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnP
   try {
     init = await buildDataMessage(params, onProgress);
   } catch (err) {
-    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err, Boolean(params.attachment));
+    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
     return;
   }
   await sendWithLocalMessage(conversation, init, localMessage);
@@ -413,7 +418,7 @@ async function uploadAlbumItem(item: AlbumItem, localMessage: ApiMessage, onProg
   try {
     item.pointer = await uploadMessageAttachment(item.params.attachment!, onProgress);
   } catch (err) {
-    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err, true);
+    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
   }
   await settleAlbumItem(item);
 }
@@ -470,7 +475,7 @@ async function sendAlbum(items: AlbumItem[]) {
     });
   } catch (err) {
     if (isStored) {
-      logError(err);
+      logSendFailure('An album was stored but sending it failed', err);
     } else {
       localMessages.forEach((localMessage) => markLocalMessageFailed(localMessage, err));
     }
@@ -491,7 +496,34 @@ async function sendWithLocalMessage(conversation: ConversationRecord, init: Data
     await reportBlockedRecipients(conversation, sent.id);
   } catch (err) {
     if (!isStored) markLocalMessageFailed(localMessage, err);
-    else logError(err);
+    else logSendFailure('A message was stored but sending it failed', err);
+  }
+}
+
+/**
+ * Replies to the story open in the story viewer, or reacts to it with the emoji of a reaction message. Private replies
+ * arrive in the chat as stored messages; group story replies stay with the story.
+ */
+async function sendStoryReply({
+  replyInfo, text, entities, isReaction, attachment, attachments, sticker, gif, audio, poll, dice, contact, story,
+  richMessage,
+}: SendMessageParams) {
+  if (replyInfo?.type !== 'story') return;
+  // Signal story replies are text or an emoji reaction
+  const hasOtherContent = Boolean(
+    attachment || attachments?.length || sticker || gif || audio || poll || dice || contact || story || richMessage,
+  );
+  if (!text || hasOtherContent) {
+    sendError(SEND_ERROR);
+    return;
+  }
+
+  try {
+    const reply = isReaction ? { emoji: text } : await buildOutgoingBody({ text, entities });
+    await processor.sendStoryReply(replyInfo.storyId, reply);
+  } catch (err) {
+    logError(err);
+    sendError(SEND_ERROR);
   }
 }
 
@@ -517,7 +549,7 @@ export async function sendMessageAnyway({ messageId }: { messageId: number }) {
     await processor.sendMessageAnyway(messageId);
     return true;
   } catch (err) {
-    logError(err);
+    logSendFailure('Sending a message anyway failed', err);
     return undefined;
   }
 }
@@ -531,7 +563,7 @@ export async function resendMessage({ messageId }: { chat: ApiChat; messageId: n
     if (conversation) await reportBlockedRecipients(conversation, messageId);
     return true;
   } catch (err) {
-    logError(err);
+    logSendFailure('Sending a message again failed', err);
     return undefined;
   }
 }
@@ -545,7 +577,9 @@ export async function fetchMessageSendDetails({ chat, messageId }: { chat: ApiCh
   const users = createUserResolver();
   const recipients: ApiMessageRecipient[] = [];
   for (const [aci, status] of Object.entries(record.recipientStatus ?? {})) {
-    recipients.push({ userId: await users.getUserId(aci), status, error: record.recipientErrors?.[aci] });
+    // A recipient that a later receipt moved on from `failed` keeps no reason
+    const error = status === 'failed' ? record.recipientErrors?.[aci] : undefined;
+    recipients.push({ userId: await users.getUserId(aci), status, error });
   }
   const apiUsers = await users.buildUsers();
   if (apiUsers.length) sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(apiUsers, 'id') });
@@ -647,7 +681,7 @@ async function buildOutgoingContact({
 }
 
 /** Mention entities of users become Signal mentions by ACI */
-async function buildOutgoingBody(text: ApiFormattedText) {
+export async function buildOutgoingBody(text: ApiFormattedText) {
   const aciByUserId = new Map<string, string>();
   for (const entity of text.entities ?? []) {
     if (entity.type !== ApiMessageEntityTypes.MentionName) continue;
@@ -777,13 +811,18 @@ async function showLocalMessage(
   return localMessage;
 }
 
-/** Shows a local message as failed; `isUpload` tells that the error is from uploading an attachment */
-function markLocalMessageFailed(localMessage: ApiMessage, err?: unknown, isUpload?: boolean) {
-  if (err) logError(err);
+/** Logs why a send failed, without the account ids and phone numbers the message of an error can carry */
+function logSendFailure(what: string, err: unknown) {
+  logError(new Error(`${what}: ${describeSendError(err)}`));
+}
+
+/** Shows a local message as failed; an upload that fails for no known reason is named as such */
+function markLocalMessageFailed(localMessage: ApiMessage, err?: unknown) {
   let localError: ApiLocalSendError | undefined;
   if (err) {
+    logSendFailure('A message was not sent', err);
     const kind = getSendErrorKind(err);
-    localError = kind === 'other' && isUpload ? 'upload' : kind;
+    localError = kind === 'other' && err instanceof AttachmentUploadError ? 'upload' : kind;
   }
   sendApiUpdate({
     '@type': 'updateMessageSendFailed',

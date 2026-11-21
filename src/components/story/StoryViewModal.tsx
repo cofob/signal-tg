@@ -15,7 +15,6 @@ import {
   selectTabState,
 } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
-import { getServerTime } from '../../util/serverTime';
 
 import useDebouncedCallback from '../../hooks/useDebouncedCallback';
 import useFlag from '../../hooks/useFlag';
@@ -41,14 +40,12 @@ interface StateProps {
   isLoading?: boolean;
   views?: ApiTypeStoryView[];
   nextOffset?: string;
-  viewersExpireDate?: number;
 }
 
 const REFETCH_DEBOUNCE = 250;
 
 function StoryViewModal({
   story,
-  viewersExpireDate,
   views,
   nextOffset,
   isLoading,
@@ -63,7 +60,6 @@ function StoryViewModal({
   const [query, setQuery] = useState('');
 
   const isOpen = Boolean(story);
-  const isExpired = Boolean(viewersExpireDate) && viewersExpireDate < getServerTime();
   const { viewsCount = 0, reactionsCount = 0 } = story?.views || {};
 
   const shouldShowJustContacts = story?.isPublic && viewsCount > STORY_VIEWS_MIN_CONTACTS_FILTER;
@@ -92,8 +88,6 @@ function StoryViewModal({
   }, [areReactionsFirst, views]);
 
   const placeholderCount = !sortedViews?.length ? Math.min(viewsCount, 8) : 1;
-
-  const notAllAvailable = Boolean(sortedViews?.length) && sortedViews.length < viewsCount && isExpired;
 
   const handleLoadMore = useLastCallback(() => {
     if (!story?.id || nextOffset === undefined) return;
@@ -191,11 +185,9 @@ function StoryViewModal({
         className={buildClassName(styles.content, !isAtBeginning && styles.topScrolled, 'custom-scroll')}
         onScroll={handleScroll}
       >
-        {isExpired && !isLoading && !query && Boolean(!sortedViews?.length) && (
+        {!isLoading && !query && Boolean(!sortedViews?.length) && (
           <div className={buildClassName(styles.info, styles.centeredInfo)}>
-            {lang('ExpiredViewsStub', undefined, {
-              withNodes: true, withMarkdown: true,
-            })}
+            {lang('NobodyViewed')}
           </div>
         )}
         {!isLoading && Boolean(query.length) && !sortedViews?.length && (
@@ -207,13 +199,10 @@ function StoryViewModal({
           items={sortedViews}
           onLoadMore={handleLoadMore}
         >
-          {sortedViews?.map((view) => {
-            const additionalKeyId = view.type === 'forward' ? view.messageId
-              : view.type === 'repost' ? view.storyId : 'user';
-            return (
-              <StoryView key={`${view.peerId}-${view.date}-${additionalKeyId}`} storyView={view} />
-            );
-          })}
+          {sortedViews?.map((view, index) => (
+            // A person may reply several times in a second
+            <StoryView key={`${view.peerId}-${view.date}-${view.type}-${index}`} storyView={view} />
+          ))}
           {isLoading && Array.from({ length: placeholderCount }).map((_, i) => (
             <ListItem
 
@@ -224,11 +213,6 @@ function StoryViewModal({
               <PlaceholderChatInfo />
             </ListItem>
           ))}
-          {notAllAvailable && (
-            <div key="not-all-available" className={buildClassName(styles.info, styles.bottomInfo)}>
-              {lang('StoryViewListNotFullyRecorded')}
-            </div>
-          )}
         </InfiniteScroll>
       </div>
       <div className={buildClassName(styles.footer, 'dialog-buttons')}>
@@ -262,17 +246,14 @@ function prepareComparator(areReactionsFirst?: boolean) {
 }
 
 export default memo(withGlobal((global): Complete<StateProps> => {
-  const { appConfig } = global;
   const { storyViewer: { viewModal } } = selectTabState(global);
   const {
     storyId, views, nextOffset, isLoading,
   } = viewModal || {};
   const story = storyId ? selectPeerStory(global, global.currentUserId!, storyId) : undefined;
-  const storyExpireDate = story?.['@type'] === 'story' ? story.expireDate : undefined;
 
   return {
     views,
-    viewersExpireDate: storyExpireDate ? (storyExpireDate + appConfig.storyViewersExpirePeriod) : undefined,
     story: story && 'content' in story ? story : undefined,
     nextOffset,
     isLoading,

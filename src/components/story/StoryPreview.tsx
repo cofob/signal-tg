@@ -15,7 +15,7 @@ import useLang from '../../hooks/useLang';
 import useMedia from '../../hooks/useMedia';
 
 import Avatar from '../common/Avatar';
-import MediaAreaOverlay from './mediaArea/MediaAreaOverlay';
+import TextStory from './TextStory';
 
 import styles from './StoryViewer.module.scss';
 
@@ -78,7 +78,7 @@ function StoryPreview({
       {thumbUrl && (
         <img src={thumbUrl} alt="" className={styles.media} draggable={false} />
       )}
-      {isLoaded && <MediaAreaOverlay story={story} />}
+      {isLoaded && story.textStory && <TextStory textStory={story.textStory} />}
 
       <div className={styles.content}>
         <div className={styles.contentInner}>

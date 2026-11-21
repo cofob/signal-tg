@@ -329,6 +329,10 @@ export type TabState = {
       storyIdsByPeerId: Record<string, number[]>;
     };
   };
+  storyComposerModal?: {
+    // The story is on its way, so it cannot be sent again
+    isSending?: boolean;
+  };
 
   selectedStoryAlbumId?: number;
 
@@ -681,6 +685,12 @@ export type TabState = {
   // Signal: a phone number from a link, which the contact discovery service looks up once the user confirms
   phoneNumberLookupModal?: {
     phoneNumber: string;
+  };
+
+  // Signal: a link to something that this app does not do, which the dialog explains; `host` is the proxy's
+  signalLinkModal?: {
+    type: 'proxy' | 'callLink' | 'linkDevice' | 'reRegister';
+    host?: string;
   };
 
   // Signal: the safety number with a contact; `isUnavailable` while we do not know their identity key

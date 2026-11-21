@@ -40,6 +40,8 @@ export type SendOptions = {
   contentHint?: ContentHint;
   // Group id that sealed sender envelopes of group messages carry
   groupId?: Uint8Array;
+  // Stories and group story replies: the server delivers them only to devices that read stories
+  isStory?: boolean;
 };
 
 export type SendResult = {
@@ -94,12 +96,14 @@ const ENVELOPE_TYPE_BY_MESSAGE_TYPE: Partial<Record<number, Envelope_Type>> = {
  * Encrypts `content` to every device of `destination` and sends it, fixing the device list from 409/410
  * responses (Signal Desktop `ts/textsecure/OutgoingMessage.preload.ts`). Messages to other users go
  * sealed sender over the unauthenticated socket when the recipient allows it, and identified otherwise.
- * When `destination` is our ACI, the content goes identified to our other devices only.
+ * Stories always go sealed sender, without an access key (Signal Desktop `getSendOptions` with `story` and the
+ * `story` auth of libsignal-net). When `destination` is our ACI, the content goes identified to our other devices only.
  */
 export async function sendContent(
   context: SenderContext, destination: string, payload: SendPayload, options: SendOptions,
 ): Promise<SendResult> {
   const isToSelf = destination === context.account.aci;
+  const isStory = Boolean(options.isStory) && !isToSelf;
   const state = await createSendState(context, destination);
   const plaintext = payload instanceof wasm.PlaintextContent
     ? payload
@@ -109,25 +113,25 @@ export async function sendContent(
 
   let deviceListAttempts = 0;
   while (deviceListAttempts < MAX_DEVICE_LIST_ATTEMPTS) {
-    const isSealedSender = Boolean(state.accessKey);
-    const messages = await encryptForDevices(state, plaintext, deviceIds, options);
-    const path = `/v1/messages/${destination}?story=false`;
+    const isSealedSender = isStory || Boolean(state.accessKey);
+    const messages = await encryptForDevices(state, plaintext, deviceIds, options, isSealedSender);
+    const path = `/v1/messages/${destination}?story=${isStory}`;
     const body = {
       messages,
       timestamp: options.timestamp,
       online: options.isOnline ?? false,
       urgent: options.isUrgent ?? true,
     };
-    const { status, json } = state.accessKey
+    const { status, json } = isSealedSender
       ? await context.unauthenticatedChat.sendJsonRequest<DeviceMismatch>(
-        'PUT', path, body, { 'Unidentified-Access-Key': state.accessKey },
+        'PUT', path, body, isStory ? undefined : { 'Unidentified-Access-Key': state.accessKey! },
       )
       : await context.connection.sendJsonRequest<DeviceMismatch>('PUT', path, body);
 
     if (status === HTTP_OK) return { isSealedSender };
     if (status === HTTP_NOT_FOUND) throw new UnregisteredUserError(destination);
 
-    if (status === HTTP_UNAUTHORIZED && state.accessKey) {
+    if (status === HTTP_UNAUTHORIZED && state.accessKey && !isStory) {
       await rejectAccessKey(state);
       continue;
     }
@@ -226,10 +230,14 @@ async function fixDevices(state: SendState, { missingDevices, extraDevices, stal
 }
 
 async function encryptForDevices(
-  state: SendState, plaintext: Uint8Array | wasm.PlaintextContent, deviceIds: number[], options: SendOptions,
+  state: SendState,
+  plaintext: Uint8Array | wasm.PlaintextContent,
+  deviceIds: number[],
+  options: SendOptions,
+  isSealedSender: boolean,
 ) {
   const { context: { store, connection } } = state;
-  const certificate = state.accessKey ? await getSenderCertificate(store, connection) : undefined;
+  const certificate = isSealedSender ? await getSenderCertificate(store, connection) : undefined;
 
   return store.runExclusive(async () => {
     const messages = [];

@@ -1,3 +1,4 @@
+import type { SendErrorKind } from '../../lib/signal/db/MessageDb';
 import type { ThreadId, ThreadReadState, WebPageMediaSize } from '../../types';
 import type { MediaEditDocument } from '../../types/mediaEditor';
 import type {
@@ -817,7 +818,7 @@ export type ApiMessageReportResult = {
 
 export type ApiMessageOutgoingStatus = 'read' | 'delivered' | 'succeeded' | 'pending' | 'failed' | 'partial';
 
-export type ApiSendErrorKind = 'unregistered' | 'identityChanged' | 'network' | 'rateLimited' | 'other';
+export type ApiSendErrorKind = SendErrorKind;
 
 // Signal: why a message that was not stored failed; `upload` is an attachment that could not be uploaded
 export type ApiLocalSendError = ApiSendErrorKind | 'upload';

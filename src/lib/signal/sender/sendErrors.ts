@@ -16,6 +16,13 @@ export class SendHttpError extends Error {
   }
 }
 
+/** An attachment could not be uploaded; `cause` is the reason */
+export class AttachmentUploadError extends Error {
+  constructor(readonly cause: unknown) {
+    super('The attachment could not be uploaded');
+  }
+}
+
 // Payload too large, rate limit challenge and too many requests (Signal Desktop `handleMultipleSendErrors`)
 const RATE_LIMIT_STATUSES = new Set([413, 428, 429]);
 const HTTP_SERVER_ERROR = 500;
@@ -28,6 +35,7 @@ const PRIVATE_DATA_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
  * `UntrustedIdentity` until the user accepts it (Signal Desktop `OutgoingIdentityKeyError`).
  */
 export function getSendErrorKind(err: unknown): SendErrorKind {
+  if (err instanceof AttachmentUploadError) return getSendErrorKind(err.cause);
   if (err instanceof UnregisteredUserError) return 'unregistered';
   if (err instanceof NetworkError) return 'network';
   if (err instanceof SendHttpError) {
@@ -41,7 +49,8 @@ export function getSendErrorKind(err: unknown): SendErrorKind {
 }
 
 /** The error for a log line, without the account ids and phone numbers its message can carry */
-export function describeSendError(err: unknown) {
+export function describeSendError(err: unknown): string {
+  if (err instanceof AttachmentUploadError) return `Attachment upload, ${describeSendError(err.cause)}`;
   const name = err instanceof Error ? err.constructor.name : typeof err;
   const message = err instanceof Error ? err.message : String(err);
   return `${name}: ${message.replace(PRIVATE_DATA_PATTERN, '<id>').slice(0, MAX_LOGGED_MESSAGE_LENGTH)}`;
