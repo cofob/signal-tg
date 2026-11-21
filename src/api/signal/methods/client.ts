@@ -1,3 +1,4 @@
+import { releaseEngineLock } from '../../../lib/signal/engineLock';
 import { reconnectClient, stopClient } from '../client';
 
 /**
@@ -6,6 +7,7 @@ import { reconnectClient, stopClient } from '../client';
  */
 export async function destroy(noLogOut = false) {
   await stopClient(!noLogOut);
+  releaseEngineLock();
 }
 
 export function disconnect() {

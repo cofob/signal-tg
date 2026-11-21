@@ -10,6 +10,7 @@ import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
 import {
   getSignalTunnelUrl, setSignalProxyUrl, setSignalSealedSenderProxyUrl, SIGNAL_PRIMARY_DEVICE_ID,
 } from '../../lib/signal/config';
+import { acquireEngineLock } from '../../lib/signal/engineLock';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
@@ -63,6 +64,8 @@ export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
   applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
+  // The other frontend shows its inactive screen once this one starts, see `listenOtherClients`
+  await acquireEngineLock(() => void stopClient(false).catch(logError));
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
