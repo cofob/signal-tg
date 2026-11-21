@@ -6,7 +6,6 @@ import { DEBUG } from '../config';
 
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
-  SIGNAL_PRIMARY_UNAUTHORIZED: 'SignalPrimaryUnauthorized',
   SIGNAL_STORAGE_LOCKED: 'SignalStorageLocked',
   SIGNAL_KEY_TRANSPARENCY_FAILED: 'KeyTransSelfFailedText',
   SIGNAL_PINNED_LIMIT: 'SignalPinnedLimit',

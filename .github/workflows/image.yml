@@ -1,0 +1,166 @@
+# Builds the all-in-one container image (`Dockerfile`: the web app, nginx and the tunnel) for linux/amd64 and
+# linux/arm64 and starts each platform's image through `docker/smoke-test.sh`. Pull requests and the default branch only
+# build and test; `release.yml` calls this workflow with a tag, which publishes `ghcr.io/<owner>/telesignal` the same
+# way the tunnel image is published: a staging tag first, the release tags after both platforms passed.
+
+name: Image
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'tauri/**'
+      - 'rust/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'tauri/**'
+      - 'rust/**'
+  workflow_dispatch:
+  # `release.yml` publishes the image of a release tag
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing v-prefixed tag to publish the image for
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ inputs.tag || github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ inputs.tag == '' && github.ref_name != github.event.repository.default_branch }}
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # Without a tag nothing is pushed: each platform is built, loaded and tested on its own, because a multi-platform
+  # build cannot be loaded into the runner's Docker
+  build:
+    name: Build and test (${{ matrix.platform }})
+    if: ${{ !inputs.tag }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The web app and the tunnel stages run natively for both platforms, so the cache is shared between them
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: telesignal:ci
+          build-args: |
+            REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=image
+          cache-to: type=gha,scope=image,mode=max
+
+      - name: Smoke-test the image
+        run: docker/smoke-test.sh telesignal:ci "${{ matrix.platform }}"
+
+  publish:
+    name: Publish image
+    if: ${{ inputs.tag }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ inputs.tag }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize the image name
+        id: image
+        run: echo "name=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/telesignal" >> "$GITHUB_OUTPUT"
+
+      # Pre-release versions get only their own tag; `latest` follows stable versions
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ inputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.tag }}
+            type=semver,pattern={{major}},value=${{ inputs.tag }}
+            type=sha
+          flavor: latest=auto
+          labels: |
+            org.opencontainers.image.title=TeleSignal
+            org.opencontainers.image.description=TeleSignal web app with nginx and the tunnel to Signal servers
+            org.opencontainers.image.licenses=GPL-3.0-or-later
+
+      # The image gets its release tags only after the smoke test below
+      - name: Build and push to a staging tag
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            REVISION=${{ github.sha }}
+          tags: ${{ steps.image.outputs.name }}:staging-${{ github.run_id }}-${{ github.run_attempt }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=image
+          cache-to: type=gha,scope=image,mode=max
+
+      - name: Smoke-test both platforms
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          for platform in linux/amd64 linux/arm64; do
+            docker/smoke-test.sh "$IMAGE" "$platform"
+            # The image store refuses a second platform of the same digest while the first is present
+            docker image rm "$IMAGE" > /dev/null
+          done
+
+      - name: Publish the release tags
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] && args+=(--tag "$tag")
+          done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" "$IMAGE"

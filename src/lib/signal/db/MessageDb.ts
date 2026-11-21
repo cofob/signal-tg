@@ -9,6 +9,8 @@ import {
   decodeRecord, decodeRecords, encodeRecord, isEncryptedRecord, isSameEncryption,
 } from './recordCrypto';
 
+import { getEngineStoreName } from '../engineStoreName';
+
 export type ConversationType = 'private' | 'group';
 
 export type ConversationRecord = {
@@ -229,6 +231,13 @@ const BY_TIMESTAMP = 'byTimestamp';
  */
 export default class MessageDb {
   private db?: Promise<IDBDatabase>;
+
+  private readonly name: string;
+
+  /** Opens the database of an account slot, by default the slot of this page or worker */
+  constructor(slot?: number) {
+    this.name = getEngineStoreName(DB_NAME, slot);
+  }
 
   getConversation(id: string) {
     return this.readRecord<ConversationRecord>(CONVERSATIONS, (store) => store.get(id));
@@ -627,7 +636,7 @@ export default class MessageDb {
     if (this.db) return this.db;
 
     const opening = new Promise<IDBDatabase>((resolve, reject) => {
-      const openRequest = indexedDB.open(DB_NAME, DB_VERSION);
+      const openRequest = indexedDB.open(this.name, DB_VERSION);
       let isFailed = false;
       // A failed open is not kept, so that the next request opens the database again
       const fail = (err: unknown) => {

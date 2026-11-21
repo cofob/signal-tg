@@ -7,7 +7,7 @@ import {
   MEDIA_CACHE_NAME_AVATARS,
   MEDIA_PROGRESSIVE_CACHE_NAME,
 } from '../../../config';
-import clearSignalLocalData from '../../../lib/signal/clearLocalData';
+import clearSignalLocalData, { clearAllSignalLocalData } from '../../../lib/signal/clearLocalData';
 import { updateAppBadge } from '../../../util/appBadge';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
@@ -340,7 +340,7 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
   }
 
   // The lock screen logs out while the engine is not started, and `destroy` does nothing then
-  await clearSignalLocalData().catch(() => undefined);
+  await clearAllSignalLocalData().catch(() => undefined);
 
   clearAllStoredSessions();
   await clearPasscodeStore().catch(() => undefined);

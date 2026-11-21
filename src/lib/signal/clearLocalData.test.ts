@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 
 import { expect, test } from 'vitest';
 
-import clearSignalLocalData from './clearLocalData';
+import clearSignalLocalData, { clearAllSignalLocalData } from './clearLocalData';
 
 import MessageDb from './db/MessageDb';
 import SignalStore from './store/SignalStore';
@@ -34,4 +34,27 @@ test('removes the account, keys and messages without a running engine', async ()
   expect(await reopenedStore.getSession(`${ACI}.1`)).toBeUndefined();
   expect(await reopenedDb.getConversations()).toEqual([]);
   expect(await reopenedDb.countMessages(ACI)).toBe(0);
+});
+
+test('keeps the data of each account slot apart and removes all slots on request', async () => {
+  const slotStore = new SignalStore(2);
+  const slotDb = new MessageDb(2);
+  const account = {
+    aci: ACI, deviceId: 2, password: 'secret', registrationId: 1, pniRegistrationId: 2,
+  };
+  await new SignalStore().setItem('account', account);
+  await slotStore.setItem('account', { ...account, aci: 'other' });
+  await slotDb.putConversation({
+    id: 'other', localId: 1, type: 'private', unreadCount: 0, profileName: 'Bob',
+  });
+
+  expect((await new SignalStore().getItem('account'))?.aci).toBe(ACI);
+  expect((await slotStore.getItem('account'))?.aci).toBe('other');
+  expect(await new MessageDb().getConversations()).toEqual([]);
+
+  await clearAllSignalLocalData();
+
+  expect(await new SignalStore().getItem('account')).toBeUndefined();
+  expect(await new SignalStore(2).getItem('account')).toBeUndefined();
+  expect(await new MessageDb(2).getConversations()).toEqual([]);
 });

@@ -197,7 +197,8 @@ export interface LangPair {
   'SignalHistorySyncFailed': undefined;
   'SignalPinnedLimit': undefined;
   'SignalStorageLocked': undefined;
-  'SignalPrimaryUnauthorized': undefined;
+  'SignalDeviceUnlinked': undefined;
+  'SignalDeviceDeregistered': undefined;
   'SignalRegisterLink': undefined;
   'SignalLinkExisting': undefined;
   'SignalRegisterTitle': undefined;

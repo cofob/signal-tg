@@ -31,7 +31,7 @@ Out of scope: the Signal service, libsignal's cryptography, the browser and oper
 | S-03 | Medium | CSP | The production policy is a `<meta>` tag: it does not apply to the engine's Web Worker and cannot carry `frame-ancestors`; the desktop app had no policy at all | Fixed for the desktop app; web: the policy printer exists, the headers belong to the deployment |
 | S-04 | Medium | Tauri | `shell:default` and `process:default` gave the page the shell plugin's `open` and the process `exit`; webviews could open new windows | Fixed |
 | S-05 | Medium | Logout | Logging out did not remove the device from the account on the server | Fixed (linked devices, best effort) |
-| S-06 | Low | Unlink | After the phone unlinks the browser, conversations and messages stay in plaintext with no way to erase them from the app | Accepted: Signal Desktop does the same; an erase action is recommended |
+| S-06 | Low | Unlink | After the phone unlinked the browser, conversations and messages stayed in plaintext with no way to erase them from the app | Fixed |
 | S-07 | Low | Logging | Production error logs carried ACIs, numbers and key-sized values | Fixed |
 | S-08 | Low | Tauri | The record of saved files (paths, attachment keys) survived logout, and log lines named saved files | Fixed |
 | S-09 | Low | Web | Links from messages sent the app's origin as `Referer` | Fixed (`same-origin`, not `no-referrer`) |
@@ -182,12 +182,16 @@ no connection, is only logged. The primary device and the demo account send noth
 lock screen cannot do it, because the engine is not running and the credentials are encrypted without the key; and a page
 that reloads right away may cut the request. Test: `src/api/signal/methods/client.test.ts`.
 
-### S-06 Phone-initiated unlink keeps the data (Low, accepted)
+### S-06 Phone-initiated unlink kept the data (Low, fixed)
 
-`handleUnlinked` keeps conversations and messages until another account links (as Signal Desktop's soft unlink), and the
-link screen has no "erase" action. Data stays in plaintext on a shared computer until the user logs in as another
-account or clears site data. Recommendation: an "erase data" action on the link screen that runs
-`clearSignalLocalData()`.
+`handleUnlinked` kept conversations and messages until another account linked (as Signal Desktop's soft unlink), and the
+link screen had no "erase" action, so the data stayed in plaintext on a shared computer. Now a confirmed deauthorization
+(the chat socket and `GET /v1/accounts/whoami` both answer 401 or 403: the phone or another device removed this device,
+or the number of the primary device was registered elsewhere) stops the client and wipes the slot's account, keys,
+messages and attachments (`handleDeauthorized` in `src/api/signal/client.ts`), then the app runs its normal logout and
+shows the link screen with a notification. A network error, a 5xx or a successful `whoami` after a 401 wipes nothing.
+Data that an earlier version left without an account is removed when the link screen starts. Tests:
+`src/api/signal/client.test.ts`.
 
 ### S-07 Logging (Low, fixed)
 
