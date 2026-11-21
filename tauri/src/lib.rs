@@ -88,10 +88,10 @@ static SHOULD_START_HIDDEN: AtomicBool = AtomicBool::new(false);
 /// frontends (`FRONTEND_PATHS`) get IPC.
 static APP_URL: OnceLock<Url> = OnceLock::new();
 
-/// The frontends of the build (`dev/build.ts`): Web K, which the app opens, and Web A. Both open the
-/// same account, and the user switches between them.
-const FRONTEND_PATHS: [&str; 2] = ["/k", "/a"];
-const DEFAULT_FRONTEND_PATH: &str = "k/";
+/// The pages of the build (`dev/build.ts`): the root page, which opens the default frontend
+/// (`plugins/frontends.ts`), and the frontends Web A and Web K. Both open the same account, and the
+/// user switches between them.
+const FRONTEND_PATHS: [&str; 3] = ["", "/a", "/k"];
 
 pub const DEFAULT_WINDOW_TITLE: &str = match std::option_env!("APP_TITLE") {
   Some(title) => title,
@@ -589,7 +589,7 @@ fn has_updater(app: &tauri::AppHandle) -> bool {
 }
 
 fn resolve_base_app_url(app: &tauri::AppHandle) -> Url {
-  let root = match &app.config().build.dev_url {
+  match &app.config().build.dev_url {
     Some(url) if tauri::is_dev() => url.clone(),
     // Tauri serves the bundled frontend on its own scheme, and on Windows on an HTTP host
     _ => Url::parse(if cfg!(windows) {
@@ -598,10 +598,7 @@ fn resolve_base_app_url(app: &tauri::AppHandle) -> Url {
       "tauri://localhost/"
     })
     .expect("The bundled frontend URL is valid"),
-  };
-  root
-    .join(DEFAULT_FRONTEND_PATH)
-    .expect("The frontend path is valid")
+  }
 }
 
 fn resolve_app_url(url: &str, base_url: &Url) -> Option<Url> {

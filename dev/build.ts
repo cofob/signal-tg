@@ -1,21 +1,22 @@
 // Builds both frontends into one directory (`BUILD_OUT_DIR`, `dist` by default): Web A in `a/`, Web K (`webk/`) in `k/`,
-// and a root page that opens Web K, the default frontend. Arguments go to Web A's build; `--sourcemap false` also
-// leaves out Web K's source maps.
+// and a root page that opens the default frontend (`plugins/frontends.ts`). Arguments go to Web A's build;
+// `--sourcemap false` also leaves out Web K's source maps.
 import { spawnSync } from 'child_process';
 import { readdirSync, rmSync, statSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 
+import { DEFAULT_FRONTEND_PATH } from '../plugins/frontends.ts';
+
 const ROOT = resolve(import.meta.dirname, '..');
 const WEB_K_DIR = join(ROOT, 'webk');
 const SOURCE_MAP_RE = /\.map$/;
-// The root of the origin has no app of its own: `/` opens Web K. nginx redirects `/` itself (`docker/templates`); the
-// page covers servers that only serve files, and the desktop app
+// The root of the origin has no app of its own: `/` opens the default frontend, on any server and in the desktop app
 const ROOT_PAGE = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'">
-  <meta http-equiv="refresh" content="0; url=k/">
+  <meta http-equiv="refresh" content="0; url=${DEFAULT_FRONTEND_PATH}">
   <title>TeleSignal</title>
 </head>
 <body></body>

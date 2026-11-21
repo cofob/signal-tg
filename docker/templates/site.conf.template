@@ -2,7 +2,7 @@
 # holds a config of your own. Copy this file as a starting point; the `${...}` names are environment variables of the
 # image, and the entrypoint fills the `TELESIGNAL_` ones in (docs/DEPLOY.md).
 
-# The build holds two frontends of the same account: Web K at `/k/`, which `/` opens, and Web A at `/a/`.
+# The build holds two frontends of the same account, Web A at `/a/` and Web K at `/k/`; the root page opens one of them.
 #
 # Files with a content hash in their name never change, so they are cached for a year: everything in `/a/assets`, the
 # worker bundles at the top of `/a/`, and the hashed chunks at the top of `/k/`. The rest, including the pages, the service
@@ -26,8 +26,6 @@ ${TELESIGNAL_LISTEN_IPV6}
     server_name _;
 
     root /srv/telesignal;
-    # Redirects keep the address the browser used, behind a TLS proxy too
-    absolute_redirect off;
     index index.html;
     access_log ${TELESIGNAL_ACCESS_LOG};
 ${TELESIGNAL_REAL_IP}
@@ -57,11 +55,6 @@ ${TELESIGNAL_REAL_IP}
     location = /healthz {
         access_log off;
         proxy_pass http://127.0.0.1:${TUNNEL_PORT}/health;
-    }
-
-    # The default frontend
-    location = / {
-        return 302 /k/$is_args$args;
     }
 
     location / {

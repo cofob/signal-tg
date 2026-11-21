@@ -112,9 +112,9 @@ request_tunnel() {
 
 check_page() {
   local status policy
-  # `/` opens Web K, the default frontend; Web A is at `/a/`
-  expect_equal 'GET / redirects' "$(fetch root /)" 302
-  expect_equal 'GET / opens Web K' "$(get_header location root)" '/k/'
+  # The root page opens the default frontend (`plugins/frontends.ts`)
+  expect_equal 'GET / is served' "$(fetch root /)" 200
+  expect_contains 'GET / opens a frontend' "$(cat "$WORK_DIR/root.body")" 'http-equiv="refresh"'
   expect_equal 'Web K is served' "$(fetch page_k /k/ -H 'Accept-Encoding: identity')" 200
   expect_contains 'Web K is the app' "$(cat "$WORK_DIR/page_k.body")" '<div id="main-columns"'
   status=$(fetch page /a/ -H 'Accept-Encoding: identity')

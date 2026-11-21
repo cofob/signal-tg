@@ -9,6 +9,7 @@ import { type Target, viteStaticCopy } from 'vite-plugin-static-copy';
 import { watchAndRun } from 'vite-plugin-watch-and-run';
 
 import buildCsp from './plugins/csp.ts';
+import { DEFAULT_FRONTEND_PATH } from './plugins/frontends.ts';
 import buildGitInfoPlugin from './plugins/gitInfo.ts';
 import buildWebManifestPlugin from './plugins/webManifest.ts';
 import packageJson from './package.json' with { type: 'json' };
@@ -19,7 +20,7 @@ const DEFAULT_BASE_URL = 'http://localhost:1234/';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
-// One build holds both frontends: Web K at `/k/`, the default (`webk/`), and this one, Web A, at `/a/`
+// One build holds both frontends: this one, Web A, at `/a/`, and Web K at `/k/` (`webk/`)
 const WEB_A_PATH = '/a/';
 const WEB_K_PATH = '/k/';
 const DEFAULT_DEV_PORT = 1234;
@@ -250,7 +251,7 @@ export default defineConfig(({ command, mode }): UserConfig => {
   };
 });
 
-// The production root page (`dev/build.ts`) sends `/` to Web K, and so does the dev server
+// The production root page (`dev/build.ts`) opens the default frontend, and so does the dev server
 function buildDevRootRedirectPlugin(): Plugin {
   return {
     name: 'dev-root-redirect',
@@ -262,7 +263,7 @@ function buildDevRootRedirectPlugin(): Plugin {
         }
 
         res.statusCode = 302;
-        res.setHeader('Location', `${WEB_K_PATH}${req.url.slice(1)}`);
+        res.setHeader('Location', `/${DEFAULT_FRONTEND_PATH}${req.url.slice(1)}`);
         res.end();
       });
     },
