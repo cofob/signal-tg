@@ -165,7 +165,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
   let allowChatIds: string[] | undefined;
   let blockUserIds: string[] | undefined;
   let blockChatIds: string[] | undefined;
-  let shouldAllowPremium: true | undefined;
   let botsPrivacy: BotsPrivacyType = 'none';
 
   const localChats = localDb.chats;
@@ -200,8 +199,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
         if (localChats[dialogId]) return dialogId;
         return channelId;
       });
-    } else if (rule instanceof GramJs.PrivacyValueAllowPremium) {
-      shouldAllowPremium = true;
     } else if (rule instanceof GramJs.PrivacyValueAllowBots) {
       botsPrivacy = 'allow';
     } else if (rule instanceof GramJs.PrivacyValueDisallowBots) {
@@ -222,7 +219,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
     allowChatIds: allowChatIds || [],
     blockUserIds: blockUserIds || [],
     blockChatIds: blockChatIds || [],
-    shouldAllowPremium,
     botsPrivacy,
   };
 }

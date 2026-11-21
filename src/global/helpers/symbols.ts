@@ -1,5 +1,4 @@
 import type {
-  ApiFormattedText,
   ApiMessage,
   ApiMessageEntityCustomEmoji,
   ApiRichTextCustomEmoji,
@@ -13,13 +12,6 @@ import { getRichMessageCustomEmojis } from './richMessage';
 export function getStickerHashById(stickerId: string, isPreview?: boolean) {
   const base = `document${stickerId}`;
   return !isPreview ? base : `${base}?size=m`;
-}
-
-export function stripCustomEmoji(text: ApiFormattedText): ApiFormattedText {
-  if (!text.entities) return text;
-
-  const entities = text.entities.filter((entity) => entity.type !== ApiMessageEntityTypes.CustomEmoji);
-  return { ...text, entities };
 }
 
 // The server can report an installation date of zero

@@ -8,7 +8,7 @@ import type {
 } from '../../../api/types';
 import type { MessageListType, ThreadId } from '../../../types/index';
 
-import { canEditMediaInEditor, isChatChannel, stripCustomEmoji } from '../../../global/helpers';
+import { canEditMediaInEditor, isChatChannel } from '../../../global/helpers';
 import {
   selectCanAnimateInterface,
   selectChat,
@@ -18,7 +18,6 @@ import {
   selectEphemeralMessage,
   selectForwardedSender,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectIsMessageProtected,
   selectSender,
   selectTabState,
@@ -58,7 +57,6 @@ type StateProps = {
   noCaptions?: boolean;
   forwardsHaveCaptions?: boolean;
   forwardsHaveWidgets?: boolean;
-  isCurrentUserPremium?: boolean;
   isContextMenuDisabled?: boolean;
   isReplyToDiscussion?: boolean;
   isInChangingRecipientMode?: boolean;
@@ -170,7 +168,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     threadId,
     currentUserId,
     onClear,
-    isCurrentUserPremium,
     isContextMenuDisabled,
     shouldPreventComposerAnimation,
     sender,
@@ -307,20 +304,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
       })
       : undefined;
 
-  const strippedMessage = useMemo(() => {
-    if (!frozenMessage || !isForwardingRendering || !frozenMessage.content.text
-      || !noAuthors || isCurrentUserPremium) return frozenMessage;
-
-    const strippedText = stripCustomEmoji(frozenMessage.content.text);
-    return {
-      ...frozenMessage,
-      content: {
-        ...frozenMessage.content,
-        text: strippedText,
-      },
-    };
-  }, [isCurrentUserPremium, isForwardingRendering, frozenMessage, noAuthors]);
-
   const renderingLeftIcon = useCurrentOrPrev(leftIcon, true);
 
   if (!shouldRender) {
@@ -351,7 +334,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
           replyInfo={frozenReplyInfo}
           isMediaNsfw={isMediaNsfw}
           isInComposer
-          message={strippedMessage}
+          message={frozenMessage}
           sender={!noAuthors ? sender : undefined}
           composerForwardSenders={forwardSenders}
           customText={customText}
@@ -570,7 +553,6 @@ export default memo(withGlobal<OwnProps>(
       noCaptions,
       forwardsHaveCaptions,
       forwardsHaveWidgets,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isContextMenuDisabled,
       isReplyToDiscussion,
       isInChangingRecipientMode: isModalShown,

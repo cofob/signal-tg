@@ -581,7 +581,6 @@ export function buildApiChatReactions(chatReactions?: GramJs.TypeChatReactions):
 export function buildApiSendAsPeerId(sendAs: GramJs.SendAsPeer): ApiSendAsPeerId {
   return {
     id: getApiChatIdFromMtpPeer(sendAs.peer),
-    isPremium: sendAs.premiumRequired,
   };
 }
 

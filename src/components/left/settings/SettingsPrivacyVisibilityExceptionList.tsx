@@ -14,7 +14,6 @@ import {
 } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import { unique } from '../../../util/iteratees';
-import { CUSTOM_PEER_PREMIUM } from '../../../util/objects/customPeer';
 import { getPrivacyKey } from './helpers/privacy';
 
 import { useFolderManagerForOrderedIds } from '../../../hooks/useFolderManager';
@@ -26,7 +25,6 @@ import FloatingActionButton from '../../ui/FloatingActionButton';
 
 export type OwnProps = {
   isAllowList?: boolean;
-  withPremiumCategory?: boolean;
   withMiniAppsCategory?: boolean;
   usersOnly?: boolean;
   screen: SettingsScreens;
@@ -39,11 +37,8 @@ type StateProps = {
   settings?: ApiPrivacySettings;
 };
 
-const PREMIUM_CATEGORY = [CUSTOM_PEER_PREMIUM];
-
 const SettingsPrivacyVisibilityExceptionList = ({
   isAllowList,
-  withPremiumCategory,
   withMiniAppsCategory,
   screen,
   isActive,
@@ -85,9 +80,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
   const selectedCategoryTypes = useMemo(() => {
     if (!settings) {
       return [];
-    }
-    if (settings.shouldAllowPremium) {
-      return [CUSTOM_PEER_PREMIUM.type];
     }
     if (settings.botsPrivacy === 'allow' && isAllowList) {
       return [customPeerBots.type];
@@ -152,7 +144,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
       privacyKey: getPrivacyKey(screen)!,
       isAllowList: Boolean(isAllowList),
       updatedIds: newSelectedContactIds,
-      isPremiumAllowed: newSelectedCategoryTypes.includes(CUSTOM_PEER_PREMIUM.type) || undefined,
       botsPrivacy: (!withMiniAppsCategory) ? 'none'
         : (newSelectedCategoryTypes.includes(customPeerBots.type) ? 'allow' : 'disallow'),
     });
@@ -174,7 +165,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
   });
 
   function getCustomCategory() {
-    if (withPremiumCategory) return PREMIUM_CATEGORY;
     if (withMiniAppsCategory && isAllowList) return miniAppsCategory;
     return undefined;
   }

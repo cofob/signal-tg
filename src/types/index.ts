@@ -54,7 +54,6 @@ export type SessionUserInfo = {
   phone?: string;
   avatarUri?: string;
   color?: number;
-  isPremium?: boolean;
   emojiStatusId?: string;
 };
 
@@ -569,7 +568,7 @@ export type InlineBotSettings = {
   cacheTime: number;
 };
 
-export type CustomPeerType = 'premium' | 'toBeDistributed' | 'contacts' | 'nonContacts'
+export type CustomPeerType = 'contacts' | 'nonContacts'
   | 'groups' | 'channels' | 'bots' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
@@ -583,8 +582,6 @@ export type CustomPeer = {
   fakeType?: ApiFakeType;
   emojiStatusId?: string;
   customPeerAvatarColor?: string;
-  withPremiumGradient?: boolean;
-  isPremium?: boolean;
 } & ({
   titleKey: RegularLangKey;
   title?: undefined;

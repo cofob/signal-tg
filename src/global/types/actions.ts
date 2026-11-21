@@ -283,7 +283,6 @@ export interface ActionPayloads {
     privacyKey: ApiPrivacyKey;
     isAllowList: boolean;
     updatedIds: string[];
-    isPremiumAllowed?: true;
     botsPrivacy: BotsPrivacyType;
   };
   loadNotificationExceptions: undefined;

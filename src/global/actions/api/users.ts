@@ -30,7 +30,6 @@ import {
   selectChatFullInfo,
   selectIsChatRestricted,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectPeer,
   selectPeerPhotos,
   selectUser,
@@ -470,24 +469,6 @@ addActionHandler('setEmojiStatus', async (global, actions, payload): Promise<voi
   const {
     emojiStatus, referrerWebAppKey, tabId = getCurrentTabId(),
   } = payload;
-
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (!isCurrentUserPremium) {
-    if (referrerWebAppKey) {
-      actions.sendWebAppEvent({
-        webAppKey: referrerWebAppKey,
-        event: {
-          eventType: 'emoji_status_failed',
-          eventData: {
-            error: 'USER_DECLINED',
-          },
-        },
-        tabId,
-      });
-    }
-
-    return;
-  }
 
   const result = await callApi('updateEmojiStatus', emojiStatus);
 

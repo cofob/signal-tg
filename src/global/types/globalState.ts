@@ -352,7 +352,6 @@ export type GlobalState = {
     featured: {
       hash?: string;
       setIds?: string[];
-      isPremium?: boolean;
       hiddenSetId?: string;
     };
     forEmoji: {

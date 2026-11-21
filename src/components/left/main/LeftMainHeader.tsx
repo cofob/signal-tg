@@ -10,7 +10,6 @@ import { LeftColumnContent, SettingsScreens } from '../../../types';
 import {
   selectCanSetPasscode,
   selectCurrentMessageList,
-  selectIsCurrentUserPremium,
   selectIsForumPanelOpen,
   selectTabState,
   selectTheme,
@@ -37,7 +36,6 @@ import Button from '../../ui/Button';
 import SearchInput from '../../ui/SearchInput';
 import ShowTransition from '../../ui/ShowTransition';
 import ConnectionStatusOverlay from '../ConnectionStatusOverlay';
-import StatusButton from './StatusButton';
 
 import './LeftMainHeader.scss';
 
@@ -59,7 +57,6 @@ type StateProps = {
   searchDate?: number;
   theme: ThemeKey;
   isMessageListOpen: boolean;
-  isCurrentUserPremium?: boolean;
   isConnectionStatusMinimized?: boolean;
   areChatsLoaded?: boolean;
   hasPasscode?: boolean;
@@ -79,7 +76,6 @@ const LeftMainHeader = ({
   isClosingSearch,
   searchQuery,
   isLoading,
-  isCurrentUserPremium,
   shouldSkipTransition,
   globalSearchChatId,
   searchDate,
@@ -272,7 +268,6 @@ const LeftMainHeader = ({
             canShow={withStoryToggler}
           />
         </SearchInput>
-        {isCurrentUserPremium && <StatusButton />}
         {hasPasscode && (
           <Button
             round
@@ -281,7 +276,7 @@ const LeftMainHeader = ({
             color="translucent"
             ariaLabel={lockScreenLabel}
             onClick={handleLockScreen}
-            className={buildClassName(!isCurrentUserPremium && 'extra-spacing')}
+            className="extra-spacing"
             iconName="unlock"
           />
         )}
@@ -324,7 +319,6 @@ export default memo(withGlobal<OwnProps>(
       isFetchingDifference,
       isMessageListOpen: Boolean(selectCurrentMessageList(global)),
       isConnectionStatusMinimized,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       areChatsLoaded: Boolean(global.chats.listIds.active),
       hasPasscode: Boolean(global.passcode.hasPasscode),
       canSetPasscode: selectCanSetPasscode(global),

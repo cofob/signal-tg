@@ -766,10 +766,6 @@ export function buildInputPrivacyRules(
       )),
     }));
   }
-  if (rules.shouldAllowPremium) {
-    privacyRules.push(new GramJs.InputPrivacyValueAllowPremium());
-  }
-
   if (rules.botsPrivacy === 'allow') {
     privacyRules.push(new GramJs.InputPrivacyValueAllowBots());
   }

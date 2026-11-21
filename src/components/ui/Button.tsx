@@ -54,7 +54,6 @@ export type OwnProps = {
   isRtl?: boolean;
   isShiny?: boolean;
   isRectangular?: boolean;
-  withPremiumGradient?: boolean;
   withSparkleEffect?: boolean;
   noSparkleAnimation?: boolean;
   noPreventDefault?: boolean;
@@ -66,7 +65,6 @@ export type OwnProps = {
   iconName?: IconName;
   iconAlignment?: 'top' | 'bottom' | 'start' | 'end';
   iconClassName?: string;
-  iconHasPremiumBadge?: boolean;
   onClick?: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   onContextMenu?: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   onMouseDown?: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -98,7 +96,6 @@ const Button = ({
   isText,
   isLoading,
   isShiny,
-  withPremiumGradient,
   withSparkleEffect,
   noSparkleAnimation,
   ariaLabel,
@@ -125,7 +122,6 @@ const Button = ({
   iconName,
   iconAlignment = 'start',
   iconClassName,
-  iconHasPremiumBadge,
   onClick,
   onContextMenu,
   onMouseDown,
@@ -167,7 +163,6 @@ const Button = ({
     isClicked && 'clicked',
     backgroundImage && 'with-image',
     isShiny && 'shiny',
-    withPremiumGradient && 'premium',
     isRectangular && 'rectangular',
     noForcedUpperCase && 'no-upper-case',
     inline && 'inline',
@@ -203,7 +198,7 @@ const Button = ({
 
   const renderIcon = () => {
     if (!iconName) return undefined;
-    return <Icon name={iconName} className={iconClassName} hasPremiumBadge={iconHasPremiumBadge} />;
+    return <Icon name={iconName} className={iconClassName} />;
   };
 
   const renderContent = () => {

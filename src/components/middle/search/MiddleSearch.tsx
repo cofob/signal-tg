@@ -24,7 +24,6 @@ import {
   selectCurrentMiddleSearch,
   selectForwardedSender,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectMonoforumChannel,
   selectPeer,
   selectSender,
@@ -77,7 +76,6 @@ type StateProps = {
   lastSearchQuery?: string;
   foundIds?: SearchResultKey[];
   isHistoryCalendarOpen?: boolean;
-  isCurrentUserPremium?: boolean;
   isSavedMessages?: boolean;
   fetchingQuery?: string;
   isHashtagQuery?: boolean;
@@ -112,7 +110,6 @@ const MiddleSearch = ({
   lastSearchQuery,
   foundIds,
   isHistoryCalendarOpen,
-  isCurrentUserPremium,
   isSavedMessages,
   fetchingQuery,
   isHashtagQuery,
@@ -319,7 +316,6 @@ const MiddleSearch = ({
   }, [savedTags]);
 
   const hasSavedTags = Boolean(savedTagsArray?.length);
-  const areSavedTagsDisabled = hasSavedTags && !isCurrentUserPremium;
 
   useEffect(() => {
     if (isSavedMessages && isActive) loadSavedReactionTags();
@@ -537,8 +533,6 @@ const MiddleSearch = ({
   });
 
   const activateSearchTag = useLastCallback((tag: ApiReaction) => {
-    if (areSavedTagsDisabled) return;
-
     updateSearchParams({ savedTag: tag });
   });
 
@@ -684,7 +678,6 @@ const MiddleSearch = ({
                   reaction={tag.reaction}
                   tag={tag}
                   withCount
-                  isDisabled={areSavedTagsDisabled}
                   isChosen={isChosen}
                   onClick={isChosen ? removeSearchSavedTag : activateSearchTag}
                 />
@@ -944,7 +937,6 @@ export default memo(withGlobal<OwnProps>(
       isHistoryCalendarOpen: Boolean(selectTabState(global).historyCalendarSelectedAt),
       savedTags,
       savedTag,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isSavedMessages,
       fetchingQuery,
       isHashtagQuery: isHashtag,

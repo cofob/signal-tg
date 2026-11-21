@@ -19,7 +19,7 @@ import {
 import { requestMutation } from '../../../lib/fasterdom/fasterdom';
 import { getAttachmentMediaType } from '../../../global/helpers';
 import {
-  selectCanSetVideoCover, selectChatFullInfo, selectIsChatWithSelf, selectIsCurrentUserPremium, selectTabState,
+  selectCanSetVideoCover, selectChatFullInfo, selectIsChatWithSelf, selectTabState,
 } from '../../../global/selectors';
 import { selectLanguageCode } from '../../../global/selectors/settings';
 import buildClassName from '../../../util/buildClassName';
@@ -100,7 +100,6 @@ type StateProps = {
   shouldSaveAttachmentsCompression?: boolean;
   shouldOpenMessageMediaEditor?: boolean;
   messageMediaEditorVideoTime?: number;
-  isCurrentUserPremium?: boolean;
   canSetVideoCover?: boolean;
 };
 
@@ -124,7 +123,6 @@ const AttachmentModal = ({
   recentEmojis,
   baseEmojiKeywords,
   emojiKeywords,
-  isCurrentUserPremium,
   isForMessage,
   shouldSchedule,
   shouldSuggestCustomEmoji,
@@ -303,7 +301,6 @@ const AttachmentModal = ({
     recentEmojiIds: recentEmojis,
     baseEmojiKeywords,
     emojiKeywords,
-    isCurrentUserPremium,
   }));
   const getIsCaptionTooltipEnabled = useLastCallback(() => Boolean(
     isReady && (isForCurrentMessageList || !isForMessage) && renderingIsOpen,
@@ -951,7 +948,6 @@ export default memo(withGlobal<OwnProps>(
       recentEmojis,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,
       emojiKeywords: emojiKeywords?.keywords,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       shouldSuggestCustomEmoji,
       attachmentSettings,
       shouldSaveAttachmentsCompression,

@@ -1069,7 +1069,6 @@ export interface LangPair {
   'Today': undefined;
   'WeekdayYesterday': undefined;
   'User': undefined;
-  'PremiumUnlockEmoji': undefined;
   'ChatListFilterErrorEmpty': undefined;
   'ChatListFilterErrorTitleEmpty': undefined;
   'FilterMuted': undefined;
@@ -1942,7 +1941,6 @@ export interface LangPair {
   'StoryPrivacyOptionCloseFriends': undefined;
   'Yes': undefined;
   'Connecting': undefined;
-  'ContactsAndPremium': undefined;
   'ConversationSearchPlaceholder': undefined;
   'ConversationStoryForwardTooltipSavedMessagesOne': undefined;
   'ConversationSuggestedPhotoTitle': undefined;
@@ -2031,7 +2029,6 @@ export interface LangPair {
   'November': undefined;
   'October': undefined;
   'OnlyAllowThisReactions': undefined;
-  'OptionPremiumRequiredMessage': undefined;
   'PeerInfoPaneStories': undefined;
   'PermissionNoLocationPosition': undefined;
   'PhoneCopied': undefined;
@@ -2059,8 +2056,6 @@ export interface LangPair {
   'PrivacyPhoneInfo': undefined;
   'PrivacyPhoneInfo3': undefined;
   'PrivacyPhoneTitle2': undefined;
-  'PrivacyPremium': undefined;
-  'PrivacyPremiumText': undefined;
   'PrivacyUserTypes': undefined;
   'PrivacyVoiceMessages': undefined;
   'PrivacyVoiceMessagesInfo': undefined;
@@ -2100,7 +2095,6 @@ export interface LangPair {
   'SearchHashtagsHint': undefined;
   'SearchMyMessages': undefined;
   'SearchThisChat': undefined;
-  'SelectSendAsPeerPremiumHint': undefined;
   'September': undefined;
   'SettingsMyStories': undefined;
   'ShareLinkCopied': undefined;

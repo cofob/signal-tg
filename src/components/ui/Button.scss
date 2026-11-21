@@ -26,7 +26,6 @@
 
 @layer ui.button {
   .Button {
-    --premium-gradient: linear-gradient(88.39deg, #6c93ff -2.56%, #976fff 51.27%, #df69d1 107.39%);
     --button-text-color: white;
     --button-background-color: transparent;
 
@@ -394,10 +393,6 @@
           transform: translateX(100%);
         }
       }
-    }
-
-    &.premium {
-      background: var(--premium-gradient);
     }
 
     &.rectangular {

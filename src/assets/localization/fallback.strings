@@ -1315,7 +1315,6 @@
 "StickerPackRemoveStickerCount_other" = "Remove {count} stickers";
 "StickerPackAddStickerCount_one" = "Add {count} sticker";
 "StickerPackAddStickerCount_other" = "Add {count} stickers";
-"PremiumUnlockEmoji" = "Subscribe to Telegram Premium to unlock premium emoji.";
 "StickerPackRemoveEmojiCount_one" = "Remove {count} emoji";
 "StickerPackRemoveEmojiCount_other" = "Remove {count} emoji";
 "StickerPackAddEmojiCount_one" = "Add {count} emoji";
@@ -2438,7 +2437,6 @@
 "StoryPrivacyOptionCloseFriends" = "Close Friends";
 "Yes" = "Yes";
 "Connecting" = "Connecting...";
-"ContactsAndPremium" = "Contacts & Premium";
 "ConversationContextViewReplies_one" = "View {count} Reply";
 "ConversationContextViewReplies_other" = "View {count} Replies";
 "ConversationSearchPlaceholder" = "Search this chat";
@@ -2566,7 +2564,6 @@
 "October" = "October";
 "MediaCounter" = "{current} of {total}";
 "OnlyAllowThisReactions" = "Only allow these reactions";
-"OptionPremiumRequiredMessage" = "Subscribe to **Telegram Premium** to select this option.";
 "PeerInfoAllowedReactionsMaxCountValue_one" = "1 reaction";
 "PeerInfoAllowedReactionsMaxCountValue_other" = "{count} reactions";
 "PeerInfoPaneStories" = "Stories";
@@ -2599,8 +2596,6 @@
 "PrivacyPhoneInfo" = "Users who have your number saved in their contacts will also see it on Telegram.";
 "PrivacyPhoneInfo3" = "Users who add your number to their contacts will see it on Telegram only if they are your contacts.";
 "PrivacyPhoneTitle2" = "Who can find me by my number?";
-"PrivacyPremium" = "Premium Users";
-"PrivacyPremiumText" = "all Telegram Premium subscribers";
 "PrivacyUserTypes" = "User Types";
 "PrivacyVoiceMessages" = "Voice Messages";
 "PrivacyVoiceMessagesInfo" = "You can restrict who can send you voice or video messages with granular precision.";
@@ -2642,7 +2637,6 @@
 "SearchHashtagsHint" = "Search hashtags";
 "SearchMyMessages" = "My Chats";
 "SearchThisChat" = "This Chat";
-"SelectSendAsPeerPremiumHint" = "Subscribe to **Telegram Premium** to be able to comment on behalf of your channels in any group chat.";
 "September" = "September";
 "SetTimeoutForDays_one" = "Set for 1 day";
 "SetTimeoutForDays_other" = "Set for {count} days";

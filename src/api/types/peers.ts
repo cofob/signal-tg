@@ -38,7 +38,6 @@ export interface ApiPeerSettings {
 
 export interface ApiSendAsPeerId {
   id: string;
-  isPremium?: boolean;
 }
 
 export interface ApiPeerColor {

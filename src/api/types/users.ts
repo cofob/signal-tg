@@ -17,7 +17,6 @@ export interface ApiUser {
   isMin: boolean;
   isSelf?: true;
   isVerified?: true;
-  isPremium?: boolean;
   isCloseFriend?: boolean;
   isContact?: true;
   isSupport?: true;

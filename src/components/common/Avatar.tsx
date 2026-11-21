@@ -319,7 +319,6 @@ const Avatar = ({
   const isRoundedRect = (isCustomPeer && peer.isAvatarSquare)
     || isCommunity
     || (isForum && !forceRound && !((withStory || withStorySolid) && realPeer?.hasStories));
-  const isPremiumGradient = isCustomPeer && peer.withPremiumGradient;
   const customColor = isCustomPeer && peer.customPeerAvatarColor;
 
   const fullClassName = buildClassName(
@@ -332,7 +331,6 @@ const Avatar = ({
     isAnonymousForwards && 'anonymous-forwards',
     isDeleted && 'deleted-account',
     isReplies && 'replies-bot-account',
-    isPremiumGradient && 'premium-gradient-bg',
     isRoundedRect && 'forum',
     isCommunity && 'community',
     asMessageBubble && 'message-bubble',

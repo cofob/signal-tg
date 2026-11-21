@@ -159,7 +159,6 @@ import EmbeddedMessage from '../../common/embedded/EmbeddedMessage';
 import EmbeddedStory from '../../common/embedded/EmbeddedStory';
 import FakeIcon from '../../common/FakeIcon';
 import Icon from '../../common/icons/Icon';
-import StarIcon from '../../common/icons/StarIcon';
 import MessageRichText from '../../common/MessageRichText';
 import MessageText from '../../common/MessageText';
 import RankBadge from '../../common/RankBadge';
@@ -1514,7 +1513,6 @@ const Message = ({
       senderTitle = getPeerFullTitle(lang, originSender);
     }
     const senderEmojiStatus = senderPeer && 'emojiStatus' in senderPeer && senderPeer.emojiStatus;
-    const senderIsPremium = senderPeer && 'isPremium' in senderPeer && senderPeer.isPremium;
     const guestFromSenderTitle = guestFromSender ? getPeerTitle(lang, guestFromSender) : undefined;
 
     const shouldRenderForwardAvatar = asForwarded && senderPeer;
@@ -1569,7 +1567,6 @@ const Message = ({
                   observeIntersectionForPlaying={observeIntersectionForPlaying}
                 />
               )}
-              {!asForwarded && !senderEmojiStatus && senderIsPremium && <StarIcon />}
               {senderPeer?.fakeType && <FakeIcon fakeType={senderPeer.fakeType} />}
             </span>
           </span>

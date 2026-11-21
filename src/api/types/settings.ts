@@ -14,7 +14,6 @@ export interface ApiPrivacySettings {
   allowChatIds: string[];
   blockUserIds: string[];
   blockChatIds: string[];
-  shouldAllowPremium?: true;
   botsPrivacy: BotsPrivacyType;
 }
 
@@ -25,7 +24,6 @@ export interface ApiInputPrivacyRules {
   allowedChats?: ApiChat[];
   blockedUsers?: ApiUser[];
   blockedChats?: ApiChat[];
-  shouldAllowPremium?: true;
   botsPrivacy: BotsPrivacyType;
 }
 

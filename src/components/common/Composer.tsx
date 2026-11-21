@@ -93,7 +93,6 @@ import {
   selectEphemeralMessage,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsInSelectMode,
   selectIsReactionPickerOpen,
   selectIsRightColumnShown,
@@ -293,7 +292,6 @@ type StateProps = {
   attachBots: GlobalState['attachMenu']['bots'];
   attachMenuPeerType?: ApiAttachMenuPeerType;
   theme: ThemeKey;
-  isCurrentUserPremium?: boolean;
   canSendVoiceByPrivacy?: boolean;
   attachmentSettings: GlobalState['attachmentSettings'];
   slowMode?: ApiChatFullInfo['slowMode'];
@@ -367,7 +365,6 @@ const Composer = ({
   user,
   replyToTopic,
   isForCurrentMessageList,
-  isCurrentUserPremium,
   canSendVoiceByPrivacy,
   isChatWithBot,
   isChatWithSelf,
@@ -1868,7 +1865,6 @@ const Composer = ({
     chatBotCommands,
     isSavedMessages: isChatWithSelf,
     isInScheduledList,
-    isCurrentUserPremium,
     canSendGifs,
   }));
   const getIsEmojiTooltipEnabled = useLastCallback(() => Boolean(
@@ -2502,7 +2498,6 @@ const Composer = ({
         chatId={chatId}
         selectedSendAsId={sendAsId}
         sendAsPeerIds={sendAsPeerIds}
-        isCurrentUserPremium={isCurrentUserPremium}
       />
       {isInMessageList && (
         <>
@@ -2992,7 +2987,6 @@ export default memo(withGlobal<OwnProps>(
     const user = selectUser(global, chatId);
     const canSendVoiceByPrivacy = (user && !userFullInfo?.noVoiceMessages) ?? true;
     const slowMode = chatFullInfo?.slowMode;
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
     const editingDraft = messageListType === 'scheduled'
       ? selectEditingScheduledDraft(global, chatId)
@@ -3080,7 +3074,6 @@ export default memo(withGlobal<OwnProps>(
       attachBots: global.attachMenu.bots,
       attachMenuPeerType: selectChatType(global, chatId),
       theme: selectTheme(global),
-      isCurrentUserPremium,
       canSendVoiceByPrivacy,
       attachmentSettings: global.attachmentSettings,
       slowMode,

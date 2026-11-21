@@ -362,7 +362,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
         >
           <NestedMenuItem
             icon="heading"
-            hasIconPremiumBadge
             disabled={!canOpenHeadingMenu}
             submenu={(
               <>
@@ -382,7 +381,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           </NestedMenuItem>
           <MenuItem
             icon="footer"
-            hasIconPremiumBadge
             disabled={!availability.canToggleFooter}
             onClick={handleToggleFooter}
           >
@@ -397,7 +395,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="pullquote"
-            hasIconPremiumBadge
             disabled={!availability.canTogglePullquote}
             onClick={handleTogglePullquote}
           >
@@ -405,7 +402,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="details-block"
-            hasIconPremiumBadge
             disabled={!availability.canSetDetails}
             onClick={handleSetDetails}
           >
@@ -413,7 +409,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="remove"
-            hasIconPremiumBadge
             disabled={!availability.canSetHorizontalRule}
             onClick={handleSetHorizontalRule}
           >
@@ -421,7 +416,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           </MenuItem>
           <MenuItem
             icon="button"
-            hasIconPremiumBadge
             disabled={!availability.canInsertButtonRow}
             onClick={handleInsertButtonRow}
           >
@@ -439,7 +433,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
               className={isOpen ? 'active' : undefined}
               iconName="bullet-list"
               ariaLabel={lang('RichEditorListMenu')}
-              iconHasPremiumBadge
               disabled={!canOpenListMenu}
               onClick={onTrigger}
             />
@@ -449,7 +442,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
             <MenuItem
               key={option.label}
               icon={option.icon}
-              hasIconPremiumBadge
               disabled={!availability[option.availability]}
               onClick={() => handleInsertList(option.type, option.isChecklist)}
             >
@@ -514,7 +506,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           color="translucent"
           iconName="table"
           ariaLabel={lang('RichEditorTable')}
-          iconHasPremiumBadge
           disabled={!availability.canInsertTable}
           onClick={handleInsertTable}
         />
@@ -536,7 +527,6 @@ const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
           color="translucent"
           iconName="formula"
           ariaLabel={lang('RichEditorFormula')}
-          iconHasPremiumBadge
           disabled={!availability.canInsertEquation}
           onClick={handleInsertEquation}
         />

@@ -123,7 +123,6 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     isMin: Boolean(mtpUser.min),
     fakeType: scam ? 'scam' : (fake ? 'fake' : undefined),
     isSelf: mtpUser.self || undefined,
-    isPremium: Boolean(mtpUser.premium),
     isVerified: mtpUser.verified || undefined,
     isCloseFriend: closeFriend || undefined,
     isSupport: support || undefined,
