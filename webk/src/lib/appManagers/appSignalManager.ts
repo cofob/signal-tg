@@ -34,6 +34,7 @@ import type {
 import {AppManager} from '@appManagers/manager';
 import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
 import makeError from '@helpers/makeError';
+import {ConnectionStatus} from '@lib/mtproto/connectionStatus';
 import tsNow from '@helpers/tsNow';
 import deferredPromise, {CancellablePromise} from '@helpers/cancellablePromise';
 
@@ -47,6 +48,8 @@ type PendingSend = {
 };
 
 const UNSUPPORTED_ERROR = 'SIGNAL_METHOD_UNSUPPORTED';
+// * `ApiManager.getBaseDcId`: Web K's code expects the account's data center
+const SIGNAL_DC_ID = 2;
 const DIALOGS_PAGE_LIMIT = 100;
 // * the provider's local ids of messages being sent: the chat's last id plus a fraction, as Web A makes them
 const LOCAL_ID_STEP = 1e-4;
@@ -516,6 +519,9 @@ export default class AppSignalManager extends AppManager {
       case 'updateAuthorizationState':
         this.onAuthorizationState(update);
         break;
+      case 'updateConnectionState':
+        this.onConnectionState(update.connectionState);
+        break;
       case 'updateCurrentUser':
         this.onCurrentUser(update.currentUser);
         break;
@@ -589,6 +595,22 @@ export default class AppSignalManager extends AppManager {
     } else if(update.authorizationState === 'authorizationStateReady') {
       this.linkCode = undefined;
     }
+  }
+
+  /** The chat connection of the engine, which Web K shows as the connection of its main data center */
+  private onConnectionState(state: string) {
+    const status = state === 'connectionStateReady' ? ConnectionStatus.Connected : (
+      state === 'connectionStateBroken' ? ConnectionStatus.Closed : ConnectionStatus.Connecting
+    );
+    this.rootScope.dispatchEvent('connection_status_change', {
+      _: 'networkerStatus',
+      status,
+      dcId: SIGNAL_DC_ID,
+      name: 'NET-' + SIGNAL_DC_ID,
+      isFileNetworker: false,
+      isFileDownload: false,
+      isFileUpload: false
+    });
   }
 
   /** The account is linked and its session runs: the user it shows from now on is ours */
