@@ -302,7 +302,6 @@ export type GlobalState = {
     byId: Record<number, ApiChatFolder>;
     invites: Record<number, ApiChatlistExportedInvite[]>;
     recommended?: ApiChatFolder[];
-    areTagsEnabled?: boolean;
   };
 
   phoneCall?: ApiPhoneCall;

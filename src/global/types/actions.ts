@@ -459,9 +459,6 @@ export interface ActionPayloads {
   deleteChatFolder: {
     id: number;
   };
-  toggleDialogFilterTags: {
-    isEnabled: boolean;
-  };
   openChatByPhoneNumber: {
     phoneNumber: string;
     startAttach?: string | boolean;

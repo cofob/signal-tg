@@ -261,7 +261,6 @@ export interface ApiChatFolder {
   groups?: true;
   channels?: true;
   bots?: true;
-  color?: number;
   excludeMuted?: true;
   excludeRead?: true;
   excludeArchived?: true;

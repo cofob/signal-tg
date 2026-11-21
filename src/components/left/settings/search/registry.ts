@@ -336,7 +336,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
 
   ...buildEntries(SettingsScreens.Language, ['LocalizationInterfaceLanguage']),
 
-  ...buildEntries(SettingsScreens.Folders, ['ShowFolderTags']),
   ...buildEntries(SettingsScreens.Folders, ['TabsPosition', 'TabsPositionLeft', 'TabsPositionTop'], {
     requires: 'isDesktopLayout',
   }),

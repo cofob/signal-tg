@@ -34,7 +34,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
 
   ['folders', [SettingsScreens.Folders]],
   ['folders/tab-view', [SettingsScreens.Folders, 'TabsPosition']],
-  ['folders/show-tags', [SettingsScreens.Folders, 'ShowFolderTags']],
   ['folders/create', [SettingsScreens.Folders, 'CreateNewFilter', { requires: 'canCreateFolder' }]],
 
   ['notifications', [SettingsScreens.Notifications]],

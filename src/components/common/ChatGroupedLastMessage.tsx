@@ -26,7 +26,6 @@ export type GroupedLastMessageItem = {
 type OwnProps = {
   // `undefined` while the items are still loading
   items?: GroupedLastMessageItem[];
-  hasTags?: boolean;
   renderLastMessage: () => TeactNode | undefined;
   // Returns `true` when the click is handled, so it does not open the chat itself
   onMainItemClick?: () => boolean;
@@ -40,7 +39,6 @@ const ICON_CLASS_NAME = buildClassName(styles.icon, 'in-text-icon');
 // both with a bubble when that part is unread
 const ChatGroupedLastMessage = ({
   items,
-  hasTags,
   renderLastMessage,
   onMainItemClick,
 }: OwnProps) => {
@@ -65,8 +63,6 @@ const ChatGroupedLastMessage = ({
   });
 
   useEffect(() => {
-    if (hasTags) return undefined;
-
     let isCancelled = false;
 
     requestMeasure(() => {
@@ -89,7 +85,7 @@ const ChatGroupedLastMessage = ({
     return () => {
       isCancelled = true;
     };
-  }, [mainItem, renderLastMessage, hasTags]);
+  }, [mainItem, renderLastMessage]);
 
   return (
     <div
@@ -101,58 +97,52 @@ const ChatGroupedLastMessage = ({
       dir={lang.isRtl ? 'rtl' : undefined}
       style={overwrittenWidth ? `--overwritten-width: ${overwrittenWidth}px` : undefined}
     >
-      {
-        !hasTags && (
-          <>
-            {mainItem && (
-              <div className={styles.titleRow}>
-                <div
-                  className={buildClassName(
-                    styles.mainColumn,
-                    mainItem.isUnread && styles.unread,
-                  )}
-                  ref={mainColumnRef}
-                  onClick={handleMainItemClick}
-                  onMouseDown={handleMainItemMouseDown}
-                >
-                  {Boolean(mainItem.icon) && <span className={ICON_CLASS_NAME}>{mainItem.icon}</span>}
-                  <div className={styles.title}>{renderText(mainItem.title)}</div>
-                  {!overwrittenWidth && isReversedCorner && (
-                    <div className={styles.afterWrapper}>
-                      <div className={styles.after} />
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.otherColumns}>
-                  {otherItems.map((item) => (
-                    <div
-                      className={buildClassName(
-                        styles.otherColumn, item.isUnread && styles.unread,
-                      )}
-                      key={item.key}
-                    >
-                      {Boolean(item.icon) && <span className={ICON_CLASS_NAME}>{item.icon}</span>}
-                      <span className={styles.otherColumnTitle}>{renderText(item.title)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className={styles.ellipsis} />
+      {mainItem && (
+        <div className={styles.titleRow}>
+          <div
+            className={buildClassName(
+              styles.mainColumn,
+              mainItem.isUnread && styles.unread,
+            )}
+            ref={mainColumnRef}
+            onClick={handleMainItemClick}
+            onMouseDown={handleMainItemMouseDown}
+          >
+            {Boolean(mainItem.icon) && <span className={ICON_CLASS_NAME}>{mainItem.icon}</span>}
+            <div className={styles.title}>{renderText(mainItem.title)}</div>
+            {!overwrittenWidth && isReversedCorner && (
+              <div className={styles.afterWrapper}>
+                <div className={styles.after} />
               </div>
             )}
-            {!items && (
-              <div className={buildClassName(styles.titleRow, styles.loading)}>
-                {lang('Loading')}
+          </div>
+
+          <div className={styles.otherColumns}>
+            {otherItems.map((item) => (
+              <div
+                className={buildClassName(
+                  styles.otherColumn, item.isUnread && styles.unread,
+                )}
+                key={item.key}
+              >
+                {Boolean(item.icon) && <span className={ICON_CLASS_NAME}>{item.icon}</span>}
+                <span className={styles.otherColumnTitle}>{renderText(item.title)}</span>
               </div>
-            )}
-          </>
-        )
-      }
+            ))}
+          </div>
+
+          <div className={styles.ellipsis} />
+        </div>
+      )}
+      {!items && (
+        <div className={buildClassName(styles.titleRow, styles.loading)}>
+          {lang('Loading')}
+        </div>
+      )}
       <div
         className={buildClassName(
           styles.lastMessage,
-          mainItem?.isUnread && !hasTags && styles.unread,
+          mainItem?.isUnread && styles.unread,
         )}
         ref={lastMessageRef}
         onClick={handleMainItemClick}

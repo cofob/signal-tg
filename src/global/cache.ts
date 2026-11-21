@@ -540,6 +540,7 @@ function removeTelegramOnlyFields(untypedCached: any) {
     delete settings.translationTone;
   }
   delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
+  delete untypedCached.chatFolders?.areTagsEnabled;
 
   Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
     delete messageStore.summaryById;

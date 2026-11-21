@@ -1267,7 +1267,7 @@ export async function fetchChatFolders() {
   if (!result) {
     return undefined;
   }
-  const { filters, tagsEnabled: areTagsEnabled } = result;
+  const { filters } = result;
 
   const defaultFolderPosition = filters.findIndex((folder) => folder instanceof GramJs.DialogFilterDefault);
   const dialogFilters = filters.filter(isChatFolder);
@@ -1281,7 +1281,6 @@ export async function fetchChatFolders() {
         .map(buildApiChatFolder), 'id',
     ) as Record<number, ApiChatFolder>,
     orderedIds,
-    areTagsEnabled,
   };
 }
 
@@ -1375,12 +1374,6 @@ export async function deleteChatFolder(id: number) {
 export function sortChatFolders(ids: number[]) {
   return invokeRequest(new GramJs.messages.UpdateDialogFiltersOrder({
     order: ids,
-  }));
-}
-
-export function toggleDialogFilterTags(isEnabled: boolean) {
-  return invokeRequest(new GramJs.messages.ToggleDialogFilterTags({
-    enabled: isEnabled,
   }));
 }
 

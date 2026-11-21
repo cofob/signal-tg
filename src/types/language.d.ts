@@ -318,10 +318,6 @@ export interface LangPair {
   'BlockedUsersBlockUser': undefined;
   'FilterChatTypes': undefined;
   'FilterChats': undefined;
-  'FilterColorTitle': undefined;
-  'FilterColorHint': undefined;
-  'ShowFolderTags': undefined;
-  'ShowFolderTagsHint': undefined;
   'TabsPosition': undefined;
   'TabsPositionLeft': undefined;
   'TabsPositionTop': undefined;
