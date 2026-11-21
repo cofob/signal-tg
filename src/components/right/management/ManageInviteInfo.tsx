@@ -3,8 +3,7 @@ import { getActions, withGlobal } from '../../../global';
 
 import type { ApiChatInviteImporter, ApiExportedInvite } from '../../../api/types';
 
-import { isChatChannel } from '../../../global/helpers';
-import { selectChat, selectTabState } from '../../../global/selectors';
+import { selectTabState } from '../../../global/selectors';
 import { formatCalendarDate, formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
 import { getServerTime } from '../../../util/serverTime';
 
@@ -27,7 +26,6 @@ type StateProps = {
   invite?: ApiExportedInvite;
   importers?: ApiChatInviteImporter[];
   requesters?: ApiChatInviteImporter[];
-  isChannel?: boolean;
 };
 
 const BULLET = '\u2022';
@@ -37,7 +35,6 @@ const ManageInviteInfo = ({
   invite,
   importers,
   requesters,
-  isChannel,
   isActive,
   onClose,
 }: OwnProps & StateProps) => {
@@ -110,7 +107,7 @@ const ManageInviteInfo = ({
     if (!requesters?.length) return undefined;
     return (
       <>
-        <IslandTitle>{isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}</IslandTitle>
+        <IslandTitle>{lang('MemberRequests')}</IslandTitle>
         <Island>
           {requesters.map((requester) => (
             <ListItem
@@ -181,14 +178,11 @@ export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const { inviteInfo } = selectTabState(global).management.byChatId[chatId] || {};
     const { invite, importers, requesters } = inviteInfo || {};
-    const chat = selectChat(global, chatId);
-    const isChannel = chat && isChatChannel(chat);
 
     return {
       invite,
       importers,
       requesters,
-      isChannel,
     };
   },
 )(ManageInviteInfo));

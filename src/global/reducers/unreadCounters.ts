@@ -1,16 +1,13 @@
-import type { ApiMessage, ApiTopicWithState } from '../../api/types';
 import type { ThreadId, ThreadReadState } from '../../types';
 import type { GlobalState } from '../types';
 
-import { buildCollectionByKey, unique } from '../../util/iteratees';
+import { unique } from '../../util/iteratees';
 import { groupMessageIdsByThreadId } from '../helpers';
 import { selectThreadReadState } from '../selectors/threads';
-import { addChatMessagesById } from './messages';
 import { replaceThreadReadStateParam } from './threads';
-import { updateTopicWithState } from './topics';
 
-type UnreadCountIdsKey = 'unreadMentions' | 'unreadReactions' | 'unreadPollVotes';
-export type UnreadCountKey = 'unreadMentionsCount' | 'unreadReactionsCount' | 'unreadPollVotesCount';
+type UnreadCountIdsKey = 'unreadMentions';
+export type UnreadCountKey = 'unreadMentionsCount';
 
 type AddUnreadCountArgs<T extends GlobalState, TKey extends UnreadCountKey> = {
   global: T;
@@ -27,20 +24,8 @@ type RemoveUnreadCountArgs<T extends GlobalState, TKey extends UnreadCountKey> =
   unreadCountKey: TKey;
 };
 
-type UpdateUnreadCountersArgs<T extends GlobalState, TKey extends UnreadCountKey> = {
-  global: T;
-  chatId: string;
-  threadId: ThreadId;
-  messages: ApiMessage[];
-  topics: ApiTopicWithState[];
-  totalCount: number;
-  unreadCountKey: TKey;
-};
-
 const unreadIdsKeyByCountKey = {
   unreadMentionsCount: 'unreadMentions',
-  unreadReactionsCount: 'unreadReactions',
-  unreadPollVotesCount: 'unreadPollVotes',
 } satisfies Record<UnreadCountKey, UnreadCountIdsKey>;
 
 function getUnreadIdsKey<TKey extends UnreadCountKey>(unreadCountKey: TKey) {
@@ -142,29 +127,6 @@ export function removeUnreadCount<T extends GlobalState, TKey extends UnreadCoun
       );
     }
   }
-
-  return global;
-}
-
-export function updateUnreadCounters<T extends GlobalState, TKey extends UnreadCountKey>({
-  global,
-  chatId,
-  threadId,
-  messages,
-  topics,
-  totalCount,
-  unreadCountKey,
-}: UpdateUnreadCountersArgs<T, TKey>): T {
-  const messagesById = buildCollectionByKey(messages, 'id');
-
-  global = addChatMessagesById(global, chatId, messagesById);
-  topics.forEach((topicState) => {
-    global = updateTopicWithState(global, chatId, topicState);
-  });
-
-  const messageIds = Object.keys(messagesById).map(Number).sort((a, b) => b - a);
-  global = replaceThreadUnreadIds(global, chatId, threadId, unreadCountKey, messageIds);
-  global = replaceThreadUnreadCount(global, chatId, threadId, unreadCountKey, totalCount);
 
   return global;
 }

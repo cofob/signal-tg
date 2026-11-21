@@ -84,24 +84,8 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateFavoriteStickers':
-      actions.loadFavoriteStickers();
-      break;
-
     case 'updateRecentStickers':
       actions.loadRecentStickers();
-      break;
-
-    case 'updateRecentReactions':
-      actions.loadRecentReactions();
-      break;
-
-    case 'updateRecentEmojiStatuses':
-      actions.loadRecentEmojiStatuses();
-      break;
-
-    case 'updateSavedReactionTags':
-      actions.loadSavedReactionTags();
       break;
 
     case 'updateMoveStickerSetToTop': {
@@ -123,10 +107,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       actions.reorderStickerSets({ order, isCustomEmoji: update.isCustomEmoji });
       break;
     }
-
-    case 'updateSavedGifs':
-      actions.loadSavedGifs();
-      break;
 
     case 'updatePrivacy':
       global = {
@@ -156,6 +136,16 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateStory':
       global = addStoriesForPeer(global, update.peerId, { [update.story.id]: update.story });
       global = updatePeersWithStories(global, { [update.peerId]: selectPeerStories(global, update.peerId)! });
+      setGlobal(global);
+      break;
+
+    case 'updateNotificationProfiles':
+      global = { ...global, notificationProfiles: update.state };
+      setGlobal(global);
+      break;
+
+    case 'updateCallLog':
+      global = { ...global, callLog: update.entries };
       setGlobal(global);
       break;
 

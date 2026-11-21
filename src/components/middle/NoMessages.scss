@@ -13,14 +13,6 @@
     font-size: 5rem;
   }
 
-  .topic-icon {
-    --custom-emoji-size: 3rem;
-
-    width: 3rem;
-    height: 3rem;
-    font-size: 3rem;
-  }
-
   .wrapper {
     display: inline-flex;
     flex-direction: column;
@@ -56,11 +48,6 @@
 
     font-size: 0.9375rem;
     list-style: none;
-  }
-
-  .topic-description {
-    padding: 0 1rem;
-    text-align: center;
   }
 
   .list-checkmarks {

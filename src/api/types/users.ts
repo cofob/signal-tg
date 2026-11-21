@@ -7,7 +7,6 @@ import type {
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
-  ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
 
@@ -43,7 +42,15 @@ export interface ApiUser {
   profileColor?: ApiTypePeerColor;
 }
 
+// Signal: the chat color (the background of own messages) and wallpaper of a chat, as CSS backgrounds
+export interface ApiSignalChatStyle {
+  bubbleColor?: string;
+  wallpaper?: string;
+}
+
 export interface ApiUserFullInfo {
+  // Signal: shown only; the colors are not in the storage service, so they are not changed here
+  signalChatStyle?: ApiSignalChatStyle;
   peerTheme?: ApiPeerTheme;
   wallpaper?: ApiWallpaper;
   isBlocked?: boolean;
@@ -68,7 +75,6 @@ export interface ApiUserFullInfo {
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
   isUnofficialSecurityRisk?: boolean;
-  shareTheme?: ApiShareTheme;
 }
 
 export type ApiUserType = 'userTypeRegular' | 'userTypeDeleted' | 'userTypeUnknown';

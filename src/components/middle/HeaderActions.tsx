@@ -9,22 +9,15 @@ import { ManagementScreens } from '../../types';
 
 import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
 import {
-  getHasAdminRight,
-  getIsSavedDialog,
-  isChatChannel, isChatSuperGroup,
-} from '../../global/helpers';
-import {
   selectCanAnimateInterface,
   selectChat,
   selectChatFullInfo,
   selectIsChatRestricted,
   selectIsChatWithSelf,
-  selectIsCurrentUserFrozen,
   selectIsInSelectMode,
   selectIsRightColumnShown,
   selectLanguageCode,
 } from '../../global/selectors';
-import { ARE_CALLS_SUPPORTED } from '../../util/browser/windowEnvironment';
 import { isUserId } from '../../util/entities/ids';
 import focusNoScroll from '../../util/focusNoScroll';
 
@@ -40,27 +33,18 @@ interface OwnProps {
   chatId: string;
   threadId: ThreadId;
   messageListType: MessageListType;
-  isForForum?: boolean;
   isMobile?: boolean;
-  onTopicSearch?: NoneToVoidFunction;
 }
 
 interface StateProps {
   noMenu?: boolean;
-  isChannel?: boolean;
   isRightColumnShown?: boolean;
-  canSubscribe?: boolean;
   canSearch?: boolean;
-  canCall?: boolean;
   canMute?: boolean;
   canLeave?: boolean;
-  canEnterVoiceChat?: boolean;
-  canCreateVoiceChat?: boolean;
-  channelMonoforumId?: string;
   pendingJoinRequests?: number;
   noAnimation?: boolean;
   language: string;
-  isAccountFrozen?: boolean;
 }
 
 const HeaderActions = ({
@@ -68,30 +52,17 @@ const HeaderActions = ({
   threadId,
   noMenu,
   isMobile,
-  isChannel,
-  canSubscribe,
   canSearch,
-  canCall,
   canMute,
   canLeave,
-  canEnterVoiceChat,
-  canCreateVoiceChat,
-  channelMonoforumId,
   pendingJoinRequests,
   isRightColumnShown,
-  isForForum,
   noAnimation,
   language,
-  isAccountFrozen,
-  onTopicSearch,
 }: OwnProps & StateProps) => {
   const {
     openMiddleSearch,
-    requestMasterAndRequestCall,
     requestNextManagementScreen,
-    openChat,
-    setViewForumAsMessages,
-    openFrozenAccountModal,
   } = getActions();
   const menuButtonRef = useRef<HTMLButtonElement>();
 
@@ -120,11 +91,6 @@ const HeaderActions = ({
   });
 
   const handleSearchClick = useLastCallback(() => {
-    if (isForForum) {
-      onTopicSearch?.();
-      return;
-    }
-
     openMiddleSearch();
 
     if (noAnimation) {
@@ -137,51 +103,24 @@ const HeaderActions = ({
     }
   });
 
-  const handleAsMessagesClick = useLastCallback(() => {
-    openChat({ id: chatId });
-    setViewForumAsMessages({ chatId, isEnabled: true });
-  });
-
-  const handleRequestCall = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-      return;
-    }
-    requestMasterAndRequestCall({ userId: chatId });
-  });
-
   useKeyboardShortcuts(useMemo(() => (canSearch ? {
     searchInChat: handleSearchClick,
   } : undefined), [canSearch]));
 
   return (
     <div className="HeaderActions">
-      {!isMobile && (
-        <>
-          {canSearch && (
-            <Button
-              round
-              ripple={isRightColumnShown}
-              color="translucent"
-              size="smaller"
-              onClick={handleSearchClick}
-              ariaLabel={searchLabel}
-              iconName="search"
-            />
-          )}
-          {canCall && (
-            <Button
-              round
-              color="translucent"
-              size="smaller"
-              onClick={handleRequestCall}
-              ariaLabel={lang('Call')}
-              iconName="phone"
-            />
-          )}
-        </>
+      {!isMobile && canSearch && (
+        <Button
+          round
+          ripple={isRightColumnShown}
+          color="translucent"
+          size="smaller"
+          onClick={handleSearchClick}
+          ariaLabel={searchLabel}
+          iconName="search"
+        />
       )}
-      {!isForForum && Boolean(pendingJoinRequests) && (
+      {Boolean(pendingJoinRequests) && (
         <Button
           round
           className="badge-button"
@@ -190,7 +129,7 @@ const HeaderActions = ({
           size="smaller"
           iconName="user"
           onClick={handleJoinRequestsClick}
-          ariaLabel={isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}
+          ariaLabel={lang('MemberRequests')}
         >
           <div className="badge">{pendingJoinRequests}</div>
         </Button>
@@ -213,20 +152,10 @@ const HeaderActions = ({
           threadId={threadId}
           isOpen={isMenuOpen}
           anchor={menuAnchor}
-          isChannel={isChannel}
-          canSubscribe={isForForum ? canSubscribe : undefined}
           canSearch={canSearch}
-          canCall={canCall}
           canMute={canMute}
           canLeave={canLeave}
-          canEnterVoiceChat={canEnterVoiceChat}
-          canCreateVoiceChat={canCreateVoiceChat}
-          pendingJoinRequests={pendingJoinRequests}
-          onJoinRequestsClick={handleJoinRequestsClick}
-          withForumActions={isForForum}
-          channelMonoforumId={channelMonoforumId}
           onSearchClick={handleSearchClick}
-          onAsMessagesClick={handleAsMessagesClick}
           onClose={handleHeaderMenuClose}
           onCloseAnimationEnd={handleHeaderMenuHide}
         />
@@ -240,8 +169,6 @@ export default memo(withGlobal<OwnProps>(
     chatId, threadId, messageListType, isMobile,
   }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
-    const isChannel = Boolean(chat && isChatChannel(chat));
-    const isSuperGroup = Boolean(chat && isChatSuperGroup(chat));
     const language = selectLanguageCode(global);
     const isPrivate = isUserId(chatId);
 
@@ -256,44 +183,23 @@ export default memo(withGlobal<OwnProps>(
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
-    const isDiscussionThread = messageListType === 'thread' && threadId !== MAIN_THREAD_ID;
     const isRightColumnShown = selectIsRightColumnShown(global, isMobile);
 
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-
-    const canSubscribe = Boolean(
-      (isMainThread || chat.isForum) && (isChannel || isSuperGroup) && chat.isNotJoined && !chat.isMonoforum,
-    );
-    const canSearch = isMainThread || isDiscussionThread;
-    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !chat.isSupport;
-    const canMute = isMainThread && !isChatWithSelf && !canSubscribe;
-    const canLeave = isSavedDialog || (isMainThread && !canSubscribe);
-    const canEnterVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && chat.isCallActive;
-    const canCreateVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && !chat.isCallActive
-      && getHasAdminRight(chat, 'manageCall') && !chat.isMonoforum;
+    const canSearch = isMainThread;
+    const canMute = isMainThread && !isChatWithSelf;
+    const canLeave = isMainThread;
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
 
-    const isAccountFrozen = selectIsCurrentUserFrozen(global);
-
-    const channelMonoforumId = isChatChannel(chat) ? chat.linkedMonoforumId : undefined;
-
     return {
       noMenu: false,
-      isChannel,
       isRightColumnShown,
-      canSubscribe,
       canSearch,
-      canCall,
       canMute,
       canLeave,
-      canEnterVoiceChat,
-      canCreateVoiceChat,
       pendingJoinRequests,
       noAnimation,
       language,
-      isAccountFrozen,
-      channelMonoforumId,
     };
   },
 )(HeaderActions));

@@ -3,23 +3,16 @@ type MiddleFooterParams = {
   withExtraShift?: boolean;
   isPinnedMessageList?: boolean;
   canUnpin?: boolean;
-  canShowOpenChatButton?: boolean;
-  canSubscribe?: boolean;
-  shouldJoinToSend?: boolean;
+  canJoin?: boolean;
   shouldSendJoinRequest?: boolean;
   canUnblock?: boolean;
-  isChannelMuteBar?: boolean;
 };
 
 export function getHasFooterActionBar({
-  canSubscribe, shouldJoinToSend, shouldSendJoinRequest,
-  canUnblock, isChannelMuteBar,
-  isPinnedMessageList, canUnpin, canShowOpenChatButton,
+  canJoin, shouldSendJoinRequest, canUnblock, isPinnedMessageList, canUnpin,
 }: MiddleFooterParams) {
   return Boolean(
-    canSubscribe || shouldJoinToSend || shouldSendJoinRequest
-    || canUnblock || isChannelMuteBar
-    || (isPinnedMessageList && canUnpin) || canShowOpenChatButton,
+    canJoin || shouldSendJoinRequest || canUnblock || (isPinnedMessageList && canUnpin),
   );
 }
 

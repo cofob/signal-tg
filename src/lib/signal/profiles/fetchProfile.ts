@@ -1,4 +1,5 @@
 import type ChatConnection from '../chat/ChatConnection';
+import type UnauthenticatedChat from '../chat/UnauthenticatedChat';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
 import { bufferFromBase64 } from '../../../util/encoding/buffer';
@@ -22,6 +23,12 @@ export type SignalProfile = {
   phoneNumberSharing?: string;
 };
 
+/** A chat without account credentials and the base64 access key that it sends (`getAccessKey`) */
+export type UnauthenticatedAccess = {
+  chat: UnauthenticatedChat;
+  accessKey: string;
+};
+
 type ProfileResponse = {
   identityKey?: string;
   name?: string;
@@ -35,6 +42,8 @@ type ProfileResponse = {
 };
 
 const HTTP_OK = 200;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 const AVATAR_CDN_NUMBER = 0;
 
@@ -49,14 +58,15 @@ export class ProfileNotFoundError extends Error {
 
 /**
  * Fetches the versioned profile of `aci` (`GET /v1/profile/{aci}/{version}`) and decrypts its fields with
- * the profile key (Signal Desktop `ts/services/profiles.preload.ts`).
+ * the profile key (Signal Desktop `ts/services/profiles.preload.ts`). With `unauthenticated`, the request goes
+ * without account credentials, as Signal Desktop's `getProfileUnauth`.
  */
 export async function fetchProfile(
-  connection: ChatConnection, aci: string, profileKey: Uint8Array,
+  connection: ChatConnection, aci: string, profileKey: Uint8Array, unauthenticated?: UnauthenticatedAccess,
 ): Promise<SignalProfile> {
   const serviceId = wasm.ServiceId_ParseFromServiceIdString(aci);
   const version = textDecoder.decode(wasm.ProfileKey_GetProfileKeyVersion(profileKey, serviceId));
-  const { status, json } = await connection.sendJsonRequest<ProfileResponse>('GET', `/v1/profile/${aci}/${version}`);
+  const { status, json } = await sendProfileRequest(connection, `/v1/profile/${aci}/${version}`, unauthenticated);
   if (status === HTTP_NOT_FOUND) throw new ProfileNotFoundError(aci);
   if (status !== HTTP_OK || !json) throw new Error(`Profile request for ${aci} failed with HTTP ${status}`);
 
@@ -85,17 +95,36 @@ export async function fetchProfile(
  * Fetches the identity key from the unversioned profile, which needs no profile key. Returns `undefined` when the
  * user has no account (Signal Desktop falls back to it when the versioned profile is missing).
  */
-export async function fetchProfileIdentityKey(connection: ChatConnection, aci: string) {
-  const { status, json } = await connection.sendJsonRequest<ProfileResponse>('GET', `/v1/profile/${aci}`);
+export async function fetchProfileIdentityKey(
+  connection: ChatConnection, aci: string, unauthenticated?: UnauthenticatedAccess,
+) {
+  const { status, json } = await sendProfileRequest(connection, `/v1/profile/${aci}`, unauthenticated);
   if (status === HTTP_NOT_FOUND) return undefined;
   if (status !== HTTP_OK || !json) throw new Error(`Profile request for ${aci} failed with HTTP ${status}`);
   return json.identityKey ? bufferFromBase64(json.identityKey) : undefined;
 }
 
+/**
+ * Sends a profile request with the access key on the unauthenticated chat. The server answers 401 for an access key it
+ * does not accept, and for an unknown user so that the answer does not reveal who exists, and the request then goes on
+ * the account's connection.
+ */
+async function sendProfileRequest(connection: ChatConnection, path: string, unauthenticated?: UnauthenticatedAccess) {
+  if (unauthenticated) {
+    const response = await unauthenticated.chat.sendJsonRequest<ProfileResponse>('GET', path, undefined, {
+      'Unidentified-Access-Key': unauthenticated.accessKey,
+    });
+    if (response.status !== HTTP_UNAUTHORIZED && response.status !== HTTP_FORBIDDEN) return response;
+  }
+  return connection.sendJsonRequest<ProfileResponse>('GET', path);
+}
+
 /** Downloads and decrypts a profile avatar from its CDN path */
 export async function downloadProfileAvatar(avatarPath: string, profileKey: Uint8Array) {
   const host = SIGNAL_CDN_HOSTS[AVATAR_CDN_NUMBER];
-  const response = await sendHttpRequest(host, { method: 'GET', path: `/${avatarPath}` });
+  const response = await sendHttpRequest(host, {
+    trafficClass: 'unauthenticated', method: 'GET', path: `/${avatarPath}`,
+  });
   if (response.status !== HTTP_OK) throw new Error(`Avatar download failed with HTTP ${response.status}`);
   return decryptAesGcmWithNonce(new Uint8Array(profileKey), response.body);
 }

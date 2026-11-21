@@ -81,7 +81,6 @@ export function updateMiddleSearch<T extends GlobalState>(
 
   if (currentSearch && (
     currentSearch.type !== updated.type
-    || currentSearch.savedTag !== updated.savedTag
     || currentSearch.fromPeerId !== updated.fromPeerId
   )) {
     updated.results = undefined;

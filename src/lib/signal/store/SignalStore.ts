@@ -1,4 +1,6 @@
 import type { LastResortPreKeys } from '../account/preKeys';
+import type { ChatStyleRecord, CustomChatColorRecord } from '../chatStyle/chatStyle';
+import type { NotificationProfile, NotificationProfileOverride } from '../notificationProfiles/notificationProfiles';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
@@ -35,6 +37,9 @@ export type AccountRecord = {
   isSealedSenderIndicatorsEnabled?: boolean;
   // The disappearing messages timer that new private chats start with, in seconds (`universalExpireTimer`)
   universalExpireTimer?: number;
+  // The chat style that chats without one of their own use, and the custom chat colors, from the transferred history
+  defaultChatStyle?: ChatStyleRecord;
+  customChatColors?: Record<string, CustomChatColorRecord>;
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;
@@ -148,6 +153,12 @@ type Items = {
   recentStickers: string[];
   cdsiToken: CdsiToken;
   storyDistributionLists: StoryDistributionList[];
+  // Notification profiles of the storage service, deleted ones included, and the manual override of the account
+  // record (`NotificationProfileManager`)
+  notificationProfiles: NotificationProfile[];
+  notificationProfileOverride: NotificationProfileOverride;
+  // The account record says that profiles are not synced between the devices; this device then has no profiles
+  isNotificationProfileSyncDisabled: boolean;
   // Receipts for messages and stories of ours that are not stored yet, oldest first (`MessageProcessor`)
   earlyReceipts: EarlyReceiptRecord[];
   // Key transparency (`keytrans/KeyTransparency.ts`): the serialized `StoredTreeHead` of the last distinguished tree

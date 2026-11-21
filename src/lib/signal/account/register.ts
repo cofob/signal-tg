@@ -371,7 +371,7 @@ async function sendRegistrationRequest(
   if (credentials) headers.Authorization = getBasicAuthorization(credentials);
   try {
     return await sendHttpRequest(SIGNAL_CHAT_HOST, {
-      method, path, headers, body: encodeUtf8(JSON.stringify(json)),
+      trafficClass: 'authenticated', method, path, headers, body: encodeUtf8(JSON.stringify(json)),
     });
   } catch {
     throw new RegistrationError('network', 0);

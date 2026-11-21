@@ -150,6 +150,7 @@ async function downloadStickerPackFile(id: string, key: string, file: string) {
 
   const controller = new AbortController();
   const response = await sendHttpRequest(SIGNAL_CDN_HOSTS[STICKER_CDN], {
+    trafficClass: 'unauthenticated',
     method: 'GET',
     path: `/stickers/${id}/${file}`,
     signal: controller.signal,

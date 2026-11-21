@@ -20,7 +20,6 @@ import {
 import { requestMeasure } from '../../../lib/fasterdom/fasterdom';
 import {
   selectCanPlayAnimatedEmojis,
-  selectChatFullInfo,
   selectCustomEmojiForEmojis,
   selectIsChatWithSelf,
 } from '../../../global/selectors';
@@ -85,7 +84,6 @@ type StateProps = {
   stickerSetsById: Record<string, ApiStickerSet>;
   addedCustomEmojiIds?: string[];
   customEmojiFeaturedIds?: string[];
-  chatEmojiSetId?: string;
   canAnimate?: boolean;
   isSavedMessages?: boolean;
   emojiGroups?: ApiEmojiGroup[];
@@ -95,7 +93,7 @@ type EmojiCategoryData = { id: string; name: string; emojis: string[] };
 
 type EmojiSection =
   | { type: 'category'; category: EmojiCategoryData; title: string }
-  | { type: 'set'; set: StickerSetOrReactionsSetOrRecent; isChatEmojiSet?: boolean };
+  | { type: 'set'; set: StickerSetOrReactionsSetOrRecent };
 
 const ICONS_BY_CATEGORY: Record<string, IconName> = {
   people: 'smile',
@@ -130,7 +128,6 @@ const EmojiPicker = ({
   stickerSetsById,
   addedCustomEmojiIds,
   customEmojiFeaturedIds,
-  chatEmojiSetId,
   canAnimate,
   isSavedMessages,
   emojiGroups,
@@ -259,12 +256,7 @@ const EmojiPicker = ({
       });
     }
 
-    const userSetIds = [...(addedCustomEmojiIds || [])];
-    if (chatEmojiSetId) {
-      userSetIds.unshift(chatEmojiSetId);
-    }
-
-    const setIdsToDisplay = unique(userSetIds.concat(customEmojiFeaturedIds || []));
+    const setIdsToDisplay = unique([...(addedCustomEmojiIds || [])].concat(customEmojiFeaturedIds || []));
     const setsToDisplay = Object.values(pickTruthy(stickerSetsById, setIdsToDisplay));
 
     return [
@@ -273,7 +265,7 @@ const EmojiPicker = ({
     ];
   }, [
     customEmojisById, recentCustomEmojiIds, addedCustomEmojiIds,
-    chatEmojiSetId, customEmojiFeaturedIds, stickerSetsById, lang,
+    customEmojiFeaturedIds, stickerSetsById, lang,
   ]);
 
   const sections = useMemo((): EmojiSection[] => {
@@ -296,11 +288,11 @@ const EmojiPicker = ({
     });
 
     customSets.forEach((set) => {
-      list.push({ type: 'set', set, isChatEmojiSet: set.id === chatEmojiSetId });
+      list.push({ type: 'set', set });
     });
 
     return list;
-  }, [categories, recentEmojis, customSets, chatEmojiSetId, lang]);
+  }, [categories, recentEmojis, customSets, lang]);
 
   const firstCategoryIndex = recentEmojis?.length ? 1 : 0;
   const lastCategoryIndex = firstCategoryIndex + (categories?.length || 0) - 1;
@@ -501,7 +493,6 @@ const EmojiPicker = ({
               observeIntersectionForShowingItems={observeIntersectionForShowingItems}
               isNearActive={activeSetIndex >= index - 1 && activeSetIndex <= index + 1}
               isSavedMessages={isSavedMessages}
-              isChatEmojiSet={section.isChatEmojiSet}
               isTranslucent={isTranslucent}
               onStickerSelect={handleCustomEmojiSelect}
               forcePlayback
@@ -645,7 +636,6 @@ export default memo(withGlobal<OwnProps>(
     const language = selectLanguageCode(global);
     const baseEmojiKeywords = global.emojiKeywords[BASE_EMOJI_KEYWORD_LANG];
     const emojiKeywords = language !== BASE_EMOJI_KEYWORD_LANG ? global.emojiKeywords[language] : undefined;
-    const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
     const isSavedMessages = Boolean(chatId && selectIsChatWithSelf(global, chatId));
 
     return {
@@ -657,7 +647,6 @@ export default memo(withGlobal<OwnProps>(
       stickerSetsById: global.stickers.setsById,
       addedCustomEmojiIds: global.customEmojis.added.setIds,
       customEmojiFeaturedIds: global.customEmojis.featuredIds,
-      chatEmojiSetId: chatFullInfo?.emojiSet?.id,
       canAnimate: selectCanPlayAnimatedEmojis(global),
       isSavedMessages,
       emojiGroups: global.emojiGroups.groups,

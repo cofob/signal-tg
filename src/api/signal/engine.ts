@@ -7,8 +7,10 @@ import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
 import { getLoggableError } from '../../util/maskSensitiveText';
+import { handleCallChanges } from './updaters/calls';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
+import { handleNotificationProfilesChange } from './updaters/notificationProfiles';
 import { handleStickerPacksChange } from './updaters/stickers';
 import { handleStoryChanges } from './updaters/stories';
 import { sendApiUpdate } from './updates';
@@ -30,11 +32,13 @@ export const processor = new MessageProcessor(db, client, {
       .then(() => handleMessageChanges(changes))
       .then(() => handleChatChanges(changes))
       .then(() => handleStoryChanges(changes))
+      .then(() => handleCallChanges(changes))
       .catch(logError);
   },
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
   onStickerPacksChange: (ids) => void handleStickerPacksChange(ids).catch(logError),
+  onNotificationProfilesChange: (state) => void handleNotificationProfilesChange(state).catch(logError),
   onOwnIdentifierChange: (identifier) => void keyTransparency.onKnownIdentifierChange(identifier).catch(logError),
 });
 

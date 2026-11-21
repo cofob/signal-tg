@@ -6,7 +6,6 @@ import type {
   ApiPeer,
   ApiReaction,
   ApiReactionKey,
-  ApiSavedReactionTag,
 } from '../../../../api/types';
 import type { ObserveFn } from '../../../../hooks/useIntersectionObserver';
 import type { ThreadId } from '../../../../types';
@@ -20,7 +19,6 @@ import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
 
 import ReactionButton from './ReactionButton';
-import SavedTagButton from './SavedTagButton';
 
 import './Reactions.scss';
 
@@ -29,7 +27,6 @@ type OwnProps = {
   threadId?: ThreadId;
   isOutside?: boolean;
   metaChildren?: React.ReactNode;
-  tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   observeIntersection?: ObserveFn;
   noRecentReactors?: boolean;
   isAccountFrozen?: boolean;
@@ -44,18 +41,15 @@ const Reactions = ({
   metaChildren,
   observeIntersection,
   noRecentReactors,
-  tags,
   isAccountFrozen,
 }: OwnProps) => {
   const {
     toggleReaction,
-    updateMiddleSearch,
-    performMiddleSearch,
     openFrozenAccountModal,
   } = getActions();
   const lang = useLang();
 
-  const { results, areTags, recentReactions } = message.reactions!;
+  const { results, recentReactions } = message.reactions!;
   const withServiceReactions = Boolean(message.areReactionsPossible && message.reactions);
 
   const totalCount = useMemo(() => (
@@ -85,7 +79,6 @@ const Reactions = ({
       const reactionKey = getReactionKey(reaction.reaction);
       const recentReactors = recentReactorsByReactionKey?.[reactionKey];
       const shouldHideRecentReactors = totalCount > MAX_RECENT_AVATARS || noRecentReactors;
-      const tag = areTags ? tags?.[reactionKey] : undefined;
 
       return {
         reaction,
@@ -93,35 +86,15 @@ const Reactions = ({
         messageKey,
         recentReactors: !shouldHideRecentReactors ? recentReactors : undefined,
         isChosen: isReactionChosen(reaction),
-        tag,
       };
     });
-  }, [message, noRecentReactors, recentReactorsByReactionKey, results, areTags, tags, totalCount]);
+  }, [message, noRecentReactors, recentReactorsByReactionKey, results, totalCount]);
 
   const handleClick = useLastCallback((reaction: ApiReaction) => {
     if (isAccountFrozen) {
       openFrozenAccountModal();
       return;
     }
-    if (areTags) {
-      updateMiddleSearch({ chatId: message.chatId, threadId, update: { savedTag: reaction } });
-      performMiddleSearch({ chatId: message.chatId, threadId });
-      return;
-    }
-
-    toggleReaction({
-      chatId: message.chatId,
-      messageId: message.id,
-      reaction,
-    });
-  });
-
-  const handleRemoveReaction = useLastCallback((reaction: ApiReaction) => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-      return;
-    }
-
     toggleReaction({
       chatId: message.chatId,
       messageId: message.id,
@@ -139,37 +112,20 @@ const Reactions = ({
       dir={lang.isRtl ? 'rtl' : 'ltr'}
     >
       {props.map(({
-        reaction, recentReactors, messageKey, reactionKey, isChosen, tag,
+        reaction, recentReactors, messageKey, reactionKey,
       }) => (
-        areTags ? (
-          <SavedTagButton
-            key={reactionKey}
-            className="message-reaction"
-            chosenClassName="chosen"
-            containerId={messageKey}
-            isOwnMessage={message.isOutgoing}
-            isChosen={isChosen}
-            reaction={reaction.reaction}
-            tag={tag}
-            withContextMenu
-            onClick={handleClick}
-            onRemove={handleRemoveReaction}
-            observeIntersection={observeIntersection}
-          />
-        ) : (
-          <ReactionButton
-            key={reactionKey}
-            className="message-reaction"
-            chosenClassName="chosen"
-            containerId={messageKey}
-            isOwnMessage={message.isOutgoing}
-            recentReactors={recentReactors}
-            isOutside={isOutside}
-            reaction={reaction}
-            onClick={handleClick}
-            observeIntersection={observeIntersection}
-          />
-        )
+        <ReactionButton
+          key={reactionKey}
+          className="message-reaction"
+          chosenClassName="chosen"
+          containerId={messageKey}
+          isOwnMessage={message.isOutgoing}
+          recentReactors={recentReactors}
+          isOutside={isOutside}
+          reaction={reaction}
+          onClick={handleClick}
+          observeIntersection={observeIntersection}
+        />
       ))}
       {metaChildren}
     </div>

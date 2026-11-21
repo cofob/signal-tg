@@ -1,5 +1,6 @@
 import { Channel, invoke } from '@tauri-apps/api/core';
 
+import type { TrafficClass } from '../../lib/signal/config';
 import type { NativeTransportEvent, NativeTransportRequest } from '../../lib/signal/net/NativeTransport';
 
 type Connection = {
@@ -29,7 +30,7 @@ export default function serveNativeTransport(port: MessagePort) {
       case 'connect': {
         const connection: Connection = { sendQueue: [] };
         connections.set(request.id, connection);
-        void connect(request.id, request.host, connection);
+        void connect(request.id, request.host, request.trafficClass, connection);
         break;
       }
       case 'send': {
@@ -56,7 +57,7 @@ export default function serveNativeTransport(port: MessagePort) {
     [...connections.keys()].forEach(closeConnection);
   };
 
-  async function connect(id: number, host: string, connection: Connection) {
+  async function connect(id: number, host: string, trafficClass: TrafficClass, connection: Connection) {
     const onEvent = new Channel<ChannelMessage>((message) => {
       if (message instanceof ArrayBuffer) {
         postEvent({ type: 'data', id, data: message }, [message]);
@@ -66,7 +67,7 @@ export default function serveNativeTransport(port: MessagePort) {
     });
 
     try {
-      connection.nativeId = await invoke<number>('signal_connect', { host, onEvent });
+      connection.nativeId = await invoke<number>('signal_connect', { host, trafficClass, onEvent });
     } catch (err) {
       reportClosed(id, String(err));
       return;

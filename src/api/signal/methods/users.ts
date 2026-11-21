@@ -4,6 +4,7 @@ import type { ApiPeer, ApiUser } from '../../types';
 import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { buildApiChat } from '../builders/chats';
+import { buildApiChatStyle } from '../builders/chatStyle';
 import {
   buildApiUser, buildApiUserFullInfo, buildAvatarPhoto, getIsContact,
 } from '../builders/users';
@@ -29,7 +30,11 @@ export async function fetchFullUser({ id }: { id: string; accessHash?: string })
 
   const user = buildApiUser(conversation, selfAci);
   const commonGroups = getCommonGroups(await db.getConversations(), conversation.id, selfAci);
-  const fullInfo = { ...buildApiUserFullInfo(conversation, selfAci), commonChatsCount: commonGroups.length };
+  const fullInfo = {
+    ...buildApiUserFullInfo(conversation, selfAci),
+    commonChatsCount: commonGroups.length,
+    signalChatStyle: await buildApiChatStyle(conversation),
+  };
   sendApiUpdate({
     '@type': 'updateUser', id, user, fullInfo,
   });

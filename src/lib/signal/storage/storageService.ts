@@ -159,6 +159,6 @@ function sendStorageRequest(credentials: Credentials, method: string, path: stri
   const headers: Record<string, string> = { Authorization: getBasicAuthorization(credentials) };
   if (body) headers['Content-Type'] = PROTOBUF_CONTENT_TYPE;
   return sendHttpRequest(SIGNAL_STORAGE_HOST, {
-    method, path, headers, body,
+    trafficClass: 'authenticated', method, path, headers, body,
   });
 }

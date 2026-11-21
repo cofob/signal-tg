@@ -21,7 +21,6 @@ import {
 import { isSameReaction } from '../../global/helpers';
 import {
   selectCanPlayAnimatedEmojis,
-  selectChatFullInfo,
   selectIsChatWithSelf,
 } from '../../global/selectors';
 import { selectLanguageCode } from '../../global/selectors/settings';
@@ -67,7 +66,6 @@ type OwnProps = {
   isHidden?: boolean;
   loadAndPlay: boolean;
   idPrefix?: string;
-  withDefaultTopicIcons?: boolean;
   selectedReactionIds?: string[];
   withSelectionOrder?: boolean;
   isStatusPicker?: boolean;
@@ -86,14 +84,12 @@ type StateProps = {
   customEmojisById?: Record<string, ApiSticker>;
   recentCustomEmojiIds?: string[];
   recentStatusEmojis?: ApiSticker[];
-  chatEmojiSetId?: string;
   topReactions?: ApiReaction[];
   recentReactions?: ApiReaction[];
   defaultTagReactions?: ApiReaction[];
   stickerSetsById: Record<string, ApiStickerSet>;
   availableReactions?: ApiAvailableReaction[];
   addedCustomEmojiIds?: string[];
-  defaultTopicIconsId?: string;
   defaultStatusIconsId?: string;
   customEmojiFeaturedIds?: string[];
   canAnimate?: boolean;
@@ -132,7 +128,6 @@ const CustomEmojiPicker = ({
   withSelectionOrder,
   recentStatusEmojis,
   stickerSetsById,
-  chatEmojiSetId,
   topReactions,
   recentReactions,
   availableReactions,
@@ -146,8 +141,6 @@ const CustomEmojiPicker = ({
   noAddButton,
   topCustomEmojis,
   isSavedMessages,
-  withDefaultTopicIcons,
-  defaultTopicIconsId,
   defaultStatusIconsId,
   defaultTagReactions,
   baseEmojiKeywords,
@@ -265,15 +258,6 @@ const CustomEmojiPicker = ({
           isEmoji: true,
         });
       }
-    } else if (withDefaultTopicIcons) {
-      const defaultTopicIconsPack = stickerSetsById[defaultTopicIconsId!];
-      if (defaultTopicIconsPack.stickers?.length) {
-        defaultSets.push({
-          ...defaultTopicIconsPack,
-          id: RECENT_SYMBOL_SET_ID,
-          title: lang('RecentStickers'),
-        });
-      }
     } else if (recentCustomEmojis?.length) {
       defaultSets.push({
         id: RECENT_SYMBOL_SET_ID,
@@ -285,12 +269,7 @@ const CustomEmojiPicker = ({
       });
     }
 
-    const userSetIds = [...(addedCustomEmojiIds || [])];
-    if (chatEmojiSetId) {
-      userSetIds.unshift(chatEmojiSetId);
-    }
-
-    const setIdsToDisplay = unique(userSetIds.concat(customEmojiFeaturedIds || []));
+    const setIdsToDisplay = unique([...(addedCustomEmojiIds || [])].concat(customEmojiFeaturedIds || []));
 
     const setsToDisplay = Object.values(pickTruthy(stickerSetsById, setIdsToDisplay));
 
@@ -299,9 +278,9 @@ const CustomEmojiPicker = ({
       ...setsToDisplay,
     ];
   }, [
-    addedCustomEmojiIds, isReactionPicker, isStatusPicker, withDefaultTopicIcons, recentCustomEmojis,
+    addedCustomEmojiIds, isReactionPicker, isStatusPicker, recentCustomEmojis,
     customEmojiFeaturedIds, stickerSetsById, topReactions, availableReactions, lang, recentReactions,
-    defaultStatusIconsId, defaultTopicIconsId, isSavedMessages, defaultTagReactions, chatEmojiSetId,
+    defaultStatusIconsId, isSavedMessages, defaultTagReactions,
     topCustomEmojis,
   ]);
 
@@ -555,10 +534,9 @@ const CustomEmojiPicker = ({
                 <div>
                   {allSets.map((stickerSet, i) => {
                     const shouldHideHeader = stickerSet.id === TOP_SYMBOL_SET_ID
-                      || (stickerSet.id === RECENT_SYMBOL_SET_ID && (withDefaultTopicIcons || isStatusPicker));
-                    // Free top emoji are shown in full and unlocked, like the chat's own set
-                    const isChatEmojiSet = stickerSet.id === chatEmojiSetId
-                      || (stickerSet.id === TOP_SYMBOL_SET_ID && Boolean(topCustomEmojis));
+                      || (stickerSet.id === RECENT_SYMBOL_SET_ID && isStatusPicker);
+                    // Free top emoji are shown in full and unlocked
+                    const isChatEmojiSet = stickerSet.id === TOP_SYMBOL_SET_ID && Boolean(topCustomEmojis);
 
                     return (
                       <StickerSet
@@ -576,7 +554,6 @@ const CustomEmojiPicker = ({
                         isReactionPicker={isReactionPicker}
                         noAddButton={noAddButton}
                         shouldHideHeader={shouldHideHeader}
-                        withDefaultTopicIcon={withDefaultTopicIcons && stickerSet.id === RECENT_SYMBOL_SET_ID}
                         withDefaultStatusIcon={isStatusPicker && stickerSet.id === RECENT_SYMBOL_SET_ID}
                         isChatEmojiSet={isChatEmojiSet}
                         selectedReactionIds={selectedReactionIds}
@@ -623,7 +600,6 @@ export default memo(withGlobal<OwnProps>(
     } = global;
 
     const isSavedMessages = Boolean(chatId && selectIsChatWithSelf(global, chatId));
-    const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
     const language = selectLanguageCode(global);
     const baseEmojiKeywords = global.emojiKeywords[BASE_EMOJI_KEYWORD_LANG];
     const emojiKeywords = language !== BASE_EMOJI_KEYWORD_LANG ? global.emojiKeywords[language] : undefined;
@@ -637,11 +613,9 @@ export default memo(withGlobal<OwnProps>(
       canAnimate: selectCanPlayAnimatedEmojis(global),
       isSavedMessages,
       customEmojiFeaturedIds,
-      defaultTopicIconsId: global.defaultTopicIconsId,
       defaultStatusIconsId: global.defaultStatusIconsId,
       topReactions: isReactionPicker ? topReactions : undefined,
       recentReactions: isReactionPicker ? recentReactions : undefined,
-      chatEmojiSetId: chatFullInfo?.emojiSet?.id,
       availableReactions: isReactionPicker ? availableReactions : undefined,
       defaultTagReactions: isReactionPicker ? defaultTags : undefined,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,

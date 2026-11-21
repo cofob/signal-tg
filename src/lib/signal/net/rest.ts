@@ -28,7 +28,10 @@ export function getBasicAuthorization({ username, password }: Credentials) {
   return `Basic ${bufferToBase64(encodeUtf8(`${username}:${password}`))}`;
 }
 
-/** Sends a JSON request over HTTP and parses the JSON response; throws `HttpError` on non-2xx statuses */
+/**
+ * Sends a JSON request over HTTP and parses the JSON response; throws `HttpError` on non-2xx statuses. These requests
+ * belong to the account (registration, linking, key and profile uploads, credentials), so they take the main tunnel.
+ */
 export async function sendJsonRequest<T>(host: string, {
   method, path, json, credentials,
 }: JsonRequest): Promise<T | undefined> {
@@ -37,6 +40,7 @@ export async function sendJsonRequest<T>(host: string, {
   if (credentials) headers.Authorization = getBasicAuthorization(credentials);
 
   const response = await sendHttpRequest(host, {
+    trafficClass: 'authenticated',
     method,
     path,
     headers,

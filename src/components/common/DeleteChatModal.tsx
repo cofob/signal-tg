@@ -8,8 +8,6 @@ import {
   getChatTitle,
   getUserFirstOrLastName,
   isChatBasicGroup,
-  isChatChannel,
-  isChatSuperGroup,
 } from '../../global/helpers';
 import { selectIsChatWithSelf, selectUser } from '../../global/selectors';
 import { isUserId } from '../../util/entities/ids';
@@ -27,17 +25,14 @@ import './DeleteChatModal.scss';
 export type OwnProps = {
   isOpen: boolean;
   chat: ApiChat;
-  isSavedDialog?: boolean;
   onClose: () => void;
   onCloseAnimationEnd?: () => void;
 };
 
 type StateProps = {
-  isChannel: boolean;
   isChatWithSelf?: boolean;
   isPrivateChat: boolean;
   isBasicGroup: boolean;
-  isSuperGroup: boolean;
   canDeleteForAll?: boolean;
   contactUser?: ApiUser;
 };
@@ -45,23 +40,17 @@ type StateProps = {
 const DeleteChatModal = ({
   isOpen,
   chat,
-  isSavedDialog,
-  isChannel,
   isPrivateChat,
   isChatWithSelf,
   isBasicGroup,
-  isSuperGroup,
   canDeleteForAll,
   contactUser,
   onClose,
   onCloseAnimationEnd,
 }: OwnProps & StateProps) => {
   const {
-    leaveChannel,
     leaveBasicGroup,
     deleteHistory,
-    deleteSavedHistory,
-    deleteChannel,
     deleteChat,
   } = getActions();
 
@@ -76,9 +65,7 @@ const DeleteChatModal = ({
   });
 
   const handleDeleteChat = useLastCallback(() => {
-    if (isSavedDialog) {
-      deleteSavedHistory({ chatId: chat.id });
-    } else if (isPrivateChat) {
+    if (isPrivateChat) {
       deleteHistory({ chatId: chat.id, shouldDeleteForAll: false });
     } else if (isBasicGroup) {
       if (chat.isOwner) {
@@ -88,19 +75,12 @@ const DeleteChatModal = ({
         // The history goes after leaving succeeded: a Signal group may refuse, as the last admin's does
         leaveBasicGroup({ chatId: chat.id });
       }
-    } else if ((isChannel || isSuperGroup) && !chat.isOwner) {
-      leaveChannel({ chatId: chat.id });
-    } else if ((isChannel || isSuperGroup) && chat.isOwner) {
-      deleteChannel({ chatId: chat.id });
     }
     onClose();
   });
 
   const handleLeaveChat = useLastCallback(() => {
-    if (isChannel || isSuperGroup) {
-      leaveChannel({ chatId: chat.id });
-      onClose();
-    } else if (isBasicGroup && chat.isOwner) {
+    if (isBasicGroup && chat.isOwner) {
       leaveBasicGroup({ chatId: chat.id });
       onClose();
     } else {
@@ -122,19 +102,7 @@ const DeleteChatModal = ({
   }
 
   function renderTitle(): RegularLangKey {
-    if (isSavedDialog) {
-      return isChatWithSelf ? 'ClearHistoryMyNotesTitle' : 'ClearHistoryTitleSingle2';
-    }
-
-    if (isChannel && !chat.isOwner) {
-      return 'ChannelLeave';
-    }
-
-    if (isChannel && chat.isOwner) {
-      return 'ChannelDelete';
-    }
-
-    if (isBasicGroup || isSuperGroup) {
+    if (isBasicGroup) {
       return 'GroupLeaveGroup';
     }
 
@@ -142,28 +110,7 @@ const DeleteChatModal = ({
   }
 
   function renderContent() {
-    if (isSavedDialog) {
-      return (
-        <p>
-          {renderText(
-            isChatWithSelf ? lang('ClearHistoryMyNotesMessage')
-              : lang('ClearHistoryMessageSingle', { chat: chatTitle }),
-            ['simple_markdown', 'emoji'],
-          )}
-        </p>
-      );
-    }
-    if (isChannel && chat.isOwner) {
-      return (
-        <p>
-          {renderText(lang('ChatListDeleteAndLeaveGroupConfirmation', {
-            chat: chatTitle,
-          }), ['simple_markdown', 'emoji'])}
-        </p>
-      );
-    }
-
-    if ((isChannel && !chat.isOwner) || isBasicGroup || isSuperGroup) {
+    if (isBasicGroup) {
       return <p>{renderText(lang('ChannelLeaveAlertWithName', { chat: chatTitle }), ['simple_markdown', 'emoji'])}</p>;
     }
 
@@ -173,18 +120,7 @@ const DeleteChatModal = ({
   }
 
   function renderActionText(): RegularLangKey {
-    if (isSavedDialog) {
-      return 'Delete';
-    }
-
-    if (isChannel && !chat.isOwner) {
-      return 'ChannelLeave';
-    }
-    if (isChannel && chat.isOwner) {
-      return 'Delete';
-    }
-
-    if (isBasicGroup || isSuperGroup) {
+    if (isBasicGroup) {
       return 'GroupLeaveGroup';
     }
 
@@ -206,7 +142,7 @@ const DeleteChatModal = ({
             {contactName ? renderText(lang('ChatListDeleteForEveryone', { user: contactName })) : lang('DeleteForAll')}
           </Button>
         )}
-        {!isPrivateChat && chat.isOwner && !isSavedDialog && (
+        {!isPrivateChat && chat.isOwner && (
           <Button color="danger" className="confirm-dialog-button" isText onClick={handleDeleteChat}>
             {lang('DeleteForAll')}
           </Button>
@@ -215,7 +151,7 @@ const DeleteChatModal = ({
           color="danger"
           className="confirm-dialog-button"
           isText
-          onClick={(isPrivateChat || isSavedDialog) ? handleDeleteChat : handleLeaveChat}
+          onClick={isPrivateChat ? handleDeleteChat : handleLeaveChat}
         >
           {lang(renderActionText())}
         </Button>
@@ -226,19 +162,17 @@ const DeleteChatModal = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { chat, isSavedDialog }): Complete<StateProps> => {
+  (global, { chat }): Complete<StateProps> => {
     const isPrivateChat = isUserId(chat.id);
     const isChatWithSelf = selectIsChatWithSelf(global, chat.id);
     const user = selectUser(global, chat.id);
-    const canDeleteForAll = (isPrivateChat && !isChatWithSelf && !isSavedDialog);
+    const canDeleteForAll = isPrivateChat && !isChatWithSelf;
     const contactUser = isPrivateChat ? user : undefined;
 
     return {
       isPrivateChat,
       isChatWithSelf,
-      isChannel: isChatChannel(chat),
       isBasicGroup: isChatBasicGroup(chat),
-      isSuperGroup: isChatSuperGroup(chat),
       canDeleteForAll,
       contactUser,
     };

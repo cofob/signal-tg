@@ -2,15 +2,11 @@ import type { ActionReturnType } from '../../types';
 import {
   type ApiAvailableReaction,
   ApiMediaFormat,
-  type ApiMessage,
-  type ApiSavedReactionTag,
-  MAIN_THREAD_ID,
 } from '../../../api/types';
 
 import { GENERAL_REFETCH_INTERVAL } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import {
-  buildCollectionByCallback, omit, omitUndefined,
+import { omit,
 } from '../../../util/iteratees';
 import { getMessageKey } from '../../../util/keys/messageKey';
 import * as mediaLoader from '../../../util/mediaLoader';
@@ -19,41 +15,30 @@ import { callApi } from '../../../api';
 import { LIMITS } from '../../../limits';
 import {
   getDocumentMediaHash,
-  getReactionKey,
   getUserReactions,
   isChatAdmin,
   isMessageLocal,
   isSameReaction,
   isUserRightBanned,
 } from '../../helpers';
-import { addActionHandler, getGlobal, getPromiseActions, setGlobal } from '../../index';
+import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
-  replaceChatMessages,
   updateChatMessage,
-  updateUnreadCounters,
 } from '../../reducers';
 import {
   addMessageReaction,
-  pauseReactionPolling,
-  removePeerReactions,
-  removeUnreadReactions,
   subtractXForEmojiInteraction,
 } from '../../reducers/reactions';
 import { updateTabState } from '../../reducers/tabs';
-import { updateThreadReadState } from '../../reducers/threads';
 import {
   selectChat,
   selectChatMessage,
-  selectChatMessages,
   selectDefaultReaction,
-  selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
   selectMessageIdsByGroupId,
-  selectPeer,
   selectPerformanceSettingsValue,
   selectTabState,
 } from '../../selectors';
-import { selectThreadReadState } from '../../selectors/threads';
 
 const INTERACTION_RANDOM_OFFSET = 40;
 
@@ -117,26 +102,6 @@ addActionHandler('interactWithAnimatedEmoji', (global, actions, payload): Action
   }, tabId);
 });
 
-addActionHandler('sendEmojiInteraction', (global, actions, payload): ActionReturnType => {
-  const {
-    messageId, chatId, emoji, interactions,
-  } = payload;
-  if (global.connectionState !== 'connectionStateReady') return;
-
-  const chat = selectChat(global, chatId);
-
-  if (!chat || !emoji || selectIsChatWithSelf(global, chatId)) {
-    return;
-  }
-
-  void callApi('sendEmojiInteraction', {
-    chat,
-    messageId,
-    emoticon: emoji,
-    timestamps: interactions,
-  });
-});
-
 addActionHandler('sendDefaultReaction', (global, actions, payload): ActionReturnType => {
   const {
     chatId, messageId, tabId = getCurrentTabId(),
@@ -177,8 +142,6 @@ addActionHandler('toggleReaction', async (global, actions, payload): Promise<voi
     return;
   }
 
-  const isInSaved = selectIsChatWithSelf(global, chatId);
-
   const isInDocumentGroup = Boolean(message.groupedId) && !message.isInAlbum;
   const documentGroupFirstMessageId = isInDocumentGroup
     ? selectMessageIdsByGroupId(global, chatId, message.groupedId!)![0]
@@ -216,10 +179,6 @@ addActionHandler('toggleReaction', async (global, actions, payload): Promise<voi
       reactions: trimmedReactions,
       shouldAddToRecent,
     });
-
-    if (isInSaved) {
-      actions.loadSavedReactionTags();
-    }
   } catch (error) {
     global = getGlobal();
     global = addMessageReaction(global, message, userReactions);
@@ -268,31 +227,6 @@ addActionHandler('stopActiveReaction', (global, actions, payload): ActionReturnT
   }, tabId);
 });
 
-addActionHandler('setDefaultReaction', async (global, actions, payload): Promise<void> => {
-  const { reaction } = payload;
-
-  const result = await callApi('setDefaultReaction', { reaction });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  if (!global.config) {
-    actions.loadConfig(); // Refetch new config, if it is somehow not loaded
-    return;
-  }
-
-  global = {
-    ...global,
-    config: {
-      ...global.config,
-      defaultReaction: reaction,
-    },
-  };
-  setGlobal(global);
-});
-
 addActionHandler('stopActiveEmojiInteraction', (global, actions, payload): ActionReturnType => {
   const { id, tabId = getCurrentTabId() } = payload;
 
@@ -331,88 +265,8 @@ addActionHandler('loadReactors', async (global, actions, payload): Promise<void>
   setGlobal(global);
 });
 
-addActionHandler('loadMessageReactions', (global, actions, payload): ActionReturnType => {
-  if (selectIsCurrentUserFrozen(global)) return;
-
-  const { ids, chatId } = payload;
-
-  const chat = selectChat(global, chatId);
-
-  if (!chat || global.connectionState !== 'connectionStateReady') {
-    return;
-  }
-
-  callApi('fetchMessageReactions', { ids, chat });
-});
-
-addActionHandler('sendWatchingEmojiInteraction', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, emoticon, x, y, startSize, isReversed, id, tabId = getCurrentTabId(),
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-
-  const tabState = selectTabState(global, tabId);
-  if (!chat || !tabState.activeEmojiInteractions?.some((interaction) => interaction.id === id)
-    || selectIsChatWithSelf(global, chatId)) {
-    return undefined;
-  }
-
-  if (global.connectionState === 'connectionStateReady') {
-    callApi('sendWatchingEmojiInteraction', { chat, emoticon });
-  }
-
-  return updateTabState(global, {
-    activeEmojiInteractions: tabState.activeEmojiInteractions.map((activeEmojiInteraction) => {
-      if (activeEmojiInteraction.id === id) {
-        return {
-          ...activeEmojiInteraction,
-          x: subtractXForEmojiInteraction(global, x),
-          y,
-          startSize,
-          isReversed,
-        };
-      }
-      return activeEmojiInteraction;
-    }),
-  }, tabId);
-});
-
-addActionHandler('loadUnreadReactions', async (global, actions, payload): Promise<void> => {
-  const { chatId, threadId = MAIN_THREAD_ID, offsetId } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('fetchUnreadReactions', {
-    chat,
-    threadId: threadId !== MAIN_THREAD_ID ? threadId : undefined,
-    offsetId,
-  });
-
-  if (!result) return;
-
-  const { messages, topics, totalCount } = result;
-
-  global = getGlobal();
-  global = updateUnreadCounters({
-    global,
-    chatId,
-    threadId,
-    messages,
-    topics,
-    totalCount,
-    unreadCountKey: 'unreadReactionsCount',
-  });
-
-  setGlobal(global);
-});
-
 addActionHandler('animateUnreadReaction', (global, actions, payload): ActionReturnType => {
   const { chatId, messageIds, tabId = getCurrentTabId() } = payload;
-
-  global = removeUnreadReactions({ global, chatId, ids: messageIds });
-
-  setGlobal(global);
 
   actions.markMessagesRead({ chatId, messageIds });
 
@@ -432,253 +286,4 @@ addActionHandler('animateUnreadReaction', (global, actions, payload): ActionRetu
   });
 
   return undefined;
-});
-
-addActionHandler('focusNextReaction', async (global, actions, payload): Promise<void> => {
-  const { chatId, threadId = MAIN_THREAD_ID, tabId = getCurrentTabId() } = payload || {};
-  let readState = selectThreadReadState(global, chatId, threadId);
-
-  if (!readState?.unreadReactions?.length) {
-    await getPromiseActions().loadUnreadReactions({ chatId, threadId });
-
-    global = getGlobal();
-    readState = selectThreadReadState(global, chatId, threadId);
-    if (!readState?.unreadReactions?.length) return;
-  }
-
-  actions.focusMessage({
-    chatId, threadId, messageId: readState.unreadReactions[0], tabId, scrollTargetPosition: 'end',
-  });
-  actions.markMessagesRead({ chatId, messageIds: [readState.unreadReactions[0]] });
-});
-
-addActionHandler('readAllReactions', (global, actions, payload): ActionReturnType => {
-  const { chatId, threadId = MAIN_THREAD_ID } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  callApi('readAllReactions', { chat, threadId: threadId !== MAIN_THREAD_ID ? threadId : undefined });
-
-  global = updateThreadReadState(global, chatId, threadId, {
-    unreadReactionsCount: 0,
-    unreadReactions: undefined,
-  });
-  return global;
-});
-
-addActionHandler('loadTopReactions', async (global): Promise<void> => {
-  const result = await callApi('fetchTopReactions', {
-    hash: global.reactions.hash.topReactions,
-  });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    reactions: {
-      ...global.reactions,
-      topReactions: result.reactions,
-      hash: {
-        ...global.reactions.hash,
-        topReactions: result.hash,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('loadRecentReactions', async (global): Promise<void> => {
-  const result = await callApi('fetchRecentReactions', {
-    hash: global.reactions.hash.recentReactions,
-  });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    reactions: {
-      ...global.reactions,
-      recentReactions: result.reactions,
-      hash: {
-        ...global.reactions.hash,
-        recentReactions: result.hash,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('clearRecentReactions', async (global): Promise<void> => {
-  const result = await callApi('clearRecentReactions');
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    reactions: {
-      ...global.reactions,
-      recentReactions: [],
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('loadDefaultTagReactions', async (global): Promise<void> => {
-  const result = await callApi('fetchDefaultTagReactions', {
-    hash: global.reactions.hash.defaultTags,
-  });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    reactions: {
-      ...global.reactions,
-      defaultTags: result.reactions,
-      hash: {
-        ...global.reactions.hash,
-        defaultTags: result.hash,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('loadSavedReactionTags', async (global): Promise<void> => {
-  const { hash } = global.savedReactionTags || {};
-
-  const result = await callApi('fetchSavedReactionTags', { hash });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  const tagsByKey = buildCollectionByCallback(
-    result.tags, (tag: ApiSavedReactionTag) => ([getReactionKey(tag.reaction), tag]),
-  );
-
-  global = {
-    ...global,
-    savedReactionTags: {
-      hash: result.hash,
-      byKey: tagsByKey,
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('deleteParticipantReaction', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, messageId, peerId, notificationPluralValue, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId);
-  const peer = selectPeer(global, peerId);
-  if (!chat || !peer) return;
-
-  const result = await callApi('deleteParticipantReaction', { chat, messageId, peer });
-  if (!result) return;
-
-  global = getGlobal();
-  global = pauseReactionPolling(global, chatId);
-  const message = selectChatMessage(global, chatId, messageId);
-  if (message) {
-    const update = removePeerReactions(message, peerId);
-    if (update) {
-      global = updateChatMessage(global, chatId, messageId, update);
-    }
-  }
-  setGlobal(global);
-
-  if (notificationPluralValue !== undefined) {
-    actions.showNotification({
-      message: { key: 'ReactionDeleted', options: { pluralValue: notificationPluralValue } },
-      tabId,
-    });
-  }
-});
-
-addActionHandler('deleteParticipantReactions', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, peerId, shouldUseNotificationPluralLang, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId);
-  const peer = selectPeer(global, peerId);
-  if (!chat || !peer) return;
-
-  const result = await callApi('deleteParticipantReactions', { chat, peer });
-  if (!result) return;
-
-  global = getGlobal();
-  global = pauseReactionPolling(global, chatId);
-  const byId = selectChatMessages(global, chatId);
-  if (byId) {
-    let newById: Record<number, ApiMessage> | undefined;
-    Object.values(byId).forEach((message) => {
-      const update = removePeerReactions(message, peerId);
-      if (!update) return;
-      if (!newById) newById = { ...byId };
-      newById[message.id] = omitUndefined({ ...message, ...update });
-    });
-    if (newById) {
-      global = replaceChatMessages(global, chatId, newById);
-    }
-  }
-  setGlobal(global);
-
-  actions.showNotification({
-    message: { key: 'ReactionDeleted', options: { pluralValue: shouldUseNotificationPluralLang ? 2 : 1 } },
-    tabId,
-  });
-});
-
-addActionHandler('reportMessageReaction', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, peerId } = payload;
-  const chat = selectChat(global, chatId);
-  const peer = selectPeer(global, peerId);
-  if (!chat || !peer) return;
-
-  void callApi('reportMessageReaction', { chat, messageId, reactorPeer: peer });
-});
-
-addActionHandler('editSavedReactionTag', async (global, actions, payload): Promise<void> => {
-  const { reaction, title } = payload;
-
-  const result = await callApi('updateSavedReactionTag', { reaction, title });
-
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-  const tagsByKey = global.savedReactionTags?.byKey;
-  if (!tagsByKey) return;
-
-  const key = getReactionKey(reaction);
-  const tag = tagsByKey[key];
-
-  const newTag = {
-    ...tag,
-    title,
-  };
-
-  global = {
-    ...global,
-    savedReactionTags: {
-      ...global.savedReactionTags!,
-      byKey: {
-        ...tagsByKey,
-        [key]: newTag,
-      },
-    },
-  };
-  setGlobal(global);
 });

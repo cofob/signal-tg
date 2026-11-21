@@ -49,7 +49,6 @@ type StateProps = {
   isScreenLocked?: boolean;
   hasPasscode?: boolean;
   inactiveReason?: 'auth' | 'otherClient';
-  isTestServer?: boolean;
   theme: ThemeKey;
   customBackgroundColor?: string;
   actionMessageBg?: string;
@@ -70,7 +69,6 @@ const App = ({
   isScreenLocked,
   hasPasscode,
   inactiveReason,
-  isTestServer,
   theme,
   customBackgroundColor,
   actionMessageBg,
@@ -262,7 +260,6 @@ const App = ({
       >
         {renderContent}
       </Transition>
-      {activeKey === AppScreens.auth && isTestServer && <div className="test-server-badge">{lang('TestServer')}</div>}
       <Notifications />
     </UiLoader>
   );
@@ -281,7 +278,6 @@ export default withGlobal(
       inactiveReason: selectTabState(global).inactiveReason,
       theme,
       customBackgroundColor: getWallpaperBaseColor(theme, themeValues || {}),
-      isTestServer: global.config?.isTestServer,
       actionMessageBg: selectActionMessageBg(global),
     };
   },

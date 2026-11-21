@@ -1,3 +1,5 @@
+import type { TrafficClass } from '../config';
+
 import { getSignalTunnelUrl, SIGNAL_CA_PEM } from '../config';
 import { wasm } from '../wasm';
 
@@ -38,6 +40,9 @@ export default class TlsTunnel {
   /** The ALPN protocol the server chose, once the handshake completes */
   alpnProtocol?: string;
 
+  /** The tunnel this connection runs through, `undefined` for the default one; it never changes */
+  readonly tunnelUrl: string | undefined;
+
   private transport!: TunnelTransport;
 
   private tls: wasm.TlsClient;
@@ -52,14 +57,18 @@ export default class TlsTunnel {
 
   private closeError?: Error;
 
-  private constructor(host: string, alpnProtocols: string[]) {
+  private constructor(host: string, readonly trafficClass: TrafficClass, alpnProtocols: string[]) {
     this.host = host;
+    this.tunnelUrl = getSignalTunnelUrl(trafficClass);
     this.tls = new wasm.TlsClient(host, [getSignalCaDer()], alpnProtocols);
   }
 
-  /** `alpnProtocols` are offered in order of preference */
-  static open(host: string, alpnProtocols = DEFAULT_ALPN_PROTOCOLS): Promise<TlsTunnel> {
-    const tunnel = new TlsTunnel(host, alpnProtocols);
+  /**
+   * The class picks the tunnel. Each connection has its own TLS client and configuration, so nothing, such as a
+   * session ticket, links one connection to another. `alpnProtocols` are offered in order of preference.
+   */
+  static open(host: string, trafficClass: TrafficClass, alpnProtocols = DEFAULT_ALPN_PROTOCOLS): Promise<TlsTunnel> {
+    const tunnel = new TlsTunnel(host, trafficClass, alpnProtocols);
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -69,7 +78,7 @@ export default class TlsTunnel {
         reject(error);
       }, HANDSHAKE_TIMEOUT_MS);
 
-      tunnel.transport = openTransport(host, {
+      tunnel.transport = openTransport(host, trafficClass, tunnel.tunnelUrl, {
         onOpen: () => {
           tunnel.isTransportOpen = true;
           tunnel.flush();
@@ -104,6 +113,11 @@ export default class TlsTunnel {
 
   get isOpen() {
     return !this.isClosed;
+  }
+
+  /** Whether new requests of this class still go through this tunnel, which a proxy setting change ends */
+  get isOnCurrentTunnel() {
+    return this.tunnelUrl === getSignalTunnelUrl(this.trafficClass);
   }
 
   /** Bytes written to the tunnel but not sent to the network yet */
@@ -173,10 +187,11 @@ export default class TlsTunnel {
   }
 }
 
-/** The proxy server setting picks a WebSocket tunnel; without one the desktop app connects natively */
-function openTransport(host: string, handlers: TunnelTransportHandlers): TunnelTransport {
-  const tunnelUrl = getSignalTunnelUrl();
-  if (!tunnelUrl && hasNativeTransport()) return new NativeTransport(host, handlers);
+/** The proxy settings pick a WebSocket tunnel; without one the desktop app connects natively */
+function openTransport(
+  host: string, trafficClass: TrafficClass, tunnelUrl: string | undefined, handlers: TunnelTransportHandlers,
+): TunnelTransport {
+  if (!tunnelUrl && hasNativeTransport()) return new NativeTransport(host, trafficClass, handlers);
 
   const url = new URL(tunnelUrl ?? getDefaultTunnelUrl());
   url.searchParams.set('host', host);

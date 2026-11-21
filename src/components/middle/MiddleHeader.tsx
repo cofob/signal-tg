@@ -4,7 +4,7 @@ import {
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiChat, ApiSticker, ApiTypingStatus,
+  ApiChat, ApiTypingStatus,
 } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 import type { Signal } from '../../util/signals';
@@ -16,21 +16,16 @@ import {
   MIN_SCREEN_WIDTH_FOR_STATIC_LEFT_COLUMN,
 } from '../../config';
 import {
-  getIsSavedDialog,
-} from '../../global/helpers';
-import {
   selectChat,
-  selectCustomEmoji,
   selectIsChatWithSelf,
   selectIsInSelectMode,
   selectIsRightColumnShown,
-  selectPeer,
   selectPinnedIds,
   selectScheduledIds,
   selectTabState,
 } from '../../global/selectors';
 import {
-  selectThreadLocalStateParam, selectThreadMessagesCount,
+  selectThreadLocalStateParam,
 } from '../../global/selectors/threads';
 import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import { IS_MAC_OS } from '../../util/browser/windowEnvironment';
@@ -55,14 +50,12 @@ import HeaderActions from './HeaderActions';
 import './MiddleHeader.scss';
 
 const BACK_BUTTON_INACTIVE_TIME = 450;
-const EMOJI_STATUS_SIZE = 22;
 const SEARCH_LONGTAP_THRESHOLD = 500;
 
 type OwnProps = {
   chatId: string;
   threadId: ThreadId;
   messageListType: MessageListType;
-  isComments?: boolean;
   isMobile?: boolean;
   getCurrentPinnedIndex: Signal<number>;
   getLoadingPinnedId: Signal<number | undefined>;
@@ -71,7 +64,6 @@ type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  isSavedDialog?: boolean;
   typingStatusByPeerId?: Record<string, ApiTypingStatus>;
   isSelectModeActive?: boolean;
   isLeftColumnShown?: boolean;
@@ -83,7 +75,6 @@ type StateProps = {
   connectionState?: GlobalState['connectionState'];
   isSyncing?: boolean;
   isFetchingDifference?: boolean;
-  emojiStatusSticker?: ApiSticker;
 };
 
 const MiddleHeader = ({
@@ -96,7 +87,6 @@ const MiddleHeader = ({
   isLeftColumnShown,
   chat,
   messagesCount,
-  isComments,
   isChatWithSelf,
   shouldSkipHistoryAnimations,
   currentTransitionKey,
@@ -105,17 +95,14 @@ const MiddleHeader = ({
   isFetchingDifference,
   getCurrentPinnedIndex,
   getLoadingPinnedId,
-  emojiStatusSticker,
-  isSavedDialog,
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
   const {
-    openThreadWithInfo,
+    openChatWithInfo,
     openChat,
     openPreviousChat,
     toggleLeftColumn,
     exitMessageSelectMode,
-    openStickerSet,
     updateMiddleSearch,
   } = getActions();
 
@@ -139,7 +126,7 @@ const MiddleHeader = ({
     if ((event.target as Element).closest('.title > .custom-emoji')) return;
 
     // Force close My Profile if clicked on Saved Messages header
-    openThreadWithInfo({ chatId, threadId, isOwnProfile: false });
+    openChatWithInfo({ id: chatId, isOwnProfile: false });
   });
 
   const {
@@ -158,12 +145,6 @@ const MiddleHeader = ({
     setTimeout(() => {
       isBackButtonActiveRef.current = true;
     }, BACK_BUTTON_INACTIVE_TIME);
-  });
-
-  const handleChannelStatusClick = useLastCallback(() => {
-    openStickerSet({
-      stickerSetInfo: emojiStatusSticker!.stickerSetInfo,
-    });
   });
 
   const navigateBack = useLastCallback(() => {
@@ -226,18 +207,6 @@ const MiddleHeader = ({
       return lang('Loading');
     }
 
-    if (messageListType === 'thread') {
-      if (!messagesCount) {
-        return lang(isComments ? 'CommentsTitle' : 'RepliesTitle');
-      }
-
-      return lang(
-        isComments ? 'Comments' : 'Replies',
-        { count: messagesCount },
-        { pluralValue: messagesCount },
-      );
-    }
-
     if (messageListType === 'pinned') {
       return lang('PinnedMessagesCount', { count: messagesCount }, { pluralValue: messagesCount });
     }
@@ -255,7 +224,7 @@ const MiddleHeader = ({
 
   function renderInfo() {
     if (messageListType === 'thread') {
-      if (threadId === MAIN_THREAD_ID || isSavedDialog || chat?.isForum) {
+      if (threadId === MAIN_THREAD_ID) {
         return renderChatInfo();
       }
     }
@@ -269,18 +238,10 @@ const MiddleHeader = ({
   }
 
   function renderChatInfo() {
-    const savedMessagesStatus = isSavedDialog
-      ? (messagesCount !== undefined
-        ? lang('Messages', { count: messagesCount }, { pluralValue: messagesCount })
-        : lang('NoteToSelf'))
-      : undefined;
-
-    const realChatId = isSavedDialog ? String(threadId) : chatId;
-
-    const displayChatId = chat?.isMonoforum ? chat.linkedMonoforumId! : realChatId;
+    const displayChatId = chatId;
     return (
       <>
-        {(isLeftColumnHideable || currentTransitionKey > 0) && renderBackButton(shouldShowCloseButton, !isSavedDialog)}
+        {(isLeftColumnHideable || currentTransitionKey > 0) && renderBackButton(shouldShowCloseButton, true)}
         <div
           className="chat-info-wrapper"
           onMouseDown={handleLongPressMouseDown}
@@ -294,34 +255,27 @@ const MiddleHeader = ({
               key={displayChatId}
               userId={displayChatId}
               typingStatusByPeerId={typingStatusByPeerId}
-              status={connectionStatusText || savedMessagesStatus}
+              status={connectionStatusText}
               withDots={Boolean(connectionStatusText)}
               withFullInfo={threadId === MAIN_THREAD_ID}
               withMediaViewer={threadId === MAIN_THREAD_ID}
               withStory={!isChatWithSelf}
               withUpdatingStatus
-              isSavedDialog={isSavedDialog}
               storyViewerOrigin={StoryViewerOrigin.MiddleHeaderAvatar}
-              emojiStatusSize={EMOJI_STATUS_SIZE}
               noRtl
             />
           ) : (
             <GroupChatInfo
               key={displayChatId}
               chatId={displayChatId}
-              threadId={!isSavedDialog ? threadId : undefined}
               typingStatusByPeerId={typingStatusByPeerId}
-              withMonoforumStatus={chat?.isMonoforum}
-              status={connectionStatusText || savedMessagesStatus}
+              status={connectionStatusText}
               withDots={Boolean(connectionStatusText)}
               withMediaViewer={threadId === MAIN_THREAD_ID}
               withFullInfo={threadId === MAIN_THREAD_ID}
               withUpdatingStatus
               withStory
-              isSavedDialog={isSavedDialog}
               storyViewerOrigin={StoryViewerOrigin.MiddleHeaderAvatar}
-              emojiStatusSize={EMOJI_STATUS_SIZE}
-              onEmojiStatusClick={handleChannelStatusClick}
               forceRoundAvatar
               noRtl
             />
@@ -383,9 +337,6 @@ export default memo(withGlobal<OwnProps>(
       isLeftColumnShown, shouldSkipHistoryAnimations, messageLists,
     } = selectTabState(global);
     const chat = selectChat(global, chatId);
-    const peer = selectPeer(global, chatId);
-
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
 
     let messagesCount: number | undefined;
     if (messageListType === 'pinned') {
@@ -394,14 +345,9 @@ export default memo(withGlobal<OwnProps>(
     } else if (messageListType === 'scheduled') {
       const scheduledIds = selectScheduledIds(global, chatId, threadId);
       messagesCount = scheduledIds?.length;
-    } else if (messageListType === 'thread' && threadId !== MAIN_THREAD_ID) {
-      messagesCount = selectThreadMessagesCount(global, chatId, threadId);
     }
 
     const typingStatusByPeerId = selectThreadLocalStateParam(global, chatId, threadId, 'typingStatusByPeerId');
-
-    const emojiStatus = peer?.emojiStatus;
-    const emojiStatusSticker = emojiStatus && selectCustomEmoji(global, emojiStatus.documentId);
 
     return {
       typingStatusByPeerId,
@@ -416,8 +362,6 @@ export default memo(withGlobal<OwnProps>(
       connectionState: global.connectionState,
       isSyncing: global.isSyncing,
       isFetchingDifference: global.isFetchingDifference,
-      emojiStatusSticker,
-      isSavedDialog,
     };
   },
 )(MiddleHeader));

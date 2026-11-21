@@ -48,6 +48,7 @@ export async function waitForTransferArchive(account: AccountRecord, signal?: Ab
     let response;
     try {
       response = await sendHttpRequest(SIGNAL_CHAT_HOST, {
+        trafficClass: 'authenticated',
         method: 'GET',
         path: `/v1/devices/transfer_archive?timeout=${timeoutSeconds}`,
         headers: { Authorization: authorization },
@@ -78,7 +79,9 @@ export async function downloadTransferArchive(
   const host = SIGNAL_CDN_HOSTS[cdn];
   if (!host) throw new Error(`Unknown transfer archive CDN ${cdn}`);
 
+  // The primary device uploaded the archive for this account, so the CDN can tie the download to it
   const response = await sendHttpRequest(host, {
+    trafficClass: 'authenticated',
     method: 'GET',
     path: `/attachments/${encodeURIComponent(key)}`,
     signal,

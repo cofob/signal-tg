@@ -54,20 +54,9 @@
 }
 
 .mention,
-.unread,
-.unopened {
+.unread {
   color: var(--color-white);
   background: var(--color-active);
-}
-
-.unopened {
-  align-self: center;
-
-  width: 0.5rem;
-  min-width: auto;
-  height: 0.5rem;
-  min-height: auto;
-  padding: 0;
 }
 
 .pinned {
@@ -80,14 +69,6 @@
   color: var(--color-list-icon);
 
   background-color: transparent;
-}
-
-.reaction {
-  background-color: #ed504f;
-}
-
-.poll {
-  background-color: var(--color-primary);
 }
 
 .round {

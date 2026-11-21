@@ -1,4 +1,3 @@
-import QrPlane from '../../../assets/tgs/auth/QrPlane.tgs';
 import BannedDuck from '../../../assets/tgs/BannedDuck.tgs';
 import CameraFlip from '../../../assets/tgs/calls/CameraFlip.tgs';
 import HandFilled from '../../../assets/tgs/calls/HandFilled.tgs';
@@ -80,7 +79,6 @@ export const LOCAL_TGS_URLS = {
   VoiceOutlined,
   JoinRequest,
   Invite,
-  QrPlane,
   Congratulations,
   Experimental,
   PartyPopper,

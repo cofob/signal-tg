@@ -7,8 +7,8 @@ import type { ApiChatMember, ApiUserStatus } from '../../../api/types';
 import { ManagementScreens, NewChatMembersProgress } from '../../../types';
 
 import {
-  getHasAdminRight, isChatBasicGroup,
-  isChatChannel, isUserRightBanned, sortUserIds,
+  getHasAdminRight,
+  isUserRightBanned, sortUserIds,
 } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import {
@@ -17,7 +17,6 @@ import {
 import { unique } from '../../../util/iteratees';
 import sortChatIds from '../../common/helpers/sortChatIds';
 
-import usePeerStoriesPolling from '../../../hooks/polling/usePeerStoriesPolling';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import useKeyboardListNavigation from '../../../hooks/useKeyboardListNavigation';
@@ -27,8 +26,7 @@ import usePeerSearch, { userGlobalSearch } from '../../../hooks/usePeerSearch';
 
 import NothingFound from '../../common/NothingFound';
 import PrivateChatInfo from '../../common/PrivateChatInfo';
-import Island, { IslandDescription } from '../../gili/layout/Island';
-import Switch from '../../gili/primitives/Switch';
+import Island from '../../gili/layout/Island';
 import FloatingActionButton from '../../ui/FloatingActionButton';
 import InfiniteScroll from '../../ui/InfiniteScroll';
 import InputText from '../../ui/InputText';
@@ -49,12 +47,9 @@ type StateProps = {
   members?: ApiChatMember[];
   canAddMembers?: boolean;
   adminMembersById?: Record<string, ApiChatMember>;
-  isChannel?: boolean;
   localContactIds?: string[];
   currentUserId?: string;
   canDeleteMembers?: boolean;
-  areParticipantsHidden?: boolean;
-  canHideParticipants?: boolean;
 };
 
 const ManageGroupMembers = ({
@@ -64,20 +59,17 @@ const ManageGroupMembers = ({
   canAddMembers,
   adminMembersById,
   userStatusesById,
-  isChannel,
   isActive,
   localContactIds,
   currentUserId,
   canDeleteMembers,
-  areParticipantsHidden,
-  canHideParticipants,
   onClose,
   onScreenSelect,
   onChatMemberSelect,
 }: OwnProps & StateProps) => {
   const {
     openChat, closeManagement,
-    toggleParticipantsHidden, setNewChatMembersDialogState, toggleManagement,
+    setNewChatMembersDialogState, toggleManagement,
     openDeleteMemberModal,
   } = getActions();
 
@@ -113,8 +105,6 @@ const ManageGroupMembers = ({
     return noAdmins ? userIds.filter((userId) => !adminIds.includes(userId)) : userIds;
   }, [members, userStatusesById, noAdmins, adminIds]);
 
-  usePeerStoriesPolling(memberIds);
-
   const displayedIds = useMemo(() => {
     const shouldUseSearchResults = Boolean(searchQuery);
     const listedIds = !shouldUseSearchResults
@@ -128,7 +118,6 @@ const ManageGroupMembers = ({
       ]).filter((contactId) => {
         return !noAdmins || !adminIds.includes(contactId);
       }),
-      true,
     );
   }, [memberIds, localContactIds, searchQuery, relevantFoundIds, noAdmins, adminIds]);
 
@@ -153,10 +142,6 @@ const ManageGroupMembers = ({
       handleMemberClick(viewportIds[index === -1 ? 0 : index]);
     }
   }, '.ListItem-button', true);
-
-  const handleToggleParticipantsHidden = useLastCallback(() => {
-    toggleParticipantsHidden({ chatId, isEnabled: !areParticipantsHidden });
-  });
 
   const handleNewMemberDialogOpen = useLastCallback(() => {
     toggleManagement();
@@ -196,19 +181,6 @@ const ManageGroupMembers = ({
     <div className="Management ManageGroupMembers">
       <div className="panel-content">
         {noAdmins && renderSearchField()}
-        {canHideParticipants && !isChannel && (
-          <>
-            <Island>
-              <ListItem icon="group" ripple onClick={handleToggleParticipantsHidden}>
-                <span>{lang('ChannelHideMembers')}</span>
-                <Switch checked={Boolean(areParticipantsHidden)} />
-              </ListItem>
-            </Island>
-            <IslandDescription>
-              {lang(areParticipantsHidden ? 'GroupMembersMembersHiddenOn' : 'GroupMembersMembersHiddenOff')}
-            </IslandDescription>
-          </>
-        )}
         {viewportIds?.length ? (
           <Island className="island-list">
             <InfiniteScroll
@@ -237,7 +209,7 @@ const ManageGroupMembers = ({
             teactOrderKey={0}
             key="nothing-found"
             className="mt-2"
-            text={lang(isChannel ? 'NoSubscribersFound' : 'NoMembersFound')}
+            text={lang('NoMembersFound')}
           />
         ) : (
           <Loading />
@@ -259,31 +231,23 @@ export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
     const { statusesById: userStatusesById } = global.users;
-    const { members, adminMembersById, areParticipantsHidden } = selectChatFullInfo(global, chatId) || {};
-    const isChannel = chat && isChatChannel(chat);
+    const { members, adminMembersById } = selectChatFullInfo(global, chatId) || {};
     const { userIds: localContactIds } = global.contactList || {};
-    const hiddenMembersMinCount = global.appConfig.hiddenMembersMinCount;
 
     const canDeleteMembers = selectCanBanUsers(global, chatId);
 
-    const canHideParticipants = canDeleteMembers && chat && !isChatBasicGroup(chat) && chat.membersCount !== undefined
-      && hiddenMembersMinCount !== undefined && chat.membersCount >= hiddenMembersMinCount;
-
     const canAddMembers = chat && ((getHasAdminRight(chat, 'inviteUsers')
-      || (!isChannel && !isUserRightBanned(chat, 'inviteUsers')))
+      || !isUserRightBanned(chat, 'inviteUsers'))
     );
 
     return {
-      areParticipantsHidden: Boolean(chat && areParticipantsHidden),
       members,
       canAddMembers,
       adminMembersById,
       userStatusesById,
-      isChannel,
       localContactIds,
       canDeleteMembers,
       currentUserId: global.currentUserId,
-      canHideParticipants,
     };
   },
 )(ManageGroupMembers));

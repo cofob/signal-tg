@@ -17,7 +17,6 @@ import useSyncEffect from '../../../hooks/useSyncEffect';
 const SHARED_MEDIA_TYPES: SharedMediaType[] = ['media', 'documents', 'links', 'audio', 'voice', 'gif', 'polls'];
 
 export default function useProfileViewportIds({
-  loadMoreMembers,
   loadCommonChats,
   searchMessages,
   loadStories,
@@ -35,10 +34,8 @@ export default function useProfileViewportIds({
   storyIds,
   pinnedStoryIds,
   archiveStoryIds,
-  similarChannels,
   scrollToTopKey,
 }: {
-  loadMoreMembers: AnyToVoidFunction;
   loadCommonChats: AnyToVoidFunction;
   searchMessages: AnyToVoidFunction;
   loadStories: AnyToVoidFunction;
@@ -56,7 +53,6 @@ export default function useProfileViewportIds({
   storyIds?: number[];
   pinnedStoryIds?: number[];
   archiveStoryIds?: number[];
-  similarChannels?: string[];
   scrollToTopKey: number;
 }) {
   const resultType = mediaSearchType && SHARED_MEDIA_TYPES.includes(tabType as SharedMediaType)
@@ -83,11 +79,11 @@ export default function useProfileViewportIds({
       return undefined;
     }
 
-    return sortChatIds(commonChatIds, true);
+    return sortChatIds(commonChatIds);
   }, [chatsById, commonChatIds]);
 
   const [memberViewportIds, getMoreMembers] = useInfiniteScrollForLoadableItems(
-    shouldResetToTop, loadMoreMembers, memberIds,
+    shouldResetToTop, undefined, memberIds,
   );
 
   const [mediaViewportIds, getMoreMedia] = useInfiniteScrollForSharedMedia(
@@ -190,14 +186,9 @@ export default function useProfileViewportIds({
       viewportIds = archiveStoryViewportIds;
       getMore = getMoreStoriesArchive;
       break;
-    case 'similarChannels':
-      viewportIds = similarChannels;
-      break;
   }
 
-  const noProfileInfo = resultType === 'dialogs';
-
-  return [resultType, viewportIds, getMore, noProfileInfo] as const;
+  return [resultType, viewportIds, getMore] as const;
 }
 
 function useInfiniteScrollForLoadableItems<ListId extends string | number>(

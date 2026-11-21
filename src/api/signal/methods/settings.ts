@@ -145,7 +145,6 @@ export async function fetchNotifyDefaultSettings(): Promise<Record<ApiNotifyPeer
   return {
     users: buildNotifyDefaults(defaults?.users),
     groups: buildNotifyDefaults(defaults?.groups),
-    channels: buildNotifyDefaults(defaults?.channels),
   };
 }
 

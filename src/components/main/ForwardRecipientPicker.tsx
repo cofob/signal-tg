@@ -3,17 +3,10 @@ import {
 } from '../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
-import type { ForwardTarget, ThreadId } from '../../types';
-import type { ChatSelectionKey } from '../../util/keys/chatSelectionKey';
+import type { ForwardTarget } from '../../types';
 
 import { getChatTitle, getUserFirstOrLastName } from '../../global/helpers';
-import {
-  selectCanCopyMessageLink,
-  selectChat,
-  selectChatMessages,
-  selectTabState,
-  selectUser,
-} from '../../global/selectors';
+import { selectChat, selectTabState, selectUser } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import captureKeyboardListeners from '../../util/captureKeyboardListeners';
 import { isUserId } from '../../util/entities/ids';
@@ -38,7 +31,6 @@ interface StateProps {
   isStory?: boolean;
   isAudioTrack?: boolean;
   isForwarding?: boolean;
-  fromChatId?: string;
   forwardMessageIds?: number[];
 }
 
@@ -48,41 +40,28 @@ const ForwardRecipientPicker = ({
   isStory,
   isAudioTrack,
   isForwarding,
-  fromChatId,
   forwardMessageIds,
 }: OwnProps & StateProps) => {
   const {
-    openChatOrTopicWithReplyInDraft,
-    setForwardChatOrTopic,
+    openChatWithReplyInDraft,
+    setForwardChat,
     exitForwardMode,
     forwardToSavedMessages,
     forwardToMultipleChats,
     forwardStory,
     forwardAudio,
     showNotification,
-    copyMessageLink,
   } = getActions();
 
   const lang = useLang();
 
   const renderingIsStory = usePreviousDeprecated(isStory, true);
   const [isShown, markIsShown, unmarkIsShown] = useFlag();
-  const [selectedIds, setSelectedIds] = useState<ChatSelectionKey[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [caption, setCaption] = useState('');
 
   const isMultiSelect = isForwarding && !isStory && !isAudioTrack;
   const messageCount = forwardMessageIds?.length || 0;
-
-  const canCopyLink = useMemo(() => {
-    if (!fromChatId || forwardMessageIds?.length !== 1) return false;
-
-    const global = getGlobal();
-    const chatMessages = selectChatMessages(global, fromChatId);
-    if (!chatMessages) return false;
-
-    const message = chatMessages[forwardMessageIds[0]];
-    return message && selectCanCopyMessageLink(global, message);
-  }, [fromChatId, forwardMessageIds]);
 
   useEffect(() => {
     if (isOpen) {
@@ -111,10 +90,10 @@ const ForwardRecipientPicker = ({
     });
   });
 
-  const handleSelectRecipient = useCallback((recipientId: string, threadId?: ThreadId) => {
+  const handleSelectRecipient = useCallback((recipientId: string) => {
     const isSelf = recipientId === currentUserId;
     if (isAudioTrack) {
-      forwardAudio({ toChatId: recipientId, toThreadId: threadId });
+      forwardAudio({ toChatId: recipientId });
       return;
     }
 
@@ -152,12 +131,10 @@ const ForwardRecipientPicker = ({
     if (isSelf) {
       forwardToSelf();
     } else {
-      const chatId = recipientId;
-      const topicId = threadId ? Number(threadId) : undefined;
       if (isForwarding) {
-        setForwardChatOrTopic({ chatId, topicId });
+        setForwardChat({ chatId: recipientId });
       } else {
-        openChatOrTopicWithReplyInDraft({ chatId, topicId });
+        openChatWithReplyInDraft({ chatId: recipientId });
       }
     }
   }, [currentUserId, isStory, isAudioTrack, lang, isForwarding]);
@@ -166,30 +143,21 @@ const ForwardRecipientPicker = ({
     exitForwardMode();
   }, [exitForwardMode]);
 
-  const handleSelectedIdsChange = useLastCallback((ids: ChatSelectionKey[]) => {
+  const handleSelectedIdsChange = useLastCallback((ids: string[]) => {
     setSelectedIds(ids);
-  });
-
-  const handleCopyLink = useLastCallback(() => {
-    if (!fromChatId || !forwardMessageIds?.length) return;
-    copyMessageLink({
-      chatId: fromChatId,
-      messageId: forwardMessageIds[0],
-    });
-    exitForwardMode();
   });
 
   const handleForwardToMultiple = useLastCallback(() => {
     if (!selectedIds.length) return;
 
     if (selectedIds.length === 1) {
-      const { peerId: chatId, topicId } = selectedIds[0];
+      const chatId = selectedIds[0];
       if (chatId === currentUserId) {
         forwardToSelf();
         return;
       }
 
-      setForwardChatOrTopic({ chatId, topicId });
+      setForwardChat({ chatId });
       return;
     }
 
@@ -202,11 +170,7 @@ const ForwardRecipientPicker = ({
     }
 
     if (!selectedIds.length) {
-      if (!canCopyLink) return false;
-
-      e.preventDefault();
-      handleCopyLink();
-      return undefined;
+      return false;
     }
 
     e.preventDefault();
@@ -223,10 +187,7 @@ const ForwardRecipientPicker = ({
   }, [isOpen, isMultiSelect, handleEnterShortcut]);
 
   const executeForward = useLastCallback(() => {
-    const targets: ForwardTarget[] = selectedIds.map(({ peerId, topicId }) => ({
-      chatId: peerId,
-      topicId,
-    }));
+    const targets: ForwardTarget[] = selectedIds.map((chatId) => ({ chatId }));
     forwardToMultipleChats({ targets, comment: caption || undefined });
 
     showNotification({
@@ -261,14 +222,12 @@ const ForwardRecipientPicker = ({
         <Button
           className="picker-footer-button"
           color="primary"
-          disabled={isInitial && !canCopyLink}
-          onClick={isInitial ? handleCopyLink : handleForwardToMultiple}
+          disabled={isInitial}
+          onClick={handleForwardToMultiple}
         >
           <Transition name="fade" activeKey={isInitial ? 0 : 1} slideClassName={styles.buttonSlide}>
             <span>
-              {isInitial
-                ? (canCopyLink ? lang('CopyLink') : lang('SelectChats'))
-                : lang('Forward')}
+              {isInitial ? lang('SelectChats') : lang('Forward')}
             </span>
           </Transition>
         </Button>
@@ -307,8 +266,7 @@ const ForwardRecipientPicker = ({
         </div>
       </div>
     );
-  }, [isForwarding, isStory, selectedCount, showComposer, caption, canCopyLink, handleForwardToMultiple, handleCopyLink,
-    lang]);
+  }, [isForwarding, isStory, selectedCount, showComposer, caption, handleForwardToMultiple, lang]);
 
   if (!isOpen && !isShown) {
     return undefined;
@@ -327,7 +285,6 @@ const ForwardRecipientPicker = ({
       onSelectedIdsChange={handleSelectedIdsChange}
       onClose={handleClose}
       onCloseAnimationEnd={unmarkIsShown}
-      isForwarding={isForwarding || isAudioTrack}
       isNativeDialog
       withFolders
     />
@@ -336,7 +293,7 @@ const ForwardRecipientPicker = ({
 
 export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
   const {
-    messageIds, storyId, audioItem, fromChatId,
+    messageIds, storyId, audioItem,
   } = selectTabState(global).forwardMessages;
   const isForwarding = (messageIds && messageIds.length > 0);
 
@@ -345,7 +302,6 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     isStory: Boolean(storyId),
     isAudioTrack: Boolean(audioItem),
     isForwarding,
-    fromChatId,
     forwardMessageIds: messageIds,
   };
 })(ForwardRecipientPicker));

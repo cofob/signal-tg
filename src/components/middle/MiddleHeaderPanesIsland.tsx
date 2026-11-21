@@ -2,16 +2,14 @@ import { memo, useLayoutEffect, useRef, useSignal } from '@teact';
 import { addExtraClass, setExtraStyles } from '@teact/teact-dom';
 import { withGlobal } from '../../global';
 
-import type { ApiChat, ApiPeerSettings } from '../../api/types';
+import type { ApiPeerSettings } from '../../api/types';
 import type { MessageListType, ThreadId } from '../../types';
 import type { Signal } from '../../util/signals';
-import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
   requestForcedReflow, requestMutation, requestNextMutation,
 } from '../../lib/fasterdom/fasterdom';
 import {
-  selectChat,
   selectChatFullInfo,
   selectCurrentMiddleSearch,
   selectTabState,
@@ -26,7 +24,6 @@ import {
   applyAnimationState, commitInMutatePhase, type PaneState, toggleIslandHiddenInstantly, transitionIslandVisual,
 } from './hooks/useHeaderPane';
 
-import GroupCallTopPane from '../calls/group/GroupCallTopPane';
 import ChatReportPane from './panes/ChatReportPane';
 import HeaderPinnedMessage from './panes/HeaderPinnedMessage';
 
@@ -44,16 +41,11 @@ type OwnProps = {
 };
 
 type StateProps = {
-  chat?: ApiChat;
   settings?: ApiPeerSettings;
   isHidden?: boolean;
 };
 
 const FALLBACK_PANE_STATE = { height: 0 };
-
-function getFallbackPaneState() {
-  return FALLBACK_PANE_STATE;
-}
 
 function setMaskHeight(middleColumn: HTMLElement, height: number, withGlide?: boolean) {
   setExtraStyles(middleColumn, {
@@ -87,7 +79,6 @@ const MiddleHeaderPanesIsland = ({
   chatId,
   threadId,
   messageListType,
-  chat,
   settings,
   getCurrentPinnedIndex,
   getLoadingPinnedId,
@@ -96,17 +87,13 @@ const MiddleHeaderPanesIsland = ({
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
   const [getPinnedState, setPinnedState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getGroupCallState, setGroupCallState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getChatReportState, setChatReportState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
-  const isGroupCallShown = threadId === MAIN_THREAD_ID && !chat?.isForum;
-
   const paneStateGetters = [
-    isGroupCallShown ? getGroupCallState : getFallbackPaneState,
     getChatReportState,
     getPinnedState,
   ];
-  const expectedReportCount = paneStateGetters.filter((getter) => getter !== getFallbackPaneState).length;
+  const expectedReportCount = paneStateGetters.length;
   const expectedReportCountRef = useRef(expectedReportCount);
   expectedReportCountRef.current = expectedReportCount;
 
@@ -367,8 +354,7 @@ const MiddleHeaderPanesIsland = ({
 
     settleRef.current = settle;
     settle();
-  }, [cacheKey, getGroupCallState, getPinnedState,
-    getChatReportState]);
+  }, [cacheKey, getPinnedState, getChatReportState]);
 
   if (!shouldRender) return undefined;
 
@@ -383,12 +369,6 @@ const MiddleHeaderPanesIsland = ({
         )
       }
     >
-      {isGroupCallShown && (
-        <GroupCallTopPane
-          chatId={chatId}
-          onPaneStateChange={setGroupCallState}
-        />
-      )}
       <ChatReportPane
         chatId={chatId}
         canAddContact={settings?.canAddContact}
@@ -415,12 +395,10 @@ export default memo(withGlobal<OwnProps>(
   (global, {
     chatId,
   }): Complete<StateProps> => {
-    const chat = selectChat(global, chatId);
     // Signal groups have the bar of a message request too
     const settings = selectUserFullInfo(global, chatId)?.settings ?? selectChatFullInfo(global, chatId)?.settings;
 
     return {
-      chat,
       settings,
       isHidden: Boolean(selectCurrentMiddleSearch(global) || selectTabState(global).isRichInputExpanded),
     };

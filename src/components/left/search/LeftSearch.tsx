@@ -49,7 +49,6 @@ type TabInfo = {
 
 const TABS: TabInfo[] = [
   { type: GlobalSearchContent.ChatList, key: 'SearchTabChats' },
-  { type: GlobalSearchContent.ChannelList, key: 'SearchTabChannels' },
   { type: GlobalSearchContent.Media, key: 'SearchTabMedia' },
   { type: GlobalSearchContent.Links, key: 'SearchTabLinks' },
   { type: GlobalSearchContent.Files, key: 'SearchTabFiles' },
@@ -59,7 +58,7 @@ const TABS: TabInfo[] = [
 
 const CHAT_TABS: TabInfo[] = [
   { type: GlobalSearchContent.ChatList, key: 'SearchTabMessages' },
-  ...TABS.slice(2), // Skip ChatList and ChannelList, replaced with All Messages
+  ...TABS.slice(1), // Skip ChatList, replaced with All Messages
 ];
 
 const LeftSearch = ({
@@ -125,20 +124,17 @@ const LeftSearch = ({
         {(() => {
           switch (activeContent) {
             case GlobalSearchContent.ChatList:
-            case GlobalSearchContent.ChannelList:
               if (chatId) {
                 return (
                   <ChatMessageResults
                     searchQuery={searchQuery}
                     dateSearchQuery={dateSearchQuery}
-                    onReset={onReset}
                     onSearchDateSelect={handleSearchDateSelect}
                   />
                 );
               }
               return (
                 <ChatResults
-                  isChannelList={activeContent === GlobalSearchContent.ChannelList}
                   searchQuery={searchQuery}
                   searchDate={searchDate}
                   dateSearchQuery={dateSearchQuery}

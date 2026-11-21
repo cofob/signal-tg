@@ -14,7 +14,6 @@ export type PushAccount = {
   // Hidden previews use the random key fingerprint to prevent guessing the account's user ID
   userHash: string;
   keyId?: string;
-  isTest?: boolean;
   shouldHidePreviews: boolean;
   shouldShowPreviewsWhenLocked: boolean;
 };

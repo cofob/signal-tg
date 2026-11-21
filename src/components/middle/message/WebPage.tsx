@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from '../../../lib/teact/teact';
+import { memo, useRef } from '../../../lib/teact/teact';
 import { getActions } from '../../../global';
 
 import type { ApiMessage, ApiMessageWebPage, ApiTypeStory, ApiWebPage, ApiWebPageFull } from '../../../api/types';
@@ -7,7 +7,6 @@ import type { ThemeKey, WebPageMediaSize } from '../../../types';
 
 import { getPhotoFullDimensions } from '../../../global/helpers';
 import buildClassName from '../../../util/buildClassName';
-import { tryParseDeepLink } from '../../../util/deepLinkParser';
 import trimText from '../../../util/text/trimText';
 import renderText from '../../common/helpers/renderText';
 import { getWebpageButtonLangKey } from './helpers/webpageType';
@@ -105,12 +104,6 @@ const WebPage = ({
 
   const hasCustomColor = stickers?.isWithTextColor || stickers?.documents?.[0]?.shouldUseTextColor;
   const customColor = useDynamicColorListener(stickersRef, undefined, !hasCustomColor);
-
-  const linkTimestamp = useMemo(() => {
-    const parsedLink = webPage?.url && tryParseDeepLink(webPage?.url);
-    if (!parsedLink || !('timestamp' in parsedLink)) return undefined;
-    return parsedLink.timestamp;
-  }, [webPage?.url]);
 
   const handleArticleClick = useLastCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -252,7 +245,7 @@ const WebPage = ({
             canAutoPlay={canAutoPlay}
             isDownloading={isDownloading}
             isProtected={isProtected}
-            lastPlaybackTimestamp={lastPlaybackTimestamp || linkTimestamp}
+            lastPlaybackTimestamp={lastPlaybackTimestamp}
             onClick={isMediaInteractive ? handleMediaClick : undefined}
             onCancelUpload={onCancelMediaTransfer}
           />

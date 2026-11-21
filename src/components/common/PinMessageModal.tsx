@@ -6,8 +6,6 @@ import type { ApiUser } from '../../api/types';
 import {
   getUserFirstOrLastName,
   isChatBasicGroup,
-  isChatChannel,
-  isChatSuperGroup,
 } from '../../global/helpers';
 import { selectChat, selectIsChatWithSelf, selectUser } from '../../global/selectors';
 import { isUserId } from '../../util/entities/ids';
@@ -28,11 +26,9 @@ export type OwnProps = {
 };
 
 type StateProps = {
-  isChannel: boolean;
   isPrivateChat: boolean;
   isChatWithSelf: boolean;
   isGroup: boolean;
-  isSuperGroup: boolean;
   canPinForAll: boolean;
   contactUser?: ApiUser;
 };
@@ -41,9 +37,7 @@ const PinMessageModal = ({
   isOpen,
   chatId,
   messageId,
-  isChannel,
   isGroup,
-  isSuperGroup,
   canPinForAll,
   contactUser,
   onClose,
@@ -67,11 +61,7 @@ const PinMessageModal = ({
   const contactName = getUserFirstOrLastName(lang, contactUser);
 
   function renderMessage() {
-    if (isChannel) {
-      return lang('PinMessageAlertChannel');
-    }
-
-    if (isGroup || isSuperGroup) {
+    if (isGroup) {
       return lang('PinMessageAlert');
     }
 
@@ -110,10 +100,8 @@ export default memo(withGlobal<OwnProps>(
     const isPrivateChat = isUserId(chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const chat = selectChat(global, chatId);
-    const isChannel = Boolean(chat) && isChatChannel(chat);
     const isGroup = Boolean(chat) && isChatBasicGroup(chat);
-    const isSuperGroup = Boolean(chat) && isChatSuperGroup(chat);
-    const canPinForAll = (isPrivateChat && !isChatWithSelf) || isSuperGroup || isGroup;
+    const canPinForAll = (isPrivateChat && !isChatWithSelf) || isGroup;
     const contactUser = chatId && isUserId(chatId)
       ? selectUser(global, chatId)
       : undefined;
@@ -121,9 +109,7 @@ export default memo(withGlobal<OwnProps>(
     return {
       isPrivateChat,
       isChatWithSelf,
-      isChannel,
       isGroup,
-      isSuperGroup,
       canPinForAll,
       contactUser,
     };

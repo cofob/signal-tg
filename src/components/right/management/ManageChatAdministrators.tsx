@@ -1,10 +1,10 @@
 import { memo, useMemo } from '../../../lib/teact/teact';
-import { getActions, getGlobal, withGlobal } from '../../../global';
+import { getGlobal, withGlobal } from '../../../global';
 
 import type { ApiChat, ApiChatMember } from '../../../api/types';
 import { ManagementScreens } from '../../../types';
 
-import { getHasAdminRight, getUserFullName, isChatChannel } from '../../../global/helpers';
+import { getHasAdminRight, getUserFullName } from '../../../global/helpers';
 import { selectChat, selectChatFullInfo } from '../../../global/selectors';
 import { partition } from '../../../util/iteratees';
 
@@ -14,7 +14,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import PrivateChatInfo from '../../common/PrivateChatInfo';
 import Island, { IslandDescription } from '../../gili/layout/Island';
-import Checkbox from '../../ui/Checkbox';
 import FloatingActionButton from '../../ui/FloatingActionButton';
 import ListItem from '../../ui/ListItem';
 
@@ -29,21 +28,18 @@ type OwnProps = {
 type StateProps = {
   chat?: ApiChat;
   currentUserId?: string;
-  isChannel?: boolean;
   adminMembersById?: Record<string, ApiChatMember>;
 };
 
 const ManageChatAdministrators = ({
   isActive,
   chat,
-  isChannel,
   currentUserId,
   adminMembersById,
   onScreenSelect,
   onChatMemberSelect,
   onClose,
 }: OwnProps & StateProps) => {
-  const { toggleSignatures } = getActions();
   const lang = useLang();
 
   useHistoryBack({
@@ -51,11 +47,7 @@ const ManageChatAdministrators = ({
     onBack: onClose,
   });
 
-  const areSignaturesEnabled = Boolean(chat?.areSignaturesShown);
-  const areProfilesEnabled = Boolean(chat?.areProfilesShown);
-
   const canAddNewAdmins = Boolean(chat && getHasAdminRight(chat, 'addAdmins'));
-  const canToggleSignatures = isChannel && getHasAdminRight(chat!, 'postMessages');
 
   const adminMembers = useMemo(() => {
     if (!adminMembersById) {
@@ -70,22 +62,6 @@ const ManageChatAdministrators = ({
   const handleAdminMemberClick = useLastCallback((member: ApiChatMember) => {
     onChatMemberSelect(member.userId, member.promotedByUserId === currentUserId);
     onScreenSelect(ManagementScreens.ChatAdminRights);
-  });
-
-  const handleToggleSignatures = useLastCallback(() => {
-    toggleSignatures({
-      chatId: chat!.id,
-      areProfilesEnabled,
-      areSignaturesEnabled: !areSignaturesEnabled,
-    });
-  });
-
-  const handleToggleProfiles = useLastCallback(() => {
-    toggleSignatures({
-      chatId: chat!.id,
-      areProfilesEnabled: !areProfilesEnabled,
-      areSignaturesEnabled,
-    });
   });
 
   const handleAddAdminClick = useLastCallback(() => {
@@ -118,12 +94,12 @@ const ManageChatAdministrators = ({
             disabled
           >
             <span className="title">{lang('EventLog')}</span>
-            <span className="subtitle">{lang(isChannel ? 'EventLogInfoDetailChannel' : 'EventLogInfoDetail')}</span>
+            <span className="subtitle">{lang('EventLogInfoDetail')}</span>
           </ListItem>
         </Island>
 
         <IslandDescription dir="auto">
-          {lang(isChannel ? 'ChannelManagementAddAdminDescription' : 'GroupManagementAddAdminDescription')}
+          {lang('GroupManagementAddAdminDescription')}
         </IslandDescription>
         <Island dir={lang.isRtl ? 'rtl' : undefined}>
           {adminMembers.map((member) => (
@@ -149,31 +125,6 @@ const ManageChatAdministrators = ({
           />
         </Island>
 
-        {canToggleSignatures && (
-          <Island>
-            <div className="ListItem narrow">
-              <Checkbox
-                checked={areSignaturesEnabled}
-                label={lang('ChannelSignMessages')}
-                onChange={handleToggleSignatures}
-              />
-            </div>
-            {areSignaturesEnabled && (
-              <>
-                <div className="ListItem narrow">
-                  <Checkbox
-                    checked={areProfilesEnabled}
-                    label={lang('ChannelSignMessagesWithProfile')}
-                    onChange={handleToggleProfiles}
-                  />
-                </div>
-                <IslandDescription>
-                  {lang('ChannelSignProfilesInfo')}
-                </IslandDescription>
-              </>
-            )}
-          </Island>
-        )}
       </div>
     </div>
   );
@@ -185,7 +136,6 @@ export default memo(withGlobal<OwnProps>(
     return {
       chat,
       currentUserId: global.currentUserId,
-      isChannel: chat && isChatChannel(chat),
       adminMembersById: selectChatFullInfo(global, chatId)?.adminMembersById,
     };
   },

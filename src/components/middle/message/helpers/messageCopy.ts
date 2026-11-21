@@ -6,7 +6,6 @@ import type { GlobalState } from '../../../../global/types';
 import type { MessageList } from '../../../../types';
 import type { ClipboardTextContent, MessageCopyRequest } from '../../../../types/messageCopy';
 
-import { isChatChannel } from '../../../../global/helpers';
 import { getPeerTitle } from '../../../../global/helpers/peers';
 import { renderMessageSummaryHtml } from '../../../../global/helpers/renderMessageSummaryHtml';
 import {
@@ -81,7 +80,7 @@ function buildMessagesDoc(
   const content: TiptapJsonContent[] = [];
   messages.forEach((message, index) => {
     const { text, richMessage } = message.content;
-    const sender = isChatChannel(chat) ? chat : selectSender(global, message);
+    const sender = selectSender(global, message);
     const senderTitle = sender ? getPeerTitle(lang, sender) : message.forwardInfo?.hiddenUserName;
     if (request.withSenderHeaders && senderTitle) {
       content.push({

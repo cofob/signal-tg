@@ -25,20 +25,6 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-
-    &-topics {
-      flex-direction: row;
-      gap: 0.5rem;
-      align-items: center;
-
-      .picker-back-button {
-        flex-shrink: 0;
-      }
-
-      .picker-topics-search {
-        flex: 1;
-      }
-    }
   }
 
   .modal-content {
@@ -49,8 +35,10 @@
     padding-block: 0 !important;
     padding-inline: 1rem !important;
 
-    > .Transition {
+    > .picker-content {
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
       height: 100%;
     }
 
@@ -119,39 +107,6 @@
     .online {
       color: var(--color-primary);
     }
-
-    @media (hover: hover) {
-      &:hover .forum-badge {
-        outline-color: var(--color-item-hover);
-      }
-    }
-  }
-
-  .picker-avatar-wrapper {
-    position: relative;
-  }
-
-  .forum-badge {
-    position: absolute;
-    z-index: 2;
-    right: -0.125rem;
-    bottom: -0.125rem;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 0.875rem;
-    height: 0.875rem;
-    border-radius: 50%;
-
-    font-size: 0.625rem;
-    color: var(--color-white);
-
-    background: rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(50px);
-    /* stylelint-disable-next-line plugin/whole-pixel */
-    outline: 1.5px solid var(--color-background);
   }
 
   .picker-checkbox {
@@ -176,62 +131,6 @@
     &.selected {
       border-color: var(--color-primary);
       background-color: var(--color-primary);
-    }
-  }
-
-  .picker-checkbox-count {
-    position: absolute;
-    right: -0.375rem;
-    bottom: -0.375rem;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 0.875rem;
-    height: 0.875rem;
-    border: 1px solid var(--color-white);
-    border-radius: 0.4375rem;
-
-    font-size: 0.625rem;
-    font-weight: var(--font-weight-semibold);
-    line-height: 0.625rem;
-    color: var(--color-white);
-
-    background-color: var(--color-primary);
-  }
-
-  .topic-icon {
-    --custom-emoji-size: 2.75rem;
-
-    width: 2.75rem;
-    height: 2.75rem;
-    margin-inline-end: 0.25rem !important;
-    font-size: 2.75rem !important;
-  }
-
-  .topic-icon-letter {
-    font-size: 1.5rem;
-  }
-
-  .topic-item {
-    .ListItem-button {
-      display: flex;
-      align-items: center;
-
-      font-size: 1rem;
-      font-weight: var(--font-weight-medium);
-      line-height: 1.6875rem;
-    }
-
-    .fullName {
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .emoji-small {
-      width: 1rem;
-      height: 1rem;
     }
   }
 

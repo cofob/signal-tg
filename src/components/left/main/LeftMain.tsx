@@ -8,14 +8,11 @@ import type { FolderEditDispatch } from '../../../hooks/reducers/useFoldersReduc
 import { LeftColumnContent } from '../../../types';
 
 import { DEBUG } from '../../../config';
-import { selectCommunityPanelId } from '../../../global/selectors';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 
-import useSelector from '../../../hooks/data/useSelector';
 import useInterval from '../../../hooks/schedulers/useInterval';
-import useForumPanelRender from '../../../hooks/useForumPanelRender';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useShowTransitionDeprecated from '../../../hooks/useShowTransitionDeprecated';
@@ -24,10 +21,9 @@ import Button from '../../ui/Button';
 import Transition from '../../ui/Transition';
 import NewChatButton from '../NewChatButton';
 import LeftSearch from '../search/LeftSearch.async';
+import CallLog from './CallLog';
 import ChatFolders from './ChatFolders';
-import CommunityPanel from './community/CommunityPanel';
 import ContactList from './ContactList.async';
-import ForumPanel from './forum/ForumPanel';
 import LeftMainHeader from './LeftMainHeader';
 
 import './LeftMain.scss';
@@ -40,10 +36,8 @@ type OwnProps = {
   shouldSkipTransition?: boolean;
   foldersDispatch: FolderEditDispatch;
   isAppUpdateAvailable?: boolean;
-  isForumPanelOpen?: boolean;
   isClosingSearch?: boolean;
   onSearchQuery: (query: string) => void;
-  onTopicSearch: NoneToVoidFunction;
   isAccountFrozen?: boolean;
   onReset: () => void;
   isFoldersSidebarShown?: boolean;
@@ -64,10 +58,8 @@ const LeftMain = ({
   shouldSkipTransition,
   foldersDispatch,
   isAppUpdateAvailable,
-  isForumPanelOpen,
   onSearchQuery,
   onReset,
-  onTopicSearch,
   isAccountFrozen,
   isFoldersSidebarShown,
 }: OwnProps) => {
@@ -75,22 +67,6 @@ const LeftMain = ({
   const [isNewChatButtonShown, setIsNewChatButtonShown] = useState(IS_TOUCH_ENV);
   const [tauriUpdate, setTauriUpdate] = useState<Update>();
   const [isTauriUpdateDownloading, setIsTauriUpdateDownloading] = useState(false);
-
-  const {
-    shouldRenderForumPanel, handleForumPanelAnimationEnd,
-    handleForumPanelAnimationStart, isAnimationStarted,
-  } = useForumPanelRender(isForumPanelOpen);
-  const isForumPanelRendered = isForumPanelOpen && content === LeftColumnContent.ChatList;
-  const isForumPanelVisible = isForumPanelRendered && isAnimationStarted;
-
-  const communityPanelId = useSelector((global) => selectCommunityPanelId(global));
-  const isCommunityPanelOpen = Boolean(communityPanelId);
-  const {
-    shouldRenderForumPanel: shouldRenderCommunityPanel,
-    handleForumPanelAnimationEnd: handleCommunityPanelAnimationEnd,
-    handleForumPanelAnimationStart: handleCommunityPanelAnimationStart,
-  } = useForumPanelRender(isCommunityPanelOpen);
-  const isCommunityPanelRendered = isCommunityPanelOpen && content === LeftColumnContent.ChatList;
 
   const {
     shouldRender: shouldRenderUpdateButton,
@@ -145,10 +121,6 @@ const LeftMain = ({
     }
   });
 
-  const handleSelectNewChannel = useLastCallback(() => {
-    openLeftColumnContent({ contentKey: LeftColumnContent.NewChannelStep1 });
-  });
-
   const handleSelectNewGroup = useLastCallback(() => {
     openLeftColumnContent({ contentKey: LeftColumnContent.NewGroupStep1 });
   });
@@ -199,7 +171,6 @@ const LeftMain = ({
       onMouseLeave={!IS_TOUCH_ENV ? handleMouseLeave : undefined}
     >
       <LeftMainHeader
-        shouldHideSearch={isForumPanelVisible}
         content={content}
         contactsFilter={contactsFilter}
         onSearchQuery={onSearchQuery}
@@ -223,7 +194,6 @@ const LeftMain = ({
               return (
                 <ChatFolders
                   foldersDispatch={foldersDispatch}
-                  isForumPanelOpen={isForumPanelVisible}
                   isFoldersSidebarShown={isFoldersSidebarShown}
                 />
               );
@@ -238,6 +208,8 @@ const LeftMain = ({
               );
             case LeftColumnContent.Contacts:
               return <ContactList filter={contactsFilter} isActive={isActive} onReset={onReset} />;
+            case LeftColumnContent.Calls:
+              return <CallLog isActive={isActive} onReset={onReset} />;
             default:
               return undefined;
           }
@@ -254,27 +226,9 @@ const LeftMain = ({
           {lang('UpdateTelegram')}
         </Button>
       )}
-      {shouldRenderCommunityPanel && (
-        <CommunityPanel
-          isOpen={isCommunityPanelOpen}
-          isHidden={!isCommunityPanelRendered}
-          onOpenAnimationStart={handleCommunityPanelAnimationStart}
-          onCloseAnimationEnd={handleCommunityPanelAnimationEnd}
-        />
-      )}
-      {shouldRenderForumPanel && (
-        <ForumPanel
-          isOpen={isForumPanelOpen}
-          isHidden={!isForumPanelRendered}
-          onTopicSearch={onTopicSearch}
-          onOpenAnimationStart={handleForumPanelAnimationStart}
-          onCloseAnimationEnd={handleForumPanelAnimationEnd}
-        />
-      )}
       <NewChatButton
         isShown={isNewChatButtonShown}
         onNewPrivateChat={handleSelectContacts}
-        onNewChannel={handleSelectNewChannel}
         onNewGroup={handleSelectNewGroup}
         isAccountFrozen={isAccountFrozen}
       />

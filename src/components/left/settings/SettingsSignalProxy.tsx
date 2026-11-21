@@ -6,11 +6,13 @@ import SignalProxyForm from '../../common/SignalProxyForm';
 import Island from '../../gili/layout/Island';
 
 type OwnProps = {
+  isSealedSender?: boolean;
   isActive?: boolean;
   onReset: NoneToVoidFunction;
 };
 
 const SettingsSignalProxy = ({
+  isSealedSender,
   isActive,
   onReset,
 }: OwnProps) => {
@@ -22,7 +24,7 @@ const SettingsSignalProxy = ({
   return (
     <div className="settings-content custom-scroll">
       <Island>
-        <SignalProxyForm onSave={onReset} />
+        <SignalProxyForm isSealedSender={isSealedSender} onSave={onReset} />
       </Island>
     </div>
   );

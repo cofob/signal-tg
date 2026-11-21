@@ -35,6 +35,9 @@ export interface SharedSettings {
   shouldCollectDebugLogs?: boolean;
   // The tunnel for Signal hosts from the proxy server setting; `undefined` uses the build default
   signalProxyUrl?: string;
+  // The tunnel for connections without account credentials from the sealed sender proxy setting; `undefined` uses the
+  // proxy server
+  signalSealedSenderProxyUrl?: string;
   shouldWarnAboutFiles?: boolean;
   // The desktop app shows a save dialog for each download instead of using the Downloads folder
   shouldAskWhereToSave?: boolean;
