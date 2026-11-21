@@ -1,5 +1,13 @@
 # Friction log
 
+## UI actions still call removed Telegram API methods
+
+`src/api/signal/methods/types.ts` lists the names of Telegram methods that `callApi` accepts but the engine does not implement (forums, communities, group and phone calls, saved dialogs, scheduled and ephemeral messages, privacy settings, wallpapers, emoji and GIF search, and others). Each call resolves to `undefined`, so the code after it, such as the loaders in `src/global/actions/api/chats.ts`, `calls.async.ts`, `symbols.ts` and `settings.ts`, is dead. Their results are typed `any`, which made some callbacks need explicit parameter types after GramJS was removed (verified with `tsc`). The Experimental settings still offer the HTTP transport and exported sender toggles (`SettingsExperimental.tsx`), which only call listed methods. Deleting the handlers and their action types, state and components shrinks the list; removing a name makes `tsc` show the remaining callers.
+
+## Telegram identifier and test server conventions remain in shared helpers
+
+`src/util/entities/ids.ts` still derives channel ids from `CHANNEL_ID_BASE` (`toChannelId` for `tg:` deep links in `src/util/deepLinkParser.ts`, `getRawPeerId` and `getPeerIdDividend` for peer colors and message links), while Signal peer ids are small local ids (`src/api/signal/peers.ts`), so the channel branch never runs. The test server concept (`config.isTestServer`, `isTest` in `AccountInfo` and `SharedSessionData`, the `test` URL parameter, `AuthPhoneNumber.tsx`, `App.tsx`) has no Signal counterpart and is never set. Verified by searching for the usages; not removed because the UI around them is still in use.
+
 ## Upstream helper scripts that nothing calls remain in `dev/` and `deploy/`
 
 `dev/createBundleStatsComment.ts` (a pull request comment with bundle sizes, keyed by the removed `stars` and `wallet`

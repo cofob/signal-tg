@@ -73,7 +73,7 @@
 
 Не проверено: рукопожатие с настоящими анклавами CDSI и SVR2 (в этом окружении TLS до `*.signal.org` перехватывает шлюз, а TLS клиента доверяет только CA Signal), восстановление из настоящего SVR2 (тратит попытки PIN), экраны PIN и поиска по номеру в браузере; регистрация на настоящем сервере (нужен номер телефона, на который можно зарегистрировать аккаунт), привязка телефоном и расшифровка первого сообщения, перенос истории с настоящего телефона. Проверка привязки вручную:
 
-1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` и любые `TELEGRAM_API_ID`/`TELEGRAM_API_HASH` (сборка их пока требует).
+1. `.env`: `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel`.
 2. `npm run signal:proxy` (нужен Rust) и `npm run dev`.
 3. В консоли `localhost:1234`: `await signalDev.link()`, отсканировать QR в Signal на телефоне (Настройки > Связанные устройства).
 4. Написать себе с другого аккаунта: расшифрованные сообщения печатаются в консоль. Другие команды: `signalDev.syncStorage()` (беседы и группы из storage service и запись локальных изменений), `signalDev.conversations()`, `signalDev.messages('<id беседы>')`, `signalDev.send('<id беседы или ACI>', 'текст')` (после `syncStorage()` уходит через sealed sender), `signalDev.markRead('<id беседы>')`, `signalDev.sendFile('<id беседы>', file)` (файл из `<input type="file">`), `signalDev.findUser('name.42')` (ACI по юзернейму или ссылке), `signalDev.profile()` (свой профиль), `signalDev.listen()` (переподключиться), `signalDev.reset()` (стереть локальные данные).
@@ -239,7 +239,7 @@ Signal позволяет аккаунты без номера: у них нет
 | Облачный пароль, passkeys, активные сессии и сайты | `left/settings/twoFa`, `modals/twoFaCheck`, `SettingsPasskeys`, `SettingsActiveSessions` | Экрана сессий нет: связанными устройствами управляет основное устройство (раздел 3) |
 | Прочие модалки Telegram | `frozenAccount`, `ageVerification`, `cocoon`, `suggestMessage`, `suggestedPostApproval`, `rank`, `profileRating`, `birthday`, `aboutAds`, `reportAd` | |
 | Серверные обои и темы чатов, langpack с сервера, ссылки `t.me` и `tg://` | `fetchWallpapers`, `fetchChatThemes`, `util/localization`, `deepLinkParser.ts`, `config.ts` | Заменяем на `signal.me`, `signal.group`, `sgnl://` (сделано для ссылок Signal, см. «Ход работ»; методы `tg:` для Telegram уйдут на этапах 1–3) |
-| GramJS | `src/lib/gramjs`, `src/api/gramjs` | 82 тыс. строк, на этапе 3 |
+| GramJS | `src/lib/gramjs`, `src/api/gramjs` | 82 тыс. строк, удалено на этапе 3 |
 
 Остаются: инфраструктура UI (`ui`, `gili`, `common`), медиаплеер и просмотрщик, код-пароль, мульти-вкладки, Service Worker (без push от Telegram), локализация (строки внутри сборки), локальные темы, Tauri (переименование отдельно).
 
@@ -270,7 +270,9 @@ Signal позволяет аккаунты без номера: у них нет
 
 ### Этап 3. Удалить GramJS
 
-Удаляем `src/lib/gramjs`, `src/api/gramjs`, конфиг Telegram в `src/config.ts` и `vite.config.ts` (`TELEGRAM_API_ID`, CSP для `*.web.telegram.org`), загрузку langpack, магические id Telegram (`777000` и другие). Строки локализации кладём в сборку.
+Сделано (2026-11-21). Удалены `src/lib/gramjs` и `src/api/gramjs`, генератор TL (`gramjs:tl`, `tl:rehash`) и зависимости `async-mutex` и `@cryptography/aes`, `TELEGRAM_API_ID` и `TELEGRAM_API_HASH` (`src/config.ts`, `vite.config.ts`, `.env.example`, CI, документация), исключения GramJS в `npm run check:hosts`. CSP уже пускала только свой origin и туннель. Воркер (`src/api/worker`) вызывает методы `src/api/signal/methods` напрямую, UI импортирует `callApi` из `src/api`. Тип `Methods` — методы Signal плюс список удалённых методов Telegram, которые вызывают действия UI и которые возвращают `undefined` (`src/api/signal/methods/types.ts`, запись в `FRICTION_LOG.md`). Сессия в хранилище сведена к метке «привязано» (`ApiSessionData`): ключи центров данных, `user_auth` и `dc*` удалены, кэш и слоты мультиаккаунта работают как раньше. Магические id Telegram (`777000` с состоянием `serviceNotifications`, `1271266957`, `2666000`) удалены; в кэше `serviceNotifications` отбрасывает `migrateCache`. Языки только из встроенного `fallback.strings` (английский), загрузки langpack нет.
+
+Осталось из раздела 4: вызовы удалённых методов и ветки форумов, сообществ, звонков и других функций Telegram в `src/global` и `src/components` (см. `FRICTION_LOG.md`).
 
 ### Этап 4. Полный функционал связанного устройства
 
