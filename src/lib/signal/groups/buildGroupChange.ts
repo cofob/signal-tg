@@ -96,11 +96,12 @@ export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
       ...state.members.map(({ aci }) => aci),
       ...state.pendingMembers.map(({ serviceId }) => serviceId),
     ]);
-    const requesting = new Set(state.requestingMembers.map(({ aci }) => aci));
     const added = [...new Set(acis)].filter((aci) => !known.has(aci));
+    if (!added.length) return undefined;
+
+    const requesting = new Set(state.requestingMembers.map(({ aci }) => aci));
     const approved = added.filter((aci) => requesting.has(aci));
     const newUsers = added.filter((aci) => !requesting.has(aci));
-    if (!added.length) return undefined;
 
     const revision = state.revision + 1;
     const users = await Promise.all(newUsers.map(async (aci) => ({
