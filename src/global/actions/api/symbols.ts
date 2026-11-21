@@ -19,7 +19,6 @@ import {
   rebuildStickersForEmoji,
   replaceAnimatedEmojis,
   updateCustomEmojiForEmoji,
-  updateCustomEmojiSets,
   updateRecentStatusCustomEmojis,
   updateStickerSet,
   updateStickerSets,
@@ -36,35 +35,15 @@ const SEARCH_THROTTLE = 500;
 
 const searchThrottled = throttle((cb) => cb(), SEARCH_THROTTLE, false);
 
-addActionHandler('loadStickerSets', async (global, actions): Promise<void> => {
-  const [addedStickers, addedCustomEmojis] = await Promise.all([
-    callApi('fetchStickerSets', { hash: global.stickers.added.hash }),
-    callApi('fetchCustomEmojiSets', { hash: global.customEmojis.added.hash }),
-  ]);
-  if (!addedCustomEmojis || !addedStickers) {
+addActionHandler('loadStickerSets', async (global): Promise<void> => {
+  const addedStickers = await callApi('fetchStickerSets', { hash: global.stickers.added.hash });
+  if (!addedStickers) {
     return;
   }
 
   global = getGlobal();
-
-  global = updateStickerSets(
-    global,
-    'added',
-    addedStickers.hash,
-    addedStickers.sets,
-  );
-
-  global = updateCustomEmojiSets(
-    global,
-    addedCustomEmojis.hash,
-    addedCustomEmojis.sets,
-  );
-
+  global = updateStickerSets(global, 'added', addedStickers.hash, addedStickers.sets);
   setGlobal(global);
-
-  actions.loadCustomEmojis({
-    ids: global.recentCustomEmojis,
-  });
 });
 
 addActionHandler('loadAddedStickers', async (global, actions): Promise<void> => {

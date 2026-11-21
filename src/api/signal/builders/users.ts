@@ -1,5 +1,7 @@
 import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
-import type { ApiPeerColor, ApiPeerSettings, ApiUser, ApiUserFullInfo } from '../../types';
+import type {
+  ApiPeerColor, ApiPeerSettings, ApiPhoto, ApiUser, ApiUserFullInfo,
+} from '../../types';
 
 import { sha256Sync } from '../../../lib/signal/crypto';
 import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
@@ -8,6 +10,8 @@ import { bufferFromBase64 } from '../../../util/encoding/buffer';
 import { getPeerId } from '../peers';
 
 const HASH_MULTIPLIER = 31;
+// Signal clients upload avatars of at most 640×640 pixels
+const AVATAR_SIZE = 640;
 // Signal avatar colors in `AvatarColors` order: the foreground colors of `AxoTokens.Avatar`
 // (Signal Desktop `ts/axo/AxoTokens.std.ts`)
 export const AVATAR_COLORS = [
@@ -49,6 +53,7 @@ export function buildApiUserFullInfo(conversation: ConversationRecord, selfAci: 
     isBlocked: Boolean(conversation.isBlocked),
     ttlPeriod: conversation.expireTimer,
     settings: buildPeerSettings(conversation, selfAci),
+    profilePhoto: buildAvatarPhoto(conversation),
   };
 }
 
@@ -87,4 +92,19 @@ function getUserNames(conversation: ConversationRecord): [string | undefined, st
   if (name) return [name, undefined];
   if (conversation.profileName) return [conversation.profileName, conversation.profileFamilyName];
   return [conversation.e164 ?? conversation.username, undefined];
+}
+
+/**
+ * The avatar as a photo for the media viewer. Its id is the avatar photo id, which `downloadMedia` resolves back to
+ * the conversation; Signal avatars have one size.
+ */
+export function buildAvatarPhoto(conversation: ConversationRecord): ApiPhoto | undefined {
+  const id = getAvatarPhotoId(conversation);
+  if (!id) return undefined;
+  return {
+    mediaType: 'photo',
+    id,
+    date: 0,
+    sizes: [{ type: 'x', width: AVATAR_SIZE, height: AVATAR_SIZE }],
+  };
 }

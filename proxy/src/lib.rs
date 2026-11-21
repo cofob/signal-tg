@@ -20,7 +20,7 @@ pub mod upstream;
 pub const TARGET_PORT: u16 = 443;
 
 /// Hosts the client needs (`src/lib/signal/config.ts`), all on [`TARGET_PORT`]
-pub const ALLOWED_HOSTS: [&str; 8] = [
+pub const ALLOWED_HOSTS: [&str; 9] = [
     "chat.signal.org",
     "storage.signal.org",
     "cdn.signal.org",
@@ -29,6 +29,7 @@ pub const ALLOWED_HOSTS: [&str; 8] = [
     "cdsi.signal.org",
     "contentproxy.signal.org",
     "sfu.voip.signal.org",
+    "svr2.signal.org",
 ];
 
 /// Returns the allowlist entry equal to `host`. The allowlist holds DNS names only, so IP literals

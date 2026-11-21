@@ -30,6 +30,7 @@ import type {
   ApiReaction,
   ApiRichMessage,
   ApiSessionData,
+  ApiSignalPinSettings,
   ApiSticker,
   ApiStickerSet,
   ApiStory,
@@ -91,6 +92,8 @@ export type ScrollTargetPosition = ScrollLogicalPosition | 'centerOrTop';
 
 export interface IAlbum {
   albumId: string;
+  // Signal: one message with several photos and videos (`MediaContent.album`) instead of grouped messages
+  isSingleMessage?: true;
   messages: ApiMessage[];
   mainMessage: ApiMessage;
   captionMessage?: ApiMessage;
@@ -174,6 +177,9 @@ export interface AccountSettings {
   shouldUpdateStickerSetOrder: boolean;
   lastRecordMessageMode?: 'voice' | 'video';
   hasPassword?: boolean;
+  // Registered primary devices only
+  signalPin?: ApiSignalPinSettings;
+  isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;
@@ -296,6 +302,9 @@ export enum SettingsScreens {
   KeyboardShortcuts,
   SignalProxy,
   Username,
+  SignalPin,
+  SignalPinNew,
+  SignalPinConfirm,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

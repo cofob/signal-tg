@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-dependencies:
+        update-types: [minor, patch]
+        patterns: ["*"]
+  - package-ecosystem: cargo
+    directory: /proxy
+    schedule:
+      interval: weekly
+    groups:
+      rust-dependencies:
+        patterns: ["*"]
+  - package-ecosystem: cargo
+    directory: /tauri
+    schedule:
+      interval: weekly
+    groups:
+      rust-dependencies:
+        patterns: ["*"]
+  # `rust/signal-wasm` follows the lockfile of the vendored libsignal and is updated with it (`rust/libsignal/NOTICE.md`)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /proxy
+    schedule:
+      interval: weekly

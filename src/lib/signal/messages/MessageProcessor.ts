@@ -23,7 +23,7 @@ import type {
   TypingMessage,
   Verified,
 } from '../proto/generated/SignalService_pb';
-import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
@@ -33,8 +33,10 @@ import type { AccountStorageField, LocalAccountFields, StorageChanges } from '..
 import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
-import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
+import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup, GroupRequestError } from '../groups/fetchGroup';
 import {
   applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
@@ -42,7 +44,7 @@ import {
 import { fetchGroupLog } from '../groups/groupLog';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
-import { fetchProfile } from '../profiles/fetchProfile';
+import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
 import { UnregisteredUserError } from '../sender/sendContent';
@@ -53,17 +55,21 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStickerPackSync,
   sendTyping,
   sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
+import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
   ACCOUNT_KEY,
   buildStorageWrite,
   getAci,
   getMutedUntil,
+  getStickerPackStorageKey,
   getStorageChanges,
   mergeStorageChanges,
   omitChangedFields,
@@ -84,6 +90,7 @@ import {
   ReceiptMessage_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
   Verified_State,
 } from '../proto/generated/SignalService_pb';
@@ -135,7 +142,11 @@ type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
   onTyping(event: TypingEvent): void;
   onError(error: Error): void;
+  // Ids of sticker packs installed or removed here or on another device
+  onStickerPacksChange?(ids: string[]): void;
 };
+
+type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
 
 type MessageSource = {
   authorAci: string;
@@ -177,6 +188,8 @@ const INITIAL_EXPIRE_TIMER_VERSION = 1;
 const MAX_EXPIRE_TIMER_VERSION = 0xffffffff;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
+// Storage record cases supported after earlier versions stored such records without reading them
+const STORAGE_RECORD_TYPES_ADDED_LATER: NonNullable<StorageRecord['record']['case']>[] = ['installedStickerPack'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Signal Desktop `ts/routineProfileRefresh.preload.ts`
 const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
@@ -796,6 +809,30 @@ export default class MessageProcessor {
   }
 
   /**
+   * Merges stored storage records of types this device learned to handle after storing them, once per type. Records
+   * are fetched only when new, so a type supported later would otherwise stay unread until another device rewrites it
+   * (Signal Desktop reprocesses its unknown records after an upgrade the same way).
+   */
+  mergeStoredRecordsOfNewTypes() {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const merged = new Set(await store.getItem('storageMergedRecordTypes'));
+      const types = STORAGE_RECORD_TYPES_ADDED_LATER.filter((type) => !merged.has(type));
+      if (!types.length) return;
+
+      const stored = await store.getItem('storageManifest');
+      if (stored) {
+        const records = (await store.getStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored))))
+          .filter(Boolean)
+          .map((record) => fromBinary(StorageRecordSchema, record))
+          .filter(({ record }) => record.case && types.includes(record.case));
+        if (records.length) await this.mergeStorageRecords(records);
+      }
+      await store.setItem('storageMergedRecordTypes', [...merged, ...types]);
+    });
+  }
+
+  /**
    * Merges a newer storage manifest: records new to this device go into the local state, except for fields changed
    * here since the last write, and are stored with the manifest for later writes
    */
@@ -847,6 +884,7 @@ export default class MessageProcessor {
         records,
         changes,
         conversations: await this.db.getConversations(),
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
@@ -919,6 +957,23 @@ export default class MessageProcessor {
   }
 
   /**
+   * Installs or removes a sticker pack on this device. Other devices learn it from a `stickerPackOperation` sync and
+   * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
+   */
+  async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
+    const isChanged = await this.runSerial(async () => {
+      const state: StickerPackState = isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() };
+      if (!await this.applyStickerPackState(id, key, state)) return false;
+      await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+      return true;
+    });
+    if (!isChanged) return;
+    await this.sendWhenConnected(async (context) => {
+      await sendStickerPackSync(context, [{ id, key, isInstalled }]);
+    });
+  }
+
+  /**
    * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
    * is in the account, other profile keys are in their recipients.
    */
@@ -927,7 +982,20 @@ export default class MessageProcessor {
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, profileKey);
+    let profile;
+    try {
+      profile = await fetchProfile(connection, aci, profileKey);
+    } catch (err) {
+      if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
+      // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
+      // try again after the usual interval instead of on every connection
+      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
+      await this.runSerial(async () => {
+        await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });
+      });
+      return;
+    }
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
@@ -1201,16 +1269,116 @@ export default class MessageProcessor {
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
         }
+      } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
+        // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
+        const { packId, packKey, position, deletedAtTimestamp } = record.value;
+        const id = bufferToHex(packId);
+        if (changes[getStickerPackStorageKey(id)]) continue;
+        await this.applyStickerPackState(
+          id,
+          packKey.length ? bufferToHex(packKey) : undefined,
+          // An unset position reads as 0 and leaves the local one (Signal Desktop keeps it when the field is absent)
+          deletedAtTimestamp
+            ? { uninstalledAt: Number(deletedAtTimestamp) }
+            : { isInstalled: true, position: position || undefined },
+        );
       }
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    if (getIsContactDiscoveryEnabled(account)) {
+      const numberOnlyContacts = getNumberOnlyContacts(records);
+      if (numberOnlyContacts.length) this.resolveContactNumbers(numberOnlyContacts).catch(this.events.onError);
+    }
 
     if (!pinIndexById) return;
     for (const conversation of await this.db.getConversations()) {
       const pinIndex = pinIndexById.get(conversation.id);
       if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
     }
+  }
+
+  /**
+   * Looks up the numbers of all stored storage service contacts without an ACI, once contact discovery is turned on.
+   * Only a primary device does it: a linked device gets contacts with ACIs from the primary device.
+   */
+  async discoverStorageContacts() {
+    const { store } = this.client;
+    if (!getIsContactDiscoveryEnabled(await this.getAccount())) return;
+    const manifest = await store.getItem('storageManifest');
+    if (!manifest) return;
+    const ids = getManifestIds(fromBinary(ManifestRecordSchema, manifest));
+    const records = (await store.getStorageRecords(ids))
+      .filter(Boolean)
+      .map((record) => fromBinary(StorageRecordSchema, record));
+    const contacts = getNumberOnlyContacts(records);
+    if (contacts.length) await this.resolveContactNumbers(contacts);
+  }
+
+  /**
+   * Creates conversations for the storage service contacts whose numbers turn out to have Signal accounts. Their
+   * records stay as they are: the conversations change only locally.
+   */
+  private async resolveContactNumbers(contacts: ContactRecord[]) {
+    const { store, connection } = this.client.getSenderContext();
+    const records = await refreshE164s(
+      connection, store, contacts.map(({ e164 }) => e164), await this.getAcisAndAccessKeys(),
+    );
+    await this.runSerial(async () => {
+      for (const contact of contacts) {
+        const aci = records.get(contact.e164)?.aci;
+        if (!aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(this.client.store, aci, contact.profileKey);
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+        });
+      }
+    });
+    this.flush();
+  }
+
+  /** The ACIs and access keys of the other users whose numbers we know, which let CDSI return their ACIs */
+  private async getAcisAndAccessKeys() {
+    const { store, account } = this.client.getSenderContext();
+    const acisAndAccessKeys = [];
+    for (const { id, type, e164 } of await this.db.getConversations()) {
+      if (type !== 'private' || !e164 || id === account.aci) continue;
+      const profileKey = (await store.getRecipient(id))?.profileKey;
+      if (profileKey) acisAndAccessKeys.push({ aci: id, accessKey: wasm.ProfileKey_DeriveAccessKey(profileKey) });
+    }
+    return acisAndAccessKeys;
+  }
+
+  /**
+   * Stores whether a sticker pack is installed and returns whether that changed. A pack installed without a position
+   * goes after the others; a removal of a pack this device never had needs no record.
+   */
+  private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
+    const { store } = this.client;
+    const packs = await store.getItem('stickerPacks') ?? {};
+    const current = packs[id];
+    const packKey = key ?? current?.key;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return false;
+
+    const wasInstalled = current?.installedAt !== undefined;
+    if ('isInstalled' in state) {
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return false;
+      packs[id] = {
+        id,
+        key: packKey,
+        installedAt: current?.installedAt ?? Date.now(),
+        position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
+      };
+    } else {
+      if (!wasInstalled) return false;
+      packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
+    }
+    await store.setItem('stickerPacks', packs);
+    this.events.onStickerPacksChange?.([id]);
+    return true;
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1460,6 +1628,13 @@ export default class MessageProcessor {
       );
       if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
     }
+    for (const { packId, packKey, type } of sync.stickerPackOperation) {
+      await this.applyStickerPackState(
+        bufferToHex(packId),
+        bufferToHex(packKey),
+        type === SyncMessage_StickerPackOperation_Type.REMOVE ? { uninstalledAt: Date.now() } : { isInstalled: true },
+      );
+    }
 
     const { content } = sync;
     switch (content.case) {
@@ -1619,6 +1794,29 @@ export default class MessageProcessor {
   /** Returns the private conversation with `aci`, creating it (and fetching the profile) when absent */
   getOrCreatePrivateConversation(aci: string) {
     return this.runSerial(() => this.ensurePrivateConversation(aci));
+  }
+
+  /**
+   * Finds the Signal user of a phone number in the contact discovery enclave and returns their private conversation,
+   * which gets the number. Signal Desktop looks up a number that the user typed in the same way
+   * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
+   */
+  async lookUpPhoneNumber(e164: string) {
+    const known = (await this.db.getConversations()).find((conversation) => (
+      conversation.type === 'private' && conversation.e164 === e164
+    ));
+    if (known) return known;
+
+    const { connection } = this.client.getSenderContext();
+    const records = await lookUpE164s(connection, [e164], await this.getAcisAndAccessKeys());
+    const aci = records.get(e164)?.aci;
+    if (!aci) return undefined;
+    const conversation = await this.runSerial(async () => {
+      const existing = await this.ensurePrivateConversation(aci);
+      return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
+    });
+    this.flush();
+    return conversation;
   }
 
   private async ensurePrivateConversation(aci: string) {
@@ -2580,4 +2778,17 @@ function omitAccountChanges(update: OwnAccountUpdate, changedFields: { has(field
     if (changedFields.has(field)) delete result[key];
   }
   return result;
+}
+
+/** Contact discovery of storage service contacts is off by default: Signal Desktop never looks up numbers in bulk */
+function getIsContactDiscoveryEnabled(account: AccountRecord) {
+  return account.deviceId === SIGNAL_PRIMARY_DEVICE_ID && Boolean(account.isContactDiscoveryEnabled);
+}
+
+function getNumberOnlyContacts(records: StorageRecord[]) {
+  return records
+    .map(({ record }) => (record.case === 'contact' ? record.value : undefined))
+    .filter((contact): contact is ContactRecord => (
+      Boolean(contact?.e164 && !contact.blocked && !getAci(contact.aci, contact.aciBinary))
+    ));
 }

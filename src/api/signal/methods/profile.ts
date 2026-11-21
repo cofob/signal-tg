@@ -164,18 +164,6 @@ export async function getChatByUsername(username: string) {
   return { chat: buildApiChat(withUsername, selfAci), user: buildApiUser(withUsername, selfAci) };
 }
 
-/** Without phone number discovery (CDSI), only numbers of known users resolve */
-export async function getChatByPhoneNumber(phoneNumber: string) {
-  const selfAci = getCurrentAccount()?.aci;
-  if (!selfAci) return undefined;
-
-  const e164 = `+${phoneNumber.replace(/\D/g, '')}`;
-  const conversation = (await db.getConversations())
-    .find((record) => record.type === 'private' && record.e164 === e164);
-  if (!conversation) return undefined;
-  return { chat: buildApiChat(conversation, selfAci), user: buildApiUser(conversation, selfAci) };
-}
-
 /** The username behind a `signal.me/#eu/` link, `undefined` when the link was reset or is invalid */
 export async function resolveUsernameLink(url: string) {
   try {

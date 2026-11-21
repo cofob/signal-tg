@@ -1648,16 +1648,17 @@ addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Prom
   actions.openChat({ id: TMP_CHAT_ID, tabId });
 
   const chat = await fetchChatByPhoneNumber(global, phoneNumber);
-  if (!chat) {
+  if (!chat || 'error' in chat) {
     actions.openPreviousChat({ tabId });
+    const error = chat?.error ?? 'notFound';
     actions.showNotification({
-      message: {
+      message: error === 'notFound' ? {
         key: 'UsernameByPhoneNotFound',
         variables: {
           phone: phoneNumber,
         },
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
+      } : { key: error === 'rateLimited' ? 'ErrorPhoneLookupRateLimited' : 'ErrorPhoneLookupUnavailable' },
       tabId,
     });
     return;
@@ -1711,6 +1712,19 @@ addActionHandler('openChatByUsernameLink', async (global, actions, payload): Pro
     return;
   }
   actions.openChatByUsername({ username, tabId });
+});
+
+/** Opens the chat with a Signal user by ACI, such as a shared contact that has no chat yet */
+addActionHandler('openChatByAci', async (global, actions, payload): Promise<void> => {
+  const { aci, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('getChatByAci', aci);
+  if (!result) return;
+
+  global = getGlobal();
+  global = updateChat(global, result.chat.id, result.chat);
+  global = updateUser(global, result.user.id, result.user);
+  setGlobal(global);
+  actions.openChat({ id: result.chat.id, tabId });
 });
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
@@ -3676,10 +3690,11 @@ export async function fetchChatByPhoneNumber<T extends GlobalState>(global: T, p
     return selectChat(global, localUser.id);
   }
 
-  const { chat, user } = await callApi('getChatByPhoneNumber', phoneNumber) || {};
-  if (!chat) {
-    return undefined;
-  }
+  // Signal: the contact discovery service finds the user, or tells why it did not
+  const result = await callApi('lookUpPhoneNumber', phoneNumber);
+  if (!result) return undefined;
+  if ('error' in result) return result;
+  const { chat, user } = result;
 
   global = getGlobal();
   global = updateChat(global, chat.id, chat);

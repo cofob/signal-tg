@@ -4,7 +4,7 @@ import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, KeyPairBytes } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST, SIGNAL_PRIMARY_DEVICE_ID } from '../config';
-import { bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { encodeUtf8, generateRegistrationId, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
 import { getBasicAuthorization } from '../net/rest';
@@ -51,6 +51,12 @@ type SessionResponse = Omit<VerificationSession, 'id' | 'requestedInformation'> 
 type CodeNotDeliverableResponse = {
   reason?: string;
   permanentFailure?: boolean;
+};
+
+type RegistrationLockResponse = {
+  // Milliseconds until the lock expires and the number can be registered without the PIN
+  timeRemaining?: number;
+  svr2Credentials?: Credentials;
 };
 
 type RegistrationResponse = {
@@ -102,6 +108,18 @@ const HTTP_NOT_DELIVERABLE = 440;
 
 const textDecoder = new TextDecoder();
 
+/** The number has Registration Lock (423): the PIN restores the master key from SVR2 with `svr2Credentials` */
+export class RegistrationLockError extends RegistrationError {
+  constructor(
+    // Milliseconds until the lock expires
+    readonly timeRemaining: number | undefined,
+    // Absent when the lock has no SVR2 data, so only waiting for its expiry helps
+    readonly svr2Credentials: Credentials | undefined,
+  ) {
+    super('registrationLock', HTTP_LOCKED);
+  }
+}
+
 /**
  * Starts phone number verification (`POST /v1/verification/session`). Without a push token the session
  * asks for a captcha before it allows a code request. The flow follows libsignal-net
@@ -150,14 +168,16 @@ export function submitVerificationCode(sessionId: string, code: string) {
  * Creates the account of a verified session with this browser as its primary device (`POST /v1/registration`)
  * and stores it as `isRegistrationPending` until `completeRegistration`. Port of Signal Desktop
  * `AccountManager.registerAsPrimaryDevice` and `WebAPI.createAccount` with the request shape of libsignal-net
- * `RegisterChatRequest`.
+ * `RegisterChatRequest`. A number with Registration Lock needs `masterKey`, which SVR2 restores with the PIN: the
+ * account keeps it and its lock, as in Signal Desktop `standaloneInstaller` `verifyPIN`.
  */
 export async function registerAccount(store: SignalStore, {
-  number, sessionId, isDiscoverableByPhoneNumber,
+  number, sessionId, isDiscoverableByPhoneNumber, masterKey,
 }: {
   number: string;
   sessionId: string;
   isDiscoverableByPhoneNumber: boolean;
+  masterKey?: Uint8Array;
 }) {
   const aciKeys = generateRegistrationKeys();
   const pniKeys = generateRegistrationKeys();
@@ -166,8 +186,8 @@ export async function registerAccount(store: SignalStore, {
   const registrationId = generateRegistrationId();
   const pniRegistrationId = generateRegistrationId();
   const profileKey = getRandomBytes(PROFILE_KEY_LENGTH);
-  const accountEntropyPool = wasm.AccountEntropyPool_Generate();
-  const svrKey = wasm.AccountEntropyPool_DeriveSvrKey(accountEntropyPool);
+  const accountEntropyPool = masterKey ? undefined : wasm.AccountEntropyPool_Generate();
+  const svrKey = masterKey ?? wasm.AccountEntropyPool_DeriveSvrKey(accountEntropyPool!);
 
   const response = await sendRegistrationRequest('POST', '/v1/registration', {
     sessionId,
@@ -178,8 +198,9 @@ export async function registerAccount(store: SignalStore, {
       recoveryPassword: bufferToBase64(wasm.SvrKey_DeriveRegistrationRecoveryPassword(svrKey)),
       unidentifiedAccessKey: bufferToBase64(wasm.ProfileKey_DeriveAccessKey(profileKey)),
       unrestrictedUnidentifiedAccess: false,
-      capabilities: getDeviceCapabilities(true),
+      capabilities: getDeviceCapabilities(true, Boolean(masterKey)),
       discoverableByPhoneNumber: isDiscoverableByPhoneNumber,
+      registrationLock: masterKey ? bufferToHex(wasm.SvrKey_DeriveRegistrationLock(masterKey)) : undefined,
     },
     skipDeviceTransfer: true,
     aciIdentityKey: bufferToBase64(aciKeys.identityKeyPair.publicKey),
@@ -192,8 +213,11 @@ export async function registerAccount(store: SignalStore, {
 
   const { status } = response;
   if (status === HTTP_UNAUTHORIZED) throw new RegistrationError('sessionNotFound', status);
-  // Signal Desktop cannot continue without the PIN either when the server sends no SVR credentials
-  if (status === HTTP_LOCKED) throw new RegistrationError('registrationLock', status);
+  if (status === HTTP_LOCKED) {
+    const json = parseJson<RegistrationLockResponse>(response);
+    const credentials = json?.svr2Credentials;
+    throw new RegistrationLockError(json?.timeRemaining, credentials?.username ? credentials : undefined);
+  }
   // 409 asks for a device transfer, which `skipDeviceTransfer` declines
   if (status === HTTP_BAD_REQUEST || status === HTTP_FORBIDDEN || status === HTTP_CONFLICT) {
     throw new RegistrationError('rejected', status);
@@ -220,8 +244,11 @@ export async function registerAccount(store: SignalStore, {
     pniRegistrationId,
     profileKey,
     accountEntropyPool,
+    masterKey,
     mediaRootBackupKey: getRandomBytes(MEDIA_ROOT_BACKUP_KEY_LENGTH),
     isDiscoverableByPhoneNumber,
+    hasSvrPin: masterKey ? true : undefined,
+    isRegistrationLockEnabled: masterKey ? true : undefined,
     isReadReceiptsEnabled: true,
     // A primary device has no other device to ask for contacts, groups and keys
     isInitialSyncDone: true,

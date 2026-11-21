@@ -36,8 +36,10 @@
     "icons:build": "tsx ./dev/buildIcons.ts",
     "tgs:avif": "tsx ./dev/tgsToAvif.ts",
     "test": "cross-env APP_ENV=test vitest run --silent=true",
-    "postinstall": "node -e \"require('fs').rmSync('.cache', { recursive: true, force: true })\"",
-    "postversion": "echo $(node -p \"require('./package.json').version\") > public/version.txt && git commit --amend --no-verify --no-edit public/version.txt"
+    "release:check": "node ./deploy/release.js check",
+    "release:notes": "node ./deploy/release.js notes",
+    "release:bump": "node ./deploy/release.js bump",
+    "postinstall": "node -e \"require('fs').rmSync('.cache', { recursive: true, force: true })\""
   },
   "engines": {
     "node": "^24.15 || ^26",

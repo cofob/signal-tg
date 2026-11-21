@@ -1,0 +1,49 @@
+# Asks pull requests that change the shipped app to add a line to `CHANGELOG.md`. Label a pull request `skip changelog`
+# to waive it; dependency updates and pull requests titled `[CI]`, `[Dev]` or `Docs` need no entry.
+
+name: Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    name: Check changelog entry
+    if: >-
+      github.actor != 'dependabot[bot]'
+      && !contains(github.event.pull_request.labels.*.name, 'skip changelog')
+      && !startsWith(github.event.pull_request.title, '[CI]')
+      && !startsWith(github.event.pull_request.title, '[Dev]')
+      && !startsWith(github.event.pull_request.title, 'Docs')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Require a changelog entry
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          if grep -qx 'CHANGELOG.md' <<< "$changed"; then
+            exit 0
+          fi
+          # Files that reach users: the app, the tunnel, the desktop shell and the WebAssembly engine
+          shipped=$(grep -E '^(src|public|proxy|tauri|rust)/|^(index\.html|vite\.config\.ts)$' <<< "$changed" \
+            | grep -Ev '\.md$|\.test\.tsx?$|Cargo\.(toml|lock)$' || true)
+          if [ -n "$shipped" ]; then
+            echo "$shipped" | head -20
+            echo "::error file=CHANGELOG.md::This pull request changes the shipped app but not CHANGELOG.md. Add a line under \"Unreleased\", or label the pull request \"skip changelog\"."
+            exit 1
+          fi

@@ -5,12 +5,14 @@ import type {
   ApiMessage,
   ApiPeer,
   ApiPeerNotifySettings,
+  ApiPhoneNumberLookup,
   ApiThreadInfo,
   ApiUser,
 } from '../../types';
 import { MAIN_THREAD_ID } from '../../types';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
+import { CdsiError } from '../../../lib/signal/cdsi/cdsiLookup';
 import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
 import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
@@ -32,6 +34,9 @@ import { getConversationByPeerId, getPeerId } from '../peers';
 import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
 import { sendApiUpdate } from '../updates';
 import { collectShownMessages } from './messages';
+
+// E.164: a country code and at most 15 digits in all
+const E164_PATTERN = /^\+[1-9]\d{6,14}$/;
 
 // The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
 const MAX_PINNED_CHATS = 4;
@@ -230,6 +235,27 @@ export async function searchChats({ query }: { query: string }) {
     accountResultIds: chats.map(({ id }) => id),
     globalResultIds: [],
   };
+}
+
+/**
+ * Finds the Signal user of a phone number, from the local chats or the contact discovery service. Each new number
+ * counts against the server's lookup rate limit, so this runs for a number the user chose, not while typing.
+ */
+export async function lookUpPhoneNumber(phoneNumber: string): Promise<ApiPhoneNumberLookup | undefined> {
+  const selfAci = getCurrentAccount()?.aci;
+  const e164 = `+${phoneNumber.replace(/\D/g, '')}`;
+  if (!selfAci) return undefined;
+  if (!E164_PATTERN.test(e164)) return { error: 'notFound' };
+
+  try {
+    const conversation = await processor.lookUpPhoneNumber(e164);
+    if (!conversation) return { error: 'notFound' };
+    return { chat: buildApiChat(conversation, selfAci), user: buildApiUser(conversation, selfAci) };
+  } catch (err) {
+    if (err instanceof CdsiError && err.reason === 'rateLimited') return { error: 'rateLimited' };
+    logError(err);
+    return { error: 'unavailable' };
+  }
 }
 
 /**

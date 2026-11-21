@@ -790,6 +790,11 @@ export type TabState = {
     peerId: string;
   };
 
+  // Signal: a phone number from a link, which the contact discovery service looks up once the user confirms
+  phoneNumberLookupModal?: {
+    phoneNumber: string;
+  };
+
   // Signal: the safety number with a contact; `isUnavailable` while we do not know their identity key
   safetyNumberModal?: {
     userId: string;

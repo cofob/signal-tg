@@ -1,4 +1,4 @@
-import type { ApiPrivacySettings, ApiUsername } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalPinSettings, ApiUsername } from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 import type { ActionReturnType } from '../../types';
 import {
@@ -26,7 +26,9 @@ import { resolveSettingsLink } from '../../../util/settingsLinks';
 import { getChatThemeEntry, RESET_WALLPAPER_SETTINGS } from '../../../util/wallpaper';
 import { callApi } from '../../../api/gramjs';
 import { buildApiInputPrivacyRules } from '../../helpers';
-import { addActionHandler, getGlobal, getPromiseActions, setGlobal } from '../../index';
+import {
+  addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
+} from '../../index';
 import {
   addBlockedUser, addNotifyExceptions, deletePeerPhoto,
   removeBlockedUser, replacePersonalChannelIds, replacePrivacySettings, replaceSettings, updateChat,
@@ -1090,6 +1092,47 @@ addActionHandler('sortChatUsernames', async (global, actions, payload): Promise<
   }
 });
 
+addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
+  const signalPin = await callApi('fetchSignalPinSettings');
+  global = getGlobal();
+  global = replaceSettings(global, { signalPin });
+  setGlobal(global);
+});
+
+addActionHandler('setSignalPin', async (global, actions, payload): Promise<void> => {
+  const { pin, tabId = getCurrentTabId() } = payload;
+  await applySignalPinChange(await callApi('setSignalPin', pin), tabId);
+});
+
+addActionHandler('removeSignalPin', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  await applySignalPinChange(await callApi('removeSignalPin'), tabId);
+});
+
+addActionHandler('setSignalRegistrationLock', async (global, actions, payload): Promise<void> => {
+  const { isEnabled, tabId = getCurrentTabId() } = payload;
+  await applySignalPinChange(await callApi('setSignalRegistrationLock', isEnabled), tabId);
+});
+
+addActionHandler('loadSignalContactDiscovery', async (global): Promise<void> => {
+  const isSignalContactDiscoveryEnabled = await callApi('fetchSignalContactDiscovery');
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled });
+  setGlobal(global);
+});
+
+addActionHandler('setSignalContactDiscovery', async (global, actions, payload): Promise<void> => {
+  const { isEnabled, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('setSignalContactDiscovery', isEnabled);
+  if (result === undefined) {
+    actions.showNotification({ message: { key: 'ErrorUnexpected' }, tabId });
+    return;
+  }
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled: result });
+  setGlobal(global);
+});
+
 addActionHandler('loadPasskeys', async (global): Promise<void> => {
   const result = await callApi('fetchPasskeys');
   if (!result) {
@@ -1170,10 +1213,10 @@ addActionHandler('deletePasskey', async (global, actions, payload): Promise<void
 addActionHandler('loadNestedSettingsData', async (global): Promise<void> => {
   const {
     loadPasswordInfo, loadAuthorizations, loadBlockedUsers, loadWebAuthorizations, loadPasskeys, loadDefaultHistoryTtl,
-    loadGlobalPrivacySettings,
+    loadGlobalPrivacySettings, loadSignalPinSettings, loadSignalContactDiscovery,
   } = getPromiseActions();
 
-  const requests = [loadPasswordInfo(), loadAuthorizations()];
+  const requests = [loadPasswordInfo(), loadAuthorizations(), loadSignalPinSettings(), loadSignalContactDiscovery()];
   if (!selectIsCurrentUserFrozen(global)) {
     requests.push(
       loadBlockedUsers(), loadWebAuthorizations(), loadPasskeys(), loadDefaultHistoryTtl(),
@@ -1216,3 +1259,15 @@ addActionHandler('openSettingsLink', async (global, actions, payload): Promise<v
 
   actions.openSettingsScreen({ screen: loadedTarget.screen, highlight: loadedTarget.highlight, tabId });
 });
+
+/** Stores the PIN settings after a change, or reloads them and tells that the change failed */
+async function applySignalPinChange(signalPin: ApiSignalPinSettings | undefined, tabId: number) {
+  if (!signalPin) {
+    getActions().showNotification({ message: { key: 'SignalPinErrorSave' }, tabId });
+    await getPromiseActions().loadSignalPinSettings();
+    return;
+  }
+  let global = getGlobal();
+  global = replaceSettings(global, { signalPin });
+  setGlobal(global);
+}
