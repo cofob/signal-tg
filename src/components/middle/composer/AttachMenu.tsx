@@ -1,12 +1,10 @@
 import {
   memo, useEffect,
-  useMemo,
 } from '../../../lib/teact/teact';
 import { getActions } from '../../../global';
 
-import type { ApiAttachMenuPeerType, ApiFormattedText, ApiMessage } from '../../../api/types';
-import type { GlobalState } from '../../../global/types';
-import type { MessageListType, ThemeKey, ThreadId } from '../../../types';
+import type { ApiFormattedText, ApiMessage } from '../../../api/types';
+import type { MessageListType, ThreadId } from '../../../types';
 
 import {
   CONTENT_TYPES_WITH_PREVIEW, DEBUG_LOG_FILENAME, SUPPORTED_AUDIO_CONTENT_TYPES,
@@ -32,9 +30,7 @@ import useMouseInside from '../../../hooks/useMouseInside';
 import Icon from '../../common/icons/Icon';
 import Menu from '../../ui/Menu';
 import MenuItem from '../../ui/MenuItem';
-import MenuSeparator from '../../ui/MenuSeparator';
 import ResponsiveHoverButton from '../../ui/ResponsiveHoverButton';
-import AttachBotItem from './AttachBotItem';
 import FormattedDateModal from './FormattedDateModal';
 
 import './AttachMenu.scss';
@@ -52,10 +48,7 @@ export type OwnProps = {
   canSendDocuments: boolean;
   canSendAudios: boolean;
   isScheduled?: boolean;
-  attachBots?: GlobalState['attachMenu']['bots'];
-  peerType?: ApiAttachMenuPeerType;
   shouldCollectDebugLogs?: boolean;
-  theme: ThemeKey;
   canEditMedia?: boolean;
   isRichInputExpanded?: boolean;
   editingMessage?: ApiMessage;
@@ -83,10 +76,7 @@ const AttachMenu = ({
   canSendVideos,
   canSendDocuments,
   canSendAudios,
-  attachBots,
-  peerType,
   isScheduled,
-  theme,
   shouldCollectDebugLogs,
   canEditMedia,
   isRichInputExpanded,
@@ -114,8 +104,7 @@ const AttachMenu = ({
   const canSendVideoAndPhoto = canSendPhotos && canSendVideos;
   const canSendVideoOrPhoto = canSendPhotos || canSendVideos;
 
-  const [isAttachmentBotMenuOpen, markAttachmentBotMenuOpen, unmarkAttachmentBotMenuOpen] = useFlag();
-  const isMenuOpen = isAttachMenuOpen || isAttachmentBotMenuOpen;
+  const isMenuOpen = isAttachMenuOpen;
 
   const isPhotoOrVideo = editingMessage && editingMessage?.groupedId
     && Boolean(getMessagePhoto(editingMessage)
@@ -176,20 +165,6 @@ const AttachMenu = ({
     const file = new File([getDebugLogs()], DEBUG_LOG_FILENAME, { type: 'text/plain' });
     onFileSelect([file]);
   });
-
-  const bots = useMemo(() => {
-    return attachBots
-      ? Object.values(attachBots).filter((bot) => {
-        if (!peerType || !bot.isForAttachMenu) return false;
-
-        if (peerType === 'bots' && bot.id === chatId
-          && bot.attachMenuPeerTypes && bot.attachMenuPeerTypes.includes('self')) {
-          return true;
-        }
-        return bot.attachMenuPeerTypes!.includes(peerType);
-      })
-      : undefined;
-  }, [attachBots, chatId, peerType]);
 
   const lang = useLang();
 
@@ -308,21 +283,6 @@ const AttachMenu = ({
               <MenuItem icon="article" onClick={onRichInputExpand}>{lang('AttachmentMenuArticle')}</MenuItem>
             )}
 
-            {!editingMessage && !canEditMedia && !isScheduled && Boolean(bots?.length) && (
-              <>
-                <MenuSeparator />
-                {bots.map((bot) => (
-                  <AttachBotItem
-                    bot={bot}
-                    chatId={chatId}
-                    threadId={threadId}
-                    theme={theme}
-                    onMenuOpened={markAttachmentBotMenuOpen}
-                    onMenuClosed={unmarkAttachmentBotMenuOpen}
-                  />
-                ))}
-              </>
-            )}
           </Menu>
         </>
       )}

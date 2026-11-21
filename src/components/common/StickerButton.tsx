@@ -3,7 +3,7 @@ import {
 } from '../../lib/teact/teact';
 import { getActions } from '../../global';
 
-import type { ApiBotInlineMediaResult, ApiSticker } from '../../api/types';
+import type { ApiSticker } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { PluralLangKeyWithVariables } from '../../types/language';
 
@@ -64,7 +64,7 @@ const STATUS_DURATION_ITEMS = [
   { title: 'SetTimeoutForDays', value: 2, arg: 172800 },
 ] satisfies { title: PluralLangKeyWithVariables; value: number; arg: number }[];
 
-const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult | undefined = undefined>({
+const StickerButton = <T extends number | ApiSticker | undefined = undefined>({
   sticker,
   size,
   noPlay,

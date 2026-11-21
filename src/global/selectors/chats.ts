@@ -18,8 +18,6 @@ import {
   isChatCommunity,
   isChatPublic,
   isChatSuperGroup,
-  isHistoryClearMessage,
-  isUserBot,
   isUserOnline,
   isUserRightBanned,
 } from '../helpers';
@@ -30,7 +28,7 @@ import { selectTabState } from './tabs';
 import { selectThreadIdFromMessage } from './threads';
 import { selectTopicFromMessage } from './topics';
 import {
-  selectBot, selectUser, selectUserFullInfo,
+  selectUser, selectUserFullInfo,
 } from './users';
 
 export function selectChat<T extends GlobalState>(global: T, chatId: string): ApiChat | undefined {
@@ -62,13 +60,7 @@ export function selectIsChatWithSelf<T extends GlobalState>(global: T, chatId: s
 
 export function selectCanSetVideoCover<T extends GlobalState>(global: T, chatId: string) {
   const chat = selectChat(global, chatId);
-  return selectIsChatWithSelf(global, chatId) || Boolean(chat && isChatChannel(chat))
-    || Boolean(selectIsChatWithBot(global, chatId));
-}
-
-export function selectIsChatWithBot<T extends GlobalState>(global: T, chatId: string) {
-  const user = selectUser(global, chatId);
-  return user && isUserBot(user);
+  return selectIsChatWithSelf(global, chatId) || Boolean(chat && isChatChannel(chat));
 }
 
 export function selectChatOnlineCount<T extends GlobalState>(global: T, chat: ApiChat) {
@@ -94,16 +86,7 @@ export function selectChatOnlineCount<T extends GlobalState>(global: T, chat: Ap
   }, 0);
 }
 
-export function selectIsTrustedBot<T extends GlobalState>(global: T, botId: string) {
-  return global.trustedBotIds.includes(botId) || global.appConfig.whitelistedBotIds?.includes(botId);
-}
-
-export function selectChatType<T extends GlobalState>(global: T, chatId: string): ApiChatType | undefined {
-  const bot = selectBot(global, chatId);
-  if (bot) {
-    return 'bots';
-  }
-
+function selectChatType<T extends GlobalState>(global: T, chatId: string): ApiChatType | undefined {
   const user = selectUser(global, chatId);
   if (user) {
     return 'users';
@@ -117,20 +100,6 @@ export function selectChatType<T extends GlobalState>(global: T, chatId: string)
   }
 
   return 'chats';
-}
-
-export function selectIsChatBotNotStarted<T extends GlobalState>(global: T, chatId: string) {
-  const bot = selectBot(global, chatId);
-  if (!bot) {
-    return false;
-  }
-
-  const lastMessage = selectChatLastMessage(global, chatId);
-  if (lastMessage && isHistoryClearMessage(lastMessage)) {
-    return true;
-  }
-
-  return Boolean(!lastMessage);
 }
 
 export function selectAreActiveChatsLoaded<T extends GlobalState>(global: T): boolean {
@@ -266,11 +235,11 @@ export function selectCanShareFolder<T extends GlobalState>(global: T, folderId:
   if (!folder) return false;
 
   const {
-    bots, groups, channels, contacts, nonContacts, includedChatIds, pinnedChatIds,
+    groups, channels, contacts, nonContacts, includedChatIds, pinnedChatIds,
     excludeArchived, excludeMuted, excludeRead, excludedChatIds,
   } = folder;
 
-  return !bots && !groups && !channels && !contacts && !nonContacts
+  return !groups && !channels && !contacts && !nonContacts
     && !excludeArchived && !excludeMuted && !excludeRead && !excludedChatIds?.length
     && (pinnedChatIds?.length || includedChatIds.length)
     && folder.includedChatIds.concat(folder.pinnedChatIds || []).some((chatId) => {
@@ -301,13 +270,6 @@ export function selectSimilarChannelIds<T extends GlobalState>(
   chatId: string,
 ) {
   return global.chats.similarChannelsById[chatId];
-}
-
-export function selectSimilarBotsIds<T extends GlobalState>(
-  global: T,
-  chatId: string,
-) {
-  return global.chats.similarBotsById[chatId];
 }
 
 export function selectChatLastMessageId<T extends GlobalState>(

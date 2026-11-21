@@ -15,17 +15,14 @@ import {
   selectUser,
 } from '../../../global/selectors';
 import { isUserId } from '../../../util/entities/ids';
-import { extractCurrentThemeParams } from '../../../util/themeStyle';
 
 import useChatContextActions from '../../../hooks/useChatContextActions';
 import useFlag from '../../../hooks/useFlag';
-import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useSelectWithEnter from '../../../hooks/useSelectWithEnter';
 
 import GroupChatInfo from '../../common/GroupChatInfo';
 import PrivateChatInfo from '../../common/PrivateChatInfo';
-import Button from '../../ui/Button';
 import ListItem from '../../ui/ListItem';
 import ChatFolderModal from '../ChatFolderModal.async';
 import MuteChatModal from '../MuteChatModal.async';
@@ -33,7 +30,6 @@ import MuteChatModal from '../MuteChatModal.async';
 type OwnProps = {
   chatId: string;
   withUsername?: boolean;
-  withOpenAppButton?: boolean;
   onClick: (id: string) => void;
 };
 
@@ -55,11 +51,9 @@ const LeftSearchResultChat = ({
   isPinned,
   isMuted,
   canChangeFolder,
-  withOpenAppButton,
   onClick,
 }: OwnProps & StateProps) => {
-  const { requestMainWebView, updateChatMutedState, openQuickPreview } = getActions();
-  const lang = useLang();
+  const { updateChatMutedState, openQuickPreview } = getActions();
 
   const [isMuteModalOpen, openMuteModal, closeMuteModal] = useFlag();
   const [isChatFolderModalOpen, openChatFolderModal, closeChatFolderModal] = useFlag();
@@ -101,17 +95,6 @@ const LeftSearchResultChat = ({
     onClick(chatId);
   });
 
-  const handleOpenApp = useLastCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    e.stopPropagation();
-
-    const theme = extractCurrentThemeParams();
-    requestMainWebView({
-      botId: chatId,
-      peerId: chatId,
-      theme,
-    });
-  });
-
   const handleFileHoverOpen = useLastCallback(() => {
     onClick(chatId);
   });
@@ -145,17 +128,6 @@ const LeftSearchResultChat = ({
           withStory
           storyViewerOrigin={StoryViewerOrigin.SearchResult}
         />
-      )}
-      {withOpenAppButton && user?.hasMainMiniApp && (
-        <Button
-          className="search-result-miniapp-button"
-          pill
-          fluid
-          size="tiny"
-          onClick={handleOpenApp}
-        >
-          {lang('BotChatMiniAppOpen')}
-        </Button>
       )}
       {shouldRenderMuteModal && (
         <MuteChatModal

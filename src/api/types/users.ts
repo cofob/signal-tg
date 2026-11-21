@@ -1,9 +1,7 @@
 import type { API_CHAT_TYPES } from '../../config';
-import type { ApiBotInfo } from './bots';
-import type { ApiAudio, ApiDocument, ApiFormattedText, ApiPhoto } from './messages';
+import type { ApiAudio, ApiFormattedText, ApiPhoto } from './messages';
 import type { ApiPeerTheme, ApiWallpaper } from './misc';
 import type {
-  ApiBotVerification,
   ApiEmojiStatusType,
   ApiFakeType,
   ApiPeerSettings,
@@ -32,10 +30,7 @@ export interface ApiUser {
   accessHash?: string;
   hasVideoAvatar?: boolean;
   avatarPhotoId?: string;
-  botPlaceholder?: string;
-  canBotBeInvitedToGroup?: boolean;
   fakeType?: ApiFakeType;
-  isAttachBot?: boolean;
   emojiStatus?: ApiEmojiStatusType;
   areStoriesHidden?: boolean;
   hasStories?: boolean;
@@ -43,15 +38,6 @@ export interface ApiUser {
   maxStoryId?: number;
   color?: ApiTypePeerColor;
   profileColor?: ApiTypePeerColor;
-  canEditBot?: boolean;
-  hasMainMiniApp?: boolean;
-  botActiveUsers?: number;
-  botVerificationIconId?: string;
-  isBotForum?: boolean;
-  canManageBotForumTopics?: boolean;
-  canManageBots?: boolean;
-  isGuestChatBot?: boolean;
-  isGuardBot?: boolean;
 }
 
 export interface ApiUserFullInfo {
@@ -62,7 +48,6 @@ export interface ApiUserFullInfo {
   bio?: string;
   commonChatsCount?: number;
   pinnedMessageId?: number;
-  botInfo?: ApiBotInfo;
   profilePhoto?: ApiPhoto;
   fallbackPhoto?: ApiPhoto;
   personalPhoto?: ApiPhoto;
@@ -76,10 +61,7 @@ export interface ApiUserFullInfo {
   starsRating?: ApiStarsRating;
   starsMyPendingRating?: ApiStarsRating;
   starsMyPendingRatingDate?: number;
-  isBotCanManageEmojiStatus?: boolean;
-  isBotAccessEmojiGranted?: boolean;
   hasScheduledMessages?: boolean;
-  botVerification?: ApiBotVerification;
   settings?: ApiPeerSettings;
   mainTab?: ApiProfileTab;
   savedMusic?: ApiAudio;
@@ -87,11 +69,10 @@ export interface ApiUserFullInfo {
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
   isUnofficialSecurityRisk?: boolean;
-  botManagerId?: string;
   shareTheme?: ApiShareTheme;
 }
 
-export type ApiUserType = 'userTypeBot' | 'userTypeRegular' | 'userTypeDeleted' | 'userTypeUnknown';
+export type ApiUserType = 'userTypeRegular' | 'userTypeDeleted' | 'userTypeUnknown';
 
 export interface ApiUserStatus {
   type: (
@@ -126,31 +107,7 @@ export interface ApiUsername {
 }
 
 export type ApiChatType = typeof API_CHAT_TYPES[number];
-export type ApiAttachMenuPeerType = 'self' | ApiChatType;
-
 export type ApiInlineQueryPeerType = 'self' | 'supergroups' | ApiChatType;
-
-type ApiAttachBotForMenu = {
-  isForAttachMenu: true;
-  attachMenuPeerTypes?: ApiAttachMenuPeerType[];
-};
-
-type ApiAttachBotBase = {
-  id: string;
-  shouldRequestWriteAccess?: boolean;
-  shortName: string;
-  isForSideMenu?: true;
-  isDisclaimerNeeded?: boolean;
-  icons: ApiAttachBotIcon[];
-  isInactive?: boolean;
-};
-
-export type ApiAttachBot = OptionalCombine<ApiAttachBotBase, ApiAttachBotForMenu>;
-
-export interface ApiAttachBotIcon {
-  name: string;
-  document: ApiDocument;
-}
 
 export interface ApiBirthday {
   day: number;

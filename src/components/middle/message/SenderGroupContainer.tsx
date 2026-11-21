@@ -14,6 +14,7 @@ import type {
 import {
   EDITABLE_INPUT_CSS_SELECTOR,
   MESSAGE_APPEARANCE_DELAY,
+  REPLIES_USER_ID,
 } from '../../../config';
 import {
   getMainUsername,
@@ -21,7 +22,6 @@ import {
   isAnonymousOwnMessage,
   isChatBasicGroup,
   isChatChannel,
-  isSystemBot,
 } from '../../../global/helpers';
 import { isApiPeerUser } from '../../../global/helpers/peers';
 import {
@@ -285,7 +285,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = selectChat(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const isSystemBotChat = isSystemBot(chatId);
     const isAnonymousForwards = isAnonymousForwardsChat(chatId);
 
     const forceSenderName = !isChatWithSelf && isAnonymousOwnMessage(message);
@@ -313,7 +312,7 @@ export default memo(withGlobal<OwnProps>(
       canShowSender,
       originSender,
       isChatWithSelf,
-      isRepliesChat: isSystemBotChat,
+      isRepliesChat: chatId === REPLIES_USER_ID,
       isAnonymousForwards,
       isChannel: chat && isChatChannel(chat),
       canRemoveSender,

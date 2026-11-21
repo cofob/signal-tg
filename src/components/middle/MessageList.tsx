@@ -16,6 +16,7 @@ import {
   ANONYMOUS_USER_ID,
   IS_PERF,
   MESSAGE_LIST_SLICE,
+  REPLIES_USER_ID,
   SCROLL_MAX_DURATION,
   SERVICE_NOTIFICATIONS_USER_ID,
 } from '../../config';
@@ -29,11 +30,9 @@ import {
   isChatChannel,
   isChatGroup,
   isChatMonoforum,
-  isSystemBot,
 } from '../../global/helpers';
 import {
   selectActionMessageBg,
-  selectBot,
   selectCanAnimateInterface,
   selectChat,
   selectChatAnchoredMessages,
@@ -55,7 +54,6 @@ import {
   selectTabState,
   selectTheme,
   selectTopic,
-  selectUser,
   selectUserFullInfo,
 } from '../../global/selectors';
 import { selectCurrentMessageList } from '../../global/selectors/messages';
@@ -136,11 +134,10 @@ type StateProps = {
   isGroupChat?: boolean;
   isChatMonoforum?: boolean;
   isChatWithSelf?: boolean;
-  isSystemBotChat?: boolean;
+  isRepliesChat?: boolean;
   isAnonymousForwards?: boolean;
   isOwner?: boolean;
   isChannelWithAvatars?: boolean;
-  isBot?: boolean;
   isNonContact?: boolean;
   nameChangeDate?: number;
   photoChangeDate?: number;
@@ -163,13 +160,11 @@ type StateProps = {
   isEmptyThread?: boolean;
   isForum?: boolean;
   withTopicSeparators?: boolean;
-  isBotForum?: boolean;
   currentUserId: string;
   isAccountFrozen?: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
   isChatProtected?: boolean;
   isActive?: boolean;
-  canManageBotForumTopics?: boolean;
   shouldScrollToBottom?: boolean;
   reactionPollingPause?: { until: number; chatId: string };
   serverThemeSettings?: ApiThemeSettings;
@@ -241,7 +236,6 @@ const MessageList = ({
   isChatLoaded,
   isForum,
   withTopicSeparators,
-  isBotForum,
   isChannelChat,
   isGroupChat,
   isChannelWithAvatars,
@@ -249,16 +243,14 @@ const MessageList = ({
   hasFooter,
   isSynced,
   isActive,
-  canManageBotForumTopics,
   shouldScrollToBottom,
   // eslint-disable-next-line @typescript-eslint/no-shadow
   isChatMonoforum,
   isReady,
   isChatWithSelf,
-  isSystemBotChat,
+  isRepliesChat,
   isAnonymousForwards,
   isOwner,
-  isBot,
   isNonContact,
   nameChangeDate,
   photoChangeDate,
@@ -411,7 +403,7 @@ const MessageList = ({
 
   const isPrivate = isUserId(chatId);
   const withUsers = Boolean((!isPrivate && !isChannelChat)
-    || isChatWithSelf || isSystemBotChat || isAnonymousForwards || isChannelWithAvatars);
+    || isChatWithSelf || isRepliesChat || isAnonymousForwards || isChannelWithAvatars);
 
   const liveTailStartOriginalId = useMemo(() => {
     if (!messageIds?.length || !messagesById) {
@@ -1323,7 +1315,7 @@ const MessageList = ({
   }, [isSelectModeActive]);
 
   const noAvatars = Boolean(!withUsers || (isChannelChat && !isChannelWithAvatars));
-  const shouldRenderGreeting = isUserId(chatId) && !isChatWithSelf && !isBot && !isAnonymousForwards
+  const shouldRenderGreeting = isUserId(chatId) && !isChatWithSelf && !isAnonymousForwards
     && type === 'thread'
     && (
       (
@@ -1366,7 +1358,7 @@ const MessageList = ({
     Content.Restricted
   ) : isContactRequirePremium && !hasMessages ? (
     Content.PremiumRequired
-  ) : (isBot || isNonContact) && !hasMessages && threadId === MAIN_THREAD_ID ? (
+  ) : isNonContact && !hasMessages && threadId === MAIN_THREAD_ID ? (
     Content.AccountInfo
   ) : shouldRenderGreeting ? (
     Content.ContactGreeting
@@ -1393,7 +1385,7 @@ const MessageList = ({
     ) : activeKey === Content.PremiumRequired ? (
       <RequirementToContactMessage peerId={chatId} />
     ) : activeKey === Content.AccountInfo ? (
-      <MessageListAccountInfo chatId={chatId} hasMessages={hasMessages} />
+      <MessageListAccountInfo chatId={chatId} />
     ) : activeKey === Content.ContactGreeting ? (
       <ContactGreeting key={chatId} userId={chatId} />
     ) : activeKey === Content.NoMessages ? (
@@ -1434,16 +1426,14 @@ const MessageList = ({
         isActive={isActive}
         hasLinkedChat={hasLinkedChat}
         isSchedule={messageGroups ? type === 'scheduled' : false}
-        shouldRenderAccountInfo={isBot || isNonContact}
+        shouldRenderAccountInfo={isNonContact}
         nameChangeDate={nameChangeDate}
         photoChangeDate={photoChangeDate}
         noAppearanceAnimation={!messageGroups || !shouldAnimateAppearanceRef.current}
         addedMessageIds={addedMessageIds}
         isQuickPreview={isQuickPreview}
         canPost={canPost}
-        canManageBotForumTopics={canManageBotForumTopics}
         withTopicSeparators={withTopicSeparators}
-        isBotForum={isBotForum}
         shouldScrollToBottom={shouldScrollToBottom}
         onScrollDownToggle={onScrollDownToggle}
         onContentResize={handleContentResize}
@@ -1475,7 +1465,6 @@ export default memo(withGlobal<OwnProps>(
     const tabState = selectTabState(global);
     const currentUserId = global.currentUserId!;
     const chat = selectChat(global, chatId);
-    const user = selectUser(global, chatId);
     const userFullInfo = selectUserFullInfo(global, chatId);
     const readState = selectThreadReadState(global, chatId, threadId);
     if (!chat) {
@@ -1510,7 +1499,6 @@ export default memo(withGlobal<OwnProps>(
       && readState && !readState.unreadCount && !focusingId && lastMessage && !lastMessage.groupedId
     );
 
-    const chatBot = selectBot(global, chatId);
     const isNonContact = Boolean(userFullInfo?.settings?.canAddContact);
     const nameChangeDate = userFullInfo?.settings?.nameChangeDate;
     const photoChangeDate = userFullInfo?.settings?.photoChangeDate;
@@ -1543,9 +1531,8 @@ export default memo(withGlobal<OwnProps>(
       isChannelWithAvatars: chat.areProfilesShown,
       isOwner: chat.isOwner,
       isChatWithSelf: selectIsChatWithSelf(global, chatId),
-      isSystemBotChat: isSystemBot(chatId),
+      isRepliesChat: chatId === REPLIES_USER_ID,
       isAnonymousForwards: isAnonymousForwardsChat(chatId),
-      isBot: Boolean(chatBot),
       isNonContact,
       nameChangeDate,
       photoChangeDate,
@@ -1565,13 +1552,11 @@ export default memo(withGlobal<OwnProps>(
       isServiceNotificationsChat: chatId === SERVICE_NOTIFICATIONS_USER_ID,
       isForum: chat.isForum,
       withTopicSeparators: chat.isForum && threadId === MAIN_THREAD_ID,
-      isBotForum: chat.isBotForum,
       isEmptyThread,
       currentUserId,
       isChatProtected: selectIsChatProtected(global, chatId),
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
-      canManageBotForumTopics: chat.isBotForum && user?.canManageBotForumTopics,
       shouldScrollToBottom,
       reactionPollingPause: global.reactionPollingPause,
       serverThemeSettings: selectChatThemeSettings(global, chatId),

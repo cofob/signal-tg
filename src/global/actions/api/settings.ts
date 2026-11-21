@@ -645,7 +645,6 @@ addActionHandler('setPrivacyVisibility', async (global, actions, payload): Promi
     visibility,
     allowedIds: [...settings.allowUserIds, ...settings.allowChatIds],
     blockedIds: [...settings.blockUserIds, ...settings.blockChatIds],
-    botsPrivacy: settings.botsPrivacy,
   });
 
   const result = await callApi('setPrivacySettings', privacyKey, rules);
@@ -671,7 +670,7 @@ addActionHandler('setPrivacyVisibility', async (global, actions, payload): Promi
 
 addActionHandler('setPrivacySettings', async (global, actions, payload): Promise<void> => {
   const {
-    privacyKey, isAllowList, updatedIds, isPremiumAllowed, botsPrivacy,
+    privacyKey, isAllowList, updatedIds, isPremiumAllowed,
   } = payload;
   const {
     privacy: { [privacyKey]: settings },
@@ -687,7 +686,6 @@ addActionHandler('setPrivacySettings', async (global, actions, payload): Promise
     shouldAllowPremium: isPremiumAllowed,
     allowedIds: isAllowList ? updatedIds : [...settings.allowUserIds, ...settings.allowChatIds],
     blockedIds: !isAllowList ? updatedIds : [...settings.blockUserIds, ...settings.blockChatIds],
-    botsPrivacy,
   });
 
   const result = await callApi('setPrivacySettings', privacyKey, rules);

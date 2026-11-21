@@ -1,6 +1,5 @@
 import type {
   ApiInputPrivacyRules,
-  BotsPrivacyType,
   PrivacyVisibility,
 } from '../../api/types';
 import type { GlobalState } from '../types';
@@ -15,14 +14,12 @@ export function buildApiInputPrivacyRules(global: GlobalState, {
   allowedIds,
   blockedIds,
   shouldAllowPremium,
-  botsPrivacy,
 }: {
   visibility: PrivacyVisibility;
   isUnspecified?: boolean;
   allowedIds: string[];
   blockedIds: string[];
   shouldAllowPremium?: true;
-  botsPrivacy: BotsPrivacyType;
 }): ApiInputPrivacyRules {
   const {
     users: { byId: usersById },
@@ -40,7 +37,6 @@ export function buildApiInputPrivacyRules(global: GlobalState, {
     blockedUsers: blockedUserIds.map((userId) => usersById[userId]).filter(Boolean),
     blockedChats: blockedChatIds.map((chatId) => chatsById[chatId]).filter(Boolean),
     shouldAllowPremium,
-    botsPrivacy,
   };
 
   return rules;

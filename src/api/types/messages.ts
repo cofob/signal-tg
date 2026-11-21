@@ -1,11 +1,6 @@
 import type { ThreadId, ThreadReadState, WebPageMediaSize } from '../../types';
 import type { MediaEditDocument } from '../../types/mediaEditor';
-import type {
-  ApiBotInlineMediaResult,
-  ApiBotInlineResult,
-} from './bots';
-import type { ApiChatAdminRights } from './chats';
-import type { ApiInstantViewPage, ApiRichText } from './instantView';
+import type { ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
 import type { ApiRichMessage } from './richMessage';
@@ -41,6 +36,15 @@ export interface ApiVideoSize extends ApiDimensions {
 
 export interface ApiThumbnail extends ApiDimensions {
   dataUri: string;
+}
+
+export interface ApiWebDocument {
+  mediaType: 'webDocument';
+  url: string;
+  size: number;
+  mimeType: string;
+  accessHash?: string;
+  dimensions?: ApiDimensions;
 }
 
 export interface ApiPhoto {
@@ -282,17 +286,6 @@ export interface ApiGeoLive {
 
 export type ApiLocation = ApiGeo | ApiVenue | ApiGeoLive;
 
-export type ApiGame = {
-  mediaType: 'game';
-  title: string;
-  description: string;
-  photo?: ApiPhoto;
-  shortName: string;
-  id: string;
-  accessHash: string;
-  document?: ApiDocument;
-};
-
 export type ApiDice = {
   mediaType: 'dice';
   value: number;
@@ -370,8 +363,6 @@ export interface ApiWebPageFull {
   video?: ApiVideo;
   story?: ApiWebPageStoryData;
   stickers?: ApiWebPageStickerData;
-  cachedPage?: ApiInstantViewPage;
-  cachedPageAudioById?: Record<string, ApiAudio>;
   aiComposeToneEmojiId?: string;
   hasLargeMedia?: boolean;
 }
@@ -669,7 +660,6 @@ export type MediaContent = {
   audio?: ApiAudio;
   voice?: ApiVoice;
   location?: ApiLocation;
-  game?: ApiGame;
   storyData?: ApiMessageStoryData;
   dice?: ApiDice;
   ttlSeconds?: number;
@@ -724,19 +714,9 @@ export interface ApiMessage {
   groupedId?: string;
   isInAlbum?: boolean;
   hasUnreadMention?: boolean;
-  inlineButtons?: ApiKeyboardButtons;
-  keyboardButtons?: ApiKeyboardButtons;
-  keyboardPlaceholder?: string;
-  isKeyboardSingleUse?: boolean;
-  isKeyboardSelective?: boolean;
-  isKeyboardFullHeight?: boolean;
-  viaBotId?: string;
-  guestChatViaId?: string;
   postAuthorTitle?: string;
   isScheduled?: boolean;
   scheduleRepeatPeriod?: number;
-  shouldHideKeyboardButtons?: boolean;
-  isHideKeyboardSelective?: boolean;
   isFromScheduled?: boolean;
   isSilent?: boolean;
   isPinned?: boolean;
@@ -899,32 +879,6 @@ export interface ApiKeyboardButtonStyle {
   iconId?: string;
 }
 
-export type ApiRequestPeerType = {
-  type: 'user';
-  isBot?: boolean;
-  isPremium?: boolean;
-} | {
-  type: 'group';
-  isCreator?: boolean;
-  isBotParticipant?: boolean;
-  hasUsername?: boolean;
-  isForum?: boolean;
-  userAdminRights?: ApiChatAdminRights;
-  botAdminRights?: ApiChatAdminRights;
-} | {
-  type: 'channel';
-  isCreator?: boolean;
-  hasUsername?: boolean;
-  userAdminRights?: ApiChatAdminRights;
-  botAdminRights?: ApiChatAdminRights;
-};
-
-export type ApiReplyButtonAction =
-  { type: 'command' | 'requestPhone' | 'unsupported' }
-  | { type: 'requestPoll'; isQuiz?: boolean }
-  | { type: 'requestPeer'; buttonId: number; maxQuantity: number; peerType: ApiRequestPeerType }
-  | { type: 'simpleWebView'; url: string };
-
 export type ApiInlineButtonAction =
   { type: 'buy' | 'game' | 'disabled' | 'unsupported' }
   | { type: 'url'; url: string }
@@ -937,13 +891,12 @@ export type ApiInlineButtonAction =
 
 export type ApiLocalButtonAction =
   { type: 'suggestedMessage'; buttonType: 'approve' | 'decline' | 'suggestChanges'; disabled?: boolean }
-  | { type: 'openThread' }
   | { type: 'noForwardsRequest'; buttonType: 'accept' | 'reject' };
 
 export type ApiKeyboardButton = {
   text: string;
   style?: ApiKeyboardButtonStyle;
-  action: ApiReplyButtonAction | ApiInlineButtonAction | ApiLocalButtonAction;
+  action: ApiLocalButtonAction;
 };
 
 export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
@@ -952,14 +905,6 @@ export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
 export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'noForwardsRequest' }>;
 };
-
-export type ApiKeyboardButtons = ApiKeyboardButton[][];
-export type ApiReplyKeyboard = {
-  keyboardPlaceholder?: string;
-  isKeyboardSingleUse?: boolean;
-  isKeyboardSelective?: boolean;
-  isKeyboardFullHeight?: boolean;
-} & Partial<Record<'inlineButtons' | 'keyboardButtons', ApiKeyboardButtons>>;
 
 export type ApiTranscription = {
   text: string;
@@ -977,42 +922,10 @@ export type ApiReportReason = 'spam' | 'violence' | 'pornography' | 'childAbuse'
   | 'copyright' | 'geoIrrelevant' | 'fake' | 'illegalDrugs' | 'personalDetails' | 'other';
 
 export type ApiSendMessageAction = {
-  type: 'cancel' | 'typing' | 'recordAudio' | 'recordRound' | 'chooseSticker' | 'playingGame';
+  type: 'cancel' | 'typing' | 'recordAudio' | 'recordRound' | 'chooseSticker';
 } | {
   type: 'stopDraft';
   randomId: string;
-};
-
-export type ApiThemeParameters = {
-  bg_color: string;
-  text_color: string;
-  hint_color: string;
-  link_color: string;
-  button_color: string;
-  button_text_color: string;
-  secondary_bg_color: string;
-  header_bg_color: string;
-  accent_text_color: string;
-  section_bg_color: string;
-  section_header_text_color: string;
-  subtitle_text_color: string;
-  destructive_text_color: string;
-  section_separator_color: string;
-};
-
-export type ApiBotApp = {
-  id: string;
-  accessHash: string;
-  title: string;
-  shortName: string;
-  description: string;
-  photo?: ApiPhoto;
-  document?: ApiDocument;
-};
-
-export type ApiMessagesBotApp = ApiBotApp & {
-  isInactive?: boolean;
-  shouldRequestWriteAccess?: boolean;
 };
 
 export type ApiFactCheck = {
@@ -1020,13 +933,6 @@ export type ApiFactCheck = {
   hash: string;
   countryCode?: string;
   text?: ApiFormattedText;
-};
-
-export type ApiPreparedInlineMessage = {
-  queryId: string;
-  result: ApiBotInlineResult | ApiBotInlineMediaResult;
-  peerTypes: ApiInlineQueryPeerType[];
-  cacheTime: number;
 };
 
 export type ApiSearchPostsFlood = {

@@ -3,7 +3,6 @@ import type {
   ApiAudio,
   ApiDimensions,
   ApiDocument,
-  ApiGame,
   ApiLocation,
   ApiMessage,
   ApiMessageSearchType,
@@ -378,26 +377,6 @@ export function getMediaHash(media: DownloadableMedia, target: SizeTarget) {
     default:
       return undefined;
   }
-}
-
-export function getGamePreviewPhotoHash(game: ApiGame) {
-  const { photo } = game;
-
-  if (photo) {
-    return `photo${photo.id}?size=x`;
-  }
-
-  return undefined;
-}
-
-export function getGamePreviewVideoHash(game: ApiGame) {
-  const { document } = game;
-
-  if (document) {
-    return `document${document.id}`;
-  }
-
-  return undefined;
 }
 
 export function appendProgressiveQueryParameters(

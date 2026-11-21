@@ -88,8 +88,6 @@ export const GLOBAL_TOPIC_SEARCH_SLICE = 5;
 export const MEMBERS_SLICE = 30;
 export const PROFILE_POLLS_SLICE = 20;
 export const SAVED_MUSIC_SLICE = 30;
-export const MUSIC_PICKER_SEARCH_DEBOUNCE = 300;
-export const MUSIC_PICKER_GLOBAL_MIN_QUERY_LENGTH = 3;
 export const MEMBERS_LOAD_SLICE = 200;
 export const PROFILE_SENSITIVE_AREA = 500;
 export const TOPIC_LIST_SENSITIVE_AREA = 600;
@@ -138,10 +136,6 @@ export const DEFAULT_MESSAGE_TEXT_SIZE_PX = 16;
 export const IOS_DEFAULT_MESSAGE_TEXT_SIZE_PX = 17;
 export const MACOS_DEFAULT_MESSAGE_TEXT_SIZE_PX = 15;
 export const RICH_CONTENT_BODY_FONT_SIZE_PX = 18;
-export const INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT = 1;
-export const INSTANT_VIEW_FONT_SIZE_ADJUST_MIN = 0.5;
-export const INSTANT_VIEW_FONT_SIZE_ADJUST_MAX = 1.5;
-export const INSTANT_VIEW_FONT_SIZE_ADJUST_STEP = 0.1;
 
 export const NBSP = '\u00A0';
 
@@ -198,10 +192,6 @@ export const MESSAGE_CONTENT_CLASS_NAME = 'message-content';
 export const MESSAGE_CONTENT_SELECTOR = '.message-content';
 export const VT_CLASS_NAME = 'active-view-transition';
 export const VT_TYPE_CLASS_PREFIX = 'active-vt-';
-
-export const RESIZE_HANDLE_CLASS_NAME = 'resizeHandle';
-export const RESIZE_HANDLE_SELECTOR = `.${RESIZE_HANDLE_CLASS_NAME}`;
-
 export const STARS_ICON_PLACEHOLDER = '⭐';
 export const STARS_CURRENCY_CODE = 'XTR';
 
@@ -258,7 +248,6 @@ export const STICKER_SIZE_TWO_FA = 160;
 export const STICKER_SIZE_PASSCODE = 160;
 export const STICKER_SIZE_DISCUSSION_GROUPS = 140;
 export const STICKER_SIZE_FOLDER_SETTINGS = 100;
-export const STICKER_SIZE_INLINE_BOT_RESULT = 100;
 export const STICKER_SIZE_JOIN_REQUESTS = 140;
 export const STICKER_SIZE_INVITES = 140;
 export const RECENT_STICKERS_LIMIT = 20;
@@ -350,7 +339,6 @@ export const RE_MENTION_TEMPLATE = '(@[\\w\\d_-]+)';
 export const RE_TG_LINK = /^tg:(\/\/)?/i;
 // Usernames link through the `tg:` scheme, which only the app itself handles
 export const USERNAME_LINK_PREFIX = 'tg://resolve?domain=';
-export const BOT_FATHER_USERNAME = 'botfather';
 export const USERNAME_PURCHASE_ERROR = 'USERNAME_PURCHASE_AVAILABLE';
 export const MESSAGE_ID_REQUIRED_ERROR = 'MESSAGE_ID_REQUIRED';
 export const PURCHASE_USERNAME = 'auction';
@@ -363,7 +351,7 @@ export const NSFW_RESTRICTION_REASON = 'sensitive';
 // eslint-disable-next-line @stylistic/max-len
 export const COUNTRIES_WITH_12H_TIME_FORMAT = new Set(['AU', 'BD', 'CA', 'CO', 'EG', 'HN', 'IE', 'IN', 'JO', 'MX', 'MY', 'NI', 'NZ', 'PH', 'PK', 'SA', 'SV', 'US']);
 
-export const API_CHAT_TYPES = ['bots', 'channels', 'chats', 'users', 'groups'] as const;
+export const API_CHAT_TYPES = ['channels', 'chats', 'users', 'groups'] as const;
 
 export const HEART_REACTION: ApiReactionEmoji = {
   type: 'emoji',
@@ -373,7 +361,6 @@ export const HEART_REACTION: ApiReactionEmoji = {
 // MTProto constants
 export const SERVICE_NOTIFICATIONS_USER_ID = '777000';
 export const REPLIES_USER_ID = '1271266957'; // TODO For Test connection ID must be equal to 708513
-export const VERIFICATION_CODES_USER_ID = '489000';
 export const ANONYMOUS_USER_ID = '2666000';
 export const RESTRICTED_EMOJI_SET_ID = '7173162320003080';
 export const LOCAL_MESSAGES_LIMIT = 1e6; // 1M
@@ -391,7 +378,6 @@ export const SUPPORT_URL = 'https://support.signal.org/';
 export const PRIVACY_URL = 'https://signal.org/legal/#privacy-policy';
 export const GENERAL_TOPIC_ID = 1;
 export const FRESH_AUTH_PERIOD = 86400; // 1 day
-export const BOT_VERIFICATION_PEERS_LIMIT = 20;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];
 

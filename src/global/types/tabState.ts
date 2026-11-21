@@ -1,7 +1,6 @@
 import type {
   ApiAiComposeTone,
   ApiAiComposeToneExample,
-  ApiAttachBot,
   ApiAudio,
   ApiBirthday,
   ApiChatInviteInfo,
@@ -21,15 +20,11 @@ import type {
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
-  ApiPreparedInlineMessage,
   ApiReaction,
-  ApiRequestPeerType,
   ApiRichText,
   ApiSearchPostsFlood,
   ApiSticker,
   ApiTypeStoryView,
-  ApiUrlAuthResultRequest,
-  ApiUser,
   ApiVideo,
 } from '../../api/types';
 import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
@@ -45,7 +40,6 @@ import type {
   FocusDirection,
   GlobalSearchContent,
   IAnchorPosition,
-  InlineBotSettings,
   LeftColumnContent,
   ManagementProgress,
   ManagementState,
@@ -71,9 +65,7 @@ import type {
   TabThread,
   ThreadId,
 } from '../../types';
-import type { BrowserState } from '../../types/browser';
 import type { RegularLangKey } from '../../types/language';
-import type { WebAppMediaKind } from '../../types/webapp';
 import type { SearchResultKey } from '../../util/keys/searchResultKey';
 import type { CallbackAction } from './actions';
 
@@ -146,15 +138,6 @@ export type MusicPickerSharedResults = {
   nextOffsetId?: number;
   nextOffsetPeerId?: string;
   totalCount?: number;
-  isLoading?: boolean;
-  isFullyLoaded?: boolean;
-};
-
-export type MusicPickerGlobalResults = {
-  query: string;
-  generation: number;
-  ids: string[];
-  nextOffset?: string;
   isLoading?: boolean;
   isFullyLoaded?: boolean;
 };
@@ -264,11 +247,6 @@ export type TabState = {
 
   recoveryEmail?: string;
 
-  inlineBots: {
-    isLoading: boolean;
-    byUsername: Record<string, false | InlineBotSettings>;
-  };
-
   leftColumn: {
     contentKey: LeftColumnContent;
     settingsScreen: SettingsScreens;
@@ -286,7 +264,6 @@ export type TabState = {
     fetchingStatus?: {
       chats?: boolean;
       messages?: boolean;
-      botApps?: boolean;
       publicPosts?: boolean;
     };
     isClosing?: boolean;
@@ -295,10 +272,6 @@ export type TabState = {
     };
     globalResults?: {
       peerIds?: string[];
-    };
-    popularBotApps?: {
-      peerIds: string[];
-      nextOffset?: string;
     };
     resultsByType?: Partial<Record<ApiGlobalMessageSearchType, {
       totalCount?: number;
@@ -484,12 +457,6 @@ export type TabState = {
     isByPhoneNumber?: boolean;
   };
 
-  openedGame?: {
-    url: string;
-    chatId: string;
-    messageId: number;
-  };
-
   requestedDraft?: {
     chatId?: string;
     text: ApiFormattedText;
@@ -518,7 +485,6 @@ export type TabState = {
     messageListType: MessageListType;
     shouldInsertToRichInput?: boolean;
     shared?: MusicPickerSharedResults;
-    global?: MusicPickerGlobalResults;
   };
 
   todoListModal?: {
@@ -526,77 +492,6 @@ export type TabState = {
     messageId?: number;
     forNewTask?: boolean;
     initialCheckList?: ParsedCheckList;
-  };
-
-  preparedMessageModal?: {
-    message: ApiPreparedInlineMessage;
-    webAppKey: string;
-    botId: string;
-  };
-
-  requestPeerModal?: {
-    botId: string;
-    chatId: string;
-    messageId: number;
-    buttonId: number;
-    maxQuantity: number;
-    peerType: ApiRequestPeerType;
-  };
-
-  botCreationModal?: {
-    managerId: string;
-    suggestedName?: string;
-    suggestedUsername?: string;
-    occupiedUsername?: string;
-  };
-
-  sharePreparedMessageModal?: {
-    webAppKey: string;
-    message: ApiPreparedInlineMessage;
-    filter: ApiChatType[];
-  };
-
-  browser: BrowserState;
-
-  botTrustRequest?: {
-    botId: string;
-    type: 'game' | 'webApp' | 'botApp';
-    shouldRequestWriteAccess?: boolean;
-    onConfirm?: CallbackAction;
-  };
-  requestedAttachBotInstall?: {
-    bot: ApiAttachBot;
-    onConfirm?: CallbackAction;
-  };
-  requestedAttachBotInChat?: {
-    bot: ApiAttachBot;
-    filter: ApiChatType[];
-    startParam?: string;
-  };
-  requestedBotStartGroup?: {
-    bot: ApiUser;
-    startParam?: string;
-  };
-  // A start parameter from a link waits for the user to press START
-  pendingBotStart?: {
-    botId: string;
-    param: string;
-  };
-
-  emojiStatusAccessModal?: {
-    bot: ApiUser;
-    webAppKey: string;
-  };
-
-  locationAccessModal?: {
-    bot: ApiUser;
-    webAppKey: string;
-  };
-
-  mediaAccessModal?: {
-    bot: ApiUser;
-    webAppKey: string;
-    kinds: WebAppMediaKind[];
   };
 
   confetti?: {
@@ -612,17 +507,6 @@ export type TabState = {
     lastWaveTime: number;
     startX: number;
     startY: number;
-  };
-
-  urlAuth?: {
-    button?: {
-      chatId: string;
-      messageId: number;
-      buttonId: number;
-    };
-    matchCode?: string;
-    request?: Omit<ApiUrlAuthResultRequest, 'type' | 'bot'> & { botId: string };
-    url: string;
   };
 
   aiMessageEditorModal?: {
@@ -701,8 +585,6 @@ export type TabState = {
     inviteHash?: string;
   };
 
-  isBrowserCloseConfirmationModalOpen?: boolean;
-
   isQuickChatPickerOpen?: boolean;
 
   isFrozenAccountModalOpen?: boolean;
@@ -778,13 +660,6 @@ export type TabState = {
 
   qrCodeModal?: {
     peerId: string;
-  };
-
-  suggestedStatusModal?: {
-    botId: string;
-    webAppKey?: string;
-    customEmojiId: string;
-    duration?: number;
   };
 
   profileRatingModal?: {

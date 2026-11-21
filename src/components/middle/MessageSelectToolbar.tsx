@@ -308,8 +308,7 @@ export default memo(withGlobal<OwnProps>(
       ? selectHasIpRevealingMedia(global, chatId, selectedMessageIds) : false;
     const isShareMessageModalOpen = tabState.isShareMessageModalShown;
     const isAnyModalOpen = Boolean(isShareMessageModalOpen || tabState.requestedDraft
-      || tabState.requestedAttachBotInChat || tabState.requestedAttachBotInstall || tabState.reportModal
-      || tabState.deleteMessageModal);
+      || tabState.reportModal || tabState.deleteMessageModal);
 
     return {
       chat,

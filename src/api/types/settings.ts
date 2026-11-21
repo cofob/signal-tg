@@ -5,8 +5,6 @@ export type ApiPrivacyKey = 'phoneNumber' | 'addByPhone' | 'lastSeen' | 'profile
   'forwards' | 'chatInvite' | 'phoneCall' | 'phoneP2P' | 'bio' | 'birthday' |
   'savedMusic';
 export type PrivacyVisibility = 'everybody' | 'contacts' | 'closeFriends' | 'nonContacts' | 'nobody';
-export type BotsPrivacyType = 'allow' | 'disallow' | 'none';
-
 export interface ApiPrivacySettings {
   visibility: PrivacyVisibility;
   isUnspecified?: boolean;
@@ -15,7 +13,6 @@ export interface ApiPrivacySettings {
   blockUserIds: string[];
   blockChatIds: string[];
   shouldAllowPremium?: true;
-  botsPrivacy: BotsPrivacyType;
 }
 
 export interface ApiInputPrivacyRules {
@@ -26,7 +23,6 @@ export interface ApiInputPrivacyRules {
   blockedUsers?: ApiUser[];
   blockedChats?: ApiChat[];
   shouldAllowPremium?: true;
-  botsPrivacy: BotsPrivacyType;
 }
 
 export interface ApiLanguage {

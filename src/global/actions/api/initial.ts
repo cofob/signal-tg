@@ -164,21 +164,21 @@ addActionHandler('loginWithPasskey', async (global, actions, payload): Promise<v
 
 addActionHandler('uploadProfilePhoto', async (global, actions, payload): Promise<void> => {
   const {
-    photo, isFallback, bot,
+    photo, isFallback,
     tabId = getCurrentTabId(),
   } = payload;
 
   global = updateManagementProgress(global, ManagementProgress.InProgress, tabId);
   setGlobal(global);
 
-  const result = await callApi('uploadProfilePhoto', { photo, isFallback, bot });
+  const result = await callApi('uploadProfilePhoto', { photo, isFallback });
   if (!result) return;
 
   global = getGlobal();
   global = updateManagementProgress(global, ManagementProgress.Complete, tabId);
   setGlobal(global);
 
-  const userId = bot?.id ?? global.currentUserId;
+  const userId = global.currentUserId;
   if (!userId) return;
 
   actions.loadFullUser({ userId });

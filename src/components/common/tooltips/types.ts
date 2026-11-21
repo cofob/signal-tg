@@ -1,16 +1,9 @@
 import type { Range as TiptapRange } from '@tiptap/core';
 import type { SuggestionProps } from '@tiptap/suggestion';
 
-import type {
-  ApiBotCommand,
-  ApiBotInlineMediaResult,
-  ApiBotInlineResult,
-  ApiChatMember,
-  ApiSticker,
-  ApiUser,
-} from '../../../api/types';
+import type { ApiChatMember, ApiSticker, ApiUser } from '../../../api/types';
 import type { GlobalActions } from '../../../global';
-import type { InlineBotSettings, ThreadId } from '../../../types';
+import type { ThreadId } from '../../../types';
 import type { RichEditorTooltipsController } from './extensions/richEditorTooltips/controller';
 
 export type RichEditorTooltipsStorage = {
@@ -24,14 +17,9 @@ export type RichEditorTooltipContext = {
   currentUserId?: string;
   currentUser?: ApiUser;
   groupChatMembers?: ApiChatMember[];
-  topInlineBotIds?: string[];
-  topGuestBotIds?: string[];
   recentEmojiIds?: string[];
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
-  inlineBots?: Record<string, false | InlineBotSettings>;
-  botCommands?: ApiBotCommand[] | false;
-  chatBotCommands?: ApiBotCommand[];
   isSavedMessages?: boolean;
   isInScheduledList?: boolean;
   isCurrentUserPremium?: boolean;
@@ -41,14 +29,8 @@ export type RichEditorTooltipContext = {
   isFormatterContextMenuOpen?: boolean;
 };
 
-export type RichEditorTooltipSurface = 'emoji' | 'customEmoji' | 'mention' | 'sticker' | 'command' | 'inlineBot';
-export type RichEditorTooltipItem =
-  Emoji
-  | ApiSticker
-  | ApiUser
-  | ApiBotCommand
-  | ApiBotInlineResult
-  | ApiBotInlineMediaResult;
+export type RichEditorTooltipSurface = 'emoji' | 'customEmoji' | 'mention' | 'sticker';
+export type RichEditorTooltipItem = Emoji | ApiSticker | ApiUser;
 
 export type RichEditorTooltipSuggestion = SuggestionProps<RichEditorTooltipItem, RichEditorTooltipItem>;
 
@@ -84,26 +66,11 @@ type RichEditorStickerTooltipConfig = RichEditorTooltipSurfaceConfig & {
   onSelect: (sticker: ApiSticker, isSilent?: boolean, shouldSchedule?: boolean) => void;
 };
 
-type RichEditorCommandTooltipConfig = RichEditorTooltipSurfaceConfig & {
-  onSelect: NoneToVoidFunction;
-};
-
-type RichEditorInlineBotTooltipConfig = RichEditorTooltipSurfaceConfig & {
-  onSelect: (
-    botId: string,
-    result: ApiBotInlineResult | ApiBotInlineMediaResult,
-    isSilent?: boolean,
-    shouldSchedule?: boolean,
-  ) => void;
-};
-
 export type RichEditorTooltipsConfig = {
   emoji?: RichEditorEmojiTooltipConfig;
   customEmoji?: RichEditorCustomEmojiTooltipConfig;
   mention?: RichEditorTooltipSurfaceConfig;
   sticker?: RichEditorStickerTooltipConfig;
-  command?: RichEditorCommandTooltipConfig;
-  inlineBot?: RichEditorInlineBotTooltipConfig;
   formatter?: RichEditorFormatterConfig;
   getTooltipBoundary?: () => HTMLElement | undefined;
   getContext: () => RichEditorTooltipContext;

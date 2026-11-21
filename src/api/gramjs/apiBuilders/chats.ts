@@ -3,7 +3,6 @@ import type { Entity } from '../../../lib/gramjs/types';
 
 import type { ThreadReadState } from '../../../types';
 import {
-  type ApiBotCommand,
   type ApiChat,
   type ApiChatAdminRights,
   type ApiChatBannedRights,
@@ -26,14 +25,12 @@ import {
 import { omitUndefined, pickTruthy } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { addPhotoToLocalDb, addUserToLocalDb } from '../helpers/localDb';
-import { buildApiBotCommand } from './bots';
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
 } from './common';
 import { omitVirtualClassFields } from './helpers';
 import { buildApiRestrictionReasons } from './misc';
 import {
-  buildApiBotVerification,
   buildApiEmojiStatus,
   buildApiPeerColor,
   buildApiPeerId,
@@ -83,7 +80,6 @@ function buildApiChatFieldsFromPeerEntity(
   const isFake = userOrChannel?.fake;
   const areStoriesHidden = userOrChannel?.storiesHidden;
   const maxStoryId = userOrChannel?.storiesMaxId?.maxId;
-  const botVerificationIconId = userOrChannel?.botVerificationIcon?.toString();
   const storiesUnavailable = userOrChannel?.storiesUnavailable;
   const color = userOrChannel?.color ? buildApiPeerColor(userOrChannel.color) : undefined;
   const profileColor = userOrChannel?.profileColor ? buildApiPeerColor(userOrChannel.profileColor) : undefined;
@@ -116,7 +112,6 @@ function buildApiChatFieldsFromPeerEntity(
     isJoinToSend: channel?.joinToSend,
     isJoinRequest: channel?.joinRequest,
     isForum,
-    isBotForum: user?.botForumView,
     isMonoforum: channel?.monoforum,
     linkedMonoforumId: channel?.linkedMonoforumId !== undefined
       ? buildApiPeerId(channel.linkedMonoforumId, 'channel') : undefined,
@@ -128,7 +123,6 @@ function buildApiChatFieldsFromPeerEntity(
     maxStoryId,
     hasStories: Boolean(maxStoryId) && !storiesUnavailable,
     emojiStatus,
-    botVerificationIconId,
     hasGeo: channel?.hasGeo,
     level: channel?.level,
     withForumTabs: channel?.forumTabs,
@@ -429,9 +423,6 @@ export function buildChatTypingStatus(
   if (action instanceof GramJs.SendMessageChooseContactAction) {
     return buildTypingStatus('chooseContact');
   }
-  if (action instanceof GramJs.SendMessageGamePlayAction) {
-    return buildTypingStatus('playingGame');
-  }
   if (action instanceof GramJs.SendMessageRecordRoundAction) {
     return buildTypingStatus('recordRound');
   }
@@ -477,7 +468,7 @@ export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFi
 
   return {
     ...pickTruthy(filter, [
-      'id', 'emoticon', 'contacts', 'nonContacts', 'groups', 'bots',
+      'id', 'emoticon', 'contacts', 'nonContacts', 'groups',
       'excludeMuted', 'excludeRead', 'excludeArchived',
     ]),
     channels: filter.broadcasts,
@@ -501,18 +492,6 @@ export function buildApiChatFolderFromSuggested({
     ...buildApiChatFolder(filter),
     description,
   };
-}
-
-export function buildApiChatBotCommands(botInfos: GramJs.BotInfo[]) {
-  return botInfos.reduce((botCommands, botInfo) => {
-    const botId = buildApiPeerId(botInfo.userId!, 'user');
-
-    if (botInfo.commands) {
-      botCommands = botCommands.concat(botInfo.commands.map((command) => buildApiBotCommand(botId, command)));
-    }
-
-    return botCommands;
-  }, [] as ApiBotCommand[]);
 }
 
 export function buildApiExportedInvite(invite: GramJs.ChatInviteExported): ApiExportedInvite {
@@ -643,7 +622,7 @@ export function buildApiMissingInvitedUser(
 export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInviteInfo {
   const {
     color, participants, participantsCount, photo, title, about, scam, fake, verified, megagroup, channel, broadcast,
-    requestNeeded, botVerification,
+    requestNeeded,
   } = invite;
 
   let apiPhoto;
@@ -669,7 +648,6 @@ export function buildApiChatInviteInfo(invite: GramJs.ChatInvite): ApiChatInvite
     isRequestNeeded: requestNeeded,
     photo: apiPhoto,
     participantIds: participants?.map((participant) => buildApiPeerId(participant.id, 'user')).filter(Boolean),
-    botVerification: botVerification && buildApiBotVerification(botVerification),
   };
 }
 

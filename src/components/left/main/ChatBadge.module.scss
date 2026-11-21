@@ -101,13 +101,6 @@
   font-size: 1rem;
 }
 
-.miniapp {
-  z-index: calc(var(--z-chat-ripple) + 1);
-  height: auto !important;
-  padding: 0 0.4375rem !important;
-  font-size: 0.875rem !important;
-}
-
 .muted {
   background-color: var(--color-gray);
 }

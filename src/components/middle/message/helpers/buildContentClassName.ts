@@ -63,8 +63,6 @@ export function buildContentClassName(
     || pollMedia?.photo || pollMedia?.video || pollMedia?.location;
   const hasText = text || location?.mediaType === 'venue' || isGeoLiveActive || hasFactCheck || poll;
   const isMediaWithNoText = isMedia && !hasText;
-  const hasInlineKeyboard = Boolean(message.inlineButtons);
-  const isViaBot = Boolean(message.viaBotId || message.guestChatViaId);
 
   const hasFooter = (() => {
     if (isInvertedMedia && isInvertibleMedia) {
@@ -169,10 +167,6 @@ export function buildContentClassName(
     classNames.push('has-outside-reactions');
   }
 
-  if (isViaBot) {
-    classNames.push('is-via-bot');
-  }
-
   if (forceSenderName) {
     classNames.push('force-sender-name');
   }
@@ -184,7 +178,7 @@ export function buildContentClassName(
       classNames.push('has-background');
     }
 
-    if (hasSubheader || asForwarded || isViaBot || !isMediaWithNoText
+    if (hasSubheader || asForwarded || !isMediaWithNoText
       || forceSenderName || hasFactCheck || withVoiceTranscription) {
       classNames.push('has-solid-background');
     }
@@ -193,7 +187,7 @@ export function buildContentClassName(
       classNames.push('has-fact-check');
     }
 
-    if (isLastInGroup && !hasInlineKeyboard
+    if (isLastInGroup
       && (photo || !isMediaWithNoText || hasBottomCommentButton)) {
       classNames.push('has-appendix');
     }

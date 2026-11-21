@@ -31,10 +31,7 @@ import {
   selectChatMessage,
   selectCurrentChat,
   selectCurrentMessageList,
-  selectIsChatWithBot,
   selectIsChatWithSelf,
-  selectIsTrustedBot,
-  selectSender,
   selectTabState,
   selectTopic,
 } from '../../selectors';
@@ -295,12 +292,11 @@ addActionHandler('showAllowedMessageTypesNotification', (global, actions, payloa
   const chat = selectChat(global, chatId);
   if (!chat) return;
   const isSavedMessages = chatId ? selectIsChatWithSelf(global, chatId) : undefined;
-  const isChatWithBot = chatId ? selectIsChatWithBot(global, chatId) : undefined;
 
   const {
     canSendPlainText, canSendPhotos, canSendVideos, canSendDocuments, canSendAudios,
     canSendStickers, canSendRoundVideos, canSendVoices,
-  } = getAllowedAttachmentOptions(chat, isChatWithBot, isSavedMessages);
+  } = getAllowedAttachmentOptions(chat, isSavedMessages);
   const lang = getTranslationFn();
   const allowedContent = compact([
     canSendPlainText ? lang('ChatAllowedText') : undefined,
@@ -395,50 +391,6 @@ addActionHandler('closeHistoryCalendar', (global, actions, payload): ActionRetur
 
   return updateTabState(global, {
     historyCalendarSelectedAt: undefined,
-  }, tabId);
-});
-
-addActionHandler('openGame', (global, actions, payload): ActionReturnType => {
-  const {
-    url, chatId, messageId, tabId = getCurrentTabId(),
-  } = payload;
-
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message) return;
-
-  const botId = message.viaBotId || selectSender(global, message)?.id;
-  if (!botId) return;
-
-  if (!selectIsTrustedBot(global, botId)) {
-    global = updateTabState(global, {
-      botTrustRequest: {
-        botId,
-        type: 'game',
-        onConfirm: {
-          action: 'openGame',
-          payload,
-        },
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  global = updateTabState(global, {
-    openedGame: {
-      url,
-      chatId,
-      messageId,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('closeGame', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    openedGame: undefined,
   }, tabId);
 });
 

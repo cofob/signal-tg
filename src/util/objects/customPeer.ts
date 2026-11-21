@@ -43,14 +43,6 @@ export const CUSTOM_PEER_INCLUDED_CHAT_TYPES: UniqueCustomPeer[] = [
     isAvatarSquare: true,
     peerColorId: 1,
   },
-  {
-    isCustomPeer: true,
-    type: 'bots',
-    titleKey: 'FilterBots',
-    avatarIcon: 'bots',
-    isAvatarSquare: true,
-    peerColorId: 6,
-  },
 ];
 
 export const CUSTOM_PEER_EXCLUDED_CHAT_TYPES: UniqueCustomPeer[] = [

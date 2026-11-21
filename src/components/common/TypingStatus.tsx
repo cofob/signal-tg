@@ -135,8 +135,6 @@ function getPrivateTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStat
       return lang('SendActionUploadPhoto');
     case 'uploadFile':
       return lang('SendActionUploadFile');
-    case 'playingGame':
-      return lang('PlayingGame');
     case 'recordRound':
       return lang('SendActionRecordRound');
     case 'uploadRound':
@@ -167,8 +165,6 @@ function getGroupTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStatus
       return lang('UserActionUploadPhoto', { user }, { withNodes: true });
     case 'uploadFile':
       return lang('UserActionUploadFile', { user }, { withNodes: true });
-    case 'playingGame':
-      return lang('UserPlayingGame', { user }, { withNodes: true });
     case 'recordRound':
       return lang('UserActionRecordRound', { user }, { withNodes: true });
     case 'uploadRound':

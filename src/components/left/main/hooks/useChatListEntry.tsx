@@ -73,7 +73,6 @@ export default function useChatListEntry({
   isSavedDialog,
   isPreview,
   hasTags,
-  shouldForceNonForumView,
   onReorderAnimationEnd,
 }: {
   chat?: ApiChat;
@@ -96,7 +95,6 @@ export default function useChatListEntry({
   orderDiff: number;
   shiftDiff: number;
   withInterfaceAnimations?: boolean;
-  shouldForceNonForumView?: boolean;
   onReorderAnimationEnd?: NoneToVoidFunction;
 }) {
   const { openChat } = getActions();
@@ -219,7 +217,7 @@ export default function useChatListEntry({
       );
     }
 
-    const shouldRenderAsForum = chat?.isForum && !isTopic && !shouldForceNonForumView;
+    const shouldRenderAsForum = chat?.isForum && !isTopic;
     if (shouldRenderAsForum) {
       return (
         <ChatForumLastMessage

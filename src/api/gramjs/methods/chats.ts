@@ -9,7 +9,6 @@ import {
   type ApiChatBannedRights,
   type ApiChatFolder,
   type ApiChatFullInfo,
-  type ApiChatInviteJoinWebView,
   type ApiChatReactions,
   type ApiDraft,
   type ApiGroupCall,
@@ -19,7 +18,6 @@ import {
   type ApiPeerNotifySettings,
   type ApiPhoto,
   type ApiProfileTab,
-  type ApiThemeParameters,
   type ApiThreadInfo,
   type ApiUser,
   type ApiUserStatus,
@@ -32,12 +30,10 @@ import {
   DEBUG,
   MEMBERS_LOAD_SLICE,
   SERVICE_NOTIFICATIONS_USER_ID,
-  WEB_APP_PLATFORM,
 } from '../../../config';
 import { buildCollectionByKey, omitUndefined } from '../../../util/iteratees';
 import { GLOBAL_SEARCH_CONTACTS_LIMIT } from '../../../limits';
 import {
-  buildApiChatBotCommands,
   buildApiChatFolder,
   buildApiChatFolderFromSuggested,
   buildApiChatFromDialog,
@@ -58,7 +54,6 @@ import { buildApiPhoto } from '../apiBuilders/common';
 import { buildApiMessage, buildMessageDraft } from '../apiBuilders/messages';
 import { buildApiShareTheme, buildApiWallpaper } from '../apiBuilders/misc';
 import {
-  buildApiBotVerification,
   buildApiPeerId,
   buildApiPeerNotifySettings,
   buildApiProfileTab,
@@ -79,7 +74,6 @@ import {
   buildInputReplyTo,
   buildInputRichMessage,
   buildInputSuggestedPost,
-  buildInputThemeParams,
   buildInputUser,
   buildMtpMessageEntity,
   DEFAULT_PRIMITIVES,
@@ -664,7 +658,6 @@ async function getFullChatInfo(chatId: string): Promise<FullChatData | undefined
     about,
     participants,
     exportedInvite,
-    botInfo,
     call,
     availableReactions,
     recentRequesters,
@@ -682,7 +675,6 @@ async function getFullChatInfo(chatId: string): Promise<FullChatData | undefined
 
   const members = buildChatMembers(participants);
   const adminMembers = members ? members.filter(({ isAdmin, isOwner }) => isAdmin || isOwner) : undefined;
-  const botCommands = botInfo ? buildApiChatBotCommands(botInfo) : undefined;
   const inviteLink = exportedInvite instanceof GramJs.ChatInviteExported ? exportedInvite.link : undefined;
   const userStatusesById = buildApiUserStatuses(result.users);
   const chats = result.chats.map((chat) => buildApiChatFromPreview(chat)).filter(Boolean);
@@ -698,8 +690,6 @@ async function getFullChatInfo(chatId: string): Promise<FullChatData | undefined
       peerTheme: themeEmoticon ? { type: 'emoticon', emoticon: themeEmoticon } : undefined,
       adminMembersById: adminMembers ? buildCollectionByKey(adminMembers, 'userId') : undefined,
       canViewMembers: true,
-      botCommands,
-      botIds: botInfo?.map((info) => buildApiPeerId(info.userId!, 'user')),
       inviteLink,
       groupCallId: groupCall?.id.toString(),
       enabledReactions: buildApiChatReactions(availableReactions),
@@ -750,7 +740,6 @@ async function getFullChannelInfo(
     linkedChatId,
     hiddenPrehistory,
     call,
-    botInfo,
     availableReactions,
     reactionsLimit,
     defaultSendAs,
@@ -763,10 +752,8 @@ async function getFullChannelInfo(
     storiesPinnedAvailable,
     viewForumAsMessages,
     emojiset,
-    botVerification,
     hasScheduled,
     mainTab,
-    guardBotId,
     ttlPeriod,
     themeEmoticon,
     wallpaper,
@@ -790,7 +777,6 @@ async function getFullChannelInfo(
   const { members: adminMembers, userStatusesById: adminStatusesById } = (
     canLoadParticipants && await fetchMembers({ chat, memberFilter: 'admin' })
   ) || {};
-  const botCommands = botInfo ? buildApiChatBotCommands(botInfo) : undefined;
   const memberInfoRequest = !chat.isNotJoined && chat.type === 'chatTypeChannel'
     ? await fetchMember({ chat }) : undefined;
   const memberInfo = memberInfoRequest?.member;
@@ -851,8 +837,6 @@ async function getFullChannelInfo(
       adminMembersById: adminMembers ? buildCollectionByKey(adminMembers, 'userId') : undefined,
       groupCallId: groupCall ? String(groupCall.id) : undefined,
       linkedChatId: linkedChatId ? buildApiPeerId(linkedChatId, 'channel') : undefined,
-      botCommands,
-      botIds: botInfo?.map((info) => buildApiPeerId(info.userId!, 'user')),
       enabledReactions: buildApiChatReactions(availableReactions),
       reactionsLimit,
       sendAsId: defaultSendAs ? getApiChatIdFromMtpPeer(defaultSendAs) : undefined,
@@ -862,10 +846,8 @@ async function getFullChannelInfo(
       emojiSet: emojiset ? buildStickerSet(emojiset) : undefined,
       areParticipantsHidden: participantsHidden,
       hasPinnedStories: Boolean(storiesPinnedAvailable),
-      botVerification: botVerification && buildApiBotVerification(botVerification),
       hasScheduledMessages: hasScheduled,
       mainTab: mainTab && buildApiProfileTab(mainTab),
-      guardBotId: guardBotId ? buildApiPeerId(guardBotId, 'user') : undefined,
       shareTheme: shareTheme && buildApiShareTheme(shareTheme),
     },
     chats,
@@ -993,22 +975,18 @@ export async function createChannel({
 }
 
 export async function joinChannel({
-  channelId, accessHash, theme,
+  channelId, accessHash,
 }: {
-  channelId: string; accessHash: string; theme?: ApiThemeParameters;
-}): Promise<ApiChatInviteJoinWebView | { type: 'ok' } | undefined> {
+  channelId: string; accessHash: string;
+}): Promise<{ type: 'ok' } | undefined> {
   const result = await invokeRequest(new GramJs.channels.JoinChannel({
     channel: buildInputChannel(channelId, accessHash),
   }), {
     shouldThrow: true,
   });
 
-  if (!result) {
+  if (!result || result instanceof GramJs.messages.ChatInviteJoinResultWebView) {
     return undefined;
-  }
-
-  if (result instanceof GramJs.messages.ChatInviteJoinResultWebView) {
-    return requestChatJoinWebView(result, theme);
   }
 
   return { type: 'ok' };
@@ -1420,10 +1398,9 @@ export async function getChatByPhoneNumber(phoneNumber: string) {
   return processResolvedPeer(result);
 }
 
-export async function getChatByUsername(username: string, referrer?: string) {
+export async function getChatByUsername(username: string) {
   const result = await invokeRequest(new GramJs.contacts.ResolveUsername({
     username,
-    referer: referrer,
   }));
 
   return processResolvedPeer(result);
@@ -1772,36 +1749,6 @@ export async function addChatMembers(chat: ApiChat, users: ApiUser[]) {
   return undefined;
 }
 
-export async function addBotToChat(chat: ApiChat, bot: ApiUser) {
-  try {
-    if (chat.type === 'chatTypeChannel' || chat.type === 'chatTypeSuperGroup') {
-      const invitedUsers = await invokeRequest(new GramJs.channels.InviteToChannel({
-        channel: buildInputChannel(chat.id, chat.accessHash),
-        users: [buildInputUser(bot.id, bot.accessHash)],
-      }));
-      if (!invitedUsers) return undefined;
-      handleGramJsUpdate(invitedUsers.updates);
-      return invitedUsers.missingInvitees.map(buildApiMissingInvitedUser);
-    }
-
-    const invitedUsers = await invokeRequest(new GramJs.messages.AddChatUser({
-      chatId: buildInputChat(chat.id),
-      userId: buildInputUser(bot.id, bot.accessHash),
-      fwdLimit: DEFAULT_PRIMITIVES.INT,
-    }));
-    if (!invitedUsers) return undefined;
-    handleGramJsUpdate(invitedUsers.updates);
-    return invitedUsers.missingInvitees.map(buildApiMissingInvitedUser);
-  } catch (err: unknown) {
-    const apiError = buildApiError(err as Error);
-    sendApiUpdate({
-      '@type': 'error',
-      error: apiError,
-    });
-  }
-  return undefined;
-}
-
 export function deleteChatMember(chat: ApiChat, user: ApiUser) {
   return invokeRequest(new GramJs.messages.DeleteChatUser({
     chatId: buildInputChat(chat.id),
@@ -1874,15 +1821,11 @@ function preparePeers(
 }
 
 export async function importChatInvite(
-  { hash, theme }: { hash: string; theme?: ApiThemeParameters },
-): Promise<ApiChatInviteJoinWebView | { type: 'ok'; chat: ApiChat } | undefined> {
+  { hash }: { hash: string },
+): Promise<{ type: 'ok'; chat: ApiChat } | undefined> {
   const result = await invokeRequest(new GramJs.messages.ImportChatInvite({ hash }));
-  if (!result) {
+  if (!result || result instanceof GramJs.messages.ChatInviteJoinResultWebView) {
     return undefined;
-  }
-
-  if (result instanceof GramJs.messages.ChatInviteJoinResultWebView) {
-    return requestChatJoinWebView(result, theme);
   }
 
   const updates = result.updates;
@@ -1900,29 +1843,6 @@ export async function importChatInvite(
   return {
     type: 'ok',
     chat,
-  };
-}
-
-async function requestChatJoinWebView(
-  result: GramJs.messages.ChatInviteJoinResultWebView,
-  theme?: ApiThemeParameters,
-): Promise<ApiChatInviteJoinWebView | undefined> {
-  const webView = await invokeRequest(new GramJs.messages.RequestChatJoinWebView({
-    queryId: result.queryId,
-    themeParams: theme ? buildInputThemeParams(theme) : undefined,
-    platform: WEB_APP_PLATFORM,
-  }));
-  if (!(webView instanceof GramJs.WebViewResultUrl)) {
-    return undefined;
-  }
-
-  return {
-    type: 'webView',
-    botId: buildApiPeerId(result.botId, 'user'),
-    url: webView.url,
-    queryId: (webView.queryId ?? result.queryId).toString(),
-    isFullscreen: Boolean(webView.fullscreen),
-    isSameOrigin: webView.sameOrigin,
   };
 }
 

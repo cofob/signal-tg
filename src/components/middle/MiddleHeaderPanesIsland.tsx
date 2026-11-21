@@ -27,7 +27,6 @@ import {
 } from './hooks/useHeaderPane';
 
 import GroupCallTopPane from '../calls/group/GroupCallTopPane';
-import BotVerificationPane from './panes/BotVerificationPane';
 import ChatReportPane from './panes/ChatReportPane';
 import HeaderPinnedMessage from './panes/HeaderPinnedMessage';
 
@@ -99,13 +98,12 @@ const MiddleHeaderPanesIsland = ({
   const [getPinnedState, setPinnedState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getGroupCallState, setGroupCallState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getChatReportState, setChatReportState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getBotVerificationState, setBotVerificationState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
   const isGroupCallShown = threadId === MAIN_THREAD_ID && !chat?.isForum;
 
   const paneStateGetters = [
     isGroupCallShown ? getGroupCallState : getFallbackPaneState,
-    getChatReportState, getBotVerificationState,
+    getChatReportState,
     getPinnedState,
   ];
   const expectedReportCount = paneStateGetters.filter((getter) => getter !== getFallbackPaneState).length;
@@ -370,7 +368,7 @@ const MiddleHeaderPanesIsland = ({
     settleRef.current = settle;
     settle();
   }, [cacheKey, getGroupCallState, getPinnedState,
-    getChatReportState, getBotVerificationState]);
+    getChatReportState]);
 
   if (!shouldRender) return undefined;
 
@@ -399,10 +397,6 @@ const MiddleHeaderPanesIsland = ({
         isAutoArchived={settings?.isAutoArchived}
         isMessageRequest={settings?.isMessageRequest}
         onPaneStateChange={setChatReportState}
-      />
-      <BotVerificationPane
-        peerId={chatId}
-        onPaneStateChange={setBotVerificationState}
       />
       <HeaderPinnedMessage
         chatId={chatId}

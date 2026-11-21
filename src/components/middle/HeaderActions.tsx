@@ -15,7 +15,6 @@ import {
   isChatChannel, isChatSuperGroup,
 } from '../../global/helpers';
 import {
-  selectBot,
   selectCanAnimateInterface,
   selectChat,
   selectChatFullInfo,
@@ -255,7 +254,6 @@ export default memo(withGlobal<OwnProps>(
       } as Complete<StateProps>;
     }
 
-    const bot = selectBot(global, chatId);
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
@@ -268,7 +266,7 @@ export default memo(withGlobal<OwnProps>(
       (isMainThread || chat.isForum) && (isChannel || isSuperGroup) && chat.isNotJoined && !chat.isMonoforum,
     );
     const canSearch = isMainThread || isDiscussionThread;
-    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !bot && !chat.isSupport
+    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !chat.isSupport
       && !isAnonymousForwardsChat(chat.id);
     const canMute = isMainThread && !isChatWithSelf && !canSubscribe;
     const canLeave = isSavedDialog || (isMainThread && !canSubscribe);

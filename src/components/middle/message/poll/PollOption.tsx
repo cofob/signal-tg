@@ -201,8 +201,6 @@ const PollOption = ({
     openUrl({
       url: webPage.url,
       shouldSkipModal: media.webPage.isSafe,
-      tryInstant: true,
-      previewId: media.webPage.id,
     });
   });
 

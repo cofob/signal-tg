@@ -6,7 +6,6 @@ export * from './media';
 export * from './instantView';
 export * from './richMessage';
 export * from './settings';
-export * from './bots';
 export * from './misc';
 export * from './calls';
 export * from './stories';

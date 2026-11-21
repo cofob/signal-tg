@@ -1,5 +1,5 @@
 import { memo, type TeactNode } from '../../../lib/teact/teact';
-import { getActions, getGlobal, withGlobal } from '../../../global';
+import { getGlobal, withGlobal } from '../../../global';
 
 import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 
@@ -7,10 +7,8 @@ import {
   GENERAL_TOPIC_ID,
   STARS_CURRENCY_CODE,
   TON_CURRENCY_CODE,
-  USERNAME_LINK_PREFIX,
 } from '../../../config';
 import {
-  getMainUsername,
   getMessageContent,
   getMessageTextWithFallback,
   isChatBasicGroup,
@@ -28,7 +26,6 @@ import {
   selectTopic,
 } from '../../../global/selectors';
 import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
-import { ensureProtocol } from '../../../util/browser/url';
 import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
 import { formatCalendarDate, formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
 import { formatStarsAsText, formatTonAsText,
@@ -51,7 +48,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import CustomEmoji from '../../common/CustomEmoji';
 import TopicDefaultIcon from '../../common/TopicDefaultIcon';
-import Link from '../../ui/Link';
 
 import styles from './ActionMessage.module.scss';
 
@@ -82,10 +78,6 @@ const ActionMessageText = ({
   isInsideTopic,
   asPreview,
 }: OwnProps & StateProps) => {
-  const {
-    openTelegramLink,
-    openUrl,
-  } = getActions();
   const { chatId, isOutgoing } = message;
   const action = message.content.action!;
 
@@ -109,7 +101,6 @@ const ActionMessageText = ({
     const channelFallbackText = lang('ActionFallbackChannel');
 
     const senderLink = renderPeerLink(sender?.id, senderTitle || userFallbackText, asPreview);
-    const chatLink = renderPeerLink(chat?.id, chatTitle || chatFallbackText, asPreview);
 
     switch (action.type) {
       case 'pinMessage': {
@@ -145,27 +136,6 @@ const ActionMessageText = ({
           'ActionPinnedNotFound',
           isOutgoing,
           { from: senderLink },
-        );
-      }
-
-      case 'gameScore': {
-        const { score } = action;
-
-        const gameTitle = replyMessage?.content.game?.title;
-        const gameLink = gameTitle && renderMessageLink(replyMessage, renderText(gameTitle), asPreview);
-
-        if (gameLink) {
-          return translateWithYou(
-            lang,
-            'ActionGameScore',
-            isOutgoing,
-            { from: senderLink, count: score, game: gameLink },
-            { pluralValue: score },
-          );
-        }
-
-        return translateWithYou(
-          lang, 'ActionGameScoreNoGame', isOutgoing, { from: senderLink, count: score }, { pluralValue: score },
         );
       }
 
@@ -421,47 +391,6 @@ const ActionMessageText = ({
         return translateWithYou(lang, 'ActionKickUser', isOutgoing, { from: senderLink, user: userLink });
       }
 
-      case 'requestedPeer': {
-        const { peerIds } = action;
-        const peerLinks = peerIds.map((peerId) => {
-          const peer = selectPeer(global, peerId);
-          return renderPeerLink(peerId, (peer && getPeerTitle(lang, peer)) || userFallbackText, asPreview);
-        });
-        return lang('ActionRequestedPeer', {
-          peer: conjuctionWithNodes(lang, peerLinks),
-          bot: chatLink,
-        }, { withNodes: true });
-      }
-
-      case 'managedBotCreated': {
-        const bot = selectPeer(global, action.botId);
-        const botLink = renderPeerLink(action.botId, (bot && getPeerTitle(lang, bot)) || userFallbackText, asPreview);
-        return translateWithYou(lang, 'ActionManagedBotCreated', isOutgoing, { from: senderLink, bot: botLink });
-      }
-
-      case 'botAllowed': {
-        const {
-          app, domain, isAttachMenu, isFromRequest,
-        } = action;
-        if (isAttachMenu) return lang('ActionAttachMenuBotAllowed');
-        if (isFromRequest) return lang('ActionWebappBotAllowed');
-        if (app) {
-          const senderUsername = sender && getMainUsername(sender);
-          const link = senderUsername && `${USERNAME_LINK_PREFIX}${senderUsername}&appname=${app.shortName}`;
-          const appLink = link
-            ? <Link onClick={() => openTelegramLink({ url: link })}>{app.title}</Link>
-            : lang('ActionBotAppPlaceholder');
-          return lang('ActionBotAllowedFromApp', { app: appLink }, { withNodes: true });
-        }
-
-        if (!domain) return lang(UNSUPPORTED_LANG_KEY);
-
-        const url = ensureProtocol(domain);
-
-        const link = <Link onClick={() => openUrl({ url })}>{domain}</Link>;
-        return lang('ActionBotAllowedFromDomain', { domain: link }, { withNodes: true });
-      }
-
       case 'groupCall': {
         const { duration } = action;
         const durationText = duration ? formatShortDuration(lang, duration) : undefined;
@@ -530,9 +459,6 @@ const ActionMessageText = ({
 
         return translateWithYou(lang, 'ActionSuggestedBirthday', isOutgoing, { user: actionPeerLink });
       }
-
-      case 'webViewDataSent':
-        return lang('ActionWebviewDataDone', { text: action.text });
 
       case 'expired': {
         const { isRoundVideo, isVoice } = action;

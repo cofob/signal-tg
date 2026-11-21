@@ -50,7 +50,6 @@ import {
   selectActiveDownloads,
   selectAlbumMessageIdToEdit,
   selectAllowedMessageActionsSlow,
-  selectBot,
   selectCanForwardMessage,
   selectCanPlayAnimatedEmojis,
   selectCanScheduleUntilOnline,
@@ -925,15 +924,12 @@ export default memo(withGlobal<OwnProps>(
 
     const userStatus = isPrivate ? selectUserStatus(global, chat.id) : undefined;
     const isOwn = isOwnMessage(message);
-    const chatBot = chat && selectBot(global, chat.id);
-    const isBot = Boolean(chatBot);
     const isMessageUnread = selectIsMessageUnread(
       global, message.chatId, threadId || MAIN_THREAD_ID, message.id, messageListType,
     );
     const canLoadReadDate = Boolean(
       isPrivate
       && isOwn
-      && !isBot
       && !isMessageUnread
       && readDateExpiresAt
       && message.date > Date.now() / 1000 - readDateExpiresAt

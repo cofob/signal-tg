@@ -5,7 +5,7 @@ import type { IAlbum, ThreadId } from '../../../../types';
 import { MAIN_THREAD_ID } from '../../../../api/types';
 import { MediaViewerOrigin } from '../../../../types';
 
-import { getMainUsername, getMessagePhoto, getWebPagePhoto, getWebPageVideo } from '../../../../global/helpers';
+import { getMessagePhoto, getWebPagePhoto, getWebPageVideo } from '../../../../global/helpers';
 import { getMessageReplyInfo } from '../../../../global/helpers/replies';
 import { tryParseDeepLink } from '../../../../util/deepLinkParser';
 import { getRichQuoteText } from '../../../../util/text/richQuote';
@@ -23,8 +23,6 @@ export default function useInnerHandlers({
   isScheduled,
   album,
   senderPeer,
-  botSender,
-  guestFromSender,
   isTranslatingChat,
   story,
   isReplyPrivate,
@@ -43,8 +41,6 @@ export default function useInnerHandlers({
   album?: IAlbum;
   avatarPeer?: ApiPeer;
   senderPeer?: ApiPeer;
-  botSender?: ApiPeer;
-  guestFromSender?: ApiPeer;
   isTranslatingChat?: boolean;
   story?: ApiStory;
   isReplyPrivate?: boolean;
@@ -53,7 +49,7 @@ export default function useInnerHandlers({
   lastPlaybackTimestamp?: number;
 }) {
   const {
-    openChat, openChatWithDraft, showNotification, focusMessage, openMediaViewer, openAudioPlayer,
+    openChat, showNotification, focusMessage, openMediaViewer, openAudioPlayer,
     markMessagesRead, cancelUploadMedia, openForwardMenu,
     openChatLanguageModal, openThread, openStoryViewer, searchChatMediaMessages,
   } = getActions();
@@ -83,29 +79,6 @@ export default function useInnerHandlers({
     } else {
       openChat({ id: senderPeer.id });
     }
-  });
-
-  const handleViaBotClick = useLastCallback(() => {
-    const username = botSender && getMainUsername(botSender);
-    if (!username) {
-      return;
-    }
-
-    openChatWithDraft({
-      chatId,
-      threadId,
-      text: {
-        text: `@${username} `,
-      },
-    });
-  });
-
-  const handleGuestForClick = useLastCallback(() => {
-    if (!guestFromSender) {
-      return;
-    }
-
-    openChat({ id: guestFromSender.id });
   });
 
   const handleReplyClick = useLastCallback((): void => {
@@ -306,8 +279,6 @@ export default function useInnerHandlers({
 
   return {
     handleSenderClick,
-    handleViaBotClick,
-    handleGuestForClick,
     handleReplyClick,
     handleDocumentClick,
     handleMediaClick,

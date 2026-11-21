@@ -1,14 +1,8 @@
 import type { Editor } from '@tiptap/core';
-import { memo, useEffect } from '../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../global';
+import { memo } from '../../../lib/teact/teact';
+import { withGlobal } from '../../../global';
 
-import type {
-  ApiBotCommand,
-  ApiBotInlineMediaResult,
-  ApiBotInlineResult,
-  ApiSticker,
-  ApiUser,
-} from '../../../api/types';
+import type { ApiSticker, ApiUser } from '../../../api/types';
 import type {
   RichEditorFormatterState,
   RichEditorTooltipContext,
@@ -18,25 +12,18 @@ import type {
   RichEditorTooltipSurface,
 } from './types';
 
-import { selectTabState } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
-import { setInlineBotHelp } from './extensions/richEditorTooltips/inlineBot';
-import { parseInlineBotQuery } from './extensions/richEditorTooltips/suggestion';
 
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import TextFormatter from '../../ui/textInput/TextFormatter';
-import ChatCommandTooltip from './ChatCommandTooltip.async';
 import CustomEmojiTooltip from './CustomEmojiTooltip.async';
 import EmojiTooltip from './EmojiTooltip.async';
-import InlineBotTooltip from './InlineBotTooltip.async';
 import MentionTooltip from './MentionTooltip.async';
 import RichEditorTooltipPanel from './RichEditorTooltipPanel';
 import StickerTooltip from './StickerTooltip.async';
 
 import styles from './RichEditorTooltipContainer.module.scss';
-
-const RE_MULTIPLE_NEWLINES = /\n{2,}/;
 
 export type OwnProps = {
   editor: Editor;
@@ -59,7 +46,6 @@ export type OwnProps = {
 type StateProps = {
   customEmoji?: ApiSticker[];
   stickers?: ApiSticker[];
-  inlineBots?: RichEditorTooltipContext['inlineBots'];
 };
 
 const RichEditorTooltipContainer = ({
@@ -78,19 +64,9 @@ const RichEditorTooltipContainer = ({
   context,
   customEmoji,
   stickers,
-  inlineBots,
   onCloseFormatter,
   onFormatterDismissalChange,
 }: OwnProps & StateProps) => {
-  const { queryInlineBot } = getActions();
-
-  const inlineBotState = surface === 'inlineBot' ? parseInlineBotQuery(suggestion?.text) : undefined;
-  const inlineBot = inlineBotState ? inlineBots?.[inlineBotState.username.toLowerCase()] || undefined : undefined;
-  const canShowInlineBotHelp = inlineBotState?.query === '' && !RE_MULTIPLE_NEWLINES.test(suggestion?.text || '');
-  const inlineBotHelp = canShowInlineBotHelp && inlineBot
-    ? inlineBot.help
-    : undefined;
-
   const handleMentionSelect = useLastCallback((user: ApiUser) => suggestion?.command(user));
   const handleEmojiSelect = useLastCallback((emoji: string) => {
     const item = suggestion ? findEmojiItem(suggestion.items, emoji) : undefined;
@@ -105,34 +81,6 @@ const RichEditorTooltipContainer = ({
     shouldSchedule?: boolean,
   ) => config.sticker?.onSelect(sticker, isSilent, shouldSchedule));
   const handleStackCustomEmojiSelect = useLastCallback((emoji: ApiSticker) => customEmojiSuggestion?.command(emoji));
-  const handleCommandSelect = useLastCallback((command: ApiBotCommand) => suggestion?.command(command));
-  const handleInlineBotLoadMore = useLastCallback(() => {
-    if (!inlineBotState || !inlineBot) {
-      return;
-    }
-
-    queryInlineBot({
-      chatId: context.chatId,
-      username: inlineBotState.username.toLowerCase(),
-      query: inlineBotState.query,
-      offset: inlineBot.offset,
-    });
-  });
-  const handleInlineBotResultSelect = useLastCallback((
-    result: ApiBotInlineResult | ApiBotInlineMediaResult,
-    isSilent?: boolean,
-    shouldSchedule?: boolean,
-  ) => {
-    if (inlineBot) {
-      config.inlineBot?.onSelect(inlineBot.id, result, isSilent, shouldSchedule);
-    }
-  });
-
-  useEffect(() => {
-    setInlineBotHelp(editor, inlineBotHelp);
-    return () => setInlineBotHelp(editor);
-  }, [editor, inlineBotHelp]);
-
   if (formatter && !editor.isDestroyed) {
     return (
       <div className={styles.formatter}>
@@ -219,54 +167,14 @@ const RichEditorTooltipContainer = ({
     );
   }
 
-  if (surface === 'command') {
-    const botCommands = suggestion.items.filter((item): item is ApiBotCommand => 'botId' in item);
-
-    return (
-      <div className={buildClassName(styles.root, styles.compact, styles.command)}>
-        <ChatCommandTooltip
-          isOpen={isOpen}
-          selectedIndex={selectedIndex}
-          botCommands={botCommands}
-          onCommandSelect={handleCommandSelect}
-        />
-      </div>
-    );
-  }
-
-  if (surface === 'inlineBot' && inlineBot && inlineBotState) {
-    return (
-      <div className={buildClassName(styles.root, styles.raised)}>
-        <InlineBotTooltip
-          isOpen={isOpen}
-          selectedIndex={selectedIndex}
-          botId={inlineBot.id}
-          isGallery={inlineBot.isGallery}
-          inlineBotResults={inlineBot.results}
-          switchPm={inlineBot.switchPm}
-          switchWebview={inlineBot.switchWebview}
-          isSavedMessages={context.isSavedMessages}
-          canSendGifs={context.canSendGifs}
-          isCurrentUserPremium={context.isCurrentUserPremium}
-          loadMore={handleInlineBotLoadMore}
-          onSelectResult={handleInlineBotResultSelect}
-        />
-      </div>
-    );
-  }
-
   return undefined;
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    const tabState = selectTabState(global);
-    return {
-      customEmoji: global.customEmojis.forEmoji.stickers,
-      stickers: global.stickers.forEmoji.stickers,
-      inlineBots: tabState.inlineBots.byUsername,
-    };
-  },
+  (global): Complete<StateProps> => ({
+    customEmoji: global.customEmojis.forEmoji.stickers,
+    stickers: global.stickers.forEmoji.stickers,
+  }),
 )(RichEditorTooltipContainer));
 
 function findEmojiItem(items: RichEditorTooltipItem[], native: string) {

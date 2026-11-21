@@ -18,8 +18,6 @@ type OwnProps = {
   children?: TeactNode;
   isRtl?: boolean;
   shouldSkipModal?: boolean;
-  tryInstantView?: boolean;
-  previewId?: string;
   chatId?: string;
   messageId?: number;
   threadId?: ThreadId;
@@ -34,8 +32,6 @@ const SafeLink = ({
   children,
   isRtl,
   shouldSkipModal,
-  tryInstantView,
-  previewId,
   chatId,
   messageId,
   threadId,
@@ -62,8 +58,6 @@ const SafeLink = ({
       url,
       shouldSkipModal: shouldSkipModal || isTrustedLink,
       ignoreDeepLinks: shouldOpenInNewTab,
-      tryInstant: shouldOpenInNewTab ? false : tryInstantView,
-      previewId,
       linkContext,
     });
 

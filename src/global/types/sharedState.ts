@@ -19,7 +19,6 @@ export interface SharedSettings {
   customLanguages?: ApiLanguage[];
   performance: PerformanceType;
   messageTextSize: number;
-  instantViewFontSizeAdjust: number;
   animationLevel: AnimationLevel;
   foldersPosition: FoldersPosition;
   // This can be deleted after September 2025, along with the corresponding migration
@@ -40,6 +39,5 @@ export interface SharedSettings {
   // The tunnel for Signal hosts from the proxy server setting; `undefined` uses the build default
   signalProxyUrl?: string;
   shouldWarnAboutFiles?: boolean;
-  shouldSkipBrowserCloseConfirmation: boolean;
   shouldKeepLockScreenBackground: boolean;
 }

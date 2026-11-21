@@ -301,12 +301,3 @@ export type ApiPageBlock =
   | { type: 'thinking'; text: ApiRichText }
   | { type: 'math'; source: string }
   | ApiPageBlockButtonRow;
-
-export interface ApiInstantViewPage {
-  url: string;
-  blocks: ApiPageBlock[];
-  views?: number;
-  isRtl?: true;
-  isPart?: true;
-  isV2?: true;
-}

@@ -41,23 +41,6 @@
   }
 }
 
-.cornerIcon {
-  position: absolute;
-  top: 0.1875rem;
-  right: 0.1875rem;
-
-  display: block;
-
-  font-size: 0.875rem;
-
-  &:global(.icon-arrow-right) {
-    top: 0.125rem;
-    right: 0.125rem;
-    transform: rotate(-45deg);
-    font-size: 0.75rem;
-  }
-}
-
 .leftIcon {
   margin-right: 0.25rem;
   font-size: 1rem !important;

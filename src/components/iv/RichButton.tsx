@@ -1,14 +1,11 @@
-import { memo, useMemo } from '../../lib/teact/teact';
-import { getActions, withGlobal } from '../../global';
+import { memo } from '../../lib/teact/teact';
+import { getActions } from '../../global';
 
 import type { ApiRichButton } from '../../api/types';
 import type { IconName } from '../../types/icons';
 import type { RichTextProps } from './RichText';
 
-import { isButtonUnsupported } from '../../global/helpers/buttons';
-import { isKeyboardButtonUnsupportedForEphemeral } from '../../global/helpers/ephemeralMessages';
-import { getRichTextPlainText } from '../../global/helpers/richMessage';
-import { selectChatMessageOrEphemeral } from '../../global/selectors';
+import { canAuthorButton } from '../../global/helpers/buttons';
 import buildClassName from '../../util/buildClassName';
 import { hasSharedCanvasContent } from '../../util/text/richText';
 
@@ -26,38 +23,27 @@ type OwnProps = {
   isInline?: boolean;
 } & Omit<RichTextProps, 'text'>;
 
-type StateProps = {
-  isEphemeral?: boolean;
-};
-
 export const RICH_BUTTON_ICONS: Partial<Record<ApiRichButton['action']['type'], IconName>> = {
   url: 'arrow-right',
-  urlAuth: 'arrow-right',
-  switchBotInline: 'share-filled',
   copy: 'copy',
   userProfile: 'user-filled',
-  webView: 'webapp',
-  buy: 'card',
 };
 
 const RichButton = ({
-  button, isInline, isEphemeral, ...context
-}: OwnProps & StateProps) => {
-  const { clickBotInlineButton } = getActions();
+  button, isInline, ...context
+}: OwnProps) => {
+  const { clickRichButton } = getActions();
   const { chatId, messageId, threadId } = context;
   const { text } = button;
   const isLink = isInline && button.action.type === 'callback' && button.style?.isLink;
   const icon = !isInline && RICH_BUTTON_ICONS[button.action.type];
-  const keyboardButton = useMemo(() => ({
-    action: button.action, text: getRichTextPlainText(text),
-  }), [button.action, text]);
-  const isDisabled = isButtonUnsupported(button.action)
-    || (isEphemeral && isKeyboardButtonUnsupportedForEphemeral(keyboardButton))
-    || ((!chatId || messageId === undefined) && !['url', 'copy', 'userProfile'].includes(button.action.type));
+  const isDisabled = button.action.type === 'disabled' || !canAuthorButton(button.action);
 
   const handleClick = useLastCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    clickBotInlineButton({ chatId, messageId, threadId, button: keyboardButton });
+    clickRichButton({
+      chatId, messageId, threadId, action: button.action,
+    });
   });
 
   const handleMouseDown = useLastCallback((e: React.MouseEvent<HTMLButtonElement>) => {
@@ -104,10 +90,4 @@ const RichButton = ({
   );
 };
 
-export default memo(withGlobal<OwnProps>((global, { chatId, messageId }): Complete<StateProps> => {
-  const message = chatId && messageId !== undefined
-    ? selectChatMessageOrEphemeral(global, chatId, messageId) : undefined;
-  return {
-    isEphemeral: message?.isEphemeral,
-  };
-})(RichButton));
+export default memo(RichButton);

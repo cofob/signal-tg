@@ -1,5 +1,4 @@
 import { memo, useCallback, useMemo } from '../../../lib/teact/teact';
-import { getActions } from '../../../global';
 
 import type { GlobalState } from '../../../global/types';
 import type { Signal } from '../../../util/signals';
@@ -12,17 +11,14 @@ import { buildCollectionByCallback } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { isSignal } from '../../../util/signals';
 import { formatIntegerCompact } from '../../../util/text/textFormat';
-import { extractCurrentThemeParams } from '../../../util/themeStyle';
 
 import useSelector, { useShallowSelector } from '../../../hooks/data/useSelector';
 import useDerivedState from '../../../hooks/useDerivedState';
 import useLang from '../../../hooks/useLang';
-import useLastCallback from '../../../hooks/useLastCallback';
 import useShowTransitionSwap from '../../../hooks/useShowTransitionSwap';
 
 import AnimatedCounter from '../../common/AnimatedCounter';
 import Icon from '../../common/icons/Icon';
-import Button from '../../ui/Button';
 import ShowTransition from '../../ui/ShowTransition';
 
 import styles from './ChatBadge.module.scss';
@@ -35,7 +31,6 @@ type OwnProps = {
   isMuted?: boolean;
   isSavedDialog?: boolean;
   shouldShowOnlyMostImportant?: boolean;
-  hasMiniApp?: boolean;
   forceHidden?: boolean | Signal<boolean>;
   // Overrides the chat's own read state, e.g. with a community's aggregated count
   forceUnreadCount?: number;
@@ -55,14 +50,11 @@ const ChatBadge = ({
   forceHidden,
   forceUnreadCount,
   isSavedDialog,
-  hasMiniApp,
   isSelected,
   isOnAvatar,
   transitionClassName,
   badgeClassName,
 }: OwnProps) => {
-  const { requestMainWebView } = getActions();
-
   const lang = useLang();
 
   const readStateSelector = useCallback((global: GlobalState) => {
@@ -154,25 +146,14 @@ const ChatBadge = ({
   );
   const isShown = !resolvedForceHidden && Boolean(
     unreadCount || unreadMentionsCount || unreadPollVotesCount || hasUnreadMark || isPinned || unreadReactionsCount
-    || isTopicUnopened || hasMiniApp,
+    || isTopicUnopened,
   );
 
   const contentCategory = (isUnread || unreadMentionsCount || unreadReactionsCount
     || unreadPollVotesCount || isTopicUnopened)
     ? 'active'
-    : (hasMiniApp ? 'miniapp' : (isPinned ? 'pinned' : 'none'));
+    : (isPinned ? 'pinned' : 'none');
   const effectiveIsOpen = useShowTransitionSwap(isShown, contentCategory);
-
-  const handleOpenApp = useLastCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    e.stopPropagation();
-
-    const theme = extractCurrentThemeParams();
-    requestMainWebView({
-      botId: chat.id,
-      peerId: chat.id,
-      theme,
-    });
-  });
 
   function renderContent() {
     const baseClassName = buildClassName(styles.badge, badgeClassName);
@@ -212,18 +193,6 @@ const ChatBadge = ({
       </div>
     );
 
-    const miniAppButton = hasMiniApp && (
-      <Button
-        color={isSelected ? 'secondary' : 'primary'}
-        className={buildClassName(baseClassName, styles.miniapp)}
-        pill
-        size="tiny"
-        onClick={handleOpenApp}
-      >
-        {lang('BotChatMiniAppOpen')}
-      </Button>
-    );
-
     const visiblePinnedElement = !unreadCountElement && !unreadMentionsElement && !unreadReactionsElement
       && !unreadPollVotesElement
       && pinnedElement;
@@ -238,9 +207,6 @@ const ChatBadge = ({
     ].filter(Boolean);
 
     if (isSavedDialog) return pinnedElement;
-
-    // Show only if empty or have pinned icon
-    if (hasMiniApp && (elements.length === 0 || visiblePinnedElement)) return miniAppButton;
 
     if (elements.length === 0) return undefined;
 

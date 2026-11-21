@@ -1,10 +1,8 @@
-import type { ApiBotCommand } from './bots';
 import type {
   ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiInputSuggestedPostInfo, ApiPhoto, ApiStickerSet,
 } from './messages';
 import type { ApiChatInviteImporter, ApiPeerTheme, ApiRestrictionReason, ApiWallpaper } from './misc';
 import type {
-  ApiBotVerification,
   ApiEmojiStatusType,
   ApiFakeType,
   ApiPeerSettings,
@@ -25,15 +23,6 @@ type ApiChatType = (
 );
 
 export type ApiPeer = ApiChat | ApiUser;
-
-export type ApiChatInviteJoinWebView = {
-  type: 'webView';
-  botId: string;
-  url: string;
-  queryId?: string;
-  isFullscreen: boolean;
-  isSameOrigin?: true;
-};
 
 export interface ApiChat {
   id: string;
@@ -62,14 +51,12 @@ export interface ApiChat {
   isForum?: boolean;
   isForumAsMessages?: true;
   isMonoforum?: boolean;
-  isBotForum?: boolean;
   withForumTabs?: boolean;
   withForumSidebar?: boolean;
   linkedMonoforumId?: string;
   linkedCommunityId?: string;
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
-  botVerificationIconId?: string;
   level?: number;
 
   // Calls
@@ -114,7 +101,7 @@ type ApiTypingStatusBase = {
 
 type ApiTypingStatusSimple = ApiTypingStatusBase & {
   type: 'typing' | 'recordVideo' | 'uploadVideo' | 'recordAudio' | 'uploadAudio'
-    | 'uploadPhoto' | 'uploadFile' | 'playingGame' | 'recordRound' | 'uploadRound'
+    | 'uploadPhoto' | 'uploadFile' | 'recordRound' | 'uploadRound'
     | 'chooseSticker' | 'chooseLocation' | 'chooseContact';
 };
 
@@ -162,8 +149,6 @@ export interface ApiChatFullInfo {
     isViaRequest?: boolean;
   };
   linkedChatId?: string;
-  botCommands?: ApiBotCommand[];
-  botIds?: string[];
   enabledReactions?: ApiChatReactions;
   reactionsLimit?: number;
   sendAsId?: string;
@@ -176,9 +161,7 @@ export interface ApiChatFullInfo {
   hasPinnedStories?: boolean;
   hasScheduledMessages?: boolean;
 
-  botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;
-  guardBotId?: string;
   shareTheme?: ApiShareTheme;
 
   // Community
@@ -260,7 +243,6 @@ export interface ApiChatFolder {
   nonContacts?: true;
   groups?: true;
   channels?: true;
-  bots?: true;
   color?: number;
   excludeMuted?: true;
   excludeRead?: true;

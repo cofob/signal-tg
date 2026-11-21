@@ -156,10 +156,8 @@ const ForumPanel = ({
       ).map(({ id }) => id)
       : [];
 
-    if (!chat?.isBotForum) return ids;
-
-    return [MAIN_THREAD_ID, ...ids];
-  }, [chat?.isBotForum, listedTopics, topicsInfo?.orderedPinnedTopicIds, topicsThreads]);
+    return ids;
+  }, [listedTopics, topicsInfo?.orderedPinnedTopicIds, topicsThreads]);
 
   const { orderDiffById, shiftDiff, getAnimationType, onReorderAnimationEnd } = useOrderDiff(orderedIds, 0, chat?.id);
   const loadedListedTopicCount = listedTopicIds?.length ?? 0;

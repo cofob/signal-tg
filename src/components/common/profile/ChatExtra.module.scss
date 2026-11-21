@@ -22,40 +22,12 @@
   color: var(--color-text-secondary);
 }
 
-.phone, .description, .link, .miniapp, .notifications, .note, .savedMessages, .botEmojiStatus,
-.botLocation, .botCamera, .botMicrophone, .subscribers {
+.phone, .description, .link, .notifications, .note, .savedMessages, .subscribers {
   @include mixins.with-vt-type('chatExtra');
 }
 
 .switch {
   margin-inline-start: auto;
-}
-
-.botVerificationSection,
-.sectionInfo {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
-}
-
-.botVerificationSection {
-  padding-inline: 1.25rem;
-
-  @include mixins.with-vt-type('chatExtra');
-}
-
-.botManager {
-  @include mixins.with-vt-type('chatExtra');
-}
-
-.botManagerIcon {
-  margin-inline-end: 0.25rem;
-  vertical-align: -0.125rem;
-}
-
-.botVerificationIcon {
-  --custom-emoji-size: 1rem;
-
-  margin-inline-end: 0.25rem;
 }
 
 .personalChannelSubscribers {
@@ -76,11 +48,6 @@
   :global(.Avatar) {
     margin-right: 0.9375rem !important;
   }
-}
-
-.openAppButton {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 
 .note {

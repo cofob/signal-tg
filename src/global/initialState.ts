@@ -9,7 +9,6 @@ import {
   DEFAULT_PLAYBACK_RATE,
   DEFAULT_VOLUME,
   FOLDERS_POSITION_DEFAULT,
-  INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT,
   IOS_DEFAULT_MESSAGE_TEXT_SIZE_PX,
   MACOS_DEFAULT_MESSAGE_TEXT_SIZE_PX,
   NOTIFICATION_MAX_VOLUME,
@@ -17,7 +16,6 @@ import {
 import { IS_IOS, IS_MAC_OS } from '../util/browser/windowEnvironment';
 import { getDefaultPatternColor } from '../util/wallpaper';
 import { DEFAULT_APP_CONFIG } from '../limits';
-import { INITIAL_BROWSER_STATE } from './helpers/browser';
 
 export const INITIAL_PERFORMANCE_STATE_MAX: PerformanceType = {
   animatedEmoji: true,
@@ -97,14 +95,12 @@ export const INITIAL_SHARED_STATE: SharedState = {
     messageTextSize: IS_IOS
       ? IOS_DEFAULT_MESSAGE_TEXT_SIZE_PX
       : (IS_MAC_OS ? MACOS_DEFAULT_MESSAGE_TEXT_SIZE_PX : DEFAULT_MESSAGE_TEXT_SIZE_PX),
-    instantViewFontSizeAdjust: INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT,
     animationLevel: PREFERS_REDUCED_MOTION ? ANIMATION_LEVEL_MIN : ANIMATION_LEVEL_DEFAULT,
     foldersPosition: FOLDERS_POSITION_DEFAULT,
     messageSendKeyCombo: 'enter',
     keyboardShortcuts: {},
     shouldReplaceTextShortcuts: true,
     performance: PREFERS_REDUCED_MOTION ? INITIAL_PERFORMANCE_STATE_MIN : INITIAL_PERFORMANCE_STATE_MAX,
-    shouldSkipBrowserCloseConfirmation: false,
     language: 'en',
     timeFormat: '24h',
     wasTimeFormatSetManually: false,
@@ -118,9 +114,8 @@ export const INITIAL_SHARED_STATE: SharedState = {
 };
 
 export const INITIAL_GLOBAL_STATE: GlobalState = {
-  cacheVersion: 9,
+  cacheVersion: 10,
   isInited: true,
-  attachMenu: { bots: {} },
   passcode: {},
   twoFaSettings: {},
   isAppUpdateAvailable: false,
@@ -155,10 +150,8 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     byId: {},
     statusesById: {},
     fullInfoById: {},
-    previewMediaByBotId: {},
     commonChatsById: {},
     savedMusicByPeerId: {},
-    botAppPermissionsById: {},
   },
 
   peers: {
@@ -174,7 +167,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     byId: {},
     fullInfoById: {},
     similarChannelsById: {},
-    similarBotsById: {},
     topicsInfoById: {},
     notifyExceptionById: {},
     loadingParameters: {
@@ -321,12 +313,10 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       translationTone: 'neutral',
     },
     privacy: {},
-    botVerificationShownPeerIds: [],
     accountDaysTtl: 365,
   },
 
   serviceNotifications: [],
-  trustedBotIds: [],
 
   transcriptions: {},
   translations: {
@@ -353,13 +343,6 @@ export const INITIAL_TAB_STATE: TabState = {
   messageLists: [],
   activeChatFolder: 0,
   tabThreads: {},
-
-  inlineBots: {
-    isLoading: false,
-    byUsername: {},
-  },
-
-  browser: INITIAL_BROWSER_STATE,
 
   globalSearch: {},
 
@@ -405,8 +388,6 @@ export const INITIAL_TAB_STATE: TabState = {
   },
 
   isShareMessageModalShown: false,
-
-  isBrowserCloseConfirmationModalOpen: false,
 
   forwardMessages: {},
 

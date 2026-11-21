@@ -3,7 +3,6 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type {
   ApiAudio,
   ApiBirthday,
-  ApiBotApp,
   ApiChatAdminRights,
   ApiChatBannedRights,
   ApiChatFolder,
@@ -31,7 +30,6 @@ import type {
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
-  ApiThemeParameters,
   ApiTypeCurrencyAmount,
   ApiVideo,
   MediaContent,
@@ -378,7 +376,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     nonContacts,
     groups,
     channels,
-    bots,
     color,
     excludeArchived,
     excludeMuted,
@@ -421,7 +418,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     contacts: contacts || undefined,
     nonContacts: nonContacts || undefined,
     groups: groups || undefined,
-    bots: bots || undefined,
     color,
     excludeArchived: excludeArchived || undefined,
     excludeMuted: excludeMuted || undefined,
@@ -651,16 +647,8 @@ export function buildSendMessageAction(action: ApiSendMessageAction) {
       return new GramJs.SendMessageRecordRoundAction();
     case 'chooseSticker':
       return new GramJs.SendMessageChooseStickerAction();
-    case 'playingGame':
-      return new GramJs.SendMessageGamePlayAction();
   }
   return undefined;
-}
-
-export function buildInputThemeParams(params: ApiThemeParameters) {
-  return new GramJs.DataJSON({
-    data: JSON.stringify(params),
-  });
 }
 
 export function buildMtpPeerId(id: string, type: 'user' | 'chat' | 'channel') {
@@ -759,13 +747,6 @@ export function buildInputTextWithEntities(formatted: ApiFormattedText) {
   });
 }
 
-export function buildInputBotApp(app: ApiBotApp) {
-  return new GramJs.InputBotAppID({
-    id: BigInt(app.id),
-    accessHash: BigInt(app.accessHash),
-  });
-}
-
 export function buildInputReplyTo(replyInfo: ApiInputReplyInfo) {
   if (replyInfo.type === 'story') {
     return new GramJs.InputReplyToStory({
@@ -856,14 +837,6 @@ export function buildInputPrivacyRules(
   }
   if (rules.shouldAllowPremium) {
     privacyRules.push(new GramJs.InputPrivacyValueAllowPremium());
-  }
-
-  if (rules.botsPrivacy === 'allow') {
-    privacyRules.push(new GramJs.InputPrivacyValueAllowBots());
-  }
-
-  if (rules.botsPrivacy === 'disallow') {
-    privacyRules.push(new GramJs.InputPrivacyValueDisallowBots());
   }
 
   if (!rules.isUnspecified) {

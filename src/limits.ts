@@ -35,7 +35,6 @@ export const LIMITS = {
   maxReactions: 1,
   moreAccounts: 3,
   aiComposeToneSaved: 5,
-  botsCreate: 20,
 } as const satisfies Record<ApiLimitType, number>;
 
 // The "All chats" folder does not count toward `LIMITS.dialogFilters`
@@ -91,11 +90,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   bandwidthPremiumDownloadSpeedup: 10,
   bandwidthPremiumNotifyPeriod: 3600,
   bandwidthPremiumUploadSpeedup: 10,
-  urlAuthDomains: [],
-  webAppAllowedProtocols: [
-    'http',
-    'https',
-  ],
   whitelistedDomains: [],
   typingDraftTtl: 10,
   isMessagePrimaryEditedDateEnabled: false,

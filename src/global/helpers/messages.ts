@@ -28,7 +28,6 @@ import {
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
-  VERIFICATION_CODES_USER_ID,
   VIDEO_STICKER_MIME_TYPE,
   WEB_APP_PLATFORM,
 } from '../../config';
@@ -97,14 +96,14 @@ export function getMessageTranscription(message: ApiMessage) {
 export function hasMessageText(message: MediaContainer) {
   const {
     action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
-    webPage, contact, location, game, storyData,
+    webPage, contact, location, storyData,
   } = message.content;
 
   if (pollId) return false;
 
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
-    || location || game || storyData || dice
+    || location || storyData || dice
     || action?.type === 'phoneCall'
   );
 }
@@ -215,14 +214,14 @@ export function getMessageCustomShape(message: ApiMessage): boolean {
   const {
     text, sticker, photo, video, audio, voice,
     document, pollId, webPage, contact, action,
-    game, location, storyData, dice,
+    location, storyData, dice,
   } = message.content;
 
   if (sticker || (video?.isRound) || dice) {
     return true;
   }
 
-  if (!text || photo || video || audio || voice || document || pollId || webPage || contact || action || game
+  if (!text || photo || video || audio || voice || document || pollId || webPage || contact || action
     || location || storyData) {
     return false;
   }
@@ -345,10 +344,6 @@ export function isMessageFailed(message: ApiMessage) {
   return message.sendingState === 'messageSendingStateFailed';
 }
 
-export function isHistoryClearMessage(message: ApiMessage) {
-  return message.content.action && message.content.action.type === 'historyClear';
-}
-
 export function isGeoLiveExpired(message: ApiMessage) {
   const { location } = message.content;
   if (location?.mediaType !== 'geoLive') return false;
@@ -356,7 +351,7 @@ export function isGeoLiveExpired(message: ApiMessage) {
 }
 
 export function isMessageTranslatable(message: ApiMessage, allowOutgoing?: boolean) {
-  const { text, game, richMessage } = message.content;
+  const { text, richMessage } = message.content;
 
   const isLocal = isMessageLocal(message);
   const isServiceNotification = isServiceNotificationMessage(message);
@@ -366,14 +361,8 @@ export function isMessageTranslatable(message: ApiMessage, allowOutgoing?: boole
     (richMessage && getRichMessageUsage(richMessage).textLength) || (text?.text.length && !text.emojiOnlyCount),
   );
 
-  return Boolean(hasTranslatableContent && !game && (allowOutgoing || !message.isOutgoing)
+  return Boolean(hasTranslatableContent && (allowOutgoing || !message.isOutgoing)
     && !isLocal && !isServiceNotification && !isAction && !message.isScheduled && !message.isEphemeral);
-}
-
-export function getMessageSingleInlineButton(message: ApiMessage) {
-  return message.inlineButtons?.length === 1
-    && message.inlineButtons[0].length === 1
-    && message.inlineButtons[0][0];
 }
 
 export function orderHistoryIds(listedIds: number[]) {
@@ -441,27 +430,6 @@ export function extractMessageText(message: ApiMessage | ApiStory, inChatList = 
           },
         ];
         entities.sort((a, b) => (a.offset > b.offset ? 1 : -1));
-      }
-    }
-
-    if (inChatList && message.chatId === VERIFICATION_CODES_USER_ID && entities) {
-      // Wrap code entities in spoiler
-      const hasCodeEntities = entities.some((entity) => entity.type === ApiMessageEntityTypes.Code);
-      if (hasCodeEntities) {
-        const oldEntities = entities;
-        entities = [];
-
-        for (let i = 0; i < oldEntities.length; i++) {
-          const entity = oldEntities[i];
-          if (entity.type === ApiMessageEntityTypes.Code) {
-            entities.push({
-              type: ApiMessageEntityTypes.Spoiler,
-              offset: entity.offset,
-              length: entity.length,
-            });
-          }
-          entities.push(entity);
-        }
       }
     }
   }

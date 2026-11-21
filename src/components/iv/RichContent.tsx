@@ -106,7 +106,6 @@ type OwnProps = {
   theme: ThemeKey;
   fontSizeAdjust?: number;
   pageUrl?: string;
-  webPageId?: string;
   chatId?: string;
   messageId?: number;
   threadId?: ThreadId;
@@ -146,7 +145,6 @@ const RichContent = ({
   theme,
   fontSizeAdjust,
   pageUrl,
-  webPageId,
   chatId,
   messageId,
   threadId,
@@ -201,13 +199,11 @@ const RichContent = ({
         itemsById.set(documentId, {
           type: 'message', chatId, threadId: threadId ?? MAIN_THREAD_ID, messageId, documentId,
         });
-      } else if (webPageId) {
-        itemsById.set(documentId, { type: 'instantView', webPageId, documentId });
       }
     });
 
     return itemsById;
-  }, [blocks, chatId, messageId, threadId, webPageId]);
+  }, [blocks, chatId, messageId, threadId]);
 
   const richTextContext: RichTextContext = {
     unsupportedText,
@@ -236,8 +232,6 @@ const RichContent = ({
 
     openUrl({
       url: block.url,
-      tryInstant: true,
-      previewId: block.webPageId,
       linkContext: getLinkContext(chatId, messageId, threadId),
     });
 
@@ -877,8 +871,6 @@ function renderRelatedArticle(
       chatId={context.richTextContext.chatId}
       messageId={context.richTextContext.messageId}
       threadId={context.richTextContext.threadId}
-      previewId={article.webPageId}
-      tryInstantView
     >
       <span className={styles.relatedArticleContent}>
         <span className={styles.relatedArticleTitle}>{renderText(title)}</span>

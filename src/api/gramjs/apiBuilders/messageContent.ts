@@ -5,7 +5,6 @@ import type {
   ApiContact,
   ApiDice,
   ApiFormattedText,
-  ApiGame,
   ApiLocation,
   ApiMediaTodo,
   ApiMessagePoll,
@@ -20,7 +19,6 @@ import type {
   ApiTodoItem,
   ApiVideo,
   ApiVoice,
-  ApiWebDocument,
   ApiWebPage,
   ApiWebPageStickerData,
   ApiWebPageStoryData,
@@ -28,7 +26,6 @@ import type {
 } from '../../types';
 import type { UniversalMessage } from './messages';
 
-import { buildPageAudioById } from '../../../global/helpers/buildPageAudioById';
 import { addTimestampEntities } from '../../../util/dates/timestamp';
 import { buildCollectionByKey, pick } from '../../../util/iteratees';
 import {
@@ -41,7 +38,6 @@ import {
   buildApiPhoto,
 } from './common';
 import {
-  buildApiInstantViewPage,
   buildApiPageBlock,
   buildApiPageMediaContext,
 } from './instantView';
@@ -199,9 +195,6 @@ export function buildMessageMediaContent(
   const location = buildLocationFromMedia(media);
   if (location) return { location };
 
-  const game = buildGameFromMedia(media);
-  if (game) return { game };
-
   const dice = buildDiceFromMedia(media);
   if (dice) return { dice };
 
@@ -239,7 +232,7 @@ export function buildVideoFromDocument(document: GramJs.Document, altDocuments?:
   return buildApiVideoFromDocument(document, altDocuments, params);
 }
 
-export function buildAudioFromDocument(document: GramJs.Document): ApiAudio | undefined {
+function buildAudioFromDocument(document: GramJs.Document): ApiAudio | undefined {
   return buildApiAudioFromDocument(document, true);
 }
 
@@ -431,34 +424,6 @@ export function buildGeoPoint(geo: GramJs.TypeGeoPoint): ApiLocation['geo'] | un
     lat,
     accessHash: accessHash.toString(),
     accuracyRadius,
-  };
-}
-
-function buildGameFromMedia(media: GramJs.TypeMessageMedia): ApiGame | undefined {
-  if (!(media instanceof GramJs.MessageMediaGame)) {
-    return undefined;
-  }
-
-  return buildGame(media);
-}
-
-function buildGame(media: GramJs.MessageMediaGame): ApiGame | undefined {
-  const {
-    id, accessHash, shortName, title, description, photo: apiPhoto, document: apiDocument,
-  } = media.game;
-
-  const photo = apiPhoto instanceof GramJs.Photo ? buildApiPhoto(apiPhoto) : undefined;
-  const document = apiDocument instanceof GramJs.Document ? buildApiDocument(apiDocument) : undefined;
-
-  return {
-    mediaType: 'game',
-    id: id.toString(),
-    accessHash: accessHash.toString(),
-    shortName,
-    title,
-    description,
-    photo,
-    document,
   };
 }
 
@@ -679,7 +644,7 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
 
   if (webPage instanceof GramJs.WebPage) {
     const {
-      id, photo, document, attributes, cachedPage,
+      id, photo, document, attributes,
     } = webPage;
 
     const video = document instanceof GramJs.Document
@@ -713,9 +678,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       };
     }
 
-    const builtCachedPage = cachedPage instanceof GramJs.Page
-      ? buildApiInstantViewPage(cachedPage, webPage) : undefined;
-
     const attributeAiTone = attributes?.find((a): a is GramJs.WebPageAttributeAiComposeTone => (
       a instanceof GramJs.WebPageAttributeAiComposeTone
     ));
@@ -741,33 +703,9 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       audio,
       story,
       stickers,
-      cachedPage: builtCachedPage,
-      cachedPageAudioById: builtCachedPage ? buildPageAudioById(builtCachedPage) : undefined,
       aiComposeToneEmojiId: attributeAiTone?.emojiId.toString(),
     };
   }
 
   return undefined;
-}
-
-export function buildApiWebDocument(document?: GramJs.TypeWebDocument): ApiWebDocument | undefined {
-  if (!document) return undefined;
-
-  const {
-    url, size, mimeType,
-  } = document;
-  const accessHash = document instanceof GramJs.WebDocument ? document.accessHash.toString() : undefined;
-  const sizeAttr = document.attributes.find((attr): attr is GramJs.DocumentAttributeImageSize => (
-    attr instanceof GramJs.DocumentAttributeImageSize
-  ));
-  const dimensions = sizeAttr && { width: sizeAttr.w, height: sizeAttr.h };
-
-  return {
-    mediaType: 'webDocument',
-    url,
-    accessHash,
-    size,
-    mimeType,
-    dimensions,
-  };
 }

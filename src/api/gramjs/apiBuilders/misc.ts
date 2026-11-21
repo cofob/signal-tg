@@ -16,7 +16,6 @@ import type {
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiThemeSettings,
-  ApiUrlAuthResult,
   ApiWallpaper,
   ApiWallpaperSettings,
   ApiWebSession,
@@ -25,12 +24,11 @@ import type {
 
 import int2hex from '../../../util/int2hex';
 import { omitUndefined, pick } from '../../../util/iteratees';
-import { addDocumentToLocalDb, addUserToLocalDb } from '../helpers/localDb';
+import { addDocumentToLocalDb } from '../helpers/localDb';
 import { buildApiFormattedText } from './common';
 import { buildApiDocument } from './messageContent';
 import { buildApiPeerId } from './peers';
 import { buildApiReaction } from './reactions';
-import { buildApiUser } from './users';
 
 const PATTERN_MIME_TYPE = 'application/x-tgwallpattern';
 
@@ -252,50 +250,6 @@ export function buildJson(json: GramJs.TypeJSONValue): any {
     acc[el.key] = buildJson(el.value);
     return acc;
   }, {});
-}
-
-export function buildApiUrlAuthResult(result: GramJs.TypeUrlAuthResult): ApiUrlAuthResult | undefined {
-  if (result instanceof GramJs.UrlAuthResultRequest) {
-    const {
-      bot, domain, requestWriteAccess, requestPhoneNumber, browser, platform, ip, region, matchCodes,
-      matchCodesFirst, userIdHint, isApp, verifiedAppName,
-    } = result;
-    const user = buildApiUser(bot);
-    if (!user) return undefined;
-
-    addUserToLocalDb(bot);
-
-    return {
-      type: 'request',
-      domain,
-      isApp,
-      shouldRequestWriteAccess: requestWriteAccess,
-      bot: user,
-      shouldRequestPhoneNumber: requestPhoneNumber,
-      browser,
-      platform,
-      ip,
-      region,
-      matchCodes,
-      matchCodesFirst,
-      userIdHint: userIdHint?.toString(),
-      verifiedAppName,
-    };
-  }
-
-  if (result instanceof GramJs.UrlAuthResultAccepted) {
-    return {
-      type: 'accepted',
-      url: result.url,
-    };
-  }
-
-  if (result instanceof GramJs.UrlAuthResultDefault) {
-    return {
-      type: 'default',
-    };
-  }
-  return undefined;
 }
 
 export function buildApiConfig(config: GramJs.Config): ApiConfig {

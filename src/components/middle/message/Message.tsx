@@ -45,7 +45,7 @@ import type {
 import type { Signal } from '../../../util/signals';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import { EMOJI_STATUS_LOOP_LIMIT, MESSAGE_APPEARANCE_DELAY } from '../../../config';
+import { EMOJI_STATUS_LOOP_LIMIT, MESSAGE_APPEARANCE_DELAY, REPLIES_USER_ID } from '../../../config';
 import {
   areReactionsEmpty,
   extractMessageText,
@@ -73,9 +73,8 @@ import {
   isMessageUnsupported,
   isOwnMessage,
   isReplyToMessage,
-  isSystemBot,
 } from '../../../global/helpers';
-import { getPeerFullTitle, getPeerTitle } from '../../../global/helpers/peers';
+import { getPeerFullTitle } from '../../../global/helpers/peers';
 import { getEphemeralReplyInfo, getMessageReplyInfo, getStoryReplyInfo } from '../../../global/helpers/replies';
 import {
   selectActiveDownloads,
@@ -94,7 +93,6 @@ import {
   selectForwardedSender,
   selectFullWebPageFromMessage,
   selectIsChatRestricted,
-  selectIsChatWithBot,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
@@ -194,7 +192,6 @@ import Contact from './Contact';
 import ContextMenuContainer from './ContextMenuContainer.async';
 import DiceWrapper from './dice/DiceWrapper';
 import FactCheck from './FactCheck';
-import Game from './Game';
 import InlineButtons from './InlineButtons';
 import Location from './Location';
 import MessageAppendix from './MessageAppendix';
@@ -253,7 +250,6 @@ type StateProps = {
   sender?: ApiPeer;
   canShowSender: boolean;
   originSender?: ApiPeer;
-  botSender?: ApiUser;
   ephemeralBot?: ApiUser;
   shouldHideReply?: boolean;
   replyMessage?: ApiMessage;
@@ -279,7 +275,6 @@ type StateProps = {
   isResizingContainer?: boolean;
   isForwarding?: boolean;
   isChatWithSelf?: boolean;
-  isBotForum?: boolean;
   isRepliesChat?: boolean;
   isAnonymousForwards?: boolean;
   isChannel?: boolean;
@@ -327,7 +322,6 @@ type StateProps = {
   shouldWarnAboutFiles?: boolean;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   canTranscribeVoice?: boolean;
-  guestFromSender?: ApiPeer;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
   maxTimestamp?: number;
@@ -381,7 +375,6 @@ const Message = ({
   sender,
   canShowSender,
   originSender,
-  botSender,
   ephemeralBot,
   isThreadTop,
   shouldHideReply,
@@ -409,7 +402,6 @@ const Message = ({
   isResizingContainer,
   isForwarding,
   isChatWithSelf,
-  isBotForum,
   isRepliesChat,
   isAnonymousForwards,
   isChannel,
@@ -457,7 +449,6 @@ const Message = ({
   shouldWarnAboutFiles,
   tags,
   canTranscribeVoice,
-  guestFromSender,
   poll,
   maxTimestamp,
   lastPlaybackTimestamp,
@@ -478,7 +469,6 @@ const Message = ({
 }: OwnProps & StateProps) => {
   const {
     toggleMessageSelection,
-    clickBotInlineButton,
     clickSuggestedMessageButton,
     rejectSuggestedPost,
     openSuggestedPostApprovalModal,
@@ -489,7 +479,6 @@ const Message = ({
     markMessageListRead,
     markMentionsRead,
     markPollVotesRead,
-    openThread,
     summarizeMessage,
   } = getActions();
 
@@ -499,7 +488,7 @@ const Message = ({
 
   const lang = useLang();
   const {
-    id: messageId, chatId, forwardInfo, viaBotId, guestChatViaId, isTranscriptionError, factCheck,
+    id: messageId, chatId, forwardInfo, isTranscriptionError, factCheck,
     isTypingDraft, previousLocalId, fromRank,
   } = message;
 
@@ -592,7 +581,7 @@ const Message = ({
     photo, video, audio,
     voice, document, sticker, contact,
     location,
-    action, game, storyData, todo, dice,
+    action, storyData, todo, dice,
   } = getMessageContent(message);
 
   const withVoiceTranscription = Boolean(!isTranscriptionHidden && (isTranscriptionError || transcribedText));
@@ -603,7 +592,6 @@ const Message = ({
   const isCustomShape = !withVoiceTranscription && getMessageCustomShape(message);
   const hasAnimatedEmoji = isCustomShape && (animatedEmoji || animatedCustomEmoji);
   const hasReactions = reactionMessage?.reactions && !areReactionsEmpty(reactionMessage.reactions);
-  const hasViaSender = Boolean(viaBotId || guestChatViaId);
 
   const asForwarded = (
     forwardInfo
@@ -611,7 +599,6 @@ const Message = ({
     && !isRepliesChat
     && !forwardInfo.isLinkedChannelPost
     && !isAnonymousForwards
-    && !hasViaSender
   ) || Boolean(storyData && !storyData.isMention);
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
@@ -692,8 +679,6 @@ const Message = ({
 
   const {
     handleSenderClick,
-    handleViaBotClick,
-    handleGuestForClick,
     handleReplyClick,
     handleMediaClick,
     handleDocumentClick,
@@ -724,8 +709,6 @@ const Message = ({
     album,
     avatarPeer,
     senderPeer,
-    botSender,
-    guestFromSender,
     isTranslatingChat: Boolean(requestedChatTranslationLanguage),
     story: replyStory && 'content' in replyStory ? replyStory : undefined,
     isReplyPrivate,
@@ -805,12 +788,10 @@ const Message = ({
     isSelected && 'is-selected',
     isInSelectMode && 'is-in-selection-mode',
     isThreadTop && !withAvatar && 'is-thread-top',
-    Boolean(message.inlineButtons) && 'has-inline-buttons',
     isSwiped && 'is-swiped',
     isJustAdded && 'is-just-added',
     (hasActiveReactions || shouldPlayEffect) && 'has-active-effect',
     isStoryMention && 'is-story-mention',
-    guestChatViaId && 'has-guest-avatar',
   );
 
   const text = textMessage && getMessageContent(textMessage).text;
@@ -1437,13 +1418,6 @@ const Message = ({
         {todo && (
           <TodoList message={message} todoList={todo} />
         )}
-        {game && (
-          <Game
-            message={message}
-            threadId={threadId}
-            canAutoLoadMedia={canAutoLoadMedia}
-          />
-        )}
         {dice && (
           <DiceWrapper
             canSendDice={canSendStickers}
@@ -1635,9 +1609,8 @@ const Message = ({
 
   function shouldRenderSenderName() {
     const media = photo || video || location;
-    return !(isCustomShape && !hasViaSender) && (
-      (withSenderName && !media) || asForwarded || viaBotId
-      || (guestChatViaId && isFirstInGroup) || forceSenderName
+    return !isCustomShape && (
+      (withSenderName && !media) || asForwarded || forceSenderName
     ) && !isInDocumentGroupNotFirst && !(hasMessageReply && isCustomShape);
   }
 
@@ -1656,24 +1629,7 @@ const Message = ({
     );
   }
 
-  const handleInlineButtonClick = useLastCallback((button: ApiKeyboardButton) => {
-    clickBotInlineButton({
-      chatId,
-      messageId: message.id,
-      threadId,
-      button,
-    });
-  });
-
   const handleLocalInlineButtonClick = useLastCallback((button: ApiKeyboardButton) => {
-    if (button.action.type === 'openThread') {
-      openThread({
-        chatId,
-        threadId: messageTopic!.id,
-      });
-      return;
-    }
-
     if (button.action.type === 'suggestedMessage') {
       if (button.action.buttonType === 'approve') {
         openSuggestedPostApprovalModal({
@@ -1715,7 +1671,7 @@ const Message = ({
     shouldSkipRenderForwardTitle: boolean = false, shouldSkipRenderAdminTitle: boolean = false,
   ) {
     let senderTitle;
-    if (senderPeer && !(isCustomShape && hasViaSender)) {
+    if (senderPeer) {
       senderTitle = getPeerFullTitle(lang, senderPeer);
     } else if (forwardInfo?.hiddenUserName) {
       senderTitle = forwardInfo.hiddenUserName;
@@ -1724,7 +1680,6 @@ const Message = ({
     }
     const senderEmojiStatus = senderPeer && 'emojiStatus' in senderPeer && senderPeer.emojiStatus;
     const senderIsPremium = senderPeer && 'isPremium' in senderPeer && senderPeer.isPremium;
-    const guestFromSenderTitle = guestFromSender ? getPeerTitle(lang, guestFromSender) : undefined;
 
     const shouldRenderForwardAvatar = asForwarded && senderPeer;
     const adminTitle = (!shouldSkipRenderAdminTitle && !signature) ? (forwardInfo?.isLinkedChannelPost ? (
@@ -1782,31 +1737,7 @@ const Message = ({
               {senderPeer?.fakeType && <FakeIcon fakeType={senderPeer.fakeType} />}
             </span>
           </span>
-        ) : (!botSender && !guestFromSender) ? (
-          NBSP
-        ) : undefined}
-        {botSender?.hasUsername && (
-          <span className="interactive via-sender">
-            <span className="via">{lang('ViaBot')}</span>
-            <span
-              className="sender-title"
-              onClick={handleViaBotClick}
-            >
-              {renderText(`@${getMainUsername(botSender)}`)}
-            </span>
-          </span>
-        )}
-        {guestFromSenderTitle && (
-          <span className="interactive via-sender">
-            <span className="via">{lang('ForBot')}</span>
-            <span
-              className="sender-title"
-              onClick={handleGuestForClick}
-            >
-              {renderText(guestFromSenderTitle)}
-            </span>
-          </span>
-        )}
+        ) : NBSP}
         <div className="title-spacer" />
         {adminTitle && (
           <span className="message-title-meta">
@@ -1849,20 +1780,7 @@ const Message = ({
     ];
   }, [isSuggestedPostExpired, lang, shouldRenderSuggestedPostButtons]);
 
-  const openThreadButtons: ApiKeyboardButton[][] | undefined = useMemo(() => {
-    if (!isBotForum || message.inlineButtons || !messageTopic || !isLastInList ||
-      threadId !== MAIN_THREAD_ID
-    ) return undefined;
-
-    return [
-      [{
-        action: { type: 'openThread' },
-        text: lang('BotForumContinueThreadButton'),
-      }],
-    ];
-  }, [isBotForum, lang, message.inlineButtons, messageTopic, isLastInList, threadId]);
-
-  const additionalInlineButtons = suggestedPostButtons || openThreadButtons;
+  const additionalInlineButtons = suggestedPostButtons;
 
   return (
     <div
@@ -1988,17 +1906,9 @@ const Message = ({
           {withAppendix && <MessageAppendix isOwn={isOwn} />}
           {withQuickReactionButton && quickReactionPosition === 'in-content' && renderQuickReactionButton()}
         </div>
-        {message.inlineButtons && (
-          <InlineButtons
-            inlineButtons={message.inlineButtons}
-            isEphemeral={message.isEphemeral}
-            onClick={handleInlineButtonClick}
-          />
-        )}
         {additionalInlineButtons && (
           <InlineButtons
             inlineButtons={additionalInlineButtons}
-            isEphemeral={message.isEphemeral}
             onClick={handleLocalInlineButtonClick}
           />
         )}
@@ -2067,7 +1977,7 @@ export default memo(withGlobal<OwnProps>(
       isLastInDocumentGroup, shouldIgnoreSendFocus,
     } = ownProps;
     const {
-      id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
+      id, chatId, isOutgoing, forwardInfo, transcriptionId, isPinned,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2077,8 +1987,7 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = selectChat(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const isChatWithBot = selectIsChatWithBot(global, chatId);
-    const isSystemBotChat = isSystemBot(chatId);
+    const isRepliesChat = chatId === REPLIES_USER_ID;
     const isAnonymousForwards = isAnonymousForwardsChat(chatId);
     const isChannel = chat && isChatChannel(chat);
     const isGroup = chat && isChatGroup(chat);
@@ -2094,9 +2003,7 @@ export default memo(withGlobal<OwnProps>(
     const canShowSender = withSenderName || withAvatar || forceSenderName;
     const sender = selectSender(global, message);
     const originSender = selectForwardedSender(global, message);
-    const botSender = viaBotId ? selectUser(global, viaBotId) : undefined;
     const ephemeralBot = message.ephemeralBotId ? selectUser(global, message.ephemeralBotId) : undefined;
-    const guestFromSender = guestChatViaId ? selectPeer(global, guestChatViaId) : undefined;
     const senderChatMember = sender?.id
       ? (adminMembersById?.[sender?.id] || members?.find((member) => member.userId === sender?.id))
       : undefined;
@@ -2111,11 +2018,11 @@ export default memo(withGlobal<OwnProps>(
     const replyMessage = selectReplyMessage(global, message);
     const forwardHeader = forwardInfo || replyFrom;
     const replyMessageSender = replyMessage ? selectSender(global, replyMessage)
-      : forwardHeader && !isSystemBotChat && !isAnonymousForwards
+      : forwardHeader && !isRepliesChat && !isAnonymousForwards
         ? selectSenderFromHeader(global, forwardHeader) : undefined;
     const replyMessageForwardSender = replyMessage && selectForwardedSender(global, replyMessage);
     const replyMessageChat = replyToPeerId ? selectChat(global, replyToPeerId) : undefined;
-    const isReplyPrivate = !isSystemBotChat && !isAnonymousForwards && replyMessageChat
+    const isReplyPrivate = !isRepliesChat && !isAnonymousForwards && replyMessageChat
       && !isChatPublic(replyMessageChat)
       && (replyMessageChat.isNotJoined || selectIsChatRestricted(global, replyMessageChat.id));
     const isReplyToTopicStart = replyMessage?.content.action?.type === 'topicCreate';
@@ -2216,7 +2123,7 @@ export default memo(withGlobal<OwnProps>(
     const summary = !message.isEphemeral
       ? selectMessageSummary(global, chatId, message.id, requestedTranslationLanguage) : undefined;
 
-    const allowedAttachmentOptions = getAllowedAttachmentOptions(chat, isChatWithBot);
+    const allowedAttachmentOptions = getAllowedAttachmentOptions(chat);
 
     return {
       theme: selectTheme(global),
@@ -2224,9 +2131,7 @@ export default memo(withGlobal<OwnProps>(
       sender,
       canShowSender,
       originSender,
-      botSender,
       ephemeralBot,
-      guestFromSender,
       shouldHideReply: shouldHideReply || isReplyToTopicStart,
       replyMessage,
       replyMessageSender,
@@ -2244,8 +2149,7 @@ export default memo(withGlobal<OwnProps>(
       isForwarding,
       reactionMessage,
       isChatWithSelf,
-      isBotForum: chat?.isBotForum,
-      isRepliesChat: isSystemBotChat,
+      isRepliesChat,
       isAnonymousForwards,
       isChannel,
       isGroup,

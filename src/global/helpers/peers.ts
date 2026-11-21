@@ -82,10 +82,6 @@ export function getPeerTypeKey(peer: ApiPeer): RegularLangKey | undefined {
     return 'SupportStatus';
   }
 
-  if (peer.type && peer.type === 'userTypeBot') {
-    return 'Bot';
-  }
-
   if (peer.isContact) {
     return 'ChatListPeerTypeContact';
   }
@@ -110,10 +106,8 @@ export function getPeerFullTitle(lang: LangFn, peer: ApiPeer | CustomPeer) {
 }
 
 export function getMessageSenderName(lang: LangFn, chatId: string, sender: ApiPeer) {
-  const isSenderUser = isApiPeerUser(sender);
-  const isSenderGuestBot = isSenderUser && sender.isGuestChatBot;
   // Hide sender name for private chats
-  if (isUserId(chatId) && !isSenderGuestBot) return undefined;
+  if (isUserId(chatId)) return undefined;
 
   if (isApiPeerChat(sender)) {
     if (chatId === sender.id) return undefined;

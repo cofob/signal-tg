@@ -3,7 +3,6 @@ import type { IconName } from '../../types/icons';
 import type { MediaEditState, VideoProcessingParams, VideoQualityLevel } from '../../types/mediaEditor';
 import type { AdvancedLangFnParameters, RegularLangFnParameters } from '../../util/localization';
 import type {
-  ApiContact,
   ApiDocument,
   ApiFormattedText,
   ApiMessageEntity,
@@ -12,8 +11,6 @@ import type {
   ApiSticker,
   ApiVideo,
 } from './messages';
-import type { ApiBotVerification } from './peers';
-import type { ApiUser } from './users';
 
 export interface ApiInitialArgs {
   userAgent: string;
@@ -238,18 +235,13 @@ export type ApiDialogMessage = {
   text: ApiFormattedText;
 };
 
-export type ApiDialogContact = {
-  type: 'contact';
-  contact: ApiContact;
-};
-
 export type ApiDialogLocalizedMessage = {
   type: 'localized';
   title?: RegularLangFnParameters;
   text: AdvancedLangFnParameters;
 };
 
-export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogContact | ApiDialogLocalizedMessage;
+export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogLocalizedMessage;
 
 export type ApiError = {
   message: string;
@@ -290,7 +282,6 @@ export type ApiChatInviteInfo = {
   color: number;
   isBroadcast?: boolean;
   isRequestNeeded?: boolean;
-  botVerification?: ApiBotVerification;
 };
 
 export type ApiChatInviteImporter = {
@@ -321,9 +312,7 @@ export interface ApiAppConfig {
   seenByExpiresAt: number;
   readDateExpiresAt: number;
   autologinDomains: string[];
-  urlAuthDomains: string[];
   whitelistedDomains: string[];
-  webAppAllowedProtocols: string[];
   premiumBotUsername: string;
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
@@ -375,13 +364,11 @@ export interface ApiAppConfig {
   ignoreRestrictionReasons?: string[];
   needAgeVideoVerification?: boolean;
   verifyAgeBotUsername?: string;
-  musicSearchUsername?: string;
   verifyAgeCountry?: string;
   verifyAgeMin?: number;
   typingDraftTtl: number;
   isMessagePrimaryEditedDateEnabled: boolean;
   contactNoteLimit?: number;
-  whitelistedBotIds?: string[];
   arePasskeysAvailable: boolean;
   passkeysMaxCount: number;
   diceEmojies: string[];
@@ -392,7 +379,6 @@ export interface ApiAppConfig {
   aiComposeToneExamplesNum?: number;
   aiComposeToneTitleLengthMax?: number;
   aiComposeTonePromptLengthMax?: number;
-  botAllowedSuffixes?: string[];
 }
 
 export interface ApiConfig {
@@ -408,7 +394,7 @@ export interface ApiConfig {
   ratingEDecay: number;
 }
 
-export type ApiTopPeerCategory = 'correspondents' | 'botsInline' | 'botsApp' | 'botsGuestChat';
+export type ApiTopPeerCategory = 'correspondents';
 
 export type ApiTopPeer = {
   peerId: string;
@@ -451,42 +437,6 @@ export interface ApiEmojiInteraction {
   timestamps: number[];
 }
 
-export type ApiUrlAuthResultRequest = {
-  type: 'request';
-  bot: ApiUser;
-  domain: string;
-  isApp?: boolean;
-  shouldRequestWriteAccess?: boolean;
-  shouldRequestPhoneNumber?: boolean;
-  browser?: string;
-  platform?: string;
-  ip?: string;
-  region?: string;
-  matchCodes?: string[];
-  matchCodesFirst?: boolean;
-  userIdHint?: string;
-  verifiedAppName?: string;
-};
-
-type ApiUrlAuthResultAccepted = {
-  type: 'accepted';
-  url?: string;
-};
-
-type ApiUrlAuthResultExpired = {
-  type: 'expired';
-};
-
-type ApiUrlAuthResultDefault = {
-  type: 'default';
-};
-
-export type ApiUrlAuthResult =
-  ApiUrlAuthResultRequest
-  | ApiUrlAuthResultAccepted
-  | ApiUrlAuthResultExpired
-  | ApiUrlAuthResultDefault;
-
 export type ApiLimitType =
   | 'uploadMaxFileparts'
   | 'stickersFaved'
@@ -504,13 +454,12 @@ export type ApiLimitType =
   | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts'
-  | 'aiComposeToneSaved'
-  | 'botsCreate';
+  | 'aiComposeToneSaved';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
   'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
-  | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
+  | 'maxReactions' | 'aiComposeToneSaved'
 )>;
 
 export type ApiPeerNotifySettings = {

@@ -1,10 +1,8 @@
 import type {
   ApiAiComposeToneType,
   ApiAppConfig,
-  ApiAttachBot,
   ApiAudio,
   ApiAvailableReaction,
-  ApiBotPreviewMedia,
   ApiChat,
   ApiChatFolder,
   ApiChatFullInfo,
@@ -56,14 +54,12 @@ import type {
 import type {
   AccountSettings,
   AttachmentCompression,
-  BotAppPermissions,
   ChatListType,
   ChatTranslatedMessages,
   EmojiKeywords,
   OrderMode,
   RepeatMode,
   ServiceNotification,
-  SimilarBotsInfo,
   TextSummary,
   Thread,
   ThreadId,
@@ -102,7 +98,6 @@ export type GlobalState = {
   lastIsChatInfoShown?: boolean;
   initialUnreadNotifications?: number;
   shouldShowContextMenuHint?: boolean;
-  botFreezeAppealId?: string;
   reactionPollingPause?: {
     until: number;
     chatId: string;
@@ -140,11 +135,6 @@ export type GlobalState = {
   };
 
   mediaEditorSettings?: MediaEditorSettings;
-
-  attachMenu: {
-    hash?: string;
-    bots: Record<string, ApiAttachBot>;
-  };
 
   passcode: {
     isScreenLocked?: boolean;
@@ -199,9 +189,7 @@ export type GlobalState = {
     savedMusicByPeerId: Record<string, ApiUserSavedMusic>;
     // Obtained from GetFullUser / UserFullInfo
     fullInfoById: Record<string, ApiUserFullInfo>;
-    previewMediaByBotId: Record<string, ApiBotPreviewMedia[]>;
     commonChatsById: Record<string, ApiUserCommonChats>;
-    botAppPermissionsById: Record<string, BotAppPermissions>;
   };
 
   peers: {
@@ -250,8 +238,6 @@ export type GlobalState = {
       count?: number;
     }>>;
     notifyExceptionById: Record<string, ApiPeerNotifySettings>;
-
-    similarBotsById: Record<string, SimilarBotsInfo>;
 
     personalChannelIds?: string[];
   };
@@ -438,13 +424,11 @@ export type GlobalState = {
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
     lastPremiumBandwithNotificationDate?: number;
-    botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
     passkeys?: ApiPasskey[];
   };
 
   transcriptions: Record<string, ApiTranscription>;
-  trustedBotIds: string[];
 
   serviceNotifications: ServiceNotification[];
 

@@ -6,7 +6,7 @@ import { getActions, getGlobal, withGlobal } from '../../../../global';
 import type { ApiChatFolder } from '../../../../api/types';
 
 import { STICKER_SIZE_FOLDER_SETTINGS } from '../../../../config';
-import { isChatChannel, isUserBot } from '../../../../global/helpers';
+import { isChatChannel } from '../../../../global/helpers';
 import {
   selectCanInviteToChat, selectChat,
   selectChatFolder,
@@ -110,11 +110,7 @@ const SettingsShareChatlist = ({
     const global = getGlobal();
     const user = selectUser(global, id);
     const chat = selectChat(global, id);
-    if (user && isUserBot(user)) {
-      showNotification({
-        message: lang('FolderLinkScreenAlertTextUnavailableBot'),
-      });
-    } else if (user) {
+    if (user) {
       showNotification({
         message: lang('FolderLinkScreenAlertTextUnavailableUser'),
       });

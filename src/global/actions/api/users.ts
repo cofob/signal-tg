@@ -2,7 +2,7 @@ import type { ApiUser } from '../../../api/types';
 import type { ActionReturnType } from '../../types';
 import { ManagementProgress } from '../../../types';
 
-import { BOT_VERIFICATION_PEERS_LIMIT, SAVED_MUSIC_SLICE } from '../../../config';
+import { SAVED_MUSIC_SLICE } from '../../../config';
 import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByKey, unique } from '../../../util/iteratees';
@@ -24,7 +24,6 @@ import {
   updateUsers,
   updateUserSavedMusic,
 } from '../../reducers';
-import { updateTabState } from '../../reducers/tabs';
 import {
   selectChat,
   selectChatFullInfo,
@@ -467,60 +466,14 @@ addActionHandler('reportSpam', async (global, actions, payload): Promise<void> =
 });
 
 addActionHandler('setEmojiStatus', async (global, actions, payload): Promise<void> => {
-  const {
-    emojiStatus, referrerWebAppKey, tabId = getCurrentTabId(),
-  } = payload;
+  const { emojiStatus } = payload;
 
   const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   if (!isCurrentUserPremium) {
-    if (referrerWebAppKey) {
-      actions.sendWebAppEvent({
-        webAppKey: referrerWebAppKey,
-        event: {
-          eventType: 'emoji_status_failed',
-          eventData: {
-            error: 'USER_DECLINED',
-          },
-        },
-        tabId,
-      });
-    }
-
     return;
   }
 
-  const result = await callApi('updateEmojiStatus', emojiStatus);
-
-  if (referrerWebAppKey) {
-    if (!result) {
-      actions.sendWebAppEvent({
-        webAppKey: referrerWebAppKey,
-        event: {
-          eventType: 'emoji_status_failed',
-          eventData: {
-            error: 'SERVER_ERROR',
-          },
-        },
-        tabId,
-      });
-      return;
-    }
-
-    actions.sendWebAppEvent({
-      webAppKey: referrerWebAppKey,
-      event: {
-        eventType: 'emoji_status_set',
-      },
-      tabId,
-    });
-    actions.showNotification({
-      message: {
-        key: 'BotSuggestedStatusUpdated',
-      },
-      customEmojiIconId: emojiStatus.documentId,
-      tabId,
-    });
-  }
+  await callApi('updateEmojiStatus', emojiStatus);
 });
 
 addActionHandler('saveCloseFriends', async (global, actions, payload): Promise<void> => {
@@ -548,42 +501,6 @@ addActionHandler('saveCloseFriends', async (global, actions, payload): Promise<v
   setGlobal(global);
 });
 
-addActionHandler('openSuggestedStatusModal', async (global, actions, payload): Promise<void> => {
-  const {
-    customEmojiId, duration, botId, webAppKey, tabId = getCurrentTabId(),
-  } = payload;
-
-  const customEmoji = await callApi('fetchCustomEmoji', {
-    documentId: [customEmojiId],
-  });
-  if (!customEmoji?.[0]) {
-    if (webAppKey) {
-      actions.sendWebAppEvent({
-        webAppKey,
-        event: {
-          eventType: 'emoji_status_failed',
-          eventData: {
-            error: 'SUGGESTED_EMOJI_INVALID',
-          },
-        },
-        tabId,
-      });
-    }
-    return;
-  }
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    suggestedStatusModal: {
-      customEmojiId,
-      duration,
-      webAppKey,
-      botId,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
 addActionHandler('loadPeerSettings', async (global, actions, payload): Promise<void> => {
   const { peerId } = payload;
 
@@ -607,23 +524,6 @@ addActionHandler('loadPeerSettings', async (global, actions, payload): Promise<v
 
   global = getGlobal();
   global = updateUserFullInfo(global, peerId, { settings });
-  setGlobal(global);
-});
-
-addActionHandler('markBotVerificationInfoShown', (global, actions, payload): ActionReturnType => {
-  const { peerId } = payload;
-
-  const currentPeerIds = global.settings.botVerificationShownPeerIds;
-  const newPeerIds = unique([peerId, ...currentPeerIds]).slice(0, BOT_VERIFICATION_PEERS_LIMIT);
-
-  global = {
-    ...global,
-    settings: {
-      ...global.settings,
-      botVerificationShownPeerIds: newPeerIds,
-    },
-  };
-
   setGlobal(global);
 });
 

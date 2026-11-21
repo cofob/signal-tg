@@ -3,12 +3,11 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type { ApiPhoneCallDiscardReason } from '../../types';
 import type { ApiMessageAction } from '../../types/messageActions';
 
-import { buildApiBotApp } from './bots';
 import { buildApiPhoto } from './common';
 import { buildPollAnswer, buildTodoItem } from './messageContent';
 import { buildApiWallpaper } from './misc';
 import { buildApiCurrencyAmount } from './payments';
-import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
+import { buildApiPeerId } from './peers';
 import { buildApiBirthday } from './users';
 
 const UNSUPPORTED_ACTION: ApiMessageAction = {
@@ -155,15 +154,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       wallpaper: !action.same ? buildApiWallpaper(action.wallpaper) : undefined,
     };
   }
-  if (action instanceof GramJs.MessageActionGameScore) {
-    const { gameId, score } = action;
-    return {
-      mediaType: 'action',
-      type: 'gameScore',
-      gameId: gameId.toString(),
-      score,
-    };
-  }
   if (action instanceof GramJs.MessageActionPhoneCall) {
     const {
       video, callId, reason, duration,
@@ -189,33 +179,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       mediaType: 'action',
       type: 'customAction',
       message,
-    };
-  }
-  if (action instanceof GramJs.MessageActionBotAllowed) {
-    const {
-      attachMenu, fromRequest, domain, app,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'botAllowed',
-      isAttachMenu: attachMenu,
-      isFromRequest: fromRequest,
-      domain,
-      app: app && buildApiBotApp(app),
-    };
-  }
-  if (action instanceof GramJs.MessageActionRequestedPeer) {
-    return {
-      mediaType: 'action',
-      type: 'requestedPeer',
-      peerIds: action.peers.map(getApiChatIdFromMtpPeer),
-    };
-  }
-  if (action instanceof GramJs.MessageActionManagedBotCreated) {
-    return {
-      mediaType: 'action',
-      type: 'managedBotCreated',
-      botId: buildApiPeerId(action.botId, 'user'),
     };
   }
   if (action instanceof GramJs.MessageActionContactSignUp) {
@@ -273,14 +236,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
     return {
       mediaType: 'action',
       type: 'chatJoinedByRequest',
-    };
-  }
-  if (action instanceof GramJs.MessageActionWebViewDataSent) {
-    const { text } = action;
-    return {
-      mediaType: 'action',
-      type: 'webViewDataSent',
-      text,
     };
   }
   if (action instanceof GramJs.MessageActionTopicCreate) {

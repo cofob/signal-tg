@@ -128,35 +128,6 @@ addActionHandler('searchMessagesGlobal', (global, actions, payload): ActionRetur
   });
 });
 
-addActionHandler('searchPopularBotApps', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const popularBotApps = selectTabState(global, tabId).globalSearch.popularBotApps;
-  const offset = popularBotApps?.nextOffset;
-  if (popularBotApps?.peerIds && !offset) return; // Already fetched all
-
-  global = updateGlobalSearchFetchingStatus(global, { botApps: true }, tabId);
-  setGlobal(global);
-
-  const result = await callApi('fetchPopularAppBots', { offset });
-
-  global = getGlobal();
-  if (!result) {
-    global = updateGlobalSearchFetchingStatus(global, { botApps: false }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  global = updateGlobalSearch(global, {
-    popularBotApps: {
-      peerIds: [...(popularBotApps?.peerIds || []), ...result.peerIds],
-      nextOffset: result.nextOffset,
-    },
-  }, tabId);
-  global = updateGlobalSearchFetchingStatus(global, { botApps: false }, tabId);
-
-  setGlobal(global);
-});
-
 addActionHandler('checkSearchPostsFlood', async (global, actions, payload): Promise<void> => {
   const { query, tabId = getCurrentTabId() } = payload;
 

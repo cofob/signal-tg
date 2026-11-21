@@ -14,7 +14,7 @@ import { cancelScrollBlockingAnimation, isAnimatingScroll } from '../../../util/
 import { areDeepEqual } from '../../../util/areDeepEqual';
 import { getState as getPlaybackState, stop as stopPlayback } from '../../../util/audioPlayback/playbackController';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
-import { copyTextToClipboardFromPromise } from '../../../util/clipboard';
+import { copyTextToClipboard, copyTextToClipboardFromPromise } from '../../../util/clipboard';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { compact } from '../../../util/iteratees';
 import { clearMediaSession } from '../../../util/mediaSession';
@@ -85,12 +85,44 @@ addActionHandler('setScrollOffset', (global, actions, payload): ActionReturnType
   return replaceTabThreadParam(global, chatId, threadId, 'scrollOffset', scrollOffset, tabId);
 });
 
-addActionHandler('setHiddenBotKeyboardId', (global, actions, payload): ActionReturnType => {
+addActionHandler('clickSuggestedMessageButton', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, threadId, messageId, tabId = getCurrentTabId(),
+    chatId, messageId, button, tabId = getCurrentTabId(),
   } = payload;
 
-  return replaceTabThreadParam(global, chatId, threadId, 'hiddenBotKeyboardId', messageId, tabId);
+  if (button.action.buttonType !== 'suggestChanges' || !selectChatMessage(global, chatId, messageId)) return;
+
+  actions.initDraftFromSuggestedMessage({ chatId, messageId, tabId });
+});
+
+addActionHandler('clickRichButton', (global, actions, payload): ActionReturnType => {
+  const {
+    chatId, messageId, threadId, action, tabId = getCurrentTabId(),
+  } = payload;
+
+  switch (action.type) {
+    case 'url':
+      actions.openUrl({
+        url: action.url,
+        linkContext: chatId && messageId !== undefined ? { type: 'message', chatId, messageId, threadId } : undefined,
+        tabId,
+      });
+      break;
+    case 'copy':
+      copyTextToClipboard(action.copyText);
+      actions.showNotification({
+        message: {
+          key: 'ExactTextCopied',
+          variables: { text: action.copyText },
+          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
+        },
+        tabId,
+      });
+      break;
+    case 'userProfile':
+      actions.openChatWithInfo({ id: action.userId, tabId });
+      break;
+  }
 });
 
 addActionHandler('setEditingId', (global, actions, payload): ActionReturnType => {
@@ -1157,22 +1189,6 @@ addActionHandler('closeDeleteMessageModal', (global, actions, payload): ActionRe
 
   return updateTabState(global, {
     deleteMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('closePreparedInlineMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    preparedMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('closeSharePreparedMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    sharePreparedMessageModal: undefined,
   }, tabId);
 });
 

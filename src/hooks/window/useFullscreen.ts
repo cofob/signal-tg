@@ -131,7 +131,7 @@ function getBrowserFullscreenElementProp() {
   return '';
 }
 
-export function checkIfFullscreen() {
+function checkIfFullscreen() {
   const fullscreenProp = getBrowserFullscreenElementProp();
   return Boolean(fullscreenProp && document[fullscreenProp]);
 }

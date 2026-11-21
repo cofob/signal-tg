@@ -1,7 +1,6 @@
 import type {
   ApiInlineButtonAction,
   ApiInputRichMessage,
-  ApiKeyboardButton,
   ApiRichButton,
   ApiRichText,
 } from '../../api/types';
@@ -9,12 +8,6 @@ import type {
 import { forEachPageBlocksRichText, forEachRichTextNode } from '../../util/text/richText';
 
 export const MAX_BUTTONS_PER_ROW = 8;
-
-export function isButtonUnsupported(action: ApiKeyboardButton['action']) {
-  return action.type === 'unsupported' || action.type === 'disabled'
-    || (action.type === 'callback' && action.requiresPassword)
-    || (action.type === 'switchBotInline' && Boolean(action.peerTypes?.length));
-}
 
 export function canAuthorButton(action: ApiInlineButtonAction) {
   return action.type === 'url' || action.type === 'userProfile' || action.type === 'copy' || action.type === 'disabled';

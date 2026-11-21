@@ -13,7 +13,6 @@ import {
   getUserFullName,
   isAnonymousForwardsChat,
   isChatWithRepliesBot,
-  isChatWithVerificationCodesBot,
 } from '../../global/helpers';
 import { isApiPeerUser } from '../../global/helpers/peers';
 import buildClassName from '../../util/buildClassName';
@@ -117,13 +116,8 @@ const FullNameTitle = ({
       return lang('RepliesTitle');
     }
 
-    if (isChatWithVerificationCodesBot(realPeer!.id)) {
-      return lang('VerifyCodesNotifications');
-    }
-
     return undefined;
   }, [customPeer, isSavedDialog, isSavedMessages, lang, realPeer]);
-  const botVerificationIconId = !isSavedMessages && !isSavedDialog ? realPeer?.botVerificationIconId : undefined;
   const renderedTitle = useMemo(() => specialTitle || renderText(title || ''), [specialTitle, title]);
 
   return (
@@ -131,14 +125,6 @@ const FullNameTitle = ({
       className={buildClassName('title', styles.root, className)}
       style={buildStyle(emojiStatusSize ? `--_status-size: ${emojiStatusSize}px` : undefined, style)}
     >
-      {botVerificationIconId && (
-        <CustomEmoji
-          documentId={botVerificationIconId}
-          size={emojiStatusSize}
-          loopLimit={!noLoopLimit ? EMOJI_STATUS_LOOP_LIMIT : undefined}
-          observeIntersectionForLoading={observeIntersection}
-        />
-      )}
       <h3
         dir="auto"
         role="button"

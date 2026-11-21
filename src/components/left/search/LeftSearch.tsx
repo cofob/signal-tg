@@ -22,7 +22,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import TabList from '../../ui/TabList';
 import Transition from '../../ui/Transition';
 import AudioResults from './AudioResults';
-import BotAppResults from './BotAppResults';
 import ChatMessageResults from './ChatMessageResults';
 import ChatResults from './ChatResults';
 import FileResults from './FileResults';
@@ -53,7 +52,6 @@ type TabInfo = {
 const TABS: TabInfo[] = [
   { type: GlobalSearchContent.ChatList, key: 'SearchTabChats' },
   { type: GlobalSearchContent.ChannelList, key: 'SearchTabChannels' },
-  { type: GlobalSearchContent.BotApps, key: 'SearchTabApps' },
   { type: GlobalSearchContent.PublicPosts, key: 'SearchTabPublicPosts' },
   { type: GlobalSearchContent.Media, key: 'SearchTabMedia' },
   { type: GlobalSearchContent.Links, key: 'SearchTabLinks' },
@@ -64,7 +62,7 @@ const TABS: TabInfo[] = [
 
 const CHAT_TABS: TabInfo[] = [
   { type: GlobalSearchContent.ChatList, key: 'SearchTabMessages' },
-  ...TABS.slice(3), // Skip ChatList, ChannelList and BotApps, replaced with All Messages
+  ...TABS.slice(2), // Skip ChatList and ChannelList, replaced with All Messages
 ];
 
 const LeftSearch = ({
@@ -176,13 +174,6 @@ const LeftSearch = ({
                 <AudioResults
                   key="voice"
                   isVoice
-                  searchQuery={searchQuery}
-                />
-              );
-            case GlobalSearchContent.BotApps:
-              return (
-                <BotAppResults
-                  key="botApps"
                   searchQuery={searchQuery}
                 />
               );

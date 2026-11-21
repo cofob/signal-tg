@@ -166,7 +166,7 @@ const Topic = ({
 
   const openTopicThread = useLastCallback(() => {
     openThread({ chatId, threadId: topic.id, shouldReplaceHistory: true });
-    if (!chat.isBotForum && !chat.isMonoforum) setViewForumAsMessages({ chatId, isEnabled: false });
+    if (!chat.isMonoforum) setViewForumAsMessages({ chatId, isEnabled: false });
   });
 
   const handleOpenTopic = useLastCallback((e: React.MouseEvent) => {
@@ -278,7 +278,7 @@ export default memo(withGlobal<OwnProps>(
     const draft = selectDraft(global, chatId, topic.id);
 
     const readState = selectThreadReadState(global, chatId, topic.id);
-    const wasTopicOpened = chat?.isBotForum || Boolean(readState?.lastReadInboxMessageId);
+    const wasTopicOpened = Boolean(readState?.lastReadInboxMessageId);
     const topicIds = selectTopicsInfo(global, chatId)?.listedTopicIds;
 
     const { chatId: currentChatId, threadId: currentThreadId } = selectCurrentMessageList(global) || {};

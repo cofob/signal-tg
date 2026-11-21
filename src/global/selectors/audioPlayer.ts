@@ -9,7 +9,7 @@ import { LoadMoreDirection } from '../../types';
 
 import { MEDIA_PRELOAD_OFFSET } from '../../config';
 import {
-  makeInstantViewTrackKey, makeMessageTrackKey, makeMusicSearchTrackKey, makeSavedMusicTrackKey,
+  makeMessageTrackKey, makeMusicSearchTrackKey, makeSavedMusicTrackKey,
   makeScheduledMessageTrackKey,
 } from '../../util/audioPlayback/mediaPool';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
@@ -20,7 +20,7 @@ import {
 } from '../helpers/messageMedia';
 import { hasMessageTtl } from '../helpers/messages';
 import {
-  selectChatMessageOrEphemeral, selectChatMessages, selectFullWebPage, selectScheduledMessage,
+  selectChatMessageOrEphemeral, selectChatMessages, selectScheduledMessage,
   selectWebPageFromMessage,
 } from './messages';
 import { selectChatMediaSearch } from './middleSearch';
@@ -70,8 +70,6 @@ export function selectPlaybackMedia<T extends GlobalState>(global: T, itemRef?: 
         itemRef.documentId, itemRef.isScheduled);
     case 'savedMusic':
       return selectSavedMusicAudio(global, itemRef.peerId, itemRef.audioId);
-    case 'instantView':
-      return selectInstantViewAudio(global, itemRef.webPageId, itemRef.documentId);
     case 'musicSearch':
       return selectMusicSearchAudio(global, itemRef.audioId);
     default:
@@ -104,10 +102,6 @@ function selectMessagePlaybackMedia<T extends GlobalState>(
   return audio || voice || video || getWebPageAudio(selectWebPageFromMessage(global, message));
 }
 
-function selectInstantViewAudio<T extends GlobalState>(global: T, webPageId: string, documentId: string) {
-  return selectFullWebPage(global, webPageId)?.cachedPageAudioById?.[documentId];
-}
-
 export function makeMessageTrackKeyFrom(
   message: ApiMessage, isScheduled = message.isScheduled, documentId?: string,
 ) {
@@ -124,8 +118,6 @@ export function makeTrackKeyFromItem(itemRef: PlaybackItemRef): TrackKey {
         : makeMessageTrackKey(itemRef.chatId, itemRef.messageId, itemRef.documentId);
     case 'savedMusic':
       return makeSavedMusicTrackKey(itemRef.peerId, itemRef.audioId);
-    case 'instantView':
-      return makeInstantViewTrackKey(itemRef.webPageId, itemRef.documentId);
     case 'musicSearch':
       return makeMusicSearchTrackKey(itemRef.audioId);
   }
@@ -140,7 +132,7 @@ export function getPlaybackCapabilities(
   contextType: PlaybackContextType, options?: { isViewOnce?: boolean; isSingle?: boolean },
 ): PlaybackCapabilities {
   if (options?.isViewOnce) return VIEW_ONCE_CAPABILITIES;
-  if (contextType === 'instantView' || contextType === 'musicSearch' || options?.isSingle) return SINGLE_CAPABILITIES;
+  if (contextType === 'musicSearch' || options?.isSingle) return SINGLE_CAPABILITIES;
   return MESSAGE_CAPABILITIES;
 }
 

@@ -169,11 +169,9 @@ const SettingsPrivacy = ({
   function getVisibilityValue(setting?: ApiPrivacySettings) {
     if (!setting) return lang('Loading');
 
-    const { visibility, shouldAllowPremium, botsPrivacy } = setting;
+    const { visibility, shouldAllowPremium } = setting;
 
-    const isAllowBots = botsPrivacy === 'allow';
     const isVisibilityEverybody = visibility === 'everybody';
-    const shouldShowBotsString = isAllowBots && !isVisibilityEverybody;
 
     const blockCount = setting.blockChatIds.length + setting.blockUserIds.length;
     const allowCount = setting.allowChatIds.length + setting.allowUserIds.length;
@@ -181,11 +179,7 @@ const SettingsPrivacy = ({
     if (blockCount) total.push(`-${blockCount}`);
     if (allowCount && !isVisibilityEverybody) total.push(`+${allowCount}`);
 
-    const botPrivacyString = shouldShowBotsString ? lang('PrivacyValueBots') : '';
-    const totalString = lang.conjunction(total);
-
-    const exceptionString = [botPrivacyString, totalString].filter(Boolean).join(' ');
-    if (shouldShowBotsString && !isVisibilityEverybody) return exceptionString;
+    const exceptionString = lang.conjunction(total);
 
     if (shouldAllowPremium) {
       return lang(exceptionString ? 'ContactsAndPremium' : 'PrivacyPremium');

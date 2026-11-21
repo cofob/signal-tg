@@ -3,10 +3,6 @@ import type { TeactNode } from '../lib/teact/teact';
 import type {
   ApiAttachment,
   ApiAudio,
-  ApiBotInlineMediaResult,
-  ApiBotInlineResult,
-  ApiBotInlineSwitchPm,
-  ApiBotInlineSwitchWebview,
   ApiChat,
   ApiChatInviteImporter,
   ApiContact,
@@ -317,7 +313,6 @@ export enum LeftColumnContent {
 export enum GlobalSearchContent {
   ChatList,
   ChannelList,
-  BotApps,
   PublicPosts,
   Media,
   Links,
@@ -361,7 +356,6 @@ export enum MediaViewerOrigin {
   SearchResult,
   ChannelAvatar,
   SuggestedAvatar,
-  PreviewMedia,
   PollPreview,
   RichPageBlock,
   IVPageBlock,
@@ -386,7 +380,7 @@ export type PlaybackSource =
   | { type: 'savedMusic'; peerId: string }
   | { type: 'single' };
 
-export type PlaybackContextType = 'message' | 'savedMusic' | 'instantView' | 'musicSearch';
+export type PlaybackContextType = 'message' | 'savedMusic' | 'musicSearch';
 
 export type PlaybackMedia = ApiAudio | ApiVoice | ApiVideo;
 
@@ -397,7 +391,6 @@ export type PlaybackItemRef =
     documentId?: string; isScheduled?: boolean;
   }
   | { type: 'savedMusic'; peerId: string; audioId: string }
-  | { type: 'instantView'; webPageId: string; documentId: string }
   | { type: 'musicSearch'; audioId: string };
 
 export type PlaybackCapabilities = {
@@ -469,7 +462,6 @@ export type ProfileTabType =
   | 'members'
   | 'commonChats'
   | 'media'
-  | 'previewMedia'
   | 'documents'
   | 'links'
   | 'audio'
@@ -478,7 +470,6 @@ export type ProfileTabType =
   | 'stories'
   | 'storiesArchive'
   | 'similarChannels'
-  | 'similarBots'
   | 'dialogs'
   | 'polls';
 export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif' | 'polls';
@@ -556,7 +547,7 @@ export enum ManagementScreens {
   NewDiscussionGroup,
 }
 
-export type ManagementType = 'user' | 'group' | 'channel' | 'bot';
+export type ManagementType = 'user' | 'group' | 'channel';
 
 export type EmojiKeywords = {
   isLoading?: boolean;
@@ -564,21 +555,8 @@ export type EmojiKeywords = {
   keywords?: Record<string, string[]>;
 };
 
-export type InlineBotSettings = {
-  id: string;
-  help?: string;
-  query?: string;
-  offset?: string;
-  canLoadMore?: boolean;
-  results?: (ApiBotInlineResult | ApiBotInlineMediaResult)[];
-  isGallery?: boolean;
-  switchPm?: ApiBotInlineSwitchPm;
-  switchWebview?: ApiBotInlineSwitchWebview;
-  cacheTime: number;
-};
-
 export type CustomPeerType = 'premium' | 'toBeDistributed' | 'contacts' | 'nonContacts'
-  | 'groups' | 'channels' | 'bots' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
+  | 'groups' | 'channels' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
   isCustomPeer: true;
@@ -654,7 +632,6 @@ export interface TabThread {
   scrollOffset?: number;
   replyStack?: number[];
   viewportIds?: number[];
-  hiddenBotKeyboardId?: number;
 }
 
 export interface ThreadReadState {
@@ -753,11 +730,6 @@ export type ChatRequestedTranslations = {
   tone?: TranslationTone;
 };
 
-export type SimilarBotsInfo = {
-  similarBotsIds?: string[];
-  count: number;
-};
-
 export type ConfettiParams = OptionalCombine<{
   style?: ConfettiStyle;
   withStars?: boolean;
@@ -785,12 +757,6 @@ export type AttachmentCompression = 'compress' | 'original';
 export type CallSound = (
   'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
 );
-
-export type BotAppPermissions = {
-  geolocation?: boolean;
-  camera?: boolean;
-  microphone?: boolean;
-};
 
 export type SendMessageParams = {
   chat?: ApiChat;

@@ -7,7 +7,6 @@ import type {
 } from '../../lib/vibecalls';
 import type { ThreadId, ThreadReadState, TranslationTone } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
-import type { ApiBotCommand, ApiBotMenuButton } from './bots';
 import type {
   ApiGroupCall, ApiPhoneCall,
 } from './calls';
@@ -737,30 +736,6 @@ export type ApiUpdatePhoneCallConnectionState = {
   connectionState: RTCPeerConnectionState;
 };
 
-export type ApiUpdateWebViewResultSent = {
-  '@type': 'updateWebViewResultSent';
-  queryId: string;
-};
-
-export type ApiJoinChatBotResult =
-  | { type: 'approved' }
-  | { type: 'declined' }
-  | { type: 'queued' }
-  | { type: 'webView'; url: string };
-
-export type ApiUpdateJoinChatWebViewDecision = {
-  '@type': 'updateJoinChatWebViewDecision';
-  peerId: string;
-  queryId: string;
-  result: ApiJoinChatBotResult;
-};
-
-export type ApiUpdateBotMenuButton = {
-  '@type': 'updateBotMenuButton';
-  botId: string;
-  button: ApiBotMenuButton;
-};
-
 export type ApiUpdateTranscribedAudio = {
   '@type': 'updateTranscribedAudio';
   transcriptionId: string;
@@ -876,10 +851,6 @@ export type ApiRequestSync = {
   '@type': 'requestSync';
 };
 
-export type ApiUpdateAttachMenuBots = {
-  '@type': 'updateAttachMenuBots';
-};
-
 export type ApiUpdateNewAuthorization = {
   '@type': 'updateNewAuthorization';
   hash: string;
@@ -938,13 +909,6 @@ export type ApiUpdateLangPack = {
   keysToRemove: string[];
 };
 
-export type ApiUpdateBotCommands = {
-  '@type': 'updateBotCommands';
-  peerId: string;
-  botId: string;
-  commands?: ApiBotCommand[];
-};
-
 export type ApiUpdateWebPage = {
   '@type': 'updateWebPage';
   webPage: ApiWebPage;
@@ -975,22 +939,21 @@ export type ApiUpdate = (
   ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
   ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
-  ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode | ApiUpdateWebViewResultSent |
-  ApiUpdateJoinChatWebViewDecision |
+  ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode |
   ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings | ApiUpdatePeerBlocked | ApiUpdatePrivacy |
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
   ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
-  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
+  ApiUpdatePhoneCallConnectionState | ApiUpdateTranscribedAudio | ApiUpdateUserEmojiStatus |
   ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
-  ApiUpdateStealthMode | ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
+  ApiUpdateStealthMode | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError

@@ -17,7 +17,7 @@ import { requestMeasure, requestMutation } from '../../../../../lib/fasterdom/fa
 import captureKeyboardListeners from '../../../../../util/captureKeyboardListeners';
 import cycleRestrict from '../../../../../util/cycleRestrict';
 import TeactRenderer from '../../../../../util/tiptap/TeactRenderer';
-import { parseInlineBotQuery, PLUGIN_KEYS, TOOLTIP_GAP_PX } from './suggestion';
+import { PLUGIN_KEYS, TOOLTIP_GAP_PX } from './suggestion';
 
 import RichEditorTooltipContainer from '../../RichEditorTooltipContainer';
 
@@ -26,7 +26,7 @@ const FORMATTER_HOST_CLASS = 'is-formatter';
 const MAX_FORMATTER_POSITION_ATTEMPTS = 10;
 const SUGGESTION_HOST_CLASS = 'is-suggestion';
 const SURFACE_PRIORITY: RichEditorTooltipSurface[] = [
-  'inlineBot', 'command', 'mention', 'emoji', 'customEmoji', 'sticker',
+  'mention', 'emoji', 'customEmoji', 'sticker',
 ];
 
 export class RichEditorTooltipsController {
@@ -185,14 +185,13 @@ export class RichEditorTooltipsController {
     }
 
     const items = this.getKeyboardItems(surface);
-    const isInlineGallery = surface === 'inlineBot' && this.getInlineBot()?.isGallery;
     const isPointerDriven = surface === 'customEmoji' || surface === 'sticker';
     const isHorizontal = surface === 'emoji';
     const direction = isHorizontal
       ? event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : undefined
       : event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : undefined;
 
-    if (direction && !isPointerDriven && !isInlineGallery && items.length) {
+    if (direction && !isPointerDriven && items.length) {
       event.preventDefault();
       this.selectedIndex = cycleRestrict(items.length, this.selectedIndex + direction);
       this.render();
@@ -282,7 +281,7 @@ export class RichEditorTooltipsController {
     const surface = this.getElectedSurface();
     const itemCount = surface ? this.getKeyboardItems(surface).length : 0;
     if (this.mountedSurface !== surface) {
-      this.selectedIndex = surface === 'emoji' || this.getInlineBot()?.isGallery ? -1 : 0;
+      this.selectedIndex = surface === 'emoji' ? -1 : 0;
     } else if (this.selectedIndex >= itemCount) {
       this.selectedIndex = itemCount ? 0 : -1;
     }
@@ -505,32 +504,10 @@ export class RichEditorTooltipsController {
   }
 
   private getKeyboardItems(surface: RichEditorTooltipSurface): RichEditorTooltipItem[] {
-    if (surface === 'inlineBot') {
-      return this.getInlineBot()?.results || [];
-    }
-
     return this.suggestions.get(surface)?.items || [];
   }
 
-  private getInlineBot() {
-    const suggestion = this.suggestions.get('inlineBot');
-    const query = parseInlineBotQuery(suggestion?.text);
-    if (!query) {
-      return undefined;
-    }
-
-    return this.config.getContext().inlineBots?.[query.username.toLowerCase()] || undefined;
-  }
-
   private selectItem(surface: RichEditorTooltipSurface, item: RichEditorTooltipItem) {
-    if (surface === 'inlineBot') {
-      const inlineBot = this.getInlineBot();
-      if (inlineBot && 'queryId' in item) {
-        this.config.inlineBot?.onSelect(inlineBot.id, item);
-      }
-      return;
-    }
-
     this.suggestions.get(surface)?.command(item);
   }
 

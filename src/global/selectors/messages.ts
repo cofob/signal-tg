@@ -24,7 +24,6 @@ import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
   GENERAL_TOPIC_ID,
-  MESSAGE_LIST_VIEWPORT_LIMIT,
   SERVICE_NOTIFICATIONS_USER_ID,
   TMP_CHAT_ID,
 } from '../../config';
@@ -74,9 +73,7 @@ import {
   selectChat,
   selectChatFullInfo,
   selectChatLastMessageId,
-  selectIsChatBotNotStarted,
   selectIsChatRestricted,
-  selectIsChatWithBot,
   selectIsChatWithSelf,
   selectIsMonoforumAdmin,
   selectRequestedChatTranslationLanguage,
@@ -100,7 +97,7 @@ import {
 } from './threads';
 import { selectTopic, selectTopicFromMessage } from './topics';
 import {
-  selectBot, selectIsCurrentUserFrozen, selectIsUserChatProtected, selectUser, selectUserFullInfo, selectUserStatus,
+  selectIsCurrentUserFrozen, selectIsUserChatProtected, selectUser, selectUserFullInfo, selectUserStatus,
 } from './users';
 
 export function selectCurrentMessageList<T extends GlobalState>(
@@ -504,7 +501,7 @@ export function selectWebPageFromMessage<T extends GlobalState>(global: T, messa
   return selectWebPage(global, message.content.webPage.id);
 }
 
-export function selectFullWebPage<T extends GlobalState>(global: T, webPageId: string) {
+function selectFullWebPage<T extends GlobalState>(global: T, webPageId: string) {
   const webPage = selectWebPage(global, webPageId);
   if (!webPage || webPage.webpageType !== 'full') return undefined;
   return webPage;
@@ -544,8 +541,7 @@ export function selectCanDeleteTopic<T extends GlobalState>(global: T, chatId: s
 
   if (topicId === GENERAL_TOPIC_ID) return false;
 
-  return chat.isBotForum
-    || getHasAdminRight(chat, 'deleteMessages')
+  return getHasAdminRight(chat, 'deleteMessages')
     || (chat.isForum
       && selectCanDeleteOwnerTopic(global, chat.id, topicId));
 }
@@ -575,14 +571,13 @@ export function selectCanPostInMessageList<T extends GlobalState>(
 ) {
   if (chatId === TMP_CHAT_ID || messageListType === 'pinned'
     || getIsSavedDialog(chatId, threadId, global.currentUserId)) return false;
-  if (selectIsChatBotNotStarted(global, chatId)) return false;
   if (selectShouldBlockSendInMonoforum(global, chatId, threadId)) return false;
 
   const userFullInfo = selectUserFullInfo(global, chatId);
   if (userFullInfo?.isBlocked || userFullInfo?.isContactRequirePremium) return false;
 
   const chat = selectChat(global, chatId);
-  if (selectIsCurrentUserFrozen(global) && (!chat || chatId !== global.botFreezeAppealId)) return false;
+  if (selectIsCurrentUserFrozen(global)) return false;
   if (!chat) return true;
 
   const threadInfo = selectThreadInfo(global, chatId, threadId);
@@ -650,7 +645,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const isBasicGroup = isChatBasicGroup(chat);
   const isSuperGroup = isChatSuperGroup(chat);
   const isChannel = isChatChannel(chat);
-  const isBotChat = Boolean(selectBot(global, chat.id));
   const isLocal = isMessageLocal(message);
   const isFailed = isMessageFailed(message);
   const isServiceNotification = isServiceNotificationMessage(message);
@@ -705,7 +699,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
       || (content.video?.isRound) || content.location || isDocumentSticker || content.dice
     )
     && !isForwarded
-    && !message.viaBotId
     && !chat.isForbidden
   );
 
@@ -735,7 +728,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const canReport = !isPrivate && !isOwn;
 
   const canDeleteForAll = canDelete && !chat.isForbidden && (
-    (isPrivate && !isChatWithSelf && !isBotChat && !content.dice)
+    (isPrivate && !isChatWithSelf && !content.dice)
     || (isBasicGroup && (
       isOwn || getHasAdminRight(chat, 'deleteMessages')
     ))
@@ -1094,114 +1087,6 @@ export function selectSelectedMessagesCount<T extends GlobalState>(
   return messageIds ? messageIds.length : 0;
 }
 
-export function selectNewestMessageWithBotKeyboardButtons<T extends GlobalState>(
-  global: T, chatId: string, threadId: ThreadId = MAIN_THREAD_ID,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-): ApiMessage | undefined {
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return undefined;
-  }
-
-  const chatMessages = selectChatMessages(global, chatId);
-  const ephemeralMessages = selectChatEphemeralMessages(global, chatId);
-  const listedIds = selectListedIds(global, chatId, threadId);
-  if (!chatMessages || !listedIds) {
-    return undefined;
-  }
-
-  let keyboardMessage: ApiMessage | undefined;
-  let hideKeyboardMessage: ApiMessage | undefined;
-  let oldestDate: number | undefined;
-
-  function scanHistoryTail(ids: number[], newerThan?: ApiMessage) {
-    for (let i = Math.max(ids.length - MESSAGE_LIST_VIEWPORT_LIMIT, 0); i < ids.length; i++) {
-      const message = selectChatMessageOrEphemeral(global, chatId, ids[i]);
-      if (!message || (newerThan && !isMessageNewer(message, newerThan))) continue;
-
-      if (oldestDate === undefined || message.date < oldestDate) oldestDate = message.date;
-      if (selectShouldDisplayReplyKeyboard(global, message) && isMessageNewer(message, keyboardMessage)) {
-        keyboardMessage = message;
-      }
-      if (selectShouldHideReplyKeyboard(global, message) && isMessageNewer(message, hideKeyboardMessage)) {
-        hideKeyboardMessage = message;
-      }
-    }
-  }
-
-  scanHistoryTail(listedIds);
-
-  const viewportIds = selectViewportIds(global, chatId, threadId, tabId);
-  if (viewportIds) {
-    const newestListedMessage = selectChatMessageOrEphemeral(global, chatId, listedIds[listedIds.length - 1]);
-    scanHistoryTail(viewportIds, newestListedMessage);
-  }
-
-  const topicId = Number(threadId);
-  Object.values(ephemeralMessages || {}).forEach((message) => {
-    if (message.anchorMsgId) return;
-    const isInThread = topicId === MAIN_THREAD_ID
-      ? message.ephemeralTopMsgId === undefined
-      : message.ephemeralTopMsgId === topicId;
-    if (!isInThread || (oldestDate !== undefined && message.date < oldestDate)) return;
-
-    if (selectShouldDisplayReplyKeyboard(global, message) && isMessageNewer(message, keyboardMessage)) {
-      keyboardMessage = message;
-    }
-    if (selectShouldHideReplyKeyboard(global, message) && isMessageNewer(message, hideKeyboardMessage)) {
-      hideKeyboardMessage = message;
-    }
-  });
-
-  if (keyboardMessage && hideKeyboardMessage && isMessageNewer(hideKeyboardMessage, keyboardMessage)) {
-    return undefined;
-  }
-
-  return keyboardMessage;
-}
-
-function selectShouldHideReplyKeyboard<T extends GlobalState>(global: T, message: ApiMessage) {
-  const {
-    shouldHideKeyboardButtons,
-    isHideKeyboardSelective,
-    isMentioned,
-  } = message;
-  if (!shouldHideKeyboardButtons) return false;
-
-  if (isHideKeyboardSelective) {
-    if (isMentioned) return true;
-
-    const replyMessage = selectReplyMessage(global, message);
-    return Boolean(replyMessage?.senderId === global.currentUserId);
-  }
-  return true;
-}
-
-function selectShouldDisplayReplyKeyboard<T extends GlobalState>(global: T, message: ApiMessage) {
-  const {
-    keyboardButtons,
-    shouldHideKeyboardButtons,
-    isKeyboardSelective,
-    isMentioned,
-  } = message;
-  if (!keyboardButtons || shouldHideKeyboardButtons) return false;
-
-  if (isKeyboardSelective) {
-    if (isMentioned) return true;
-
-    const replyMessage = selectReplyMessage(global, message);
-    return Boolean(replyMessage?.senderId === global.currentUserId);
-  }
-
-  return true;
-}
-
-function isMessageNewer(message: ApiMessage, previousMessage?: ApiMessage) {
-  return !previousMessage
-    || message.date > previousMessage.date
-    || (message.date === previousMessage.date && message.id > previousMessage.id);
-}
-
 export function selectCanAutoLoadMedia<T extends GlobalState>(
   global: T, message: ApiMessage,
 ) {
@@ -1435,8 +1320,7 @@ export function selectCanSchedule<T extends GlobalState>(
 
 export function selectCanScheduleUntilOnline<T extends GlobalState>(global: T, id: string) {
   const isChatWithSelf = selectIsChatWithSelf(global, id);
-  const chatBot = selectBot(global, id);
-  return Boolean(!isChatWithSelf && !chatBot && isUserId(id) && selectUserStatus(global, id)?.wasOnline);
+  return Boolean(!isChatWithSelf && isUserId(id) && selectUserStatus(global, id)?.wasOnline);
 }
 
 export function selectForwardsContainVoiceMessages<T extends GlobalState>(
@@ -1544,8 +1428,7 @@ export function selectForwardsCanBeSentToChat<T extends GlobalState>(
   }
 
   const isSavedMessages = toChatId ? selectIsChatWithSelf(global, toChatId) : undefined;
-  const isChatWithBot = toChatId ? selectIsChatWithBot(global, toChatId) : undefined;
-  const options = getAllowedAttachmentOptions(chat, isChatWithBot, isSavedMessages);
+  const options = getAllowedAttachmentOptions(chat, isSavedMessages);
   return !messageIds!.some((messageId) => {
     const message = selectChatMessageOrEphemeral(global, fromChatId!, messageId);
     return !message || сheckMessageSendingDenied(message, options);
@@ -1592,7 +1475,7 @@ export function selectTopicLink<T extends GlobalState>(
   global: T, chatId: string, topicId?: ThreadId,
 ) {
   const chat = selectChat(global, chatId);
-  if (!chat || !chat.isForum || chat.isBotForum) {
+  if (!chat || !chat.isForum) {
     return undefined;
   }
 

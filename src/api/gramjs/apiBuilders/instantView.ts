@@ -1,7 +1,6 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiInstantViewPage,
   ApiPageBlock,
   ApiPageCaption,
   ApiPageListItem,
@@ -37,22 +36,6 @@ type PageMediaContext = {
   photosById: Record<string, ApiPhoto>;
   documentsById: Record<string, GramJs.Document>;
 };
-
-export function buildApiInstantViewPage(page: GramJs.Page, webPage: GramJs.WebPage): ApiInstantViewPage {
-  const {
-    url, blocks, photos, documents, views, rtl, part, v2,
-  } = page;
-  const mediaContext = buildApiPageMediaContext(photos, documents, { webPage });
-
-  return {
-    url,
-    blocks: blocks.map((block) => buildApiPageBlock(block, mediaContext)),
-    views,
-    isRtl: rtl,
-    isPart: part,
-    isV2: v2,
-  };
-}
 
 export function buildApiPageMediaContext(
   photos: GramJs.TypePhoto[],

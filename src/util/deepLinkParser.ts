@@ -3,14 +3,12 @@ import type { ThreadId } from '../types';
 import { RE_TG_LINK } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { parseTimestampDuration } from './dates/timestamp';
-import { isBase64Url } from './encoding/base64';
 import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
 
-export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
+export type DeepLinkMethod = 'resolve' | 'login' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'addlist' | 'oauth' |
-  'newbot' | 'contact';
+  'msg' | 'msg_url' | 'addlist' | 'contact';
 
 interface PublicMessageLink {
   type: 'publicMessageLink';
@@ -53,29 +51,10 @@ interface LanguageLink {
   langCode: string;
 }
 
-interface TelegramPassportLink {
-  type: 'telegramPassportLink';
-  botId: number;
-  scope: string;
-  publicKey: string;
-  nonce: string;
-  callbackUrl?: string;
-  payload?: string;
-}
-
 interface PublicUsernameOrBotLink {
   type: 'publicUsernameOrBotLink';
   username: string;
-  start?: string;
-  startGroup?: string;
-  ref?: string;
-  startApp?: string;
-  mode?: string;
-  appName?: string;
-  startAttach?: string;
-  attach?: string;
   text?: string;
-  choose?: string;
   isDirect?: boolean;
   noPaidMessagesToken?: string;
 }
@@ -102,21 +81,8 @@ interface SettingsScreenLink {
   path?: string;
 }
 
-interface OAuthLink {
-  type: 'oauth';
-  url: string;
-}
-
-interface NewBotLink {
-  type: 'newBotLink';
-  managerUsername: string;
-  username?: string;
-  name?: string;
-}
-
 type DeepLink =
   LanguageLink |
-  TelegramPassportLink |
   LoginCodeLink |
   PublicMessageLink |
   PrivateMessageLink |
@@ -126,9 +92,7 @@ type DeepLink =
   GroupCallLink |
   PrivateChannelLink |
   ContactLink |
-  SettingsScreenLink |
-  OAuthLink |
-  NewBotLink;
+  SettingsScreenLink;
 
 type BuilderParams<T extends DeepLink> = Record<keyof Omit<T, 'type'>, string | undefined>;
 type BuilderReturnType<T extends DeepLink> = T | undefined;
@@ -146,12 +110,7 @@ type PublicUsernameOrBotLinkBuilderParams = Omit<BuilderParams<PublicUsernameOrB
   direct?: string;
 };
 
-type OAuthLinkBuilderParams = Omit<BuilderParams<OAuthLink>, 'url'> & {
-  url: string;
-};
-
 const RE_TG_SLASHES_PROTOCOL = /^tg:\/\//i;
-const MAX_BOT_START_PARAMETER_LENGTH = 64;
 
 // Only `tg:` links are deep links; links to Telegram websites stay ordinary external links
 export function isDeepLink(link: string): boolean {
@@ -167,14 +126,6 @@ export function tryParseDeepLink(link: string): DeepLink | undefined {
   } catch (err) {
     return undefined;
   }
-}
-
-export function getUsernameFromDeepLink(url: string) {
-  const deepLink = tryParseDeepLink(url);
-  if (deepLink?.type === 'publicUsernameOrBotLink') {
-    return deepLink.username;
-  }
-  return undefined;
 }
 
 function parseDeepLink(url: string) {
@@ -224,28 +175,10 @@ function parseTgLink(url: URL) {
       return buildChatFolderLink({ slug: queryParams.slug });
     case 'loginCodeLink':
       return buildLoginCodeLink({ code: queryParams.code });
-    case 'telegramPassportLink':
-      return buildTelegramPassportLink({
-        botId: queryParams.bot_id,
-        scope: queryParams.scope,
-        publicKey: queryParams.public_key,
-        nonce: queryParams.nonce,
-        callbackUrl: queryParams.callback_url,
-        payload: queryParams.payload,
-      });
     case 'publicUsernameOrBotLink':
       return buildPublicUsernameOrBotLink({
         username: queryParams.domain,
-        start: queryParams.start,
-        startGroup: queryParams.admin !== undefined ? undefined : queryParams.startgroup,
         text: queryParams.text,
-        appName: queryParams.appname,
-        startApp: queryParams.startapp,
-        mode: queryParams.mode,
-        startAttach: queryParams.startattach,
-        attach: queryParams.attach,
-        choose: queryParams.choose,
-        ref: queryParams.ref,
         direct: queryParams.direct,
         noPaidMessagesToken: queryParams.free,
       });
@@ -261,14 +194,6 @@ function parseTgLink(url: URL) {
       return buildContactLink({ token: queryParams.token, noPaidMessagesToken: queryParams.free });
     case 'settings':
       return { type: 'settings', path: pathParams.join('/').toLowerCase() || undefined } satisfies SettingsScreenLink;
-    case 'oauth':
-      return buildOAuthLink({ url: url.toString() });
-    case 'newBotLink':
-      return buildNewBotLink({
-        managerUsername: queryParams.manager,
-        username: queryParams.username,
-        name: queryParams.name,
-      });
     default:
       break;
   }
@@ -284,16 +209,7 @@ function getTgDeepLinkType(
     case 'setlanguage':
       return 'languageLink';
     case 'resolve': {
-      const {
-        domain, post, bot_id, scope, public_key, nonce, startapp,
-      } = queryParams;
-      if (domain === 'telegrampassport' && bot_id && scope && public_key && nonce) {
-        return 'telegramPassportLink';
-      }
-      if (domain === 'oauth' && startapp) {
-        return 'oauth';
-      }
-
+      const { domain, post } = queryParams;
       if (domain && isUsernameValid(domain)) {
         if (getGroupCallInviteHash(queryParams) !== undefined) return 'groupCallLink';
         return post ? 'publicMessageLink' : 'publicUsernameOrBotLink';
@@ -314,17 +230,11 @@ function getTgDeepLinkType(
       return 'chatFolderLink';
     case 'login':
       return 'loginCodeLink';
-    case 'passport':
-      return 'telegramPassportLink';
     case 'contact':
       return 'contactLink';
     case 'settings': {
       return 'settings';
     }
-    case 'oauth':
-      return 'oauth';
-    case 'newbot':
-      return 'newBotLink';
     default:
       break;
   }
@@ -430,46 +340,12 @@ function buildLanguageLink(params: BuilderParams<LanguageLink>): BuilderReturnTy
   return { type: 'languageLink', langCode };
 }
 
-function buildTelegramPassportLink(
-  params: BuilderParams<TelegramPassportLink>,
-): BuilderReturnType<TelegramPassportLink> {
-  const {
-    botId,
-    scope,
-    publicKey,
-    nonce,
-    callbackUrl,
-    payload,
-  } = params;
-  if (!botId || !isNumber(botId) || !scope || !publicKey || !nonce) {
-    return undefined;
-  }
-  return {
-    type: 'telegramPassportLink',
-    botId: Number(botId),
-    scope,
-    publicKey,
-    nonce,
-    callbackUrl,
-    payload,
-  };
-}
-
 function buildPublicUsernameOrBotLink(
   params: PublicUsernameOrBotLinkBuilderParams,
 ): BuilderReturnType<PublicUsernameOrBotLink> {
   const {
     username,
-    start,
-    startGroup,
     text,
-    startApp,
-    mode,
-    startAttach,
-    attach,
-    appName,
-    choose,
-    ref,
     direct,
     noPaidMessagesToken,
   } = params;
@@ -479,31 +355,13 @@ function buildPublicUsernameOrBotLink(
   if (!isUsernameValid(username)) {
     return undefined;
   }
-  const normalizedStartGroup = normalizeBotStartGroup(startGroup);
   return {
     type: 'publicUsernameOrBotLink',
     username,
-    start,
-    startGroup: normalizedStartGroup,
-    startApp,
-    mode,
-    appName,
-    startAttach,
-    attach,
     text,
-    choose,
-    ref,
     isDirect: direct === '',
     noPaidMessagesToken: noPaidMessagesToken || undefined,
   };
-}
-
-function normalizeBotStartGroup(startGroup?: string) {
-  if (!startGroup || (startGroup.length <= MAX_BOT_START_PARAMETER_LENGTH && isBase64Url(startGroup))) {
-    return startGroup;
-  }
-
-  return '';
 }
 
 function buildGroupCallLink(params: BuilderParams<GroupCallLink>): BuilderReturnType<GroupCallLink> {
@@ -544,35 +402,6 @@ function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType
     type: 'contactLink',
     token,
     noPaidMessagesToken: noPaidMessagesToken || undefined,
-  };
-}
-
-function buildOAuthLink(params: OAuthLinkBuilderParams): BuilderReturnType<OAuthLink> {
-  const {
-    url,
-  } = params;
-  return {
-    type: 'oauth',
-    url,
-  };
-}
-
-function buildNewBotLink(params: BuilderParams<NewBotLink>): BuilderReturnType<NewBotLink> {
-  const {
-    managerUsername,
-    username,
-    name,
-  } = params;
-
-  if (!managerUsername || !isUsernameValid(managerUsername)) {
-    return undefined;
-  }
-
-  return {
-    type: 'newBotLink',
-    managerUsername,
-    username,
-    name,
   };
 }
 

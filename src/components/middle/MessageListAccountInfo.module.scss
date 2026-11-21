@@ -39,27 +39,6 @@
   background-color: var(--action-message-bg);
 }
 
-.botBackground {
-  margin-top: var(--message-list-top-inset);
-  color: var(--color-text);
-  background-color: var(--color-background);
-}
-
-.bot-info-description {
-  padding: 0.5rem 1rem;
-  text-wrap: pretty;
-}
-
-.bot-info-title {
-  margin-bottom: 0.25rem;
-  font-weight: var(--font-weight-medium);
-}
-
-.media {
-  max-width: 100%;
-  height: auto !important;
-}
-
 .chatInfoTitle {
   margin: 0 0 0.25rem;
   font-weight: var(--font-weight-semibold);

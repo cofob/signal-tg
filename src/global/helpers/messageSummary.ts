@@ -151,7 +151,6 @@ function getSummaryDescription(
     sticker,
     contact,
     location,
-    game,
     storyData,
     todo,
     dice,
@@ -221,10 +220,6 @@ function getSummaryDescription(
 
   if (location?.mediaType === 'geoLive') {
     summary = lang('AttachLiveLocation');
-  }
-
-  if (game) {
-    summary = `🎮 ${game.title}`;
   }
 
   if (storyData) {

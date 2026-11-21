@@ -3,7 +3,6 @@ import { memo, useEffect, useMemo, useRef, useState } from '@teact';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
 import type {
-  ApiBotPreviewMedia,
   ApiChat,
   ApiChatFullInfo,
   ApiChatMember,
@@ -36,7 +35,6 @@ import {
   isChatBasicGroup,
   isChatChannel,
   isChatGroup,
-  isUserBot,
   isUserRightBanned,
   parseSharedMediaKey,
   type SharedMediaKey,
@@ -57,7 +55,6 @@ import {
   selectMonoforumChannel,
   selectPeerStories,
   selectPerformanceSettingsValue,
-  selectSimilarBotsIds,
   selectSimilarChannelIds,
   selectTabState,
   selectTheme,
@@ -103,7 +100,6 @@ import Document from '../common/Document';
 import GroupChatInfo from '../common/GroupChatInfo';
 import Media from '../common/Media';
 import NothingFound from '../common/NothingFound';
-import PreviewMedia from '../common/PreviewMedia';
 import PrivateChatInfo from '../common/PrivateChatInfo';
 import ChatExtra from '../common/profile/ChatExtra';
 import ProfileInfo from '../common/profile/ProfileInfo.tsx';
@@ -139,7 +135,6 @@ type StateProps = {
   linkedCommunityChatsCount?: number;
   theme: ThemeKey;
   isChannel?: boolean;
-  isBot?: boolean;
   currentUserId?: string;
   messagesById?: Record<number, ApiMessage>;
   foundIds?: number[];
@@ -147,7 +142,6 @@ type StateProps = {
   hasCommonChatsTab?: boolean;
   hasStoriesTab?: boolean;
   hasMembersTab?: boolean;
-  hasPreviewMediaTab?: boolean;
   areProfileTabsKnown?: boolean;
   storyAlbums?: ApiStoryAlbum[];
   areMembersHidden?: boolean;
@@ -172,8 +166,6 @@ type StateProps = {
   animationLevel: AnimationLevel;
   shouldWarnAboutFiles?: boolean;
   similarChannels?: string[];
-  similarBots?: string[];
-  botPreviewMedia?: ApiBotPreviewMedia[];
   isCurrentUserPremium?: boolean;
   isTopicInfo?: boolean;
   isSavedDialog?: boolean;
@@ -219,7 +211,7 @@ const SHARED_MEDIA_TYPES = new Set<StringAutocomplete<SharedMediaType>>([
   'media', 'documents', 'links', 'audio', 'voice', 'gif', 'polls',
 ]);
 const NON_ISLAND_TABS = new Set<ProfileTabType>([
-  'media', 'gif', 'stories', 'storiesArchive', 'previewMedia', 'polls',
+  'media', 'gif', 'stories', 'storiesArchive', 'polls',
 ]);
 const MESSAGE_BASED_TABS = new Set<ProfileTabType>([
   'media', 'gif', 'documents', 'links', 'audio', 'voice', 'polls',
@@ -239,11 +231,9 @@ const CONTENT_LIST_CLASS: Record<string, string> = {
   gif: styles.gifList,
   stories: styles.storiesList,
   storiesArchive: styles.storiesArchiveList,
-  previewMedia: styles.previewMediaList,
   members: styles.membersList,
   commonChats: styles.commonChatsList,
   similarChannels: styles.similarChannelsList,
-  similarBots: styles.similarBotsList,
 };
 
 const Profile = ({
@@ -257,7 +247,6 @@ const Profile = ({
   linkedCommunity,
   linkedCommunityChatsCount,
   isChannel,
-  isBot,
   currentUserId,
   messagesById,
   foundIds,
@@ -270,10 +259,8 @@ const Profile = ({
   hasCommonChatsTab,
   hasStoriesTab,
   hasMembersTab,
-  hasPreviewMediaTab,
   areProfileTabsKnown,
   storyAlbums,
-  botPreviewMedia,
   areMembersHidden,
   canAddMembers,
   canDeleteMembers,
@@ -290,7 +277,6 @@ const Profile = ({
   animationLevel,
   shouldWarnAboutFiles,
   similarChannels,
-  similarBots,
   isCurrentUserPremium,
   isTopicInfo,
   isSavedDialog,
@@ -316,8 +302,6 @@ const Profile = ({
     loadPeerProfileStories,
     loadStoriesArchive,
     loadChannelRecommendations,
-    loadBotRecommendations,
-    loadPreviewMedias,
     loadStoryAlbums,
     resetSelectedStoryAlbum,
     changeProfileTab,
@@ -368,10 +352,6 @@ const Profile = ({
       arr.push({ type: 'members', key: 'ProfileTabMembers' });
     }
 
-    if (hasPreviewMediaTab && !isOwnProfile) {
-      arr.push({ type: 'previewMedia', key: 'ProfileTabBotPreview' });
-    }
-
     if (!isOwnProfile) {
       arr.push(...TABS);
     }
@@ -391,10 +371,6 @@ const Profile = ({
 
     if (isChannel && similarChannels?.length && !isOwnProfile) {
       arr.push({ type: 'similarChannels', key: 'ProfileTabSimilarChannels' });
-    }
-
-    if (isBot && similarBots?.length && !isOwnProfile) {
-      arr.push({ type: 'similarBots', key: 'ProfileTabSimilarBots' });
     }
 
     // Fallback to prevent errors in edge cases
@@ -429,9 +405,9 @@ const Profile = ({
       } satisfies TabWithPropertiesAndType;
     });
   }, [
-    isGeneralSavedMessages, hasStoriesTab, hasMembersTab, hasPreviewMediaTab,
+    isGeneralSavedMessages, hasStoriesTab, hasMembersTab,
     isTopicInfo,
-    hasCommonChatsTab, isChannel, isBot, similarChannels?.length, similarBots?.length, lang, isOwnProfile,
+    hasCommonChatsTab, isChannel, similarChannels?.length, lang, isOwnProfile,
     mainTab, chatId, canUpdateMainTab, validMainTabTypes,
   ]);
 
@@ -467,22 +443,10 @@ const Profile = ({
   });
 
   useEffect(() => {
-    if (hasPreviewMediaTab && !botPreviewMedia) {
-      loadPreviewMedias({ botId: chatId });
-    }
-  }, [chatId, botPreviewMedia, hasPreviewMediaTab]);
-
-  useEffect(() => {
     if (isChannel && !similarChannels && isSynced) {
       loadChannelRecommendations({ chatId });
     }
   }, [chatId, isChannel, similarChannels, isSynced]);
-
-  useEffect(() => {
-    if (isBot && !similarBots && isSynced) {
-      loadBotRecommendations({ userId: chatId });
-    }
-  }, [chatId, isBot, similarBots, isSynced]);
 
   useEffect(() => {
     if (isActive && linkedCommunity && linkedCommunityChatsCount === undefined) {
@@ -569,7 +533,6 @@ const Profile = ({
     pinnedStoryIds,
     archiveStoryIds,
     similarChannels,
-    similarBots,
     scrollToTopKey,
   });
 
@@ -657,15 +620,6 @@ const Profile = ({
     });
   });
 
-  const handleSelectPreviewMedia = useLastCallback((index: number) => {
-    openMediaViewer({
-      standaloneMedia: botPreviewMedia?.flatMap((item) => item?.content.photo
-        || item?.content.video).filter(Boolean),
-      origin: MediaViewerOrigin.PreviewMedia,
-      mediaIndex: index,
-    });
-  });
-
   const handlePlayAudio = useLastCallback((messageId: number, messageChatId: string, documentId?: string) => {
     openAudioPlayer({
       item: {
@@ -728,7 +682,7 @@ const Profile = ({
   if (isFirstTab) {
     renderingDelay = !isRightColumnShown ? HIDDEN_RENDER_DELAY : 0;
     // @optimization Used to delay first render of secondary tabs while animating
-  } else if (!viewportIds && !botPreviewMedia) {
+  } else if (!viewportIds) {
     renderingDelay = SLIDE_TRANSITION_DURATION;
   }
 
@@ -838,7 +792,7 @@ const Profile = ({
     }
 
     const needsMessages = MESSAGE_BASED_TABS.has(resultType);
-    const noContent = (!viewportIds && !botPreviewMedia) || !canRenderContent || (needsMessages && !messagesById);
+    const noContent = !viewportIds || !canRenderContent || (needsMessages && !messagesById);
     const noSpinner = isFirstTab && !canRenderContent;
 
     if (shouldWrapInIsland) {
@@ -1102,18 +1056,6 @@ const Profile = ({
               <GroupChatInfo chatId={id} />
             </ListItem>
           ))
-        ) : resultType === 'previewMedia' ? (
-          botPreviewMedia!.map((media, i, arr) => (
-            <PreviewMedia
-              key={media.date}
-              media={media}
-              className={getGridCornerClassName(i, arr.length)}
-              isProtected={isChatProtected}
-              observeIntersection={observeIntersectionForMedia}
-              onClick={handleSelectPreviewMedia}
-              index={i}
-            />
-          ))
         ) : resultType === 'similarChannels' ? (
           <div key={resultType}>
             {(viewportIds as string[]).map((channelId, i) => (
@@ -1125,23 +1067,6 @@ const Profile = ({
                 onClick={() => openChat({ id: channelId })}
               >
                 <GroupChatInfo avatarSize="large" chatId={channelId} withFullInfo />
-              </ListItem>
-            ))}
-          </div>
-        ) : resultType === 'similarBots' ? (
-          <div key={resultType}>
-            {(viewportIds as string[]).map((userId, i) => (
-              <ListItem
-                key={userId}
-                teactOrderKey={i}
-                className="chat-item-clickable search-result"
-
-                onClick={() => openChat({ id: userId })}
-              >
-                <PrivateChatInfo
-                  userId={userId}
-                  avatarSize="medium"
-                />
               </ListItem>
             ))}
           </div>
@@ -1341,7 +1266,6 @@ export default memo(withGlobal<OwnProps>(
 
     const isGroup = chat && isChatGroup(chat);
     const isChannel = chat && isChatChannel(chat);
-    const isBot = user && isUserBot(user);
     const hasMembersTab = !isTopicInfo && !isSavedDialog && isGroup && !chat?.isMonoforum;
     const members = chatFullInfo?.members;
     const adminMembersById = chatFullInfo?.adminMembersById;
@@ -1352,7 +1276,6 @@ export default memo(withGlobal<OwnProps>(
     const canDeleteMembers = hasMembersTab && selectCanBanUsers(global, chatId);
     const activeDownloads = selectActiveDownloads(global);
     const { similarChannelIds } = selectSimilarChannelIds(global, chatId) || {};
-    const { similarBotsIds } = selectSimilarBotsIds(global, chatId) || {};
     const isCurrentUserPremium = selectIsCurrentUserPremium(global);
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
 
@@ -1362,9 +1285,6 @@ export default memo(withGlobal<OwnProps>(
     const hasCommonChatsTab = user && !user.isSelf && !isSavedMessages
       && Boolean(userFullInfo?.commonChatsCount);
     const commonChats = selectUserCommonChats(global, chatId);
-
-    const hasPreviewMediaTab = userFullInfo?.botInfo?.hasPreviewMedia;
-    const botPreviewMedia = global.users.previewMediaByBotId[chatId];
 
     const hasStoriesTab = peer && (user?.isSelf || (!peer.areStoriesHidden && peerFullInfo?.hasPinnedStories))
       && !isSavedMessages;
@@ -1399,14 +1319,12 @@ export default memo(withGlobal<OwnProps>(
     return {
       theme: selectTheme(global),
       isChannel,
-      isBot,
       messagesById,
       foundIds,
       mediaSearchType,
       hasCommonChatsTab,
       hasStoriesTab,
       hasMembersTab,
-      hasPreviewMediaTab,
       areMembersHidden,
       canAddMembers,
       canDeleteMembers,
@@ -1429,8 +1347,6 @@ export default memo(withGlobal<OwnProps>(
       animationLevel,
       shouldWarnAboutFiles,
       similarChannels: similarChannelIds,
-      similarBots: similarBotsIds,
-      botPreviewMedia,
       isCurrentUserPremium,
       isTopicInfo,
       isSavedDialog,

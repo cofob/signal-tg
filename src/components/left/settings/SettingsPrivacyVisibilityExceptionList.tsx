@@ -5,7 +5,7 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type { ApiPrivacySettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
-import type { CustomPeerType, UniqueCustomPeer } from '../../../types';
+import type { CustomPeerType } from '../../../types';
 import { SettingsScreens } from '../../../types';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
@@ -27,7 +27,6 @@ import FloatingActionButton from '../../ui/FloatingActionButton';
 export type OwnProps = {
   isAllowList?: boolean;
   withPremiumCategory?: boolean;
-  withMiniAppsCategory?: boolean;
   usersOnly?: boolean;
   screen: SettingsScreens;
   isActive?: boolean;
@@ -44,7 +43,6 @@ const PREMIUM_CATEGORY = [CUSTOM_PEER_PREMIUM];
 const SettingsPrivacyVisibilityExceptionList = ({
   isAllowList,
   withPremiumCategory,
-  withMiniAppsCategory,
   screen,
   isActive,
   currentUserId,
@@ -55,21 +53,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
   const { setPrivacySettings } = getActions();
 
   const lang = useLang();
-
-  const customPeerBots: UniqueCustomPeer = useMemo(() => {
-    return {
-      isCustomPeer: true,
-      type: 'bots',
-      title: lang('PrivacyValueBots'),
-      avatarIcon: 'bots',
-      isAvatarSquare: true,
-      peerColorId: 6,
-    };
-  }, [lang]);
-
-  const miniAppsCategory = useMemo(() => {
-    return [customPeerBots];
-  }, [customPeerBots]);
 
   const selectedContactIds = useMemo(() => {
     if (!settings) {
@@ -89,11 +72,8 @@ const SettingsPrivacyVisibilityExceptionList = ({
     if (settings.shouldAllowPremium) {
       return [CUSTOM_PEER_PREMIUM.type];
     }
-    if (settings.botsPrivacy === 'allow' && isAllowList) {
-      return [customPeerBots.type];
-    }
     return [];
-  }, [settings, isAllowList, customPeerBots]);
+  }, [settings]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSubmitShown, setIsSubmitShown] = useState<boolean>(false);
   const [newSelectedContactIds, setNewSelectedContactIds] = useState<string[]>(selectedContactIds);
@@ -153,19 +133,15 @@ const SettingsPrivacyVisibilityExceptionList = ({
       isAllowList: Boolean(isAllowList),
       updatedIds: newSelectedContactIds,
       isPremiumAllowed: newSelectedCategoryTypes.includes(CUSTOM_PEER_PREMIUM.type) || undefined,
-      botsPrivacy: (!withMiniAppsCategory) ? 'none'
-        : (newSelectedCategoryTypes.includes(customPeerBots.type) ? 'allow' : 'disallow'),
     });
 
     onReset();
   }, [
     isAllowList,
-    withMiniAppsCategory,
     newSelectedCategoryTypes,
     newSelectedContactIds,
     onReset,
     screen,
-    customPeerBots,
   ]);
 
   useHistoryBack({
@@ -174,9 +150,7 @@ const SettingsPrivacyVisibilityExceptionList = ({
   });
 
   function getCustomCategory() {
-    if (withPremiumCategory) return PREMIUM_CATEGORY;
-    if (withMiniAppsCategory && isAllowList) return miniAppsCategory;
-    return undefined;
+    return withPremiumCategory ? PREMIUM_CATEGORY : undefined;
   }
 
   return (

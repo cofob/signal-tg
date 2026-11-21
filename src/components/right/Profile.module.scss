@@ -168,8 +168,7 @@
   &.storiesArchiveList,
   &.storiesList,
   &.mediaList,
-  &.gifList,
-  &.previewMediaList {
+  &.gifList {
     display: grid;
     grid-auto-rows: 1fr;
     grid-template-columns: repeat(3, 1fr);
@@ -179,8 +178,7 @@
   &.storiesArchiveList,
   &.storiesList,
   &.mediaList,
-  &.gifList,
-  &.previewMediaList {
+  &.gifList {
     overflow: hidden;
     margin-inline-start: var(--scrollbar-width);
   }
@@ -229,7 +227,6 @@
   }
 
   &.similarChannelsList,
-  &.similarBotsList,
   &.commonChatsList,
   &.membersList {
     padding: 0.5rem;

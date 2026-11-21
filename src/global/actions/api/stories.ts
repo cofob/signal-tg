@@ -576,7 +576,6 @@ addActionHandler('editStoryPrivacy', (global, actions, payload): ActionReturnTyp
     isUnspecified: privacy.isUnspecified,
     allowedIds,
     blockedIds,
-    botsPrivacy: 'none',
   });
 
   void callApi('editStoryPrivacy', {

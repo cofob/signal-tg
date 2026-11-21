@@ -36,7 +36,6 @@ interface FolderSummary {
   nonContacts?: true;
   groups?: true;
   channels?: true;
-  bots?: true;
   excludeMuted?: true;
   excludeRead?: true;
   excludeArchived?: true;
@@ -59,7 +58,6 @@ interface ChatSummary {
   linkedCommunityId?: string;
   orderInAll: number;
   orderInSaved: number;
-  isUserBot?: boolean;
   isUserContact?: boolean;
 }
 
@@ -662,7 +660,6 @@ function buildChatSummary<T extends GlobalState>(
     unreadCount,
     unreadMentionsCount,
     linkedCommunityId,
-    isUserBot: userInfo ? userInfo.type === 'userTypeBot' : undefined,
     isUserContact: userInfo ? userInfo.isContact : undefined,
     orderInAll,
     orderInSaved,
@@ -733,18 +730,12 @@ function isChatInFolder(
   }
 
   if (type === 'chatTypePrivate') {
-    if (chatSummary.isUserBot) {
-      if (folderSummary.bots) {
-        return true;
-      }
-    } else {
-      if (folderSummary.contacts && chatSummary.isUserContact) {
-        return true;
-      }
+    if (folderSummary.contacts && chatSummary.isUserContact) {
+      return true;
+    }
 
-      if (folderSummary.nonContacts && !chatSummary.isUserContact) {
-        return true;
-      }
+    if (folderSummary.nonContacts && !chatSummary.isUserContact) {
+      return true;
     }
   } else if (type === 'chatTypeChannel') {
     return Boolean(folderSummary.channels);
