@@ -6,12 +6,6 @@
 Verified: every `vite` or `vitest` start logs `Pre-transform error: Failed to load url /src/bundles/stars.ts`. The
 message is harmless but hides real warm-up errors in the same output.
 
-## `tauri/` is not rustfmt-clean
-
-`cargo fmt --check` in `tauri/` reports differences, for example in `src/mac.rs`, so CI runs Clippy and the tests for
-the crate but not rustfmt. The repository rules do not require formatting there. Formatting the crate once (the
-`rustfmt.toml` sets two-space indentation) would let CI check it like `proxy/`.
-
 ## The built `dist/` directory is tracked
 
 `git ls-files dist` lists about 11 500 files (145 MB), the output of `npm run web:release:production` from Telegram

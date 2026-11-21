@@ -285,7 +285,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2.9.3
@@ -302,6 +302,9 @@ jobs:
       # The crate embeds the frontend directory at compile time; the checks need it to exist, not to hold the app
       - name: Create the frontend directory
         run: mkdir -p dist
+
+      - name: Check formatting
+        run: cargo fmt --check
 
       - name: Clippy
         run: cargo clippy --locked --all-targets -- -D warnings

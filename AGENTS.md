@@ -25,7 +25,7 @@ TeleSignal is a web client for the Signal messenger, built on the Telegram Web A
 - For import-order errors, try `npx eslint --fix <filename>`. If it fails, make one manual attempt, then report the remaining error. Suggest that command for unresolved auto-fixable ESLint errors.
 - Keep additional verification proportional to the change. Once relevant checks pass, repeat or broaden them only for new changes, failures, or unresolved concerns.
 - After changing `proxy/`, run `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` in it.
-- After changing `tauri/`, run `cargo clippy --all-targets -- -D warnings` and `cargo test` in it; `proxy/` must still build without the desktop app.
+- After changing `tauri/`, run `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` and `cargo test` in it; `proxy/` must still build without the desktop app.
 - After changing `rust/signal-wasm` or the vendored libsignal crates, run `npm run signal:wasm`; after changing a schema in `src/lib/signal/proto/schema`, run `npm run signal:proto`. Commit the regenerated output.
 - For browser verification, reuse `localhost:1234` if running; otherwise run `npm run dev`. If a sandboxed check fails, confirm through the browser or an approved check outside the sandbox before starting another server.
 - Signal hosts are reachable only through the tunnel: run `npm run signal:proxy` (Rust) and set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunnel` in `.env`. That is the build default; the Proxy server setting (Data and Storage, or the link screen) overrides it at runtime. In development builds, `signalDev` in the browser console links a device and prints decrypted messages.
