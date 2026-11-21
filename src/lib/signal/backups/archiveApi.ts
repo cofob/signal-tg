@@ -1,5 +1,5 @@
-import type SignalStore from '../store/SignalStore';
 import type { TrafficClass } from '../config';
+import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, ArchiveCredentialsRecord } from '../store/SignalStore';
 
 import { SIGNAL_BACKUP_SERVER_PUBLIC_PARAMS, SIGNAL_CDN_HOSTS, SIGNAL_CHAT_HOST } from '../config';
