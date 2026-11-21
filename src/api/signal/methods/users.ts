@@ -10,6 +10,16 @@ import { db, logError, processor } from '../engine';
 import { getConversationByPeerId, getPeerId } from '../peers';
 import { sendApiUpdate } from '../updates';
 
+const ACI_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The chat with an ACI, such as a shared contact's, created when there is none yet */
+export async function getChatByAci(aci: string) {
+  const selfAci = getCurrentAccount()?.aci;
+  if (!selfAci || !ACI_REGEX.test(aci)) return undefined;
+  const conversation = await processor.getOrCreatePrivateConversation(aci);
+  return { chat: buildApiChat(conversation, selfAci), user: buildApiUser(conversation, selfAci) };
+}
+
 export async function fetchFullUser({ id }: { id: string; accessHash?: string }) {
   const selfAci = getCurrentAccount()?.aci;
   const conversation = await getConversationByPeerId(id);

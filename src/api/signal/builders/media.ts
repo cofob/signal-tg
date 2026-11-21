@@ -14,6 +14,7 @@ import { AttachmentPointer_Flags } from '../../../lib/signal/proto/generated/Sig
 import { getIsStickerPackValid } from '../../../lib/signal/stickers/stickerPackLinks';
 import { bufferToHex } from '../../../util/encoding/buffer';
 import { getBlurHashDataUri } from '../media/blurHash';
+import { getIsValidLinkPreview } from './linkPreviews';
 import { STICKER_SIZE } from './stickers';
 
 export const STICKER_SLOT = 's';
@@ -23,7 +24,6 @@ export const PREVIEW_SLOT = 'p';
 type AttachmentSlot = number | typeof STICKER_SLOT | typeof PREVIEW_SLOT;
 
 const MEDIA_ID_REGEX = /^(\d+)_(\d+|s|p)$/;
-const HTTPS_PREFIX = 'https://';
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 const PHOTO_CONTENT_TYPES = new Set([...SUPPORTED_PHOTO_CONTENT_TYPES, 'image/webp']);
 // Signal Desktop `getFileExtension` in `ts/util/Attachment.std.ts`
@@ -40,7 +40,10 @@ const FILE_INDEX_LENGTH = 3;
 const UNREGISTERED_CONTACT_ID = '0';
 const NON_DIGIT_REGEX = /\D/g;
 const VCARD_SPECIAL_CHARACTERS_REGEX = /[\\,;]/g;
-const NEW_LINE_REGEX = /\r?\n/g;
+const NEW_LINE_REGEX = /\r\n|\r|\n/g;
+// Signal Android sends at most 32 attachments in a message (`RemoteConfig.maxAttachmentCount` default); more from a
+// crafted message are not shown
+const MAX_ALBUM_ITEMS = 32;
 // vCard `TYPE`s of `DataMessage.Contact.Phone.Type`, `Email.Type` and `PostalAddress.Type`; custom ones have none
 const VCARD_PHONE_TYPES: Record<number, string> = { 1: 'HOME', 2: 'CELL', 3: 'WORK' };
 const VCARD_EMAIL_TYPES: Record<number, string> = { 1: 'HOME', 3: 'WORK' };
@@ -68,7 +71,10 @@ export function buildMessageMedia(message: MessageRecord, dataMessage: DataMessa
   const albumItems = media.filter((item): item is Pick<MediaContent, 'photo' | 'video'> => Boolean(
     item && (item.photo || (item.video && !item.video.isGif)),
   ));
-  if (albumItems.length > 1) return { ...albumItems[0], album: { mediaType: 'album', items: albumItems } };
+  if (albumItems.length > 1) {
+    const items = albumItems.slice(0, MAX_ALBUM_ITEMS);
+    return { ...items[0], album: { mediaType: 'album', items } };
+  }
   const first = media.find(Boolean);
   if (first) return first;
 
@@ -180,12 +186,12 @@ function buildSticker(message: MessageRecord, sticker: DataMessage_Sticker, data
 }
 
 /**
- * The link preview of a message as the app's web page. As Signal Desktop does (`ts/linkPreviews/`), a preview shows
- * only for an `https:` link that the text contains.
+ * The link preview of a message as the app's web page. As in Signal Desktop (`ts/util/getValidLinkPreviews.node.ts`),
+ * only a safe `https:` link of the message text has a preview.
  */
 export function buildWebPage(message: MessageRecord, { body, preview }: DataMessage): ApiWebPageFull | undefined {
   const [first] = preview;
-  if (!first?.url.startsWith(HTTPS_PREFIX) || !body.includes(first.url)) return undefined;
+  if (!first || !getIsValidLinkPreview(body, first.url)) return undefined;
 
   const {
     url, title, description, image,

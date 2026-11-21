@@ -1778,6 +1778,9 @@ export interface ActionPayloads {
   openChatByUsernameLink: {
     url: string;
   } & WithTabId;
+  openChatByAci: {
+    aci: string;
+  } & WithTabId;
   loadPhoneNumberPrivacy: undefined;
   updatePhoneNumberPrivacy: {
     isShared?: boolean;

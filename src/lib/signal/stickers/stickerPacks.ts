@@ -47,7 +47,11 @@ const SALT_LENGTH = 32;
 const PACK_KEY_INFO = encodeUtf8('Sticker Pack');
 // Signal Desktop `ts/types/AttachmentSize.std.ts`
 const MAX_CIPHERTEXT_LENGTH = 1024 * 1024;
+// Signal Desktop `MAX_STICKERS_PER_PACK` in `ts/util/Stickers.std.ts`
+const MAX_STICKERS_PER_PACK = 1024;
 const HTTP_OK = 200;
+// The sticker CDN answers 403 for a pack that does not exist, as CDN 0 does for attachments
+const HTTP_NOT_FOUND_STATUSES = new Set([403, 404]);
 const DEFAULT_CONTENT_TYPE = 'image/webp';
 const PNG_CONTENT_TYPE = 'image/png';
 const PNG_SIGNATURE = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -75,6 +79,9 @@ export function getKnownStickerPacks() {
   return Object.entries(KNOWN_PACKS).map(([id, key]) => ({ id, key: bufferToHex(bufferFromBase64(key)) }));
 }
 
+/** The CDN has no such pack, or the pack key does not decrypt it */
+export class StickerPackNotFoundError extends Error {}
+
 /** The manifest of a pack, downloaded and stored on first use */
 export async function fetchStickerPackManifest(store: SignalStore, id: string, key: string) {
   const stored = await store.getStickerPackManifest(id);
@@ -87,16 +94,21 @@ export async function fetchStickerPackManifest(store: SignalStore, id: string, k
 
 /**
  * Downloads and decrypts a pack manifest: `cdn.signal.org/stickers/<id>/manifest.proto`, encrypted like attachments
- * with keys derived from the pack key (Signal Desktop `downloadStickerPack` in `ts/types/Stickers.preload.ts`)
+ * with keys derived from the pack key (Signal Desktop `downloadStickerPack` and `parseStickerPackManifest` in
+ * `ts/types/Stickers.preload.ts`). Packs keep at most `MAX_STICKERS_PER_PACK` stickers; a pack without a cover and
+ * stickers is malformed.
  */
 export async function downloadStickerPackManifest(id: string, key: string): Promise<StickerPackManifest> {
   const plaintext = await downloadStickerPackFile(id, key, 'manifest.proto');
   const pack = fromBinary(PackSchema, plaintext);
-  const stickers = pack.stickers.map(({ id: stickerId, emoji }) => ({ id: stickerId, emoji }));
+  const stickers = pack.stickers.slice(0, MAX_STICKERS_PER_PACK)
+    .map(({ id: stickerId, emoji }) => ({ id: stickerId, emoji }));
+  const cover = pack.cover ?? stickers[0];
+  if (!cover) throw new Error('Sticker pack has no cover and no stickers');
   return {
     title: pack.title,
     author: pack.author,
-    coverStickerId: pack.cover?.id ?? stickers[0]?.id ?? 0,
+    coverStickerId: cover.id,
     stickers,
   };
 }
@@ -147,8 +159,17 @@ async function downloadStickerPackFile(id: string, key: string, file: string) {
       }
     },
   });
+  if (HTTP_NOT_FOUND_STATUSES.has(response.status)) throw new StickerPackNotFoundError(`HTTP ${response.status}`);
   if (response.status !== HTTP_OK) throw new Error(`Sticker pack download failed with HTTP ${response.status}`);
+  // Progress has no total without `Content-Length`, so the length is checked again here
+  if (response.body.length > MAX_CIPHERTEXT_LENGTH) {
+    throw new Error(`Sticker pack file is larger than ${MAX_CIPHERTEXT_LENGTH} bytes`);
+  }
 
   const derivedKey = deriveSecrets(DERIVED_KEY_LENGTH, bufferFromHex(key), PACK_KEY_INFO, new Uint8Array(SALT_LENGTH));
-  return decryptAttachment(response.body, derivedKey);
+  try {
+    return await decryptAttachment(response.body, derivedKey);
+  } catch (err) {
+    throw new StickerPackNotFoundError('The pack key does not decrypt the pack', { cause: err });
+  }
 }

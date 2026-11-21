@@ -36,16 +36,22 @@ const Contact = ({
   contact, user, phoneCodeList, noUserColors,
 }: OwnProps & StateProps) => {
   const {
-    openChat, openAddContactDialog, showNotification, openChatWithInfo,
+    openChat, openAddContactDialog, showNotification, openChatWithInfo, openChatByAci,
   } = getActions();
   const lang = useLang();
 
-  const { phoneNumber, userId, vcard } = contact;
-  const isRegistered = userId !== UNREGISTERED_CONTACT_ID;
+  const {
+    phoneNumber, userId, vcard, aci,
+  } = contact;
+  const isRegistered = userId !== UNREGISTERED_CONTACT_ID || Boolean(aci);
   // Signal has no contact list on the server: a shared contact is saved as a vCard instead
   const canAddContact = Boolean(vcard) || (isRegistered && user && getCanAddContact(user));
 
   const handleOpenChat = useLastCallback(() => {
+    if (userId === UNREGISTERED_CONTACT_ID && aci) {
+      openChatByAci({ aci });
+      return;
+    }
     openChat({ id: userId });
   });
 

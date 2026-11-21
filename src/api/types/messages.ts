@@ -198,6 +198,8 @@ export interface ApiContact {
   userId: string;
   // Signal: the shared contact as a vCard, which the message offers to save
   vcard?: string;
+  // Signal: the contact's ACI when no chat with it exists yet; messaging it creates one
+  aci?: string;
 }
 
 export interface ApiPollAnswer {

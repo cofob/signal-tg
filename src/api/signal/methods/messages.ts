@@ -168,7 +168,13 @@ export function sendMessageLocal(params: SendMessageParams) {
 export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnProgress) {
   // The composer sends the items of an album one after another, so each joins the album before its upload starts
   const albumItem = getIsAlbumItem(params) ? joinAlbum(params) : undefined;
-  const localMessage = params.localMessage ?? await sendMessageLocal(params);
+  let localMessage: ApiMessage | undefined;
+  try {
+    localMessage = params.localMessage ?? await sendMessageLocal(params);
+  } finally {
+    // An item without a local message leaves the album, so the others are not held back
+    if (albumItem && !localMessage) await settleAlbumItem(albumItem);
+  }
   if (!localMessage) return;
   if (albumItem) {
     await uploadAlbumItem(albumItem, localMessage, onProgress);
@@ -420,8 +426,12 @@ async function uploadAlbumItem(item: AlbumItem, localMessage: ApiMessage, onProg
   } catch (err) {
     if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
   }
-  item.isSettled = true;
+  await settleAlbumItem(item);
+}
 
+/** Marks an item uploaded or failed; the last item of an album to settle sends it */
+async function settleAlbumItem(item: AlbumItem) {
+  item.isSettled = true;
   const groupedId = item.params.groupedId!;
   const items = albumItemsByGroupedId.get(groupedId)!;
   if (items.some(({ isSettled }) => !isSettled)) return;

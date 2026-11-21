@@ -120,10 +120,7 @@ export async function buildApiMessageWithPoll(
 
   const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
   const media = buildMessageMedia(message, dataMessage);
-  if (media.contact) {
-    const userId = await resolveContactUserId(dataMessage.contact[0], users);
-    if (userId) media.contact = { ...media.contact, userId };
-  }
+  if (media.contact) media.contact = { ...media.contact, ...await resolveContact(dataMessage.contact[0], users) };
   // View-once media stays out of the chat and opens once in the media viewer; outgoing media cannot be opened,
   // as in Signal Desktop
   if (dataMessage.isViewOnce) {
@@ -268,18 +265,23 @@ export function createUserResolver() {
 }
 
 /**
- * The user to message for a shared contact: the ACI it carries, or a conversation with one of its numbers (Signal
- * Desktop `resolveSharedContact` in `ts/util/sharedContact.std.ts`)
+ * How to message a shared contact (Signal Desktop `resolveSharedContact` in `ts/util/sharedContact.std.ts`): the
+ * existing chat with its ACI or one of its numbers, or its ACI, which gets a chat only when messaged
  */
-async function resolveContactUserId({ aciBinary, number }: DataMessage_Contact, users: UserResolver) {
-  if (aciBinary.length === UUID_BYTE_LENGTH) return users.getUserId(uuidToString(aciBinary));
+async function resolveContact(
+  { aciBinary, number }: DataMessage_Contact, users: UserResolver,
+): Promise<{ userId?: string; aci?: string }> {
+  if (aciBinary.length === UUID_BYTE_LENGTH) {
+    const aci = uuidToString(aciBinary);
+    return await db.getConversation(aci) ? { userId: await users.getUserId(aci) } : { aci };
+  }
 
   const e164s = new Set(number.map(({ value }) => `+${value.replace(NON_DIGIT_REGEX, '')}`));
-  if (!e164s.size) return undefined;
+  if (!e164s.size) return {};
   const conversation = (await db.getConversations()).find(({ type, e164 }) => (
     type === 'private' && e164 && e164s.has(e164)
   ));
-  return conversation && users.getUserId(conversation.id);
+  return conversation ? { userId: await users.getUserId(conversation.id) } : {};
 }
 
 async function resolveMentionedUsers(bodyRanges: BodyRange[], users: UserResolver) {

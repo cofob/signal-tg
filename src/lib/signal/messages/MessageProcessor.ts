@@ -877,10 +877,13 @@ export default class MessageProcessor {
    * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
    */
   async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
-    await this.runSerial(async () => {
-      await this.applyStickerPackState(id, key, isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() });
+    const isChanged = await this.runSerial(async () => {
+      const state: StickerPackState = isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() };
+      if (!await this.applyStickerPackState(id, key, state)) return false;
       await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+      return true;
     });
+    if (!isChanged) return;
     await this.sendWhenConnected(async (context) => {
       await sendStickerPackSync(context, [{ id, key, isInstalled }]);
     });
@@ -1151,7 +1154,10 @@ export default class MessageProcessor {
         await this.applyStickerPackState(
           id,
           packKey.length ? bufferToHex(packKey) : undefined,
-          deletedAtTimestamp ? { uninstalledAt: Number(deletedAtTimestamp) } : { isInstalled: true, position },
+          // An unset position reads as 0 and leaves the local one (Signal Desktop keeps it when the field is absent)
+          deletedAtTimestamp
+            ? { uninstalledAt: Number(deletedAtTimestamp) }
+            : { isInstalled: true, position: position || undefined },
         );
       }
     }
@@ -1166,19 +1172,19 @@ export default class MessageProcessor {
   }
 
   /**
-   * Stores whether a sticker pack is installed. A pack installed without a position goes after the others; a removal
-   * of a pack this device never had needs no record.
+   * Stores whether a sticker pack is installed and returns whether that changed. A pack installed without a position
+   * goes after the others; a removal of a pack this device never had needs no record.
    */
   private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
     const { store } = this.client;
     const packs = await store.getItem('stickerPacks') ?? {};
     const current = packs[id];
     const packKey = key ?? current?.key;
-    if (!packKey || !getIsStickerPackValid(id, packKey)) return;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return false;
 
     const wasInstalled = current?.installedAt !== undefined;
     if ('isInstalled' in state) {
-      if (wasInstalled && (state.position === undefined || state.position === current.position)) return;
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return false;
       packs[id] = {
         id,
         key: packKey,
@@ -1186,11 +1192,12 @@ export default class MessageProcessor {
         position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
       };
     } else {
-      if (!wasInstalled) return;
+      if (!wasInstalled) return false;
       packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
     }
     await store.setItem('stickerPacks', packs);
     this.events.onStickerPacksChange?.([id]);
+    return true;
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */

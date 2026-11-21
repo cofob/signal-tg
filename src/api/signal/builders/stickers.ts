@@ -20,10 +20,13 @@ export function buildApiStickerSet(
   id: string, key: string, manifest: StickerPackManifest, pack?: StickerPackRecord,
 ): ApiStickerSetWithStickers {
   const stickers = manifest.stickers.map((sticker) => buildApiPackSticker(id, key, sticker.id, sticker.emoji));
-  const packs: Record<string, ApiSticker[]> = {};
+  // Emoji come from the manifest: grouping in a `Map` and defining the keys with `Object.fromEntries` keeps a key such
+  // as `__proto__` or `constructor` an own property
+  const stickersByEmoji = new Map<string, ApiSticker[]>();
   stickers.forEach((sticker) => {
-    if (sticker.emoji) packs[sticker.emoji] = [...packs[sticker.emoji] ?? [], sticker];
+    if (sticker.emoji) stickersByEmoji.set(sticker.emoji, [...stickersByEmoji.get(sticker.emoji) ?? [], sticker]);
   });
+  const packs: Record<string, ApiSticker[]> = Object.fromEntries(stickersByEmoji);
   const cover = stickers.find((sticker) => sticker.id === buildPackStickerId(id, key, manifest.coverStickerId))
     ?? buildApiPackSticker(id, key, manifest.coverStickerId);
 
@@ -41,6 +44,18 @@ export function buildApiStickerSet(
     },
     stickers,
     packs,
+  };
+}
+
+/** An installed pack whose manifest is not here yet: the app loads its stickers later through `fetchStickers` */
+export function buildApiStickerSetStub({ id, key, installedAt }: StickerPackRecord): ApiStickerSet {
+  return {
+    id,
+    accessHash: key,
+    shortName: id,
+    title: '',
+    count: 0,
+    installedDate: installedAt !== undefined ? Math.floor(installedAt / MS_PER_SECOND) : undefined,
   };
 }
 

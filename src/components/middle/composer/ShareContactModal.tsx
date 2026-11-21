@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
+import type { ApiUser } from '../../../api/types';
 import type { MessageList } from '../../../types';
 
 import { getUserFullName } from '../../../global/helpers';
@@ -18,6 +19,7 @@ type OwnProps = {
 };
 
 type StateProps = {
+  usersById: Record<string, ApiUser>;
   contactIds?: string[];
   currentUserId?: string;
 };
@@ -26,6 +28,7 @@ type StateProps = {
 const ShareContactModal = ({
   isOpen,
   messageList,
+  usersById,
   contactIds,
   currentUserId,
   onClose,
@@ -36,11 +39,10 @@ const ShareContactModal = ({
 
   const filteredContactIds = useMemo(() => {
     const ids = (contactIds || []).filter((id) => id !== currentUserId);
-    const usersById = getGlobal().users.byId;
     return filterPeersByQuery({ ids, query: search, type: 'user' }).sort((firstId, secondId) => (
       (getUserFullName(lang, usersById[firstId]) || '').localeCompare(getUserFullName(lang, usersById[secondId]) || '')
     ));
-  }, [contactIds, currentUserId, lang, search]);
+  }, [contactIds, currentUserId, lang, search, usersById]);
 
   const handleSelect = useLastCallback((userId: string) => {
     const user = getGlobal().users.byId[userId];
@@ -75,6 +77,7 @@ const ShareContactModal = ({
 
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => ({
+    usersById: global.users.byId,
     contactIds: global.contactList?.userIds,
     currentUserId: global.currentUserId,
   }),

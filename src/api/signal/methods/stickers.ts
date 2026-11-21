@@ -1,10 +1,13 @@
+import type { StickerPackRecord } from '../../../lib/signal/stickers/stickerPacks';
 import type { ApiSticker, ApiStickerSet, ApiStickerSetInfo } from '../../types';
 
 import { getIsStickerPackValid } from '../../../lib/signal/stickers/stickerPackLinks';
 import {
-  fetchStickerPackManifest, getKnownStickerPacks, sortInstalledStickerPacks,
+  fetchStickerPackManifest, getKnownStickerPacks, sortInstalledStickerPacks, StickerPackNotFoundError,
 } from '../../../lib/signal/stickers/stickerPacks';
-import { buildApiPackSticker, buildApiStickerSet, parsePackStickerId } from '../builders/stickers';
+import {
+  buildApiPackSticker, buildApiStickerSet, buildApiStickerSetStub, parsePackStickerId,
+} from '../builders/stickers';
 import { logError, processor, store } from '../engine';
 
 // Signal Desktop `getRecentStickers` in `ts/sql/Server.node.ts`
@@ -18,11 +21,18 @@ const LIST_HASH = 'signal';
 export async function fetchStickerSets({ hash }: { hash?: string }) {
   if (hash) return undefined;
   const packs = sortInstalledStickerPacks(Object.values(await store.getItem('stickerPacks') ?? {}));
-  const sets = await Promise.all(packs.map(async (pack) => {
-    const manifest = await fetchStickerPackManifest(store, pack.id, pack.key).catch(logError);
-    return manifest && buildApiStickerSet(pack.id, pack.key, manifest, pack).set;
-  }));
-  return { hash: LIST_HASH, sets: sets.filter(isStickerSet) };
+  return { hash: LIST_HASH, sets: await Promise.all(packs.map(buildInstalledStickerSet)) };
+}
+
+/** An installed pack with its stickers, or without them while its manifest cannot be loaded */
+export async function buildInstalledStickerSet(pack: StickerPackRecord) {
+  try {
+    const manifest = await fetchStickerPackManifest(store, pack.id, pack.key);
+    return buildApiStickerSet(pack.id, pack.key, manifest, pack).set;
+  } catch (err) {
+    logError(err);
+    return buildApiStickerSetStub(pack);
+  }
 }
 
 /** Signal's artist series packs, which the sticker picker offers to install */
@@ -30,13 +40,21 @@ export async function fetchFeaturedStickers({ hash }: { hash?: string }) {
   if (hash) return undefined;
   const installed = await store.getItem('stickerPacks') ?? {};
   const sets = await Promise.all(getKnownStickerPacks().map(async ({ id, key }) => {
-    const manifest = await fetchStickerPackManifest(store, id, key).catch(logError);
-    return manifest && buildApiStickerSet(id, key, manifest, installed[id]).set;
+    try {
+      const manifest = await fetchStickerPackManifest(store, id, key);
+      return buildApiStickerSet(id, key, manifest, installed[id]).set;
+    } catch (err) {
+      logError(err);
+      return undefined;
+    }
   }));
   return { hash: LIST_HASH, isPremium: false, sets: sets.filter(isStickerSet) };
 }
 
-/** A pack by id and key, as stickers and links name it; a short name is the id of a pack this device knows */
+/**
+ * A pack by id and key, as stickers and links name it; a short name is the id of a pack this device knows. A pack
+ * the CDN does not have is reported as invalid, other failures as they are, so the app can try again.
+ */
 export async function fetchStickers({ stickerSetInfo }: { stickerSetInfo: ApiStickerSetInfo }) {
   if ('isMissing' in stickerSetInfo) return undefined;
   const packs = await store.getItem('stickerPacks') ?? {};
@@ -50,7 +68,8 @@ export async function fetchStickers({ stickerSetInfo }: { stickerSetInfo: ApiSti
     const manifest = await fetchStickerPackManifest(store, id, key);
     return buildApiStickerSet(id, key, manifest, packs[id]);
   } catch (err) {
-    throw new Error(STICKER_SET_INVALID_ERROR, { cause: err });
+    if (err instanceof StickerPackNotFoundError) throw new Error(STICKER_SET_INVALID_ERROR, { cause: err });
+    throw err;
   }
 }
 
@@ -100,7 +119,7 @@ export async function addRecentSticker(packId: string, stickerId: number) {
   ));
 }
 
-function isStickerSet(set: ApiStickerSet | void): set is ApiStickerSet {
+function isStickerSet(set: ApiStickerSet | undefined): set is ApiStickerSet {
   return Boolean(set);
 }
 

@@ -106,5 +106,5 @@ export {
   uninstallStickerSet,
 } from './stickers';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, getChatByAci, reportSpam,
 } from './users';
