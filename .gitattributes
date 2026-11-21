@@ -14,6 +14,10 @@
 *.md text eol=lf
 *.svg text eol=lf
 *.sh text eol=lf
+# Copied into the container image, where CRLF breaks the shell and nginx
+Dockerfile text eol=lf
+docker/**/*.conf text eol=lf
+*.template text eol=lf
 dev/icons-templates/*.template text eol=lf
 
 # Denote all files that are truly binary and should not be modified.
