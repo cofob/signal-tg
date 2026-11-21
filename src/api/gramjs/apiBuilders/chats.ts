@@ -24,7 +24,6 @@ import {
 } from '../../types';
 
 import { omitUndefined, pickTruthy } from '../../../util/iteratees';
-import { toJSNumber } from '../../../util/numbers';
 import { getServerTime } from '../../../util/serverTime';
 import { addPhotoToLocalDb, addUserToLocalDb } from '../helpers/localDb';
 import { buildApiBotCommand } from './bots';
@@ -89,7 +88,6 @@ function buildApiChatFieldsFromPeerEntity(
   const color = userOrChannel?.color ? buildApiPeerColor(userOrChannel.color) : undefined;
   const profileColor = userOrChannel?.profileColor ? buildApiPeerColor(userOrChannel.profileColor) : undefined;
   const emojiStatus = userOrChannel?.emojiStatus ? buildApiEmojiStatus(userOrChannel.emojiStatus) : undefined;
-  const paidMessagesStars = userOrChannel?.sendPaidMessagesStars;
   const linkedCommunityId = userOrChannel?.linkedCommunityId;
   const isVerified = userOrChannel?.verified;
   const isForum = channel?.forum || user?.botForumView;
@@ -132,9 +130,7 @@ function buildApiChatFieldsFromPeerEntity(
     emojiStatus,
     botVerificationIconId,
     hasGeo: channel?.hasGeo,
-    paidMessagesStars: toJSNumber(paidMessagesStars),
     level: channel?.level,
-    hasAutoTranslation: channel?.autotranslation,
     withForumTabs: channel?.forumTabs,
     withForumSidebar: channel?.forumSidebar,
 

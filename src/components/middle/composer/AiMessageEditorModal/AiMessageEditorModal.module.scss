@@ -125,38 +125,6 @@
   }
 }
 
-.paidStarsBadge {
-  position: absolute;
-  top: -1rem;
-  left: 50%;
-  transform: translateX(-50%);
-
-  height: auto;
-  margin-top: 0.625rem;
-  padding-block: 0.25rem;
-  padding-inline: 0.375rem;
-
-  font-size: 0.8125rem;
-  font-weight: var(--font-weight-semibold) !important;
-  line-height: 1;
-
-  &.hidden {
-    pointer-events: none;
-    opacity: 0;
-  }
-
-  :global(.icon) {
-    margin-inline-start: 0;
-    margin-inline-end: 0.0625rem;
-    font-size: 0.875rem;
-  }
-}
-
-.paidStarsBadgeText {
-  display: inline-flex;
-  align-items: center;
-}
-
 .helpButton {
   position: absolute;
   z-index: 3;

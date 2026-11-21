@@ -72,6 +72,18 @@ const NBSP = '\u00A0';
 const DEFAULT_TOPIC_ICON_ID = '0';
 
 const UNSUPPORTED_LANG_KEY = 'ActionUnsupported';
+// Signal group updates whose text names only who made them
+const GROUP_UPDATE_LANG_KEYS = {
+  description: 'ActionGroupDescription',
+  descriptionRemoved: 'ActionGroupDescriptionRemoved',
+  joinRequested: 'ActionGroupJoinRequested',
+  linkOn: 'ActionGroupLinkOn',
+  linkOnWithApproval: 'ActionGroupLinkOnWithApproval',
+  linkOff: 'ActionGroupLinkOff',
+  linkReset: 'ActionGroupLinkReset',
+  announcementsOn: 'ActionGroupAnnouncementsOn',
+  announcementsOff: 'ActionGroupAnnouncementsOff',
+} as const;
 
 const ActionMessageText = ({
   message,
@@ -182,6 +194,30 @@ const ActionMessageText = ({
 
       case 'chatJoinedByRequest':
         return translateWithYou(lang, 'ActionJoinedByRequest', isOutgoing, { from: senderLink });
+
+      case 'groupUpdate': {
+        const user = action.userId ? selectPeer(global, action.userId) : undefined;
+        const userLink = renderPeerLink(user?.id, (user && getPeerTitle(lang, user)) || userFallbackText, asPreview);
+        const access = lang(action.isAdminOnly ? 'ActionGroupAccessAdmins' : 'ActionGroupAccessMembers');
+        switch (action.update) {
+          case 'adminAdded':
+            return translateWithYou(lang, 'ActionGroupAdminAdded', isSenderSelf, { from: senderLink, user: userLink });
+          case 'adminRemoved':
+            return translateWithYou(
+              lang, 'ActionGroupAdminRemoved', isSenderSelf, { from: senderLink, user: userLink },
+            );
+          case 'invited':
+            return translateWithYou(lang, 'ActionGroupInvited', isSenderSelf, {
+              from: senderLink, count: action.count ?? 0,
+            }, { pluralValue: action.count ?? 0 });
+          case 'infoAccess':
+            return translateWithYou(lang, 'ActionGroupInfoAccess', isSenderSelf, { from: senderLink, access });
+          case 'membersAccess':
+            return translateWithYou(lang, 'ActionGroupMembersAccess', isSenderSelf, { from: senderLink, access });
+          default:
+            return translateWithYou(lang, GROUP_UPDATE_LANG_KEYS[action.update], isSenderSelf, { from: senderLink });
+        }
+      }
 
       case 'channelJoined': {
         const { isViaRequest, inviterId } = action;
@@ -545,11 +581,25 @@ const ActionMessageText = ({
       case 'historyClear':
         return lang('ActionHistoryCleared');
 
-      case 'deleted':
-        return lang('ActionMessageDeleted');
+      // Signal Desktop `getMessageStatusContents` in `ts/components/conversation/Message.dom.tsx`
+      case 'deleted': {
+        const { adminId } = action;
+        if (adminId && adminId !== currentUserId) {
+          const admin = selectPeer(global, adminId);
+          const adminTitle = (admin && getPeerTitle(lang, admin)) || userFallbackText;
+          const adminLink = renderPeerLink(adminId, adminTitle, asPreview);
+          return lang('ActionMessageDeletedByAdmin', { admin: adminLink }, { withNodes: true });
+        }
+        return translateWithYou(lang, 'ActionMessageDeleted', isOutgoing || Boolean(adminId), { from: senderLink });
+      }
 
+      // Signal Desktop `ts/components/conversation/Message.dom.tsx` (`#renderTapToViewText`)
       case 'viewOnce':
-        return lang(action.isViewed ? 'ActionViewOnceViewed' : 'ActionViewOnceMedia');
+        if (action.isViewed) return lang('ActionViewOnceViewed');
+        if (action.media) {
+          return lang(action.media.mediaType === 'video' ? 'ActionViewOnceVideo' : 'ActionViewOncePhoto');
+        }
+        return lang('ActionViewOnceMedia');
 
       case 'safetyNumberChange':
         return lang('ActionSafetyChanged', { user: senderLink }, { withNodes: true });
@@ -608,49 +658,6 @@ const ActionMessageText = ({
 
       case 'customAction':
         return action.message;
-
-      case 'paidMessagesPrice': {
-        const { stars, isAllowedInChannel } = action;
-        if (stars === 0) {
-          if (isChannel) {
-            return lang(
-              isAllowedInChannel ? 'ActionMessageChannelFree' : 'ActionMessageChannelDisabled',
-              { peer: chatLink },
-              { withNodes: true },
-            );
-          }
-          return translateWithYou(lang, 'ActionPaidMessagePriceFree', isOutgoing, { peer: senderLink });
-        }
-        return translateWithYou(lang, 'ActionPaidMessagePrice', isOutgoing, {
-          peer: senderLink,
-          amount: formatStarsAsText(lang, stars),
-        }, { withMarkdown: true });
-      }
-
-      case 'noPaidMessagesTokenUsed': {
-        if (isOutgoing) {
-          return lang('ActionNoPaidTokenUsedYou', {
-            user: renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview),
-          }, { withNodes: true });
-        }
-
-        return lang('ActionNoPaidTokenUsed', { user: senderLink }, { withNodes: true });
-      }
-
-      case 'paidMessagesRefunded': {
-        const { stars } = action;
-        const user = selectPeer(global, chatId);
-        const userTitle = (user && getPeerTitle(lang, user)) || userFallbackText;
-
-        const key = isOutgoing
-          ? 'ApiMessageActionPaidMessagesRefundedOutgoing'
-          : 'ApiMessageActionPaidMessagesRefundedIncoming';
-
-        return lang(key, {
-          stars: formatStarsAsText(lang, stars),
-          user: renderPeerLink(user?.id, userTitle),
-        }, { withNodes: true, withMarkdown: true });
-      }
 
       case 'suggestedPostSuccess': {
         const { amount: price } = action;

@@ -59,11 +59,11 @@ export function translateWithYou<K extends LangKeyWithYou>(
 
 export function getPinnedMediaValue(lang: LangFn, message: ApiMessage) {
   const {
-    audio, contact, document, game, paidMedia, storyData,
+    audio, contact, document, game, storyData,
     location, photo, pollId, sticker, video, voice, dice,
   } = getMessageContent(message);
 
-  if (message.groupedId || paidMedia) return lang('ActionPinnedMediaAlbum');
+  if (message.groupedId) return lang('ActionPinnedMediaAlbum');
   if (photo) return lang('ActionPinnedMediaPhoto');
   if (audio) return lang('ActionPinnedMediaAudio');
   if (voice) return lang('ActionPinnedMediaVoice');

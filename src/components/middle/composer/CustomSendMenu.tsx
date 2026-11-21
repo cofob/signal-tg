@@ -1,26 +1,13 @@
-import {
-  memo, useEffect, useState,
-} from '../../../lib/teact/teact';
-import { getActions } from '../../../global';
-
-import type {
-  ApiAvailableReaction,
-  ApiReaction,
-} from '../../../api/types';
-import type { IAnchorPosition } from '../../../types';
+import { memo, useState } from '../../../lib/teact/teact';
 
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
-import buildClassName from '../../../util/buildClassName';
 
 import useEffectWithPrevDeps from '../../../hooks/useEffectWithPrevDeps';
-import useFlag from '../../../hooks/useFlag';
 import useLang from '../../../hooks/useLang';
-import useLastCallback from '../../../hooks/useLastCallback';
 import useMouseInside from '../../../hooks/useMouseInside';
 
 import Menu from '../../ui/Menu';
 import MenuItem from '../../ui/MenuItem';
-import ReactionSelector from '../message/reactions/ReactionSelector';
 
 import './CustomSendMenu.scss';
 
@@ -33,22 +20,9 @@ export type OwnProps = {
   onSendSilent?: NoneToVoidFunction;
   onSendSchedule?: NoneToVoidFunction;
   onSendWhenOnline?: NoneToVoidFunction;
-  onRemoveEffect?: NoneToVoidFunction;
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd?: NoneToVoidFunction;
-  chatId?: string;
-  withEffects?: boolean;
-  hasCurrentEffect?: boolean;
-  effectReactions?: ApiReaction[];
-  allAvailableReactions?: ApiAvailableReaction[];
-  onToggleReaction?: (reaction: ApiReaction) => void;
-  isCurrentUserPremium?: boolean;
-  isInSavedMessages?: boolean;
-  isInStoryViewer?: boolean;
-  canPlayAnimatedEmojis?: boolean;
 };
-
-const ANIMATION_DURATION = 200;
 
 const CustomSendMenu = ({
   isOpen,
@@ -59,59 +33,20 @@ const CustomSendMenu = ({
   onSendSilent,
   onSendSchedule,
   onSendWhenOnline,
-  onRemoveEffect,
   onClose,
   onCloseAnimationEnd,
-  chatId,
-  withEffects,
-  hasCurrentEffect,
-  effectReactions,
-  allAvailableReactions,
-  onToggleReaction,
-  isCurrentUserPremium,
-  isInSavedMessages,
-  isInStoryViewer,
-  canPlayAnimatedEmojis,
 }: OwnProps) => {
-  const {
-    openEffectPicker,
-  } = getActions();
-
   const [handleMouseEnter, handleMouseLeave] = useMouseInside(isOpen, onClose);
   const [displayScheduleUntilOnline, setDisplayScheduleUntilOnline] = useState(false);
 
   const lang = useLang();
-  const [areItemsHidden, hideItems, showItems] = useFlag();
 
   useEffectWithPrevDeps(([prevIsOpen]) => {
     // Avoid context menu item shuffling when opened
     if (isOpen && !prevIsOpen) {
-      showItems();
       setDisplayScheduleUntilOnline(Boolean(canScheduleUntilOnline));
     }
   }, [isOpen, canScheduleUntilOnline]);
-
-  const [isReady, markIsReady, unmarkIsReady] = useFlag();
-
-  const handleOpenMessageEffectsPicker = useLastCallback((position: IAnchorPosition) => {
-    hideItems();
-    if (chatId) openEffectPicker({ chatId, position });
-  });
-
-  useEffect(() => {
-    if (!isOpen) {
-      unmarkIsReady();
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      markIsReady();
-    }, ANIMATION_DURATION);
-
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [isOpen, markIsReady, unmarkIsReady]);
 
   return (
     <Menu
@@ -119,40 +54,14 @@ const CustomSendMenu = ({
       autoClose
       positionX="right"
       positionY={isOpenToBottom ? 'top' : 'bottom'}
-      className={buildClassName(
-        'CustomSendMenu', 'fluid', 'with-menu-transitions', withEffects && 'with-effects',
-      )}
+      className="CustomSendMenu fluid with-menu-transitions"
       onClose={onClose}
       onCloseAnimationEnd={onCloseAnimationEnd}
       onMouseEnter={!IS_TOUCH_ENV ? handleMouseEnter : undefined}
       onMouseLeave={!IS_TOUCH_ENV ? handleMouseLeave : undefined}
       noCloseOnBackdrop={!IS_TOUCH_ENV}
     >
-
-      {withEffects && !isInStoryViewer && (
-        <ReactionSelector
-          allAvailableReactions={allAvailableReactions}
-          effectReactions={effectReactions}
-          currentReactions={undefined}
-          onToggleReaction={onToggleReaction!}
-          isPrivate
-          isReady={isReady}
-          isCurrentUserPremium={isCurrentUserPremium}
-          isInSavedMessages={isInSavedMessages}
-          isForEffects
-          canPlayAnimatedEmojis={canPlayAnimatedEmojis}
-          onShowMore={handleOpenMessageEffectsPicker}
-          className={buildClassName(areItemsHidden && 'ReactionSelector-hidden')}
-        />
-      )}
-
-      <div
-        className={buildClassName(
-          'CustomSendMenu_items',
-          areItemsHidden && 'CustomSendMenu_items-hidden',
-        )}
-        dir={lang.isRtl ? 'rtl' : undefined}
-      >
+      <div dir={lang.isRtl ? 'rtl' : undefined}>
         {onSendSilent && <MenuItem icon="mute" onClick={onSendSilent}>{lang('SendWithoutSound')}</MenuItem>}
         {canSchedule && onSendSchedule && (
           <MenuItem icon="schedule" onClick={onSendSchedule}>
@@ -162,11 +71,6 @@ const CustomSendMenu = ({
         {canSchedule && onSendSchedule && displayScheduleUntilOnline && (
           <MenuItem icon="user-online" onClick={onSendWhenOnline}>
             {lang('ScheduleSendWhenOnline')}
-          </MenuItem>
-        )}
-        {withEffects && hasCurrentEffect && (
-          <MenuItem icon="delete" onClick={onRemoveEffect}>
-            {lang('RemoveEffect')}
           </MenuItem>
         )}
       </div>

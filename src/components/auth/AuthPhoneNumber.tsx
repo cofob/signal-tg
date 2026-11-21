@@ -23,7 +23,6 @@ import useLastCallback from '../../hooks/useLastCallback';
 import useMultiaccountInfo from '../../hooks/useMultiaccountInfo';
 
 import Button from '../ui/Button';
-import Checkbox from '../ui/Checkbox';
 import InputText from '../ui/InputText';
 import Loading from '../ui/Loading';
 import CountryCodeInput from './CountryCodeInput';
@@ -51,7 +50,6 @@ const AuthPhoneNumber = ({
 }: StateProps) => {
   const {
     setAuthPhoneNumber,
-    setAuthRememberMe,
     loadNearestCountry,
     loadCountryList,
     clearAuthErrorKey,
@@ -66,7 +64,6 @@ const AuthPhoneNumber = ({
     nearestCountry,
     isLoading: authIsLoading,
     errorKey,
-    rememberMe,
     isLoadingQrCode,
     passkeyOption,
   } = auth;
@@ -210,10 +207,6 @@ const AuthPhoneNumber = ({
     parseFullNumber(shouldFixSafariAutoComplete ? `${country.countryCode} ${value}` : value);
   });
 
-  const handleKeepSessionChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setAuthRememberMe({ value: e.target.checked });
-  });
-
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -256,8 +249,8 @@ const AuthPhoneNumber = ({
       )}
       <div className="auth-form">
         <div id="logo" />
-        <h1>{lang('AuthTitle')}</h1>
-        <p className="note">{lang('StartText')}</p>
+        <h1>{lang('SignalRegisterTitle')}</h1>
+        <p className="note">{lang('SignalRegisterHelp')}</p>
         <form className="form" action="" onSubmit={handleSubmit}>
           <CountryCodeInput
             id="sign-in-phone-code"
@@ -274,12 +267,6 @@ const AuthPhoneNumber = ({
             inputMode="tel"
             onChange={handlePhoneNumberChange}
             onPaste={IS_SAFARI ? handlePaste : undefined}
-          />
-          <Checkbox
-            id="sign-in-keep-session"
-            label={lang('AuthKeepSignedIn')}
-            checked={Boolean(rememberMe)}
-            onChange={handleKeepSessionChange}
           />
           {canSubmit && (
             isAuthReady ? (
@@ -303,7 +290,7 @@ const AuthPhoneNumber = ({
               isLoading={isLoadingQrCode}
               onClick={handleGoToAuthQrCode}
             >
-              {lang('LoginQRLogin')}
+              {lang('SignalLinkExisting')}
             </Button>
           )}
           {passkeyOption && (

@@ -22,7 +22,6 @@ import {
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
   selectPeer,
-  selectPeerPaidMessagesStars,
   selectPeerStory,
   selectPerformanceSettingsValue,
   selectTabState,
@@ -37,7 +36,6 @@ import download from '../../util/download';
 import { isUserId } from '../../util/entities/ids';
 import { getIsKeyboardShortcut } from '../../util/keyboardShortcuts';
 import { formatRecentTimestamp, secondsToDate } from '../../util/localization/dateFormat';
-import { formatStarsAsIcon } from '../../util/localization/format';
 import { round } from '../../util/math';
 import { getServerTime } from '../../util/serverTime';
 import renderText from '../common/helpers/renderText';
@@ -108,7 +106,6 @@ interface StateProps {
   isCurrentUserPremium?: boolean;
   stealthMode: ApiStealthMode;
   withHeaderAnimation?: boolean;
-  paidMessagesStars?: number;
   isAccountFrozen?: boolean;
 }
 
@@ -143,7 +140,6 @@ function Story({
   isCurrentUserPremium,
   stealthMode,
   withHeaderAnimation,
-  paidMessagesStars,
   isAccountFrozen,
   onDelete,
   onClose,
@@ -796,13 +792,7 @@ function Story({
     );
   }
 
-  const inputPlaceholder = paidMessagesStars
-    ? lang('ComposerPlaceholderPaidReply', {
-      amount: formatStarsAsIcon(lang, paidMessagesStars, { asFont: true, className: 'placeholder-star-icon' }),
-    }, {
-      withNodes: true,
-    })
-    : lang(isChatStory ? 'ReplyToGroupStory' : 'ReplyPrivately');
+  const inputPlaceholder = lang(isChatStory ? 'ReplyToGroupStory' : 'ReplyPrivately');
 
   return (
     <div
@@ -987,15 +977,13 @@ export default memo(withGlobal<OwnProps>((global, {
     safeLinkModalUrl,
     mapModal,
     reportModal,
-    paymentMessageConfirmDialogKey,
     storyStealthModal,
   } = tabState;
   const isStealthModalOpen = Boolean(storyStealthModal);
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
-    paymentMessageConfirmDialogKey
-    || viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
+    viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
     || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
   );
 
@@ -1007,7 +995,6 @@ export default memo(withGlobal<OwnProps>((global, {
   const withHeaderAnimation = selectPerformanceSettingsValue(global, 'mediaViewerAnimations');
 
   const fromPeer = isLoadedStory && story.fromId ? selectPeer(global, story.fromId) : undefined;
-  const paidMessagesStars = selectPeerPaidMessagesStars(global, peerId);
   const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
   return {
@@ -1025,7 +1012,6 @@ export default memo(withGlobal<OwnProps>((global, {
     arePeerSettingsLoaded: Boolean(userFullInfo?.settings),
     stealthMode: global.stories.stealthMode,
     withHeaderAnimation,
-    paidMessagesStars,
     isAccountFrozen,
   };
 })(Story));

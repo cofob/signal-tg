@@ -72,13 +72,14 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
   const { size, width, height } = pointer;
   const fileName = pointer.fileName || getSuggestedFileName(mimeType, message.sentAt, index);
   const duration = Math.round(pointer.audioDurationSeconds);
+  const isUnavailable = message.unavailableAttachmentIndexes?.includes(index) || undefined;
 
   // Legacy Android voice notes have no flag, only an audio type and no file name
   // (Signal Desktop `isVoiceMessage` in `ts/util/Attachment.std.ts`)
   if (hasFlag(pointer, AttachmentPointer_Flags.VOICE_MESSAGE) || (mimeType.startsWith('audio/') && !pointer.fileName)) {
     return {
       voice: {
-        mediaType: 'voice', id, duration, waveform: buildWaveform(pointer.audioWaveform), size,
+        mediaType: 'voice', id, duration, waveform: buildWaveform(pointer.audioWaveform), size, isUnavailable,
       },
     };
   }
@@ -91,7 +92,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
         date: Math.floor(message.sentAt / MS_PER_SECOND),
         thumbnail: buildThumbnail(pointer),
         sizes: width && height ? [{ type: 'x', width, height }] : [],
-        isUnavailable: message.unavailableAttachmentIndexes?.includes(index) || undefined,
+        isUnavailable,
       },
     };
   }
@@ -110,6 +111,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
         isGif: hasFlag(pointer, AttachmentPointer_Flags.GIF) || undefined,
         thumbnail: buildThumbnail(pointer),
         size,
+        isUnavailable,
       },
     };
   }
@@ -117,7 +119,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
   if (SUPPORTED_AUDIO_CONTENT_TYPES.has(mimeType)) {
     return {
       audio: {
-        mediaType: 'audio', id, size, mimeType, fileName, duration,
+        mediaType: 'audio', id, size, mimeType, fileName, duration, isUnavailable,
       },
     };
   }
@@ -130,6 +132,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
       size,
       timestamp: Math.floor(message.sentAt / MS_PER_SECOND),
       mimeType,
+      isUnavailable,
     },
   };
 }
@@ -145,6 +148,7 @@ function buildSticker(message: MessageRecord, sticker: DataMessage_Sticker, data
     isVideo: false,
     width: data.width || STICKER_SIZE,
     height: data.height || STICKER_SIZE,
+    isUnavailable: message.isStickerUnavailable,
   };
 }
 

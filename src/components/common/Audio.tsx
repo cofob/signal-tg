@@ -123,6 +123,7 @@ const Audio = ({
   } = message;
   const audio = contentAudio || getWebPageAudio(webPage);
   const media = (voice || video || audio)!;
+  const isUnavailable = media.isUnavailable;
   const mediaSource = (voice || video);
   const isVoice = Boolean(voice || video);
   const hasTtl = hasMessageTtl(message);
@@ -160,7 +161,7 @@ const Audio = ({
 
   const mediaData = useMedia(
     getMediaHash(media, 'inline'),
-    !PRELOAD,
+    !PRELOAD || isUnavailable,
     getMediaFormat(media, 'inline'),
   );
 
@@ -221,6 +222,7 @@ const Audio = ({
       isOwn={isOwn}
       isMediaUnread={isMediaUnread}
       isViewOnceLocked={hasTtl && !isInOneTimeModal}
+      isUnavailable={isUnavailable}
       noProgress={noProgress}
       noProgressUpdates={hasTtl && !isInOneTimeModal}
       withPlayingRing={withPlayingRing}
@@ -228,7 +230,7 @@ const Audio = ({
       isSelectable={isSelectable}
       isSelected={isSelected}
       isDownloading={isDownloading}
-      canDownload={canDownload}
+      canDownload={canDownload && !isUnavailable}
       uploadProgress={uploadProgress}
       downloadProgress={downloadProgress}
       isTranscribing={isTranscribing}

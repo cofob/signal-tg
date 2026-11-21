@@ -5,7 +5,6 @@ import { setPhoneNumberDiscoverability } from '../../../lib/signal/account/phone
 import { generateSafetyNumber } from '../../../lib/signal/account/safetyNumber';
 import { writeProfile } from '../../../lib/signal/profiles/writeProfile';
 import { Verified_State } from '../../../lib/signal/proto/generated/SignalService_pb';
-import { notifyAccountRecordChange } from '../../../lib/signal/storage/accountRecordChanges';
 import { lookupUsername, resolveUsernameLink as resolveLink } from '../../../lib/signal/usernames/lookupUsername';
 import {
   buildUsernameLinkUrl,
@@ -103,9 +102,7 @@ export async function confirmUsername({ username }: { username: string }) {
     const context = client.getSenderContext();
     const result = await confirmReservation(context.connection, usernameReservation, context.account.usernameLink);
     usernameReservation = undefined;
-    await client.updateAccount({ usernameLink: result.link });
-    await processor.updateOwnConversation({ username: result.username });
-    notifyAccountRecordChange(['username', 'usernameLink']);
+    await processor.updateOwnAccount({ username: result.username, usernameLink: result.link });
     return { username: result.username };
   } catch (err) {
     return { error: getUsernameErrorKey(err) };
@@ -115,9 +112,7 @@ export async function confirmUsername({ username }: { username: string }) {
 export async function deleteUsername() {
   try {
     await deleteReservedUsername(client.getSenderContext().connection);
-    await client.updateAccount({ usernameLink: undefined });
-    await processor.updateOwnConversation({ username: undefined });
-    notifyAccountRecordChange(['username', 'usernameLink']);
+    await processor.updateOwnAccount({ username: undefined, usernameLink: undefined });
     return true;
   } catch (err) {
     logError(err);
@@ -139,8 +134,7 @@ export async function resetUsernameLink() {
 
   try {
     const link = await setUsernameLink(client.getSenderContext().connection, self.username);
-    await client.updateAccount({ usernameLink: link });
-    notifyAccountRecordChange(['usernameLink']);
+    await processor.updateOwnAccount({ usernameLink: link });
     return buildUsernameLinkUrl(link);
   } catch (err) {
     logError(err);
@@ -238,7 +232,10 @@ export async function fetchPhoneNumberPrivacy() {
   if (!account) return undefined;
   return {
     phoneNumber: buildPrivacySettings(account.isPhoneNumberShared ? 'everybody' : 'nobody'),
-    addByPhone: buildPrivacySettings(account.isPhoneNumberUnlisted ? 'nobody' : 'everybody'),
+    // A primary device registered here knows its choice before the storage service has an account record
+    addByPhone: buildPrivacySettings(
+      account.isPhoneNumberUnlisted ?? account.isDiscoverableByPhoneNumber === false ? 'nobody' : 'everybody',
+    ),
   };
 }
 
@@ -259,8 +256,7 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
     const shouldBeDiscoverable = isShared ? true : isDiscoverable;
     if (shouldBeDiscoverable !== undefined && shouldBeDiscoverable === Boolean(context.account.isPhoneNumberUnlisted)) {
       await setPhoneNumberDiscoverability(context.connection, shouldBeDiscoverable);
-      await client.updateAccount({ isPhoneNumberUnlisted: !shouldBeDiscoverable });
-      notifyAccountRecordChange(['unlistedPhoneNumber']);
+      await processor.updateOwnAccount({ isPhoneNumberUnlisted: !shouldBeDiscoverable });
     }
     if (isShared !== undefined && isShared !== Boolean(context.account.isPhoneNumberShared)) {
       await writeProfile(context, {
@@ -269,8 +265,7 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
         about: self.about,
         aboutEmoji: self.aboutEmoji,
       }, { type: 'unchanged' }, isShared);
-      await client.updateAccount({ isPhoneNumberShared: isShared });
-      notifyAccountRecordChange(['phoneNumberSharingMode']);
+      await processor.updateOwnAccount({ isPhoneNumberShared: isShared });
     }
     return fetchPhoneNumberPrivacy();
   } catch (err) {

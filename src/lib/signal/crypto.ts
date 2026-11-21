@@ -1,4 +1,4 @@
-import { compareBuffersConstantTime } from '../../util/encoding/buffer';
+import { compareBuffersConstantTime, concat } from '../../util/encoding/buffer';
 import { wasm } from './wasm';
 
 const PADDING_BLOCK = 80;
@@ -93,15 +93,12 @@ export async function decryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, data:
   return new Uint8Array(plaintext);
 }
 
-/** AES-GCM with a random nonce in front of the ciphertext, the format that `decryptAesGcmWithNonce` reads */
+/** AES-256-GCM with a random 12-byte nonce prepended to the ciphertext (Signal Desktop `encryptProfile`) */
 export async function encryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['encrypt']);
   const iv = getRandomBytes(AES_GCM_NONCE_LENGTH);
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, plaintext);
-  const result = new Uint8Array(AES_GCM_NONCE_LENGTH + ciphertext.byteLength);
-  result.set(iv);
-  result.set(new Uint8Array(ciphertext), AES_GCM_NONCE_LENGTH);
-  return result;
+  return concat(iv, new Uint8Array(ciphertext));
 }
 
 /**

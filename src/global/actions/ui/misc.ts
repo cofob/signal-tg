@@ -33,9 +33,7 @@ import {
   selectCurrentMessageList,
   selectIsChatWithBot,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectIsTrustedBot,
-  selectPeerPaidMessagesStars,
   selectSender,
   selectTabState,
   selectTopic,
@@ -292,19 +290,7 @@ addActionHandler('reorderStickerSets', (global, actions, payload): ActionReturnT
 });
 
 addActionHandler('showAllowedMessageTypesNotification', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageListType, tabId = getCurrentTabId() } = payload;
-
-  const paidMessagesStars = selectPeerPaidMessagesStars(global, chatId);
-
-  if (paidMessagesStars && messageListType === 'scheduled') {
-    actions.showNotification({
-      message: {
-        key: 'DescriptionScheduledPaidMessagesNotAllowed',
-      },
-      tabId,
-    });
-    return;
-  }
+  const { chatId, tabId = getCurrentTabId() } = payload;
 
   const chat = selectChat(global, chatId);
   if (!chat) return;
@@ -523,60 +509,6 @@ addActionHandler('applyDefaultAttachmentsCompression', (global): ActionReturnTyp
       shouldCompress,
     },
   };
-});
-
-addActionHandler('requestEffectInComposer', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    shouldPlayEffectInComposer: true,
-  }, tabId);
-});
-
-addActionHandler('hideEffectInComposer', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    shouldPlayEffectInComposer: undefined,
-  }, tabId);
-});
-
-addActionHandler('setPaidMessageAutoApprove', (global): ActionReturnType => {
-  global = {
-    ...global,
-    settings: {
-      ...global.settings,
-      byKey: {
-        ...global.settings.byKey,
-        shouldPaidMessageAutoApprove: true,
-      },
-    },
-  };
-
-  return global;
-});
-
-addActionHandler('setReactionEffect', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, threadId, reaction, tabId = getCurrentTabId(),
-  } = payload;
-
-  const emoticon = reaction?.type === 'emoji' && reaction.emoticon;
-  if (!emoticon) return;
-
-  const effect = Object.values(global.availableEffectById)
-    .find((currentEffect) => currentEffect.effectAnimationId && currentEffect.emoticon === emoticon);
-
-  const effectId = effect?.id;
-
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-  if (effect?.isPremium && !isCurrentUserPremium) return;
-
-  if (!effectId) return;
-
-  actions.requestEffectInComposer({ tabId });
-
-  actions.saveEffectInDraft({ chatId, threadId, effectId });
 });
 
 addActionHandler('openLimitReachedModal', (global, actions, payload): ActionReturnType => {

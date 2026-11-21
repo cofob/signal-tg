@@ -15,14 +15,13 @@ import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import useFlag from '../../../../hooks/useFlag';
 import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
-import useTextLanguage from '../../../../hooks/useTextLanguage';
 
 import CheckboxField from '../../../gili/templates/CheckboxField';
 import Menu from '../../../ui/Menu';
 import MenuItem from '../../../ui/MenuItem';
 import TranslationToneSelector from '../../message/TranslationToneSelector';
 import {
-  AiEditorCopyButton, AiEditorErrorMessage, AiEditorPreview, AiEditorResultArea, getAiEditorText,
+  AiEditorCopyButton, AiEditorErrorMessage, AiEditorPreview, AiEditorResultArea,
 } from './AiEditorShared';
 
 import sharedStyles from './AiEditorShared.module.scss';
@@ -67,8 +66,6 @@ const AiTextTranslateEditor = ({
 
   const triggerRef = useRef<HTMLSpanElement>();
 
-  const originalText = useMemo(() => content ? getAiEditorText(content) : undefined, [content]);
-  const detectedLanguage = useTextLanguage(originalText);
   const hasError = Boolean(error);
 
   const currentLanguageCode = lang.code;
@@ -82,12 +79,6 @@ const AiTextTranslateEditor = ({
       displayName,
     };
   }), [currentLanguageCode]);
-
-  const detectedLanguageName = useMemo(() => {
-    if (!detectedLanguage) return undefined;
-    const displayNames = new Intl.DisplayNames([currentLanguageCode], { type: 'language' });
-    return displayNames.of(detectedLanguage);
-  }, [detectedLanguage, currentLanguageCode]);
 
   const selectedLanguageName = useMemo(() => {
     if (!selectedLanguage) return undefined;
@@ -160,14 +151,6 @@ const AiTextTranslateEditor = ({
   return (
     <div className={modalStyles.editorBlock}>
       <div className={styles.section}>
-        <div className={sharedStyles.labelRow}>
-          <span className={sharedStyles.label}>
-            {lang('AiMessageEditorFrom')}
-          </span>
-          <span className={styles.sourceLanguage}>
-            {detectedLanguageName}
-          </span>
-        </div>
         <AiEditorPreview content={content} />
       </div>
 

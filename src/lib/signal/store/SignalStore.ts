@@ -1,4 +1,5 @@
 import type { Verified_State } from '../proto/generated/SignalService_pb';
+import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
 
 import { IdbStore } from '../../../util/browser/idb';
@@ -14,7 +15,8 @@ export type AccountRecord = {
   pni?: string;
   number?: string;
   deviceId: number;
-  deviceName: string;
+  // Linked devices only: a registered primary device has no name
+  deviceName?: string;
   password: string;
   registrationId: number;
   pniRegistrationId: number;
@@ -34,6 +36,10 @@ export type AccountRecord = {
   isPhoneNumberUnlisted?: boolean;
   // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
   usernameLink?: UsernameLink;
+  // Registered primary devices only: the account attribute that lets people find us by phone number
+  isDiscoverableByPhoneNumber?: boolean;
+  // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
+  isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
@@ -64,6 +70,8 @@ export type RecipientRecord = {
   number?: string;
   profileKey?: Uint8Array;
   sealedSender?: SealedSenderAccess;
+  // Expiring profile key credential for adding the recipient to groups, valid for `profileKey` only
+  profileKeyCredential?: { credential: Uint8Array; profileKey: Uint8Array; expiresAt: number };
 };
 
 export type SenderCertificateRecord = {
@@ -83,6 +91,9 @@ type Items = {
   blockedE164s: string[];
   // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
   notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
+  // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
+  storageManifest: Uint8Array<ArrayBuffer>;
+  storageChanges: StorageChanges;
 };
 
 export type NotificationDefaults = {
@@ -294,6 +305,19 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */
+  getStorageRecords(ids: string[]) {
+    return this.db.getMany<Uint8Array<ArrayBuffer> | undefined>(ids.map((id) => `storageRecord:${id}`));
+  }
+
+  setStorageRecords(records: Map<string, Uint8Array>) {
+    return this.db.setMany([...records].map(([id, record]) => [`storageRecord:${id}`, record]));
+  }
+
+  removeStorageRecords(ids: string[]) {
+    return this.db.delMany(ids.map((id) => `storageRecord:${id}`));
   }
 
   addSentProto(record: SentProtoRecord) {

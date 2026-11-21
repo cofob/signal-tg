@@ -120,10 +120,6 @@ export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
 
-export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
-export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
-export const DEFAULT_MAXIMUM_CHARGE_FOR_MESSAGES = 10000;
-
 export const DEFAULT_VOLUME = 1;
 export const DEFAULT_PLAYBACK_RATE = 1;
 export const PLAYBACK_RATE_FOR_AUDIO_MIN_DURATION = 8 * 60; // 8 min
@@ -275,8 +271,6 @@ export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
 export const COLLECTIBLE_STATUS_SET_ID = 'collectibleStatus';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
-export const EFFECT_STICKERS_SET_ID = 'effectStickers';
-export const EFFECT_EMOJIS_SET_ID = 'effectEmojis';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
 export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
 export const DEFAULT_STATUS_ICON_ID = 'status-default-icon';
@@ -354,6 +348,8 @@ export const SUPPORTED_TRANSLATION_LANGUAGES = [
 export const RE_LINK_TEMPLATE = '((ftp|https?):\\/\\/)?((www\\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z][-a-zA-Z0-9]{1,62})\\b([-a-zA-Z0-9()@:%_+.,~#?&/=]*)';
 export const RE_MENTION_TEMPLATE = '(@[\\w\\d_-]+)';
 export const RE_TG_LINK = /^tg:(\/\/)?/i;
+// Signal group links, which open the group's join preview in the app
+export const RE_SIGNAL_GROUP_LINK = /^(?:https|sgnl):\/\/signal\.group\/?#/i;
 // Usernames link through the `tg:` scheme, which only the app itself handles
 export const USERNAME_LINK_PREFIX = 'tg://resolve?domain=';
 export const BOT_FATHER_USERNAME = 'botfather';
@@ -382,7 +378,6 @@ export const REPLIES_USER_ID = '1271266957'; // TODO For Test connection ID must
 export const VERIFICATION_CODES_USER_ID = '489000';
 export const ANONYMOUS_USER_ID = '2666000';
 export const RESTRICTED_EMOJI_SET_ID = '7173162320003080';
-export const COCOON_EMOJI_ID = '5197252827247841976';
 export const LOCAL_MESSAGES_LIMIT = 1e6; // 1M
 export const CHANNEL_ID_BASE = 10n ** 12n;
 export const DEFAULT_GIF_SEARCH_BOT_USERNAME = 'gif';

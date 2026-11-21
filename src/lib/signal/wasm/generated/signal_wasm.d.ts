@@ -1,6 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8Array;
+
+export function AccountEntropyPool_Generate(): string;
+
 export function BackupKey_DeriveBackupId(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): Uint8Array;
 
 export class CiphertextMessage {
@@ -514,6 +518,11 @@ export function ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(params: Se
  */
 export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params: ServerPublicParams, request_context: Uint8Array, response: Uint8Array, current_time: number): Uint8Array;
 
+/**
+ * Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+ */
+export function ServerPublicParams_VerifySignature(params: ServerPublicParams, message: Uint8Array, notary_signature: Uint8Array): void;
+
 export function ServiceId_ParseFromServiceIdBinary(input: Uint8Array): Uint8Array;
 
 export function ServiceId_ParseFromServiceIdString(input: string): Uint8Array;
@@ -602,6 +611,8 @@ export function SignedPreKeyRecord_New(id: number, timestamp_millis: number, pub
 
 export function SignedPreKeyRecord_Serialize(obj: SignedPreKeyRecord): Uint8Array;
 
+export function SvrKey_DeriveRegistrationRecoveryPassword(svr_key: Uint8Array): Uint8Array;
+
 export class TlsClient {
     free(): void;
     [Symbol.dispose](): void;
@@ -674,6 +685,8 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
+    readonly AccountEntropyPool_Generate: () => [number, number];
     readonly BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
@@ -811,6 +824,7 @@ export interface InitOutput {
     readonly ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
     readonly ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+    readonly ServerPublicParams_VerifySignature: (a: number, b: number, c: number, d: number, e: number) => [number, number];
     readonly ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
     readonly ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];
@@ -840,6 +854,7 @@ export interface InitOutput {
     readonly SignedPreKeyRecord_GetTimestamp: (a: number) => [number, number, number];
     readonly SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
+    readonly SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
     readonly UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContentHint: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContents: (a: number) => [number, number, number, number];

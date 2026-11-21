@@ -70,7 +70,6 @@ export interface ApiChat {
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
   botVerificationIconId?: string;
-  hasAutoTranslation?: true;
   level?: number;
 
   // Calls
@@ -97,8 +96,6 @@ export interface ApiChat {
   isJoinToSend?: boolean;
   isJoinRequest?: boolean;
   sendAsPeerIds?: ApiSendAsPeerId[];
-  sendPaidReactionsAsPeerIds?: ApiSendAsPeerId[];
-  sendPaidReactionsPeer?: ApiSendAsPeerId;
 
   // Stories
   areStoriesHidden?: boolean;
@@ -107,9 +104,7 @@ export interface ApiChat {
   maxStoryId?: number;
 
   // Locally determined field
-  detectedLanguage?: string;
 
-  paidMessagesStars?: number;
   ttlPeriod?: number;
 }
 
@@ -178,11 +173,8 @@ export interface ApiChatFullInfo {
   emojiSet?: ApiStickerSet;
   profilePhoto?: ApiPhoto;
   areParticipantsHidden?: boolean;
-  isTranslationDisabled?: true;
   hasPinnedStories?: boolean;
-  isPaidReactionAvailable?: boolean;
   hasScheduledMessages?: boolean;
-  arePaidMessagesAvailable?: true;
 
   botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;
@@ -315,6 +307,5 @@ export type ApiDraft = {
   replyInfo?: ApiInputDraftReplyInfo;
   suggestedPostInfo?: ApiInputSuggestedPostInfo;
   date?: number;
-  effectId?: string;
   isLocal?: boolean;
 };

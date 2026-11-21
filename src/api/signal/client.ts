@@ -9,7 +9,6 @@ import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
-import { fetchStorageSnapshot } from '../../lib/signal/storage/storageService';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
@@ -17,6 +16,7 @@ import { clearAttachmentCache } from './media/attachments';
 import {
   client, db, logError, processor, store,
 } from './engine';
+import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
 
 const DEVICE_NAME = 'TeleSignal';
@@ -31,6 +31,7 @@ const PERCENT = 100;
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
 
 let currentAccount: AccountRecord | undefined;
+let initialArgs: ApiInitialArgs | undefined;
 let reconnectDelay = RECONNECT_MIN_DELAY_MS;
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
@@ -41,21 +42,45 @@ let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
 
 /**
- * Starts the linked device: shows the link QR code until the phone scans it, or connects the stored account.
- * The app treats a linked account as authorized even while the connection is down, so local chats stay visible.
+ * Connects the stored account, or shows the link QR code until the phone scans it; registration with a phone
+ * number starts from there. An account whose registration stopped before its profile resumes at that step.
+ * The app treats an account as authorized even while the connection is down, so local chats stay visible.
  */
-export async function startClient(initialArgs: ApiInitialArgs) {
+export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
-  applyProxyUrl(initialArgs.signalProxyUrl);
+  initialArgs = args;
+  applyProxyUrl(args.signalProxyUrl);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
   const account = await store.getItem('account');
+  if (account?.isRegistrationPending) {
+    sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
+    resumeRegistration(account);
+    return;
+  }
   if (account) {
     await startSession(account);
     return;
   }
-  void runDeviceLink(initialArgs.platform).catch(logError);
+  void runDeviceLink(args.platform).catch(logError);
+}
+
+/** Leaves the link QR code for registration with a phone number */
+export function switchToRegistration() {
+  if (currentAccount) return;
+  stopDeviceLink();
+  startRegistration(initialArgs?.langCode);
+}
+
+/** Leaves registration for the link QR code */
+export function switchToDeviceLink() {
+  if (currentAccount) return;
+  resetRegistration();
+  stopDeviceLink();
+  // The link screen shows a spinner until the provisioning socket sends the new code
+  sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateWaitQrCode' });
+  void runDeviceLink(initialArgs?.platform).catch(logError);
 }
 
 export function getCurrentAccount() {
@@ -68,6 +93,7 @@ export async function stopClient(shouldForget: boolean) {
   clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
+  resetRegistration();
   historyTransferController?.abort();
   processor.stop();
   client.close();
@@ -83,6 +109,12 @@ function applyProxyUrl(url: string | undefined) {
   const prevTunnelUrl = getSignalTunnelUrl();
   setSignalProxyUrl(url);
   if (getSignalTunnelUrl() !== prevTunnelUrl) closeIdleHttpConnections();
+}
+
+function stopDeviceLink() {
+  clientGeneration++;
+  linkSession?.cancel();
+  linkSession = undefined;
 }
 
 async function runDeviceLink(platform?: string) {
@@ -125,7 +157,8 @@ async function runDeviceLink(platform?: string) {
   }
 }
 
-async function startSession(storedAccount: AccountRecord) {
+/** Shows the account's chats and connects it; registration calls it once the new account is complete */
+export async function startSession(storedAccount: AccountRecord) {
   let account = storedAccount;
   currentAccount = account;
   let hasHistoryTransferFailed = false;
@@ -210,7 +243,7 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile and the storage service records
+ * succeed once for the account, then our profile and a storage service sync
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
@@ -222,8 +255,7 @@ async function syncAfterConnect() {
     await client.updateAccount({ isInitialSyncDone: true });
   }
   void processor.refreshProfile(context.account.aci).catch(logError);
-  const snapshot = await fetchStorageSnapshot(context.account, context.connection);
-  if (snapshot) await processor.applyStorageRecords([...snapshot.records.values()]);
+  await processor.syncStorage();
 }
 
 async function connect() {

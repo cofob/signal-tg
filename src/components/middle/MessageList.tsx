@@ -35,7 +35,6 @@ import {
   selectActionMessageBg,
   selectBot,
   selectCanAnimateInterface,
-  selectCanTranslateChat,
   selectChat,
   selectChatAnchoredMessages,
   selectChatEphemeralMessages,
@@ -52,12 +51,10 @@ import {
   selectIsCurrentUserFrozen,
   selectIsInSelectMode,
   selectIsViewportNewest,
-  selectMonoforumChannel,
   selectPerformanceSettingsValue,
   selectTabState,
   selectTheme,
   selectTopic,
-  selectTranslationLanguage,
   selectUser,
   selectUserFullInfo,
 } from '../../global/selectors';
@@ -128,7 +125,6 @@ type OwnProps = {
   withBottomShift?: boolean;
   withDefaultBg: boolean;
   isContactRequirePremium?: boolean;
-  paidMessagesStars?: number;
   isQuickPreview?: boolean;
   onScrollDownToggle?: BooleanToVoidFunction;
   onIntersectPinnedMessage?: OnIntersectPinnedMessage;
@@ -172,10 +168,6 @@ type StateProps = {
   isAccountFrozen?: boolean;
   channelJoinInfo?: ApiChatFullInfo['joinInfo'];
   isChatProtected?: boolean;
-  monoforumChannelId?: string;
-  canTranslate?: boolean;
-  translationLanguage?: string;
-  shouldAutoTranslate?: boolean;
   isActive?: boolean;
   canManageBotForumTopics?: boolean;
   shouldScrollToBottom?: boolean;
@@ -197,7 +189,6 @@ enum Content {
   // eslint-disable-next-line @typescript-eslint/no-shadow
   Loading,
   Restricted,
-  StarsRequired,
   PremiumRequired,
   AccountInfo,
   // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -292,14 +283,9 @@ const MessageList = ({
   isServiceNotificationsChat,
   currentUserId,
   isContactRequirePremium,
-  paidMessagesStars,
   channelJoinInfo,
   isChatProtected,
   isAccountFrozen,
-  monoforumChannelId,
-  canTranslate,
-  translationLanguage,
-  shouldAutoTranslate,
   reactionPollingPause,
   serverThemeSettings,
   actionMessageBg,
@@ -312,7 +298,7 @@ const MessageList = ({
 }: OwnProps & StateProps) => {
   const {
     loadViewportMessages, setScrollOffset, loadMessageReactions, copyMessagesByIds,
-    loadMessageViews, loadPeerStoriesByIds, loadFactChecks, requestChatTranslation,
+    loadMessageViews, loadPeerStoriesByIds, loadFactChecks,
   } = getActions();
   const lang = useLang();
 
@@ -522,12 +508,6 @@ const MessageList = ({
   useSyncEffect(() => {
     memoFocusingIdRef.current = focusingId;
   }, [focusingId]);
-
-  // Enable auto translation for the chat if it's available
-  useEffect(() => {
-    if (!shouldAutoTranslate || !canTranslate) return;
-    requestChatTranslation({ chatId, toLanguageCode: translationLanguage });
-  }, [shouldAutoTranslate, canTranslate, translationLanguage, chatId]);
 
   useNativeCopySelectedMessages(isActive, chatId, threadId, type, copyMessagesByIds);
 
@@ -1384,8 +1364,6 @@ const MessageList = ({
 
   const activeKey = isRestricted ? (
     Content.Restricted
-  ) : paidMessagesStars && !hasMessages ? (
-    Content.StarsRequired
   ) : isContactRequirePremium && !hasMessages ? (
     Content.PremiumRequired
   ) : (isBot || isNonContact) && !hasMessages && threadId === MAIN_THREAD_ID ? (
@@ -1412,8 +1390,6 @@ const MessageList = ({
           )}
         </span>
       </div>
-    ) : activeKey === Content.StarsRequired ? (
-      <RequirementToContactMessage paidMessagesStars={paidMessagesStars} peerId={monoforumChannelId || chatId} />
     ) : activeKey === Content.PremiumRequired ? (
       <RequirementToContactMessage peerId={chatId} />
     ) : activeKey === Content.AccountInfo ? (
@@ -1545,11 +1521,6 @@ export default memo(withGlobal<OwnProps>(
 
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
-    const monoforumChannelId = selectMonoforumChannel(global, chatId)?.id;
-    const canTranslate = selectCanTranslateChat(global, chatId) && !chatFullInfo?.isTranslationDisabled;
-    const shouldAutoTranslate = chat?.hasAutoTranslation;
-    const translationLanguage = selectTranslationLanguage(global);
-
     const currentMessageList = selectCurrentMessageList(global);
     const isActive = currentMessageList && currentMessageList.chatId === chatId
       && currentMessageList.threadId === threadId && currentMessageList.type === type;
@@ -1600,10 +1571,6 @@ export default memo(withGlobal<OwnProps>(
       isChatProtected: selectIsChatProtected(global, chatId),
       lastMessage: withLastMessageWhenPreloading ? lastMessage : undefined,
       isAccountFrozen,
-      monoforumChannelId,
-      canTranslate,
-      translationLanguage,
-      shouldAutoTranslate,
       canManageBotForumTopics: chat.isBotForum && user?.canManageBotForumTopics,
       shouldScrollToBottom,
       reactionPollingPause: global.reactionPollingPause,

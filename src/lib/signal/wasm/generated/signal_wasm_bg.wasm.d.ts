@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
+export const AccountEntropyPool_Generate: () => [number, number];
 export const BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
 export const CiphertextMessage_FromPlaintextContent: (a: number) => number;
 export const CiphertextMessage_Serialize: (a: number) => [number, number];
@@ -138,6 +140,7 @@ export const ServerPublicParams_Deserialize: (a: number, b: number) => [number, 
 export const ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number, number];
 export const ServerPublicParams_ReceiveExpiringProfileKeyCredential: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const ServerPublicParams_VerifySignature: (a: number, b: number, c: number, d: number, e: number) => [number, number];
 export const ServiceId_ParseFromServiceIdBinary: (a: number, b: number) => [number, number, number, number];
 export const ServiceId_ParseFromServiceIdString: (a: number, b: number) => [number, number, number, number];
 export const ServiceId_ServiceIdBinary: (a: number, b: number) => [number, number, number, number];
@@ -167,6 +170,7 @@ export const SignedPreKeyRecord_GetSignature: (a: number) => [number, number, nu
 export const SignedPreKeyRecord_GetTimestamp: (a: number) => [number, number, number];
 export const SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
+export const SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
 export const UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
 export const UnidentifiedSenderMessageContent_GetContentHint: (a: number) => [number, number, number];
 export const UnidentifiedSenderMessageContent_GetContents: (a: number) => [number, number, number, number];

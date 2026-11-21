@@ -153,6 +153,7 @@ const ActionMessage = ({
 }: OwnProps & StateProps) => {
   const {
     openMediaViewer,
+    showNotification,
     toggleChannelRecommendations,
     animateUnreadReaction,
     markMentionsRead,
@@ -310,6 +311,22 @@ const ActionMessage = ({
 
   const handleClick = useLastCallback(() => {
     switch (action.type) {
+      // Signal Desktop `ts/components/conversation/Message.dom.tsx` (`#handleOpen` for tap-to-view messages)
+      case 'viewOnce': {
+        if (action.media) {
+          openMediaViewer({
+            standaloneMedia: [action.media],
+            origin: MediaViewerOrigin.ViewOnce,
+            viewOnceMessage: { chatId, messageId: id },
+          });
+        } else {
+          showNotification({
+            message: { key: message.isOutgoing ? 'ViewOnceOutgoingToast' : 'ViewOnceViewedToast' },
+          });
+        }
+        break;
+      }
+
       case 'chatEditPhoto': {
         openMediaViewer({
           chatId: message.chatId,

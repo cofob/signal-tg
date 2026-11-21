@@ -1,3 +1,6 @@
+import type { GroupState } from '../groups/fetchGroup';
+import type { GroupUpdate } from '../groups/groupUpdates';
+
 export type ConversationType = 'private' | 'group';
 
 export type ConversationRecord = {
@@ -24,6 +27,8 @@ export type ConversationRecord = {
   memberAcis?: string[];
   adminAcis?: string[];
   isAnnouncementsOnly?: boolean;
+  // The decrypted state at `revision`; the fields above are read from it
+  groupState?: GroupState;
   // Both
   expireTimer?: number;
   expireTimerVersion?: number;
@@ -58,6 +63,8 @@ export type MessageRecord = {
   authorAci: string;
   // Who caused a notice, such as a timer change
   actorAci?: string;
+  // What a `groupUpdate` notice says
+  groupUpdate?: GroupUpdate;
   authorDeviceId?: number;
   // The Signal timestamp: with `authorAci` it identifies the message across devices
   sentAt: number;
@@ -70,6 +77,8 @@ export type MessageRecord = {
   revisions?: { dataMessage: Uint8Array; editedAt: number }[];
   editedAt?: number;
   deletedAt?: number;
+  // The group admin who deleted another member's message for everyone
+  deletedByAdminAci?: string;
   // Text of the latest version, for previews and search
   body?: string;
   reactions?: { emoji: string; authorAci: string; sentAt: number }[];
@@ -82,6 +91,7 @@ export type MessageRecord = {
   isViewOnceOpened?: boolean;
   // Indexes in `DataMessage.attachments` that the CDN no longer has
   unavailableAttachmentIndexes?: number[];
+  isStickerUnavailable?: true;
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   isSealedSender?: boolean;

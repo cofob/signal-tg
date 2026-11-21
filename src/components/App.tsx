@@ -13,7 +13,7 @@ import {
   selectActionMessageBg, selectChatWallpaperSettings, selectTabState, selectTheme,
 } from '../global/selectors';
 import { IS_TAURI } from '../util/browser/globalEnvironment';
-import { IS_INSTALL_PROMPT_SUPPORTED, IS_IOS, PLATFORM_ENV } from '../util/browser/windowEnvironment';
+import { IS_INSTALL_PROMPT_SUPPORTED, IS_IOS } from '../util/browser/windowEnvironment';
 import buildClassName from '../util/buildClassName';
 import { setupBeforeInstallPrompt } from '../util/installPrompt';
 import { ACCOUNT_SLOT, getAccountSlotUrl, getFirstLoggedInAccountSlot } from '../util/multiaccount';
@@ -78,7 +78,6 @@ const App = ({
   const lang = useLang();
 
   const { isMobile } = useAppLayout();
-  const isMobileOs = PLATFORM_ENV === 'iOS' || PLATFORM_ENV === 'Android';
 
   useEffect(() => {
     if (IS_INSTALL_PROMPT_SUPPORTED) {
@@ -157,6 +156,7 @@ const App = ({
         page = 'authPassword';
         activeKey = AppScreens.auth;
         break;
+      case 'authorizationStateWaitCaptcha':
       case 'authorizationStateWaitRegistration':
         activeKey = AppScreens.auth;
         break;
@@ -178,7 +178,8 @@ const App = ({
   } else if (hasPasscode) {
     activeKey = AppScreens.lock;
   } else {
-    page = isMobileOs ? 'authPhoneNumber' : 'authQrCode';
+    // Linking with the QR code is the default sign-in; registration with a phone number starts from it
+    page = 'authQrCode';
     activeKey = AppScreens.auth;
   }
 

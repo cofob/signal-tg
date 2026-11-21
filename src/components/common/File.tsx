@@ -49,6 +49,7 @@ type OwnProps = {
   isUploading?: boolean;
   isSelectable?: boolean;
   isSelected?: boolean;
+  isUnavailable?: boolean;
   transferProgress?: number;
   actionIcon?: IconName;
   contextActions?: MenuItemContextAction[];
@@ -73,6 +74,7 @@ const File = ({
   isUploading,
   isSelectable,
   isSelected,
+  isUnavailable,
   transferProgress,
   actionIcon,
   contextActions,
@@ -168,7 +170,9 @@ const File = ({
       <div className="file-info">
         <div className="file-title" dir="auto" title={name}>{renderText(name)}</div>
         <div className="file-subtitle" dir="auto">
-          <AnimatedFileSize size={size} progress={isTransferring ? transferProgress : undefined} />
+          {isUnavailable ? lang('MediaUnavailable') : (
+            <AnimatedFileSize size={size} progress={isTransferring ? transferProgress : undefined} />
+          )}
           {sender && (
             <>
               <span className="bullet">&bull;</span>

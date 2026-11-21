@@ -21,14 +21,12 @@ import Transition from '../../ui/Transition';
 import SettingsFolders from './folders/SettingsFolders';
 import SettingsKeyboardShortcuts from './keyboardShortcuts/SettingsKeyboardShortcuts';
 import SettingsPasscode from './passcode/SettingsPasscode';
-import PrivacyMessages from './PrivacyMessages';
 import SettingsSearch from './search/SettingsSearch';
 import SettingsActiveSessions from './SettingsActiveSessions';
 import SettingsActiveWebsites from './SettingsActiveWebsites';
 import SettingsAutoDeleteMessages from './SettingsAutoDeleteMessages';
 import SettingsCustomEmoji from './SettingsCustomEmoji';
 import SettingsDataStorage from './SettingsDataStorage';
-import SettingsDoNotTranslate from './SettingsDoNotTranslate';
 import SettingsEditProfile from './SettingsEditProfile';
 import SettingsExperimental from './SettingsExperimental';
 import SettingsGeneral from './SettingsGeneral';
@@ -155,10 +153,6 @@ const PRIVACY_GROUP_CHATS_SCREENS = [
   SettingsScreens.PrivacyGroupChatsDeniedContacts,
 ];
 
-const PRIVACY_MESSAGES_SCREENS = [
-  SettingsScreens.PrivacyNoPaidMessages,
-];
-
 export type OwnProps = {
   isActive: boolean;
   currentScreen: SettingsScreens;
@@ -269,7 +263,6 @@ const Settings = ({
       [SettingsScreens.PrivacyForwarding]: PRIVACY_FORWARDING_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyVoiceMessages]: PRIVACY_VOICE_MESSAGES_SCREENS.includes(activeScreen),
       [SettingsScreens.PrivacyGroupChats]: PRIVACY_GROUP_CHATS_SCREENS.includes(activeScreen),
-      [SettingsScreens.PrivacyMessages]: PRIVACY_MESSAGES_SCREENS.includes(activeScreen),
     };
 
     const isTwoFaScreen = TWO_FA_SCREENS.includes(activeScreen);
@@ -359,13 +352,9 @@ const Settings = ({
       case SettingsScreens.Language:
         return (
           <SettingsLanguage
-            isActive={isScreenActive || activeScreen === SettingsScreens.DoNotTranslate}
+            isActive={isScreenActive}
             onReset={handleReset}
           />
-        );
-      case SettingsScreens.DoNotTranslate:
-        return (
-          <SettingsDoNotTranslate isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.Stickers:
         return (
@@ -442,11 +431,9 @@ const Settings = ({
       case SettingsScreens.PrivacyForwardingAllowedContacts:
       case SettingsScreens.PrivacyVoiceMessagesAllowedContacts:
       case SettingsScreens.PrivacyGroupChatsAllowedContacts:
-      case SettingsScreens.PrivacyNoPaidMessages:
         return (
           <SettingsPrivacyVisibilityExceptionList
             isAllowList
-            usersOnly={currentScreen === SettingsScreens.PrivacyNoPaidMessages}
             withPremiumCategory={currentScreen === SettingsScreens.PrivacyGroupChatsAllowedContacts}
             screen={currentScreen}
             isActive={isScreenActive || privacyAllowScreens[currentScreen]}
@@ -468,14 +455,6 @@ const Settings = ({
         return (
           <SettingsPrivacyVisibilityExceptionList
             screen={currentScreen}
-            isActive={isScreenActive}
-            onReset={handleReset}
-          />
-        );
-
-      case SettingsScreens.PrivacyMessages:
-        return (
-          <PrivacyMessages
             isActive={isScreenActive}
             onReset={handleReset}
           />

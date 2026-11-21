@@ -71,8 +71,11 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   STARGIFT_CONVERT_TOO_OLD: 'ErrorStargiftConvertTooOld',
   SUBSCRIPTION_ALREADY_ACTIVE: 'ErrorSubscriptionAlreadyActive',
   PEERS_LIST_EMPTY: 'ErrorPeersListEmpty',
-  PAID_MEDIA_FORBIDDEN: 'ErrorPaidMediaForbidden',
   USER_DISALLOWED_STARGIFTS: 'SendDisallowError',
+  SIGNAL_GROUP_CHANGE_FAILED: 'ErrorGroupChangeFailed',
+  SIGNAL_GROUP_TITLE_TOO_LONG: 'ErrorGroupTitleTooLong',
+  SIGNAL_GROUP_DESCRIPTION_TOO_LONG: 'ErrorGroupDescriptionTooLong',
+  SIGNAL_GROUP_LAST_ADMIN: 'ErrorGroupLastAdmin',
 };
 
 if (DEBUG) {

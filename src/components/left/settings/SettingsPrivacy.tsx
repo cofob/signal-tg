@@ -40,8 +40,6 @@ type StateProps = {
   canChangeSensitive?: boolean;
   canDisplayAutoarchiveSetting: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;
-  shouldNewNonContactPeersRequirePremium?: boolean;
-  shouldChargeForMessages: boolean;
   canDisplayChatInTitle?: boolean;
   isCurrentUserFrozen?: boolean;
   needAgeVideoVerification?: boolean;
@@ -67,8 +65,6 @@ const SettingsPrivacy = ({
   canChangeSensitive,
   canDisplayAutoarchiveSetting,
   shouldArchiveAndMuteNewNonContact,
-  shouldNewNonContactPeersRequirePremium,
-  shouldChargeForMessages,
   canDisplayChatInTitle,
   canSetPasscode,
   needAgeVideoVerification,
@@ -412,22 +408,6 @@ const SettingsPrivacy = ({
         </ListItem>
         <ListItem
           narrow
-          rightElement={isCurrentUserPremium && <StarIcon size="big" type="premium" />}
-          className="no-icon"
-          onClick={() => openSettingsScreen({ screen: SettingsScreens.PrivacyMessages })}
-        >
-          <div className="multiline-item">
-            <span className="title">{lang('PrivacyMessagesTitle')}</span>
-            <span className="subtitle" dir="auto">
-              {shouldChargeForMessages ? lang('PrivacyPaidMessagesValue')
-                : shouldNewNonContactPeersRequirePremium
-                  ? lang('PrivacyMessagesContactsAndPremium')
-                  : lang('P2PEverybody')}
-            </span>
-          </div>
-        </ListItem>
-        <ListItem
-          narrow
           className="no-icon"
           onClick={() => openSettingsScreen({ screen: SettingsScreens.PrivacyGroupChats })}
         >
@@ -520,7 +500,7 @@ export default memo(withGlobal<OwnProps>(
       settings: {
         byKey: {
           hasPassword, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
-          shouldNewNonContactPeersRequirePremium, nonContactPeersPaidStars, defaultHistoryTtl,
+          defaultHistoryTtl,
         },
         privacy,
         accountDaysTtl,
@@ -534,7 +514,6 @@ export default memo(withGlobal<OwnProps>(
     } = global;
 
     const { canDisplayChatInTitle } = selectSharedSettings(global);
-    const shouldChargeForMessages = Boolean(nonContactPeersPaidStars);
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
     const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
@@ -548,8 +527,6 @@ export default memo(withGlobal<OwnProps>(
       canDisplayAutoarchiveSetting: appConfig.canDisplayAutoarchiveSetting || isCurrentUserPremium,
       shouldArchiveAndMuteNewNonContact,
       canChangeSensitive,
-      shouldNewNonContactPeersRequirePremium,
-      shouldChargeForMessages,
       needAgeVideoVerification: Boolean(appConfig.needAgeVideoVerification),
       privacy,
       canDisplayChatInTitle,

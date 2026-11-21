@@ -234,7 +234,7 @@ export async function searchChats({ query }: { query: string }) {
 
 /**
  * Pins append to the end and bring the chat out of the archive, as in Signal Desktop
- * (`ts/models/conversations.preload.ts`, `pin`). Other devices learn about pins once storage service writes exist.
+ * (`ts/models/conversations.preload.ts`, `pin`). Other devices learn about pins through the storage service.
  */
 export async function toggleChatPinned({ chat, shouldBePinned }: { chat: ApiChat; shouldBePinned: boolean }) {
   const conversation = await getConversationByPeerId(chat.id);

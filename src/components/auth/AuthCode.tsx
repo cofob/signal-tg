@@ -3,16 +3,21 @@ import {
 } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
+import type { ApiAuthCodeTransport } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 
 import { IS_TOUCH_ENV } from '../../util/browser/windowEnvironment';
+import { formatMediaDuration } from '../../util/dates/duration';
 import { pick } from '../../util/iteratees';
 
+import useInterval from '../../hooks/schedulers/useInterval';
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
+import useLastCallback from '../../hooks/useLastCallback';
 
 import Icon from '../common/icons/Icon';
 import TrackingMonkey from '../common/TrackingMonkey';
+import Button from '../ui/Button';
 import InputText from '../ui/InputText';
 import Loading from '../ui/Loading';
 
@@ -20,18 +25,24 @@ type StateProps = {
   auth: GlobalState['auth'];
 };
 
-const CODE_LENGTH = 5;
+// Signal verification codes have six digits
+const CODE_LENGTH = 6;
+const COUNTDOWN_INTERVAL_MS = 1000;
+const MS_IN_SECOND = 1000;
 
 const AuthCode = ({
   auth,
 }: StateProps) => {
   const {
     setAuthCode,
+    requestAuthCode,
     returnToAuthPhoneNumber,
     clearAuthErrorKey,
   } = getActions();
 
-  const { phoneNumber, isCodeViaApp, isLoading, errorKey } = auth;
+  const {
+    phoneNumber, codeInfo, isLoading, errorKey,
+  } = auth;
 
   const lang = useLang();
   const inputRef = useRef<HTMLInputElement>();
@@ -86,6 +97,38 @@ const AuthCode = ({
     returnToAuthPhoneNumber();
   }
 
+  const handleRequestSms = useLastCallback(() => {
+    requestAuthCode({ transport: 'sms' });
+  });
+
+  const handleRequestCall = useLastCallback(() => {
+    requestAuthCode({ transport: 'voice' });
+  });
+
+  const [now, setNow] = useState(Date.now);
+  const hasCountdown = [codeInfo?.nextSmsAt, codeInfo?.nextCallAt].some((at) => at !== undefined && at > now);
+  useInterval(() => setNow(Date.now()), hasCountdown ? COUNTDOWN_INTERVAL_MS : undefined);
+
+  function renderResendButton(transport: ApiAuthCodeTransport, nextAt: number | undefined) {
+    if (nextAt === undefined) return undefined;
+
+    const secondsLeft = Math.ceil((nextAt - now) / MS_IN_SECOND);
+    const isSms = transport === 'sms';
+    const time = formatMediaDuration(secondsLeft);
+    return (
+      <Button
+        className="auth-button"
+        isText
+        disabled={secondsLeft > 0 || isLoading}
+        onClick={isSms ? handleRequestSms : handleRequestCall}
+      >
+        {secondsLeft > 0
+          ? lang(isSms ? 'SignalCodeResendSmsIn' : 'SignalCodeCallIn', { time })
+          : lang(isSms ? 'SignalCodeResendSms' : 'SignalCodeCall')}
+      </Button>
+    );
+  }
+
   return (
     <div id="auth-code-form" className="custom-scroll">
       <div className="auth-form">
@@ -109,10 +152,7 @@ const AuthCode = ({
           </div>
         </h1>
         <p className="note">
-          {lang(isCodeViaApp ? 'SentAppCode' : 'LoginJustSentSms', undefined, {
-            withNodes: true,
-            withMarkdown: true,
-          })}
+          {lang(codeInfo?.transport === 'voice' ? 'SignalCodeSentVoice' : 'SignalCodeSentSms')}
         </p>
         <InputText
           ref={inputRef}
@@ -125,6 +165,8 @@ const AuthCode = ({
           inputMode="numeric"
         />
         {isLoading && <Loading />}
+        {renderResendButton('sms', codeInfo?.nextSmsAt)}
+        {renderResendButton('voice', codeInfo?.nextCallAt)}
       </div>
     </div>
   );

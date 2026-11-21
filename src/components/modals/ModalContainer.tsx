@@ -37,7 +37,6 @@ import MapModal from './map/MapModal.async';
 import MediaAccessModal from './mediaAccess/MediaAccessModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
-import PaidReactionModal from './paidReaction/PaidReactionModal.async';
 import PasskeyModal from './passkey/PasskeyModal.async';
 import PollModal from './poll/PollModal.async';
 import PreparedMessageModal from './preparedMessage/PreparedMessageModal.async';
@@ -70,7 +69,6 @@ type ModalKey = keyof Pick<TabState,
   'inviteViaLinkModal' |
   'requestedAttachBotInstall' |
   'reportModal' |
-  'paidReactionModal' |
   'pollModal' |
   'musicPicker' |
   'suggestMessageModal' |
@@ -178,7 +176,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   reportModal: ReportModal,
   browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
-  paidReactionModal: PaidReactionModal,
   suggestMessageModal: SuggestMessageModal,
   suggestedPostApprovalModal: SuggestedPostApprovalModal,
   isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,

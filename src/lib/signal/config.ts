@@ -14,6 +14,8 @@ export const SIGNAL_CDN_HOSTS: Record<number, string> = {
 
 export const SIGNAL_TUNNEL_URL = import.meta.env.TG_SIGNAL_TUNNEL_URL || undefined;
 export const SIGNAL_USER_AGENT = `TeleSignal/${APP_VERSION}`;
+// The device id of an account's primary device; linked devices get higher ids
+export const SIGNAL_PRIMARY_DEVICE_ID = 1;
 
 let signalProxyUrl: string | undefined;
 

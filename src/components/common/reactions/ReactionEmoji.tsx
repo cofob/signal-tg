@@ -1,16 +1,12 @@
-import {
-  memo, useEffect, useMemo, useRef,
-} from '../../../lib/teact/teact';
+import { memo, useMemo, useRef } from '../../../lib/teact/teact';
 
-import type { ApiAvailableReaction, ApiReactionWithPaid } from '../../../api/types';
+import type { ApiAvailableReaction, ApiReaction } from '../../../api/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 
 import { EMOJI_SIZE_PICKER } from '../../../config';
 import { getDocumentMediaHash, isSameReaction } from '../../../global/helpers';
 import buildClassName from '../../../util/buildClassName';
-import { LOCAL_TGS_URLS } from '../helpers/animatedAssets';
 
-import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
 import useCoordsInSharedCanvas from '../../../hooks/useCoordsInSharedCanvas';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useMedia from '../../../hooks/useMedia';
@@ -24,7 +20,7 @@ import SelectionOrderBadge from '../SelectionOrderBadge';
 import styles from './ReactionEmoji.module.scss';
 
 type OwnProps = {
-  reaction: ApiReactionWithPaid;
+  reaction: ApiReaction;
   availableReactions?: ApiAvailableReaction[];
   className?: string;
   isSelected?: boolean;
@@ -32,8 +28,7 @@ type OwnProps = {
   loadAndPlay?: boolean;
   observeIntersection?: ObserveFn;
   forcePlayback?: boolean;
-  onClick: (reaction: ApiReactionWithPaid) => void;
-  onContextMenu?: (reaction: ApiReactionWithPaid) => void;
+  onClick: (reaction: ApiReaction) => void;
 };
 
 const ReactionEmoji = ({
@@ -45,7 +40,6 @@ const ReactionEmoji = ({
   observeIntersection,
   forcePlayback,
   onClick,
-  onContextMenu,
 }: OwnProps) => {
   const ref = useRef<HTMLDivElement>();
   const isCustom = reaction.type === 'custom';
@@ -61,24 +55,6 @@ const ReactionEmoji = ({
     !animationId,
   );
 
-  const {
-    isContextMenuOpen,
-    handleBeforeContextMenu,
-    handleContextMenu,
-    handleContextMenuClose,
-    handleContextMenuHide,
-  } = useContextMenuHandlers(ref, reaction.type !== 'paid', undefined, undefined, undefined, true);
-
-  useEffect(() => {
-    if (isContextMenuOpen) {
-      onContextMenu?.(reaction);
-
-      handleContextMenuClose();
-      handleContextMenuHide();
-    }
-  }, [handleContextMenuClose, onContextMenu, handleContextMenuHide, isContextMenuOpen, reaction]);
-
-  const tgsUrl = reaction.type === 'paid' ? LOCAL_TGS_URLS.StarReaction : mediaData;
   const handleClick = useLastCallback(() => {
     onClick(reaction);
   });
@@ -97,8 +73,6 @@ const ReactionEmoji = ({
       onClick={handleClick}
       title={availableReaction?.title}
       data-sticker-id={isCustom ? reaction.documentId : undefined}
-      onMouseDown={handleBeforeContextMenu}
-      onContextMenu={handleContextMenu}
     >
       {isCustom ? (
         <CustomEmoji
@@ -113,7 +87,7 @@ const ReactionEmoji = ({
       ) : (
         <AnimatedIconWithPreview
           key={dpr}
-          tgsUrl={tgsUrl}
+          tgsUrl={mediaData}
           thumbDataUri={thumbDataUri}
           play={loadAndPlay}
           noLoop={false}

@@ -1,12 +1,9 @@
 import type { ActionReturnType } from '../../types';
 
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { getMessageKey } from '../../../util/keys/messageKey';
-import { runForAllTabs } from '../../helpers';
 import { addActionHandler } from '../../index';
-import { updateChatMessage } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
-import { selectChatMessage, selectTabState } from '../../selectors';
+import { selectTabState } from '../../selectors';
 
 addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionReturnType => {
   const {
@@ -65,22 +62,6 @@ addActionHandler('openStoryReactionPicker', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openEffectPicker', (global, actions, payload): ActionReturnType => {
-  const {
-    position,
-    chatId,
-    tabId = getCurrentTabId(),
-  } = payload;
-
-  return updateTabState(global, {
-    reactionPicker: {
-      position,
-      chatId,
-      isForEffects: true,
-    },
-  }, tabId);
-});
-
 addActionHandler('closeReactionPicker', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
   const tabState = selectTabState(global, tabId);
@@ -92,49 +73,6 @@ addActionHandler('closeReactionPicker', (global, actions, payload): ActionReturn
       position: undefined,
       storyId: undefined,
       storyPeerId: undefined,
-      isForEffects: undefined,
     },
   }, tabId);
-});
-
-addActionHandler('resetLocalPaidReactions', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message) {
-    return undefined;
-  }
-
-  const { reactions } = message;
-
-  if (!reactions) {
-    return undefined;
-  }
-
-  const updatedResults = reactions.results.map((reaction) => {
-    if (reaction.localAmount) {
-      if (!reaction.count) return undefined;
-      return {
-        ...reaction,
-        localAmount: undefined,
-        localPreviousChosenOrder: undefined,
-        chosenOrder: reaction.localPreviousChosenOrder,
-      };
-    }
-    return reaction;
-  }).filter(Boolean);
-
-  const messageKey = getMessageKey(message);
-  runForAllTabs(global, (tabId) => {
-    actions.dismissNotification({
-      localId: messageKey,
-      tabId,
-    });
-  });
-
-  return updateChatMessage(global, chatId, messageId, {
-    reactions: {
-      ...reactions,
-      results: updatedResults,
-    },
-  });
 });

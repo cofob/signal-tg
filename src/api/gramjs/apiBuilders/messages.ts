@@ -279,11 +279,9 @@ export function buildApiMessageWithChatId(
     hasComments,
     savedPeerId,
     factCheck,
-    effectId: mtpMessage.effect?.toString(),
     isInvertedMedia,
     isVideoProcessingPending,
     reportDeliveryUntilDate: mtpMessage.reportDeliveryUntilDate,
-    paidMessageStars: toJSNumber(mtpMessage.paidMessageStars),
     restrictionReasons,
     summaryLanguageCode: mtpMessage.summaryFromLanguage,
     fromRank: mtpMessage.fromRank,
@@ -297,7 +295,7 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
   }
 
   const {
-    message, entities, replyTo, date, effect, suggestedPost, richMessage,
+    message, entities, replyTo, date, suggestedPost, richMessage,
   } = draft;
 
   const replyInfo = replyTo instanceof GramJs.InputReplyToMessage ? {
@@ -326,7 +324,6 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
     replyInfo,
     suggestedPostInfo,
     date,
-    effectId: effect?.toString(),
   };
 }
 
@@ -492,9 +489,7 @@ export function buildLocalMessage({
   sendAs,
   story,
   isInvertedMedia,
-  effectId,
   isPending,
-  messagePriceInStars,
   dice,
   action,
 }: {
@@ -518,9 +513,7 @@ export function buildLocalMessage({
   sendAs?: ApiPeer;
   story?: ApiStory | ApiStorySkipped;
   isInvertedMedia?: true;
-  effectId?: string;
   isPending?: true;
-  messagePriceInStars?: number;
   dice?: string;
   action?: ApiMessageAction;
 }) {
@@ -573,9 +566,7 @@ export function buildLocalMessage({
     scheduleRepeatPeriod,
     isForwardingAllowed: true,
     isInvertedMedia,
-    effectId,
     ...(isPending && { sendingState: 'messageSendingStatePending' }),
-    ...(messagePriceInStars && { paidMessageStars: messagePriceInStars }),
   } satisfies ApiMessage;
 
   const emojiOnlyCount = getEmojiOnlyCountForMessage(message.content, message.groupedId);
@@ -599,7 +590,6 @@ export function buildLocalForwardedMessage({
   isCurrentUserPremium,
   lastMessageId,
   sendAs,
-  effectId,
 }: {
   toChat: ApiChat;
   toThreadId?: number;
@@ -612,7 +602,6 @@ export function buildLocalForwardedMessage({
   isCurrentUserPremium?: boolean;
   lastMessageId?: number;
   sendAs?: ApiPeer;
-  effectId?: string;
 }): ApiMessage {
   const localId = getNextLocalMessageId(lastMessageId);
   const {
@@ -673,7 +662,6 @@ export function buildLocalForwardedMessage({
     isForwardingAllowed: true,
     replyInfo,
     isInvertedMedia,
-    effectId,
     forwardInfo,
     ...(toThreadId && toChat?.isForum && { isTopicReply: true }),
     ...(scheduledAt && { isScheduled: true }),

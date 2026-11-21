@@ -69,7 +69,6 @@ import {
 } from '../../selectors/audioPlayer';
 import { selectMessageDownloadableMedia } from '../../selectors/media';
 import { selectDraft, selectReplyStack, selectThreadInfo } from '../../selectors/threads';
-import { getPeerStarsForMessage } from '../api/messages';
 
 import { getIsMobile } from '../../../hooks/useAppLayout';
 
@@ -741,13 +740,6 @@ addActionHandler('setForwardNoCaptions', (global, actions, payload): ActionRetur
   }, tabId);
 });
 
-addActionHandler('clearAudioPendingSend', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const { audioPendingSend, ...forwardMessages } = selectTabState(global, tabId).forwardMessages;
-
-  return updateTabState(global, { forwardMessages }, tabId);
-});
-
 addActionHandler('exitForwardMode', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
 
@@ -1135,20 +1127,6 @@ addActionHandler('openPreviousReportModal', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openPaidReactionModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    paidReactionModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closePaidReactionModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    paidReactionModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('openSuggestMessageModal', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId, tabId = getCurrentTabId() } = payload;
   return updateTabState(global, {
@@ -1243,41 +1221,6 @@ addActionHandler('closeSharePreparedMessageModal', (global, actions, payload): A
   return updateTabState(global, {
     sharePreparedMessageModal: undefined,
   }, tabId);
-});
-
-addActionHandler('updateSharePreparedMessageModalSendArgs', async (global, actions, payload): Promise<void> => {
-  const { args, tabId = getCurrentTabId() } = payload || {};
-  const tabState = selectTabState(global, tabId);
-
-  if (!tabState.sharePreparedMessageModal) {
-    return;
-  }
-
-  if (!args) {
-    global = updateTabState(global, {
-      sharePreparedMessageModal: {
-        ...tabState.sharePreparedMessageModal,
-        pendingSendArgs: undefined,
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  const starsForSendMessage = await getPeerStarsForMessage(global, args.peerId);
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    sharePreparedMessageModal: {
-      ...tabState.sharePreparedMessageModal,
-      pendingSendArgs: {
-        peerId: args.peerId,
-        threadId: args.threadId,
-        starsForSendMessage,
-      },
-    },
-  }, tabId);
-  setGlobal(global);
 });
 
 addActionHandler('openQuickPreview', (global, actions, payload): ActionReturnType => {

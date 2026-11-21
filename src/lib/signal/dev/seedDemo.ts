@@ -5,14 +5,23 @@ import type MessageDb from '../db/MessageDb';
 import type { ConversationRecord, NewMessageRecord } from '../db/MessageDb';
 import type SignalStore from '../store/SignalStore';
 
+import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
 import { wasm } from '../wasm';
 
-import { BodyRange_Style, DataMessageSchema, Verified_State } from '../proto/generated/SignalService_pb';
+import {
+  AttachmentPointerSchema, BodyRange_Style, DataMessageSchema, Verified_State,
+} from '../proto/generated/SignalService_pb';
 
 const MINUTE = 60 * 1000;
 const PHOTO_WIDTH = 1280;
 const PHOTO_HEIGHT = 960;
+const PHOTO_MIME_TYPE = 'image/jpeg';
+const TRAIL_WIDTH = 24;
+// Trail points as fractions of the photo size
+const TRAIL_POINTS = [[0.1, 0.85], [0.35, 0.45], [0.6, 0.7], [0.9, 0.15]];
+const SUN_RADIUS = 120;
+const SUN_CENTER_Y = 0.7 * PHOTO_HEIGHT;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -21,11 +30,15 @@ type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'bod
 
 /**
  * Fills the stores with a fake account, contacts, a group and messages, so the UI can be checked without
- * a phone. The account has `isDemo`, so the client never connects; reload the page afterwards.
+ * a phone. The account has `isDemo`, so the client never connects, and attachments are either cached
+ * locally or marked unavailable, so they are never downloaded; reload the page afterwards.
  */
 export async function seedDemo(store: SignalStore, db: MessageDb) {
   await store.clear();
   await db.clear();
+
+  const trailPhoto = await createDemoPhoto('demo-photo', drawTrailMap);
+  const viewOncePhoto = await createDemoPhoto('demo-view-once-photo', drawSunset);
 
   const me = crypto.randomUUID();
   const alice = crypto.randomUUID();
@@ -193,17 +206,15 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       dataMessage: {
         body: 'Map of the trail',
         expireTimer: 7 * 24 * 60 * 60,
-        attachments: [{
-          attachmentIdentifier: { case: 'cdnKey', value: 'demo-photo' },
-          cdnNumber: 3,
-          contentType: 'image/jpeg',
-          key: getRandomBytes(64),
-          size: 245_000,
-          width: PHOTO_WIDTH,
-          height: PHOTO_HEIGHT,
-          blurHash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
-        }],
+        attachments: [trailPhoto],
       },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 45 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 44 * MINUTE,
+      dataMessage: { isViewOnce: true, attachments: [viewOncePhoto] },
     }],
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },
@@ -218,7 +229,11 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       readAt: now,
     }],
     [bobChat, {
-      authorAci: bob, sentAt: now - 290 * MINUTE, isOutgoing: false, readAt: now,
+      authorAci: bob,
+      sentAt: now - 290 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      unavailableAttachmentIndexes: [0],
       dataMessage: { body: 'Hey! Sending the report', attachments: [{
         attachmentIdentifier: { case: 'cdnKey', value: 'demo-file' },
         cdnNumber: 3,
@@ -241,6 +256,48 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       dataMessage: { body: 'Hi, we met at the conference' },
     }],
     [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'create' },
+      sentAt: now - 50 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'membersAdded', acis: [me, bob] },
+      sentAt: now - 49 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'inviteLink', state: 'onWithApproval' },
+      sentAt: now - 48 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: carol, groupUpdate: { type: 'joinRequested' },
+      sentAt: now - 47 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'joinApproved', aci: carol },
+      sentAt: now - 46 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: me, groupUpdate: { type: 'description' },
+      sentAt: now - 45 * MINUTE, isOutgoing: true, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate',
+      authorAci: '',
+      actorAci: alice,
+      groupUpdate: { type: 'adminChanged', aci: bob, isAdmin: true },
+      sentAt: now - 44 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate',
+      authorAci: '',
+      actorAci: alice,
+      groupUpdate: { type: 'access', target: 'info', isAdminOnly: true },
+      sentAt: now - 43 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
+      kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'invited', count: 2 },
+      sentAt: now - 42 * MINUTE, isOutgoing: false, readAt: now,
+    }],
+    [group, {
       authorAci: alice, sentAt: now - 40 * MINUTE, isOutgoing: false, readAt: now,
       dataMessage: { body: 'Plan for Saturday: hike, then picnic by the lake' },
     }],
@@ -251,6 +308,14 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
         body: '@Demo can you book the tables?',
         bodyRanges: [{ start: 0, length: 5, associatedValue: { case: 'mentionAci', value: me } }],
       },
+    }],
+    [group, {
+      authorAci: bob,
+      sentAt: now - 33 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      deletedAt: now - 32 * MINUTE,
+      deletedByAdminAci: alice,
     }],
     [group, {
       authorAci: me, sentAt: now - 30 * MINUTE, isOutgoing: true, readAt: now,
@@ -301,6 +366,52 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     const last = lastByConversation.get(conversation.id);
     await db.putConversation({ ...conversation, lastMessageId: last?.id, lastMessageAt: last?.sentAt });
   }
+}
+
+/** A photo attachment whose bytes are cached, so it shows without a download */
+async function createDemoPhoto(cdnKey: string, draw: (context: OffscreenCanvasRenderingContext2D) => void) {
+  const canvas = new OffscreenCanvas(PHOTO_WIDTH, PHOTO_HEIGHT);
+  draw(canvas.getContext('2d')!);
+  const blob = await canvas.convertToBlob({ type: PHOTO_MIME_TYPE });
+  const pointer = create(AttachmentPointerSchema, {
+    attachmentIdentifier: { case: 'cdnKey', value: cdnKey },
+    cdnNumber: 3,
+    contentType: PHOTO_MIME_TYPE,
+    key: getRandomBytes(64),
+    size: blob.size,
+    width: PHOTO_WIDTH,
+    height: PHOTO_HEIGHT,
+  });
+  await saveAttachmentBlob(pointer, blob);
+  return pointer;
+}
+
+function drawTrailMap(context: OffscreenCanvasRenderingContext2D) {
+  const gradient = context.createLinearGradient(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+  gradient.addColorStop(0, '#a8d5a2');
+  gradient.addColorStop(1, '#4f8f5b');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+
+  context.strokeStyle = '#c0392b';
+  context.lineWidth = TRAIL_WIDTH;
+  context.lineCap = 'round';
+  context.beginPath();
+  TRAIL_POINTS.forEach(([x, y]) => context.lineTo(x * PHOTO_WIDTH, y * PHOTO_HEIGHT));
+  context.stroke();
+}
+
+function drawSunset(context: OffscreenCanvasRenderingContext2D) {
+  const gradient = context.createLinearGradient(0, 0, 0, PHOTO_HEIGHT);
+  gradient.addColorStop(0, '#2c3e70');
+  gradient.addColorStop(1, '#f39c4a');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+
+  context.fillStyle = '#ffd56b';
+  context.beginPath();
+  context.arc(PHOTO_WIDTH / 2, SUN_CENTER_Y, SUN_RADIUS, 0, 2 * Math.PI);
+  context.fill();
 }
 
 function generateKeyPair() {

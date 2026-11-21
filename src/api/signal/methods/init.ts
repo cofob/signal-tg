@@ -6,7 +6,8 @@ import { startClient } from '../client';
 import { initUpdates } from '../updates';
 import * as methods from './index';
 
-// Each Signal method keeps the name and signature of the GramJS method it replaces
+// Each Signal method keeps the name and signature of the GramJS method it replaces; authorization methods
+// define their own signatures (`Methods`)
 const SIGNAL_METHODS: Partial<Methods> = methods;
 
 // The worker passes the GramJS local cache as the third argument; Signal keeps its state in IndexedDB

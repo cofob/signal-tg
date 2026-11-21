@@ -5,7 +5,6 @@ import { getActions, getPromiseActions, withGlobal } from '../../../global';
 
 import type { SharedSettings } from '../../../global/types';
 import type { AccountSettings } from '../../../types';
-import { SettingsScreens } from '../../../types';
 
 import { selectIsCurrentUserPremium } from '../../../global/selectors';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
@@ -22,7 +21,6 @@ import PickerItem from '../../common/pickers/PickerItem';
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
 import DropdownMenu from '../../ui/DropdownMenu';
-import ListItem from '../../ui/ListItem';
 import Loading from '../../ui/Loading';
 import MenuItem from '../../ui/MenuItem';
 import Radio from '../../ui/Radio';
@@ -35,7 +33,7 @@ type OwnProps = {
 
 type StateProps = {
   isCurrentUserPremium: boolean;
-} & Pick<AccountSettings, 'canTranslate' | 'canTranslateChats' | 'doNotTranslate'>
+} & Pick<AccountSettings, 'canTranslate'>
 & Pick<SharedSettings, 'language' | 'languages' | 'customLanguages'>;
 
 const SettingsLanguage = ({
@@ -45,15 +43,12 @@ const SettingsLanguage = ({
   language,
   customLanguages,
   canTranslate,
-  canTranslateChats,
-  doNotTranslate,
   onReset,
 }: OwnProps & StateProps) => {
   const {
     loadLanguages,
     setSettingOption,
     removeCustomLanguage,
-    openSettingsScreen,
   } = getActions();
 
   const lang = useLang();
@@ -61,8 +56,6 @@ const SettingsLanguage = ({
   const [selectedLanguage, setSelectedLanguage] = useState<string>(language);
   const [isLoading, markIsLoading, unmarkIsLoading] = useFlag();
   const languageRequestRef = useRef(0);
-
-  const canTranslateChatsEnabled = isCurrentUserPremium && canTranslateChats;
 
   useEffect(() => {
     if (!languages?.length) {
@@ -112,27 +105,6 @@ const SettingsLanguage = ({
     setSettingOption({ canTranslate: newValue });
   });
 
-  const handleShouldTranslateChatsChange = useLastCallback((newValue: boolean) => {
-    setSettingOption({ canTranslateChats: newValue });
-  });
-
-  const doNotTranslateText = useMemo(() => {
-    if (!IS_TRANSLATION_SUPPORTED || !doNotTranslate.length) {
-      return undefined;
-    }
-
-    if (doNotTranslate.length === 1) {
-      const originalNames = new Intl.DisplayNames([lang.code], { type: 'language' });
-      return originalNames.of(doNotTranslate[0])!;
-    }
-
-    return lang('Languages', { count: doNotTranslate.length }, { pluralValue: doNotTranslate.length });
-  }, [doNotTranslate, lang]);
-
-  const handleDoNotSelectOpen = useLastCallback(() => {
-    openSettingsScreen({ screen: SettingsScreens.DoNotTranslate });
-  });
-
   useHistoryBack({
     isActive,
     onBack: onReset,
@@ -148,22 +120,6 @@ const SettingsLanguage = ({
               checked={canTranslate}
               onCheck={handleShouldTranslateChange}
             />
-            <Checkbox
-              label={lang('ShowTranslateChatButton')}
-              checked={canTranslateChatsEnabled}
-              disabled={!isCurrentUserPremium}
-              rightIcon={!isCurrentUserPremium ? 'lock' : undefined}
-              onCheck={handleShouldTranslateChatsChange}
-            />
-            {(canTranslate || canTranslateChatsEnabled) && (
-              <ListItem
-                narrow
-                onClick={handleDoNotSelectOpen}
-              >
-                {lang('DoNotTranslate')}
-                <span className="settings-item__current-value">{doNotTranslateText}</span>
-              </ListItem>
-            )}
           </Island>
           <IslandDescription>
             {lang('TranslateSettingsAbout')}
@@ -226,7 +182,7 @@ const SettingsLanguage = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const {
-      canTranslate, canTranslateChats, doNotTranslate,
+      canTranslate,
     } = global.settings.byKey;
     const { language, languages, customLanguages } = selectSharedSettings(global);
 
@@ -238,8 +194,6 @@ export default memo(withGlobal<OwnProps>(
       language,
       customLanguages,
       canTranslate,
-      canTranslateChats,
-      doNotTranslate,
     };
   },
 )(SettingsLanguage));

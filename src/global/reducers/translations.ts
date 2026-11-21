@@ -165,28 +165,6 @@ export function removeRequestedChatTranslation<T extends GlobalState>(
   return global;
 }
 
-export function updateChatTranslationTone<T extends GlobalState>(
-  global: T, chatId: string, tone: TranslationTone, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const tabState = selectTabState(global, tabId);
-  const existingChat = tabState.requestedTranslations.byChatId[chatId];
-
-  global = updateTabState(global, {
-    requestedTranslations: {
-      ...tabState.requestedTranslations,
-      byChatId: {
-        ...tabState.requestedTranslations.byChatId,
-        [chatId]: {
-          ...existingChat,
-          tone,
-        },
-      },
-    },
-  }, tabId);
-
-  return global;
-}
-
 export function updateMessageTranslationTone<T extends GlobalState>(
   global: T, chatId: string, messageId: number, tone: TranslationTone, ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {

@@ -17,8 +17,8 @@ const MAX_LENGTH_FACTOR = 1.05;
 
 /** The CDN no longer has the attachment, so later downloads fail as well */
 export class AttachmentUnavailableError extends Error {
-  constructor(status: number) {
-    super(`Attachment is no longer available (HTTP ${status})`);
+  constructor(status?: number) {
+    super(`Attachment is no longer available${status ? ` (HTTP ${status})` : ''}`);
   }
 }
 

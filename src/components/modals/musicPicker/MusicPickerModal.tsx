@@ -17,14 +17,11 @@ import {
   SUPPORTED_AUDIO_CONTENT_TYPES,
 } from '../../../config';
 import { getChatNotifySettings } from '../../../global/helpers/notifications';
-import { getPeerTitle } from '../../../global/helpers/peers';
 import {
   selectChat,
   selectChatMessage,
   selectNotifyDefaults,
   selectNotifyException,
-  selectPeerPaidMessagesStars,
-  selectTabState,
   selectUserSavedMusic,
 } from '../../../global/selectors';
 import { revokeAttachmentUrls } from '../../../util/attachments';
@@ -43,9 +40,7 @@ import { useShallowSelector } from '../../../hooks/data/useSelector';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useSchedule from '../../../hooks/useSchedule';
-import usePaidMessageConfirmation from '../../middle/composer/hooks/usePaidMessageConfirmation';
 
-import PaymentMessageConfirmDialog from '../../common/PaymentMessageConfirmDialog';
 import Button from '../../ui/Button';
 import InfiniteScroll from '../../ui/InfiniteScroll';
 import SearchInput from '../../ui/SearchInput';
@@ -73,8 +68,6 @@ type StateProps = {
   musicSearchAudiosById: Record<string, ApiAudio>;
   hasMusicSearchBot: boolean;
   isAppConfigLoaded?: boolean;
-  paidMessagesStars?: number;
-  paymentMessageConfirmDialogKey?: string;
   isSilentPosting?: boolean;
 };
 
@@ -96,7 +89,6 @@ type SendContent = {
 
 type RichInputMedia = Pick<NonNullable<TabState['requestedRichInputMedia']>, 'audio' | 'files'>;
 
-const PAYMENT_DIALOG_KEY = 'musicPicker';
 const SCROLL_CONTAINER_SELECTOR = '.custom-scroll';
 const SINGLE_SOURCE: PlaybackSource = { type: 'single' };
 const AUDIO_FILES_ACCEPT = Array.from(SUPPORTED_AUDIO_CONTENT_TYPES).join(',');
@@ -112,8 +104,6 @@ const MusicPickerModal = ({
   musicSearchAudiosById,
   hasMusicSearchBot,
   isAppConfigLoaded,
-  paidMessagesStars,
-  paymentMessageConfirmDialogKey,
   isSilentPosting,
 }: OwnProps & StateProps) => {
   const {
@@ -125,18 +115,6 @@ const MusicPickerModal = ({
   const [query, setQuery] = useState('');
   const [listGeneration, setListGeneration] = useState(0);
   const [requestCalendar, calendar] = useSchedule();
-
-  const {
-    closeConfirmDialog,
-    dialogHandler,
-    shouldAutoApprove,
-    setAutoApprove,
-    handleWithConfirmation,
-  } = usePaidMessageConfirmation(
-    PAYMENT_DIALOG_KEY,
-    paidMessagesStars || 0,
-    true,
-  );
 
   const { shared, global: globalResults } = modal;
   const isInScheduledList = modal.messageListType === 'scheduled';
@@ -307,12 +285,12 @@ const MusicPickerModal = ({
   const handleSubmit = useLastCallback((content: SendContent) => {
     if (isInScheduledList) {
       requestCalendar((scheduledAt, scheduleRepeatPeriod) => {
-        handleWithConfirmation(submitContent, content, scheduledAt, scheduleRepeatPeriod);
+        submitContent(content, scheduledAt, scheduleRepeatPeriod);
       });
       return;
     }
 
-    handleWithConfirmation(submitContent, content);
+    submitContent(content);
   });
 
   const insertToRichInput = useLastCallback((media: RichInputMedia) => {
@@ -516,23 +494,12 @@ const MusicPickerModal = ({
         </InfiniteScroll>
       </Modal>
       {calendar}
-      <PaymentMessageConfirmDialog
-        isOpen={paymentMessageConfirmDialogKey === PAYMENT_DIALOG_KEY}
-        onClose={closeConfirmDialog}
-        userName={chat ? getPeerTitle(lang, chat) : undefined}
-        messagePriceInStars={paidMessagesStars || 0}
-        messagesCount={1}
-        shouldAutoApprove={shouldAutoApprove}
-        setAutoApprove={setAutoApprove}
-        confirmHandler={dialogHandler}
-      />
     </>
   );
 };
 
 export default memo(withGlobal<OwnProps>(
   (global, { modal }): Complete<StateProps> => {
-    const tabState = selectTabState(global);
     const { currentUserId } = global;
     const chat = selectChat(global, modal.chatId);
 
@@ -543,8 +510,6 @@ export default memo(withGlobal<OwnProps>(
       musicSearchAudiosById: global.musicSearch.audiosById,
       hasMusicSearchBot: Boolean(global.appConfig.musicSearchUsername),
       isAppConfigLoaded: global.isAppConfigLoaded,
-      paidMessagesStars: selectPeerPaidMessagesStars(global, modal.chatId),
-      paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
       isSilentPosting: chat ? getChatNotifySettings(
         chat,
         selectNotifyDefaults(global),
