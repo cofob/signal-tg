@@ -122,6 +122,10 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalSealedProxyTitle': undefined;
+  'SignalSealedProxySame': undefined;
+  'SignalSealedProxyAbout': undefined;
+  'SignalSealedProxyUseMain': undefined;
   'SignalProfileAbout': undefined;
   'SignalProfileAboutHelp': undefined;
   'SignalProfileRemovePhoto': undefined;
@@ -2242,6 +2246,7 @@ export interface LangPair {
   'SettingsKeywordsAutoDelete': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSealedProxy': undefined;
   'SettingsKeywordsSignalDevices': undefined;
   'SettingsKeywordsReadReceipts': undefined;
   'SettingsKeywordsTypingIndicators': undefined;

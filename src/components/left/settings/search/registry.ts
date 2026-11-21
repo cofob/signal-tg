@@ -167,6 +167,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsSignalProxy',
   },
   {
+    screen: SettingsScreens.SignalSealedSenderProxy,
+    parent: SettingsScreens.DataStorage,
+    titleKey: 'SignalSealedProxyTitle',
+    keywordsKey: 'SettingsKeywordsSealedProxy',
+  },
+  {
     screen: SettingsScreens.QuickReaction,
     parent: SettingsScreens.Stickers,
     titleKey: 'DoubleTapSetting',

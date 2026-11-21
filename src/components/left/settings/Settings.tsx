@@ -297,13 +297,19 @@ const Settings = ({
       case SettingsScreens.DataStorage:
         return (
           <SettingsDataStorage
-            isActive={isScreenActive || activeScreen === SettingsScreens.SignalProxy}
+            isActive={isScreenActive
+              || activeScreen === SettingsScreens.SignalProxy
+              || activeScreen === SettingsScreens.SignalSealedSenderProxy}
             onReset={handleReset}
           />
         );
       case SettingsScreens.SignalProxy:
         return (
           <SettingsSignalProxy isActive={isScreenActive} onReset={handleReset} />
+        );
+      case SettingsScreens.SignalSealedSenderProxy:
+        return (
+          <SettingsSignalProxy isSealedSender isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.SignalPin:
         return (

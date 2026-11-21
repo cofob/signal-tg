@@ -183,7 +183,7 @@ export interface ActionPayloads {
   // settings
   setSettingOption: Partial<AccountSettings> | undefined;
   setSharedSettingOption: Partial<SharedState['settings']> | undefined;
-  setSignalProxyUrl: { url?: string };
+  setSignalProxyUrl: { url?: string; isSealedSender?: boolean };
   setKeyboardShortcut: {
     id: KeyboardShortcutId;
     combo: string | false;

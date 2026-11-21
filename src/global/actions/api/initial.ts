@@ -56,13 +56,16 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
   if (global.passcode.isScreenLocked || checkSessionLocked()
     || !selectTabState(global, getCurrentTabId()).isMasterTab) return;
 
-  const { shouldCollectDebugLogs, language, signalProxyUrl } = selectSharedSettings(global);
+  const {
+    shouldCollectDebugLogs, language, signalProxyUrl, signalSealedSenderProxyUrl,
+  } = selectSharedSettings(global);
 
   void initApi(actions.apiUpdate, {
     userAgent: navigator.userAgent,
     platform: PLATFORM_ENV,
     langCode: language,
     signalProxyUrl,
+    signalSealedSenderProxyUrl,
   });
 
   void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
@@ -73,7 +76,10 @@ addActionHandler('setSignalProxyUrl', (global, actions, payload): ActionReturnTy
   // Only the master tab runs the API; a change from another tab reaches it after a reload
   const isMasterTab = selectTabState(global, getCurrentTabId()).isMasterTab;
 
-  global = updateSharedSettings(global, { signalProxyUrl: payload.url });
+  global = updateSharedSettings(
+    global,
+    payload.isSealedSender ? { signalSealedSenderProxyUrl: payload.url } : { signalProxyUrl: payload.url },
+  );
   // Changes to initial shared state are not shared, and a reload takes the shared copy, which would drop the URL
   global = updateSharedState(global, { isInitial: undefined });
   // The link screen shows a spinner until a new code arrives through the new tunnel

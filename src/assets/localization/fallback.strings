@@ -142,6 +142,10 @@
 "SignalProxyErrorInvalid" = "Invalid URL";
 "SignalProxyErrorProtocol" = "Use wss://, or ws:// on localhost";
 "SignalProxyErrorCredentials" = "Remove the user name and password";
+"SignalSealedProxyTitle" = "Sealed sender proxy";
+"SignalSealedProxySame" = "Same tunnel";
+"SignalSealedProxyAbout" = "Messages sent with sealed sender, profile and contact lookups and downloads carry no account credentials. Set a second tunnel server for them, so that no single tunnel operator can link them to your account. Leave it empty to send everything through the proxy server.";
+"SignalSealedProxyUseMain" = "Use proxy server";
 "SignalProfileAbout" = "About";
 "SignalProfileAboutHelp" = "Your profile is end-to-end encrypted. People you chat with, your contacts and your groups see it. An emoji at the start of the about text shows as your about emoji.";
 "SignalProfileRemovePhoto" = "Remove photo";
@@ -2767,6 +2771,7 @@
 "SettingsKeywordsAutoDelete" = "auto delete, self destruct, ttl, timer";
 "SettingsKeywordsDataStorage" = "storage, cache, data usage, auto download, traffic";
 "SettingsKeywordsSignalProxy" = "proxy, tunnel, connection, network, server, blocked, censorship";
+"SettingsKeywordsSealedProxy" = "sealed sender, proxy, tunnel, anonymous, unlinkable, metadata, privacy, network";
 "SettingsKeywordsSignalDevices" = "devices, link, linked, desktop, qr code, unlink, sessions";
 "SettingsKeywordsReadReceipts" = "read receipts, seen, delivered, ticks, blue";
 "SettingsKeywordsTypingIndicators" = "typing indicators, typing, writing";
