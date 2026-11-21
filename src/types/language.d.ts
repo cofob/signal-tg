@@ -2321,6 +2321,9 @@ export interface LangPair {
   'NotificationProfileWeekends': undefined;
   'NotificationProfileForHour': undefined;
   'NotificationProfileDelete': undefined;
+  'ChatColor': undefined;
+  'ChatColorWallpaper': undefined;
+  'ChatColorBubbles': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

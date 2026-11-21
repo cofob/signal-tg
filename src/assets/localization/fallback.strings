@@ -2860,3 +2860,6 @@
 "NotificationProfileForHour" = "Turn on for one hour";
 "NotificationProfileDelete" = "Delete profile";
 "NotificationProfileDeleteInfo" = "Delete the notification profile \"{name}\"?";
+"ChatColor" = "Chat color";
+"ChatColorWallpaper" = "Wallpaper";
+"ChatColorBubbles" = "Message color";

@@ -20,6 +20,9 @@ import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
 import { wasm } from '../wasm';
 
+import {
+  ChatStyle_BubbleColorPreset, ChatStyle_WallpaperPreset,
+} from '../proto/generated/Backup_pb';
 import { Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
@@ -107,6 +110,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
 
   await store.setItem('account', {
     aci: me,
+    defaultChatStyle: { bubbleColorPreset: ChatStyle_BubbleColorPreset.SOLID_INDIGO },
     deviceId: 2,
     deviceName: 'TeleSignal (demo)',
     password: 'demo',
@@ -600,6 +604,13 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     });
     lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
   }
+
+  // Chat colors and wallpapers from the transferred history; Bob's chat uses the default style of the account
+  aliceChat.chatStyle = {
+    wallpaperPreset: ChatStyle_WallpaperPreset.GRADIENT_AQUA,
+    bubbleColorPreset: ChatStyle_BubbleColorPreset.GRADIENT_LAGOON,
+  };
+  carolChat.chatStyle = { wallpaperPreset: ChatStyle_WallpaperPreset.SOLID_BLUSH };
 
   // Calls of the call history, which show in their chats and the call log
   const demoCalls: [ConversationRecord, Omit<CallRecord, 'peerId' | 'messageId' | 'mode'>][] = [

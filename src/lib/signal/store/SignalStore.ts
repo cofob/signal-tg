@@ -1,4 +1,5 @@
 import type { LastResortPreKeys } from '../account/preKeys';
+import type { ChatStyleRecord, CustomChatColorRecord } from '../chatStyle/chatStyle';
 import type { NotificationProfile, NotificationProfileOverride } from '../notificationProfiles/notificationProfiles';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
@@ -36,6 +37,9 @@ export type AccountRecord = {
   isSealedSenderIndicatorsEnabled?: boolean;
   // The disappearing messages timer that new private chats start with, in seconds (`universalExpireTimer`)
   universalExpireTimer?: number;
+  // The chat style that chats without one of their own use, and the custom chat colors, from the transferred history
+  defaultChatStyle?: ChatStyleRecord;
+  customChatColors?: Record<string, CustomChatColorRecord>;
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;

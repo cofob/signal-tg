@@ -1,4 +1,5 @@
 import type { CallDirection, CallMode, CallStatus, CallType } from '../calls/callDisposition';
+import type { ChatStyleRecord } from '../chatStyle/chatStyle';
 import type { GroupState } from '../groups/fetchGroup';
 import type { GroupUpdate } from '../groups/groupUpdates';
 
@@ -50,6 +51,8 @@ export type ConversationRecord = {
   // The last `reportSpamToken` of an envelope from the contact, sent with spam reports
   reportingToken?: Uint8Array;
   mutedUntil?: number;
+  // The chat color and wallpaper from the transferred history; the account's default style applies without one
+  chatStyle?: ChatStyleRecord;
   // Position in the pinned conversations list
   pinIndex?: number;
   pinnedMessages?: { messageId: number; pinnedAt: number; expiresAt?: number }[];
