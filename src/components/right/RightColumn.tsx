@@ -6,7 +6,6 @@ import type { AnimationLevel, ThreadId } from '../../types';
 import { ManagementScreens, NewChatMembersProgress, ProfileState, RightColumnContent } from '../../types';
 
 import { MIN_SCREEN_WIDTH_FOR_STATIC_RIGHT_COLUMN } from '../../config';
-import { getIsSavedDialog } from '../../global/helpers';
 import {
   selectAreActiveChatsLoaded,
   selectCurrentMessageList,
@@ -30,8 +29,6 @@ import useWindowSize from '../../hooks/window/useWindowSize';
 
 import Transition from '../ui/Transition';
 import AddChatMembers from './AddChatMembers';
-import CreateTopic from './CreateTopic.async';
-import EditTopic from './EditTopic.async';
 import Management from './management/Management.async';
 import PollResults from './PollResults.async';
 import Profile from './Profile';
@@ -53,7 +50,6 @@ type StateProps = {
   nextManagementScreen?: ManagementScreens;
   shouldCloseRightColumn?: boolean;
   isSavedMessages?: boolean;
-  isSavedDialog?: boolean;
   isOwnProfile?: boolean;
   hasProfileBackground?: boolean;
 };
@@ -72,7 +68,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
   nextManagementScreen,
   shouldCloseRightColumn,
   isSavedMessages,
-  isSavedDialog,
   isOwnProfile,
   hasProfileBackground,
 }) => {
@@ -85,8 +80,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
     setEditingExportedInvite,
     setOpenedInviteInfo,
     requestNextManagementScreen,
-    closeCreateTopicPanel,
-    closeEditTopicPanel,
     setShouldCloseRightColumn,
   } = getActions();
 
@@ -94,7 +87,7 @@ const RightColumn: FC<OwnProps & StateProps> = ({
 
   const { width: windowWidth } = useWindowSize();
   const [profileState, setProfileState] = useState<ProfileState>(
-    isSavedMessages && !isSavedDialog ? ProfileState.SavedDialogs : ProfileState.Profile,
+    ProfileState.Profile,
   );
   const [managementScreen, setManagementScreen] = useState<ManagementScreens>(ManagementScreens.Initial);
   const [selectedChatMemberId, setSelectedChatMemberId] = useState<string | undefined>();
@@ -107,12 +100,10 @@ const RightColumn: FC<OwnProps & StateProps> = ({
   const isManagement = contentKey === RightColumnContent.Management;
   const isPollResults = contentKey === RightColumnContent.PollResults;
   const isAddingChatMembers = contentKey === RightColumnContent.AddingMembers;
-  const isCreatingTopic = contentKey === RightColumnContent.CreateTopic;
-  const isEditingTopic = contentKey === RightColumnContent.EditTopic;
   const isOverlaying = windowWidth <= MIN_SCREEN_WIDTH_FOR_STATIC_RIGHT_COLUMN;
   const isContentScrolledRef = useRef(false);
 
-  const hasStaticHeader = isSavedMessages || isAddingChatMembers || isCreatingTopic || isEditingTopic
+  const hasStaticHeader = isSavedMessages || isAddingChatMembers
     || (isManagement && (
       managementScreen === ManagementScreens.GroupMembers
       || managementScreen === ManagementScreens.ChatAdministrators
@@ -184,17 +175,12 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           case ManagementScreens.Initial:
             toggleManagement();
             break;
-          case ManagementScreens.ChatPrivacyType:
-          case ManagementScreens.Discussion:
           case ManagementScreens.GroupPermissions:
           case ManagementScreens.GroupType:
           case ManagementScreens.ChatAdministrators:
-          case ManagementScreens.ChannelSubscribers:
           case ManagementScreens.GroupMembers:
           case ManagementScreens.Invites:
-          case ManagementScreens.Reactions:
           case ManagementScreens.JoinRequests:
-          case ManagementScreens.ChannelRemovedUsers:
           case ManagementScreens.GroupInvitedUsers:
             setManagementScreen(ManagementScreens.Initial);
             break;
@@ -205,13 +191,9 @@ const RightColumn: FC<OwnProps & StateProps> = ({
             setSelectedChatMemberId(undefined);
             setIsPromotedByCurrentUser(undefined);
             break;
-          case ManagementScreens.NewDiscussionGroup:
-            setManagementScreen(ManagementScreens.Discussion);
-            break;
           case ManagementScreens.ChatAdminRights:
           case ManagementScreens.ChatNewAdminRights:
           case ManagementScreens.GroupAddAdmins:
-          case ManagementScreens.GroupRecentActions:
             setManagementScreen(ManagementScreens.ChatAdministrators);
             setSelectedChatMemberId(undefined);
             setIsPromotedByCurrentUser(undefined);
@@ -228,12 +210,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
       }
       case RightColumnContent.PollResults:
         closePollResults();
-        break;
-      case RightColumnContent.CreateTopic:
-        closeCreateTopicPanel();
-        break;
-      case RightColumnContent.EditTopic:
-        closeEditTopicPanel();
         break;
     }
   });
@@ -274,20 +250,16 @@ const RightColumn: FC<OwnProps & StateProps> = ({
   // We need to clear profile state and management screen state, when changing chats
   useLayoutEffectWithPrevDeps(([prevChatId, prevThreadId]) => {
     if (prevChatId !== chatId || prevThreadId !== threadId) {
-      setProfileState(
-        isSavedMessages && !isSavedDialog ? ProfileState.SavedDialogs : ProfileState.Profile,
-      );
+      setProfileState(ProfileState.Profile);
       setManagementScreen(ManagementScreens.Initial);
     }
-  }, [chatId, threadId, isSavedDialog, isSavedMessages]);
+  }, [chatId, threadId, isSavedMessages]);
 
   useHistoryBack({
     isActive: isChatSelected && (
       contentKey === RightColumnContent.ChatInfo
       || contentKey === RightColumnContent.Management
-      || contentKey === RightColumnContent.AddingMembers
-      || contentKey === RightColumnContent.CreateTopic
-      || contentKey === RightColumnContent.EditTopic),
+      || contentKey === RightColumnContent.AddingMembers),
     onBack: () => close(false),
   });
 
@@ -337,10 +309,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
 
       case RightColumnContent.PollResults:
         return <PollResults onClose={close} isActive={isOpen && isActive} />;
-      case RightColumnContent.CreateTopic:
-        return <CreateTopic onClose={close} isActive={isOpen && isActive} />;
-      case RightColumnContent.EditTopic:
-        return <EditTopic onClose={close} isActive={isOpen && isActive} />;
     }
 
     return undefined; // Unreachable
@@ -363,8 +331,6 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           headerBackground={headerBackground}
           isManagement={isManagement}
           isPollResults={isPollResults}
-          isCreatingTopic={isCreatingTopic}
-          isEditingTopic={isEditingTopic}
           isAddingChatMembers={isAddingChatMembers}
           profileState={profileState}
           managementScreen={managementScreen}
@@ -402,7 +368,6 @@ export default memo(withGlobal<OwnProps>(
 
     const isOwnProfile = chatInfo?.isOwnProfile;
     const isSavedMessages = chatId && !isOwnProfile ? selectIsChatWithSelf(global, chatId) : undefined;
-    const isSavedDialog = chatId ? getIsSavedDialog(chatId, threadId, global.currentUserId) : undefined;
 
     return {
       contentKey: selectRightColumnContentKey(global, isMobile),
@@ -414,7 +379,6 @@ export default memo(withGlobal<OwnProps>(
       nextManagementScreen,
       shouldCloseRightColumn,
       isSavedMessages,
-      isSavedDialog,
       isOwnProfile,
       hasProfileBackground: chatId ? selectPeerHasProfileBackground(global, chatId) : undefined,
     };

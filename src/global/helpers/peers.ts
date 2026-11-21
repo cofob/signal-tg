@@ -58,12 +58,8 @@ export function filterPeersByQuery({
 
 export function getPeerTypeKey(peer: ApiPeer): RegularLangKey | undefined {
   if (isApiPeerChat(peer)) {
-    if (peer.type === 'chatTypeBasicGroup' || peer.type === 'chatTypeSuperGroup') {
+    if (peer.type === 'chatTypeBasicGroup') {
       return 'ChatListPeerTypeGroup';
-    }
-
-    if (peer.type === 'chatTypeChannel') {
-      return 'ChatListPeerTypeChannel';
     }
 
     if (peer.type === 'chatTypePrivate') {

@@ -4,17 +4,14 @@ import { getActions } from '../../global';
 import type {
   ApiPeer,
 } from '../../api/types';
-import type { ObserveFn } from '../../hooks/useIntersectionObserver';
 import type { CustomPeer } from '../../types';
 
-import { EMOJI_STATUS_LOOP_LIMIT } from '../../config';
 import {
   getChatTitle,
   getUserFullName,
 } from '../../global/helpers';
 import { isApiPeerUser } from '../../global/helpers/peers';
 import buildClassName from '../../util/buildClassName';
-import buildStyle from '../../util/buildStyle';
 import { copyTextToClipboard } from '../../util/clipboard';
 import stopEvent from '../../util/stopEvent';
 import renderText from './helpers/renderText';
@@ -23,10 +20,6 @@ import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
 import Marquee from '../ui/Marquee';
-import Transition from '../ui/Transition';
-import CustomEmoji from './CustomEmoji';
-import FakeIcon from './FakeIcon';
-import VerifiedIcon from './VerifiedIcon';
 
 import styles from './FullNameTitle.module.scss';
 
@@ -36,20 +29,9 @@ type OwnProps = {
   style?: string;
   isScrolling?: boolean;
   isScrollingPaused?: boolean;
-  noVerified?: boolean;
-  noFake?: boolean;
-  withEmojiStatus?: boolean;
-  emojiStatusSize?: number;
   isSavedMessages?: boolean;
-  isSavedDialog?: boolean;
-  isMonoforum?: boolean;
-  monoforumBadgeClassName?: string;
-  noLoopLimit?: boolean;
   canCopyTitle?: boolean;
   iconElement?: React.ReactNode;
-  withStatusTextColor?: boolean;
-  onEmojiStatusClick?: NoneToVoidFunction;
-  observeIntersection?: ObserveFn;
 };
 
 const FullNameTitle = ({
@@ -58,20 +40,9 @@ const FullNameTitle = ({
   isScrolling,
   isScrollingPaused,
   peer,
-  noVerified,
-  noFake,
-  withEmojiStatus,
-  emojiStatusSize,
   isSavedMessages,
-  isSavedDialog,
-  noLoopLimit,
   canCopyTitle,
   iconElement,
-  isMonoforum,
-  monoforumBadgeClassName,
-  withStatusTextColor,
-  onEmojiStatusClick,
-  observeIntersection,
 }: OwnProps) => {
   const { showNotification } = getActions();
 
@@ -81,9 +52,6 @@ const FullNameTitle = ({
   const customPeer = 'isCustomPeer' in peer ? peer : undefined;
   const isUser = realPeer && isApiPeerUser(realPeer);
   const title = realPeer && (isUser ? getUserFullName(lang, realPeer) : getChatTitle(lang, realPeer));
-  const canShowEmojiStatus = withEmojiStatus && !isSavedMessages;
-  const emojiStatus = realPeer?.emojiStatus
-    || (customPeer?.emojiStatusId ? { type: 'regular', documentId: customPeer.emojiStatusId } : undefined);
 
   const handleTitleClick = useLastCallback((e) => {
     if (!title || !canCopyTitle) {
@@ -101,17 +69,17 @@ const FullNameTitle = ({
     }
 
     if (isSavedMessages) {
-      return lang(isSavedDialog ? 'MyNotes' : 'NoteToSelf');
+      return lang('NoteToSelf');
     }
 
     return undefined;
-  }, [customPeer, isSavedDialog, isSavedMessages, lang]);
+  }, [customPeer, isSavedMessages, lang]);
   const renderedTitle = useMemo(() => specialTitle || renderText(title || ''), [specialTitle, title]);
 
   return (
     <div
       className={buildClassName('title', styles.root, className)}
-      style={buildStyle(emojiStatusSize ? `--_status-size: ${emojiStatusSize}px` : undefined, style)}
+      style={style}
     >
       <h3
         dir="auto"
@@ -125,36 +93,6 @@ const FullNameTitle = ({
       >
         {isScrolling ? <Marquee paused={isScrollingPaused}>{renderedTitle}</Marquee> : renderedTitle}
       </h3>
-      {!iconElement && peer && (
-        <>
-          {!noVerified && peer?.isVerified && <VerifiedIcon />}
-          {!noFake && peer?.fakeType && <FakeIcon fakeType={peer.fakeType} />}
-          {canShowEmojiStatus && emojiStatus && (
-            <Transition
-              className={styles.statusTransition}
-              slideClassName={styles.statusTransitionSlide}
-              activeKey={Number(emojiStatus.documentId)}
-              name="slideFade"
-              direction={-1}
-              shouldCleanup
-            >
-              <CustomEmoji
-                className={buildClassName('no-selection', !withStatusTextColor && styles.statusPrimaryColor)}
-                documentId={emojiStatus.documentId}
-                size={emojiStatusSize}
-                loopLimit={!noLoopLimit ? EMOJI_STATUS_LOOP_LIMIT : undefined}
-                observeIntersectionForLoading={observeIntersection}
-                onClick={onEmojiStatusClick}
-              />
-            </Transition>
-          )}
-          {isMonoforum && (
-            <div className={buildClassName(styles.monoforumBadge, monoforumBadgeClassName)}>
-              {lang('MonoforumBadge')}
-            </div>
-          )}
-        </>
-      )}
       {iconElement}
     </div>
   );

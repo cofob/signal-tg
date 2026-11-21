@@ -3,7 +3,7 @@ import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions } from '../../../global';
 
 import type {
-  ApiAvailableReaction, ApiMessage, ApiMessageOutgoingStatus, ApiThreadInfo,
+  ApiAvailableReaction, ApiMessage, ApiMessageOutgoingStatus,
 } from '../../../api/types';
 import type { LangFn } from '../../../util/localization';
 
@@ -17,7 +17,6 @@ import renderText from '../../common/helpers/renderText';
 import useFlag from '../../../hooks/useFlag';
 import useLang from '../../../hooks/useLang';
 
-import AnimatedCounter from '../../common/AnimatedCounter';
 import Icon from '../../common/icons/Icon';
 import MessageOutgoingStatus from '../../common/MessageOutgoingStatus';
 
@@ -29,15 +28,12 @@ type OwnProps = {
   outgoingStatus?: ApiMessageOutgoingStatus;
   signature?: string;
   availableReactions?: ApiAvailableReaction[];
-  noReplies?: boolean;
-  repliesThreadInfo?: ApiThreadInfo;
   isPinned?: boolean;
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onOutgoingStatusClick?: NoneToVoidFunction;
   renderQuickReactionButton?: () => TeactNode | undefined;
-  onOpenThread: NoneToVoidFunction;
 };
 
 const MessageMeta = ({
@@ -45,14 +41,11 @@ const MessageMeta = ({
   outgoingStatus,
   signature,
   withReactionOffset,
-  repliesThreadInfo,
   renderQuickReactionButton,
-  noReplies,
   isPinned,
   withFullDate,
   onClick,
   onOutgoingStatusClick,
-  onOpenThread,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
   const { showNotification } = getActions();
@@ -69,11 +62,6 @@ const MessageMeta = ({
         key: 'ImportedInfo',
       },
     });
-  }
-
-  function handleOpenThread(e: React.MouseEvent) {
-    e.stopPropagation();
-    onOpenThread();
   }
 
   const dateTitle = useMemo(() => {
@@ -116,12 +104,6 @@ const MessageMeta = ({
     return text;
   }, [lang, message.forwardsCount, message.viewsCount]);
 
-  const repliesTitle = useMemo(() => {
-    const count = repliesThreadInfo?.messagesCount;
-    if (!count) return undefined;
-    return lang('MessageTooltipReplies', { count }, { pluralValue: count });
-  }, [lang, repliesThreadInfo]);
-
   const shouldShowPrimaryEditedDate = Boolean(message.isEdited && isMessagePrimaryEditedDateEnabled);
 
   const date = useMemo(() => {
@@ -158,14 +140,6 @@ const MessageMeta = ({
           </span>
           <Icon name="eye" />
         </>
-      )}
-      {!noReplies && Boolean(repliesThreadInfo?.messagesCount) && (
-        <span onClick={handleOpenThread} className="message-replies-wrapper" title={repliesTitle}>
-          <span className="message-replies">
-            <AnimatedCounter text={formatIntegerCompact(lang, repliesThreadInfo.messagesCount)} />
-          </span>
-          <Icon name="reply-filled" />
-        </span>
       )}
       {isPinned && (
         <Icon name="pin-filled" className="message-pinned" />

@@ -55,7 +55,7 @@ const AnimatedEmoji = ({
     size,
     style,
     handleClick,
-  } = useAnimatedEmoji(chatId, messageId, soundId, activeEmojiInteractions, isOwn, effect ? emoji : undefined);
+  } = useAnimatedEmoji(chatId, messageId, soundId, isOwn, effect ? emoji : undefined);
   const isIntersecting = useIsIntersecting(ref, observeIntersection);
   const fitzModifier = getEmojiFitzModifier(emoji);
 

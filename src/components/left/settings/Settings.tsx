@@ -39,7 +39,6 @@ import SettingsPrivacyBlockedUsers from './SettingsPrivacyBlockedUsers';
 import SettingsPrivacyPhoneNumber from './SettingsPrivacyPhoneNumber';
 import SettingsPrivacyVisibility from './SettingsPrivacyVisibility';
 import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityExceptionList';
-import SettingsQuickReaction from './SettingsQuickReaction';
 import SettingsSignalDevices from './SettingsSignalDevices';
 import SettingsSignalPin from './SettingsSignalPin';
 import SettingsSignalPinForm from './SettingsSignalPinForm';
@@ -277,15 +276,10 @@ const Settings = ({
             isActive={isScreenActive
               || activeScreen === SettingsScreens.GeneralChatBackgroundColor
               || activeScreen === SettingsScreens.GeneralChatBackground
-              || activeScreen === SettingsScreens.QuickReaction
               || activeScreen === SettingsScreens.CustomEmoji
               || isPrivacyScreen || isFoldersScreen}
             onReset={handleReset}
           />
-        );
-      case SettingsScreens.QuickReaction:
-        return (
-          <SettingsQuickReaction isActive={isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.CustomEmoji:
         return (

@@ -4,7 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiPeer } from '../../../api/types';
 
 import {
-  getChatTitle, getUserFirstOrLastName, getUserFullName, isChatBasicGroup,
+  getChatTitle, getUserFirstOrLastName, getUserFullName,
 } from '../../../global/helpers';
 import { isApiPeerChat, isApiPeerUser } from '../../../global/helpers/peers';
 import { selectPeer } from '../../../global/selectors';
@@ -54,7 +54,6 @@ const ChatReportPane = ({
     openAddContactDialog,
     blockUser,
     reportSpam,
-    leaveChannel,
     leaveBasicGroup,
     deleteHistory,
     toggleChatArchived,
@@ -84,7 +83,6 @@ const ChatReportPane = ({
   }, !isRendering);
   const chat = renderingPeer && isApiPeerChat(renderingPeer) ? renderingPeer : undefined;
   const user = renderingPeer && isApiPeerUser(renderingPeer) ? renderingPeer : undefined;
-  const isBasicGroup = chat && isChatBasicGroup(chat);
 
   const handleAddContact = useLastCallback(() => {
     openAddContactDialog({ userId: renderingChatId });
@@ -111,12 +109,8 @@ const ChatReportPane = ({
   const handleChatReportSpam = useLastCallback(() => {
     closeBlockUserModal();
     reportSpam({ chatId: renderingChatId });
-    if (isBasicGroup) {
-      // The history goes after leaving succeeded: a Signal group may refuse, as the last admin's does
-      leaveBasicGroup({ chatId: renderingChatId });
-    } else {
-      leaveChannel({ chatId: renderingChatId });
-    }
+    // The history goes after leaving succeeded: a Signal group may refuse, as the last admin's does
+    leaveBasicGroup({ chatId: renderingChatId });
   });
 
   const handleAcceptRequest = useLastCallback(() => {

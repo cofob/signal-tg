@@ -11,7 +11,6 @@ import type { IconName } from '../../../types/icons';
 import {
   getMessageIsSpoiler,
   getMessageRoundVideo,
-  isChatChannel,
   isChatGroup,
 } from '../../../global/helpers';
 import { getMediaContentTypeDescription } from '../../../global/helpers/messageSummary';
@@ -225,10 +224,6 @@ const EmbeddedMessage = ({
 
     let icon: IconName | undefined;
     if (senderChat) {
-      if (isChatChannel(senderChat)) {
-        icon = 'megaphone-filled';
-      }
-
       if (isChatGroup(senderChat)) {
         icon = 'group-filled';
       }

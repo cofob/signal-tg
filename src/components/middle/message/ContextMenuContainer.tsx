@@ -10,7 +10,6 @@ import type { ApiAvailableReaction,
   ApiMessagePoll,
   ApiReaction,
   ApiStickerSet,
-  ApiThreadInfo,
   ApiTypeStory,
   ApiUser,
   ApiWebPage } from '../../../api/types';
@@ -34,13 +33,11 @@ import {
   getMediaHash,
   getMessageAudio,
   getMessageCustomEmojis,
-  getMessageVideo,
   getUniqueStickerSetsInfo,
   getUserFullName,
   hasMessageTtl,
   isActionMessage,
   isChatAdmin,
-  isChatChannel,
   isChatGroup,
   isMessageLocal,
   isOwnMessage,
@@ -64,14 +61,12 @@ import {
   selectPeerStory,
   selectPollFromMessage,
   selectStickerSet,
-  selectTopic,
   selectUser,
   selectUserFullInfo,
   selectUserStatus,
   selectWebPageFromMessage,
 } from '../../../global/selectors';
 import { selectMessageDownloadableMedia } from '../../../global/selectors/media';
-import { selectSavedDialogIdFromMessage, selectThreadInfo } from '../../../global/selectors/threads';
 import buildClassName from '../../../util/buildClassName';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { isUserId } from '../../../util/entities/ids';
@@ -99,8 +94,6 @@ export type OwnProps = {
   targetHref?: string;
   messageListType: MessageListType;
   threadId: ThreadId;
-  noReplies?: boolean;
-  repliesThreadInfo?: ApiThreadInfo;
   className?: string;
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd: NoneToVoidFunction;
@@ -123,18 +116,13 @@ type StateProps = {
   canShowReactionList?: boolean;
   canUnpin?: boolean;
   canDelete?: boolean;
-  canReport?: boolean;
   canEdit?: boolean;
   canForward?: boolean;
-  canFaveSticker?: boolean;
-  canUnfaveSticker?: boolean;
   canCopy?: boolean;
   isPrivate?: boolean;
   hasFullInfo?: boolean;
-  canCopyLink?: boolean;
   canSelect?: boolean;
   canDownload?: boolean;
-  canSaveGif?: boolean;
   canRevote?: boolean;
   canClosePoll?: boolean;
   canViewDetails?: boolean;
@@ -152,10 +140,8 @@ type StateProps = {
   isReactionPickerOpen?: boolean;
   isInSavedMessages?: boolean;
   quoteLengthMax: number;
-  isChannel?: boolean;
   canReplyInChat?: boolean;
   user?: ApiUser;
-  savedDialogId?: string;
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
   savedMusicById?: Record<string, true>;
@@ -186,25 +172,19 @@ const ContextMenuContainer = ({
   canReschedule,
   canReply,
   canPin,
-  repliesThreadInfo,
   canUnpin,
   canDelete,
   canShowReactionsCount,
   chat,
-  canReport,
   canShowReactionList,
   canEdit,
   enabledReactions,
   reactionsLimit,
   isPrivate,
   canForward,
-  canFaveSticker,
-  canUnfaveSticker,
   canCopy,
-  canCopyLink,
   canSelect,
   canDownload,
-  canSaveGif,
   canRevote,
   canClosePoll,
   canPlayAnimatedEmojis,
@@ -212,7 +192,6 @@ const ContextMenuContainer = ({
   shouldRenderShowWhen,
   activeDownloads,
   savedFileKey,
-  noReplies,
   canShowSeenBy,
   canViewDetails,
   canResend,
@@ -223,7 +202,6 @@ const ContextMenuContainer = ({
   canReplyInChat,
   user,
   className,
-  savedDialogId,
   noForwardsMyEnabled,
   noForwardsPeerEnabled,
   savedMusicById,
@@ -233,14 +211,11 @@ const ContextMenuContainer = ({
   onCloseAnimationEnd,
 }: OwnProps & StateProps) => {
   const {
-    openThread,
     updateDraftReplyInfo,
     startEditingMessage,
     pinMessage,
     openForwardMenu,
     openReplyMenu,
-    faveSticker,
-    unfaveSticker,
     toggleMessageSelection,
     sendScheduledMessages,
     rescheduleMessage,
@@ -256,17 +231,14 @@ const ContextMenuContainer = ({
     loadFullChat,
     loadReactors,
     copyMessagesByIds,
-    saveGif,
     loadStickers,
     cancelPollVote,
     closePoll,
     toggleReaction,
     openMessageReactionPicker,
     loadOutboxReadDate,
-    copyMessageLink,
     openDeleteMessageModal,
     deleteEphemeralMessage,
-    reportMessages,
     loadRichMessage,
     loadSavedMusicIds,
     toggleMusicInProfile,
@@ -506,18 +478,9 @@ const ContextMenuContainer = ({
         quoteText,
         quoteRich,
         quoteOffset,
-        monoforumPeerId: savedDialogId,
         replyToPeerId: undefined,
       });
     }
-    closeMenu();
-  });
-
-  const handleOpenThread = useLastCallback(() => {
-    openThread({
-      chatId: message.chatId,
-      threadId: message.id,
-    });
     closeMenu();
   });
 
@@ -545,16 +508,6 @@ const ContextMenuContainer = ({
     } else {
       openForwardMenu({ fromChatId: message.chatId, messageIds: [message.id] });
     }
-  });
-
-  const handleFaveSticker = useLastCallback(() => {
-    closeMenu();
-    faveSticker({ sticker: message.content.sticker! });
-  });
-
-  const handleUnfaveSticker = useLastCallback(() => {
-    closeMenu();
-    unfaveSticker({ sticker: message.content.sticker! });
   });
 
   const handleCancelVote = useLastCallback(() => {
@@ -626,16 +579,6 @@ const ContextMenuContainer = ({
     closeMenu();
   });
 
-  const handleCopyLink = useLastCallback(() => {
-    copyMessageLink({
-      chatId: message.chatId,
-      messageId: message.id,
-      shouldIncludeThread: threadId !== MAIN_THREAD_ID,
-      shouldIncludeGrouped: true, // TODO: Provide correct value when ability to target specific message is added
-    });
-    closeMenu();
-  });
-
   const handleCopyNumber = useLastCallback(() => {
     copyTextToClipboard(message.content.contact!.phoneNumber);
     closeMenu();
@@ -666,12 +609,6 @@ const ContextMenuContainer = ({
     closeMenu();
   });
 
-  const handleSaveGif = useLastCallback(() => {
-    const video = getMessageVideo(message);
-    saveGif({ gif: video! });
-    closeMenu();
-  });
-
   const handleToggleMusicInProfile = useLastCallback(() => {
     toggleMusicInProfile({ audio: audio! });
     closeMenu();
@@ -686,17 +623,6 @@ const ContextMenuContainer = ({
 
   const handleReactionPickerOpen = useLastCallback((position: IAnchorPosition) => {
     openMessageReactionPicker({ chatId: message.chatId, messageId: message.id, position });
-  });
-
-  const reportMessageIds = useMemo(() => (album ? album.messages : [message]).map(({ id }) => id), [album, message]);
-
-  const handleReport = useLastCallback(() => {
-    if (!chat) return;
-    setIsMenuOpen(false);
-    onClose();
-    reportMessages({
-      chatId: chat.id, messageIds: reportMessageIds,
-    });
   });
 
   if (noOptions) {
@@ -730,19 +656,13 @@ const ContextMenuContainer = ({
         canQuote={selectionQuoteOffset !== UNQUOTABLE_OFFSET}
         canDelete={canDelete}
         canPin={canPin}
-        canReport={canReport}
-        repliesThreadInfo={repliesThreadInfo}
         canUnpin={canUnpin}
         canEdit={canEdit}
         canForward={canForward}
-        canFaveSticker={canFaveSticker}
-        canUnfaveSticker={canUnfaveSticker}
         canCopy={canCopy}
-        canCopyLink={canCopyLink}
         canSelect={canSelect}
         canDownload={canDownload}
         canOpenSavedFile={Boolean(savedFileKey)}
-        canSaveGif={canSaveGif}
         canManageMusicInProfile={canManageMusicInProfile}
         isMusicProfileStatusLoaded={isMusicProfileStatusLoaded}
         isMusicProfileActionLoading={isSavedMusicLoading}
@@ -760,31 +680,24 @@ const ContextMenuContainer = ({
         isDownloading={isDownloading}
         seenByRecentPeers={seenByRecentPeers}
         isInSavedMessages={isInSavedMessages}
-        noReplies={noReplies}
         poll={poll}
         webPage={webPage}
         story={story}
-        onOpenThread={handleOpenThread}
         onReply={handleReply}
         onEdit={handleEdit}
         onPin={handlePin}
         onUnpin={handleUnpin}
         onForward={handleForward}
         onDelete={handleDelete}
-        onReport={handleReport}
-        onFaveSticker={handleFaveSticker}
-        onUnfaveSticker={handleUnfaveSticker}
         onSelect={handleSelectMessage}
         onSend={handleScheduledMessageSend}
         onReschedule={handleOpenCalendar}
         onClose={closeMenu}
-        onCopyLink={handleCopyLink}
         onCopyMessages={handleCopyMessages}
         onCopyNumber={handleCopyNumber}
         onDownload={handleDownloadClick}
         onOpenSavedFile={handleOpenSavedFile}
         onShowSavedFileInFolder={handleShowSavedFileInFolder}
-        onSaveGif={handleSaveGif}
         onToggleMusicInProfile={handleToggleMusicInProfile}
         onCancelVote={handleCancelVote}
         onClosePoll={openClosePollDialog}
@@ -835,7 +748,7 @@ export default memo(withGlobal<OwnProps>(
       seenByExpiresAt, seenByMaxChatMembers, maxUniqueReactions, readDateExpiresAt,
     } = global.appConfig;
 
-    const reactionsLimit = chatFullInfo?.reactionsLimit || maxUniqueReactions;
+    const reactionsLimit = maxUniqueReactions;
 
     const {
       noOptions,
@@ -843,15 +756,10 @@ export default memo(withGlobal<OwnProps>(
       canPin,
       canUnpin,
       canDelete,
-      canReport,
       canEdit,
-      canFaveSticker,
-      canUnfaveSticker,
       canCopy,
-      canCopyLink,
       canSelect,
       canDownload,
-      canSaveGif,
       canRevote,
       canClosePoll,
       canViewDetails,
@@ -878,22 +786,15 @@ export default memo(withGlobal<OwnProps>(
     );
     const isPinned = messageListType === 'pinned';
     const isScheduled = messageListType === 'scheduled';
-    const isChannel = chat && isChatChannel(chat);
-
-    const threadInfo = threadId && selectThreadInfo(global, message.chatId, threadId);
-    const isMessageThread = Boolean(threadInfo && !threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-    const topic = threadId ? selectTopic(global, message.chatId, threadId) : undefined;
 
     const canSendText = chat && !isUserRightBanned(chat, 'sendPlain');
 
-    const canReplyInChat = chat && threadId ? getCanPostInChat(chat, topic, isMessageThread)
-      && canSendText : false;
+    const canReplyInChat = chat && threadId ? getCanPostInChat(chat) && canSendText : false;
 
     const isLocal = isMessageLocal(message);
     const hasTtl = hasMessageTtl(message);
     const canShowSeenBy = Boolean(!isLocal
       && chat
-      && !chat.isMonoforum
       && !isMessageUnread
       && seenByMaxChatMembers
       && seenByExpiresAt
@@ -904,7 +805,7 @@ export default memo(withGlobal<OwnProps>(
       && chat.membersCount <= seenByMaxChatMembers
       && message.date > Date.now() / 1000 - seenByExpiresAt);
     const isAction = isActionMessage(message);
-    const canShowReactionsCount = !isLocal && !isChannel && !isScheduled && !isAction && !isPrivate && message.reactions
+    const canShowReactionsCount = !isLocal && !isScheduled && !isAction && !isPrivate && message.reactions
       && !areReactionsEmpty(message.reactions) && message.reactions.canSeeList;
     const isProtected = selectIsMessageProtected(global, message);
     const canCopyNumber = Boolean(message.content.contact);
@@ -916,15 +817,12 @@ export default memo(withGlobal<OwnProps>(
     const storyData = message.content.storyData;
     const story = storyData ? selectPeerStory(global, storyData.peerId, storyData.id) : undefined;
 
-    const savedDialogId = selectSavedDialogIdFromMessage(global, message);
-
     return {
       chat,
       availableReactions,
       topReactions,
       defaultTagReactions: defaultTags,
       noOptions: message.isEphemeral ? false : noOptions,
-      canReport: message.isEphemeral ? !message.isOutgoing : canReport,
       canSendNow: isScheduled,
       canReschedule: isScheduled,
       canReply: message.isEphemeral
@@ -935,14 +833,10 @@ export default memo(withGlobal<OwnProps>(
       canDelete: message.isEphemeral || canDelete,
       canEdit: !message.isEphemeral && !isPinned && canEdit,
       canForward: !isScheduled && canForward,
-      canFaveSticker: !message.isEphemeral && !isScheduled && canFaveSticker,
-      canUnfaveSticker: !message.isEphemeral && !isScheduled && canUnfaveSticker,
       canCopy: (canCopyNumber || (!isProtected && canCopy)),
       isMessageProtected: isProtected,
-      canCopyLink: !message.isEphemeral && !isScheduled && canCopyLink,
       canSelect: !message.isEphemeral && canSelect,
       canDownload: !isProtected && canDownload,
-      canSaveGif: !isProtected && canSaveGif,
       canRevote: !message.isEphemeral && canRevote,
       canClosePoll: !message.isEphemeral && !isScheduled && canClosePoll,
       canViewDetails: !message.isEphemeral && !isScheduled && canViewDetails,
@@ -964,12 +858,10 @@ export default memo(withGlobal<OwnProps>(
       isReactionPickerOpen: !message.isEphemeral && selectIsReactionPickerOpen(global),
       isInSavedMessages,
       quoteLengthMax: global.appConfig.quoteLengthMax,
-      isChannel,
       canReplyInChat,
       poll,
       story,
       user,
-      savedDialogId,
       webPage,
       noForwardsMyEnabled: userFullInfo?.noForwardsMyEnabled,
       noForwardsPeerEnabled: userFullInfo?.noForwardsPeerEnabled,

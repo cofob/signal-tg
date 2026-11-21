@@ -14,7 +14,6 @@ import Button from '../../ui/Button';
 import FloatingActionButton from '../../ui/FloatingActionButton';
 
 export type OwnProps = {
-  isChannel?: boolean;
   isActive: boolean;
   selectedMemberIds: string[];
   onSelectedMemberIdsChange: (ids: string[]) => void;
@@ -31,7 +30,6 @@ type StateProps = {
 };
 
 const NewChatStep1 = ({
-  isChannel,
   isActive,
   selectedMemberIds,
   localContactIds,
@@ -74,7 +72,6 @@ const NewChatStep1 = ({
 
         return user && !user.isSelf;
       }),
-      false,
       selectedMemberIds,
     );
   }, [localContactIds, searchQuery, localPeerIds, globalPeerIds, selectedMemberIds]);
@@ -117,7 +114,7 @@ const NewChatStep1 = ({
         <FloatingActionButton
           isShown
           onClick={handleNextStep}
-          ariaLabel={lang(isChannel ? 'AriaNewChannelContinue' : 'AriaNewGroupContinue')}
+          ariaLabel={lang('AriaNewGroupContinue')}
           iconName="arrow-right"
         />
       </div>

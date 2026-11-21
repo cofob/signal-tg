@@ -37,8 +37,7 @@
   }
 }
 
-.chatExtraBlock,
-.linkedCommunityIsland {
+.chatExtraBlock {
   margin: 1rem;
   margin-bottom: 0;
 
@@ -56,11 +55,6 @@
       margin-left: 0;
     }
   }
-}
-
-.linkedCommunityAvatar {
-  flex-shrink: 0;
-  margin-inline-end: 0.5rem;
 }
 
 .sharedMediaTabs {
@@ -124,20 +118,6 @@
   .sharedMediaIslandContainer {
     display: flex;
     flex-direction: column;
-  }
-
-  .savedDialogsIsland {
-    overflow: clip;
-    height: auto;
-  }
-
-  .savedDialogs {
-    overflow: visible !important;
-    height: auto !important;
-
-    :global(.Chat) {
-      position: static;
-    }
   }
 }
 
@@ -226,7 +206,6 @@
     }
   }
 
-  &.similarChannelsList,
   &.commonChatsList,
   &.membersList {
     padding: 0.5rem;

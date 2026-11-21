@@ -4,13 +4,8 @@ import { getGlobal, withGlobal } from '../../../global';
 import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 
 import {
-  GENERAL_TOPIC_ID,
-} from '../../../config';
-import {
   getMessageTextWithFallback,
   isChatBasicGroup,
-  isChatChannel,
-  isChatSuperGroup,
 } from '../../../global/helpers';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import { getMessageReplyInfo } from '../../../global/helpers/replies';
@@ -20,35 +15,26 @@ import {
   selectChatMessage,
   selectPeer,
   selectSender,
-  selectTopic,
 } from '../../../global/selectors';
-import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
-import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
-import { formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
+import { formatCountdown } from '../../../util/dates/duration';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
 import { getServerTime } from '../../../util/serverTime';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 import {
-  getCallMessageKey,
   getPinnedMediaValue,
   renderMessageLink,
   renderPeerLink,
-  renderTopicLink,
   translateWithYou,
 } from './helpers/messageActions';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import CustomEmoji from '../../common/CustomEmoji';
-import TopicDefaultIcon from '../../common/TopicDefaultIcon';
-
 import styles from './ActionMessage.module.scss';
 
 type OwnProps = {
   message: ApiMessage;
-  isInsideTopic?: boolean;
   asPreview?: boolean;
 };
 
@@ -59,9 +45,7 @@ type StateProps = {
   chat?: ApiChat;
 };
 
-const NBSP = '\u00A0';
 const MS_PER_SECOND = 1000;
-const DEFAULT_TOPIC_ICON_ID = '0';
 
 const UNSUPPORTED_LANG_KEY = 'ActionUnsupported';
 // Signal group updates whose text names only who made them
@@ -86,10 +70,9 @@ const ActionMessageText = ({
   sender,
   chat,
   replyMessage,
-  isInsideTopic,
   asPreview,
 }: OwnProps & StateProps) => {
-  const { chatId, isOutgoing } = message;
+  const { isOutgoing } = message;
   const action = message.content.action!;
 
   const lang = useLang();
@@ -102,13 +85,11 @@ const ActionMessageText = ({
   const renderActionText = useLastCallback(() => {
     const global = getGlobal();
 
-    const isChannel = chat && isChatChannel(chat);
     const isSenderSelf = sender ? sender.id === currentUserId : isOutgoing;
     const senderTitle = sender && getPeerTitle(lang, sender);
     const chatTitle = chat && getPeerTitle(lang, chat);
 
     const userFallbackText = lang('ActionFallbackUser');
-    const chatFallbackText = lang('ActionFallbackChat');
 
     const senderLink = renderPeerLink(sender?.id, senderTitle || userFallbackText, asPreview);
 
@@ -149,14 +130,6 @@ const ActionMessageText = ({
         );
       }
 
-      case 'chatJoinedViaCommunity': {
-        const community = selectChat(global, action.communityId);
-        const communityLink = renderPeerLink(
-          action.communityId, community ? getPeerTitle(lang, community)! : chatFallbackText, asPreview,
-        );
-        return lang('ActionJoinedViaCommunity', { from: senderLink, community: communityLink }, { withNodes: true });
-      }
-
       case 'chatJoinedByLink':
         return lang('ActionUserJoinedByLink', { from: senderLink }, { withNodes: true });
 
@@ -195,40 +168,24 @@ const ActionMessageText = ({
         }
       }
 
-      case 'channelJoined': {
-        const { isViaRequest, inviterId } = action;
-        const inviter = inviterId ? selectPeer(global, inviterId) : undefined;
-        if (inviter && inviterId !== currentUserId) {
-          const inviterLink = renderPeerLink(inviterId, getPeerTitle(lang, inviter) || userFallbackText, asPreview);
-          return lang('ActionAddYou', { from: inviterLink }, { withNodes: true });
-        }
-
-        return lang(isViaRequest ? 'ActionChannelJoinedByRequestChannelYou' : 'ActionChannelJoinedYou');
-      }
-
       case 'chatEditTitle': {
         const { title } = action;
-        if (isChannel) return lang('ActionChangedTitleChannel', { title });
         return translateWithYou(lang, 'ActionChangedTitle', isOutgoing, { title, from: senderLink });
       }
 
       case 'chatDeletePhoto':
-        return isChannel ? lang('ActionRemovedPhotoChannel')
-          : translateWithYou(lang, 'ActionRemovedPhoto', isOutgoing, { from: senderLink });
+        return translateWithYou(lang, 'ActionRemovedPhoto', isOutgoing, { from: senderLink });
 
       case 'chatEditPhoto':
-        return isChannel ? lang('ActionChangedPhotoChannel')
-          : translateWithYou(lang, 'ActionChangedPhoto', isOutgoing, { from: senderLink });
+        return translateWithYou(lang, 'ActionChangedPhoto', isOutgoing, { from: senderLink });
 
       case 'setChatTheme': {
         const themeName = action.emoticon;
         if (!themeName) {
-          return isChannel ? lang('ActionDisabledThemeChannel')
-            : translateWithYou(lang, 'ActionDisabledTheme', isSenderSelf, { from: senderLink });
+          return translateWithYou(lang, 'ActionDisabledTheme', isSenderSelf, { from: senderLink });
         }
         const theme = renderStrong(renderText(themeName));
-        return isChannel ? lang('ActionChangedThemeChannel', { theme }, { withNodes: true })
-          : translateWithYou(lang, 'ActionChangedTheme', isSenderSelf, { from: senderLink, theme });
+        return translateWithYou(lang, 'ActionChangedTheme', isSenderSelf, { from: senderLink, theme });
       }
 
       case 'setChatWallpaper': {
@@ -240,8 +197,7 @@ const ActionMessageText = ({
             peer: renderStrong(chatTitle || userFallbackText),
           }, { withNodes: true });
         }
-        if (isChannel) return lang('ActionChangedWallpaperChannel');
-        if (chat && (isChatBasicGroup(chat) || isChatSuperGroup(chat))) {
+        if (chat && isChatBasicGroup(chat)) {
           return lang(isSenderSelf ? 'ActionChangedWallpaperGroupYou' : 'ActionChangedWallpaperGroup');
         }
         return translateWithYou(lang, 'ActionChangedWallpaper', isSenderSelf, { from: senderLink });
@@ -250,146 +206,6 @@ const ActionMessageText = ({
       case 'chatCreate': {
         const { title } = action;
         return lang('ActionCreatedChat', { title, from: senderLink }, { withNodes: true });
-      }
-
-      case 'channelCreate': {
-        const { title } = action;
-        return isChannel ? lang('ActionCreatedChannel')
-          : translateWithYou(lang, 'ActionCreatedChat', isOutgoing, { title, from: senderLink });
-      }
-
-      case 'chatMigrateTo': {
-        const { channelId } = action;
-        const channel = selectChat(global, channelId)!;
-        const channelLink = renderPeerLink(channelId, getPeerTitle(lang, channel)!, asPreview);
-        return lang('ActionMigratedTo', { chat: channelLink }, { withNodes: true });
-      }
-
-      case 'channelMigrateFrom': {
-        const { chatId: originalChatId, title } = action;
-        const originalChatLink = renderPeerLink(originalChatId, title || chatFallbackText, asPreview);
-        return lang('ActionMigratedFrom', { chat: originalChatLink }, { withNodes: true });
-      }
-
-      case 'changeCommunity': {
-        const { communityId } = action;
-        if (!communityId) {
-          return lang('ActionRemovedFromCommunity', { from: senderLink }, { withNodes: true });
-        }
-
-        const community = selectChat(global, communityId);
-        const communityLink = renderPeerLink(
-          communityId, community ? getPeerTitle(lang, community)! : chatFallbackText, asPreview,
-        );
-        return lang('ActionAddedToCommunity', { from: senderLink, community: communityLink }, { withNodes: true });
-      }
-
-      case 'topicCreate': {
-        const { title, iconColor, iconEmojiId } = action;
-
-        const topicId = selectThreadIdFromMessage(global, message);
-
-        const topicLinkContent = (
-          <>
-            {iconEmojiId ? <CustomEmoji documentId={iconEmojiId} className={styles.topicIcon} isSelectable />
-              : (
-                <TopicDefaultIcon
-                  className={styles.topicIcon}
-                  topicId={topicId}
-                  title={title}
-                  iconColor={iconColor}
-                />
-              )}
-            {NBSP}
-            {renderText(title)}
-          </>
-        );
-        const topicLink = renderTopicLink(chatId, Number(topicId), topicLinkContent, asPreview);
-        return lang('ActionTopicCreated', { topic: topicLink }, { withNodes: true });
-      }
-
-      case 'topicEdit': {
-        const {
-          iconEmojiId, isClosed, isHidden, title,
-        } = action;
-
-        const topicId = selectThreadIdFromMessage(global, message);
-        const currentTopic = selectTopic(global, chatId, topicId);
-        const topicLinkContent = (
-          <>
-            {iconEmojiId && iconEmojiId !== DEFAULT_TOPIC_ICON_ID
-              ? <CustomEmoji documentId={iconEmojiId} className={styles.topicIcon} isSelectable />
-              : (
-                <TopicDefaultIcon
-                  className={styles.topicIcon}
-                  topicId={topicId}
-                  title={title || currentTopic?.title || lang('ActionTopicPlaceholder')}
-                  iconColor={currentTopic?.iconColor}
-                />
-              )}
-            {topicId !== GENERAL_TOPIC_ID && NBSP}
-            {renderText(title || currentTopic?.title || lang('ActionTopicPlaceholder'))}
-          </>
-        );
-        const topicLink = renderTopicLink(chatId, Number(topicId), topicLinkContent, asPreview);
-
-        const topicPlaceholderLink = renderTopicLink(
-          chatId, Number(topicId), lang('ActionTopicPlaceholder'), asPreview,
-        );
-
-        if (isClosed !== undefined) {
-          if (isInsideTopic) {
-            return lang(isClosed ? 'ActionTopicClosedInside' : 'ActionTopicReopenedInside');
-          }
-
-          return lang(
-            isClosed ? 'ActionTopicClosed' : 'ActionTopicReopened',
-            { from: senderLink, topic: topicLink },
-            { withNodes: true },
-          );
-        }
-
-        if (isHidden !== undefined) {
-          if (isInsideTopic) {
-            return lang(isHidden ? 'ActionTopicHiddenInside' : 'ActionTopicUnhiddenInside');
-          }
-          return lang(
-            isHidden ? 'ActionTopicHidden' : 'ActionTopicUnhidden',
-            { topic: topicLink },
-            { withNodes: true },
-          );
-        }
-
-        if (title && iconEmojiId) {
-          return lang(
-            'ActionTopicIconAndRenamed',
-            {
-              from: senderLink,
-              link: topicPlaceholderLink,
-              topic: topicLink,
-            },
-            { withNodes: true },
-          );
-        }
-
-        if (title === undefined) {
-          if (!iconEmojiId || iconEmojiId === DEFAULT_TOPIC_ICON_ID) {
-            return lang(
-              'ActionTopicIconRemoved', { from: senderLink, link: topicPlaceholderLink }, { withNodes: true },
-            );
-          }
-          return lang(
-            'ActionTopicIconChanged',
-            {
-              from: senderLink,
-              link: topicPlaceholderLink,
-              emoji: <CustomEmoji documentId={iconEmojiId} className={styles.topicIcon} loopLimit={2} />,
-            },
-            { withNodes: true },
-          );
-        }
-
-        return lang('ActionTopicRenamed', { from: senderLink, link: topicPlaceholderLink, title }, { withNodes: true });
       }
 
       case 'chatAddUser': {
@@ -431,57 +247,6 @@ const ActionMessageText = ({
         const userTitle = (user && getPeerTitle(lang, user)) || userFallbackText;
         const userLink = renderPeerLink(user?.id, userTitle, asPreview);
         return translateWithYou(lang, 'ActionKickUser', isOutgoing, { from: senderLink, user: userLink });
-      }
-
-      case 'groupCall': {
-        const { duration } = action;
-        const durationText = duration ? formatShortDuration(lang, duration) : undefined;
-        if (durationText) {
-          if (isChannel) {
-            return lang('ActionGroupCallFinishedChannel', { duration: durationText });
-          }
-          return lang(
-            'ActionGroupCallFinishedGroup', { from: senderLink, duration: durationText }, { withNodes: true },
-          );
-        }
-
-        if (isChannel) return lang('ActionGroupCallStartedChannel');
-        return lang('ActionGroupCallStartedGroup', { from: senderLink }, { withNodes: true });
-      }
-
-      case 'groupCallScheduled': {
-        const { scheduleDate } = action;
-        const formattedDate = formatDateTime(lang, secondsToDate(scheduleDate), { date: 'short', time: 'short' });
-
-        if (isChannel) return lang('ActionGroupCallScheduledChannel', { date: formattedDate });
-        return lang('ActionGroupCallScheduledGroup', { from: senderLink, date: formattedDate }, { withNodes: true });
-      }
-
-      case 'inviteToGroupCall': {
-        const { userIds } = action;
-
-        if (userIds.length === 1) {
-          const user = selectPeer(global, userIds[0]);
-          const userTitle = (user && getPeerTitle(lang, user)) || userFallbackText;
-          const userLink = renderPeerLink(user?.id, userTitle, asPreview);
-          return translateWithYou(lang, 'ActionVideoInvited', isOutgoing, { from: senderLink, user: userLink });
-        }
-
-        const users = userIds.map((userId) => selectPeer(global, userId)).filter(Boolean);
-
-        if (!users.length) {
-          return translateWithYou(
-            lang, 'ActionVideoInvited', isOutgoing, { from: senderLink, user: userFallbackText },
-          );
-        }
-
-        const userLinks = users.map((user) => (
-          renderPeerLink(user.id, getPeerTitle(lang, user) || userFallbackText, asPreview)
-        ));
-
-        return translateWithYou(
-          lang, 'ActionVideoInvitedMany', isOutgoing, { from: senderLink, users: conjuctionWithNodes(lang, userLinks) },
-        );
       }
 
       case 'suggestProfilePhoto': {
@@ -581,8 +346,6 @@ const ActionMessageText = ({
         const { period, autoSettingFromId } = action;
 
         if (period === 0) {
-          if (isChannel) return lang('ActionTTLChannelDisabled');
-
           return isOutgoing
             ? lang('ActionTTLYouDisabled')
             : lang('ActionTTLDisabled', { from: senderLink }, { withNodes: true });
@@ -608,8 +371,6 @@ const ActionMessageText = ({
             { withNodes: true },
           );
         }
-
-        if (isChannel) return lang('ActionTTLChannelChanged', { time });
 
         return isOutgoing
           ? lang('ActionTTLYouChanged', { time })
@@ -648,9 +409,6 @@ const ActionMessageText = ({
         );
       }
 
-      case 'phoneCall': // Rendered as a regular message, but considered an action for the summary
-        return lang(getCallMessageKey(action, isOutgoing));
-
       case 'noForwardsToggle': {
         const { prevValue, newValue } = action;
         if (newValue && newValue === prevValue) {
@@ -668,22 +426,6 @@ const ActionMessageText = ({
         return isOutgoing
           ? lang('NoForwardsRequestYouTitle')
           : lang('NoForwardsRequestTitle', { user: senderLink }, { withNodes: true });
-      }
-
-      case 'newCreatorPending': {
-        const { newCreatorId } = action;
-        const newCreator = selectPeer(global, newCreatorId);
-        const newCreatorTitle = (newCreator && getPeerTitle(lang, newCreator)) || userFallbackText;
-        const newCreatorLink = renderPeerLink(newCreator?.id, newCreatorTitle, asPreview);
-        return lang('ActionNewCreatorPending', { user: newCreatorLink, from: senderLink }, { withNodes: true });
-      }
-
-      case 'changeCreator': {
-        const { newCreatorId } = action;
-        const newCreator = selectPeer(global, newCreatorId);
-        const newCreatorTitle = (newCreator && getPeerTitle(lang, newCreator)) || userFallbackText;
-        const newCreatorLink = renderPeerLink(newCreator?.id, newCreatorTitle, asPreview);
-        return lang('ActionChangeCreator', { user: newCreatorLink, from: senderLink }, { withNodes: true });
       }
 
       default:

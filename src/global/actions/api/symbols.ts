@@ -204,25 +204,6 @@ addActionHandler('loadDiceStickers', async (global): Promise<void> => {
   setGlobal(global);
 });
 
-addActionHandler('loadDefaultTopicIcons', async (global): Promise<void> => {
-  const stickerSet = await callApi('fetchDefaultTopicIcons');
-  if (!stickerSet) {
-    return;
-  }
-  global = getGlobal();
-
-  const { set, stickers } = stickerSet;
-
-  const fullSet = { ...set, stickers };
-
-  global = updateStickerSet(global, fullSet.id, fullSet);
-  global = {
-    ...global,
-    defaultTopicIconsId: fullSet.id,
-  };
-  setGlobal(global);
-});
-
 addActionHandler('loadDefaultStatusIcons', async (global): Promise<void> => {
   const stickerSet = await callApi('fetchDefaultStatusEmojis');
   if (!stickerSet) {

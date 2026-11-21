@@ -62,7 +62,6 @@ const SettingsNotifications = ({
 
   const areNotificationsSupported = checkIfNotificationsSupported();
 
-  const areChannelsMuted = Boolean(notifyDefaults?.channels?.mutedUntil);
   const areGroupsMuted = Boolean(notifyDefaults?.groups?.mutedUntil);
   const areUsersMuted = Boolean(notifyDefaults?.users?.mutedUntil);
 
@@ -103,14 +102,6 @@ const SettingsNotifications = ({
 
   const handleGroupsPreviewChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     handleSettingsChange(e, 'groups', 'showPreviews');
-  }, [handleSettingsChange]);
-
-  const handleChannelsNotificationsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    handleSettingsChange(e, 'channels', 'mute');
-  }, [handleSettingsChange]);
-
-  const handleChannelsPreviewChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    handleSettingsChange(e, 'channels', 'showPreviews');
   }, [handleSettingsChange]);
 
   const handleContactNotificationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,24 +210,6 @@ const SettingsNotifications = ({
             ? 'UserInfoNotificationsEnabled' : 'UserInfoNotificationsDisabled')}
           checked={Boolean(notifyDefaults?.groups?.shouldShowPreviews)}
           onChange={handleGroupsPreviewChange}
-        />
-      </Island>
-
-      <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('FilterChannels')}</IslandTitle>
-      <Island>
-        <Checkbox
-          label={lang('NotificationsForChannels')}
-          subLabel={lang(!areChannelsMuted ? 'UserInfoNotificationsEnabled' : 'UserInfoNotificationsDisabled')}
-          checked={!areChannelsMuted}
-          onChange={handleChannelsNotificationsChange}
-        />
-        <Checkbox
-          label={lang('MessagePreview')}
-          disabled={areChannelsMuted}
-          subLabel={lang(notifyDefaults?.channels?.shouldShowPreviews
-            ? 'UserInfoNotificationsEnabled' : 'UserInfoNotificationsDisabled')}
-          checked={Boolean(notifyDefaults?.channels?.shouldShowPreviews)}
-          onChange={handleChannelsPreviewChange}
         />
       </Island>
 

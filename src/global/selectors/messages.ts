@@ -20,7 +20,6 @@ import type {
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
-  GENERAL_TOPIC_ID,
   TMP_CHAT_ID,
 } from '../../config';
 import { isUserId } from '../../util/entities/ids';
@@ -35,10 +34,8 @@ import {
   getAllowedAttachmentOptions,
   getCanPostInChat,
   getHasAdminRight,
-  getIsSavedDialog,
   getMessageAudio,
   getMessageDocument,
-  getMessageLink,
   getMessagePhoto,
   getMessageVideo,
   getMessageVoice,
@@ -48,9 +45,7 @@ import {
   hasMessageTtl,
   isActionMessage,
   isChatBasicGroup,
-  isChatChannel,
   isChatGroup,
-  isChatSuperGroup,
   isCommonBoxChat,
   isExpiredMessage,
   isForwardedMessage,
@@ -67,25 +62,19 @@ import {
   selectChatLastMessageId,
   selectIsChatRestricted,
   selectIsChatWithSelf,
-  selectIsMonoforumAdmin,
 } from './chats';
 import { selectMessageDownloadableMedia } from './media';
 import { selectPeer } from './peers';
 import { selectPeerStory } from './stories';
-import { selectIsStickerFavorite } from './symbols';
 import { selectTabState } from './tabs';
 import {
-  selectDraft,
   selectEditingId,
   selectEditingScheduledId,
   selectTabThreadParam,
-  selectThreadByMessage,
   selectThreadInfo,
-  selectThreadLocalState,
   selectThreadLocalStateParam,
   selectThreadReadState,
 } from './threads';
-import { selectTopic, selectTopicFromMessage } from './topics';
 import {
   selectIsCurrentUserFrozen, selectIsUserChatProtected, selectUser, selectUserFullInfo, selectUserStatus,
 } from './users';
@@ -223,14 +212,7 @@ export function selectIsMessageInCurrentMessageList<T extends GlobalState>(
     return false;
   }
 
-  const { threadInfo } = selectThreadByMessage(global, message) || {};
-  return (
-    chatId === currentMessageList.chatId
-    && (
-      (currentMessageList.threadId === MAIN_THREAD_ID)
-      || (threadInfo && currentMessageList.threadId === threadInfo.threadId)
-    )
-  );
+  return chatId === currentMessageList.chatId && currentMessageList.threadId === MAIN_THREAD_ID;
 }
 
 export function selectIsViewportNewest<T extends GlobalState>(
@@ -242,18 +224,10 @@ export function selectIsViewportNewest<T extends GlobalState>(
     return true;
   }
 
-  const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-
   let lastMessageId: number;
 
   if (threadId === MAIN_THREAD_ID) {
     const id = selectChatLastMessageId(global, chatId);
-    if (!id) {
-      return true;
-    }
-    lastMessageId = id;
-  } else if (isSavedDialog) {
-    const id = selectChatLastMessageId(global, String(threadId), 'saved');
     if (!id) {
       return true;
     }
@@ -388,8 +362,6 @@ export function selectSender<T extends GlobalState>(global: T, message: ApiMessa
     return message.isOutgoing ? currentUser : chat;
   }
 
-  if (chat && isChatChannel(chat) && !chat.areProfilesShown) return chat;
-
   return selectPeer(global, senderId);
 }
 
@@ -503,40 +475,6 @@ export function selectFullWebPageFromMessage<T extends GlobalState>(global: T, m
   return selectFullWebPage(global, message.content.webPage.id);
 }
 
-const MAX_MESSAGES_TO_DELETE_OWNER_TOPIC = 10;
-export function selectCanDeleteOwnerTopic<T extends GlobalState>(global: T, chatId: string, topicId: number) {
-  const topic = selectTopic(global, chatId, topicId);
-  if (topic && !topic.isOwner) return false;
-
-  const localThreadState = selectThreadLocalState(global, chatId, topicId);
-  if (!localThreadState) return false;
-
-  const { listedIds } = localThreadState;
-  if (!listedIds
-    // Plus one for root message
-    || listedIds.length + 1 >= MAX_MESSAGES_TO_DELETE_OWNER_TOPIC) {
-    return false;
-  }
-
-  const hasNotOutgoingMessages = listedIds.some((messageId) => {
-    const message = selectChatMessage(global, chatId, messageId);
-    return !message || !message.isOutgoing;
-  });
-
-  return !hasNotOutgoingMessages;
-}
-
-export function selectCanDeleteTopic<T extends GlobalState>(global: T, chatId: string, topicId: number) {
-  const chat = selectChat(global, chatId);
-  if (!chat) return false;
-
-  if (topicId === GENERAL_TOPIC_ID) return false;
-
-  return getHasAdminRight(chat, 'deleteMessages')
-    || (chat.isForum
-      && selectCanDeleteOwnerTopic(global, chat.id, topicId));
-}
-
 export function selectCanReplyToMessage<T extends GlobalState>(global: T, message: ApiMessage, threadId: ThreadId) {
   const chat = selectChat(global, message.chatId);
   const isRestricted = selectIsChatRestricted(global, message.chatId);
@@ -546,22 +484,13 @@ export function selectCanReplyToMessage<T extends GlobalState>(global: T, messag
 
   if (isLocal) return false;
 
-  const threadInfo = selectThreadInfo(global, message.chatId, threadId);
-  const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-  const topic = selectTopic(global, chat.id, threadId);
-  const canPostInChat = getCanPostInChat(chat, topic, isMessageThread);
-  if (!canPostInChat) return false;
-
-  const messageTopic = selectTopicFromMessage(global, message);
-  return !messageTopic || !messageTopic.isClosed || messageTopic.isOwner || getHasAdminRight(chat, 'manageTopics');
+  return getCanPostInChat(chat);
 }
 
 export function selectCanPostInMessageList<T extends GlobalState>(
   global: T, chatId: string, threadId: ThreadId, messageListType: MessageListType,
 ) {
-  if (chatId === TMP_CHAT_ID || messageListType === 'pinned'
-    || getIsSavedDialog(chatId, threadId, global.currentUserId)) return false;
-  if (selectShouldBlockSendInMonoforum(global, chatId, threadId)) return false;
+  if (chatId === TMP_CHAT_ID || messageListType === 'pinned') return false;
 
   const userFullInfo = selectUserFullInfo(global, chatId);
   if (userFullInfo?.isBlocked) return false;
@@ -570,27 +499,9 @@ export function selectCanPostInMessageList<T extends GlobalState>(
   if (selectIsCurrentUserFrozen(global)) return false;
   if (!chat) return true;
 
-  const threadInfo = selectThreadInfo(global, chatId, threadId);
-  const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-  const topic = selectTopic(global, chatId, threadId);
-  if (!getCanPostInChat(chat, topic, isMessageThread)) return false;
-  if (chat.isNotJoined && (chat.isJoinToSend || chat.isJoinRequest || (chat.isForum && !chat.isMonoforum))) {
-    return false;
-  }
+  if (!getCanPostInChat(chat)) return false;
 
-  return !(chat.isForum && threadId === MAIN_THREAD_ID && !selectDraft(global, chatId, threadId)?.replyInfo
-    && selectTopic(global, chatId, GENERAL_TOPIC_ID)?.isClosed);
-}
-
-export function selectShouldBlockSendInMonoforum<T extends GlobalState>(
-  global: T, chatId: string, threadId: ThreadId,
-) {
-  return Boolean(
-    selectChat(global, chatId)?.isMonoforum
-    && !selectDraft(global, chatId, threadId)?.replyInfo
-    && selectIsMonoforumAdmin(global, chatId)
-    && !selectEditingId(global, chatId, threadId),
-  );
+  return !(chat.isNotJoined && chat.isJoinRequest);
 }
 
 export function selectCanForwardMessage<T extends GlobalState>(global: T, message: ApiMessage) {
@@ -632,8 +543,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const isPrivate = isUserId(chat.id);
   const isChatWithSelf = selectIsChatWithSelf(global, message.chatId);
   const isBasicGroup = isChatBasicGroup(chat);
-  const isSuperGroup = isChatSuperGroup(chat);
-  const isChannel = isChatChannel(chat);
   const isLocal = isMessageLocal(message);
   const isFailed = isMessageFailed(message);
   const isOwn = isOwnMessage(message);
@@ -642,39 +551,14 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const hasTtl = hasMessageTtl(message);
   const { content } = message;
   const isDocumentSticker = isMessageDocumentSticker(message);
-  const isMonoforum = chat.isMonoforum;
 
-  // https://github.com/telegramdesktop/tdesktop/blob/6627de646022af1394134974477109cd1439e1bb/Telegram/SourceFiles/data/data_peer_values.cpp#L367C2-L372C3
-  const canPinMessage = (() => {
-    if (isPrivate) return true;
-
-    if (isChannel) {
-      return getHasAdminRight(chat, 'editMessages');
-    }
-
-    const hasPinMessageRight = getHasAdminRight(chat, 'pinMessages');
-    const isPinMessageRightBanned = isUserRightBanned(chat, 'pinMessages');
-
-    if (isSuperGroup) {
-      return hasPinMessageRight || (!chat.hasUsername && !isPinMessageRightBanned);
-    }
-
-    if (isBasicGroup) {
-      return !chat.isForbidden && !chat.isNotJoined
-        && (hasPinMessageRight || !isPinMessageRightBanned);
-    }
-
-    return hasPinMessageRight;
-  })();
+  const canPinMessage = isPrivate || (
+    !chat.isForbidden && !chat.isNotJoined
+    && (getHasAdminRight(chat, 'pinMessages') || !isUserRightBanned(chat, 'pinMessages'))
+  );
 
   // https://github.com/telegramdesktop/tdesktop/blob/335095a332607c41a8d20b47e61f5bbd66366d4b/Telegram/SourceFiles/data/data_peer.cpp#L653
-  const canEditMessagesIndefinitely = (() => {
-    if (isPrivate) return isChatWithSelf;
-    if (isBasicGroup) return false;
-    if (isSuperGroup) return canPinMessage;
-    if (isChannel) return getHasAdminRight(chat, 'editMessages');
-    return false;
-  })();
+  const canEditMessagesIndefinitely = isPrivate && isChatWithSelf;
 
   const isMessageEditable = (
     (
@@ -688,13 +572,10 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     && !chat.isForbidden
   );
 
-  const isSavedDialog = getIsSavedDialog(chat.id, threadId, global.currentUserId);
-
   const canReply = selectCanReplyToMessage(global, message, threadId);
-  const canReplyGlobally = canReply || (!isSavedDialog && !isLocal
-    && (isSuperGroup || isBasicGroup || isChatChannel(chat)));
+  const canReplyGlobally = canReply || (!isLocal && isBasicGroup);
 
-  let canPin = !isLocal && !isAction && canPinMessage && !isSavedDialog;
+  let canPin = !isLocal && !isAction && canPinMessage;
   let canUnpin = false;
 
   const pinnedMessageIds = selectPinnedIds(global, chat.id, threadId);
@@ -711,8 +592,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     || getHasAdminRight(chat, 'deleteMessages')
   );
 
-  const canReport = !isPrivate && !isOwn;
-
   const canDeleteForAll = canDelete && !chat.isForbidden && (
     (isPrivate && !isChatWithSelf && !content.dice)
     || (isBasicGroup && (
@@ -720,25 +599,18 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     ))
   );
 
-  const hasMessageEditRight = isOwn || (isChannel && getHasAdminRight(chat, 'editMessages'));
+  const hasMessageEditRight = isOwn;
 
   const isUploading = selectUploadProgress(global, message) !== undefined;
   const canEdit = !isLocal && !isAction && !isUploading && isMessageEditable && hasMessageEditRight;
 
-  const hasSticker = Boolean(message.content.sticker);
-  const hasFavoriteSticker = hasSticker && selectIsStickerFavorite(global, message.content.sticker!);
-  const canFaveSticker = !isAction && hasSticker && !hasFavoriteSticker;
-  const canUnfaveSticker = !isAction && hasFavoriteSticker;
   const canCopy = !isAction;
-  const canCopyLink = !isLocal && !isAction && (isChannel || isSuperGroup) && !isMonoforum;
   const canSelect = !isLocal && !isAction;
   const sendingState = isOwn ? getSendingState(message) : undefined;
   const canViewDetails = isOwn && !isLocal && !isAction;
   const canResend = !isLocal && (sendingState === 'failed' || sendingState === 'partial');
 
   const canDownload = selectMessageDownloadableMedia(global, message) && !hasTtl;
-
-  const canSaveGif = message.content.video?.isGif;
 
   const poll = content.pollId ? selectPoll(global, content.pollId) : undefined;
   const hasChosenPollAnswer = Boolean(
@@ -754,16 +626,11 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canEdit,
     canPin,
     canUnpin,
-    canReport,
     canDelete,
     canDeleteForAll,
-    canFaveSticker,
-    canUnfaveSticker,
     canCopy,
-    canCopyLink,
     canSelect,
     canDownload,
-    canSaveGif,
     canRevote,
     canClosePoll,
     canViewDetails,
@@ -777,35 +644,16 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canEdit,
     canPin,
     canUnpin,
-    canReport,
     canDelete,
     canDeleteForAll,
-    canFaveSticker,
-    canUnfaveSticker,
     canCopy,
-    canCopyLink,
     canSelect,
     canDownload,
-    canSaveGif,
     canRevote,
     canClosePoll,
     canViewDetails,
     canResend,
   };
-}
-
-export function selectCanCopyMessageLink<T extends GlobalState>(
-  global: T, message: ApiMessage,
-) {
-  const chat = selectChat(global, message.chatId);
-  if (!chat || selectIsChatRestricted(global, message.chatId)) return false;
-
-  const isLocal = isMessageLocal(message);
-  const isAction = isActionMessage(message);
-  const isChannel = isChatChannel(chat);
-  const isSuperGroup = isChatSuperGroup(chat);
-
-  return !isLocal && !isAction && (isChannel || isSuperGroup) && !chat.isMonoforum;
 }
 
 export function selectCanDeleteMessages<T extends GlobalState>(
@@ -843,24 +691,6 @@ export function selectCanDeleteSelectedMessages<T extends GlobalState>(
   }
 
   return selectCanDeleteMessages(global, chatId, threadId, messageIdList);
-}
-
-export function selectCanReportSelectedMessages<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const { messageIds: selectedMessageIds } = selectTabState(global, tabId).selectedMessages || {};
-  const { chatId, threadId } = selectCurrentMessageList(global, tabId) || {};
-  const chatMessages = chatId && selectChatMessages(global, chatId);
-  if (!chatMessages || !selectedMessageIds || !threadId) {
-    return false;
-  }
-
-  const messageActions = selectedMessageIds
-    .map((id) => chatMessages[id] && selectAllowedMessageActionsSlow(global, chatMessages[id], threadId))
-    .filter(Boolean);
-
-  return messageActions.every((actions) => actions.canReport);
 }
 
 export function selectCanDownloadSelectedMessages<T extends GlobalState>(
@@ -1100,15 +930,12 @@ export function selectCanAutoLoadMedia<T extends GlobalState>(
     canAutoLoadPhotoFromContacts,
     canAutoLoadPhotoInPrivateChats,
     canAutoLoadPhotoInGroups,
-    canAutoLoadPhotoInChannels,
     canAutoLoadVideoFromContacts,
     canAutoLoadVideoInPrivateChats,
     canAutoLoadVideoInGroups,
-    canAutoLoadVideoInChannels,
     canAutoLoadFileFromContacts,
     canAutoLoadFileInPrivateChats,
     canAutoLoadFileInGroups,
-    canAutoLoadFileInChannels,
   } = global.settings.byKey;
 
   if (isPhoto) {
@@ -1119,7 +946,6 @@ export function selectCanAutoLoadMedia<T extends GlobalState>(
       canAutoLoadMediaFromContacts: canAutoLoadPhotoFromContacts,
       canAutoLoadMediaInPrivateChats: canAutoLoadPhotoInPrivateChats,
       canAutoLoadMediaInGroups: canAutoLoadPhotoInGroups,
-      canAutoLoadMediaInChannels: canAutoLoadPhotoInChannels,
     });
   }
 
@@ -1131,7 +957,6 @@ export function selectCanAutoLoadMedia<T extends GlobalState>(
       canAutoLoadMediaFromContacts: canAutoLoadVideoFromContacts,
       canAutoLoadMediaInPrivateChats: canAutoLoadVideoInPrivateChats,
       canAutoLoadMediaInGroups: canAutoLoadVideoInGroups,
-      canAutoLoadMediaInChannels: canAutoLoadVideoInChannels,
     });
   }
 
@@ -1143,7 +968,6 @@ export function selectCanAutoLoadMedia<T extends GlobalState>(
       canAutoLoadMediaFromContacts: canAutoLoadFileFromContacts,
       canAutoLoadMediaInPrivateChats: canAutoLoadFileInPrivateChats,
       canAutoLoadMediaInGroups: canAutoLoadFileInGroups,
-      canAutoLoadMediaInChannels: canAutoLoadFileInChannels,
     });
   }
 
@@ -1157,14 +981,12 @@ function canAutoLoadMedia<T extends GlobalState>({
   canAutoLoadMediaFromContacts,
   canAutoLoadMediaInPrivateChats,
   canAutoLoadMediaInGroups,
-  canAutoLoadMediaInChannels,
 }: {
   global: T;
   chat: ApiChat;
   canAutoLoadMediaFromContacts: boolean;
   canAutoLoadMediaInPrivateChats: boolean;
   canAutoLoadMediaInGroups: boolean;
-  canAutoLoadMediaInChannels: boolean;
   sender?: ApiPeer;
 }) {
   const isMediaFromContact = Boolean(sender && (
@@ -1174,8 +996,7 @@ function canAutoLoadMedia<T extends GlobalState>({
   return Boolean(
     (isMediaFromContact && canAutoLoadMediaFromContacts)
     || (!isMediaFromContact && canAutoLoadMediaInPrivateChats && isUserId(chat.id))
-    || (canAutoLoadMediaInGroups && isChatGroup(chat))
-    || (canAutoLoadMediaInChannels && isChatChannel(chat)),
+    || (canAutoLoadMediaInGroups && isChatGroup(chat)),
   );
 }
 
@@ -1376,17 +1197,6 @@ function сheckMessageSendingDenied(message: ApiMessage, options: IAllowedAttach
     || (isPhoto && !options.canSendPhotos)
     || (isGif && !options.canSendGifs)
     || (isPlainText && !options.canSendPlainText);
-}
-
-export function selectTopicLink<T extends GlobalState>(
-  global: T, chatId: string, topicId?: ThreadId,
-) {
-  const chat = selectChat(global, chatId);
-  if (!chat || !chat.isForum) {
-    return undefined;
-  }
-
-  return getMessageLink(chat, topicId);
 }
 
 export function selectMessageReplyInfo<T extends GlobalState>(

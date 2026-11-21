@@ -179,12 +179,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsSealedProxy',
   },
   {
-    screen: SettingsScreens.QuickReaction,
-    parent: SettingsScreens.Stickers,
-    titleKey: 'DoubleTapSetting',
-    requires: 'isQuickReactionAvailable',
-  },
-  {
     screen: SettingsScreens.CustomEmoji,
     parent: SettingsScreens.Stickers,
     titleKey: 'Emoji',
@@ -314,7 +308,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
 
   ...buildEntries(SettingsScreens.Notifications, [
     'NotificationsWeb', 'NotificationsForPrivateChats', 'MessagePreview',
-    'NotificationsForGroups', 'NotificationsForChannels', 'ContactJoined', 'PinnedMessagesNotifications',
+    'NotificationsForGroups', 'ContactJoined', 'PinnedMessagesNotifications',
   ]),
   ...buildEntries(SettingsScreens.Notifications, IS_IOS ? [] : ['NotificationsSound']),
   ...buildEntries(SettingsScreens.Notifications, ['PushPreviewsWhenLocked'], { requires: 'hasPasscode' }),
@@ -322,11 +316,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywordsKey: 'SettingsKeywordsPrivateChats',
   }),
   ...buildEntries(SettingsScreens.Notifications, ['FilterGroups'], { keywordsKey: 'SettingsKeywordsGroups' }),
-  ...buildEntries(SettingsScreens.Notifications, ['FilterChannels'], { keywordsKey: 'SettingsKeywordsChannels' }),
 
   ...buildEntries(SettingsScreens.DataStorage, [
     'AutoDownloadPhotosTitle', 'AutoDownloadVideosTitle', 'AutoDownloadFilesTitle', 'AutoDownloadSettingsContacts',
-    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats', 'AutoDownloadSettingsChannels',
+    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats',
     'AutoDownloadMaxFileSize', 'SettingsDataClearMediaCache',
   ]),
   ...buildEntries(SettingsScreens.DataStorage, IS_TAURI ? ['SettingsAskWhereToSave'] : []),

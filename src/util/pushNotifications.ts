@@ -124,7 +124,6 @@ async function preparePushAccounts(previous: PushState | undefined, hasPasscode:
       slot,
       userHash: shouldHidePreviews ? keyId! : userIdHash,
       keyId,
-      isTest: session.isTest,
       shouldHidePreviews,
       shouldShowPreviewsWhenLocked,
     });

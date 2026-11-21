@@ -7,7 +7,6 @@ export * from './instantView';
 export * from './richMessage';
 export * from './settings';
 export * from './misc';
-export * from './calls';
 export * from './callLog';
 export * from './stories';
 export * from './peers';

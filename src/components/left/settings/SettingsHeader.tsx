@@ -82,8 +82,6 @@ const SettingsHeader = ({
         return <h3>{lang('SettingsInformation')}</h3>;
       case SettingsScreens.General:
         return <h3>{lang('General')}</h3>;
-      case SettingsScreens.QuickReaction:
-        return <h3>{lang('DoubleTapSetting')}</h3>;
       case SettingsScreens.CustomEmoji:
         return <h3>{lang('Emoji')}</h3>;
       case SettingsScreens.Notifications:

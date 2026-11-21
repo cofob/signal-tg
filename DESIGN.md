@@ -103,21 +103,11 @@ The reference column describes the initialized defaults. In particular, matching
 | <a id="color-skeleton-foreground"></a>`--color-skeleton-foreground` | Skeleton foreground | `rgba(232, 232, 232, 0.2)` | `rgba(232, 232, 232, 0.2)` | No; literal or Sass-computed value |
 | <a id="color-scrollbar"></a>`--color-scrollbar` | Scrollbar | `rgba(90, 90, 90, 0.3)` | `rgba(90, 90, 90, 0.3)` | No; literal or Sass-computed value |
 | <a id="color-telegram-blue"></a>`--color-telegram-blue` | Fixed Telegram brand blue | `#3390ec` | `#3390ec` | No; literal or Sass-computed value |
-| <a id="color-forum-hover-unread-topic"></a>`--color-forum-hover-unread-topic` | Forum hover unread topic | `#e9e9e9` | `#e9e9e9` | No; literal or Sass-computed value |
-| <a id="color-forum-hover-unread-topic-hover"></a>`--color-forum-hover-unread-topic-hover` | Forum hover unread topic hover | `#e2e2e2` | `#3f3f3f` | No; literal or Sass-computed value |
 | <a id="color-deleted-account"></a>`--color-deleted-account` | Deleted account | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-archive"></a>`--color-archive` | Archive | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-heart"></a>`--color-heart` | Heart | `#ff3c32` | `#ff3c32` | No; literal or Sass-computed value |
 | <a id="color-web-app-browser"></a>`--color-web-app-browser` | Web app browser | `#FFFFFFBB` | `#0303038F` | No; literal or Sass-computed value |
 | <a id="color-chat-active-greyed"></a>`--color-chat-active-greyed` | Chat active greyed | `#2973bd` | `#6c5db4` | No CSS alias; [--color-primary](#color-primary) mixed 20% toward the selected neutral |
-| <a id="color-topic-blue"></a>`--color-topic-blue` | Topic blue | `#2F7772` | `#6ff9f0` | No; literal or Sass-computed value |
-| <a id="color-topic-yellow"></a>`--color-topic-yellow` | Topic yellow | `#7F693B` | `#ffd67e` | No; literal or Sass-computed value |
-| <a id="color-topic-violet"></a>`--color-topic-violet` | Topic violet | `#8B5A96` | `#cb86db` | No; literal or Sass-computed value |
-| <a id="color-topic-green"></a>`--color-topic-green` | Topic green | `#44774A` | `#8eee98` | No; literal or Sass-computed value |
-| <a id="color-topic-rose"></a>`--color-topic-rose` | Topic rose | `#9B576B` | `#ff93b2` | No; literal or Sass-computed value |
-| <a id="color-topic-red"></a>`--color-topic-red` | Topic red | `#EB6858` | `#fb6f5f` | No; literal or Sass-computed value |
-| <a id="color-topic-grey"></a>`--color-topic-grey` | Topic grey | `#6C6C6C` | `#999999` | No; literal or Sass-computed value |
-| <a id="color-forum-unread-topic-hover"></a>`--color-forum-unread-topic-hover` | Forum unread topic hover | `#e9e9e9` | `#363636` | No; literal or Sass-computed value |
 | <a id="color-hover-overlay"></a>`--color-hover-overlay` | Hover overlay | `#00000006` | `#ffffff06` | No; literal or Sass-computed value |
 
 The primary alpha variants have stylesheet fallback references to [--color-primary](#color-primary), but initialization replaces them with generated alpha colors. The same distinction applies to the outgoing compatibility variables in the message section.

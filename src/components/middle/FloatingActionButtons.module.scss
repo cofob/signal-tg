@@ -59,14 +59,6 @@
   transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.transformDown {
-  transform: translateY(var(--unread-count-button-offset));
-}
-
-.transformDownDouble {
-  transform: translateY(calc(var(--unread-count-button-offset) * 2));
-}
-
 .unread {
   pointer-events: none;
 }

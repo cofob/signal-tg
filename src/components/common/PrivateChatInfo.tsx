@@ -210,14 +210,8 @@ const PrivateChatInfo = ({
         <div className="info-name-title">
           <FullNameTitle
             peer={customPeer || user!}
-            noFake={noFake}
-            noVerified={noVerified}
-            withEmojiStatus={!noEmojiStatus}
-            emojiStatusSize={emojiStatusSize}
             isSavedMessages={isSavedMessages}
-            isSavedDialog={isSavedDialog}
             iconElement={iconElement}
-            onEmojiStatusClick={onEmojiStatusClick}
           />
           <RankBadge
             chatId={chatMemberOriginId!}
@@ -233,13 +227,7 @@ const PrivateChatInfo = ({
     return (
       <FullNameTitle
         peer={customPeer || user!}
-        noFake={noFake}
-        noVerified={noVerified}
-        withEmojiStatus={!noEmojiStatus}
-        emojiStatusSize={emojiStatusSize}
         isSavedMessages={isSavedMessages}
-        isSavedDialog={isSavedDialog}
-        onEmojiStatusClick={onEmojiStatusClick}
         iconElement={iconElement}
       />
     );

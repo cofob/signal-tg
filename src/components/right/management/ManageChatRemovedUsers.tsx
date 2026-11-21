@@ -3,7 +3,7 @@ import { getActions, withGlobal } from '../../../global';
 
 import type { ApiChat, ApiChatMember, ApiUser } from '../../../api/types';
 
-import { getUserFullName, isChatChannel } from '../../../global/helpers';
+import { getUserFullName } from '../../../global/helpers';
 import { selectCanBanUsers, selectChat, selectChatFullInfo } from '../../../global/selectors';
 import { isUserId } from '../../../util/entities/ids';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
@@ -30,7 +30,6 @@ type StateProps = {
   usersById: Record<string, ApiUser>;
   removedMembers: ApiChatMember[];
   canDeleteMembers?: boolean;
-  isChannel?: boolean;
 };
 
 const ManageChatRemovedUsers = ({
@@ -38,7 +37,6 @@ const ManageChatRemovedUsers = ({
   usersById,
   canDeleteMembers,
   removedMembers,
-  isChannel,
   onClose,
   isActive,
 }: OwnProps & StateProps) => {
@@ -85,7 +83,7 @@ const ManageChatRemovedUsers = ({
   return (
     <div className="Management">
       <div className="panel-content custom-scroll">
-        <IslandDescription>{lang(isChannel ? 'NoBlockedChannel2' : 'NoBlockedGroup2')}</IslandDescription>
+        <IslandDescription>{lang('NoBlockedGroup2')}</IslandDescription>
         {Boolean(removedMembers.length) && (
           <Island dir={lang.isRtl ? 'rtl' : undefined}>
             {removedMembers.map((member) => (
@@ -142,7 +140,6 @@ export default memo(withGlobal<OwnProps>(
       usersById,
       canDeleteMembers,
       removedMembers: selectChatFullInfo(global, chatId)?.kickedMembers || MEMO_EMPTY_ARRAY,
-      isChannel: chat && isChatChannel(chat),
     };
   },
 )(ManageChatRemovedUsers));

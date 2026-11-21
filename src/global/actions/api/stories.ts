@@ -1,6 +1,6 @@
-import type { ActionReturnType, ReportSection } from '../../types';
+import type { ActionReturnType } from '../../types';
 
-import { DEBUG, MESSAGE_ID_REQUIRED_ERROR } from '../../../config';
+import { DEBUG } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getServerTime } from '../../../util/serverTime';
 import { callApi } from '../../../api';
@@ -12,7 +12,6 @@ import {
   removePeerStory,
   updateLastReadStoryForPeer,
   updateLastViewedStoryForPeer,
-  updatePeer,
   updatePeerProfileStory,
   updatePeerStoriesFullyLoaded,
   updatePeerStoriesHidden,
@@ -455,109 +454,6 @@ addActionHandler('loadStoryViewList', async (global, actions, payload): Promise<
   setGlobal(global);
 });
 
-addActionHandler('reportStory', async (global, actions, payload): Promise<void> => {
-  const {
-    peerId,
-    storyId,
-    description = '',
-    option = '',
-    tabId = getCurrentTabId(),
-  } = payload;
-  const peer = selectPeer(global, peerId);
-  if (!peer) {
-    return;
-  }
-
-  const response = await callApi('reportStory', {
-    peer,
-    storyId,
-    description,
-    option,
-  });
-
-  if (!response) return;
-
-  const { result, error } = response;
-
-  if (error === MESSAGE_ID_REQUIRED_ERROR) {
-    actions.showNotification({
-      message: {
-        key: 'ReportPleaseSelectMessages',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      tabId,
-    });
-    actions.closeReportModal({ tabId });
-    return;
-  }
-
-  if (!result) return;
-
-  if (result.type === 'reported') {
-    actions.showNotification({
-      message: result
-        ? {
-          key: 'ReportPeerAlertSuccess',
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        }
-        : { key: 'ReportSubmitError' },
-      tabId,
-    });
-    actions.closeReportModal({ tabId });
-    return;
-  }
-
-  if (result.type === 'selectOption') {
-    global = getGlobal();
-    const oldSections = selectTabState(global, tabId).reportModal?.sections;
-    const latestSection = oldSections?.[oldSections.length - 1];
-    const selectedOption = latestSection?.type === 'options'
-      ? latestSection.options.find((item) => item.option === option)
-      : undefined;
-    const newSection = {
-      type: 'options',
-      title: result.title,
-      options: result.options,
-      subtitle: selectedOption?.text,
-    } satisfies ReportSection;
-    global = updateTabState(global, {
-      reportModal: {
-        messageIds: [storyId],
-        subject: 'story',
-        peerId,
-        description,
-        sections: oldSections ? [...oldSections, newSection] : [newSection],
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-
-  if (result.type === 'comment') {
-    global = getGlobal();
-    const oldSections = selectTabState(global, tabId).reportModal?.sections;
-    const latestSection = oldSections?.[oldSections.length - 1];
-    const selectedOption = latestSection?.type === 'options'
-      ? latestSection.options.find((item) => item.option === option)
-      : undefined;
-    const newSection = {
-      type: 'comment',
-      isOptional: result.isOptional,
-      option: result.option,
-      title: selectedOption?.text,
-    } satisfies ReportSection;
-    global = updateTabState(global, {
-      reportModal: {
-        messageIds: [storyId],
-        description,
-        peerId,
-        subject: 'story',
-        sections: oldSections ? [...oldSections, newSection] : [newSection],
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-});
-
 addActionHandler('editStoryPrivacy', (global, actions, payload): ActionReturnType => {
   const {
     peerId,
@@ -598,37 +494,6 @@ addActionHandler('toggleStoriesHidden', async (global, actions, payload): Promis
   global = getGlobal();
   global = updatePeerStoriesHidden(global, peerId, isHidden);
   setGlobal(global);
-});
-
-addActionHandler('loadStoriesMaxIds', async (global, actions, payload): Promise<void> => {
-  const { peerIds } = payload;
-  const peers = peerIds.map((peerId) => selectPeer(global, peerId)).filter(Boolean);
-  if (!peers.length) return;
-
-  const result = await callApi('fetchStoriesMaxIds', { peers });
-  if (!result) return;
-
-  const peerIdsToLoad: string[] = [];
-
-  global = getGlobal();
-  result.forEach((maxId: { maxId?: number }, i: number) => {
-    const peerId = peers[i].id;
-    const hasStories = Boolean(maxId.maxId);
-    const peer = selectPeer(global, peerId);
-    if (peer && (peer.maxStoryId !== maxId.maxId || peer.hasStories !== hasStories)) {
-      global = updatePeer(global, peerId, {
-        maxStoryId: maxId.maxId,
-        hasStories,
-      });
-    }
-
-    if (maxId.maxId && maxId.maxId > 0) {
-      peerIdsToLoad.push(peerId);
-    }
-  });
-  setGlobal(global);
-
-  peerIdsToLoad?.forEach((peerId) => actions.loadPeerStories({ peerId }));
 });
 
 addActionHandler('sendStoryReaction', async (global, actions, payload): Promise<void> => {

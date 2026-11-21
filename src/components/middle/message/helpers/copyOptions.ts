@@ -38,7 +38,6 @@ export function getMessageCopyOptions(
   href?: string,
   canCopy?: boolean,
   afterEffect?: () => void,
-  onCopyLink?: () => void,
   onCopyMessages?: (request: MessageCopyRequest, textFormat?: ClipboardTextFormat) => void,
   onCopyNumber?: () => void,
 ): ICopyOptions {
@@ -110,14 +109,6 @@ export function getMessageCopyOptions(
           messageIds: [message.id],
         }, textFormat);
       },
-    });
-  }
-
-  if (onCopyLink) {
-    options.push({
-      label: 'ContextCopyMessageLink',
-      icon: 'link',
-      handler: onCopyLink,
     });
   }
 

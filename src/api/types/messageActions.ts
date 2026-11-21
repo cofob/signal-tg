@@ -1,5 +1,4 @@
 import type { ApiCallLogOutcome, ApiCallLogType } from './callLog';
-import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
   ApiPhoto, ApiPollAnswer, ApiVideo,
 } from './messages';
@@ -45,32 +44,6 @@ export interface ApiMessageActionChatJoinedByLink extends ActionMediaType {
   inviterId: string;
 }
 
-export interface ApiMessageActionChatJoinedViaCommunity extends ActionMediaType {
-  type: 'chatJoinedViaCommunity';
-  communityId: string;
-}
-
-export interface ApiMessageActionChannelCreate extends ActionMediaType {
-  type: 'channelCreate';
-  title: string;
-}
-
-export interface ApiMessageActionChatMigrateTo extends ActionMediaType {
-  type: 'chatMigrateTo';
-  channelId: string;
-}
-
-export interface ApiMessageActionChannelMigrateFrom extends ActionMediaType {
-  type: 'channelMigrateFrom';
-  title: string;
-  chatId: string;
-}
-
-export interface ApiMessageActionChangeCommunity extends ActionMediaType {
-  type: 'changeCommunity';
-  communityId?: string;
-}
-
 export interface ApiMessageActionPinMessage extends ActionMediaType {
   type: 'pinMessage';
 }
@@ -97,14 +70,6 @@ export interface ApiMessageActionSetChatWallpaper extends ActionMediaType {
   wallpaper?: ApiWallpaper;
 }
 
-export interface ApiMessageActionPhoneCall extends ActionMediaType {
-  type: 'phoneCall';
-  isVideo?: true;
-  callId: string;
-  reason?: ApiPhoneCallDiscardReason;
-  duration?: number;
-}
-
 export interface ApiMessageActionScreenshotTaken extends ActionMediaType {
   type: 'screenshotTaken';
 }
@@ -118,41 +83,8 @@ export interface ApiMessageActionContactSignUp extends ActionMediaType {
   type: 'contactSignUp';
 }
 
-export interface ApiMessageActionGroupCall extends ActionMediaType {
-  type: 'groupCall';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  duration?: number;
-}
-
-export interface ApiMessageActionInviteToGroupCall extends ActionMediaType {
-  type: 'inviteToGroupCall';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  userIds: string[];
-}
-
-export interface ApiMessageActionGroupCallScheduled extends ActionMediaType {
-  type: 'groupCallScheduled';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  scheduleDate: number;
-}
-
 export interface ApiMessageActionChatJoinedByRequest extends ActionMediaType {
   type: 'chatJoinedByRequest';
-}
-
-export interface ApiMessageActionTopicCreate extends ActionMediaType {
-  type: 'topicCreate';
-  title: string;
-  iconColor: number;
-  iconEmojiId?: string;
-}
-
-export interface ApiMessageActionTopicEdit extends ActionMediaType {
-  type: 'topicEdit';
-  title?: string;
-  iconEmojiId?: string;
-  isClosed?: boolean;
-  isHidden?: boolean;
 }
 
 export interface ApiMessageActionSuggestProfilePhoto extends ActionMediaType {
@@ -163,12 +95,6 @@ export interface ApiMessageActionSuggestProfilePhoto extends ActionMediaType {
 export interface ApiMessageActionSuggestBirthday extends ActionMediaType {
   type: 'suggestBirthday';
   birthday: ApiBirthday;
-}
-
-export interface ApiMessageActionChannelJoined extends ActionMediaType {
-  type: 'channelJoined';
-  isViaRequest?: true;
-  inviterId?: string;
 }
 
 export interface ApiMessageActionExpiredContent extends ActionMediaType {
@@ -185,16 +111,6 @@ export interface ApiMessageActionPollAppendAnswer extends ActionMediaType {
 export interface ApiMessageActionPollDeleteAnswer extends ActionMediaType {
   type: 'pollDeleteAnswer';
   answer: ApiPollAnswer;
-}
-
-export interface ApiMessageActionNewCreatorPending extends ActionMediaType {
-  type: 'newCreatorPending';
-  newCreatorId: string;
-}
-
-export interface ApiMessageActionChangeCreator extends ActionMediaType {
-  type: 'changeCreator';
-  newCreatorId: string;
 }
 
 export interface ApiMessageActionNoForwardsToggle extends ActionMediaType {
@@ -277,20 +193,14 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionSignalCall | ApiMessageActionGiftBadge | ApiMessageActionPayment
   | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle | ApiMessageActionGroupUpdate
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
-  | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate
-  | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage
+  | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionPinMessage
   | ApiMessageActionHistoryClear | ApiMessageActionSetMessagesTtl
   | ApiMessageActionSetChatTheme | ApiMessageActionSetChatWallpaper
-  | ApiMessageActionPhoneCall
   | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction
   | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
-  | ApiMessageActionGroupCall | ApiMessageActionInviteToGroupCall | ApiMessageActionGroupCallScheduled
-  | ApiMessageActionChatJoinedByRequest | ApiMessageActionChatJoinedViaCommunity
-  | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
+  | ApiMessageActionChatJoinedByRequest
+  | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
-  | ApiMessageActionChannelJoined
   | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer
 
-  | ApiMessageActionNewCreatorPending
-  | ApiMessageActionChangeCreator | ApiMessageActionNoForwardsToggle | ApiMessageActionNoForwardsRequest
-  | ApiMessageActionChangeCommunity;
+  | ApiMessageActionNoForwardsToggle | ApiMessageActionNoForwardsRequest;

@@ -5,24 +5,19 @@ import { Suggestion, type SuggestionMatch } from '@tiptap/suggestion';
 import { getGlobal } from '../../../../../global';
 
 import type { ApiUser } from '../../../../../api/types';
-import type { ThreadId } from '../../../../../types';
 import type {
   RichEditorInsertContent,
 } from '../../../../middle/composer/richEditorTypes';
 import type {
-  RichEditorTooltipItem, RichEditorTooltipsConfig, RichEditorTooltipSuggestion,
+  RichEditorTooltipItem, RichEditorTooltipsConfig,
 } from '../../types';
-import { MAIN_THREAD_ID } from '../../../../../api/types';
 
-import { getMainUsername, isChatSuperGroup } from '../../../../../global/helpers';
+import { getMainUsername } from '../../../../../global/helpers';
 import {
   filterPeersByQuery, getPeerTitle, isApiPeerUser,
 } from '../../../../../global/helpers/peers';
-import { selectChat } from '../../../../../global/selectors';
-import { pickTruthy, unique } from '../../../../../util/iteratees';
+import { pickTruthy } from '../../../../../util/iteratees';
 import { getTranslationFn } from '../../../../../util/localization';
-import { debounce } from '../../../../../util/schedulers';
-import { callApi } from '../../../../../api';
 import { replaceEditorRange } from '../../../../middle/composer/helpers/richEditorComposer';
 import {
   buildBlockMatch,
@@ -30,7 +25,6 @@ import {
   type GetTooltipController,
   hasUnsuitableContext,
   PLUGIN_KEYS,
-  SEARCH_DEBOUNCE_MS,
   TOOLTIP_GAP_PX,
 } from './suggestion';
 
@@ -58,61 +52,8 @@ export function buildMentionSuggestion(
       replaceEditorRange(currentEditor, range, content);
     },
     shouldResetDismissed: ({ transaction }) => transaction.docChanged,
-    render: () => {
-      const renderer = buildSuggestionRenderer('mention', getController);
-      let currentProps: RichEditorTooltipSuggestion | undefined;
-
-      const searchRemote = debounce(async (props: RichEditorTooltipSuggestion) => {
-        const { chatId, threadId } = config.getContext();
-        const memberIds = await searchMentionMemberIds(chatId, threadId, props.query);
-        if (!memberIds?.length || currentProps !== props) {
-          return;
-        }
-
-        currentProps = {
-          ...props,
-          items: mergeMemberIds(props.items as ApiUser[], memberIds, config.getContext().currentUserId),
-        };
-        renderer.onUpdate(currentProps);
-      }, SEARCH_DEBOUNCE_MS, false);
-
-      const update = (props: RichEditorTooltipSuggestion) => {
-        currentProps = props;
-        renderer.onUpdate(props);
-        if (!props.loading && props.query) {
-          searchRemote(props);
-        }
-      };
-
-      return {
-        ...renderer,
-        onStart: update,
-        onUpdate: update,
-        onExit: () => {
-          currentProps = undefined;
-          renderer.onExit();
-        },
-      };
-    },
+    render: () => buildSuggestionRenderer('mention', getController),
   });
-}
-
-async function searchMentionMemberIds(chatId: string, threadId: ThreadId | undefined, query: string) {
-  const chat = selectChat(getGlobal(), chatId);
-  if (!chat || !isChatSuperGroup(chat)) {
-    return undefined;
-  }
-
-  const topMsgId = typeof threadId === 'number' && threadId !== MAIN_THREAD_ID ? threadId : undefined;
-  const result = await callApi('fetchMembers', { chat, memberFilter: 'mentions', query, topMsgId });
-  return result?.members?.map(({ userId }: { userId: string }) => userId);
-}
-
-function mergeMemberIds(localUsers: ApiUser[], memberIds: string[], currentUserId?: string) {
-  const usersById = getGlobal().users.byId;
-  const ids = unique([...localUsers.map(({ id }) => id), ...memberIds.filter((id) => id !== currentUserId)]);
-
-  return ids.map((id) => usersById[id]).filter(Boolean);
 }
 
 function findMentionMatch({ $position }: { $position: ResolvedPos }): SuggestionMatch {

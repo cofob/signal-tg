@@ -10,7 +10,6 @@ import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { throttle } from '../../../util/schedulers';
 import { renderMessageSummary } from '../../common/helpers/renderMessageText';
 
-import useAppLayout from '../../../hooks/useAppLayout';
 import useLang from '../../../hooks/useLang';
 
 import NothingFound from '../../common/NothingFound';
@@ -18,12 +17,10 @@ import Island from '../../gili/layout/Island';
 import InfiniteScroll from '../../ui/InfiniteScroll';
 import ChatMessage from './ChatMessage';
 import DateSuggest from './DateSuggest';
-import LeftSearchResultTopic from './LeftSearchResultTopic';
 
 export type OwnProps = {
   searchQuery?: string;
   dateSearchQuery?: string;
-  onReset: () => void;
   onSearchDateSelect: (value: Date) => void;
 };
 
@@ -33,8 +30,6 @@ type StateProps = {
   globalMessagesByChatId?: Record<string, { byId: Record<number, ApiMessage> }>;
   chatsById: Record<string, ApiChat>;
   fetchingStatus?: { chats?: boolean; messages?: boolean };
-  foundTopicIds?: number[];
-  searchChatId?: string;
 };
 
 const runThrottled = throttle((cb) => cb(), 500, true);
@@ -46,15 +41,11 @@ const ChatMessageResults = ({
   globalMessagesByChatId,
   chatsById,
   fetchingStatus,
-  foundTopicIds,
-  searchChatId,
   onSearchDateSelect,
-  onReset,
 }: OwnProps & StateProps) => {
-  const { searchMessagesGlobal, openThread } = getActions();
+  const { searchMessagesGlobal } = getActions();
 
   const lang = useLang();
-  const { isMobile } = useAppLayout();
 
   const handleLoadMore = useCallback(({ direction }: { direction: LoadMoreDirection }) => {
     if (direction === LoadMoreDirection.Backwards) {
@@ -66,18 +57,6 @@ const ChatMessageResults = ({
     }
   // eslint-disable-next-line react-hooks-static-deps/exhaustive-deps -- `searchQuery` is required to prevent infinite message loading
   }, [searchQuery]);
-
-  const handleTopicClick = useCallback(
-    (id: number) => {
-      if (!searchChatId) return;
-      openThread({ chatId: searchChatId, threadId: id, shouldReplaceHistory: true });
-
-      if (!isMobile) {
-        onReset();
-      }
-    },
-    [searchChatId, isMobile, onReset],
-  );
 
   const foundMessages = useMemo(() => {
     if (!foundIds || foundIds.length === 0) {
@@ -107,13 +86,11 @@ const ChatMessageResults = ({
         chatId={message.chatId}
         message={message}
         searchQuery={searchQuery}
-        withTopic
       />
     );
   }
 
-  const nothingFound = fetchingStatus && !fetchingStatus.chats && !fetchingStatus.messages && !foundMessages.length
-    && !foundTopicIds?.length;
+  const nothingFound = fetchingStatus && !fetchingStatus.chats && !fetchingStatus.messages && !foundMessages.length;
 
   return (
     <div className="LeftSearch--content">
@@ -138,22 +115,6 @@ const ChatMessageResults = ({
             description={lang('ChatListSearchNoResultsDescription')}
           />
         )}
-        {Boolean(foundTopicIds?.length) && (
-          <Island className="search-island pb-2">
-            <h3 className="section-heading topic-search-heading" dir={lang.isRtl ? 'auto' : undefined}>
-              {lang('SearchResultTopics')}
-            </h3>
-            {foundTopicIds.map((id) => {
-              return (
-                <LeftSearchResultTopic
-                  chatId={searchChatId!}
-                  topicId={id}
-                  onClick={handleTopicClick}
-                />
-              );
-            })}
-          </Island>
-        )}
         {Boolean(foundMessages.length) && (
           <Island className="search-island pb-2">
             <h3 className="section-heading topic-search-heading" dir={lang.isRtl ? 'auto' : undefined}>
@@ -172,7 +133,7 @@ export default memo(withGlobal<OwnProps>(
     const { byId: chatsById } = global.chats;
     const { currentUserId, messages: { byChatId: globalMessagesByChatId } } = global;
     const {
-      fetchingStatus, resultsByType, foundTopicIds, chatId: searchChatId,
+      fetchingStatus, resultsByType,
     } = selectTabState(global).globalSearch;
 
     const { foundIds } = (resultsByType?.text) || {};
@@ -183,8 +144,6 @@ export default memo(withGlobal<OwnProps>(
       globalMessagesByChatId,
       chatsById,
       fetchingStatus,
-      foundTopicIds,
-      searchChatId,
     };
   },
 )(ChatMessageResults));

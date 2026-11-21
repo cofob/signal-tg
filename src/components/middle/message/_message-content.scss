@@ -471,19 +471,10 @@
         margin-bottom: calc(0.5rem - 0.375rem);
       }
     }
-
-    .CommentButton {
-      margin-top: 0.625rem;
-    }
   }
 
   &.audio {
     min-width: 20rem;
-
-    // The standalone meta raised above the button keeps the same gap under the performer line as without comments
-    > .MessageMeta ~ .CommentButton {
-      margin-top: 1rem;
-    }
 
     @media (max-width: 600px) {
       min-width: 17rem;
@@ -670,15 +661,6 @@
   flex-wrap: wrap;
   align-items: flex-end;
   line-height: 1.2;
-
-  &.has-comment-counter {
-    min-height: 5.25rem;
-    margin-top: 0 !important;
-
-    &.has-replies {
-      min-height: 6.5rem;
-    }
-  }
 
   &.has-subheader {
     max-width: 100%;

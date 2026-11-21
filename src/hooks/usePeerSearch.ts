@@ -2,7 +2,6 @@ import { getGlobal } from '../global';
 
 import type { ApiChat } from '../api/types';
 
-import { isChatBasicGroup, isChatSuperGroup } from '../global/helpers';
 import { filterPeersByQuery } from '../global/helpers/peers';
 import { selectChatFullInfo } from '../global/selectors';
 import { isUserId } from '../util/entities/ids';
@@ -35,41 +34,15 @@ export async function userAccountSearch(query: string) {
 }
 
 export function prepareChatMemberSearch(chat: ApiChat) {
-  return async (query: string) => {
+  return (query: string) => {
     const trimmedQuery = query.trim();
 
-    // For basic groups, filter from cached members in fullInfo
-    if (isChatBasicGroup(chat)) {
-      const global = getGlobal();
-      const fullInfo = selectChatFullInfo(global, chat.id);
-      const memberIds = fullInfo?.members?.map((m) => m.userId) || [];
+    const fullInfo = selectChatFullInfo(getGlobal(), chat.id);
+    const memberIds = fullInfo?.members?.map((m) => m.userId) || [];
 
-      if (!trimmedQuery) {
-        return memberIds;
-      }
-
-      return filterPeersByQuery({ ids: memberIds, query: trimmedQuery, type: 'user' });
-    }
-
-    // For supergroups/channels, use API
-    const searchResult = await callApi('fetchMembers', {
-      chat,
-      memberFilter: trimmedQuery ? 'search' : 'recent',
-      query: trimmedQuery,
-    });
-
-    const memberIds = searchResult?.members?.map((member: { userId: string }) => member.userId) || [];
-
-    if (!isChatSuperGroup(chat)) {
-      return memberIds;
-    }
-
-    if (!trimmedQuery) {
-      return [...memberIds, chat.id];
-    }
-
-    const chatMatches = filterPeersByQuery({ ids: [chat.id], query: trimmedQuery, type: 'chat' });
-    return [...memberIds, ...chatMatches];
+    return Promise.resolve(
+      trimmedQuery ? filterPeersByQuery({ ids: memberIds, query: trimmedQuery, type: 'user' }) : memberIds,
+    );
   };
 }
 

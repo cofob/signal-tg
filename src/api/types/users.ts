@@ -7,7 +7,6 @@ import type {
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
-  ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
 
@@ -76,7 +75,6 @@ export interface ApiUserFullInfo {
   noForwardsMyEnabled?: boolean;
   noForwardsPeerEnabled?: boolean;
   isUnofficialSecurityRisk?: boolean;
-  shareTheme?: ApiShareTheme;
 }
 
 export type ApiUserType = 'userTypeRegular' | 'userTypeDeleted' | 'userTypeUnknown';

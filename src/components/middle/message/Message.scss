@@ -176,8 +176,7 @@
   &:not(.own) {
     padding-left: 2.5rem;
 
-    .no-avatars &,
-    &.is-thread-top {
+    .no-avatars & {
       padding-left: 0;
     }
 
@@ -205,8 +204,7 @@
     @media (max-width: 600px) {
       padding-left: 2.875rem;
 
-      .no-avatars &,
-      &.is-thread-top {
+      .no-avatars & {
         padding-left: 0.25rem;
       }
     }

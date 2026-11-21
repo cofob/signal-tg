@@ -6,7 +6,7 @@ import { MAIN_THREAD_ID } from '../../api/types';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
 import { omit, pick } from '../../util/iteratees';
 import { selectChatMessage, selectTabState } from '../selectors';
-import { selectThread, selectThreadIdFromMessage, selectThreadInfo, selectThreadReadState } from '../selectors/threads';
+import { selectThread, selectThreadInfo, selectThreadReadState } from '../selectors/threads';
 import { updateMessageStore } from './messages';
 import { updateTabState } from './tabs';
 
@@ -196,7 +196,7 @@ export function updateThreadInfoLastMessageId<T extends GlobalState>(
 export function addUnreadMessageToCounter<T extends GlobalState>(
   global: T, chatId: string, message: ApiMessage,
 ): T {
-  const threadId = selectThreadIdFromMessage(global, message);
+  const threadId = MAIN_THREAD_ID;
   const currentReadState = selectThreadReadState(global, chatId, threadId);
   const newUnreadCount = (currentReadState?.unreadCount || 0) + 1;
   return replaceThreadReadStateParam(global, chatId, threadId, 'unreadCount', newUnreadCount);
@@ -208,7 +208,7 @@ export function decrementUnreadCount<T extends GlobalState>(
   const message = selectChatMessage(global, chatId, messageId);
   if (!message) return global;
 
-  const threadId = selectThreadIdFromMessage(global, message);
+  const threadId = MAIN_THREAD_ID;
   const currentReadState = selectThreadReadState(global, chatId, threadId);
   const newUnreadCount = Math.max(0, (currentReadState?.unreadCount || 0) - amount);
   return replaceThreadReadStateParam(global, chatId, threadId, 'unreadCount', newUnreadCount);

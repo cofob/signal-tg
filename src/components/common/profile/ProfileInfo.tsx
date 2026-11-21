@@ -2,12 +2,10 @@ import { memo, useEffect, useMemo, useState } from '../../../lib/teact/teact';
 
 import type {
   ApiChat,
-  ApiEmojiStatus,
   ApiPeerColorOption,
   ApiPeerPhotos,
   ApiPeerProfileColorSet,
   ApiPhoto,
-  ApiTopic,
   ApiUser,
   ApiUserFullInfo,
   ApiUserStatus,
@@ -16,12 +14,11 @@ import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
 import {
-  getUserStatus, isChatChannel, isUserOnline,
+  getUserStatus, isUserOnline,
 } from '../../../global/helpers/index';
 import { getActions, withGlobal } from '../../../global/index';
 import {
   selectChat,
-  selectCurrentMessageList,
   selectPeer,
   selectPeerAvatarPhoto,
   selectPeerHasProfileBackground,
@@ -29,13 +26,11 @@ import {
   selectPeerProfileColor,
   selectTabState,
   selectTheme,
-  selectTopic,
   selectUser,
   selectUserFullInfo,
   selectUserStatus,
 } from '../../../global/selectors/index';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
-import { selectThreadMessagesCount } from '../../../global/selectors/threads.ts';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import buildStyle from '../../../util/buildStyle';
@@ -43,7 +38,6 @@ import { captureEvents, SwipeDirection } from '../../../util/captureEvents';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { resolveTransitionName } from '../../../util/resolveTransitionName';
 import { REM } from '../helpers/mediaDimensions.ts';
-import renderText from '../helpers/renderText.tsx';
 
 import { useVtn } from '../../../hooks/animations/useVtn';
 import useIntervalForceUpdate from '../../../hooks/schedulers/useIntervalForceUpdate';
@@ -56,7 +50,6 @@ import usePhotosPreload from '../hooks/usePhotosPreload';
 import Transition from '../../ui/Transition.tsx';
 import Avatar from '../Avatar.tsx';
 import FullNameTitle from '../FullNameTitle.tsx';
-import TopicIcon from '../TopicIcon.tsx';
 import ProfileMusicStrip from './ProfileMusicStrip';
 import ProfilePhoto from './ProfilePhoto';
 import RadialPatternBackground from './RadialPatternBackground.tsx';
@@ -70,7 +63,6 @@ type OwnProps = {
   peerId: string;
   isForSettings?: boolean;
   canPlayVideo: boolean;
-  isForMonoforum?: boolean;
   onExpand?: NoneToVoidFunction;
 };
 
@@ -81,10 +73,7 @@ type StateProps = {
   chat?: ApiChat;
   mediaIndex?: number;
   avatarOwnerId?: string;
-  topic?: ApiTopic;
-  messagesCount?: number;
   animationLevel: AnimationLevel;
-  emojiStatus?: ApiEmojiStatus;
   profilePhotos?: ApiPeerPhotos;
   avatarPhoto?: ApiPhoto;
   profileColorOption?: ApiPeerColorOption<ApiPeerProfileColorSet>;
@@ -93,8 +82,6 @@ type StateProps = {
   hasAvatar?: boolean;
 };
 
-const EMOJI_STATUS_SIZE = 24;
-const EMOJI_TOPIC_SIZE = 120;
 const LOAD_MORE_THRESHOLD = 3;
 const MAX_PHOTO_DASH_COUNT = 30;
 const STATUS_UPDATE_INTERVAL = 1000 * 60; // 1 min
@@ -112,14 +99,10 @@ const ProfileInfo = ({
   chat,
   mediaIndex,
   avatarOwnerId,
-  topic,
-  messagesCount,
   animationLevel,
-  emojiStatus,
   profilePhotos,
   avatarPhoto,
   peerId,
-  isForMonoforum,
   profileColorOption,
   theme,
   isPlain,
@@ -271,26 +254,6 @@ const ProfileInfo = ({
     return undefined;
   }
 
-  function renderTopic() {
-    return (
-      <div className={styles.topicContainer}>
-        <TopicIcon
-          topic={topic!}
-          size={EMOJI_TOPIC_SIZE}
-          className={styles.topicIcon}
-          letterClassName={styles.topicIconTitle}
-          noLoopLimit
-        />
-        <h3 className={styles.topicTitle} dir={lang.isRtl ? 'rtl' : undefined}>{renderText(topic!.title)}</h3>
-        <p className={styles.topicMessagesCounter}>
-          {messagesCount ? lang('Messages', {
-            count: lang.number(messagesCount),
-          }, { pluralValue: messagesCount }) : lang('ForumNoMessages')}
-        </p>
-      </div>
-    );
-  }
-
   function renderPhotoTabs() {
     const totalPhotosLength = Math.max(photos.length, profilePhotos?.count || 0);
     if (!photos || totalPhotosLength <= 1) {
@@ -330,18 +293,6 @@ const ProfileInfo = ({
   }
 
   function renderStatus() {
-    if (isForMonoforum) {
-      return (
-        <span
-          className={buildClassName(styles.status, 'status')}
-          dir="auto"
-          style={createVtnStyle('status', true)}
-        >
-          {lang('MonoforumStatus')}
-        </span>
-      );
-    }
-
     if (user) {
       return (
         <div
@@ -370,21 +321,11 @@ const ProfileInfo = ({
         dir="auto"
         style={createVtnStyle('status', true)}
       >
-        {
-          isChatChannel(chat!)
-            ? lang('Subscribers', {
-              count: lang.number(chat!.membersCount ?? 0),
-            }, { pluralValue: chat!.membersCount ?? 0 })
-            : lang('NMembers', {
-              count: lang.number(chat!.membersCount ?? 0),
-            }, { pluralValue: chat!.membersCount ?? 0 })
-        }
+        {lang('NMembers', {
+          count: lang.number(chat!.membersCount ?? 0),
+        }, { pluralValue: chat!.membersCount ?? 0 })}
       </span>
     );
-  }
-
-  if (topic) {
-    return renderTopic();
   }
 
   return (
@@ -499,10 +440,6 @@ const ProfileInfo = ({
             className={styles.title}
             style={createVtnStyle('title', true)}
             peer={(user || chat)!}
-            withEmojiStatus
-            withStatusTextColor
-            emojiStatusSize={EMOJI_STATUS_SIZE}
-            noLoopLimit
             canCopyTitle
             isScrolling
             isScrollingPaused={!isActive}
@@ -533,12 +470,7 @@ export default memo(withGlobal<OwnProps>(
     const profilePhotos = selectPeerPhotos(global, peerId);
     const avatarPhoto = selectPeerAvatarPhoto(global, peerId);
     const { mediaIndex, chatId: avatarOwnerId } = selectTabState(global).mediaViewer;
-    const isForum = chat?.isForum;
-    const { threadId: currentTopicId } = selectCurrentMessageList(global) || {};
-    const topic = isForum && currentTopicId ? selectTopic(global, peerId, currentTopicId) : undefined;
     const { animationLevel } = selectSharedSettings(global);
-
-    const emojiStatus = peer?.emojiStatus;
 
     const profileColor = peer && selectPeerProfileColor(global, peer);
     const theme = selectTheme(global);
@@ -554,11 +486,8 @@ export default memo(withGlobal<OwnProps>(
       mediaIndex,
       avatarOwnerId,
       animationLevel,
-      emojiStatus,
       profilePhotos,
       avatarPhoto,
-      topic,
-      messagesCount: topic ? selectThreadMessagesCount(global, peerId, topic.id) : undefined,
       profileColorOption: profileColor,
       theme,
       isPlain: !hasBackground,

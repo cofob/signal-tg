@@ -4,8 +4,6 @@ import {
 import { getActions, withGlobal } from '../../../global';
 
 import type {
-  ApiAvailableReaction,
-  ApiReaction,
   ApiSticker,
   ApiStickerSet,
 } from '../../../api/types';
@@ -14,19 +12,15 @@ import { SettingsScreens } from '../../../types';
 
 import { selectCanPlayAnimatedEmojis } from '../../../global/selectors';
 import { pick } from '../../../util/iteratees';
-import { REM } from '../../common/helpers/mediaDimensions';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import { useIntersectionObserver } from '../../../hooks/useIntersectionObserver';
 import useLang from '../../../hooks/useLang';
 
-import ReactionStaticEmoji from '../../common/reactions/ReactionStaticEmoji';
 import StickerSetCard from '../../common/StickerSetCard';
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
 import ListItem from '../../ui/ListItem';
-
-const DEFAULT_REACTION_SIZE = 1.5 * REM;
 
 type OwnProps = {
   isActive?: boolean;
@@ -40,8 +34,6 @@ type StateProps =
     addedSetIds?: string[];
     customEmojiSetIds?: string[];
     stickerSetsById: Record<string, ApiStickerSet>;
-    defaultReaction?: ApiReaction;
-    availableReactions?: ApiAvailableReaction[];
     canPlayAnimatedEmojis: boolean;
   };
 
@@ -50,10 +42,8 @@ const SettingsStickers = ({
   addedSetIds,
   customEmojiSetIds,
   stickerSetsById,
-  defaultReaction,
   shouldSuggestStickers,
   shouldUpdateStickerSetOrder,
-  availableReactions,
   canPlayAnimatedEmojis,
   onReset,
 }: OwnProps & StateProps) => {
@@ -106,21 +96,6 @@ const SettingsStickers = ({
           {lang('StickersListEmojiItem')}
           {customEmojiSetIds && <span className="settings-item__current-value">{customEmojiSetIds.length}</span>}
         </ListItem>
-        {defaultReaction && (
-          <ListItem
-            className="SettingsDefaultReaction"
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.QuickReaction })}
-          >
-            <ReactionStaticEmoji
-              reaction={defaultReaction}
-              className="ListItem-main-icon"
-              size={DEFAULT_REACTION_SIZE}
-              availableReactions={availableReactions}
-            />
-            <div className="title">{lang('DoubleTapSetting')}</div>
-          </ListItem>
-        )}
       </Island>
 
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
@@ -171,8 +146,6 @@ export default memo(withGlobal<OwnProps>(
       addedSetIds: global.stickers.added.setIds,
       customEmojiSetIds: global.customEmojis.added.setIds,
       stickerSetsById: global.stickers.setsById,
-      defaultReaction: global.config?.defaultReaction,
-      availableReactions: global.reactions.availableReactions,
       canPlayAnimatedEmojis: selectCanPlayAnimatedEmojis(global),
     };
   },

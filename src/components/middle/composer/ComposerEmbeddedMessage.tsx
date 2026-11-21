@@ -8,7 +8,7 @@ import type {
 } from '../../../api/types';
 import type { MessageListType, ThreadId } from '../../../types/index';
 
-import { canEditMediaInEditor, isChatChannel } from '../../../global/helpers';
+import { canEditMediaInEditor } from '../../../global/helpers';
 import {
   selectCanAnimateInterface,
   selectChat,
@@ -57,11 +57,9 @@ type StateProps = {
   noCaptions?: boolean;
   forwardsHaveCaptions?: boolean;
   isContextMenuDisabled?: boolean;
-  isReplyToDiscussion?: boolean;
   isInChangingRecipientMode?: boolean;
   shouldPreventComposerAnimation?: boolean;
   senderChat?: ApiChat;
-  isSenderChannel?: boolean;
   currentUserId?: string;
   forwardMessageIds?: number[];
   fromChatId?: string;
@@ -85,7 +83,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
   const {
     shouldAnimate,
     isMessageProtected,
-    isReplyToDiscussion,
     isInChangingRecipientMode,
     forwardMessageIds,
     fromChatId,
@@ -103,7 +100,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     setEditingId,
     focusMessage,
     changeRecipient,
-    openChatOrTopicWithReplyInDraft,
+    openChatWithReplyInDraft,
     setForwardNoAuthors,
     setForwardNoCaptions,
     exitForwardMode,
@@ -115,7 +112,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
   const lang = useLang();
   const { isMobile } = useAppLayout();
 
-  const isReplyToTopicStart = message?.content.action?.type === 'topicCreate';
   const isForwarding = Boolean(forwardedMessagesCount);
 
   const selectSenderFromForwardedMessage = useLastCallback((forwardedMessage: ApiMessage) => {
@@ -143,7 +139,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     if (forwardSenders && isForwarding) return true;
     return false;
   })();
-  const isOpen = isShown && !isReplyToTopicStart && !isReplyToDiscussion && !isHidden;
+  const isOpen = isShown && !isHidden;
 
   useEffect(() => {
     onIsOpenChange?.(isOpen);
@@ -180,7 +176,6 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     shouldForceShowEditing: frozenShouldForceShowEditing,
     replyInfo: frozenReplyInfo,
     editingId: frozenEditingId,
-    isSenderChannel,
   } = useFrozenProps(props, isClosing);
 
   const isForwardingRendering = Boolean(frozenForwardedMessagesCount);
@@ -217,7 +212,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
   } = useContextMenuHandlers(ref);
 
   const focusMessageFromDraft = () => {
-    focusMessage({ chatId: frozenMessage!.chatId, messageId: frozenMessage!.id, noForumTopicPanel: true });
+    focusMessage({ chatId: frozenMessage!.chatId, messageId: frozenMessage!.id });
   };
   const handleMessageClick = useLastCallback((e: React.MouseEvent): void => {
     handleContextMenu(e);
@@ -251,7 +246,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
   const handleReplyInSenderChat = useLastCallback(() => {
     handleContextMenuClose();
     if (!sender) return;
-    openChatOrTopicWithReplyInDraft({ chatId: sender.id });
+    openChatWithReplyInDraft({ chatId: sender.id });
   });
   const handleDoNotReplyClick = useLastCallback(buildAutoCloseMenuItemHandler(clearEmbedded));
 
@@ -308,8 +303,7 @@ const ComposerEmbeddedMessage = (props: OwnProps & StateProps) => {
     return undefined;
   }
 
-  const canReplyInSenderChat = sender && !isSenderChannel
-    && chatId !== sender.id && sender.id !== currentUserId;
+  const canReplyInSenderChat = sender && chatId !== sender.id && sender.id !== currentUserId;
 
   return (
     <div className={className} ref={ref} onContextMenu={handleContextMenu}>
@@ -519,18 +513,12 @@ export default memo(withGlobal<OwnProps>(
       }
     }
 
-    const chat = sender && selectChat(global, sender.id);
-    const isSenderChannel = chat && isChatChannel(chat);
-
     const forwardsHaveCaptions = forwardedMessages?.some((forward) => (
       forward?.content.text && Object.keys(forward.content).length > 1
     ));
 
     const isContextMenuDisabled = replyInfo?.type === 'ephemeral'
       || (isForwarding && forwardMessageIds!.length === 1 && Boolean(message?.content.storyData));
-
-    const isReplyToDiscussion = replyInfo?.type !== 'ephemeral'
-      && replyInfo?.replyToMsgId === threadId && !replyToPeerId;
 
     const isMediaNsfw = message && selectIsMediaNsfw(global, message);
 
@@ -545,12 +533,10 @@ export default memo(withGlobal<OwnProps>(
       noCaptions,
       forwardsHaveCaptions,
       isContextMenuDisabled,
-      isReplyToDiscussion,
       isInChangingRecipientMode: isModalShown,
       shouldPreventComposerAnimation,
       senderChat,
       currentUserId: global.currentUserId,
-      isSenderChannel,
       forwardMessageIds,
       fromChatId,
       isMediaNsfw,

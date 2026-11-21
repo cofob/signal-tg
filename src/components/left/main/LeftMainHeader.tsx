@@ -10,7 +10,6 @@ import { LeftColumnContent, SettingsScreens } from '../../../types';
 import {
   selectCanSetPasscode,
   selectCurrentMessageList,
-  selectIsForumPanelOpen,
   selectTabState,
   selectTheme,
 } from '../../../global/selectors';
@@ -28,7 +27,6 @@ import useKeyboardShortcuts from '../../../hooks/useKeyboardShortcuts';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import Icon from '../../common/icons/Icon';
 import MainMenuDropdown from '../../common/MainMenuDropdown';
 import PeerChip from '../../common/PeerChip';
 import StoryToggler from '../../story/StoryToggler';
@@ -40,7 +38,6 @@ import ConnectionStatusOverlay from '../ConnectionStatusOverlay';
 import './LeftMainHeader.scss';
 
 type OwnProps = {
-  shouldHideSearch?: boolean;
   content: LeftColumnContent;
   contactsFilter: string;
   isClosingSearch?: boolean;
@@ -61,7 +58,6 @@ type StateProps = {
   areChatsLoaded?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
-  isForumPanelOpen?: boolean;
 } & Pick<GlobalState, 'connectionState' | 'isSyncing' | 'isFetchingDifference'>;
 
 const CLEAR_DATE_SEARCH_PARAM = { date: undefined };
@@ -70,7 +66,6 @@ const CLEAR_CHAT_SEARCH_PARAM = { id: undefined };
 const IS_WITH_WINDOW_BUTTONS = IS_TAURI && IS_MAC_OS;
 
 const LeftMainHeader = ({
-  shouldHideSearch,
   content,
   contactsFilter,
   isClosingSearch,
@@ -89,7 +84,6 @@ const LeftMainHeader = ({
   hasPasscode,
   canSetPasscode,
   isFoldersSidebarShown,
-  isForumPanelOpen,
   onSearchQuery,
   onReset,
 }: OwnProps & StateProps) => {
@@ -99,7 +93,6 @@ const LeftMainHeader = ({
     setGlobalSearchChatId,
     lockScreen,
     openSettingsScreen,
-    closeForumPanel,
   } = getActions();
 
   const lang = useLang();
@@ -107,8 +100,6 @@ const LeftMainHeader = ({
 
   const areContactsVisible = content === LeftColumnContent.Contacts;
   const hasMenu = content === LeftColumnContent.ChatList;
-
-  const isSearchButton = isForumPanelOpen && isFoldersSidebarShown && !IS_WITH_WINDOW_BUTTONS;
 
   const selectedSearchDate = useMemo(() => {
     return searchDate
@@ -134,10 +125,6 @@ const LeftMainHeader = ({
     }
   });
 
-  const handleForumSearchClick = useLastCallback(() => {
-    closeForumPanel();
-  });
-
   useKeyboardShortcuts(useMemo(() => (canSetPasscode ? {
     lockScreen: handleLockScreenHotkey,
   } : undefined), [canSetPasscode]));
@@ -152,23 +139,18 @@ const LeftMainHeader = ({
         size="smaller"
         color="translucent"
         className={buildClassName(isOpen && 'active')}
-
-        onClick={isSearchButton ? handleForumSearchClick : hasMenu ? onTrigger : () => onReset()}
+        onClick={hasMenu ? onTrigger : () => onReset()}
         ariaLabel={hasMenu ? lang('AriaLabelOpenMenu') : lang('AriaLabelBackChatList')}
       >
-        {isSearchButton ? (
-          <Icon name="search" />
-        ) : (
-          <div className={buildClassName(
-            'animated-menu-icon',
-            !hasMenu && 'state-back',
-            shouldSkipTransition && 'no-animation',
-          )}
-          />
+        <div className={buildClassName(
+          'animated-menu-icon',
+          !hasMenu && 'state-back',
+          shouldSkipTransition && 'no-animation',
         )}
+        />
       </Button>
     );
-  }, [hasMenu, isSearchButton, isMobile, lang, onReset, shouldSkipTransition]);
+  }, [hasMenu, isMobile, lang, onReset, shouldSkipTransition]);
 
   const handleSearchFocus = useLastCallback(() => {
     if (!searchQuery) {
@@ -238,8 +220,7 @@ const LeftMainHeader = ({
         <MainMenuDropdown
           trigger={MainButton}
           className={buildClassName(
-            hasMenu && isFoldersSidebarShown && !IS_WITH_WINDOW_BUTTONS && !isSearchButton && 'hide-menu-button',
-            isSearchButton && 'forum-search-button',
+            hasMenu && isFoldersSidebarShown && !IS_WITH_WINDOW_BUTTONS && 'hide-menu-button',
           )}
         />
         <SearchInput
@@ -247,7 +228,6 @@ const LeftMainHeader = ({
           resultsItemSelector=".LeftSearch .ListItem-button"
           className={buildClassName(
             (globalSearchChatId || searchDate) ? 'with-picker-item' : undefined,
-            shouldHideSearch && 'SearchInput--hidden',
             hasMenu && isFoldersSidebarShown && !IS_WITH_WINDOW_BUTTONS && 'SearchInput--no-left-margin',
           )}
           value={isClosingSearch ? undefined : (contactsFilter || searchQuery)}
@@ -306,7 +286,6 @@ export default memo(withGlobal<OwnProps>(
       connectionState, isSyncing, isFetchingDifference,
     } = global;
     const { isConnectionStatusMinimized } = selectSharedSettings(global);
-    const isForumPanelOpen = selectIsForumPanelOpen(global);
 
     return {
       searchQuery,
@@ -322,7 +301,6 @@ export default memo(withGlobal<OwnProps>(
       areChatsLoaded: Boolean(global.chats.listIds.active),
       hasPasscode: Boolean(global.passcode.hasPasscode),
       canSetPasscode: selectCanSetPasscode(global),
-      isForumPanelOpen,
     };
   },
 )(LeftMainHeader));
