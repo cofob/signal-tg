@@ -19,7 +19,9 @@ import { buildCollectionByKey } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
-import { buildApiUser, buildAvatarColor, buildPeerSettings, getAvatarPhotoId } from './users';
+import {
+  buildApiUser, buildAvatarColor, buildAvatarPhoto, buildPeerSettings, getAvatarPhotoId,
+} from './users';
 
 const READ_STATE_PAGE_SIZE = 50;
 // Signal group admins edit the group, add and remove members and admins, pin messages and delete them for everyone
@@ -215,6 +217,7 @@ export async function buildGroupFullInfo(
     fullInfo: {
       settings: buildPeerSettings(conversation, selfAci),
       about: conversation.description,
+      profilePhoto: buildAvatarPhoto(conversation),
       ttlPeriod: conversation.expireTimer,
       members,
       adminMembersById: buildCollectionByKey(members.filter(({ isAdmin }) => isAdmin), 'userId'),

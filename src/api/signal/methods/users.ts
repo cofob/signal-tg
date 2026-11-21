@@ -4,7 +4,9 @@ import type { ApiPeer, ApiUser } from '../../types';
 import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { buildApiChat } from '../builders/chats';
-import { buildApiUser, buildApiUserFullInfo, getIsContact } from '../builders/users';
+import {
+  buildApiUser, buildApiUserFullInfo, buildAvatarPhoto, getIsContact,
+} from '../builders/users';
 import { getCurrentAccount } from '../client';
 import { db, logError, processor } from '../engine';
 import { getConversationByPeerId, getPeerId } from '../peers';
@@ -96,4 +98,12 @@ function getCommonGroups(conversations: ConversationRecord[], aci: string, selfA
   return conversations.filter(({ type, memberAcis }) => (
     type === 'group' && memberAcis?.includes(aci) && memberAcis.includes(selfAci)
   ));
+}
+
+/** Signal keeps one avatar per user or group, so the profile photo list holds at most the current avatar */
+export async function fetchProfilePhotos({ peer }: { peer: ApiPeer }) {
+  const conversation = await getConversationByPeerId(peer.id);
+  const photo = conversation && buildAvatarPhoto(conversation);
+  const photos = photo ? [photo] : [];
+  return { photos, count: photos.length, nextOffsetId: undefined };
 }
