@@ -117,7 +117,8 @@ fn check_chain(trust: &X509StoreRef, chain: &[X509], untrusted_crls: &[X509CRL],
         if cert.not_before > time {
             return Err(X509VerifyError::CERT_NOT_YET_VALID);
         }
-        if cert.not_after < time {
+        // A certificate expires at its `notAfter` time, as in BoringSSL `X509_cmp_time_posix`
+        if cert.not_after <= time {
             return Err(X509VerifyError::CERT_HAS_EXPIRED);
         }
         if depth > 0 {
@@ -186,7 +187,7 @@ fn check_revocation(cert: &Certificate, issuer: &Certificate, crls: &[&Crl], tim
         if crl.this_update > time {
             return Err(X509VerifyError::CRL_NOT_YET_VALID);
         }
-        if crl.next_update.is_some_and(|next_update| next_update < time) {
+        if crl.next_update.is_some_and(|next_update| next_update <= time) {
             return Err(X509VerifyError::CRL_HAS_EXPIRED);
         }
         // Delta CRLs, distribution point scopes and indirect CRLs are not supported

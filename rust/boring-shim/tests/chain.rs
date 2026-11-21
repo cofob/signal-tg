@@ -1,8 +1,13 @@
 //! Chain verification with CRLs on certificates and CRLs that OpenSSL generated (`tests/data`): a root, a CA with
 //! `pathlen:0`, leaves, a leaf that is no CA but issues a certificate, a leaf with an unknown critical extension, and
-//! CRLs of the root and the CA, with and without revocations, one of them expired (`tests/make-fixtures.sh`).
+//! CRLs of the root and the CA, with and without revocations, one of them expired, a sub-CA below the CA, a chain
+//! to another root with the same name, a P-384 CA and a SHA-384 signature (`tests/make-fixtures.sh`).
 
-use boring::asn1::Asn1Time;
+use boring::asn1::{Asn1Time, Asn1TimeRef};
+use boring::bn::BigNum;
+use boring::ec::{EcGroup, EcKey};
+use boring::ecdsa::EcdsaSig;
+use boring::nid::Nid;
 use boring::stack::Stack;
 use boring::x509::crl::X509CRL;
 use boring::x509::store::X509StoreBuilder;
@@ -19,15 +24,29 @@ fn crl(name: &str) -> X509CRL {
     X509CRL::from_der(&std::fs::read(format!("{}/tests/data/{name}.der", env!("CARGO_MANIFEST_DIR"))).unwrap()).unwrap()
 }
 
+fn unix(time: &Asn1TimeRef) -> i64 {
+    let diff = Asn1Time::from_unix(0).unwrap().diff(time).unwrap();
+    i64::from(diff.days) * DAY_SECONDS + i64::from(diff.secs)
+}
+
 /// A day after the fixtures were made: the CRLs are current, except the expired one
 fn test_time() -> i64 {
-    let diff = Asn1Time::from_unix(0).unwrap().diff(cert("root").not_before()).unwrap();
-    i64::from(diff.days) * DAY_SECONDS + i64::from(diff.secs) + DAY_SECONDS
+    unix(cert("root").not_before()) + DAY_SECONDS
 }
 
 /// Verifies `leaf` with `chain` as untrusted certificates, the root and `trusted_crls` in the store, and
 /// `untrusted_crls` from the caller, as `attest` does
 fn verify(leaf: &str, chain: &[&str], trusted_crls: &[&str], untrusted_crls: &[&str], time: i64) -> X509VerifyResult {
+    verify_cert(&cert(leaf), chain, trusted_crls, untrusted_crls, time)
+}
+
+fn verify_cert(
+    leaf: &X509,
+    chain: &[&str],
+    trusted_crls: &[&str],
+    untrusted_crls: &[&str],
+    time: i64,
+) -> X509VerifyResult {
     let mut builder = X509StoreBuilder::new().unwrap();
     builder
         .param_mut()
@@ -48,10 +67,9 @@ fn verify(leaf: &str, chain: &[&str], trusted_crls: &[&str], untrusted_crls: &[&
         crls.push(crl(name)).unwrap();
     }
 
-    let leaf = cert(leaf);
     let mut context = X509StoreContext::new().unwrap();
     context
-        .init(&store, &leaf, &untrusted, |c| {
+        .init(&store, leaf, &untrusted, |c| {
             let is_valid = c.verify_cert_with_crls(crls)?;
             let result = c.verify_result();
             assert_eq!(is_valid, result.is_ok());
@@ -174,4 +192,111 @@ fn checks_issuers_and_signatures() {
     assert!(!leaf.verify(&root.public_key().unwrap()).unwrap());
     assert!(crl("ca_crl").verify(&ca.public_key().unwrap()).unwrap());
     assert!(!crl("ca_crl").verify(&root.public_key().unwrap()).unwrap());
+}
+
+#[test]
+fn expires_at_the_end_time() {
+    let chain_expiry = ["root", "ca", "leaf"]
+        .map(|name| unix(cert(name).not_after()))
+        .into_iter()
+        .min()
+        .unwrap();
+    assert_eq!(
+        verify("leaf", &["ca"], &["root_crl"], &["ca_crl"], chain_expiry - 1),
+        Ok(())
+    );
+    assert_eq!(
+        verify("leaf", &["ca"], &["root_crl"], &["ca_crl"], chain_expiry),
+        Err(X509VerifyError::CERT_HAS_EXPIRED)
+    );
+
+    let crl_expiry = unix(crl("ca_crl_expired").next_update().unwrap());
+    assert_eq!(
+        verify("leaf", &["ca"], &["root_crl"], &["ca_crl_expired"], crl_expiry - 1),
+        Ok(())
+    );
+    assert_eq!(
+        verify("leaf", &["ca"], &["root_crl"], &["ca_crl_expired"], crl_expiry),
+        Err(X509VerifyError::CRL_HAS_EXPIRED)
+    );
+}
+
+#[test]
+fn rejects_tampered_signatures() {
+    let mut der = cert("leaf").to_der().unwrap();
+    // The last byte belongs to the `s` scalar of the signature
+    *der.last_mut().unwrap() ^= 1;
+    let tampered = X509::from_der(&der).unwrap();
+    assert_eq!(
+        verify_cert(&tampered, &["ca"], &["root_crl"], &["ca_crl"], test_time()),
+        Err(X509VerifyError::CERT_SIGNATURE_FAILURE)
+    );
+    assert!(!tampered.verify(&cert("ca").public_key().unwrap()).unwrap());
+}
+
+#[test]
+fn rejects_unsupported_algorithms_and_curves() {
+    let time = test_time();
+    // ECDSA with SHA-384
+    assert_eq!(
+        verify("sha384", &["ca"], &["root_crl", "ca_crl"], &[], time),
+        Err(X509VerifyError::CERT_SIGNATURE_FAILURE)
+    );
+    // A P-384 issuer key
+    assert_eq!(
+        verify("leaf384", &["ca384"], &["root_crl"], &[], time),
+        Err(X509VerifyError::CERT_SIGNATURE_FAILURE)
+    );
+    assert!(cert("ca384").public_key().is_err());
+    assert!(EcGroup::from_curve_name(Nid::SECP384R1).is_err());
+}
+
+#[test]
+fn rejects_signature_scalars_out_of_range() {
+    let key = EcKey::from_public_key_affine_coordinates(
+        &EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap(),
+        &BigNum::from_slice(&hex("6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296")).unwrap(),
+        &BigNum::from_slice(&hex("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5")).unwrap(),
+    )
+    .unwrap();
+    let digest = [7; 32];
+    let order = hex("ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
+    let one = BigNum::from_slice(&[1]).unwrap();
+    for (r, s) in [
+        (BigNum::from_slice(&[]).unwrap(), one.clone()),
+        (one.clone(), BigNum::from_slice(&[]).unwrap()),
+        (BigNum::from_slice(&order).unwrap(), one.clone()),
+        (one.clone(), BigNum::from_slice(&order).unwrap()),
+        (BigNum::from_slice(&[1; 33]).unwrap(), one.clone()),
+    ] {
+        let signature = EcdsaSig::from_private_components(r, s).unwrap();
+        assert!(!signature.verify(&digest, &key).unwrap());
+    }
+}
+
+#[test]
+fn rejects_chains_to_another_root_with_the_same_name() {
+    assert_eq!(
+        verify("leaf2", &["ca2", "root2"], &["root_crl"], &[], test_time()),
+        Err(X509VerifyError::SELF_SIGNED_CERT_IN_CHAIN)
+    );
+    assert_eq!(
+        verify("leaf2", &["ca2"], &["root_crl"], &[], test_time()),
+        Err(X509VerifyError::UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+    );
+}
+
+#[test]
+fn rejects_exceeded_path_lengths() {
+    assert_eq!(
+        verify("subleaf", &["sub", "ca"], &["root_crl", "ca_crl"], &[], test_time()),
+        Err(X509VerifyError::PATH_LENGTH_EXCEEDED)
+    );
+}
+
+fn hex(text: &str) -> Vec<u8> {
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).unwrap())
+        .collect()
 }
