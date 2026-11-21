@@ -145,7 +145,7 @@ export async function sendGroupRequest(
 /**
  * Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`). Fields that do not
  * decrypt are cleared and users that do not decrypt are left out, so that one bad field of a member does not keep
- * the group from updating (Signal Desktop `decryptGroupState`).
+ * the group from updating (Signal Desktop `decryptGroupState`). Titles and descriptions are trimmed.
  */
 export function decryptGroupState(secretParams: Uint8Array, group: Group): GroupState {
   const decryptServiceId = (ciphertext: Uint8Array) => decryptGroupServiceId(secretParams, ciphertext);
@@ -155,8 +155,8 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
 
   return {
     revision: group.version,
-    title: title?.case === 'title' ? title.value : undefined,
-    description: description?.case === 'descriptionText' ? description.value : undefined,
+    title: title?.case === 'title' ? title.value.trim() : undefined,
+    description: description?.case === 'descriptionText' ? description.value.trim() : undefined,
     avatarUrl: group.avatarUrl || undefined,
     expireTimer: timer?.case === 'disappearingMessagesDuration' ? timer.value : undefined,
     accessControl: buildAccessControl(group.accessControl),

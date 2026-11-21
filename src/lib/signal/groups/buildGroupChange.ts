@@ -49,9 +49,11 @@ const INVITE_LINK_PASSWORD_LENGTH = 16;
 // Signal Android `RemoteConfig.groupLimits` hard limit, which also bounds the banned list
 const GROUP_SIZE_HARD_LIMIT = 1001;
 
-export function buildTitleChange(title: string): GroupChangeBuilder {
+/** Titles and descriptions are trimmed, as Signal Desktop does; a title cannot be empty */
+export function buildTitleChange(rawTitle: string): GroupChangeBuilder {
+  const title = rawTitle.trim();
   return (state, { secretParams }) => {
-    if (state.title === title) return undefined;
+    if (!title || state.title === title) return undefined;
     checkGroupTitle(title);
     const encrypted = encryptGroupAttribute(secretParams, { case: 'title', value: title });
     if (encrypted.length > GROUP_TITLE_MAX_ENCRYPTED_BYTES) throw new Error('Group title is too long');
@@ -59,7 +61,8 @@ export function buildTitleChange(title: string): GroupChangeBuilder {
   };
 }
 
-export function buildDescriptionChange(description: string): GroupChangeBuilder {
+export function buildDescriptionChange(rawDescription: string): GroupChangeBuilder {
+  const description = rawDescription.trim();
   return (state, { secretParams }) => {
     if ((state.description ?? '') === description) return undefined;
     checkGroupDescription(description);
@@ -303,11 +306,11 @@ export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupCha
 
 /** Group titles are limited in grapheme clusters, as Signal Android counts them */
 export function checkGroupTitle(title: string) {
-  if (countGraphemes(title) > GROUP_TITLE_MAX_GRAPHEMES) throw new GroupChangeRefusedError('titleTooLong');
+  if (countGraphemes(title.trim()) > GROUP_TITLE_MAX_GRAPHEMES) throw new GroupChangeRefusedError('titleTooLong');
 }
 
 export function checkGroupDescription(description: string) {
-  if (countGraphemes(description) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
+  if (countGraphemes(description.trim()) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
     throw new GroupChangeRefusedError('descriptionTooLong');
   }
 }

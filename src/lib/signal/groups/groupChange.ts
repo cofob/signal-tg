@@ -162,7 +162,7 @@ export function decryptGroupChange(secretParams: Uint8Array, actions: GroupChang
       content.case === 'title' ? content.value.trim() : undefined
     )),
     description: decryptAttribute(actions.modifyDescription?.description, (content) => (
-      content.case === 'descriptionText' ? content.value : undefined
+      content.case === 'descriptionText' ? content.value.trim() : undefined
     )),
     avatarUrl: actions.modifyAvatar && { value: actions.modifyAvatar.avatar || undefined },
     expireTimer: decryptAttribute(actions.modifyDisappearingMessageTimer?.timer, (content) => (

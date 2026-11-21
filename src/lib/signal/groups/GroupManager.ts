@@ -101,7 +101,10 @@ export default class GroupManager {
    * Creates a group with us as its admin (Signal Desktop `createGroupV2`). Users whose profile key credential we
    * cannot get are invited; the server rejecting a credential fetches all of them once more.
    */
-  async createGroup({ title, memberAcis, expireTimer }: { title: string; memberAcis: string[]; expireTimer?: number }) {
+  async createGroup({ title: rawTitle, memberAcis, expireTimer }: {
+    title: string; memberAcis: string[]; expireTimer?: number;
+  }) {
+    const title = rawTitle.trim();
     checkGroupTitle(title);
     const { store, account, connection } = this.client.getSenderContext();
     const others = [...new Set(memberAcis)].filter((aci) => aci !== account.aci);
