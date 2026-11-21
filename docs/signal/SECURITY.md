@@ -1,0 +1,240 @@
+# Security audit
+
+Audit of 2026-11-21 of the tunnel (`proxy/`), the TLS client (`rust/signal-wasm`), the web app, the data at rest, logging,
+the desktop app (`tauri/`) and the dependencies. Method: code review, unit tests, black-box runs of the tunnel, and
+measurements in Chrome on a demo account (`signalDev.seedDemo()`), which show what the browser keeps at rest. Status
+values: **fixed** (with a test or a before and after reproduction), **open** (needs a decision or more work),
+**accepted** (a deliberate trade-off).
+
+## Threat model
+
+Assets: the account credentials, identity and session keys, the profile key, the account entropy pool and master key,
+the message history, the contact list with numbers, and the decrypted attachments.
+
+| Adversary | Can | Defence |
+| --- | --- | --- |
+| Operator of the tunnel, or the network | Drop, delay and reorder connections; see the host names, times and volumes | TLS runs in the page's WebAssembly and trusts only Signal's CA (`SIGNAL_CA_PEM`), so the tunnel cannot read or forge Signal traffic |
+| Another website | Reach the tunnel through a visitor's browser; post to the app's share target | `Origin` check in the tunnel; the share target only pre-fills a draft |
+| A message sender | Send text, file names, vCards, link previews, stickers, SVG and other attachments, long strings | Rendered as text nodes, attributes are escaped, links keep only allowed schemes, media is shown through `<img>` and `<video>` and streamed with `Content-Security-Policy: sandbox` |
+| Someone with the browser profile or the files of the desktop app, without the passcode | Read IndexedDB, Cache storage, `localStorage`, files | The passcode encrypts Web A's state only; the engine's stores are not encrypted (S-02) |
+| Script running in the page or the worker | Read everything the engine holds in memory and storage | Not defended by design: CSP without `unsafe-eval` and inline scripts, no third-party hosts, `check:hosts` in CI |
+| Someone who gets the unlocked computer | Everything the user can do | Out of scope |
+
+Out of scope: the Signal service, libsignal's cryptography, the browser and operating system, the user's phone.
+
+## Findings
+
+| ID | Severity | Area | Finding | Status |
+| --- | --- | --- | --- | --- |
+| S-01 | High | Logout | Logging out from the passcode lock screen, or before the engine started, left the account, keys, messages and attachments, and the next load signed back in | Fixed |
+| S-02 | High | Data at rest | With a passcode, the engine's stores (keys, account password, conversations, messages, attachments) stay plaintext | Open: design written, key management done |
+| S-03 | Medium | CSP | The production policy is a `<meta>` tag: it does not apply to the engine's Web Worker and cannot carry `frame-ancestors` | Open: needs the response headers of the deployment, documented |
+| S-04 | Medium | Tauri | `shell:default` and `process:default` gave the page the shell plugin's `open` and the process `exit`; webviews could open new windows | Fixed |
+| S-05 | Medium | Logout | Logging out does not remove the device from the account on the server | Open: decision needed |
+| S-06 | Low | Unlink | After the phone unlinks the browser, conversations and messages stay in plaintext with no way to erase them from the app | Accepted: Signal Desktop does the same; an erase action is recommended |
+| S-07 | Low | Logging | Production error logs carried ACIs, numbers and key-sized values | Fixed |
+| S-08 | Low | Tauri | The record of saved files (paths, attachment keys) survived logout, and log lines named saved files | Fixed |
+| S-09 | Low | Web | Links from messages sent the app's origin as `Referer` | Fixed |
+| S-10 | Low | CSP | `frame-src 'self'` although the app embeds no frames | Fixed |
+| S-11 | Info | CSP | `connect-src` allows any `wss:` host and `style-src` allows inline styles | Accepted |
+| S-12 | Info | Web | The share target accepts a cross-site POST and pre-fills a draft | Accepted |
+| S-13 | Info | Build | Builds with `APP_ENV` other than `production` expose `signalDev` and `window.getGlobal` | Accepted: deployment rule |
+| S-14 | Info | Tunnel | A client can hold the global handshake slots; the tunnel connects upstream before it checks the ClientHello | Accepted |
+| S-15 | Info | Dependencies | 2 high and 22 moderate advisories in dev tooling; unmaintained crates in the desktop and WASM lockfiles | Accepted |
+
+### S-01 Logout leaves the engine's data (High, fixed)
+
+`signOut` and `signOutAllAccounts` wiped Web A's state and called the API's `destroy`, which wipes the engine's stores.
+The API connector drops `destroy` while the worker is not initialized (`NO_QUEUE_BEFORE_INIT` in
+`src/api/worker/connector.ts`): that is the case on the lock screen of a passcode, whose "forgot passcode" link runs
+`signOutAllAccounts`, and during the first seconds after a load.
+
+Reproduction before the fix (demo account, passcode set, reload, lock screen, `getActions().signOutAllAccounts()`):
+`ts-signal` kept 7 records including the account password and identity keys, `ts-signal-messages` kept 12 conversations,
+56 messages and 6 stories, and after the reload `localStorage.account1` was back: the engine found the account and
+signed in again. After the fix the same steps leave 0 records, an empty attachment cache and no account.
+
+Fix: `clearSignalLocalData()` (`src/lib/signal/clearLocalData.ts`) clears the stores and the attachment cache from the
+page, whether or not the engine runs; both actions call it. Test: `src/lib/signal/clearLocalData.test.ts`.
+
+### S-02 Engine stores are plaintext under a passcode (High, open)
+
+Measured with the demo account, passcode set, screen unlocked and locked:
+
+| Storage | Contents | State |
+| --- | --- | --- |
+| IndexedDB `ts-signal` (7 records) | `account` with `password`, identity key pairs, sessions, prekeys, profile key | plaintext objects |
+| IndexedDB `ts-signal-messages` | 12 conversations with names and numbers, 56 messages with `body`, 6 stories | plaintext objects |
+| Cache `ts-signal-attachments` | 9 decrypted images | plaintext |
+| IndexedDB `tt-data`, `tt-passcode`, `localStorage` | Web A state | encrypted in `tt-passcode`; `localStorage` holds only the lock flag |
+
+Without a passcode the same data is plaintext too, as in Signal Desktop's default. A passcode therefore protects the UI
+state but not the history or keys.
+
+What is done: `getEngineKey()` (`src/util/passcode/index.ts`) keeps a random 32-byte key in the passcode vault under the
+data key, creates it at first use, wraps it again when the passcode changes, and drops it with the vault. Tests:
+`src/util/passcode/engineKey.test.ts`.
+
+What is not: encrypting the stores. It does not fit one clean pass: `MessageDb` has indexes and cursors on plaintext
+fields, attachments sit in the Cache API, the engine has to start with the key and migrate existing records, and a
+half-way state (only the keys encrypted) would suggest that the history is protected. The concrete design (record format,
+which fields stay open, migration, lock and multi-tab behaviour, what it does not protect) is in
+`docs/signal/PLAN.md`, stage 6, "Шифрование хранилища движка код-паролем".
+
+### S-03 The CSP does not cover the engine's worker (Medium, open)
+
+A `<meta http-equiv="Content-Security-Policy">` applies to the document. A dedicated worker takes its policy from its own
+response. Test: a page with `connect-src 'self'` in a meta tag could not `fetch` another origin, and a worker from the
+same origin fetched it (`REACHED-OTHER-ORIGIN` in the server log). The Signal engine, with all keys, runs in such a
+worker, so in production the CSP does not limit its network access, and `frame-ancestors` cannot be set at all. The
+development server sends the policy as a header, so it does not show the gap.
+
+The policy itself is sound: `default-src 'self'`, `script-src 'self' 'wasm-unsafe-eval'` (no `unsafe-eval`, no inline
+scripts), `worker-src 'self'` (plus `blob:` only in development), `object-src 'none'`, `base-uri 'none'`,
+`form-action 'none'`, `frame-src 'none'`, `connect-src` limited to the app, the tunnel and the proxy setting (S-11).
+
+Mitigation: `proxy/README.md` ("Headers for the app") gives the nginx and Caddy header blocks that send the same policy,
+`frame-ancestors 'none'`, `nosniff`, `Referrer-Policy` and HSTS on every response. Open: the desktop app sets `csp: null`
+in `tauri/tauri.conf.json`, so its workers get no policy either; a Tauri `csp` equal to `buildCsp` would fix it and needs a
+test on the three platforms. The unit that ships the headers (a file emitted by the build) is not written.
+
+### S-04 Tauri capabilities (Medium, fixed)
+
+Reviewed: `capabilities/default.json` is `local`, so only the app's page gets IPC; `on_navigation` allows only the app's
+exact URL; the page's commands are the app's own (`build.rs` lists them, `removeUnusedCommands` is on); `dialog`,
+`opener`, `fs` and `os` have no permission for the page; downloads that the webview starts are refused; the updater runs
+only with an endpoint and a public key in the build config and the plugin verifies every signature, and the page cannot
+override its endpoints.
+
+Fixed:
+
+- `shell:default` exposed the shell plugin's `open` to any script in the page. The page opened links through it. A native
+  `open_external_url` command opens only `http`, `https`, `mailto` and `tel` URLs; the shell plugin and its npm package
+  are removed.
+- `process:default` allowed `exit` and `restart`; only `restart` is used.
+- No handler denied `window.open`, which Windows webviews open as a window by default; `on_new_window` now denies it.
+
+Tests: `opens_only_web_mail_and_phone_links_outside_the_app` in `tauri/src/lib.rs`.
+
+### S-05 Logout does not unlink the device (Medium, open)
+
+`destroy` forgets the account locally ("the phone keeps listing the device until it unlinks it",
+`src/api/signal/methods/client.ts`). The server keeps the device registered: it queues messages for it, and uses its
+prekeys, until the phone removes it. The local keys are gone, so nobody can use the device, and no data leaks, but the
+user believes the session is closed. Linked devices may remove themselves (`unlinkDevice`, already used for relink).
+Recommendation: on a user's logout of a linked device, send `DELETE /v1/devices/{id}` best effort in parallel with the
+local wipe, never delaying the wipe. Not changed here because it alters a documented behaviour and needs a decision.
+
+### S-06 Phone-initiated unlink keeps the data (Low, accepted)
+
+`handleUnlinked` keeps conversations and messages until another account links (as Signal Desktop's soft unlink), and the
+link screen has no "erase" action. Data stays in plaintext on a shared computer until the user logs in as another
+account or clears site data. Recommendation: an "erase data" action on the link screen that runs
+`clearSignalLocalData()`.
+
+### S-07 Logging (Low, fixed)
+
+Production logs: all errors of the engine go through `logError` (`src/api/signal/engine.ts`) and the global
+`handleError`; their text named ACIs (`Profile request for <aci> failed`) and could name numbers. They now print
+`maskSensitiveText(...)` of the error's stack in production (`src/util/maskSensitiveText.ts`: UUIDs, E.164 numbers and
+runs of 32 or more key-sized characters are replaced), and the error object in development. The other `console.*` calls
+in production code print no message content, keys, numbers or ACIs (checked: they are guarded by `DEBUG`, or print
+error objects and fixed text; the link-open failure no longer prints the URL). `signalDev` and `window.getGlobal` exist
+only when `DEBUG` is true (S-13). Test: `src/util/maskSensitiveText.test.ts`.
+
+### S-08 Saved files in the desktop app (Low, fixed)
+
+`saved_files.json` in the app data directory lists the paths and attachment keys of every saved file and was never
+cleared. `forget_saved_files` drops the records (the files stay) and logout calls it; Rust log lines no longer print
+file paths. Test: `clearing_drops_every_record_from_storage` in `tauri/src/files.rs`.
+
+### S-09, S-10 Referrer and frames (Low, fixed)
+
+`<meta name="referrer" content="no-referrer">` keeps the app's origin from the sites that links open; `frame-src` is
+`'none'` because the only iframe, Telegram's Instant View embed, is unreachable in the Signal app.
+
+### S-11 to S-13 Accepted
+
+- `connect-src` has `wss:` because the Proxy server setting accepts any `wss://` URL at runtime, which a static policy
+  cannot list. `style-src 'unsafe-inline'` is for style attributes that the UI sets; scripts have no inline allowance.
+  `blob:` and `data:` in `connect-src` serve `fetch` of object URLs.
+- The web share target (`/share/`) can be posted to by any site and opens a draft; the user still picks a chat and sends.
+- Deployments must build with `APP_ENV=production`: other values enable the developer console tools.
+
+### S-14 Tunnel observations (Info, accepted)
+
+No bypass found (see below). Two limits remain: `MAX_HANDSHAKES` slots are global, so one client can keep them busy
+for `HANDSHAKE_TIMEOUT_SECS` (the reverse proxy's connection limits cover this), and the upstream TCP connection opens
+before the ClientHello check (a bad client costs a connection of 10 seconds at most, within its per-client limits).
+
+### S-15 Dependencies (Info, accepted)
+
+- `npm audit --omit=dev`: 0 advisories. The full audit reports 2 high (`undici` 4 to 6.29 and 8.0 to 8.12 through
+  `jsdom`, `zod` below 4.6.6 in tooling) and 22 moderate advisories, all in `devDependencies` (test runner, linters, icon
+  and bundle tooling); none ships in the app. `npm audit fix` finds nothing it may change without a major update.
+- `cargo audit` (advisory database of 2026-11-21): no vulnerabilities in `proxy/`, `tauri/`, `rust/signal-wasm` and
+  `rust/libsignal`. Warnings only: unmaintained `chrono`, `paste`, `bincode`, `proc-macro-error(2)`, `ttf-parser`,
+  `zbus_names`, `zvariant`; and `glib` 0.18 (unsound `VariantStrIter`) through Tauri's GTK stack, which the app does
+  not call and which Tauri has to update.
+
+## Reviewed without findings
+
+### Tunnel (`proxy/`, `tauri/src/transport.rs`)
+
+- Allowlist: exact, lowercase DNS names from `ALLOWED_HOSTS`, port 443 only, no percent-decoding, so IP literals,
+  `host:port`, trailing dots, case variants and NUL are refused. `host` and `port` may appear once.
+- SNI against host: the first bytes must be a ClientHello whose only `server_name` is the requested host (checked
+  case-insensitively against the allowlist entry); `encrypted_client_hello`, a second name, a name type other than
+  `host_name`, trailing bytes, and a hello over 16 KiB are refused. The upstream is the allowlisted host, whatever the
+  client names. TLS is never terminated: after the check the relay copies bytes.
+- DNS rebinding and SSRF: the name is resolved once, only public addresses are used (IPv4-mapped and NAT64 forms are
+  unwrapped first), and the connection goes to the checked address. With `UPSTREAM_PROXY` the proxy resolves (documented).
+- Origin: loopback origins by default, exact origins by configuration, two `Origin` headers are refused, no `Origin`
+  needs `ALLOW_NO_ORIGIN=1`. It protects against other websites, not against non-browser clients.
+- Resources: global and per-client tunnel counts, new-tunnel rate, bandwidth, optional hourly bytes, bans after
+  repeated violations, bounded client table, bounded handshake count, request head and WebSocket message sizes, hello
+  and idle timeouts, bounded write buffers. The desktop app reuses the same library.
+- Black-box run of the built tunnel: a ClientHello for `cdn.signal.org`, `example.com` or an IP on a tunnel to
+  `chat.signal.org` closes with 1008 "server name mismatch" and no upstream bytes; the matching one gets the server's
+  answer; a missing or foreign `Origin`, `host=127.0.0.1` and `port=22` get 403.
+- Tests (new, `cargo test` in `proxy/`): allowlist, target parsing, origin matching, public-address ranges, proxy URL
+  parsing, limits, the ClientHello parser on valid, malformed, split and oversized hellos, and 200,000 deterministic
+  mutations that must not panic and never accept a hello without the host name. `cargo fuzz` needs nightly; the mutation
+  test runs in `cargo test` instead.
+
+### TLS client (`rust/signal-wasm/src/tls.rs`, `src/lib/signal/net/TlsTunnel.ts`)
+
+`RootCertStore` holds only `SIGNAL_CA_PEM` (Signal's root, valid to 2032-01-24), the server name is the host being
+contacted, rustls verifies the chain and the name, ALPN is `h2` or `http/1.1`, there is no client authentication and no
+way to disable verification. Every host in use (chat, storage, cdn, cdn2, cdn3, cdsi, contentproxy, svr2, sfu) is both
+in `src/lib/signal/config.ts` and in the tunnel's allowlist. CDSI and SVR2 use the attested connections of libsignal's
+`attest` with the production MRENCLAVE values in `config.ts` and tests that reject another enclave, an expired report
+and a modified byte (see PLAN.md). Certificate dates use the device clock, so a wrong clock fails closed.
+
+### Web app
+
+- XSS: no `dangerouslySetInnerHTML`; `innerHTML` is used for LaTeX markup (`Latex.tsx`), for copying the app's own
+  rendered selection, and in an inert `template` for pasted HTML. Message text, entities, file names, contacts and link
+  previews render as text nodes; the HTML builders escape attributes (`escapeHtmlAttribute`) and `ensureProtocol`
+  keeps `http`, `https`, `mailto`, `tel`, `tg`, `sgnl` and `ton`, so `javascript:` and `data:` links become web
+  addresses. Message links open through `SafeLink`, which asks before leaving for a suspicious link or one whose text
+  differs from its address. SVG attachments are shown through `<img>`, which does not run scripts, and streamed media carries
+  `Content-Security-Policy: sandbox` and `nosniff`.
+- `postMessage`: the only window handler (`EmbedFrame`) checks that the event comes from its iframe, which the policy
+  now forbids; the other channels are same-origin `BroadcastChannel`s and the service worker.
+- Service worker: it caches only same-origin static assets matched by hashed file names and the app shell, with
+  `response.ok` only; it does not cache media when a passcode exists. Decrypted media lives in `ts-signal-attachments`
+  and in the `tt-media*` caches, which logout clears (measured after the fix: the static `tt-assets` and empty media
+  caches are left).
+
+## Verifying again
+
+1. `cargo test`, `cargo clippy --all-targets -- -D warnings` and `cargo fmt --check` in `proxy/` and `tauri/`.
+2. `npm run check:ts`, `npm run check:hosts`, and `npx vitest run src/lib/signal/clearLocalData.test.ts
+   src/util/maskSensitiveText.test.ts src/util/passcode/engineKey.test.ts`.
+3. At rest and logout: run `npm run dev`, open the page in Chrome, call `await signalDev.seedDemo()` in the console, reload,
+   set a passcode in Settings, and list `indexedDB.databases()`, `localStorage` and `caches.keys()`. After a fix of S-02
+   `ts-signal*` must hold no readable message text or password. For S-01: lock, reload, "forgot passcode" and log out;
+   every store above must be empty after the reload and the app must not sign in again.
+4. CSP in workers: serve the built app without headers and with the headers of `proxy/README.md`, and fetch another
+   origin from the worker (the engine's `worker-*.js`) in each case.
