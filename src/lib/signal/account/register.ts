@@ -1,13 +1,13 @@
 import type { HttpResponse } from '../net/http';
 import type { Credentials } from '../net/rest';
 import type SignalStore from '../store/SignalStore';
-import type { AccountRecord, KeyPairBytes } from '../store/SignalStore';
+import type { AccountRecord, KeyPairBytes, PendingRegistration } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST, SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferToBase64 } from '../../../util/encoding/buffer';
 import { encodeUtf8, generateRegistrationId, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
-import { getBasicAuthorization } from '../net/rest';
+import { getBasicAuthorization, HttpError, sendJsonRequest } from '../net/rest';
 import { uploadProfile } from '../profiles/uploadProfile';
 import { toPniServiceId } from '../serviceId';
 import { wasm } from '../wasm';
@@ -59,9 +59,10 @@ type RegistrationResponse = {
   number?: string;
 };
 
-type RegistrationKeys = {
-  identityKeyPair: KeyPairBytes;
-  lastResortPreKeys: ReturnType<typeof createLastResortPreKeys>;
+type WhoAmIResponse = {
+  uuid?: string;
+  pni?: string;
+  number?: string;
 };
 
 export class RegistrationError extends Error {
@@ -89,6 +90,7 @@ const PASSWORD_BYTES = 16;
 const PROFILE_KEY_LENGTH = 32;
 const MEDIA_ROOT_BACKUP_KEY_LENGTH = 32;
 const HTTP_MULTIPLE_CHOICES = 300;
+const HTTP_SERVER_ERROR = 500;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
@@ -150,7 +152,9 @@ export function submitVerificationCode(sessionId: string, code: string) {
  * Creates the account of a verified session with this browser as its primary device (`POST /v1/registration`)
  * and stores it as `isRegistrationPending` until `completeRegistration`. Port of Signal Desktop
  * `AccountManager.registerAsPrimaryDevice` and `WebAPI.createAccount` with the request shape of libsignal-net
- * `RegisterChatRequest`.
+ * `RegisterChatRequest`. The keys are stored as a pending registration before the request, so an account that the
+ * server created while the answer got lost is not lost with them: a pending registration is resolved first
+ * (`resumePendingRegistration`), and its keys are never replaced while its outcome is unknown.
  */
 export async function registerAccount(store: SignalStore, {
   number, sessionId, isDiscoverableByPhoneNumber,
@@ -159,16 +163,20 @@ export async function registerAccount(store: SignalStore, {
   sessionId: string;
   isDiscoverableByPhoneNumber: boolean;
 }) {
-  const aciKeys = generateRegistrationKeys();
-  const pniKeys = generateRegistrationKeys();
-  // The base64 of 16 random bytes without its `==` padding
-  const password = bufferToBase64(getRandomBytes(PASSWORD_BYTES)).slice(0, -2);
-  const registrationId = generateRegistrationId();
-  const pniRegistrationId = generateRegistrationId();
-  const profileKey = getRandomBytes(PROFILE_KEY_LENGTH);
-  const accountEntropyPool = wasm.AccountEntropyPool_Generate();
+  const resumedAccount = await resumePendingRegistration(store).catch(() => {
+    throw new RegistrationError('network', 0);
+  });
+  if (resumedAccount) return resumedAccount;
+
+  const pending = createPendingRegistration(number, !isDiscoverableByPhoneNumber);
+  await store.setItem('pendingRegistration', pending);
+  const {
+    aciIdentityKeyPair, pniIdentityKeyPair, aciLastResortPreKeys, pniLastResortPreKeys, registrationId,
+    pniRegistrationId, password, accountEntropyPool, profileKey,
+  } = pending;
   const svrKey = wasm.AccountEntropyPool_DeriveSvrKey(accountEntropyPool);
 
+  // A request that never gets an answer leaves the registration pending
   const response = await sendRegistrationRequest('POST', '/v1/registration', {
     sessionId,
     accountAttributes: {
@@ -182,15 +190,17 @@ export async function registerAccount(store: SignalStore, {
       discoverableByPhoneNumber: isDiscoverableByPhoneNumber,
     },
     skipDeviceTransfer: true,
-    aciIdentityKey: bufferToBase64(aciKeys.identityKeyPair.publicKey),
-    pniIdentityKey: bufferToBase64(pniKeys.identityKeyPair.publicKey),
-    aciSignedPreKey: aciKeys.lastResortPreKeys.signedPreKey.upload,
-    pniSignedPreKey: pniKeys.lastResortPreKeys.signedPreKey.upload,
-    aciPqLastResortPreKey: aciKeys.lastResortPreKeys.pqLastResortPreKey.upload,
-    pniPqLastResortPreKey: pniKeys.lastResortPreKeys.pqLastResortPreKey.upload,
+    aciIdentityKey: bufferToBase64(aciIdentityKeyPair.publicKey),
+    pniIdentityKey: bufferToBase64(pniIdentityKeyPair.publicKey),
+    aciSignedPreKey: aciLastResortPreKeys.signedPreKey.upload,
+    pniSignedPreKey: pniLastResortPreKeys.signedPreKey.upload,
+    aciPqLastResortPreKey: aciLastResortPreKeys.pqLastResortPreKey.upload,
+    pniPqLastResortPreKey: pniLastResortPreKeys.pqLastResortPreKey.upload,
   }, undefined, { username: number, password });
 
   const { status } = response;
+  // A refusal means that there is no account: nothing is left to resume. A server error may have created one.
+  if (status >= HTTP_MULTIPLE_CHOICES && status < HTTP_SERVER_ERROR) await store.removeItem('pendingRegistration');
   if (status === HTTP_UNAUTHORIZED) throw new RegistrationError('sessionNotFound', status);
   // Signal Desktop cannot continue without the PIN either when the server sends no SVR credentials
   if (status === HTTP_LOCKED) throw new RegistrationError('registrationLock', status);
@@ -202,32 +212,86 @@ export async function registerAccount(store: SignalStore, {
 
   const json = parseJson<RegistrationResponse>(response);
   if (!json?.uuid || !json.pni) throw new Error('Registration response has no ACI or PNI');
-  const { uuid: aci, pni } = json;
-  const pniServiceId = toPniServiceId(pni);
+  return saveRegisteredAccount(store, pending, { ...json, uuid: json.uuid, pni: json.pni });
+}
 
-  await store.setItem('aciIdentityKeyPair', aciKeys.identityKeyPair);
-  await store.setItem('pniIdentityKeyPair', pniKeys.identityKeyPair);
-  await saveLastResortPreKeys(store, aci, aciKeys.lastResortPreKeys);
-  await saveLastResortPreKeys(store, pniServiceId, pniKeys.lastResortPreKeys);
+/**
+ * Finds out what became of a registration whose request went out and stores its account: the server tells with the
+ * credentials of the request (`GET /v1/accounts/whoami`). A 401 means that it created nothing, and the keys go. When
+ * the server cannot be asked, the registration stays and the error is thrown. Returns `undefined` without an account.
+ */
+export async function resumePendingRegistration(store: SignalStore) {
+  const pending = await store.getItem('pendingRegistration');
+  if (!pending) return undefined;
+
+  let json;
+  try {
+    json = await sendJsonRequest<WhoAmIResponse>(SIGNAL_CHAT_HOST, {
+      method: 'GET',
+      path: '/v1/accounts/whoami',
+      credentials: { username: pending.number, password: pending.password },
+    });
+  } catch (err) {
+    if (err instanceof HttpError && err.status === HTTP_UNAUTHORIZED) {
+      await store.removeItem('pendingRegistration');
+      return undefined;
+    }
+    throw err;
+  }
+  if (!json?.uuid || !json.pni) throw new Error('Account response has no ACI or PNI');
+  return saveRegisteredAccount(store, pending, { ...json, uuid: json.uuid, pni: json.pni });
+}
+
+function createPendingRegistration(number: string, isPhoneNumberUnlisted: boolean): PendingRegistration {
+  const aciIdentityKeyPair = generateIdentityKeyPair();
+  const pniIdentityKeyPair = generateIdentityKeyPair();
+  return {
+    number,
+    // The base64 of 16 random bytes without its `==` padding
+    password: bufferToBase64(getRandomBytes(PASSWORD_BYTES)).slice(0, -2),
+    isPhoneNumberUnlisted,
+    registrationId: generateRegistrationId(),
+    pniRegistrationId: generateRegistrationId(),
+    profileKey: getRandomBytes(PROFILE_KEY_LENGTH),
+    accountEntropyPool: wasm.AccountEntropyPool_Generate(),
+    mediaRootBackupKey: getRandomBytes(MEDIA_ROOT_BACKUP_KEY_LENGTH),
+    aciIdentityKeyPair,
+    pniIdentityKeyPair,
+    aciLastResortPreKeys: createLastResortPreKeys(aciIdentityKeyPair),
+    pniLastResortPreKeys: createLastResortPreKeys(pniIdentityKeyPair),
+  };
+}
+
+/** Stores the keys and the account of a registration that the server accepted; the pending registration goes last */
+async function saveRegisteredAccount(
+  store: SignalStore,
+  pending: PendingRegistration,
+  { uuid: aci, pni, number }: { uuid: string; pni: string; number?: string },
+) {
+  await store.setItem('aciIdentityKeyPair', pending.aciIdentityKeyPair);
+  await store.setItem('pniIdentityKeyPair', pending.pniIdentityKeyPair);
+  await saveLastResortPreKeys(store, aci, pending.aciLastResortPreKeys);
+  await saveLastResortPreKeys(store, toPniServiceId(pni), pending.pniLastResortPreKeys);
 
   const account: AccountRecord = {
     aci,
     pni,
-    number: json.number || number,
+    number: number || pending.number,
     deviceId: SIGNAL_PRIMARY_DEVICE_ID,
-    password,
-    registrationId,
-    pniRegistrationId,
-    profileKey,
-    accountEntropyPool,
-    mediaRootBackupKey: getRandomBytes(MEDIA_ROOT_BACKUP_KEY_LENGTH),
-    isPhoneNumberUnlisted: !isDiscoverableByPhoneNumber,
+    password: pending.password,
+    registrationId: pending.registrationId,
+    pniRegistrationId: pending.pniRegistrationId,
+    profileKey: pending.profileKey,
+    accountEntropyPool: pending.accountEntropyPool,
+    mediaRootBackupKey: pending.mediaRootBackupKey,
+    isPhoneNumberUnlisted: pending.isPhoneNumberUnlisted,
     isReadReceiptsEnabled: true,
     // A primary device has no other device to ask for contacts, groups and keys
     isInitialSyncDone: true,
     isRegistrationPending: true,
   };
   await store.setItem('account', account);
+  await store.removeItem('pendingRegistration');
   return account;
 }
 
@@ -251,13 +315,12 @@ export async function completeRegistration(
   return completedAccount;
 }
 
-function generateRegistrationKeys(): RegistrationKeys {
+function generateIdentityKeyPair(): KeyPairBytes {
   const privateKey = wasm.PrivateKey_Generate();
-  const identityKeyPair = {
+  return {
     privateKey: wasm.PrivateKey_Serialize(privateKey),
     publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(privateKey)),
   };
-  return { identityKeyPair, lastResortPreKeys: createLastResortPreKeys(identityKeyPair) };
 }
 
 function getSessionPath(sessionId: string) {

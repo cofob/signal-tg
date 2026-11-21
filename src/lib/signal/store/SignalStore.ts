@@ -1,3 +1,4 @@
+import type { LastResortPreKeys } from '../account/preKeys';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
@@ -46,6 +47,25 @@ export type AccountRecord = {
   historyTransfer?: HistoryTransferState;
 };
 
+/**
+ * Everything a registration generates, stored before its request goes out: when the answer is lost, the account may
+ * exist on the server, and only these keys can use it
+ */
+export type PendingRegistration = {
+  number: string;
+  password: string;
+  isPhoneNumberUnlisted: boolean;
+  registrationId: number;
+  pniRegistrationId: number;
+  profileKey: Uint8Array;
+  accountEntropyPool: string;
+  mediaRootBackupKey: Uint8Array;
+  aciIdentityKeyPair: KeyPairBytes;
+  pniIdentityKeyPair: KeyPairBytes;
+  aciLastResortPreKeys: LastResortPreKeys;
+  pniLastResortPreKeys: LastResortPreKeys;
+};
+
 /** Where the primary device uploaded the message history archive */
 export type TransferArchive = {
   cdn: number;
@@ -92,6 +112,8 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // A registration whose request went out; `resumePendingRegistration` finds out what became of it
+  pendingRegistration: PendingRegistration;
   // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
   unlinkedAci: string;
 };

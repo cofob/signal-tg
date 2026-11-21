@@ -5,6 +5,7 @@ import type { ApiInitialArgs } from '../types';
 import { DEBUG } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
+import { resumePendingRegistration } from '../../lib/signal/account/register';
 import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
@@ -43,7 +44,8 @@ let historyTransferController: AbortController | undefined;
 
 /**
  * Connects the stored account, or shows the link QR code until the phone scans it; registration with a phone
- * number starts from there. An account whose registration stopped before its profile resumes at that step.
+ * number starts from there. An account whose registration stopped before its profile resumes at that step, and so
+ * does one that the server created while the app was closed before it saw the answer.
  * The app treats an account as authorized even while the connection is down, so local chats stay visible.
  */
 export async function startClient(args: ApiInitialArgs) {
@@ -53,7 +55,7 @@ export async function startClient(args: ApiInitialArgs) {
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
-  const account = await store.getItem('account');
+  const account = await store.getItem('account') ?? await resumeInterruptedRegistration();
   if (account?.isRegistrationPending) {
     sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
     resumeRegistration(account);
@@ -64,6 +66,16 @@ export async function startClient(args: ApiInitialArgs) {
     return;
   }
   void runDeviceLink(args.platform).catch(logError);
+}
+
+/** The account that a registration created before the app stopped, when the server has it */
+async function resumeInterruptedRegistration() {
+  try {
+    return await resumePendingRegistration(store);
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
 }
 
 /** Leaves the link QR code for registration with a phone number */
