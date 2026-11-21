@@ -167,6 +167,9 @@ const DELIVERY_RECEIPT_DELAY_MS = 1000;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Signal Desktop `ts/routineProfileRefresh.preload.ts`
+const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
+const MAX_PROFILES_TO_REFRESH = 50;
 // Signal Desktop `ts/util/canEditMessage.dom.ts` and `ts/util/getDeleteMaxAgeMs.std.ts`
 const EDIT_MAX_AGE_MS = DAY_MS;
 const MAX_EDIT_COUNT = 10;
@@ -888,9 +891,35 @@ export default class MessageProcessor {
         about: profile.about,
         aboutEmoji: profile.aboutEmoji,
         avatarPath: profile.avatarPath,
+        profileFetchedAt: Date.now(),
       });
     });
     this.flush();
+  }
+
+  /**
+   * Fetches the profiles of up to 50 private conversations whose profile is missing or older than three days,
+   * most recently active first (Signal Desktop `routineProfileRefresh`). Conversations created before the
+   * connection, such as those from history transfer or storage service, get their names and avatars this way.
+   */
+  async refreshStaleProfiles() {
+    const { store, account } = this.client.getSenderContext();
+    const now = Date.now();
+    const candidates = (await this.db.getConversations())
+      .filter(({ id, type, profileFetchedAt }) => (
+        type === 'private' && id !== account.aci && (!profileFetchedAt || now - profileFetchedAt > PROFILE_MAX_AGE_MS)
+      ))
+      .sort((a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0));
+
+    let count = 0;
+    for (const { id } of candidates) {
+      if (count >= MAX_PROFILES_TO_REFRESH) break;
+      // Profiles without a known profile key cannot be decrypted
+      if (!(await store.getRecipient(id))?.profileKey) continue;
+      count++;
+      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(id)).catch(this.events.onError);
+    }
+    await this.profileQueue;
   }
 
   /**

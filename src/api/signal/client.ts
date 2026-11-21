@@ -243,7 +243,7 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile and a storage service sync
+ * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
@@ -256,6 +256,7 @@ async function syncAfterConnect() {
   }
   void processor.refreshProfile(context.account.aci).catch(logError);
   await processor.syncStorage();
+  void processor.refreshStaleProfiles().catch(logError);
 }
 
 async function connect() {
