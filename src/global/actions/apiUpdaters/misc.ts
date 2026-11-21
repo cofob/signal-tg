@@ -1,5 +1,6 @@
 import type { ActionReturnType } from '../../types';
 
+import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler, setGlobal } from '../../index';
 import {
   addBlockedUser,
@@ -74,6 +75,14 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateConfig':
       actions.loadConfig();
       break;
+
+    case 'updateSafetyNumberBlock': {
+      const { chatId, messageId, userIds } = update;
+      actions.openSafetyNumberChangeModal({
+        chatId, messageId, userIds, tabId: getCurrentTabId(),
+      });
+      break;
+    }
 
     case 'updateFavoriteStickers':
       actions.loadFavoriteStickers();

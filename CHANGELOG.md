@@ -7,6 +7,11 @@ TeleSignal is based, is in [docs/TELEGRAM_WEB_A_CHANGELOG.md](docs/TELEGRAM_WEB_
 
 ## [Unreleased]
 
+### Security
+
+- Desktop app: the TLS libraries and the ZIP reader of the updater are updated to versions that fix published security
+  advisories.
+
 ## [0.1.0] - 2026-11-21
 
 The conversion of Telegram Web A into a Signal client; the plan and its status are in

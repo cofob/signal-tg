@@ -333,6 +333,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
 
   ...PRIVACY_VISIBILITY_SCREENS.flatMap(([screen, titleKey]) => [
     ...buildEntries(screen, [titleKey], { isSectionHeader: true }),

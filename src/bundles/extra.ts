@@ -70,7 +70,11 @@ export { default as AudioPlaylistModal } from '../components/modals/audioPlaylis
 export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/OneTimeMediaModal';
 export { default as FrozenAccountModal } from '../components/modals/frozenAccount/FrozenAccountModal';
 export { default as DisableSharingAboutModal } from '../components/modals/disableSharing/DisableSharingAboutModal';
+export { default as RecoveryKeyModal } from '../components/modals/recoveryKey/RecoveryKeyModal';
 export { default as SafetyNumberModal } from '../components/modals/safetyNumber/SafetyNumberModal';
+export {
+  default as SafetyNumberChangeModal,
+} from '../components/modals/safetyNumberChange/SafetyNumberChangeModal';
 export { default as AutoDeleteTimerModal } from '../components/modals/autoDeleteTimer/AutoDeleteTimerModal';
 export { default as SettingsConfirmationModal }
   from '../components/modals/settingsConfirmation/SettingsConfirmationModal';

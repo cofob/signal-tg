@@ -1,0 +1,39 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.key {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 0.375rem 1rem;
+  justify-content: center;
+
+  padding: 1rem;
+  border-radius: 1.125rem;
+
+  font-family: var(--font-family-monospace);
+  font-size: 1rem;
+  color: var(--color-text);
+
+  background-color: var(--color-background-secondary);
+}
+
+.block {
+  letter-spacing: 0.05em;
+}
+
+.warning {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error);
+}

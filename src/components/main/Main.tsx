@@ -205,6 +205,7 @@ const Main = ({
     loadFeaturedEmojiStickers,
     loadPeerColors,
     loadSavedReactionTags,
+    openRecoveryKeyModal,
     loadAllChats,
     loadAllStories,
     loadAllHiddenStories,
@@ -252,6 +253,14 @@ const Main = ({
   }, [isMobile]);
 
   useInterval(checkAppVersion, isMasterTab ? APP_OUTDATED_TIMEOUT_MS : undefined, true);
+
+  // The recovery key of a new account shows once per start, until the user confirms to have saved it
+  const hasCheckedRecoveryKeyRef = useRef(false);
+  useEffect(() => {
+    if (!isMasterTab || !isSynced || hasCheckedRecoveryKeyRef.current) return;
+    hasCheckedRecoveryKeyRef.current = true;
+    openRecoveryKeyModal({ shouldSkipConfirmed: true });
+  }, [isMasterTab, isSynced]);
 
   // Initial API calls
   useEffect(() => {

@@ -79,6 +79,7 @@ const SettingsPrivacy = ({
     openSettingsScreen,
     loadAccountDaysTtl,
     openAgeVerificationModal,
+    openRecoveryKeyModal,
     loadSignalPinSettings,
     loadSignalContactDiscovery,
     setSignalContactDiscovery,
@@ -143,6 +144,9 @@ const SettingsPrivacy = ({
     openDeleteAccountModal({ days: accountDaysTtl });
   });
 
+  const handleOpenRecoveryKey = useLastCallback(() => {
+    openRecoveryKeyModal();
+  });
   const handleOpenAutoDeleteMessages = useLastCallback(() => {
     if (defaultHistoryTtl === undefined) return;
 
@@ -227,6 +231,14 @@ const SettingsPrivacy = ({
             </div>
           </ListItem>
         )}
+        <ListItem
+          icon="key-filled"
+          iconBg="orange"
+          narrow
+          onClick={handleOpenRecoveryKey}
+        >
+          {lang('RecoveryKey')}
+        </ListItem>
         {!isCurrentUserFrozen && (
           <ListItem
             icon="timer-filled"

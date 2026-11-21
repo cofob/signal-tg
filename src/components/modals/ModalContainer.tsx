@@ -31,8 +31,10 @@ import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
+import RecoveryKeyModal from './recoveryKey/RecoveryKeyModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
+import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 
 // `Pick` used only to provide tab completion
@@ -51,6 +53,8 @@ type ModalKey = keyof Pick<TabState,
   'isAgeVerificationModalOpen' |
   'qrCodeModal' |
   'safetyNumberModal' |
+  'safetyNumberChangeModal' |
+  'recoveryKeyModal' |
   'quickPreview' |
   'isAudioPlaylistModalOpen' |
   'birthdaySetupModal' |
@@ -133,6 +137,8 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   isAgeVerificationModalOpen: AgeVerificationModal,
   qrCodeModal: QrCodeModal,
   safetyNumberModal: SafetyNumberModal,
+  safetyNumberChangeModal: SafetyNumberChangeModal,
+  recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
   birthdaySetupModal: BirthdaySetupModal,

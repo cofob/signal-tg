@@ -22,6 +22,13 @@ const HTTP_NOT_FOUND = 404;
 
 const textDecoder = new TextDecoder();
 
+/** The primary device uploaded nothing within the wait; waiting again would not change that */
+export class TransferArchiveTimeoutError extends Error {
+  constructor() {
+    super('Timed out waiting for the transfer archive');
+  }
+}
+
 /**
  * Waits for the primary device to upload the message history archive (`GET /v1/devices/transfer_archive`).
  * Each request waits on the server for up to five minutes and answers 204 when nothing arrived; the wait ends
@@ -33,7 +40,7 @@ export async function waitForTransferArchive(account: AccountRecord, signal?: Ab
 
   for (;;) {
     const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) throw new Error('Timed out waiting for the transfer archive');
+    if (remainingMs <= 0) throw new TransferArchiveTimeoutError();
     const timeoutSeconds = Math.max(1, Math.round(Math.min(remainingMs, MAX_REQUEST_TIMEOUT_MS) / MS_PER_SECOND));
 
     // A bit of leeway lets the server answer before the request gives up

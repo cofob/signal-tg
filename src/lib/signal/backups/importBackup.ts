@@ -16,7 +16,10 @@ import { uuidToString } from '../serviceId';
 import { convertChatItem } from './backupChatItems';
 
 import { getGroupId } from '../messages/MessageProcessor';
-import { BackupInfoSchema, FrameSchema, Group_Member_Role } from '../proto/generated/Backup_pb';
+import {
+  BackupInfoSchema, Contact_IdentityState, FrameSchema, Group_Member_Role,
+} from '../proto/generated/Backup_pb';
+import { Verified_State } from '../proto/generated/SignalService_pb';
 
 export type BackupImportContext = {
   store: SignalStore;
@@ -38,6 +41,11 @@ export type BackupImportResult = {
 
 // Signal Desktop `BACKUP_VERSION` in `ts/services/backups/constants.std.ts`
 const BACKUP_VERSION = 1n;
+const VERIFIED_STATE_BY_IDENTITY_STATE: Record<Contact_IdentityState, Verified_State> = {
+  [Contact_IdentityState.DEFAULT]: Verified_State.DEFAULT,
+  [Contact_IdentityState.VERIFIED]: Verified_State.VERIFIED,
+  [Contact_IdentityState.UNVERIFIED]: Verified_State.UNVERIFIED,
+};
 const BATCH_SIZE = 500;
 const MAX_LOGGED_ERRORS = 10;
 const MS_PER_SECOND = 1000;
@@ -188,6 +196,7 @@ class BackupImporter {
       return;
     }
     if (contact.profileKey?.length) await saveProfileKey(this.context.store, aci, contact.profileKey);
+    if (contact.identityKey?.length) await this.addIdentity(aci, contact.identityKey, contact.identityState);
 
     this.addRecipientConversation(id, { id: aci, type: 'private' }, aci);
     this.patchConversation({
@@ -201,6 +210,18 @@ class BackupImporter {
       username: contact.username || undefined,
       isBlocked: contact.blocked,
       isAccepted: contact.profileSharing,
+    });
+  }
+
+  /**
+   * The identity key and verification of a contact, so safety numbers and verified contacts carry over (Signal
+   * Desktop `#fromContact`). A key we have stored already is newer and stays.
+   */
+  private async addIdentity(aci: string, publicKey: Uint8Array, identityState: Contact_IdentityState) {
+    const { store } = this.context;
+    await store.runExclusive(async () => {
+      if (await store.getIdentity(aci)) return;
+      await store.setIdentity(aci, { publicKey, verified: VERIFIED_STATE_BY_IDENTITY_STATE[identityState] });
     });
   }
 

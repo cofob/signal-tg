@@ -156,6 +156,18 @@ export interface LangPair {
   'SafetyNumberMarkVerified': undefined;
   'SafetyNumberClearVerification': undefined;
   'SafetyNumberVerified': undefined;
+  'SafetyNumberChanges': undefined;
+  'SafetyNumberChangesText': undefined;
+  'SafetyNumberVerify': undefined;
+  'SendAnyway': undefined;
+  'RecoveryKey': undefined;
+  'RecoveryKeyRecord': undefined;
+  'RecoveryKeyText': undefined;
+  'RecoveryKeyWarning': undefined;
+  'RecoveryKeyCopy': undefined;
+  'RecoveryKeyCopied': undefined;
+  'RecoveryKeySaved': undefined;
+  'RecoveryKeyUnavailable': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -171,6 +183,8 @@ export interface LangPair {
   'SignalHistorySyncWaiting': undefined;
   'SignalHistorySyncNote': undefined;
   'SignalHistorySyncFailed': undefined;
+  'SignalPinnedLimit': undefined;
+  'SignalPrimaryUnauthorized': undefined;
   'SignalRegisterLink': undefined;
   'SignalLinkExisting': undefined;
   'SignalRegisterTitle': undefined;

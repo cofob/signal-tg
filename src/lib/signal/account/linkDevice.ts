@@ -9,7 +9,7 @@ import { bufferToBase64 } from '../../../util/encoding/buffer';
 import {
   encodeUtf8, encryptAesCtr, generateRegistrationId, getRandomBytes, hmacSha256,
 } from '../crypto';
-import { sendJsonRequest } from '../net/rest';
+import { HttpError, sendJsonRequest } from '../net/rest';
 import { toPniServiceId, uuidToString } from '../serviceId';
 import { wasm } from '../wasm';
 import { getDeviceCapabilities } from './capabilities';
@@ -26,6 +26,7 @@ type LinkDeviceResponse = {
 const PASSWORD_BYTES = 16;
 const SYNTHETIC_IV_LENGTH = 16;
 const AES_COUNTER_LENGTH = 16;
+const HTTP_UNAUTHORIZED = 401;
 
 /**
  * Registers this browser as a linked device with the keys from the primary device's provisioning message
@@ -122,6 +123,24 @@ export async function unlinkDevice(account: AccountRecord) {
     path: `/v1/devices/${account.deviceId}`,
     credentials: getAccountCredentials(account),
   });
+}
+
+/**
+ * Whether the server still accepts the credentials of this device (`GET /v1/accounts/whoami`): `false` after a 401,
+ * which is what an unlinked or deregistered device gets. Any other failure throws, as the answer is unknown then.
+ */
+export async function checkAccountAuthorized(account: AccountRecord) {
+  try {
+    await sendJsonRequest(SIGNAL_CHAT_HOST, {
+      method: 'GET',
+      path: '/v1/accounts/whoami',
+      credentials: getAccountCredentials(account),
+    });
+    return true;
+  } catch (err) {
+    if (err instanceof HttpError && err.status === HTTP_UNAUTHORIZED) return false;
+    throw err;
+  }
 }
 
 export function getAccountCredentials(account: AccountRecord) {

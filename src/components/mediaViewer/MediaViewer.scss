@@ -116,8 +116,9 @@
       min-width: 0;
     }
 
+    // The window buttons end where `--window-controls-width` ends, so the head keeps its own inset after them
     body.is-tauri.is-macos #Main:not(.is-fullscreen) & {
-      padding-left: var(--window-controls-width);
+      padding-left: calc(var(--window-controls-width) + 1.25rem);
     }
 
     @media (max-width: 600px) {

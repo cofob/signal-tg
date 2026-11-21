@@ -19,7 +19,7 @@ import {
 import { resetPinGuessCount } from '../../lib/signal/svr/accountPin';
 import { restoreMasterKey, SvrError } from '../../lib/signal/svr/svr2';
 import { formatMediaDuration } from '../../util/dates/duration';
-import { logError, store } from './engine';
+import { logError, processor, store } from './engine';
 import { sendApiUpdate } from './updates';
 
 type RegistrationProfile = {
@@ -200,11 +200,12 @@ export async function submitRegistrationPin(pin: string) {
   return completedAccount;
 }
 
-function completeProfile(account: AccountRecord, { firstName, lastName }: RegistrationProfile) {
-  return completeRegistration(store, account, {
-    givenName: firstName.trim(),
-    familyName: lastName?.trim() || undefined,
-  });
+async function completeProfile(account: AccountRecord, { firstName, lastName }: RegistrationProfile) {
+  const name = { givenName: firstName.trim(), familyName: lastName?.trim() || undefined };
+  const completedAccount = await completeRegistration(store, account, name);
+  // The first storage manifest, which the connection creates, has our name from our conversation
+  await processor.updateOwnConversation({ profileName: name.givenName, profileFamilyName: name.familyName });
+  return completedAccount;
 }
 
 /** Moves to the step the session asks for; a session that allows a code request gets an SMS code right away */
