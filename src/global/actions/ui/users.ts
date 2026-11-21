@@ -101,3 +101,10 @@ addActionHandler('openSignalLinkModal', (global, actions, payload): ActionReturn
 });
 
 addTabStateResetterAction('closeSignalLinkModal', 'signalLinkModal');
+
+addActionHandler('openLinkDeviceModal', (global, actions, payload): ActionReturnType => {
+  const { url, tabId = getCurrentTabId() } = payload;
+  return updateTabState(global, { linkDeviceModal: { url } }, tabId);
+});
+
+addTabStateResetterAction('closeLinkDeviceModal', 'linkDeviceModal');

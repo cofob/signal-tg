@@ -16,7 +16,7 @@ import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
-  client, db, logError, processor, store,
+  client, db, keyTransparency, logError, processor, store,
 } from './engine';
 import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
@@ -40,6 +40,11 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
 let hasSyncedThisSession = false;
+// Whether the session reached its first connection attempt, from which it stays connected until it stops
+let isConnectionStarted = false;
+let isConnecting = false;
+// A reconnect that was asked for while a connection attempt was under way, which runs when the attempt ends
+let isReconnectPending = false;
 // Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
 let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
@@ -104,12 +109,15 @@ export function getCurrentAccount() {
 /** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
+  isConnectionStarted = false;
+  isReconnectPending = false;
   clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
   resetRegistration();
   historyTransferController?.abort();
   processor.stop();
+  keyTransparency.stop();
   client.close();
   resetCdsiState();
   currentAccount = undefined;
@@ -212,6 +220,7 @@ export async function startSession(storedAccount: AccountRecord) {
   }
 
   hasSyncedThisSession = false;
+  isConnectionStarted = true;
   await connect();
 }
 
@@ -306,9 +315,19 @@ async function syncAfterConnect() {
 }
 
 async function connect() {
+  await attemptConnection();
+
+  if (isReconnectPending) {
+    isReconnectPending = false;
+    reconnectClient();
+  }
+}
+
+async function attemptConnection() {
   if (isDestroyed) return;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateConnecting' });
 
+  isConnecting = true;
   try {
     await client.connect({
       onContent: (decrypted) => processor.processContent(decrypted),
@@ -323,12 +342,44 @@ async function connect() {
     logError(err);
     scheduleReconnect();
     return;
+  } finally {
+    isConnecting = false;
   }
 
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
+  keyTransparency.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
+}
+
+/**
+ * Replaces the chat connection at once, for the page to call after the computer slept or the network changed: the
+ * old socket can look alive for up to the keepalive timeout, and after failed attempts the next one waits for the
+ * backoff. An attempt that is already under way is left to finish, and the reconnect follows it.
+ */
+export function reconnectClient() {
+  if (isDestroyed || !isConnectionStarted || currentAccount?.isDemo) return;
+  if (isConnecting) {
+    isReconnectPending = true;
+    return;
+  }
+
+  void reconnect();
+}
+
+async function reconnect() {
+  isConnecting = true;
+  // The close reaches `scheduleReconnect`, whose timer the connection below makes unnecessary
+  const drained = client.close();
+  clearTimeout(reconnectTimer);
+  // The new connection loads the envelopes that are stored but not processed, and the old one still processes them
+  await drained;
+  isConnecting = false;
+
+  if (isDestroyed) return;
+  reconnectDelay = RECONNECT_MIN_DELAY_MS;
+  void connect();
 }
 
 function scheduleReconnect() {

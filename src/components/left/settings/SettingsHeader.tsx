@@ -165,6 +165,8 @@ const SettingsHeader = ({
 
       case SettingsScreens.Performance:
         return <h3>{lang('MenuAnimations')}</h3>;
+      case SettingsScreens.SignalDevices:
+        return <h3>{lang('SignalDevices')}</h3>;
       case SettingsScreens.KeyboardShortcuts:
         return <h3>{lang('KeyboardShortcuts')}</h3>;
 

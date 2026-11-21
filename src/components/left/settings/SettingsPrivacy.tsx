@@ -1,8 +1,11 @@
 import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPrivacySettings, ApiSignalPinSettings } from '../../../api/types';
+import type {
+  ApiKeyTransparencySelfStatus, ApiPrivacySettings, ApiSignalMessageSettings, ApiSignalPinSettings,
+} from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
+import type { RegularLangKey } from '../../../types/language';
 import { SettingsScreens } from '../../../types';
 
 import { ACCOUNT_TTL_OPTIONS } from '../../../config';
@@ -29,6 +32,8 @@ type OwnProps = {
 
 type StateProps = {
   signalPin?: ApiSignalPinSettings;
+  signalMessageSettings?: ApiSignalMessageSettings;
+  keyTransparencySelfStatus?: ApiKeyTransparencySelfStatus;
   isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
@@ -46,10 +51,19 @@ type StateProps = {
 };
 
 const DAYS_PER_MONTH = 30;
+const KEY_TRANSPARENCY_SELF_TEXTS = {
+  idle: 'KeyTransSelfIdle',
+  running: 'KeyTransRunning',
+  ok: 'KeyTransOk',
+  fail: 'KeyTransFail',
+  intermittent: 'KeyTransSelfRetry',
+} as const satisfies Record<ApiKeyTransparencySelfStatus, RegularLangKey>;
 
 const SettingsPrivacy = ({
   isActive,
   signalPin,
+  signalMessageSettings,
+  keyTransparencySelfStatus,
   isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
@@ -83,6 +97,10 @@ const SettingsPrivacy = ({
     loadSignalPinSettings,
     loadSignalContactDiscovery,
     setSignalContactDiscovery,
+    loadSignalMessageSettings,
+    updateSignalMessageSettings,
+    loadKeyTransparencySelfStatus,
+    runKeyTransparencySelfCheck,
   } = getActions();
 
   useEffect(() => {
@@ -92,6 +110,8 @@ const SettingsPrivacy = ({
       loadPhoneNumberPrivacy();
       loadSignalPinSettings();
       loadSignalContactDiscovery();
+      loadSignalMessageSettings();
+      loadKeyTransparencySelfStatus();
     }
   }, [isCurrentUserFrozen]);
 
@@ -117,6 +137,26 @@ const SettingsPrivacy = ({
 
   const handleContactDiscoveryChange = useLastCallback((isEnabled: boolean) => {
     setSignalContactDiscovery({ isEnabled });
+  });
+
+  const handleKeyTransparencyClick = useLastCallback(() => {
+    runKeyTransparencySelfCheck();
+  });
+
+  const handleReadReceiptsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isReadReceiptsEnabled: isEnabled });
+  });
+
+  const handleTypingIndicatorsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isTypingIndicatorsEnabled: isEnabled });
+  });
+
+  const handleLinkPreviewsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isLinkPreviewsEnabled: isEnabled });
+  });
+
+  const handleSealedSenderIndicatorsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isSealedSenderIndicatorsEnabled: isEnabled });
   });
 
   const handleArchiveAndMuteChange = useLastCallback((isEnabled: boolean) => {
@@ -247,6 +287,22 @@ const SettingsPrivacy = ({
         >
           {lang('RecoveryKey')}
         </ListItem>
+        {keyTransparencySelfStatus && (
+          <ListItem
+            icon="check-filled"
+            iconBg="blue"
+            narrow
+            disabled={keyTransparencySelfStatus === 'running'}
+            onClick={handleKeyTransparencyClick}
+          >
+            <div className="multiline-item">
+              <span className="title">{lang('KeyTransTitle')}</span>
+              <span className="subtitle" dir="auto">
+                {lang(KEY_TRANSPARENCY_SELF_TEXTS[keyTransparencySelfStatus])}
+              </span>
+            </div>
+          </ListItem>
+        )}
         {!isCurrentUserFrozen && (
           <ListItem
             icon="timer-filled"
@@ -270,6 +326,35 @@ const SettingsPrivacy = ({
             subLabel={lang('SignalContactDiscoveryAbout')}
             checked={isContactDiscoveryEnabled}
             onCheck={handleContactDiscoveryChange}
+          />
+        </Island>
+      )}
+
+      {signalMessageSettings && (
+        <Island>
+          <Checkbox
+            label={lang('SignalReadReceipts')}
+            subLabel={lang('SignalReadReceiptsAbout')}
+            checked={signalMessageSettings.isReadReceiptsEnabled}
+            onCheck={handleReadReceiptsChange}
+          />
+          <Checkbox
+            label={lang('SignalTypingIndicators')}
+            subLabel={lang('SignalTypingIndicatorsAbout')}
+            checked={signalMessageSettings.isTypingIndicatorsEnabled}
+            onCheck={handleTypingIndicatorsChange}
+          />
+          <Checkbox
+            label={lang('SignalSealedSenderIndicators')}
+            subLabel={lang('SignalSealedSenderIndicatorsAbout')}
+            checked={signalMessageSettings.isSealedSenderIndicatorsEnabled}
+            onCheck={handleSealedSenderIndicatorsChange}
+          />
+          <Checkbox
+            label={lang('SignalLinkPreviews')}
+            subLabel={lang('SignalLinkPreviewsAbout')}
+            checked={signalMessageSettings.isLinkPreviewsEnabled}
+            onCheck={handleLinkPreviewsChange}
           />
         </Island>
       )}
@@ -478,8 +563,8 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          signalPin, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
-          shouldArchiveAndMuteNewNonContact,
+          signalPin, signalMessageSettings, keyTransparencySelfStatus, isSignalContactDiscoveryEnabled,
+          isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
@@ -497,6 +582,8 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       signalPin,
+      signalMessageSettings,
+      keyTransparencySelfStatus,
       isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,

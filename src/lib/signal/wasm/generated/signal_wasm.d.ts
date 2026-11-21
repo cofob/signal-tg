@@ -126,6 +126,10 @@ export function IdentityKeyPair_Serialize(public_key: PublicKey, private_key: Pr
 
 export function IdentityKeyPair_SignAlternateIdentity(public_key: PublicKey, private_key: PrivateKey, other_identity: PublicKey): Uint8Array;
 
+export function KeyTransparency_Check(transport: any, aci: Uint8Array, aci_identity_key: PublicKey, e164: string | null | undefined, unidentified_access_key: Uint8Array | null | undefined, username_hash: Uint8Array | null | undefined, account_data: Uint8Array | null | undefined, last_distinguished_tree_head: Uint8Array | null | undefined, is_self_check: boolean, is_e164_discoverable: boolean, now: number): Promise<any>;
+
+export function KeyTransparency_ResetDataField(account_data: Uint8Array, field: number): Uint8Array;
+
 export class KyberKeyPair {
     private constructor();
     free(): void;
@@ -772,6 +776,8 @@ export interface InitOutput {
     readonly IdentityKeyPair_Deserialize: (a: number, b: number) => [number, number, number];
     readonly IdentityKeyPair_Serialize: (a: number, b: number) => [number, number];
     readonly IdentityKeyPair_SignAlternateIdentity: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly KeyTransparency_Check: (a: any, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => any;
+    readonly KeyTransparency_ResetDataField: (a: number, b: number, c: number) => [number, number, number, number];
     readonly KyberKeyPair_Generate: () => number;
     readonly KyberKeyPair_GetPublicKey: (a: number) => number;
     readonly KyberKeyPair_GetSecretKey: (a: number) => number;

@@ -22,6 +22,7 @@ import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.
 import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
 import LanguageModal from './language/LanguageModal.async';
+import LinkDeviceModal from './linkDevice/LinkDeviceModal';
 import MessageDetailsModal from './messageDetails/MessageDetailsModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
@@ -67,11 +68,12 @@ type ModalKey = keyof Pick<TabState,
   'autoDeleteTimerModal' |
   'settingsConfirmation' |
   'phoneNumberLookupModal' |
+  'linkDeviceModal' |
   'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
   | 'settingsConfirmation'
-  | 'phoneNumberLookupModal' | 'signalLinkModal';
+  | 'phoneNumberLookupModal' | 'linkDeviceModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
 type ModalStateProps = {
@@ -157,6 +159,7 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   autoDeleteTimerModal: AutoDeleteTimerModal,
   settingsConfirmation: SettingsConfirmationModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
+  linkDeviceModal: LinkDeviceModal,
   signalLinkModal: SignalLinkModal,
 };
 

@@ -1,11 +1,11 @@
-import { create, toBinary } from '@bufbuild/protobuf';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type { ProvisionMessage } from '../proto/generated/Provisioning_pb';
 import type SignalStore from '../store/SignalStore';
 import type { AccountRecord, KeyPairBytes } from '../store/SignalStore';
 
 import { SIGNAL_CHAT_HOST } from '../config';
-import { bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import {
   encodeUtf8, encryptAesCtr, generateRegistrationId, getRandomBytes, hmacSha256,
 } from '../crypto';
@@ -153,6 +153,28 @@ function getKeyPair(privateKeyBytes: Uint8Array): KeyPairBytes {
     privateKey: wasm.PrivateKey_Serialize(privateKey),
     publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(privateKey)),
   };
+}
+
+/**
+ * Decrypts a device name that the server lists (base64 `DeviceName`) with the account's ACI identity private key
+ * (Signal Desktop `decryptDeviceName` in `ts/Crypto.node.ts`)
+ */
+export async function decryptDeviceName(encodedName: string, identityPrivateKey: Uint8Array) {
+  const { ephemeralPublic, syntheticIv, ciphertext } = fromBinary(DeviceNameSchema, bufferFromBase64(encodedName));
+  const masterSecret = wasm.PrivateKey_Agree(
+    wasm.PrivateKey_Deserialize(identityPrivateKey), wasm.PublicKey_Deserialize(ephemeralPublic),
+  ) as Uint8Array<ArrayBuffer>;
+
+  const cipherSeed = await hmacSha256(masterSecret, encodeUtf8('cipher'));
+  const cipherKey = await hmacSha256(cipherSeed, syntheticIv as Uint8Array<ArrayBuffer>);
+  const plaintext = await encryptAesCtr(
+    cipherKey, ciphertext as Uint8Array<ArrayBuffer>, new Uint8Array(AES_COUNTER_LENGTH),
+  );
+
+  const authKey = await hmacSha256(masterSecret, encodeUtf8('auth'));
+  const expectedIv = (await hmacSha256(authKey, plaintext)).slice(0, SYNTHETIC_IV_LENGTH);
+  if (!buffersEqual(expectedIv, syntheticIv)) throw new Error('The device name does not match its IV');
+  return new TextDecoder().decode(plaintext);
 }
 
 /** Encrypts the device name to the account's ACI identity key (Signal Desktop `encryptDeviceName`) */

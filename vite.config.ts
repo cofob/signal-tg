@@ -301,7 +301,7 @@ function buildCsp(appEnv: string, tunnelUrl?: string) {
   img-src 'self' data: blob:;
   media-src 'self' blob: data:;
   object-src 'none';
-  frame-src 'self';
+  frame-src 'none';
   base-uri 'none';
   form-action 'none';`
     .replace(/\s+/g, ' ').trim();

@@ -152,6 +152,37 @@ signal.example.com {
 }
 ```
 
+### Headers for the app
+
+The app's Content-Security-Policy ships as a `<meta>` tag, which browsers do not apply to the Web Worker that runs the
+Signal engine (a worker takes its policy from its own response headers), and which cannot carry `frame-ancestors`. Send
+the same policy as a response header for every file of the app, with the headers that a `<meta>` tag cannot set. The
+build puts the policy in `dist/index.html`:
+
+```sh
+sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/index.html
+```
+
+nginx, in the `server` block of the app (`<policy>` is that output):
+
+```nginx
+add_header Content-Security-Policy "<policy>; frame-ancestors 'none'" always;
+add_header X-Content-Type-Options nosniff always;
+add_header Referrer-Policy same-origin always;
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+```
+
+Caddy:
+
+```caddy
+header {
+    Content-Security-Policy "<policy>; frame-ancestors 'none'"
+    X-Content-Type-Options nosniff
+    Referrer-Policy same-origin
+    Strict-Transport-Security "max-age=63072000; includeSubDomains"
+}
+```
+
 If the reverse proxy runs on another machine or container, bind with `HOST=0.0.0.0
 ALLOW_PUBLIC_BIND=1` and make sure only the reverse proxy can reach the port: with `TRUST_PROXY=1`,
 anyone who reaches the tunnel directly can pick their `X-Forwarded-For` address. Without

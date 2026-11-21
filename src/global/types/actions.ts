@@ -33,6 +33,7 @@ import type {
   ApiRichText,
   ApiSendMessageAction,
   ApiSessionData,
+  ApiSignalMessageSettings,
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
@@ -214,6 +215,14 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadSignalPinSettings: undefined;
+  loadSignalDevices: undefined;
+  loadSignalMessageSettings: undefined;
+  updateSignalMessageSettings: Partial<ApiSignalMessageSettings>;
+  linkSignalDevice: { url: string } & WithTabId;
+  unlinkSignalDevice: { deviceId: number } & WithTabId;
+  openSignalLinkDevice: { url: string } & WithTabId;
+  openLinkDeviceModal: { url?: string } & WithTabId;
+  closeLinkDeviceModal: WithTabId | undefined;
   setSignalPin: {
     pin: string;
   } & WithTabId;
@@ -598,6 +607,9 @@ export interface ActionPayloads {
     targetIndexDelta: number;
   } & WithTabId;
   deleteChat: { chatId: string } & WithTabId;
+  terminateChat: { chatId: string } & WithTabId;
+  revokeChatInvite: { chatId: string; serviceId: string } & WithTabId;
+  addChatMemberByPhoneNumber: { chatId: string; phoneNumber: string } & WithTabId;
 
   // chat creation
   createGroupChat: {
@@ -1274,6 +1286,10 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  checkKeyTransparency: WithTabId | undefined;
+  cancelKeyTransparencyCheck: WithTabId | undefined;
+  loadKeyTransparencySelfStatus: undefined;
+  runKeyTransparencySelfCheck: undefined;
   openSafetyNumberChangeModal: {
     chatId: string;
     messageId: number;

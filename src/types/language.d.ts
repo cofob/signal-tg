@@ -70,6 +70,7 @@ export interface LangPair {
   'UserRestrictionsInviteUsers': undefined;
   'UserRestrictionsPinMessages': undefined;
   'UserRestrictionsEditRank': undefined;
+  'ChatPermissionNotAvailable': undefined;
   'StatsMessagePublicShares': undefined;
   'WrongNumber': undefined;
   'SentAppCode': undefined;
@@ -162,6 +163,21 @@ export interface LangPair {
   'RecoveryKeyCopied': undefined;
   'RecoveryKeySaved': undefined;
   'RecoveryKeyUnavailable': undefined;
+  'KeyTransTitle': undefined;
+  'KeyTransIdle': undefined;
+  'KeyTransRunning': undefined;
+  'KeyTransOk': undefined;
+  'KeyTransUnavailable': undefined;
+  'KeyTransFail': undefined;
+  'KeyTransError': undefined;
+  'KeyTransHint': undefined;
+  'KeyTransLearnMore': undefined;
+  'KeyTransOkText': undefined;
+  'KeyTransErrorText': undefined;
+  'KeyTransUnavailableText': undefined;
+  'KeyTransSelfIdle': undefined;
+  'KeyTransSelfRetry': undefined;
+  'KeyTransSelfFailedText': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -233,6 +249,38 @@ export interface LangPair {
   'SignalCallLinkText': undefined;
   'SignalDeviceLinkTitle': undefined;
   'SignalDeviceLinkText': undefined;
+  'SignalReadReceipts': undefined;
+  'SignalReadReceiptsAbout': undefined;
+  'SignalTypingIndicators': undefined;
+  'SignalTypingIndicatorsAbout': undefined;
+  'SignalSealedSenderIndicators': undefined;
+  'SignalSealedSenderIndicatorsAbout': undefined;
+  'SignalLinkPreviews': undefined;
+  'SignalLinkPreviewsAbout': undefined;
+  'SignalDevices': undefined;
+  'SettingsSignalDevicesDesc': undefined;
+  'SignalDevicesLink': undefined;
+  'SignalDevicesThisDevice': undefined;
+  'SignalDevicesUnnamed': undefined;
+  'SignalDevicesUnlink': undefined;
+  'SignalDevicesUnlinkText': undefined;
+  'SignalDevicesPrimaryAbout': undefined;
+  'SignalDevicesLinkedAbout': undefined;
+  'SignalDeviceLinkPrompt': undefined;
+  'SignalDeviceLinkPromptText': undefined;
+  'SignalDeviceLinkWarning': undefined;
+  'SignalDeviceLinkField': undefined;
+  'SignalDeviceLinkScan': undefined;
+  'SignalDeviceLinkStopScan': undefined;
+  'SignalDeviceLinkConfirm': undefined;
+  'SignalDeviceLinked': undefined;
+  'SignalDeviceLinkPending': undefined;
+  'SignalDeviceLinkBadCode': undefined;
+  'SignalDeviceLinkLimit': undefined;
+  'SignalDeviceLinkRejected': undefined;
+  'SignalDeviceLinkRateLimited': undefined;
+  'SignalDeviceLinkNoKey': undefined;
+  'SignalDeviceLinkNetwork': undefined;
   'SignalReRegisterTitle': undefined;
   'SignalReRegisterText': undefined;
   'SignalContactDiscovery': undefined;
@@ -744,6 +792,13 @@ export interface LangPair {
   'ChannelPermissions': undefined;
   'GroupMembers': undefined;
   'DeleteMega': undefined;
+  'GroupPendingInvites': undefined;
+  'GroupPendingInvitesDescription': undefined;
+  'GroupInvitedByNumber': undefined;
+  'GroupInvitedContact': undefined;
+  'GroupRevokeInvite': undefined;
+  'GroupEndGroup': undefined;
+  'GroupEndGroupText': undefined;
   'AreYouSureDeleteAndExit': undefined;
   'EditAdminWhatCanDo': undefined;
   'EditAdminChangeGroupInfo': undefined;
@@ -1243,6 +1298,7 @@ export interface LangPair {
   'ActionGroupLinkOnWithApprovalYou': undefined;
   'ActionGroupLinkOffYou': undefined;
   'ActionGroupLinkResetYou': undefined;
+  'ActionGroupTerminatedYou': undefined;
   'ActionGroupAccessAdmins': undefined;
   'ActionGroupAccessMembers': undefined;
   'ActionGroupAnnouncementsOnYou': undefined;
@@ -1832,6 +1888,7 @@ export interface LangPair {
   'ErrorGroupChangeFailed': undefined;
   'ErrorGroupTitleTooLong': undefined;
   'ErrorGroupDescriptionTooLong': undefined;
+  'ErrorGroupLabelTooLong': undefined;
   'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
@@ -1851,7 +1908,13 @@ export interface LangPair {
   'SettingsKeywordsAutoDelete': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSignalDevices': undefined;
+  'SettingsKeywordsReadReceipts': undefined;
+  'SettingsKeywordsTypingIndicators': undefined;
+  'SettingsKeywordsSealedSender': undefined;
+  'SettingsKeywordsLinkPreviews': undefined;
   'SettingsKeywordsSignalPin': undefined;
+  'SettingsKeywordsKeyTrans': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -1859,6 +1922,21 @@ export interface LangPair {
   'SettingsKeywordsLogOut': undefined;
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
+  'SettingsDesktopApp': undefined;
+  'SettingsDesktopTray': undefined;
+  'SettingsDesktopTrayDescription': undefined;
+  'SettingsDesktopAutostart': undefined;
+  'SettingsDesktopAutostartDescription': undefined;
+  'SettingsDesktopProtect': undefined;
+  'SettingsDesktopProtectDescription': undefined;
+  'ShortcutQuitApp': undefined;
+  'DesktopMenuUndo': undefined;
+  'DesktopMenuRedo': undefined;
+  'DesktopMenuCut': undefined;
+  'DesktopMenuPaste': undefined;
+  'DesktopMenuSelectAll': undefined;
+  'DesktopMenuWindow': undefined;
+  'DesktopMenuMinimize': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -1933,6 +2011,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SafetyNumberUnavailable': {
     'user': V;
   };
+  'KeyTransFailText': {
+    'user': V;
+  };
   'ActionSafetyChanged': {
     'user': V;
   };
@@ -1971,6 +2052,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalProxyLinkText': {
     'host': V;
+  };
+  'SignalDevicesLastActive': {
+    'date': V;
+  };
+  'SignalDevicesUnlinkTitle': {
+    'name': V;
   };
   'ConversationScheduleMessageSendToday': {
     'time': V;
@@ -2149,6 +2236,21 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'UserRemovedBy': {
     'user': V;
+  };
+  'GroupPhoneInvited': {
+    'phone': V;
+  };
+  'GroupPhoneAdded': {
+    'phone': V;
+  };
+  'GroupInviteByPhone': {
+    'phone': V;
+  };
+  'GroupInvitedBy': {
+    'user': V;
+  };
+  'GroupEndGroupTitle': {
+    'group': V;
   };
   'LinkExpiresIn': {
     'time': V;
@@ -2349,6 +2451,16 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ActionGroupMembersAccessYou': {
     'access': V;
+  };
+  'ActionGroupLabelAccess': {
+    'from': V;
+    'access': V;
+  };
+  'ActionGroupLabelAccessYou': {
+    'access': V;
+  };
+  'ActionGroupTerminated': {
+    'from': V;
   };
   'ActionGroupAnnouncementsOn': {
     'from': V;
@@ -2645,6 +2757,15 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'PeerPickerUnknownPeer': {
     'id': V;
+  };
+  'DesktopMenuOpen': {
+    'app': V;
+  };
+  'DesktopMenuQuit': {
+    'app': V;
+  };
+  'DesktopMenuHide': {
+    'app': V;
   };
 }
 
@@ -2961,6 +3082,7 @@ export interface LangKeyGroups {
       | 'UserActionUploadRound'
       | 'SafetyNumberHint'
       | 'SafetyNumberUnavailable'
+      | 'KeyTransFailText'
       | 'ActionSafetyChanged'
       | 'ActionSafetyVerified'
       | 'ActionSafetyVerifiedSynced'
@@ -2977,6 +3099,7 @@ export interface LangKeyGroups {
       | 'PeerInfoConfirmRemovePeer'
       | 'EditAdminPromotedBy'
       | 'UserRemovedBy'
+      | 'GroupInvitedBy'
       | 'VoipPeerIncompatible'
       | 'ActionAddUserYou'
       | 'ActionKickUserYou'
@@ -3095,6 +3218,9 @@ export interface LangKeyGroups {
     keys:
       | 'SignalPhoneSearch'
       | 'SignalPhoneLookupText'
+      | 'GroupPhoneInvited'
+      | 'GroupPhoneAdded'
+      | 'GroupInviteByPhone'
       | 'UsernameByPhoneNotFound';
     variables: 'phone';
   };
@@ -3102,6 +3228,27 @@ export interface LangKeyGroups {
     keys:
       | 'SignalProxyLinkText';
     variables: 'host';
+  };
+  'date': {
+    keys:
+      | 'SignalDevicesLastActive'
+      | 'MessageScheduledOn'
+      | 'MessageTooltipEditedDate'
+      | 'MessageTooltipForwardedDate'
+      | 'LastSeenAtDate'
+      | 'ChannelPermissionDeniedSendMessagesUntil'
+      | 'ProfileBirthdayValue'
+      | 'ProfileBirthdayTodayValue'
+      | 'ChatPrivateMessageEditTimestampDate'
+      | 'MessageReadAt';
+    variables: 'date';
+  };
+  'name': {
+    keys:
+      | 'SignalDevicesUnlinkTitle'
+      | 'ContextMenuNoForwardsPeer'
+      | 'StoriesSettingDeleteListInfo';
+    variables: 'name';
   };
   'date,time': {
     keys:
@@ -3187,6 +3334,7 @@ export interface LangKeyGroups {
       | 'ActionGroupLinkOnWithApproval'
       | 'ActionGroupLinkOff'
       | 'ActionGroupLinkReset'
+      | 'ActionGroupTerminated'
       | 'ActionGroupAnnouncementsOn'
       | 'ActionGroupAnnouncementsOff'
       | 'ActionUserRegistered'
@@ -3237,18 +3385,10 @@ export interface LangKeyGroups {
       | 'PollResultsAnswerTitle';
     variables: 'answer' | 'percent';
   };
-  'date': {
+  'group': {
     keys:
-      | 'MessageScheduledOn'
-      | 'MessageTooltipEditedDate'
-      | 'MessageTooltipForwardedDate'
-      | 'LastSeenAtDate'
-      | 'ChannelPermissionDeniedSendMessagesUntil'
-      | 'ProfileBirthdayValue'
-      | 'ProfileBirthdayTodayValue'
-      | 'ChatPrivateMessageEditTimestampDate'
-      | 'MessageReadAt';
-    variables: 'date';
+      | 'GroupEndGroupTitle';
+    variables: 'group';
   };
   'count,total': {
     keys:
@@ -3335,13 +3475,15 @@ export interface LangKeyGroups {
   'access,from': {
     keys:
       | 'ActionGroupInfoAccess'
-      | 'ActionGroupMembersAccess';
+      | 'ActionGroupMembersAccess'
+      | 'ActionGroupLabelAccess';
     variables: 'access' | 'from';
   };
   'access': {
     keys:
       | 'ActionGroupInfoAccessYou'
-      | 'ActionGroupMembersAccessYou';
+      | 'ActionGroupMembersAccessYou'
+      | 'ActionGroupLabelAccessYou';
     variables: 'access';
   };
   'from,theme': {
@@ -3359,12 +3501,6 @@ export interface LangKeyGroups {
       | 'ActionChangedTitle'
       | 'ActionCreatedChat';
     variables: 'from' | 'title';
-  };
-  'name': {
-    keys:
-      | 'ContextMenuNoForwardsPeer'
-      | 'StoriesSettingDeleteListInfo';
-    variables: 'name';
   };
   'amount,from,worth': {
     keys:
@@ -3513,6 +3649,13 @@ export interface LangKeyGroups {
     keys:
       | 'PeerPickerUnknownPeer';
     variables: 'id';
+  };
+  'app': {
+    keys:
+      | 'DesktopMenuOpen'
+      | 'DesktopMenuQuit'
+      | 'DesktopMenuHide';
+    variables: 'app';
   };
 }
 

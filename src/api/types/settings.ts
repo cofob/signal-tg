@@ -11,6 +11,38 @@ export type ApiSignalPinSettings = {
   isRegistrationLockEnabled: boolean;
 };
 
+/**
+ * The state of an automatic key verification (key transparency) of a chat: `idle` before it runs, `fail` when the log
+ * does not list the keys, `error` when the check could not finish and may be repeated, `unavailable` for a chat that
+ * cannot be checked
+ */
+export type ApiKeyTransparencyStatus = 'idle' | 'running' | 'ok' | 'fail' | 'error' | 'unavailable';
+
+/** The state of the check of our own account; `intermittent` is a first failure, which the check repeats a day later */
+export type ApiKeyTransparencySelfStatus = 'idle' | 'running' | 'ok' | 'fail' | 'intermittent';
+
+/** The message settings of the account, which the storage service keeps for all its devices */
+export type ApiSignalMessageSettings = {
+  isReadReceiptsEnabled: boolean;
+  isTypingIndicatorsEnabled: boolean;
+  isLinkPreviewsEnabled: boolean;
+  isSealedSenderIndicatorsEnabled: boolean;
+};
+
+/** A device of the account; `lastSeen` is in milliseconds, with the precision of a day */
+export type ApiSignalDevice = {
+  id: number;
+  name?: string;
+  lastSeen: number;
+};
+
+/** The devices of the account: a primary device links and unlinks them, a linked device only lists them */
+export type ApiSignalDevices = {
+  isPrimary: boolean;
+  currentDeviceId: number;
+  devices: ApiSignalDevice[];
+};
+
 export interface ApiPrivacySettings {
   visibility: PrivacyVisibility;
   isUnspecified?: boolean;

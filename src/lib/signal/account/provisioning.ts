@@ -1,11 +1,13 @@
-import { fromBinary } from '@bufbuild/protobuf';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type { ProvisionEnvelope } from '../proto/generated/ProvisionEnvelope_pb';
 import type { ProvisionMessage } from '../proto/generated/Provisioning_pb';
 
 import { SIGNAL_CHAT_HOST } from '../config';
 import { bufferToBase64, concat } from '../../../util/encoding/buffer';
-import { decryptAesCbc, deriveSecrets, encodeUtf8, verifyHmacSha256 } from '../crypto';
+import {
+  decryptAesCbc, deriveSecrets, encodeUtf8, encryptAesCbc, getRandomBytes, hmacSha256, verifyHmacSha256,
+} from '../crypto';
 import { wasm } from '../wasm';
 
 import ResourceSocket from '../net/ResourceSocket';
@@ -93,6 +95,31 @@ function buildLinkUrl(address: string, publicKey: Uint8Array) {
     capabilities: LINK_CAPABILITIES.join(','),
   });
   return `sgnl://linkdevice?${params}`;
+}
+
+/**
+ * Encrypts a serialized `ProvisionMessage` to the public key of a device that wants to be linked, and returns the
+ * serialized `ProvisionEnvelope`: the version, an IV, the AES-256-CBC ciphertext and an HMAC-SHA256 under keys from
+ * an ECDH agreement with a fresh ephemeral key (libsignal `encrypt_provision_message`, Signal Android
+ * `PrimaryProvisioningCipher`). `ephemeralKey` and `iv` are for known-answer tests.
+ */
+export async function encryptProvisionMessage(
+  secondaryPublicKey: Uint8Array,
+  message: Uint8Array<ArrayBuffer>,
+  { ephemeralKey = wasm.PrivateKey_Generate(), iv = getRandomBytes(IV_LENGTH) }: {
+    ephemeralKey?: wasm.PrivateKey; iv?: Uint8Array<ArrayBuffer>;
+  } = {},
+) {
+  const agreement = wasm.PrivateKey_Agree(ephemeralKey, wasm.PublicKey_Deserialize(secondaryPublicKey));
+  const secrets = deriveSecrets(KEY_LENGTH * 2, agreement, encodeUtf8(PROVISIONING_INFO), SALT);
+  const ciphertext = await encryptAesCbc(secrets.slice(0, KEY_LENGTH), message, iv);
+  const versionAndIv = concat(new Uint8Array([PROVISIONING_VERSION]), iv);
+  const mac = await hmacSha256(secrets.slice(KEY_LENGTH), concat(versionAndIv, ciphertext));
+
+  return toBinary(ProvisionEnvelopeSchema, create(ProvisionEnvelopeSchema, {
+    publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(ephemeralKey)),
+    body: concat(versionAndIv, ciphertext, mac),
+  }));
 }
 
 async function decryptProvisionEnvelope(envelope: ProvisionEnvelope, ephemeralKey: wasm.PrivateKey) {

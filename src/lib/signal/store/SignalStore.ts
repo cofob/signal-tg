@@ -32,6 +32,9 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  isSealedSenderIndicatorsEnabled?: boolean;
+  // The disappearing messages timer that new private chats start with, in seconds (`universalExpireTimer`)
+  universalExpireTimer?: number;
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;
@@ -123,6 +126,10 @@ type Items = {
   nextKeyIds: Record<string, { preKey: number; signedPreKey: number; kyberPreKey: number }>;
   // Blocked phone numbers without a known ACI, kept so the blocked list we sync does not unblock them
   blockedE164s: string[];
+  // The numbers of users invited to groups by PNI, by PNI service id; the group state lists only the PNI
+  invitedNumbers: Record<string, string>;
+  // The devices a demo account lists (`signalDev.seedDemo()`)
+  demoDevices: { id: number; name?: string; lastSeen: number }[];
   // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
   notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
@@ -143,7 +150,15 @@ type Items = {
   storyDistributionLists: StoryDistributionList[];
   // Receipts for messages and stories of ours that are not stored yet, oldest first (`MessageProcessor`)
   earlyReceipts: EarlyReceiptRecord[];
+  // Key transparency (`keytrans/KeyTransparency.ts`): the serialized `StoredTreeHead` of the last distinguished tree
+  // head, the result of our last self check, and when it ran by the device clock
+  keyTransparencyDistinguished: Uint8Array<ArrayBuffer>;
+  keyTransparencySelfHealth: KeyTransparencySelfHealth;
+  keyTransparencyLastSelfCheck: number;
 };
+
+/** `intermittent` is a first failed verification, which the self check repeats a day later before it reports `fail` */
+export type KeyTransparencySelfHealth = 'ok' | 'intermittent' | 'fail';
 
 /** A delivery, read or viewed receipt that arrived before the message or story it names */
 export type EarlyReceiptRecord = {
@@ -356,6 +371,15 @@ export default class SignalStore {
 
   removeKyberPreKey(ourServiceId: string, id: number) {
     return this.db.del(`kyberPreKey:${ourServiceId}:${id}`);
+  }
+
+  /** The serialized `StoredAccountData` that key transparency keeps for `aci` */
+  getKeyTransparencyAccountData(aci: string) {
+    return this.db.get<Uint8Array<ArrayBuffer>>(`keyTransparency:${aci}`);
+  }
+
+  setKeyTransparencyAccountData(aci: string, data: Uint8Array<ArrayBuffer>) {
+    return this.db.set(`keyTransparency:${aci}`, data);
   }
 
   getSenderKey(key: string) {

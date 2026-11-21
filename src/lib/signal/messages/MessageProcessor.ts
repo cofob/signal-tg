@@ -51,10 +51,11 @@ import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
-  describeSendError, getSendErrorKind, NotGroupMemberError, UnregisteredUserError,
+  describeSendError, getSendErrorKind, GroupTerminatedError, NotGroupMemberError, UnregisteredUserError,
 } from '../sender/sendErrors';
 import {
   sendBlockedSync,
+  sendConfigurationSync,
   sendDeleteForMeSync,
   sendMessage,
   sendMessageRequestResponseSync,
@@ -69,7 +70,7 @@ import {
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
-import { uuidToBytes, uuidToString } from '../serviceId';
+import { toPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
 import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
 import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
@@ -109,6 +110,7 @@ import {
   StoryMessageSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_Request_Type,
   SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
   Verified_State,
@@ -175,6 +177,8 @@ type MessageProcessorEvents = {
   onError(error: Error): void;
   // Ids of sticker packs installed or removed here or on another device
   onStickerPacksChange?(ids: string[]): void;
+  // Our username or phone number discoverability changed on another device, which key transparency has to learn
+  onOwnIdentifierChange?(identifier: 'username' | 'phoneNumberDiscoverability'): void;
 };
 
 type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
@@ -208,6 +212,11 @@ type PendingStorageWrite = {
 /** Account record fields that this device changes; each one present is written to the storage service */
 export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
 
+export type MessageSettingsUpdate = Pick<OwnAccountUpdate,
+  'isReadReceiptsEnabled' | 'isTypingIndicatorsEnabled' | 'isLinkPreviewsEnabled' | 'isSealedSenderIndicatorsEnabled'
+  | 'universalExpireTimer'
+>;
+
 // The account record fields that our profile fills, see `updateOwnConversation`
 const PROFILE_STORAGE_FIELDS: AccountStorageField[] = ['givenName', 'familyName', 'avatarUrlPath'];
 const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
@@ -217,6 +226,11 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
   isPhoneNumberUnlisted: 'unlistedPhoneNumber',
   isStoriesDisabled: 'storiesDisabled',
   isStoryViewReceiptsEnabled: 'storyViewReceiptsEnabled',
+  isReadReceiptsEnabled: 'readReceipts',
+  isTypingIndicatorsEnabled: 'typingIndicators',
+  isLinkPreviewsEnabled: 'linkPreviews',
+  isSealedSenderIndicatorsEnabled: 'sealedSenderIndicators',
+  universalExpireTimer: 'universalExpireTimer',
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
@@ -376,33 +390,38 @@ export default class MessageProcessor {
     onStored?: (message: MessageRecord) => void,
   ) {
     const account = await this.getAccount();
-    const sentAt = this.allocateTimestamp();
 
-    const { conversation, message, dataMessage } = await this.runSerial(async () => {
+    const {
+      conversation, message, dataMessage, sentAt, startedTimer,
+    } = await this.runSerial(async () => {
       // An ACI that has no conversation yet starts one
-      const found = await this.db.getConversation(conversationId)
+      const existing = await this.db.getConversation(conversationId)
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
-      if (!found) throw new Error(`Unknown conversation ${conversationId}`);
+      if (!existing) throw new Error(`Unknown conversation ${conversationId}`);
+      assertGroupIsOpen(existing);
+      const universalTimer = await this.maybeStartUniversalTimer(existing, account);
+      const found = universalTimer?.conversation ?? existing;
+      const messageAt = this.allocateTimestamp();
       // Writing accepts the message request, so the message carries our profile key
       const accepted = found.isAccepted
         ? found
         : await this.putLocalConversation(found, { ...found, isAccepted: true });
-      const outgoing = createOutgoingDataMessage(account, accepted, init, sentAt);
+      const outgoing = createOutgoingDataMessage(account, accepted, init, messageAt);
       const { message: added } = await this.addMessage(accepted, {
         conversationId,
         kind: 'message',
         authorAci: account.aci,
         authorDeviceId: account.deviceId,
-        sentAt,
-        receivedAt: sentAt,
+        sentAt: messageAt,
+        receivedAt: messageAt,
         isOutgoing: true,
         dataMessage: toBinary(DataMessageSchema, outgoing),
         body: outgoing.body || undefined,
         expireTimer: accepted.expireTimer || undefined,
-        expiresAt: accepted.expireTimer ? sentAt + accepted.expireTimer * 1000 : undefined,
-        readAt: sentAt,
+        expiresAt: accepted.expireTimer ? messageAt + accepted.expireTimer * 1000 : undefined,
+        readAt: messageAt,
         recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
-        sendRetry: { startedAt: sentAt, attempt: 0, at: sentAt },
+        sendRetry: { startedAt: messageAt, attempt: 0, at: messageAt },
       });
       this.markSendStarted(added.id);
       try {
@@ -411,13 +430,40 @@ export default class MessageProcessor {
         this.markSendEnded(added.id);
         throw err;
       }
-      return { conversation: accepted, message: added, dataMessage: outgoing };
+      return {
+        conversation: accepted, message: added, dataMessage: outgoing, sentAt: messageAt, startedTimer: universalTimer,
+      };
     });
 
+    if (startedTimer) {
+      // The timer is stored with its notice; a failed update must not keep the message from going out
+      await this.sendExpireTimerUpdate(account, startedTimer.conversation, startedTimer.timestamp)
+        .catch(this.events.onError);
+    }
     return this.sendStoredMessage(conversation, message, { case: 'dataMessage', value: dataMessage }, {
       timestamp: sentAt,
       expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
     });
+  }
+
+  /**
+   * The first message of a private chat in which we never sent or received a message and that has no timer starts
+   * the timer that the account sets for new chats (Signal Desktop `maybeApplyUniversalTimer` in
+   * `ts/models/conversations.preload.ts`, called before a message is queued). Note to Self keeps messages for good,
+   * as in Signal Android. Runs in the serial queue; the timer update goes out afterwards.
+   */
+  private async maybeStartUniversalTimer(conversation: ConversationRecord, account: AccountRecord) {
+    const { universalExpireTimer, aci } = account;
+    if (!universalExpireTimer || conversation.id === aci || conversation.type !== 'private'
+      || conversation.expireTimer) {
+      return undefined;
+    }
+    const [firstMessage] = await this.db.findLatestMessages(conversation.id, 1, ({ kind }) => kind === 'message');
+    if (firstMessage) return undefined;
+
+    const timestamp = this.allocateTimestamp();
+    const updated = await this.storeExpireTimer(conversation.id, universalExpireTimer, account, timestamp);
+    return updated && { conversation: updated, timestamp };
   }
 
   /**
@@ -429,36 +475,41 @@ export default class MessageProcessor {
   async setExpireTimer(conversationId: string, seconds: number) {
     const account = await this.getAccount();
     const timestamp = this.allocateTimestamp();
+
+    const updated = await this.runSerial(() => this.storeExpireTimer(conversationId, seconds, account, timestamp));
+    if (updated) await this.sendExpireTimerUpdate(account, updated, timestamp);
+  }
+
+  /** Stores the timer and its notice; resolves with the conversation, or `undefined` when the timer is the same */
+  private async storeExpireTimer(conversationId: string, seconds: number, account: AccountRecord, timestamp: number) {
     const timer = seconds || undefined;
+    const found = await this.db.getConversation(conversationId);
+    if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
+    if (found.expireTimer === timer) return undefined;
 
-    const updated = await this.runSerial(async () => {
-      const found = await this.db.getConversation(conversationId);
-      if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
-      if (found.expireTimer === timer) return undefined;
-
-      const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
-      const withTimer = await this.putConversation({
-        ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
-      });
-      const { conversation } = await this.addMessage(withTimer, {
-        conversationId,
-        kind: 'timerUpdate',
-        authorAci: '',
-        actorAci: account.aci,
-        sentAt: timestamp,
-        receivedAt: timestamp,
-        isOutgoing: true,
-        expireTimer: timer,
-        readAt: timestamp,
-      });
-      return conversation;
+    const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
+    const withTimer = await this.putConversation({
+      ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
     });
-    if (!updated) return;
+    const { conversation } = await this.addMessage(withTimer, {
+      conversationId,
+      kind: 'timerUpdate',
+      authorAci: '',
+      actorAci: account.aci,
+      sentAt: timestamp,
+      receivedAt: timestamp,
+      isOutgoing: true,
+      expireTimer: timer,
+      readAt: timestamp,
+    });
+    return conversation;
+  }
 
+  private async sendExpireTimerUpdate(account: AccountRecord, conversation: ConversationRecord, timestamp: number) {
     const message = createOutgoingDataMessage(
-      account, updated, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
+      account, conversation, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
     );
-    await this.sendWithRetry(updated, [conversationId], { case: 'dataMessage', value: message }, timestamp);
+    await this.sendWithRetry(conversation, [conversation.id], { case: 'dataMessage', value: message }, timestamp);
   }
 
   /**
@@ -476,6 +527,7 @@ export default class MessageProcessor {
       if (!target?.dataMessage || !found || target.authorAci !== account.aci || target.deletedAt) {
         throw new Error('The message cannot be edited');
       }
+      assertGroupIsOpen(found);
       const isNoteToSelf = found.id === account.aci;
       const isTooOld = editedAt - target.sentAt > EDIT_MAX_AGE_MS;
       if (!isNoteToSelf && (isTooOld || (target.revisions?.length ?? 0) >= MAX_EDIT_COUNT)) {
@@ -528,6 +580,7 @@ export default class MessageProcessor {
       if (!target || !found || target.kind !== 'message' || !target.dataMessage) {
         throw new Error('The message cannot have reactions');
       }
+      assertGroupIsOpen(found);
       const previous = target.reactions?.find(({ authorAci }) => authorAci === account.aci);
       if (!emoji && !previous) return undefined;
       await this.putReaction(target, account.aci, emoji ? { emoji, authorAci: account.aci, sentAt } : undefined);
@@ -733,6 +786,7 @@ export default class MessageProcessor {
       const message = await this.db.getMessage(messageId);
       const found = message && await this.db.getConversation(message.conversationId);
       if (!message || !found || message.isPollEnded) throw new Error('The poll does not accept votes');
+      assertGroupIsOpen(found);
       const count = (message.pollVotes?.find(({ authorAci }) => authorAci === account.aci)?.voteCount ?? 0) + 1;
       await this.putMessage({
         ...message,
@@ -841,7 +895,7 @@ export default class MessageProcessor {
   async sendTyping(conversationId: string, isTyping: boolean) {
     const conversation = await this.db.getConversation(conversationId);
     const context = this.client.getSenderContext();
-    if (!conversation || context.account.isTypingIndicatorsEnabled === false
+    if (!conversation || conversation.groupState?.isTerminated || context.account.isTypingIndicatorsEnabled === false
       || !getIsConversationAccepted(conversation, context.account.aci)) {
       return;
     }
@@ -949,7 +1003,7 @@ export default class MessageProcessor {
       // Signal Desktop `sendStoryMessage` skips groups where only admins may send. Stories carry our profile key, so
       // they do not go to groups that are blocked or that we have not accepted.
       if (group.isAnnouncementsOnly && !group.adminAcis?.includes(account.aci)) continue;
-      if (group.isBlocked || !getIsConversationAccepted(group, account.aci)) continue;
+      if (group.isBlocked || group.groupState?.isTerminated || !getIsConversationAccepted(group, account.aci)) continue;
       sent.push(await this.sendGroupStory(account, story, group));
     }
 
@@ -1332,6 +1386,17 @@ export default class MessageProcessor {
       const fields = (Object.keys(update) as (keyof OwnAccountUpdate)[]).map((key) => OWN_ACCOUNT_FIELDS[key]);
       await this.markStorageChanges({ [ACCOUNT_KEY]: fields });
     });
+  }
+
+  /**
+   * Changes receipts, typing indicators, link previews, sealed sender indicators or the timer of new chats. They
+   * go to the account record of the storage service, which other devices read, and a primary device also tells the
+   * devices it linked, as Signal Android does with `MultiDeviceConfigurationUpdateJob`.
+   */
+  async updateMessageSettings(update: MessageSettingsUpdate) {
+    await this.updateOwnAccount(update);
+    const account = await this.getAccount();
+    if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) await this.sendConfiguration(account);
   }
 
   /** Stores the username of a contact that a username lookup found */
@@ -1844,11 +1909,13 @@ export default class MessageProcessor {
             : self.avatarPath,
         });
         const { usernameLink } = accountRecord;
-        await this.client.updateAccount({
-          isReadReceiptsEnabled: accountRecord.readReceipts,
-          isTypingIndicatorsEnabled: accountRecord.typingIndicators,
-          isLinkPreviewsEnabled: accountRecord.linkPreviews,
+        const updatedAccount = await this.client.updateAccount({
           ...omitAccountChanges({
+            isReadReceiptsEnabled: accountRecord.readReceipts,
+            isTypingIndicatorsEnabled: accountRecord.typingIndicators,
+            isLinkPreviewsEnabled: accountRecord.linkPreviews,
+            isSealedSenderIndicatorsEnabled: accountRecord.sealedSenderIndicators,
+            universalExpireTimer: accountRecord.universalExpireTimer || undefined,
             // Signal Desktop `mergeAccountRecord`: an unknown sharing mode means nobody
             isPhoneNumberShared: accountRecord.phoneNumberSharingMode
               === AccountRecord_PhoneNumberSharingMode.EVERYBODY,
@@ -1860,10 +1927,14 @@ export default class MessageProcessor {
             isStoryViewReceiptsEnabled: getOptionalBool(accountRecord.storyViewReceiptsEnabled),
           }, accountChanges),
         });
+        if (Boolean(account.isPhoneNumberUnlisted) !== Boolean(updatedAccount.isPhoneNumberUnlisted)) {
+          this.events.onOwnIdentifierChange?.('phoneNumberDiscoverability');
+        }
         if (accountRecord.storiesDisabled && !accountChanges.has('storiesDisabled')) await this.removeAllStories();
         const username = accountRecord.username || undefined;
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+          this.events.onOwnIdentifierChange?.('username');
         }
         // Signal Desktop `mergeAccountRecord`: the primary device rotates the profile key, linked devices follow it
         const { profileKey } = accountRecord;
@@ -2415,6 +2486,7 @@ export default class MessageProcessor {
           isReadReceiptsEnabled: content.value.readReceipts,
           isTypingIndicatorsEnabled: content.value.typingIndicators,
           isLinkPreviewsEnabled: content.value.linkPreviews,
+          isSealedSenderIndicatorsEnabled: content.value.unidentifiedDeliveryIndicators,
         });
         break;
       case 'viewOnceOpen': {
@@ -2444,8 +2516,38 @@ export default class MessageProcessor {
         // Another device changed our username and wrote it to the storage service
         this.scheduleStorageSync();
         break;
+      case 'request':
+        await this.answerSyncRequest(content.value.type);
+        break;
       default:
         break;
+    }
+  }
+
+  private sendConfiguration(account: AccountRecord) {
+    return this.sendWhenConnected(async (context) => {
+      await sendConfigurationSync(context, {
+        readReceipts: account.isReadReceiptsEnabled,
+        typingIndicators: account.isTypingIndicatorsEnabled,
+        linkPreviews: account.isLinkPreviewsEnabled,
+        unidentifiedDeliveryIndicators: account.isSealedSenderIndicatorsEnabled,
+      });
+    });
+  }
+
+  /**
+   * A device we linked asks for our message settings and blocked list. Only a primary device answers (Signal
+   * Android `SyncMessageProcessor.handleSynchronizeRequestMessage`); contacts and keys reach the new device through
+   * the storage service and the provisioning message instead.
+   */
+  private async answerSyncRequest(type: SyncMessage_Request_Type) {
+    const account = await this.getAccount();
+    if (account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID) return;
+
+    if (type === SyncMessage_Request_Type.CONFIGURATION) {
+      await this.sendConfiguration(account);
+    } else if (type === SyncMessage_Request_Type.BLOCKED) {
+      await this.sendWhenConnected((context) => this.sendBlockedList(context));
     }
   }
 
@@ -2912,21 +3014,61 @@ export default class MessageProcessor {
    * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
    */
   async lookUpPhoneNumber(e164: string) {
+    return (await this.resolvePhoneNumber(e164))?.conversation;
+  }
+
+  /** Keeps the number behind an invitation by PNI, which the group state does not have */
+  saveInvitedNumber(pniServiceId: string, e164: string) {
+    return this.runSerial(async () => {
+      await this.client.store.setItem('invitedNumbers', { ...await this.getInvitedNumbers(), [pniServiceId]: e164 });
+    });
+  }
+
+  /** Forgets the numbers of invitations that no group has any more, because they were accepted or revoked */
+  private async pruneInvitedNumbers() {
+    const numbers = await this.getInvitedNumbers();
+    const pniServiceIds = Object.keys(numbers);
+    if (!pniServiceIds.length) return;
+
+    const pending = new Set((await this.db.getConversations())
+      .flatMap(({ groupState }) => groupState?.pendingMembers.map(({ serviceId }) => serviceId) ?? []));
+    const kept = pniServiceIds.filter((serviceId) => pending.has(serviceId));
+    if (kept.length === pniServiceIds.length) return;
+    await this.client.store.setItem('invitedNumbers', Object.fromEntries(kept.map((id) => [id, numbers[id]])));
+  }
+
+  /** The numbers of users invited to groups by PNI, by PNI service id */
+  async getInvitedNumbers() {
+    return await this.client.store.getItem('invitedNumbers') ?? {};
+  }
+
+  /**
+   * Like `lookUpPhoneNumber`, but a number whose account the enclave knows by PNI only, because the user does not
+   * share the ACI, comes back as `pniServiceId`. Such a user can be invited to a group (Signal Desktop
+   * `lookupConversationWithoutServiceId`, which keeps such a user as a conversation with a PNI). The group lists
+   * the PNI alone, so `saveInvitedNumber` keeps the number once the invitation went through.
+   */
+  async resolvePhoneNumber(
+    e164: string,
+  ): Promise<{ conversation?: ConversationRecord; pniServiceId?: string } | undefined> {
     const known = (await this.db.getConversations()).find((conversation) => (
       conversation.type === 'private' && conversation.e164 === e164
     ));
-    if (known) return known;
+    if (known) return { conversation: known };
 
     const { connection } = this.client.getSenderContext();
     const records = await lookUpE164s(connection, [e164], await this.getAcisAndAccessKeys());
-    const aci = records.get(e164)?.aci;
-    if (!aci) return undefined;
+    const { aci, pni } = records.get(e164) ?? {};
+    if (!aci) {
+      if (!pni) return undefined;
+      return { pniServiceId: toPniServiceId(pni) };
+    }
     const conversation = await this.runSerial(async () => {
       const existing = await this.ensurePrivateConversation(aci);
       return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
     });
     this.flush();
-    return conversation;
+    return { conversation };
   }
 
   private async ensurePrivateConversation(aci: string) {
@@ -3313,6 +3455,7 @@ export default class MessageProcessor {
       avatarPath: state.avatarUrl,
       groupState: state,
     });
+    await this.pruneInvitedNumbers();
     if (!applied) return updated;
 
     const { change, isOutgoing, sentAt } = applied;
@@ -3825,6 +3968,11 @@ function setOutgoingFields(
   message.groupV2 = conversation.masterKey
     ? create(GroupContextV2Schema, { masterKey: conversation.masterKey, revision: conversation.revision })
     : undefined;
+}
+
+/** Refuses a send to a group that an admin ended */
+function assertGroupIsOpen({ id, groupState }: ConversationRecord) {
+  if (groupState?.isTerminated) throw new GroupTerminatedError(id);
 }
 
 /** Members who receive our messages in a conversation; Note to Self has only us, which sends a sync alone */

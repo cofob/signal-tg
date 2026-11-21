@@ -85,7 +85,9 @@ async function runSave(url: string, fileName: string, key: string) {
 /** Opens a saved file with the default app; the app confirms first when the file type is dangerous */
 export async function openSavedFile(key: string, tabId?: number) {
   try {
-    handleOutcome(await invoke<SavedFileOutcome>('open_saved_file', { key }), tabId);
+    // The app words the confirmation for a dangerous type itself, in the language that this code names
+    const langCode = getTranslationFn().rawCode;
+    handleOutcome(await invoke<SavedFileOutcome>('open_saved_file', { key, langCode }), tabId);
   } catch (err) {
     handleFailure(err, tabId);
   }
@@ -104,6 +106,11 @@ export async function revealSavedFile(key: string, tabId?: number) {
 export async function loadSavedFiles() {
   const keys = await invoke<string[]>('list_saved_files');
   getActions().updateSavedFiles({ added: keys });
+}
+
+/** Drops the app's records of saved files, which hold their paths, when the account is forgotten; the files stay */
+export function forgetSavedFiles() {
+  return invoke<void>('forget_saved_files');
 }
 
 export function getShowInFolderLangKey(): RegularLangKey {

@@ -334,6 +334,7 @@ export const MAX_ACTIVE_PINNED_CHATS = 5;
 export const SCHEDULED_WHEN_ONLINE = 0x7FFFFFFE;
 export const SUPPORT_URL = 'https://support.signal.org/';
 export const PRIVACY_URL = 'https://signal.org/legal/#privacy-policy';
+export const KEY_TRANSPARENCY_URL = 'https://support.signal.org/hc/articles/10223569377562';
 export const GENERAL_TOPIC_ID = 1;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];

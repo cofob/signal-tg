@@ -1,6 +1,6 @@
 import type { NotificationDefaults } from '../../../lib/signal/store/SignalStore';
 import type {
-  ApiConfig, ApiNotifyPeerType, ApiPeer, ApiPeerColors, ApiPeerNotifySettings,
+  ApiConfig, ApiNotifyPeerType, ApiPeer, ApiPeerColors, ApiPeerNotifySettings, ApiSignalMessageSettings,
 } from '../../types';
 
 import { MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP } from '../../../config';
@@ -22,6 +22,45 @@ const EDIT_TIME_LIMIT = 24 * 60 * 60;
 const MAX_GROUP_SIZE = 1001;
 // Signal Desktop `MAX_PLAINTEXT_BODY_ATTACHMENT_BYTE_LENGTH` in `ts/util/longAttachment.std.ts`
 const MAX_MESSAGE_LENGTH = 64 * 1024;
+
+/** The message settings with the values Signal Desktop uses until they are set */
+export async function fetchSignalMessageSettings(): Promise<ApiSignalMessageSettings | undefined> {
+  const account = await store.getItem('account');
+  if (!account) return undefined;
+  return {
+    isReadReceiptsEnabled: account.isReadReceiptsEnabled ?? false,
+    isTypingIndicatorsEnabled: account.isTypingIndicatorsEnabled ?? true,
+    isLinkPreviewsEnabled: account.isLinkPreviewsEnabled ?? true,
+    isSealedSenderIndicatorsEnabled: account.isSealedSenderIndicatorsEnabled ?? false,
+  };
+}
+
+/** Resolves with the settings after the change, or `undefined` when it failed */
+export async function updateSignalMessageSettings(update: Partial<ApiSignalMessageSettings>) {
+  try {
+    await processor.updateMessageSettings(update);
+    return fetchSignalMessageSettings();
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
+
+/** The disappearing messages timer that new private chats start with; 0 is off */
+export async function fetchDefaultHistoryTtl() {
+  const account = await store.getItem('account');
+  return account ? account.universalExpireTimer ?? 0 : undefined;
+}
+
+export async function setDefaultHistoryTtl({ period }: { period: number }) {
+  try {
+    await processor.updateMessageSettings({ universalExpireTimer: period || undefined });
+    return true as const;
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
 
 /**
  * Signal limits in the shape of Telegram's config. Forwarded messages are sent one by one, so they are not

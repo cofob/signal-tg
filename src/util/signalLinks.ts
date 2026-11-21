@@ -35,6 +35,8 @@ export type SignalLink = {
   key: string;
 } | {
   type: 'linkDevice';
+  /** The whole link, which a primary device sends the new device's key from */
+  url: string;
 } | {
   type: 'reRegister';
 } | {
@@ -246,7 +248,9 @@ function parseLinkDevice(parts: LinkParts): SignalLink | undefined {
   if (!isRootPath(parts) || parts.fragment || !parts.query) return undefined;
 
   const params = new URLSearchParams(parts.query);
-  return params.get('uuid') && params.get('pub_key') ? { type: 'linkDevice' } : INVALID_LINK;
+  return params.get('uuid') && params.get('pub_key')
+    ? { type: 'linkDevice', url: `sgnl://${LINK_DEVICE_HOST}?${parts.query}` }
+    : INVALID_LINK;
 }
 
 function isRootPath({ path }: LinkParts) {

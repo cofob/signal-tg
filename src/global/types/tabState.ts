@@ -6,6 +6,7 @@ import type {
   ApiDialog,
   ApiFormattedText,
   ApiGlobalMessageSearchType,
+  ApiKeyTransparencyStatus,
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
@@ -479,6 +480,11 @@ export type TabState = {
   };
 
   // Signal: a link to something that this app does not do, which the dialog explains; `host` is the proxy's
+  linkDeviceModal?: {
+    // The link of the device to link, when it came from a `sgnl://linkdevice` link
+    url?: string;
+  };
+
   signalLinkModal?: {
     type: 'proxy' | 'callLink' | 'linkDevice' | 'reRegister';
     host?: string;
@@ -491,6 +497,7 @@ export type TabState = {
     qrData?: string;
     isVerified?: boolean;
     isUnavailable?: boolean;
+    keyTransparencyStatus?: ApiKeyTransparencyStatus;
   };
 
   // Signal: a message that was not sent to `userIds` because their safety numbers changed

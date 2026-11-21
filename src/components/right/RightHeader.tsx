@@ -74,6 +74,7 @@ enum HeaderContent {
   ManageChatAdministrators,
   ManageGroupPermissions,
   ManageGroupRemovedUsers,
+  ManageGroupInvitedUsers,
   ManageGroupUserPermissionsCreate,
   ManageGroupUserPermissions,
   ManageGroupAdminRights,
@@ -183,6 +184,8 @@ const RightHeader = ({
       HeaderContent.ManageChatAdministrators
     ) : managementScreen === ManagementScreens.GroupRemovedUsers ? (
       HeaderContent.ManageGroupRemovedUsers
+    ) : managementScreen === ManagementScreens.GroupInvitedUsers ? (
+      HeaderContent.ManageGroupInvitedUsers
     ) : managementScreen === ManagementScreens.GroupUserPermissionsCreate ? (
       HeaderContent.ManageGroupUserPermissionsCreate
     ) : managementScreen === ManagementScreens.GroupUserPermissions ? (
@@ -257,6 +260,8 @@ const RightHeader = ({
         return <h3 className="title">{lang('ChannelPermissions')}</h3>;
       case HeaderContent.ManageGroupRemovedUsers:
         return <h3 className="title">{lang('BlockedUsers')}</h3>;
+      case HeaderContent.ManageGroupInvitedUsers:
+        return <h3 className="title">{lang('GroupPendingInvites')}</h3>;
       case HeaderContent.ManageGroupUserPermissionsCreate:
         return <h3 className="title">{lang('ChannelAddException')}</h3>;
       case HeaderContent.ManageGroupUserPermissions:

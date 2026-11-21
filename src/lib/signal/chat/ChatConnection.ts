@@ -81,8 +81,10 @@ export default class ChatConnection {
     return connection;
   }
 
+  /** Closes the socket; the result settles once the envelopes that it received are processed */
   close() {
     this.socket.close();
+    return this.queue;
   }
 
   /** Sends a JSON request on the authenticated socket */

@@ -29,6 +29,7 @@ import { subscribeToPasscodeChannel } from './util/passcode/channel';
 import { initPasscodeNavigation } from './util/passcode/navigation';
 import { onBeforeUnload } from './util/schedulers';
 import { clearLegacySessionKeys } from './util/sessions';
+import setupReconnectTriggers from './util/setupReconnectTriggers';
 import initTauriApi from './util/tauri/initTauriApi';
 import setupTauriListeners from './util/tauri/setupTauriListeners';
 import updateWebmanifest from './util/updateWebmanifest';
@@ -90,6 +91,7 @@ async function init() {
   });
   const shouldReestablishMasterToSelf = getGlobal().auth.state !== 'authorizationStateReady';
   establishMultitabRole(shouldReestablishMasterToSelf);
+  setupReconnectTriggers();
 
   if (DEBUG) {
     // eslint-disable-next-line no-console

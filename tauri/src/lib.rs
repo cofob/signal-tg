@@ -1,10 +1,15 @@
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, Mutex, OnceLock};
+use std::sync::{
+  Arc, LazyLock, Mutex, OnceLock,
+  atomic::{AtomicBool, Ordering},
+};
 
 use tauri::{
   LogicalPosition, Manager,
-  webview::{DownloadEvent, PageLoadEvent},
+  webview::{DownloadEvent, NewWindowResponse, PageLoadEvent},
 };
+use tauri_plugin_opener::OpenerExt;
+use tauri_plugin_window_state::StateFlags;
 use url::Url;
 use uuid::Uuid;
 
@@ -17,12 +22,19 @@ use files::Files;
 pub mod transport;
 use transport::Transport;
 
+mod notifications;
+
+mod settings;
+use settings::DesktopSettings;
+
 mod tray;
 mod window;
 use crate::window::{WINDOW_STATES, WindowState};
 
 #[cfg(target_os = "macos")]
 mod mac;
+#[cfg(target_os = "macos")]
+mod menu;
 
 #[derive(Debug, Default)]
 pub struct AppStateStruct {
@@ -69,6 +81,9 @@ pub const WINDOW_MIN_HEIGHT: f64 = 200.0;
 /// The URL of the last window closed, which the tray opens again
 pub static LAST_URL: Mutex<String> = Mutex::new(String::new());
 
+/// Set for a launch at login, and taken by the first window, which then opens hidden
+static SHOULD_START_HIDDEN: AtomicBool = AtomicBool::new(false);
+
 /// The app's own page: the dev server in `tauri dev`, the bundled frontend otherwise. Only it gets
 /// IPC.
 static APP_URL: OnceLock<Url> = OnceLock::new();
@@ -105,12 +120,14 @@ pub(crate) fn save_window_url(app: &tauri::AppHandle, window_label: &str) {
 pub fn run() {
   let app = tauri::Builder::default()
     // Deep links that start a second instance reach this one through the deep link plugin
-    .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-      show_main_window(app);
+    .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+      // The login entry of a running app has nothing to bring forward
+      if !settings::is_autostart_launch(&args) {
+        show_main_window(app);
+      }
     }))
     .plugin(tauri_plugin_os::init())
     .plugin(tauri_plugin_fs::init())
-    .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
     // The page gets no permission for the plugin's commands; `files.rs` calls it
     .plugin(
@@ -120,7 +137,17 @@ pub fn run() {
     )
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_log::Builder::default().build())
-    .plugin(tauri_plugin_window_state::Builder::default().build())
+    // Whether a window shows is up to the app: a launch at login starts hidden, which a restored state must not undo
+    .plugin(
+      tauri_plugin_window_state::Builder::default()
+        .with_state_flags(StateFlags::all() - StateFlags::VISIBLE)
+        .build(),
+    )
+    .plugin(
+      tauri_plugin_autostart::Builder::new()
+        .arg(settings::AUTOSTART_ARG)
+        .build(),
+    )
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_process::init());
 
@@ -128,14 +155,15 @@ pub fn run() {
     tauri::WindowEvent::CloseRequested { api, .. } => {
       let active_windows = window.app_handle().windows();
 
-      if active_windows.len() == 1 {
-        // Save current URL before hiding the last window
-        save_window_url(window.app_handle(), window.label());
-
-        #[cfg(target_os = "macos")]
-        window.app_handle().hide().unwrap_or_default();
-        #[cfg(not(target_os = "macos"))]
-        window.hide().unwrap_or_default();
+      // With "Close to tray" off, closing the last window quits the app
+      if active_windows.len() == 1
+        && window
+          .app_handle()
+          .state::<DesktopSettings>()
+          .get()
+          .should_close_to_tray
+      {
+        hide_to_tray(window);
         api.prevent_close();
       }
     }
@@ -175,6 +203,11 @@ pub fn run() {
     _ => {}
   });
 
+  #[cfg(target_os = "macos")]
+  let app = app
+    .menu(menu::build_app_menu)
+    .on_menu_event(menu::handle_menu_event);
+
   // A reloaded page starts its engine again, so the connections and the saves of the previous page end
   let app = app.on_page_load(|webview, payload| {
     if payload.event() == PageLoadEvent::Started {
@@ -191,6 +224,11 @@ pub fn run() {
     app.manage(Arc::new(Transport::from_env()));
     app.manage(PendingLinks::default());
     app.manage(Files::new(app.path().app_data_dir().ok()));
+    app.manage(DesktopSettings::load(settings::get_storage_path(
+      app.handle(),
+    )));
+    #[cfg(target_os = "macos")]
+    mac::begin_background_activity();
 
     let app_url = resolve_base_app_url(app.handle());
     if let Ok(mut last_url) = LAST_URL.lock() {
@@ -198,6 +236,9 @@ pub fn run() {
     }
     APP_URL.set(app_url).expect("The app URL is set up once");
 
+    // A launch at login starts in the tray, without a window in the way
+    let args: Vec<String> = std::env::args().collect();
+    SHOULD_START_HIDDEN.store(settings::is_autostart_launch(&args), Ordering::Relaxed);
     let _main_window = open_new_window(app.handle().clone(), get_app_url().to_string())
       .expect("Failed to open main window");
 
@@ -225,6 +266,11 @@ pub fn run() {
     open_new_window_cmd,
     save_current_url,
     set_menu_translations,
+    quit_app,
+    open_external_url,
+    settings::get_desktop_settings,
+    settings::set_desktop_settings,
+    notifications::show_notification,
     deeplink::take_deep_links,
     transport::signal_connect,
     transport::signal_send,
@@ -236,7 +282,8 @@ pub fn run() {
     files::abort_file_save,
     files::list_saved_files,
     files::open_saved_file,
-    files::reveal_saved_file
+    files::reveal_saved_file,
+    files::forget_saved_files
   ]);
 
   app
@@ -246,6 +293,11 @@ pub fn run() {
       // Saves that the exit interrupts leave temporary files, so they end here
       if matches!(event, tauri::RunEvent::Exit) {
         app.state::<Files>().abort_all();
+      }
+      // A click on the Dock icon brings the window back after it was hidden
+      #[cfg(target_os = "macos")]
+      if matches!(event, tauri::RunEvent::Reopen { .. }) {
+        show_main_window(app);
       }
     });
 }
@@ -329,8 +381,54 @@ fn set_notifications_count(
 }
 
 #[tauri::command]
-fn set_menu_translations(translations: HashMap<String, String>) {
+fn set_menu_translations(app: tauri::AppHandle, translations: HashMap<String, String>) {
   crate::tray::set_menu_translations(translations);
+  crate::tray::refresh_menu(&app);
+  #[cfg(target_os = "macos")]
+  menu::refresh(&app);
+}
+
+/// Ctrl+Q on Windows and Linux, where the app has no menu bar to quit from
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+  app.exit(0);
+}
+
+/// Opens a link from a message in the default browser or mail app. The page can name any URL, so only the schemes
+/// of links that the app shows are opened: `file:` and the schemes of installed apps would run something else.
+#[tauri::command]
+fn open_external_url(window: tauri::WebviewWindow, url: String) -> Result<(), String> {
+  let url = parse_external_url(&url)?;
+  window
+    .opener()
+    .open_url(url.as_str(), None::<&str>)
+    .map_err(|err| err.to_string())
+}
+
+/// Parses a link for `open_external_url`, or says why the app refuses it
+fn parse_external_url(raw: &str) -> Result<Url, String> {
+  let url = Url::parse(raw).map_err(|err| err.to_string())?;
+  let is_allowed = match url.scheme() {
+    "http" | "https" => url.has_host(),
+    // Mail and phone apps get the opaque part as it is, so neither the text nor its serialized form may hold
+    // whitespace, quotes, angle brackets or control characters, which could split or extend the command that a
+    // handler builds from it. The parser drops tabs and newlines and encodes some others, so the text is checked too.
+    "mailto" | "tel" => {
+      !url.path().is_empty()
+        && !raw.chars().any(is_unsafe_url_char)
+        && !url.as_str().chars().any(is_unsafe_url_char)
+    }
+    _ => false,
+  };
+  if is_allowed {
+    Ok(url)
+  } else {
+    Err(format!("Disallowed URL: {}", url.scheme()))
+  }
+}
+
+fn is_unsafe_url_char(char: char) -> bool {
+  char.is_whitespace() || char.is_control() || matches!(char, '"' | '<' | '>')
 }
 
 #[tauri::command]
@@ -379,12 +477,17 @@ pub(crate) fn open_new_window(
   .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
   .min_inner_size(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
   .disable_drag_drop_handler() // Required for Drag & Drop on Windows
+  .visible(!SHOULD_START_HIDDEN.swap(false, Ordering::Relaxed))
+  .content_protected(app.state::<DesktopSettings>().get().is_content_protected)
   .initialization_script(format!(
     "window.tauri = {{ version: '{}', hasUpdater: {} }};",
     app.package_info().version,
     has_updater(&app),
   ))
   .on_navigation(move |url| is_allowed_app_url(url, &base_url))
+  // Links open in the system browser through `open_external_url`; a page-opened window would hold a site next to
+  // the app, and on Windows the webview opens one by default
+  .on_new_window(|_, _| NewWindowResponse::Deny)
   // The page saves files through `files.rs`; a download that the webview starts on its own has no
   // sanitized name or checked destination, so none is allowed
   .on_download(|_, event| {
@@ -428,9 +531,7 @@ pub(crate) fn open_new_window(
 /// Shows and focuses the first window, or opens one at the last URL
 pub(crate) fn show_main_window(app: &tauri::AppHandle) -> Option<tauri::WebviewWindow> {
   if let Some(window) = app.webview_windows().into_values().next() {
-    window.unminimize().unwrap_or_default();
-    window.show().unwrap_or_default();
-    window.set_focus().unwrap_or_default();
+    bring_window_forward(&window);
     return Some(window);
   }
 
@@ -441,6 +542,41 @@ pub(crate) fn show_main_window(app: &tauri::AppHandle) -> Option<tauri::WebviewW
   open_new_window(app.clone(), url)
     .inspect_err(|err| log::error!("Failed to open window: {err}"))
     .ok()
+}
+
+pub(crate) fn bring_window_forward(window: &tauri::WebviewWindow) {
+  // A hidden app does not show its windows
+  #[cfg(target_os = "macos")]
+  window.app_handle().show().unwrap_or_default();
+  window.unminimize().unwrap_or_default();
+  window.show().unwrap_or_default();
+  window.set_focus().unwrap_or_default();
+}
+
+/// Hides the window, as closing it does with "Close to tray" on: the app and its engine keep running, and the
+/// tray icon brings the window back
+pub(crate) fn hide_to_tray(window: &tauri::Window) {
+  save_window_url(window.app_handle(), window.label());
+
+  #[cfg(target_os = "macos")]
+  window.app_handle().hide().unwrap_or_default();
+  #[cfg(not(target_os = "macos"))]
+  window.hide().unwrap_or_default();
+}
+
+/// Closes the window as its close button does: the last window hides to the tray with "Close to tray" on, and
+/// quits the app with it off
+pub(crate) fn hide_or_close_window(window: &tauri::Window) {
+  let app = window.app_handle();
+  if app.windows().len() == 1 && app.state::<DesktopSettings>().get().should_close_to_tray {
+    hide_to_tray(window);
+    return;
+  }
+
+  save_window_url(window.app_handle(), window.label());
+  if let Err(err) = window.close() {
+    log::error!("Failed to close the window: {err:?}");
+  }
 }
 
 fn has_updater(app: &tauri::AppHandle) -> bool {
@@ -475,4 +611,52 @@ fn is_allowed_app_url(url: &Url, base_url: &Url) -> bool {
     && url.host() == base_url.host()
     && url.port_or_known_default() == base_url.port_or_known_default()
     && url.path().trim_end_matches('/') == base_url.path().trim_end_matches('/')
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// What `open_external_url` accepts: a URL that parses, with an allowed scheme
+  fn is_allowed(url: &str) -> bool {
+    parse_external_url(url).is_ok()
+  }
+
+  #[test]
+  fn opens_only_web_mail_and_phone_links_outside_the_app() {
+    for url in [
+      "https://signal.org/",
+      "http://example.com/a?b=c#d",
+      "mailto:someone@example.com",
+      "tel:+123456789",
+      "mailto:someone@example.com?subject=Hi&body=Hello%20there",
+    ] {
+      assert!(is_allowed(url), "{url}");
+    }
+    for url in [
+      "file:///etc/passwd",
+      "file://host/share/run.exe",
+      "javascript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "blob:https://example.com/id",
+      "ms-msdt:/id",
+      "ssh://host",
+      "smb://host/share",
+      "vscode://file/x",
+      "tauri://localhost/",
+      "sgnl://signal.me/#p/+1",
+      "http:///",
+      "mailto:",
+      "mailto:a@b.c\"><script>",
+      "mailto:a@b.c?body=x<y",
+      "mailto:a@b.c?body=x\"y",
+      "mailto:a b@c.d",
+      "mailto:a@b.c\ttab",
+      "mailto:a@b.c\nBcc:x@y.z",
+      "tel:+123\u{7f}456",
+      "tel:+123\u{a0}456",
+    ] {
+      assert!(!is_allowed(url), "{url}");
+    }
+  }
 }

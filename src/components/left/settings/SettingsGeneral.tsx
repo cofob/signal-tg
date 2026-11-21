@@ -9,6 +9,7 @@ import type { IRadioOption } from '../../ui/RadioGroup';
 import { SettingsScreens } from '../../../types';
 
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
+import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_IOS } from '../../../util/browser/windowEnvironment';
 import { getSystemTheme } from '../../../util/systemTheme';
 
@@ -22,6 +23,7 @@ import ListItem from '../../ui/ListItem';
 import RadioGroup from '../../ui/RadioGroup';
 import RangeSlider from '../../ui/RangeSlider';
 import ChatThemesPicker from './ChatThemesPicker';
+import SettingsDesktopApp from './SettingsDesktopApp';
 
 type OwnProps = {
   isActive?: boolean;
@@ -154,6 +156,8 @@ const SettingsGeneral = ({
           onCheck={handleTextShortcutReplacementChange}
         />
       </Island>
+
+      {IS_TAURI && <SettingsDesktopApp />}
     </div>
   );
 };

@@ -33,6 +33,7 @@ import { callApi } from '../api';
 import { IS_TAURI } from './browser/globalEnvironment';
 import { IS_SERVICE_WORKER_SUPPORTED, IS_TOUCH_ENV } from './browser/windowEnvironment';
 import jsxToHtml from './element/jsxToHtml';
+import { showDesktopNotification } from './tauri/desktopApp';
 import { buildCollectionByKey } from './iteratees';
 import { getTranslationFn } from './localization';
 import * as mediaLoader from './mediaLoader';
@@ -298,10 +299,11 @@ export async function notifyAboutMessage({
   }
 
   if (IS_TAURI) {
-    // The system notification shows the app icon: the plugin takes icon names and paths, not the avatar's blob URL
+    // The system notification shows the app icon: it takes icon names and paths, not the avatar's blob URL. A click
+    // opens the chat (`setupTauriListeners`), except while the screen is locked.
     const { title, body } = getNotificationContent(chat, message as ApiMessage, activeReaction);
-    const { sendNotification } = await import('@tauri-apps/plugin-notification');
-    sendNotification({ title, body });
+    const shouldOpenChat = !getGlobal().passcode.isScreenLocked;
+    void showDesktopNotification(title, body, shouldOpenChat ? chat.id : undefined, message.id);
     return;
   }
 

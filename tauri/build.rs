@@ -7,6 +7,11 @@ fn main() {
       "open_new_window_cmd",
       "save_current_url",
       "set_menu_translations",
+      "quit_app",
+      "open_external_url",
+      "get_desktop_settings",
+      "set_desktop_settings",
+      "show_notification",
       "take_deep_links",
       "signal_connect",
       "signal_send",
@@ -19,6 +24,7 @@ fn main() {
       "list_saved_files",
       "open_saved_file",
       "reveal_saved_file",
+      "forget_saved_files",
     ]),
   ))
   .expect("Failed to build Tauri application")

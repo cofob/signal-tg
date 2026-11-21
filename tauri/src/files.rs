@@ -45,10 +45,7 @@ const MAX_KEY_BYTES: usize = 512;
 const MAX_PENDING_SAVES: usize = 16;
 const MAX_SAVED_FILES: usize = 5000;
 const UNKNOWN_SAVE_ERROR: &str = "Unknown save";
-// The warning before opening a dangerous file is fixed here: text from the page could disguise it
-const OPEN_WARNING_TITLE: &str = "Open this file?";
-const OPEN_WARNING_OPEN_LABEL: &str = "Open";
-const OPEN_WARNING_CANCEL_LABEL: &str = "Cancel";
+const FALLBACK_LANGUAGE: &str = "en";
 /// Characters that Windows forbids in names; replacing them everywhere keeps files portable
 const FORBIDDEN_NAME_CHARS: &[char] = &['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 /// Names that Windows reserves for devices, with any extension
@@ -401,6 +398,14 @@ impl SavedFiles {
     evicted
   }
 
+  /// Drops every record and returns their keys
+  fn clear(&self) -> Vec<String> {
+    let mut data = lock(&self.data);
+    let keys = data.files.drain().map(|(key, _)| key).collect();
+    self.persist(&data);
+    keys
+  }
+
   fn remove(&self, key: &str) {
     let mut data = lock(&self.data);
     if data.files.remove(key).is_some() {
@@ -439,7 +444,7 @@ impl SavedFiles {
   }
 }
 
-fn write_json_atomically(path: &Path, data: &SavedFilesData) -> io::Result<()> {
+pub(crate) fn write_json_atomically(path: &Path, data: &impl Serialize) -> io::Result<()> {
   if let Some(parent) = path.parent() {
     fs::create_dir_all(parent)?;
   }
@@ -572,7 +577,8 @@ fn discard_temp_file(save: &mut PendingSave) {
   // Windows cannot remove an open file
   drop(save.file.take());
   if let Err(err) = fs::remove_file(&save.temp_path) {
-    log::warn!("Failed to remove {}: {err}", save.temp_path.display());
+    // File names come from messages, so logs name no file
+    log::warn!("Failed to remove a temporary file: {err}");
   }
 }
 
@@ -779,12 +785,27 @@ pub async fn list_saved_files(
   Ok(kept)
 }
 
+/// Drops the records of every saved file, as logging out does: they hold the paths and the keys of attachments that the
+/// account received. The files themselves stay where the user saved them.
+#[tauri::command]
+pub async fn forget_saved_files(
+  app: AppHandle,
+  files: tauri::State<'_, Files>,
+) -> Result<(), String> {
+  let removed = files.saved.clear();
+  if !removed.is_empty() {
+    emit_change(&app, Vec::new(), removed);
+  }
+  Ok(())
+}
+
 /// Opens a saved file with the default app, after a confirmation when its type is dangerous
 #[tauri::command]
 pub async fn open_saved_file(
   window: WebviewWindow,
   files: tauri::State<'_, Files>,
   key: String,
+  lang_code: String,
 ) -> Result<SavedFileOutcome, String> {
   let Some(path) = get_existing_path(&window, &files, &key) else {
     return Ok(SavedFileOutcome::Missing);
@@ -794,7 +815,7 @@ pub async fn open_saved_file(
     .file_name()
     .map(|name| name.to_string_lossy().into_owned())
     .unwrap_or_default();
-  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name).await {
+  if is_file_dangerous(&file_name) && !confirm_open(&window, &file_name, &lang_code).await {
     return Ok(SavedFileOutcome::Cancelled);
   }
 
@@ -821,7 +842,7 @@ pub async fn reveal_saved_file(
     .reveal_item_in_dir(&path)
     .or_else(|err| {
       // Without a file manager that implements `FileManager1` (Linux), opening the folder is the best left
-      log::warn!("Failed to reveal {}: {err}", path.display());
+      log::warn!("Failed to reveal a file: {err}");
       let dir = path.parent().ok_or(err)?;
       opener.open_path(dir.to_string_lossy(), None::<&str>)
     })
@@ -840,24 +861,78 @@ fn get_existing_path(window: &WebviewWindow, files: &Files, key: &str) -> Option
   None
 }
 
+/// The words of the warning before opening a dangerous file. They are fixed here, one set for each language of the
+/// app, and the page picks a set by its language code: text from the page could disguise the warning.
+struct OpenWarningText {
+  title: &'static str,
+  file_label: &'static str,
+  type_label: &'static str,
+  warning: &'static str,
+  open_label: &'static str,
+  cancel_label: &'static str,
+}
+
+const OPEN_WARNING_TEXTS: &[(&str, OpenWarningText)] = &[
+  (
+    "en",
+    OpenWarningText {
+      title: "Open this file?",
+      file_label: "File",
+      type_label: "Type",
+      warning: "This type of file can run programs or change settings on your computer. Open it only if you trust the sender.",
+      open_label: "Open",
+      cancel_label: "Cancel",
+    },
+  ),
+  (
+    "ru",
+    OpenWarningText {
+      title: "Открыть этот файл?",
+      file_label: "Файл",
+      type_label: "Тип",
+      warning: "Файлы этого типа могут запускать программы или менять настройки компьютера. Открывайте его, только если доверяете отправителю.",
+      open_label: "Открыть",
+      cancel_label: "Отмена",
+    },
+  ),
+];
+
+/// The text for a language code such as `ru` or `ru-RU`; a code that the app does not ship gets English
+fn get_open_warning_text(lang_code: &str) -> &'static OpenWarningText {
+  let language = lang_code
+    .split(['-', '_'])
+    .next()
+    .unwrap_or_default()
+    .to_ascii_lowercase();
+  let find = |code: &str| OPEN_WARNING_TEXTS.iter().find(|(known, _)| *known == code);
+  let (_, text) = find(&language)
+    .or_else(|| find(FALLBACK_LANGUAGE))
+    .expect("The fallback language has a text");
+  text
+}
+
 /// The warning with the real file name and extension
-fn build_open_warning(file_name: &str) -> String {
+fn build_open_warning(text: &OpenWarningText, file_name: &str) -> String {
   format!(
-    "File: {file_name}\nType: .{}\n\nThis type of file can run programs or change settings on your computer. Open it only if you trust the sender.",
-    get_extension(file_name)
+    "{}: {file_name}\n{}: .{}\n\n{}",
+    text.file_label,
+    text.type_label,
+    get_extension(file_name),
+    text.warning,
   )
 }
 
-async fn confirm_open(window: &WebviewWindow, file_name: &str) -> bool {
+async fn confirm_open(window: &WebviewWindow, file_name: &str, lang_code: &str) -> bool {
+  let text = get_open_warning_text(lang_code);
   let (sender, receiver) = tokio::sync::oneshot::channel();
   window
     .dialog()
-    .message(build_open_warning(file_name))
-    .title(OPEN_WARNING_TITLE)
+    .message(build_open_warning(text, file_name))
+    .title(text.title)
     .kind(MessageDialogKind::Warning)
     .buttons(MessageDialogButtons::OkCancelCustom(
-      OPEN_WARNING_OPEN_LABEL.to_string(),
-      OPEN_WARNING_CANCEL_LABEL.to_string(),
+      text.open_label.to_string(),
+      text.cancel_label.to_string(),
     ))
     .show(move |is_confirmed| {
       let _ = sender.send(is_confirmed);
@@ -888,7 +963,7 @@ fn mark_as_downloaded(path: &Path) {
       .arg(path)
       .status();
     if !result.is_ok_and(|status| status.success()) {
-      log::warn!("Failed to quarantine {}", path.display());
+      log::warn!("Failed to quarantine a file");
     }
   }
   #[cfg(windows)]
@@ -897,7 +972,7 @@ fn mark_as_downloaded(path: &Path) {
     let mut stream = path.as_os_str().to_owned();
     stream.push(":Zone.Identifier");
     if let Err(err) = fs::write(&stream, "[ZoneTransfer]\r\nZoneId=3\r\n") {
-      log::warn!("Failed to mark {}: {err}", path.display());
+      log::warn!("Failed to mark a file: {err}");
     }
   }
   #[cfg(not(any(target_os = "macos", windows)))]
@@ -1141,6 +1216,30 @@ mod tests {
   }
 
   #[test]
+  fn clearing_drops_every_record_from_storage() {
+    let dir = make_temp_dir();
+    let file = dir.join("secret.txt");
+    fs::write(&file, "a").unwrap();
+    let storage = dir.join(SAVED_FILES_FILE_NAME);
+
+    let saved = SavedFiles::load(Some(storage.clone()));
+    saved.insert("one".to_string(), file.clone());
+    saved.insert("two".to_string(), file.clone());
+    let mut keys = saved.clear();
+    keys.sort();
+    assert_eq!(keys, vec!["one".to_string(), "two".to_string()]);
+    assert_eq!(saved.get_path("one"), None);
+
+    // The stored list holds neither the keys nor the path, and the file stays
+    let stored = fs::read_to_string(&storage).unwrap();
+    assert!(!stored.contains("secret.txt") && !stored.contains("one"));
+    assert_eq!(SavedFiles::load(Some(storage)).get_path("two"), None);
+    assert!(file.exists());
+
+    fs::remove_dir_all(&dir).unwrap();
+  }
+
+  #[test]
   fn records_ignore_unreadable_storage() {
     let dir = make_temp_dir();
     let path = dir.join(SAVED_FILES_FILE_NAME);
@@ -1253,10 +1352,11 @@ mod tests {
 
   #[test]
   fn the_open_warning_names_the_file_and_type() {
-    let warning = build_open_warning("Invoice.PDF.exe");
+    let text = get_open_warning_text("en");
+    let warning = build_open_warning(text, "Invoice.PDF.exe");
     assert!(warning.contains("File: Invoice.PDF.exe"));
     assert!(warning.contains("Type: .exe"));
-    assert!(build_open_warning(".bat").contains("Type: .bat"));
+    assert!(build_open_warning(text, ".bat").contains("Type: .bat"));
   }
 
   #[test]

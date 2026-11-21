@@ -375,6 +375,56 @@ addActionHandler('deleteChat', async (global, actions, payload): Promise<void> =
   }
 });
 
+// Signal admins end a group for everyone; it stays in the list with its history
+addActionHandler('terminateChat', async (global, actions, payload): Promise<void> => {
+  const { chatId } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  await callApi('terminateChat', { chat });
+});
+
+// Taking back an invitation changes the group, which brings the new list of invitations
+addActionHandler('revokeChatInvite', async (global, actions, payload): Promise<void> => {
+  const { chatId, serviceId } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  await callApi('revokeChatInvite', { chat, serviceId });
+});
+
+// Signal: a number that belongs to a Signal user, even one we know by PNI only, is added or invited
+addActionHandler('addChatMemberByPhoneNumber', async (global, actions, payload): Promise<void> => {
+  const { chatId, phoneNumber, tabId = getCurrentTabId() } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  actions.setNewChatMembersDialogState({ newChatMembersProgress: NewChatMembersProgress.Loading, tabId });
+  const result = await callApi('addChatMemberByPhoneNumber', { chat, phoneNumber });
+  actions.setNewChatMembersDialogState({ newChatMembersProgress: NewChatMembersProgress.Closed, tabId });
+  if (!result) return;
+
+  const phone = `+${phoneNumber}`;
+  if ('error' in result) {
+    actions.showNotification({
+      message: result.error === 'notFound' ? {
+        key: 'UsernameByPhoneNotFound',
+        variables: { phone: phoneNumber },
+        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
+      } : { key: result.error === 'rateLimited' ? 'ErrorPhoneLookupRateLimited' : 'ErrorPhoneLookupUnavailable' },
+      tabId,
+    });
+    return;
+  }
+
+  actions.showNotification({
+    message: { key: result.status === 'invited' ? 'GroupPhoneInvited' : 'GroupPhoneAdded', variables: { phone } },
+    tabId,
+  });
+  global = getGlobal();
+  loadFullChat(global, actions, chat);
+});
+
 function cleanupAfterLeave(chatId: string, tabId: number) {
   let global = getGlobal();
   global = leaveChat(global, chatId);

@@ -33,7 +33,7 @@ type StateProps = {
   isOwn?: boolean;
 };
 
-const MAX_RANK_LENGTH = 16;
+const MAX_RANK_LENGTH = 24;
 const PREVIEW_TIME = '9:37';
 
 const EditRankModal = ({
@@ -168,8 +168,6 @@ export default memo(withGlobal<OwnProps>(
       canEditRank: modal && selectCanEditRank(global, {
         chatId: modal.chatId,
         userId: modal.userId,
-        isAdmin: modal.isAdmin,
-        isOwner: modal.isOwner,
       }),
       isOwn: modal && modal.userId === global.currentUserId,
     };

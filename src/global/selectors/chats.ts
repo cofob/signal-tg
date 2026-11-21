@@ -245,35 +245,24 @@ export function selectAreFoldersPresent<T extends GlobalState>(global: T) {
 }
 
 export function selectCanEditRank<T extends GlobalState>(global: T, {
-  chatId, userId, isAdmin, isOwner,
+  chatId, userId,
 }: {
   chatId: string;
   userId: string;
-  isAdmin?: boolean;
-  isOwner?: boolean;
 }) {
   const chat = selectChat(global, chatId);
   if (!chat || chat.isNotJoined || chat.isRestricted) return false;
 
-  const isCurrentUserAdmin = isChatAdmin(chat);
-  const hasAdminRight = getHasAdminRight(chat, 'manageRanks');
-  if (!isCurrentUserAdmin) return userId === global.currentUserId && !isUserRightBanned(chat, 'editRank'); // Users can edit only their own rank
-  if (!hasAdminRight) return false;
-
-  if (userId === global.currentUserId) return true; // Admin can edit own rank with permission
-
-  if (!chat.isOwner && (isOwner || isAdmin)) return false; // Admin can't edit rank of owner or another admin
-
-  return true;
+  // Members set only their own label; admins can do that even when only admins may
+  if (userId !== global.currentUserId) return false;
+  return selectCanEditOwnRank(global, chatId);
 }
 
 export function selectCanEditOwnRank<T extends GlobalState>(global: T, chatId: string) {
   const chat = selectChat(global, chatId);
   if (!chat || chat.isNotJoined || chat.isRestricted) return false;
 
-  const isCurrentUserAdmin = isChatAdmin(chat);
-  if (!isCurrentUserAdmin) return !isUserRightBanned(chat, 'editRank'); // Users can edit only their own rank
-  return getHasAdminRight(chat, 'manageRanks');
+  return isChatAdmin(chat) || !isUserRightBanned(chat, 'editRank');
 }
 
 export function selectIsChatUnread<T extends GlobalState>(global: T, chatId: string) {

@@ -144,6 +144,17 @@ const SettingsMain = ({
           </ListItem>
 
           <ListItem
+            icon="devices-filled"
+            iconBg="blue"
+            multiline
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.SignalDevices })}
+          >
+            <span className="title">{lang('SignalDevices')}</span>
+            <span className="subtitle">{lang('SettingsSignalDevicesDesc')}</span>
+          </ListItem>
+
+          <ListItem
             icon="animations-filled"
             iconBg="purple"
             multiline

@@ -43,6 +43,7 @@ import { updateTopReserveWithScrollCompensation } from '../middle/helpers/messag
 
 import useInterval from '../../hooks/schedulers/useInterval';
 import useTimeout from '../../hooks/schedulers/useTimeout';
+import useDesktopApp from '../../hooks/tauri/useDesktopApp';
 import useTauriEvent from '../../hooks/tauri/useTauriEvent';
 import useAppLayout from '../../hooks/useAppLayout';
 import useForceUpdate from '../../hooks/useForceUpdate';
@@ -205,6 +206,7 @@ const Main = ({
   }
 
   const lang = useLang();
+  useDesktopApp();
 
   useTimeout(() => {
     onFullyIdle(() => {

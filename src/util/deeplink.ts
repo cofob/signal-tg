@@ -118,8 +118,10 @@ export function openSignalLink(link: SignalLink, tabId?: number) {
     case 'proxy':
       actions.openSignalLinkModal({ type: 'proxy', host: link.host, tabId });
       break;
-    case 'callLink':
     case 'linkDevice':
+      actions.openSignalLinkDevice({ url: link.url, tabId });
+      break;
+    case 'callLink':
     case 'reRegister':
       actions.openSignalLinkModal({ type: link.type, tabId });
       break;

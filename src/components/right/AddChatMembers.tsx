@@ -1,7 +1,7 @@
 import {
   memo, useCallback, useMemo, useState,
 } from '../../lib/teact/teact';
-import { withGlobal } from '../../global';
+import { getActions, withGlobal } from '../../global';
 
 import type {
   ApiChatMember,
@@ -15,11 +15,13 @@ import sortChatIds from '../common/helpers/sortChatIds';
 
 import useHistoryBack from '../../hooks/useHistoryBack';
 import useLang from '../../hooks/useLang';
+import useLastCallback from '../../hooks/useLastCallback';
 import usePeerSearch, { userGlobalSearch } from '../../hooks/usePeerSearch';
 import usePreviousDeprecated from '../../hooks/usePreviousDeprecated';
 
 import PeerPicker from '../common/pickers/PeerPicker';
 import FloatingActionButton from '../ui/FloatingActionButton';
+import ListItem from '../ui/ListItem';
 
 import './AddChatMembers.scss';
 
@@ -37,7 +39,11 @@ type StateProps = {
   isLoading: boolean;
 };
 
+const PHONE_SEPARATORS = /[\s().-]/g;
+const PHONE_PATTERN = /^\+[1-9]\d{6,14}$/;
+
 const AddChatMembers = ({
+  chatId,
   members,
   onNextStep,
   currentUserId,
@@ -46,6 +52,8 @@ const AddChatMembers = ({
   onClose,
   isActive,
 }: OwnProps & StateProps) => {
+  const { addChatMemberByPhoneNumber } = getActions();
+
   const lang = useLang();
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +97,16 @@ const AddChatMembers = ({
     );
   }, [localContactIds, relevantFoundIds, searchQuery, currentUserId, memberIds]);
 
+  // A number can belong to a Signal user we have no contact for, whom the contact discovery service finds on
+  // request; one known by PNI only is invited
+  const phoneQuery = searchQuery.replace(PHONE_SEPARATORS, '');
+  const searchPhoneNumber = PHONE_PATTERN.test(phoneQuery) ? phoneQuery.replace('+', '') : undefined;
+
+  const handlePhoneSearchClick = useLastCallback(() => {
+    addChatMemberByPhoneNumber({ chatId, phoneNumber: searchPhoneNumber! });
+    onClose();
+  });
+
   const handleNextStep = useCallback(() => {
     if (selectedMemberIds.length) {
       onNextStep(selectedMemberIds);
@@ -114,6 +132,11 @@ const AddChatMembers = ({
           allowMultiple
           withStatus
           itemInputType="checkbox"
+          subheader={searchPhoneNumber ? (
+            <ListItem icon="phone" className="chat-item-clickable" onClick={handlePhoneSearchClick}>
+              {lang('GroupInviteByPhone', { phone: `+${searchPhoneNumber}` })}
+            </ListItem>
+          ) : undefined}
         />
 
         <FloatingActionButton

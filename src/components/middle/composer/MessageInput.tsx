@@ -382,7 +382,7 @@ const MessageInput = ({
       input.removeAttribute('aria-readonly');
     }
     if (IS_TAURI) {
-      input.setAttribute('spellcheck', 'false');
+      input.setAttribute('spellcheck', 'true');
     } else {
       input.removeAttribute('spellcheck');
     }
@@ -780,7 +780,7 @@ const MessageInput = ({
               aria-disabled={canRenderRichEditor && !isRichEditorReady}
               aria-readonly={isCollapsedRichOnlyPreview || undefined}
               dir="auto"
-              spellCheck={IS_TAURI ? false : undefined}
+              spellCheck={IS_TAURI ? true : undefined}
               tabIndex={isCollapsedRichOnlyPreview ? -1 : 0}
               onClick={isCollapsedRichOnlyPreview ? undefined : focusInput}
               onDoubleClick={DEBUG ? handleDebugDoubleClick : undefined}

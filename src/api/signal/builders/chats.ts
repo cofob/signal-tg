@@ -6,6 +6,7 @@ import type {
   ApiChatBannedRights,
   ApiChatFullInfo,
   ApiChatMember,
+  ApiChatPendingInvite,
   ApiPeerNotifySettings,
   ApiThreadInfo,
   ApiUser,
@@ -14,8 +15,9 @@ import { MAIN_THREAD_ID } from '../../types';
 
 import { ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '../../../config';
 import { buildGroupInviteLink } from '../../../lib/signal/groups/inviteLinks';
+import { formatMemberLabel } from '../../../lib/signal/groups/memberLabels';
 import { AccessControl_AccessRequired } from '../../../lib/signal/proto/generated/Groups_pb';
-import { toPniServiceId } from '../../../lib/signal/serviceId';
+import { isPniServiceId, toPniServiceId } from '../../../lib/signal/serviceId';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { getCurrentAccount } from '../client';
@@ -26,6 +28,7 @@ import {
 } from './users';
 
 const READ_STATE_PAGE_SIZE = 50;
+const MS_PER_SECOND = 1000;
 // Signal group admins edit the group, add and remove members and admins, pin messages and delete them for everyone
 const GROUP_ADMIN_RIGHTS: ApiChatAdminRights = {
   changeInfo: true,
@@ -34,6 +37,7 @@ const GROUP_ADMIN_RIGHTS: ApiChatAdminRights = {
   inviteUsers: true,
   pinMessages: true,
   addAdmins: true,
+  manageRanks: true,
 };
 
 /**
@@ -66,6 +70,8 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
 
   const { memberAcis, adminAcis } = conversation;
   const isInvited = getIsInvitedToGroup(conversation, selfAci);
+  // An ended group keeps its history, and nobody can write to it, as to a group we left
+  const isTerminated = Boolean(conversation.groupState?.isTerminated);
   return {
     id,
     type: 'chatTypeBasicGroup',
@@ -76,7 +82,7 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
     membersCount: memberAcis?.length,
     ttlPeriod: conversation.expireTimer,
     isListed,
-    isForbidden: memberAcis && !memberAcis.includes(selfAci) && !isInvited ? true : undefined,
+    isForbidden: isTerminated || (memberAcis && !memberAcis.includes(selfAci) && !isInvited) ? true : undefined,
     isNotJoined: isInvited || undefined,
     adminRights: adminAcis?.includes(selfAci) ? GROUP_ADMIN_RIGHTS : undefined,
     defaultBannedRights: buildGroupBannedRights(conversation),
@@ -100,11 +106,13 @@ export function getIsInvitedToGroup(conversation: ConversationRecord, selfAci: s
 function buildGroupBannedRights({ isAnnouncementsOnly, groupState }: ConversationRecord) {
   const isInfoAdminOnly = groupState?.accessControl.attributes === AccessControl_AccessRequired.ADMINISTRATOR;
   const isMembersAdminOnly = groupState?.accessControl.members === AccessControl_AccessRequired.ADMINISTRATOR;
-  if (!isAnnouncementsOnly && !isInfoAdminOnly && !isMembersAdminOnly) return undefined;
+  const isLabelAdminOnly = groupState?.accessControl.memberLabel === AccessControl_AccessRequired.ADMINISTRATOR;
+  if (!isAnnouncementsOnly && !isInfoAdminOnly && !isMembersAdminOnly && !isLabelAdminOnly) return undefined;
   return {
     sendMessages: isAnnouncementsOnly || undefined,
     changeInfo: isInfoAdminOnly || undefined,
     inviteUsers: isMembersAdminOnly || undefined,
+    editRank: isLabelAdminOnly || undefined,
   } satisfies ApiChatBannedRights;
 }
 
@@ -210,10 +218,34 @@ export async function buildGroupFullInfo(
   for (const { aci } of requesters) {
     requesterConversations.push(await processor.getOrCreatePrivateConversation(aci));
   }
+  // Admins see who was invited and by whom; the others have no use for it
+  const pendingMembers = isSelfAdmin ? conversation.groupState?.pendingMembers ?? [] : [];
+  const invitedConversations = new Map<string, ConversationRecord>();
+  for (const serviceId of new Set(pendingMembers.flatMap(({ serviceId: invited, addedBy }) => [invited, addedBy]))) {
+    if (serviceId && !isPniServiceId(serviceId)) {
+      invitedConversations.set(serviceId, await processor.getOrCreatePrivateConversation(serviceId));
+    }
+  }
+  const invitedNumbers = pendingMembers.some(({ serviceId }) => isPniServiceId(serviceId))
+    ? await processor.getInvitedNumbers()
+    : undefined;
+  const pendingInvites = pendingMembers.map(({ serviceId, addedBy, timestamp }): ApiChatPendingInvite => {
+    const invited = invitedConversations.get(serviceId);
+    const inviter = addedBy ? invitedConversations.get(addedBy) : undefined;
+    return {
+      serviceId,
+      userId: invited && getPeerId(invited),
+      phoneNumber: invitedNumbers?.[serviceId],
+      inviterId: inviter && getPeerId(inviter),
+      date: timestamp ? Math.floor(timestamp / MS_PER_SECOND) : undefined,
+    };
+  });
+  const labels = new Map(conversation.groupState?.members.map((member) => [member.aci, formatMemberLabel(member)]));
   const members = memberConversations.map((member): ApiChatMember => {
     const isMemberAdmin = adminAcis.has(member.id);
     return {
       userId: getPeerId(member),
+      rank: labels.get(member.id),
       isAdmin: isMemberAdmin ? true : undefined,
       adminRights: isMemberAdmin ? GROUP_ADMIN_RIGHTS : undefined,
     };
@@ -235,8 +267,10 @@ export async function buildGroupFullInfo(
       inviteLink: getGroupInviteLink(conversation),
       requestsPending: requesters.length || undefined,
       recentRequesterIds: requesterConversations.length ? requesterConversations.map(getPeerId) : undefined,
+      pendingInvites: pendingInvites.length ? pendingInvites : undefined,
     },
-    users: [...memberConversations, ...requesterConversations].map((member) => buildApiUser(member, selfAci)),
+    users: [...memberConversations, ...requesterConversations, ...invitedConversations.values()]
+      .map((member) => buildApiUser(member, selfAci)),
   };
 }
 

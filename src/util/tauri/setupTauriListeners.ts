@@ -1,21 +1,39 @@
 import { getActions } from '../../global';
 
+import { SettingsScreens } from '../../types';
+
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
+import { getLoggableError } from '../maskSensitiveText';
 import { isSgnlLink, parseSignalLink } from '../signalLinks';
+import { openExternalUrl } from './desktopApp';
+
+const NOTIFICATION_CLICKED_EVENT = 'notification-clicked';
+const OPEN_SETTINGS_EVENT = 'open-settings';
+
+type NotificationClick = {
+  chatId: string;
+  messageId?: number;
+};
+
+// The inputs that hold text, unlike checkboxes, ranges and buttons
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email', 'password', 'number']);
 
 let isSetup = false;
 export default function setupTauriListeners() {
   if (isSetup) return;
   isSetup = true;
 
-  // Disable default tauri context menu in production build
+  // Show the system context menu only in text fields (cut, copy, paste, spelling suggestions) in production builds,
+  // which have no inspector; elsewhere it holds browser items such as Reload and Back
   if (!DEBUG) {
     document.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
+      if (!getIsEditableTarget(event.target)) event.preventDefault();
     });
   }
+
+  void listenToNativeEvents();
 
   // Disable Backspace handling as back navigation
   document.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -61,6 +79,38 @@ export default function setupTauriListeners() {
   window.addEventListener('auxclick', handleClick);
 }
 
+function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has(target.type) && !target.readOnly && !target.disabled;
+  }
+  if (target instanceof HTMLTextAreaElement) return !target.readOnly && !target.disabled;
+  return target.isContentEditable;
+}
+
+async function listenToNativeEvents() {
+  try {
+    const { listen } = await import('@tauri-apps/api/event');
+
+    // The app brought the window forward after a click on a notification (`tauri/src/notifications.rs`)
+    await listen<NotificationClick>(NOTIFICATION_CLICKED_EVENT, ({ payload: { chatId, messageId } }) => {
+      if (messageId === undefined) {
+        getActions().openChat({ id: chatId, shouldReplaceHistory: true });
+        return;
+      }
+      getActions().focusMessage({ chatId, messageId, shouldReplaceHistory: true });
+    });
+
+    // Cmd+, in the macOS menu bar
+    await listen(OPEN_SETTINGS_EVENT, () => {
+      getActions().openSettingsScreen({ screen: SettingsScreens.Main });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to listen to native events:', getLoggableError(err));
+  }
+}
+
 async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
   // Links that only the app handles stay in it: a `tg:` link would leave for another app, and an `sgnl:` link is
   // the app's own scheme. The addresses of Signal's websites that are routes open in the app too, unless the browser
@@ -77,11 +127,10 @@ async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
     if (window.location.origin === urlObject.origin && window.location.pathname === urlObject.pathname) {
       await window.tauri.openNewWindow(urlObject.toString());
     } else {
-      const shellPlugin = await import('@tauri-apps/plugin-shell');
-      await shellPlugin.open(urlObject.toString());
+      await openExternalUrl(urlObject.toString());
     }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error('Failed to open link:', url, e);
+    console.error('Failed to open link:', getLoggableError(e));
   }
 }

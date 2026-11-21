@@ -4,6 +4,7 @@ import type { SharedSettings } from '../../global/types';
 import type { KeyboardShortcutCondition, KeyboardShortcutDefault, KeyboardShortcutId } from './registry';
 
 import { selectSharedSettings } from '../../global/selectors/sharedState';
+import { IS_TAURI } from '../browser/globalEnvironment';
 import { IS_APP, IS_FIREFOX, IS_WINDOWS } from '../browser/windowEnvironment';
 import { getKeyComboFromEvent, IS_APPLE_KEYBOARD, normalizeKeyCombo } from './keyCombos';
 import { KEYBOARD_SHORTCUT_IDS, KEYBOARD_SHORTCUTS } from './registry';
@@ -81,6 +82,7 @@ function getIsDefaultAvailable(shortcutDefault: KeyboardShortcutDefault, sendKey
   if (platform === 'windows' && !IS_WINDOWS) return false;
   if (environment === 'app' && !IS_APP) return false;
   if (environment === 'notMacApp' && IS_APPLE_KEYBOARD && IS_APP) return false;
+  if (environment === 'notMacTauri' && (!IS_TAURI || IS_APPLE_KEYBOARD)) return false;
   if (environment === 'notFirefox' && IS_FIREFOX) return false;
   if (shortcutDefault.sendKeyCombo && shortcutDefault.sendKeyCombo !== sendKeyCombo) return false;
 

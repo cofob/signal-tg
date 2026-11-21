@@ -91,6 +91,7 @@ export interface ApiChatFullInfo {
   enabledReactions?: ApiChatReactions;
   members?: ApiChatMember[];
   kickedMembers?: ApiChatMember[];
+  pendingInvites?: ApiChatPendingInvite[];
   adminMembersById?: Record<string, ApiChatMember>;
   canViewMembers?: boolean;
   isPreHistoryHidden?: boolean;
@@ -124,6 +125,17 @@ export interface ApiChatMember {
   isAdmin?: true;
   isOwner?: true;
   isViaRequest?: true;
+}
+
+/** A Signal group invitation that has not been accepted; `serviceId` is the ACI or PNI the invitation names */
+export interface ApiChatPendingInvite {
+  serviceId: string;
+  // The invited user, when the invitation names an ACI
+  userId?: string;
+  // The number of a user invited by PNI, as far as we know it
+  phoneNumber?: string;
+  inviterId?: string;
+  date?: number;
 }
 
 export interface ApiChatAdminRights {

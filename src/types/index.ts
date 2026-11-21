@@ -13,6 +13,7 @@ import type {
   ApiFormattedText,
   ApiInputReplyInfo,
   ApiInputRichMessage,
+  ApiKeyTransparencySelfStatus,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -23,6 +24,8 @@ import type {
   ApiPhoto,
   ApiReaction,
   ApiSessionData,
+  ApiSignalDevices,
+  ApiSignalMessageSettings,
   ApiSignalPinSettings,
   ApiSticker,
   ApiStickerSet,
@@ -158,6 +161,10 @@ export interface AccountSettings {
   lastRecordMessageMode?: 'voice' | 'video';
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
+  signalDevices?: ApiSignalDevices;
+  signalMessageSettings?: ApiSignalMessageSettings;
+  // The result of the last key transparency check of our own account
+  keyTransparencySelfStatus?: ApiKeyTransparencySelfStatus;
   isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
@@ -260,6 +267,7 @@ export enum SettingsScreens {
   SignalPin,
   SignalPinNew,
   SignalPinConfirm,
+  SignalDevices,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
@@ -497,6 +505,7 @@ export enum ManagementScreens {
   EditInvite,
   InviteInfo,
   JoinRequests,
+  GroupInvitedUsers,
 }
 
 export type ManagementType = 'user' | 'group';

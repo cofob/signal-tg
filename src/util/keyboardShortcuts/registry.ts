@@ -4,7 +4,7 @@ import type { RegularLangKey } from '../../types/language';
 import { IS_MAC_OS } from '../browser/windowEnvironment';
 
 export type KeyboardShortcutId =
-  'globalSearch' | 'quickChatPicker' | 'savedMessages' | 'archivedChats' | 'openSettings' | 'lockScreen'
+  'globalSearch' | 'quickChatPicker' | 'savedMessages' | 'archivedChats' | 'openSettings' | 'lockScreen' | 'quitApp'
   | 'closeOrGoBack'
   | 'previousChat' | 'nextChat' | 'openChatByNumber' | 'openFolderByNumber'
   | 'searchInChat' | 'focusMessageInput' | 'editLastMessage' | 'replyToPreviousMessage' | 'replyToNextMessage'
@@ -32,7 +32,7 @@ export type KeyboardShortcutDefault = {
   combo: string;
   condition?: KeyboardShortcutCondition;
   platform?: 'mac' | 'windows';
-  environment?: 'app' | 'notFirefox' | 'notMacApp';
+  environment?: 'app' | 'notFirefox' | 'notMacApp' | 'notMacTauri';
   sendKeyCombo?: SharedSettings['messageSendKeyCombo'];
 };
 
@@ -121,6 +121,13 @@ export const KEYBOARD_SHORTCUTS: Record<KeyboardShortcutId, KeyboardShortcut> = 
       { combo: 'Meta+Shift+L', platform: 'mac' },
       { combo: 'Mod+L', environment: 'app' },
     ],
+  },
+  quitApp: {
+    section: 'general',
+    scope: 'global',
+    titleKey: 'ShortcutQuitApp',
+    // The macOS menu bar quits with Cmd+Q; the desktop app has no menu bar elsewhere
+    defaults: [{ combo: 'Ctrl+Q', environment: 'notMacTauri' }],
   },
   closeOrGoBack: {
     section: 'general',

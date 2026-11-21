@@ -929,11 +929,105 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
   setGlobal(global);
 });
 
+const LINK_DEVICE_ERROR_KEYS = {
+  badCode: 'SignalDeviceLinkBadCode',
+  limitExceeded: 'SignalDeviceLinkLimit',
+  rejected: 'SignalDeviceLinkRejected',
+  rateLimited: 'SignalDeviceLinkRateLimited',
+  noRecoveryKey: 'SignalDeviceLinkNoKey',
+  network: 'SignalDeviceLinkNetwork',
+} as const;
+
 addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
   const signalPin = await callApi('fetchSignalPinSettings');
   global = getGlobal();
   global = replaceSettings(global, { signalPin });
   setGlobal(global);
+});
+
+addActionHandler('loadKeyTransparencySelfStatus', async (global): Promise<void> => {
+  const keyTransparencySelfStatus = await callApi('fetchKeyTransparencySelfStatus');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
+  setGlobal(global);
+});
+
+addActionHandler('runKeyTransparencySelfCheck', async (global): Promise<void> => {
+  if (global.settings.byKey.keyTransparencySelfStatus === 'running') return;
+
+  global = replaceSettings(global, { keyTransparencySelfStatus: 'running' });
+  setGlobal(global);
+
+  const keyTransparencySelfStatus = await callApi('checkKeyTransparencySelf');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
+  setGlobal(global);
+});
+
+addActionHandler('loadSignalMessageSettings', async (global): Promise<void> => {
+  const signalMessageSettings = await callApi('fetchSignalMessageSettings');
+  global = getGlobal();
+  global = replaceSettings(global, { signalMessageSettings });
+  setGlobal(global);
+});
+
+// The change shows at once and goes back when it fails
+addActionHandler('updateSignalMessageSettings', async (global, actions, payload): Promise<void> => {
+  const previous = global.settings.byKey.signalMessageSettings;
+  if (!previous) return;
+
+  global = replaceSettings(global, { signalMessageSettings: { ...previous, ...payload } });
+  setGlobal(global);
+
+  const signalMessageSettings = await callApi('updateSignalMessageSettings', payload);
+  global = getGlobal();
+  global = replaceSettings(global, { signalMessageSettings: signalMessageSettings ?? previous });
+  setGlobal(global);
+});
+
+addActionHandler('loadSignalDevices', async (global): Promise<void> => {
+  const signalDevices = await callApi('fetchSignalDevices');
+  global = getGlobal();
+  global = replaceSettings(global, { signalDevices });
+  setGlobal(global);
+});
+
+addActionHandler('linkSignalDevice', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('linkSignalDevice', url);
+  if (!result) return;
+
+  if ('error' in result && result.error) {
+    actions.showNotification({ message: { key: LINK_DEVICE_ERROR_KEYS[result.error] }, tabId });
+    return;
+  }
+
+  actions.closeLinkDeviceModal({ tabId });
+  actions.showNotification({
+    message: result.device
+      ? { key: 'SignalDeviceLinked' }
+      : { key: 'SignalDeviceLinkPending' },
+    tabId,
+  });
+  actions.loadSignalDevices();
+});
+
+addActionHandler('unlinkSignalDevice', async (global, actions, payload): Promise<void> => {
+  const { deviceId, tabId = getCurrentTabId() } = payload;
+  const isUnlinked = await callApi('unlinkSignalDevice', deviceId);
+  if (!isUnlinked) actions.showNotification({ message: { key: 'ErrorUnexpected' }, tabId });
+  actions.loadSignalDevices();
+});
+
+// A link of a device that wants to be linked: a primary device offers to link it, a linked device cannot
+addActionHandler('openSignalLinkDevice', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+  const isPrimary = await callApi('fetchIsSignalPrimary');
+  if (isPrimary) {
+    actions.openLinkDeviceModal({ url, tabId });
+  } else {
+    actions.openSignalLinkModal({ type: 'linkDevice', tabId });
+  }
 });
 
 addActionHandler('setSignalPin', async (global, actions, payload): Promise<void> => {

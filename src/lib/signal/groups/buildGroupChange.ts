@@ -4,8 +4,9 @@ import type { GroupChange_ActionsSchema } from '../proto/generated/Groups_pb';
 import type { GroupState } from './fetchGroup';
 
 import { bufferToHex } from '../../../util/encoding/buffer';
-import { getRandomBytes } from '../crypto';
-import { encryptGroupAttribute, encryptGroupServiceId } from './groupCipher';
+import { encodeUtf8, getRandomBytes } from '../crypto';
+import { isPniServiceId } from '../serviceId';
+import { encryptGroupAttribute, encryptGroupServiceId, encryptGroupText } from './groupCipher';
 import { createProfileKeyCredentialPresentation } from './profileKeyCredentials';
 
 import { AccessControl_AccessRequired, Member_Role } from '../proto/generated/Groups_pb';
@@ -27,7 +28,7 @@ export type GroupChangeBuilder = (
 
 /** A change Signal clients do not make, such as a title over the length limit or the last admin leaving */
 export class GroupChangeRefusedError extends Error {
-  constructor(readonly reason: 'titleTooLong' | 'descriptionTooLong' | 'lastAdmin') {
+  constructor(readonly reason: 'titleTooLong' | 'descriptionTooLong' | 'lastAdmin' | 'labelTooLong') {
     super(`Group change refused: ${reason}`);
   }
 }
@@ -46,6 +47,12 @@ const GROUP_DESCRIPTION_MAX_ENCRYPTED_BYTES = 8192;
 export const GROUP_TITLE_MAX_GRAPHEMES = 32;
 const GROUP_DESCRIPTION_MAX_GRAPHEMES = 480;
 const INVITE_LINK_PASSWORD_LENGTH = 16;
+// Signal Desktop `ts/types/GroupMemberLabels.std.ts`: limits on the plaintext and on what the server accepts
+export const MEMBER_LABEL_MAX_GRAPHEMES = 24;
+const MEMBER_LABEL_MAX_BYTES = 96;
+const MEMBER_LABEL_EMOJI_MAX_BYTES = 48;
+const MEMBER_LABEL_SERVER_MAX_BYTES = 512;
+const MEMBER_LABEL_SERVER_EMOJI_MAX_BYTES = 64;
 // Signal Android `RemoteConfig.groupLimits` hard limit, which also bounds the banned list
 const GROUP_SIZE_HARD_LIMIT = 1001;
 
@@ -87,27 +94,31 @@ export function buildExpireTimerChange(seconds: number): GroupChangeBuilder {
 
 /**
  * Adds users as full members with their profile key credentials; users without one are invited and join once
- * they accept. Banned users are unbanned (Signal Desktop `buildAddMembersChange`). Users who asked to join are
- * approved instead, as in Signal Android `createApproveGroupJoinRequest`.
+ * they accept. Users known only by their PNI, which the contact discovery service returns for a phone number
+ * without sharing the ACI, are invited by PNI; a PNI invitation turns into a membership when its owner accepts
+ * (Signal Desktop `buildAddMember` and `ts/groups.preload.ts`, `promoteMembersPendingPniAciProfileKey`). Banned
+ * users are unbanned (Signal Desktop `buildAddMembersChange`). Users who asked to join are approved instead, as in
+ * Signal Android `createApproveGroupJoinRequest`.
  */
-export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
+export function buildAddMembersChange(serviceIds: string[]): GroupChangeBuilder {
   return async (state, { secretParams, selfAci, getCredential }) => {
     const known = new Set([
       ...state.members.map(({ aci }) => aci),
       ...state.pendingMembers.map(({ serviceId }) => serviceId),
     ]);
-    const added = [...new Set(acis)].filter((aci) => !known.has(aci));
+    const added = [...new Set(serviceIds)].filter((serviceId) => !known.has(serviceId));
     if (!added.length) return undefined;
 
     const requesting = new Set(state.requestingMembers.map(({ aci }) => aci));
-    const approved = added.filter((aci) => requesting.has(aci));
-    const newUsers = added.filter((aci) => !requesting.has(aci));
+    const approved = added.filter((serviceId) => requesting.has(serviceId));
+    const newUsers = added.filter((serviceId) => !requesting.has(serviceId));
 
     const revision = state.revision + 1;
-    const users = await Promise.all(newUsers.map(async (aci) => ({
-      aci,
-      userId: encryptGroupServiceId(secretParams, aci),
-      credential: await getCredential(aci),
+    const users = await Promise.all(newUsers.map(async (serviceId) => ({
+      serviceId,
+      userId: encryptGroupServiceId(secretParams, serviceId),
+      // Nobody has a profile key credential for a PNI
+      credential: isPniServiceId(serviceId) ? undefined : await getCredential(serviceId),
     })));
     const banned = new Set(state.bannedMembers.map(({ serviceId }) => serviceId));
     return {
@@ -126,7 +137,9 @@ export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
           timestamp: BigInt(Date.now()),
         },
       })),
-      deleteMembersBanned: users.filter(({ aci }) => banned.has(aci)).map(({ userId }) => ({ deletedUserId: userId })),
+      deleteMembersBanned: users.filter(({ serviceId }) => banned.has(serviceId)).map(({ userId }) => ({
+        deletedUserId: userId,
+      })),
       promoteMembersPendingAdminApproval: approved.map((aci) => ({
         userId: encryptGroupServiceId(secretParams, aci), role: Member_Role.DEFAULT,
       })),
@@ -197,7 +210,8 @@ export function buildRoleChange(aci: string, isAdmin: boolean): GroupChangeBuild
     if (!member || member.role === role) return undefined;
 
     const userId = encryptGroupServiceId(secretParams, aci);
-    // Labels that only admins may set go with the admin role (Signal Desktop `buildModifyMemberRoleChange`)
+    // A demoted admin loses the label when only admins may set labels, in the same change (Signal Desktop
+    // `buildModifyMemberRoleChange`: the member was an admin, because the role differs from the new one)
     const shouldDropLabel = !isAdmin && member.label
       && state.accessControl.memberLabel === AccessControl_AccessRequired.ADMINISTRATOR;
     return {
@@ -207,22 +221,37 @@ export function buildRoleChange(aci: string, isAdmin: boolean): GroupChangeBuild
   };
 }
 
-/** Who may edit the title, avatar, description and timer, and who may add members */
+/**
+ * Who may edit the title, avatar, description and timer, who may add members, and who may set member labels.
+ * Labels of members who are no admins go in the same change, but only when the access turns into admins only and
+ * only for members that have a label (Signal Desktop `buildAccessControlMemberLabelChange`).
+ */
 export function buildAccessChange(
-  { isInfoAdminOnly, isMembersAdminOnly }: { isInfoAdminOnly?: boolean; isMembersAdminOnly?: boolean },
+  { isInfoAdminOnly, isMembersAdminOnly, isLabelAdminOnly }:
+  { isInfoAdminOnly?: boolean; isMembersAdminOnly?: boolean; isLabelAdminOnly?: boolean },
 ): GroupChangeBuilder {
-  return ({ accessControl }) => {
+  return ({ accessControl, members }, { secretParams }) => {
     const attributes = getAccessRequired(isInfoAdminOnly);
-    const members = getAccessRequired(isMembersAdminOnly);
+    const memberAccess = getAccessRequired(isMembersAdminOnly);
+    const label = getAccessRequired(isLabelAdminOnly);
+    const isLabelChanged = isLabelAdminOnly !== undefined && label !== accessControl.memberLabel;
     const actions: GroupActions = {
       modifyAttributesAccess: isInfoAdminOnly !== undefined && attributes !== accessControl.attributes
         ? { attributesAccess: attributes }
         : undefined,
-      modifyMemberAccess: isMembersAdminOnly !== undefined && members !== accessControl.members
-        ? { membersAccess: members }
+      modifyMemberAccess: isMembersAdminOnly !== undefined && memberAccess !== accessControl.members
+        ? { membersAccess: memberAccess }
+        : undefined,
+      modifyMemberLabelAccess: isLabelChanged ? { memberLabelAccess: label } : undefined,
+      modifyMemberLabels: isLabelChanged && isLabelAdminOnly
+        ? members
+          .filter((member) => member.role !== Member_Role.ADMINISTRATOR && (member.label || member.labelEmoji))
+          .map((member) => ({ userId: encryptGroupServiceId(secretParams, member.aci) }))
         : undefined,
     };
-    return actions.modifyAttributesAccess || actions.modifyMemberAccess ? actions : undefined;
+    return actions.modifyAttributesAccess || actions.modifyMemberAccess || actions.modifyMemberLabelAccess
+      ? actions
+      : undefined;
   };
 }
 
@@ -230,6 +259,46 @@ export function buildAnnouncementsOnlyChange(isAnnouncementsOnly: boolean): Grou
   return (state) => (Boolean(state.isAnnouncementsOnly) === isAnnouncementsOnly
     ? undefined
     : { modifyAnnouncementsOnly: { announcementsOnly: isAnnouncementsOnly } });
+}
+
+export type MemberLabel = { emoji?: string; text: string };
+
+/**
+ * Sets the label of a member, or removes it without `label` or with an empty text (Signal Desktop
+ * `buildModifyMemberLabelChange`). Signal clients let members set their own label only; the server decides
+ * whether the member may, by the access level for labels.
+ */
+export function buildMemberLabelChange(aci: string, label?: MemberLabel): GroupChangeBuilder {
+  const text = label?.text.trim() ?? '';
+  const emoji = label?.emoji;
+  return (state, { secretParams }) => {
+    const member = state.members.find((current) => current.aci === aci);
+    if (!member || ((member.label ?? '') === text && member.labelEmoji === emoji)) return undefined;
+
+    // `buildModifyMemberLabelChange`: an emoji needs the text it goes with
+    if (emoji && !text) throw new Error('A member label emoji needs a label text');
+    checkMemberLabel(text, emoji);
+    const encryptedText = text ? encryptGroupText(secretParams, text) : undefined;
+    const encryptedEmoji = emoji ? encryptGroupText(secretParams, emoji) : undefined;
+    if (
+      (encryptedText && encryptedText.length > MEMBER_LABEL_SERVER_MAX_BYTES)
+      || (encryptedEmoji && encryptedEmoji.length > MEMBER_LABEL_SERVER_EMOJI_MAX_BYTES)
+    ) {
+      throw new GroupChangeRefusedError('labelTooLong');
+    }
+    return {
+      modifyMemberLabels: [{
+        userId: encryptGroupServiceId(secretParams, aci),
+        labelEmoji: encryptedEmoji,
+        labelString: encryptedText,
+      }],
+    };
+  };
+}
+
+/** Ends the group for good: nobody can send to it or change it afterwards (Signal Desktop `buildTerminateChange`) */
+export function buildTerminateChange(): GroupChangeBuilder {
+  return (state) => (state.isTerminated ? undefined : { terminateGroup: {} });
 }
 
 /**
@@ -313,6 +382,16 @@ export function checkGroupTitle(title: string) {
 export function checkGroupDescription(description: string) {
   if (countGraphemes(description.trim()) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
     throw new GroupChangeRefusedError('descriptionTooLong');
+  }
+}
+
+export function checkMemberLabel(text: string, emoji?: string) {
+  if (
+    countGraphemes(text) > MEMBER_LABEL_MAX_GRAPHEMES
+    || encodeUtf8(text).length > MEMBER_LABEL_MAX_BYTES
+    || (emoji && encodeUtf8(emoji).length > MEMBER_LABEL_EMOJI_MAX_BYTES)
+  ) {
+    throw new GroupChangeRefusedError('labelTooLong');
   }
 }
 

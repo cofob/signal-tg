@@ -39,13 +39,16 @@ type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestam
 type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
   | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath'
-  | 'storiesDisabled' | 'storyViewReceiptsEnabled';
+  | 'storiesDisabled' | 'storyViewReceiptsEnabled' | 'readReceipts' | 'typingIndicators' | 'linkPreviews'
+  | 'sealedSenderIndicators' | 'universalExpireTimer';
 // Sticker pack and story distribution list records are written whole
 type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList';
 
 /** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
 export type LocalAccountFields = Pick<LocalAccount,
   'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted' | 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'
+  | 'isReadReceiptsEnabled' | 'isTypingIndicatorsEnabled' | 'isLinkPreviewsEnabled' | 'isSealedSenderIndicatorsEnabled'
+  | 'universalExpireTimer'
 >;
 
 /**
@@ -97,7 +100,8 @@ const CONVERSATION_FIELDS: Record<ConversationRecordField, keyof ConversationRec
 const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationRecordField[];
 const ACCOUNT_FIELD_NAMES: AccountStorageField[] = [
   'pinnedConversations', 'noteToSelfArchived', 'noteToSelfMarkedUnread', 'username', 'usernameLink',
-  'phoneNumberSharingMode', 'unlistedPhoneNumber', 'givenName', 'familyName', 'avatarUrlPath',
+  'phoneNumberSharingMode', 'unlistedPhoneNumber', 'givenName', 'familyName', 'avatarUrlPath', 'readReceipts',
+  'typingIndicators', 'linkPreviews', 'sealedSenderIndicators', 'universalExpireTimer',
 ];
 
 /**
@@ -309,9 +313,6 @@ export function buildNewStorageWrite({
 
   const account = create(AccountRecordSchema, {
     profileKey: localAccount.profileKey,
-    readReceipts: localAccount.isReadReceiptsEnabled ?? false,
-    typingIndicators: localAccount.isTypingIndicatorsEnabled ?? true,
-    linkPreviews: localAccount.isLinkPreviewsEnabled ?? true,
   });
   setAccountFields(account, ACCOUNT_FIELD_NAMES, conversations, selfAci, localAccount);
   addRecord(create(StorageRecordSchema, { record: { case: 'account', value: account } }));
@@ -486,7 +487,16 @@ function setAccountFields(
   conversations: ConversationRecord[],
   selfAci: string,
   {
-    usernameLink, isPhoneNumberShared, isPhoneNumberUnlisted, isStoriesDisabled, isStoryViewReceiptsEnabled,
+    usernameLink,
+    isPhoneNumberShared,
+    isPhoneNumberUnlisted,
+    isStoriesDisabled,
+    isStoryViewReceiptsEnabled,
+    isReadReceiptsEnabled,
+    isTypingIndicatorsEnabled,
+    isLinkPreviewsEnabled,
+    isSealedSenderIndicatorsEnabled,
+    universalExpireTimer,
   }: LocalAccountFields,
 ) {
   const self = conversations.find(({ id }) => id === selfAci);
@@ -534,6 +544,22 @@ function setAccountFields(
         break;
       case 'storiesDisabled':
         record.storiesDisabled = Boolean(isStoriesDisabled);
+        break;
+      // Signal Desktop `toAccountRecord`: receipts are off, and typing and link previews on, until set
+      case 'readReceipts':
+        record.readReceipts = isReadReceiptsEnabled ?? false;
+        break;
+      case 'typingIndicators':
+        record.typingIndicators = isTypingIndicatorsEnabled ?? true;
+        break;
+      case 'linkPreviews':
+        record.linkPreviews = isLinkPreviewsEnabled ?? true;
+        break;
+      case 'sealedSenderIndicators':
+        record.sealedSenderIndicators = isSealedSenderIndicatorsEnabled ?? false;
+        break;
+      case 'universalExpireTimer':
+        record.universalExpireTimer = universalExpireTimer ?? 0;
         break;
       case 'storyViewReceiptsEnabled':
         record.storyViewReceiptsEnabled = isStoryViewReceiptsEnabled === undefined

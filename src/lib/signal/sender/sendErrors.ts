@@ -9,6 +9,13 @@ export class UnregisteredUserError extends Error {
   }
 }
 
+/** A group that an admin ended takes no messages, reactions, votes or edits (Signal Android `PushGroupSendJob`) */
+export class GroupTerminatedError extends Error {
+  constructor(readonly groupId: string) {
+    super('The group has ended');
+  }
+}
+
 /** The recipient left the group, or was removed from it, before the message was encrypted for them */
 export class NotGroupMemberError extends Error {
   constructor(readonly serviceId: string) {

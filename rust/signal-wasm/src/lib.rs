@@ -10,6 +10,7 @@ mod cipher;
 mod error;
 mod handles;
 mod keys;
+mod keytrans;
 mod messages;
 mod records;
 mod stores;

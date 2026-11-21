@@ -130,7 +130,8 @@ export interface ApiMessageActionGroupUpdate extends ActionMediaType {
   type: 'groupUpdate';
   update: 'description' | 'descriptionRemoved' | 'adminAdded' | 'adminRemoved' | 'invited' | 'inviteRevoked'
     | 'inviteDeclined' | 'joinRequested' | 'joinDenied' | 'joinCanceled' | 'linkOn' | 'linkOnWithApproval'
-    | 'linkOff' | 'linkReset' | 'infoAccess' | 'membersAccess' | 'announcementsOn' | 'announcementsOff';
+    | 'linkOff' | 'linkReset' | 'infoAccess' | 'membersAccess' | 'labelAccess' | 'announcementsOn'
+    | 'announcementsOff' | 'terminated';
   userId?: string;
   count?: number;
   isAdminOnly?: boolean;

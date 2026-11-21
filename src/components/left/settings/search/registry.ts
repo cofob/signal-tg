@@ -9,6 +9,7 @@ import { IS_IOS, IS_MAC_OS } from '../../../../util/browser/windowEnvironment';
 import { unique } from '../../../../util/iteratees';
 import { getIsKeyboardShortcutAvailable } from '../../../../util/keyboardShortcuts';
 import { KEYBOARD_SHORTCUT_IDS, KEYBOARD_SHORTCUTS } from '../../../../util/keyboardShortcuts/registry';
+import { CAN_PROTECT_CONTENT } from '../../../../util/tauri/desktopApp';
 
 export type SettingsSearchFlag =
   'isDesktopLayout' | 'canSendWithKeyboard' | keyof ReturnType<typeof selectSettingsSearchFlags>;
@@ -98,6 +99,14 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     titleKey: 'Filters',
     keywordsKey: 'SettingsKeywordsFolders',
     icon: 'folder-filled',
+    iconBg: 'blue',
+  },
+  {
+    screen: SettingsScreens.SignalDevices,
+    parent: SettingsScreens.Main,
+    titleKey: 'SignalDevices',
+    keywordsKey: 'SettingsKeywordsSignalDevices',
+    icon: 'devices-filled',
     iconBg: 'blue',
   },
   {
@@ -277,6 +286,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     'EmptyChatAppearanceLight', 'EmptyChatAppearanceDark', 'EmptyChatAppearanceSystem', 'SettingsTimeFormat12',
     'SettingsTimeFormat24', 'SettingsAutomaticTextReplacements', 'SettingsKeyboard',
   ]),
+  ...buildEntries(SettingsScreens.General, IS_TAURI ? ['SettingsDesktopTray', 'SettingsDesktopAutostart'] : []),
+  ...buildEntries(SettingsScreens.General, IS_TAURI && CAN_PROTECT_CONTENT ? ['SettingsDesktopProtect'] : []),
 
   ...buildEntries(SettingsScreens.GeneralChatBackground, [
     'UploadImage', 'ThemeResetToDefaults', 'BackgroundPatternIntensity', 'BackgroundBlurred',
@@ -335,7 +346,18 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalReadReceipts'], { keywordsKey: 'SettingsKeywordsReadReceipts' }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalTypingIndicators'], {
+    keywordsKey: 'SettingsKeywordsTypingIndicators',
+  }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalSealedSenderIndicators'], {
+    keywordsKey: 'SettingsKeywordsSealedSender',
+  }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalLinkPreviews'], { keywordsKey: 'SettingsKeywordsLinkPreviews' }),
   ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
+  ...buildEntries(SettingsScreens.Privacy, ['KeyTransTitle'], {
+    requires: 'hasKeyTransparency', keywordsKey: 'SettingsKeywordsKeyTrans',
+  }),
   ...buildEntries(SettingsScreens.Stories, [
     'StoriesSettingEnable', 'StoriesSettingViewReceipts', 'StoryRibbonMyStory', 'StoriesSettingAllowReplies',
     'StoriesSettingCustomLists', 'StoriesSettingNewList',

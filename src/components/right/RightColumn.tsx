@@ -181,6 +181,7 @@ const RightColumn: FC<OwnProps & StateProps> = ({
           case ManagementScreens.GroupMembers:
           case ManagementScreens.Invites:
           case ManagementScreens.JoinRequests:
+          case ManagementScreens.GroupInvitedUsers:
             setManagementScreen(ManagementScreens.Initial);
             break;
           case ManagementScreens.GroupUserPermissionsCreate:

@@ -21,7 +21,7 @@ import { buildApiChat } from '../builders/chats';
 import { buildApiUser } from '../builders/users';
 import { getCurrentAccount } from '../client';
 import {
-  client, db, logError, processor, store,
+  client, db, keyTransparency, logError, processor, store,
 } from '../engine';
 import { getConversationByPeerId } from '../peers';
 
@@ -107,6 +107,7 @@ export async function confirmUsername({ username }: { username: string }) {
     const result = await confirmReservation(context.connection, usernameReservation, context.account.usernameLink);
     usernameReservation = undefined;
     await processor.updateOwnAccount({ username: result.username, usernameLink: result.link });
+    await keyTransparency.onKnownIdentifierChange('username');
     return { username: result.username };
   } catch (err) {
     return { error: getUsernameErrorKey(err) };
@@ -117,6 +118,7 @@ export async function deleteUsername() {
   try {
     await deleteReservedUsername(client.getSenderContext().connection);
     await processor.updateOwnAccount({ username: undefined, usernameLink: undefined });
+    await keyTransparency.onKnownIdentifierChange('username');
     return true;
   } catch (err) {
     logError(err);
@@ -199,6 +201,9 @@ export async function fetchSafetyNumber({ user }: { user: ApiUser }) {
     // One character per byte, as the QR code encodes it in byte mode
     qrData: String.fromCharCode(...safetyNumber.scannable),
     isVerified: identity?.verified === Verified_State.VERIFIED,
+    keyTransparencyStatus: await keyTransparency.isContactAvailable(conversation.id)
+      ? 'idle' as const
+      : 'unavailable' as const,
   };
 }
 
@@ -243,6 +248,7 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
     if (shouldBeDiscoverable !== undefined && shouldBeDiscoverable === Boolean(context.account.isPhoneNumberUnlisted)) {
       await setPhoneNumberDiscoverability(context.connection, shouldBeDiscoverable);
       await processor.updateOwnAccount({ isPhoneNumberUnlisted: !shouldBeDiscoverable });
+      await keyTransparency.onKnownIdentifierChange('phoneNumberDiscoverability');
     }
     if (isShared !== undefined && isShared !== Boolean(context.account.isPhoneNumberShared)) {
       await writeProfile(context, {}, { type: 'unchanged' }, isShared);

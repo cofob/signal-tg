@@ -7,7 +7,9 @@ import {
   MEDIA_CACHE_NAME_AVATARS,
   MEDIA_PROGRESSIVE_CACHE_NAME,
 } from '../../../config';
+import clearSignalLocalData from '../../../lib/signal/clearLocalData';
 import { updateAppBadge } from '../../../util/appBadge';
+import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
 import { PLATFORM_ENV } from '../../../util/browser/windowEnvironment';
 import * as cacheApi from '../../../util/cacheApi';
@@ -28,6 +30,7 @@ import {
   clearStoredSession,
   storeSession,
 } from '../../../util/sessions';
+import { forgetSavedFiles } from '../../../util/tauri/nativeFiles';
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
 import {
   callApi, callApiLocal, initApi, reconnectApi, setShouldEnableDebugLog,
@@ -207,6 +210,9 @@ addActionHandler('signOut', async (global, actions, payload): Promise<void> => {
     // Do nothing
   }
 
+  // `destroy` does nothing while the engine is not started, which a logout then has to survive
+  await clearSignalLocalData().catch(() => undefined);
+
   actions.reset();
   await resetStorage();
 
@@ -244,6 +250,7 @@ addActionHandler('reset', async (global, actions): Promise<void> => {
     await clearPasscodeStore();
     localStorage.removeItem(IS_SCREEN_LOCKED_CACHE_KEY);
     await clearWallpaperBlobs();
+    if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
   }
 
   updateAppBadge(0);
@@ -309,6 +316,9 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
     // Do nothing
   }
 
+  // The lock screen logs out while the engine is not started, and `destroy` does nothing then
+  await clearSignalLocalData().catch(() => undefined);
+
   clearAllStoredSessions();
   await clearPasscodeStore().catch(() => undefined);
 
@@ -322,6 +332,8 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
   } catch (err) {
     // Do nothing
   }
+
+  if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
 
   broadcastPasscodeReset();
   window.location.reload();

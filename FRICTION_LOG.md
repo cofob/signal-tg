@@ -26,24 +26,25 @@ every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revisi
 conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
 is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
 
-## Desktop notifications cannot open the chat that they announce
+## The desktop app cannot switch on spell checking in WebKitGTK
 
-`src/util/notifications.tsx` shows the desktop app's notifications with `sendNotification({ title, body })` of
-`@tauri-apps/plugin-notification`. On desktop the plugin shows the notification through `notify-rust` and drops the
-handle (`tauri-plugin-notification` 2.5.1, `src/desktop.rs`), and `onAction` exists on mobile only, so a click reaches
-the page as nothing, and the plugin offers no inline reply or grouping either. Verified by reading the plugin's source;
-not tried on macOS or Windows. Opening the chat needs native code per system (a `notify-rust` handle on Linux, a
-`UNUserNotificationCenter` delegate on macOS, a toast activation on Windows), or a heuristic: remember the last
-notified chat and open it when the window gains focus soon after.
+The composer sets `spellcheck` (`MessageInput.tsx`) and the system context menu is allowed in text fields
+(`setupTauriListeners.ts`), but on Linux the webview decides whether to spell-check, through
+`webkit_web_context_set_spell_checking_enabled`, which neither `wry` 0.57 nor the app calls (a search for "spell" in the
+`wry` and `tauri` sources finds nothing). Verified under Xvfb with WebKitGTK 2.52: misspelled words in the composer got
+no underline and the context menu had no suggestions, though the system may lack dictionaries there. Calling it from
+`Webview::with_webview` needs the `webkit2gtk` crate as a direct dependency, which the tree has through `wry` but
+`tauri/Cargo.toml` does not list. Whether WKWebView (macOS) and WebView2 (Windows) spell-check the composer is not
+tried.
 
-## The desktop app ships the webview inspector, so production turns off the context menu
+## A launch at login on Linux hides the window even when no tray host runs
 
-`tauri/Cargo.toml` enables the `devtools` feature of `tauri`, which keeps the inspector in release builds, and
-`src/util/tauri/setupTauriListeners.ts` cancels every `contextmenu` event outside `DEBUG` to hide it. The same line
-removes the system menu of text fields (cut, copy, paste, select all, spellcheck suggestions), and the inputs turn
-spellcheck off (`spellCheck={IS_TAURI ? false : undefined}`). Verified by reading both places; the inspector in a
-release build is not tried. Either dropping the feature or showing the system menu on editable targets only, with
-the inspector off, would restore text field menus.
+`tauri/src/lib.rs` opens the first window hidden for `--autostart` (`SHOULD_START_HIDDEN`), and the tray icon is how a
+hidden window comes back. On a Linux desktop without a StatusNotifier host (GNOME without the AppIndicator extension,
+for example) nobody can show the window except by launching the app a second time. Verified by reading the code; the
+hidden start itself was tried under Xvfb, a missing tray host was not. Detecting the host means asking the session bus
+whether `org.kde.StatusNotifierWatcher` has an owner, which needs `zbus` (in the tree through `notify-rust`) as a
+direct dependency; the start could then stay visible without one.
 
 ## The demo account has no downloadable document and no file with a risky name
 
@@ -72,3 +73,7 @@ every screenshot with a focused `input` adds two such errors (verified on the de
 opening a chat and after typing; 2 more after each default screenshot, none with `caret: 'initial'`). The error text
 names no element, so these reports look like a component bug. Browser verification scripts should pass
 `caret: 'initial'`; `stricterdom` could name the target element and ignore `caret-color`.
+
+## The API connector drops `destroy` and `reconnectNow` while the engine is not started
+
+`NO_QUEUE_BEFORE_INIT` in `src/api/worker/connector.ts` makes `callApi` and `callApiLocal` resolve these two calls to `undefined` when the worker is not initialized, which is the case on the lock screen of a passcode and in the first seconds after a load. That suited GramJS, which had nothing at rest in the worker. The Signal engine keeps the account, keys and messages in IndexedDB and the Cache API, so a `destroy` that never arrives leaves them (reproduced in Chrome on the demo account; the logout actions now clear the stores from the page with `clearSignalLocalData()`, see S-01 in `docs/signal/SECURITY.md`). A new method that has to act on the stores without a started engine needs the same page-side route, and nothing in the connector says so; whether `destroy` should start the worker and run, or the stores' clearing should be reachable from the page only, is undecided.

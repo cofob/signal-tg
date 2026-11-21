@@ -7,6 +7,7 @@ import type {
   ReceiptMessage_Type,
   StoryMessageSchema,
   SyncMessage_BlockedSchema,
+  SyncMessage_ConfigurationSchema,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
@@ -259,6 +260,13 @@ export function sendMessageRequestResponseSync(
   return syncToOtherDevices(context, {
     content: { case: 'messageRequestResponse', value: response },
   }, Date.now());
+}
+
+/** Sends our message settings to our other devices, such as a newly linked one that asked for them */
+export function sendConfigurationSync(
+  context: SenderContext, configuration: MessageInitShape<typeof SyncMessage_ConfigurationSchema>,
+) {
+  return syncToOtherDevices(context, { content: { case: 'configuration', value: configuration } }, Date.now());
 }
 
 /** Sends the whole blocked list to our other devices; the primary device replaces its list with it */

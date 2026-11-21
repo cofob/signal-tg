@@ -7,6 +7,7 @@ import { DEBUG } from '../config';
 const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_HISTORY_TRANSFER_FAILED: 'SignalHistorySyncFailed',
   SIGNAL_PRIMARY_UNAUTHORIZED: 'SignalPrimaryUnauthorized',
+  SIGNAL_KEY_TRANSPARENCY_FAILED: 'KeyTransSelfFailedText',
   SIGNAL_PINNED_LIMIT: 'SignalPinnedLimit',
   SIGNAL_PIN_RESET_FAILED: 'SignalPinErrorResetFailed',
   CHAT_RESTRICTED: 'ErrorChatRestricted',
@@ -74,6 +75,7 @@ const READABLE_ERROR_KEYS: Record<string, RegularLangKey> = {
   SIGNAL_GROUP_TITLE_TOO_LONG: 'ErrorGroupTitleTooLong',
   SIGNAL_GROUP_DESCRIPTION_TOO_LONG: 'ErrorGroupDescriptionTooLong',
   SIGNAL_GROUP_LAST_ADMIN: 'ErrorGroupLastAdmin',
+  SIGNAL_GROUP_LABEL_TOO_LONG: 'ErrorGroupLabelTooLong',
 };
 
 if (DEBUG) {

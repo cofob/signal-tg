@@ -10,6 +10,8 @@ import { ManagementProgress, ManagementScreens } from '../../../types';
 import {
   getChatAvatarHash,
   getHasAdminRight,
+  isChatAdmin,
+  isChatBasicGroup,
 } from '../../../global/helpers';
 import {
   selectCanBanUsers, selectChat, selectChatFullInfo, selectIsChatRestricted, selectPeerAvatarPhoto, selectTabState,
@@ -44,6 +46,8 @@ type StateProps = {
   chatFullInfo?: ApiChatFullInfo;
   currentAvatarPhoto?: ApiPhoto;
   progress?: ManagementProgress;
+  isBasicGroup: boolean;
+  canTerminate?: boolean;
   canChangeInfo?: boolean;
   canBanUsers?: boolean;
   canInvite?: boolean;
@@ -77,6 +81,8 @@ const ManageGroup = ({
   chatFullInfo,
   currentAvatarPhoto,
   progress,
+  isBasicGroup,
+  canTerminate,
   canChangeInfo,
   canBanUsers,
   canInvite,
@@ -88,6 +94,7 @@ const ManageGroup = ({
   const {
     updateChat,
     deleteChat,
+    terminateChat,
     closeManagement,
     openChat,
     loadExportedChatInvites,
@@ -95,6 +102,7 @@ const ManageGroup = ({
   } = getActions();
 
   const [isDeleteDialogOpen, openDeleteDialog, closeDeleteDialog] = useFlag();
+  const [isTerminateDialogOpen, openTerminateDialog, closeTerminateDialog] = useFlag();
   const currentTitle = chat.title;
   const currentAbout = chatFullInfo?.about || '';
 
@@ -174,6 +182,10 @@ const ManageGroup = ({
     });
   });
 
+  const handleClickInvitedUsers = useLastCallback(() => {
+    onScreenSelect(ManagementScreens.GroupInvitedUsers);
+  });
+
   const handleClickMembers = useLastCallback(() => {
     onScreenSelect(ManagementScreens.GroupMembers);
   });
@@ -204,6 +216,12 @@ const ManageGroup = ({
     closeDeleteDialog();
     closeManagement();
     openChat({ id: undefined });
+  });
+
+  const handleTerminateGroup = useLastCallback(() => {
+    terminateChat({ chatId: chat.id });
+    closeTerminateDialog();
+    closeManagement();
   });
 
   const isRestricted = selectIsChatRestricted(getGlobal(), chatId);
@@ -296,8 +314,20 @@ const ManageGroup = ({
             <span className="title">{lang('GroupMembers')}</span>
             <span className="subtitle">{formatInteger(chat.membersCount ?? 0)}</span>
           </ListItem>
+
+          {Boolean(chatFullInfo?.pendingInvites?.length) && (
+            <ListItem icon="add-user" multiline onClick={handleClickInvitedUsers}>
+              <span className="title">{lang('GroupPendingInvites')}</span>
+              <span className="subtitle">{formatInteger(chatFullInfo.pendingInvites.length)}</span>
+            </ListItem>
+          )}
         </Island>
         <Island>
+          {isBasicGroup && canTerminate && (
+            <ListItem icon="stop" ripple destructive onClick={openTerminateDialog}>
+              {lang('GroupEndGroup')}
+            </ListItem>
+          )}
           <ListItem icon="delete" ripple destructive onClick={openDeleteDialog}>
             {lang('DeleteMega')}
           </ListItem>
@@ -310,6 +340,15 @@ const ManageGroup = ({
         ariaLabel={lang('Save')}
         iconName="check"
         isLoading={isLoading}
+      />
+      <ConfirmDialog
+        isOpen={isTerminateDialogOpen}
+        onClose={closeTerminateDialog}
+        title={lang('GroupEndGroupTitle', { group: chat.title })}
+        text={lang('GroupEndGroupText')}
+        confirmLabel={lang('GroupEndGroup')}
+        confirmHandler={handleTerminateGroup}
+        confirmIsDestructive
       />
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
@@ -336,15 +375,19 @@ export default memo(withGlobal<OwnProps>(
     const canChangeInfo = getHasAdminRight(chat, 'changeInfo');
     const canBanUsers = selectCanBanUsers(global, chatId);
     const canInvite = getHasAdminRight(chat, 'inviteUsers');
+    // Signal admins can end a group
+    const canTerminate = isChatAdmin(chat);
 
     return {
       chat,
       chatFullInfo,
       currentAvatarPhoto: selectPeerAvatarPhoto(global, chatId),
       progress,
+      isBasicGroup: isChatBasicGroup(chat),
       canChangeInfo,
       canBanUsers,
       canInvite,
+      canTerminate,
       exportedInvites: invites,
     };
   },

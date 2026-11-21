@@ -10,6 +10,11 @@
     "allow-open-new-window-cmd",
     "allow-save-current-url",
     "allow-set-menu-translations",
+    "allow-quit-app",
+    "allow-open-external-url",
+    "allow-get-desktop-settings",
+    "allow-set-desktop-settings",
+    "allow-show-notification",
     "allow-take-deep-links",
     "allow-signal-connect",
     "allow-signal-send",
@@ -22,14 +27,13 @@
     "allow-list-saved-files",
     "allow-open-saved-file",
     "allow-reveal-saved-file",
+    "allow-forget-saved-files",
     "core:event:default",
     "core:window:allow-is-fullscreen",
     "core:window:allow-start-dragging",
-    "process:default",
+    "process:allow-restart",
     "updater:default",
     "notification:allow-is-permission-granted",
-    "notification:allow-notify",
-    "notification:allow-request-permission",
-    "shell:default"
+    "notification:allow-request-permission"
   ]
 }

@@ -24,9 +24,10 @@ export {
   toggleDialogUnread,
   updateChatNotifySettings,
 } from './chats';
-export { destroy, disconnect } from './client';
+export { destroy, disconnect, reconnectNow } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
+  addChatMemberByPhoneNumber,
   addChatMembers,
   checkChatInvite,
   createGroupChat,
@@ -35,6 +36,7 @@ export {
   deleteChatUser,
   deleteExportedChatInvite,
   deleteRevokedExportedChatInvites,
+  editChatParticipantRank,
   editChatPhoto,
   editExportedChatInvite,
   exportChatInvite,
@@ -44,7 +46,9 @@ export {
   hideChatJoinRequest,
   importChatInvite,
   joinChannel,
+  revokeChatInvite,
   setHistoryTtl,
+  terminateChat,
   toggleJoinRequest,
   updateChatAbout,
   updateChatAdmin,
@@ -52,6 +56,9 @@ export {
   updateChatMemberBannedRights,
   updateChatTitle,
 } from './groups';
+export {
+  fetchIsSignalPrimary, fetchSignalDevices, linkSignalDevice, unlinkSignalDevice,
+} from './devices';
 export { downloadMedia } from './media';
 export {
   fetchSignalContactDiscovery,
@@ -83,6 +90,9 @@ export {
   sendReaction,
 } from './messages';
 export {
+  cancelKeyTransparencyCheck, checkKeyTransparency, checkKeyTransparencySelf, fetchKeyTransparencySelfStatus,
+} from './keyTransparency';
+export {
   confirmRecoveryKeySaved,
   confirmUsername,
   deleteUsername,
@@ -102,10 +112,14 @@ export {
   blockUser,
   fetchBlockedUsers,
   fetchConfig,
+  fetchDefaultHistoryTtl,
   fetchNotifyDefaultSettings,
   fetchPeerColors,
+  fetchSignalMessageSettings,
+  setDefaultHistoryTtl,
   unblockUser,
   updateNotificationSettings,
+  updateSignalMessageSettings,
 } from './settings';
 export {
   clearRecentStickers,

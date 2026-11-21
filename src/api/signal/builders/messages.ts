@@ -41,6 +41,11 @@ const INVITE_LINK_UPDATES = {
   off: 'linkOff',
   reset: 'linkReset',
 } as const;
+const ACCESS_UPDATES = {
+  info: 'infoAccess',
+  members: 'membersAccess',
+  memberLabel: 'labelAccess',
+} as const;
 const DELIVERED_STATUSES = new Set<SendStatus>(['delivered', 'read', 'viewed']);
 const UUID_BYTE_LENGTH = 16;
 const NON_DIGIT_REGEX = /\D/g;
@@ -227,13 +232,13 @@ async function buildGroupUpdateAction(
         update: update.isAdmin ? 'adminAdded' : 'adminRemoved', userId: await users.getUserId(update.aci),
       });
     case 'access':
-      return groupAction({
-        update: update.target === 'info' ? 'infoAccess' : 'membersAccess', isAdminOnly: update.isAdminOnly,
-      });
+      return groupAction({ update: ACCESS_UPDATES[update.target], isAdminOnly: update.isAdminOnly });
     case 'inviteLink':
       return groupAction({ update: INVITE_LINK_UPDATES[update.state] });
     case 'announcementsOnly':
       return groupAction({ update: update.isEnabled ? 'announcementsOn' : 'announcementsOff' });
+    case 'terminated':
+      return groupAction({ update: 'terminated' });
     default:
       return { action: { mediaType: 'action', type: 'unsupported' } };
   }
