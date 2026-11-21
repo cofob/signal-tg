@@ -35,9 +35,6 @@ env:
   # Keep in line with `ci.yml` and `rust/signal-wasm/rust-toolchain`
   RUST_TOOLCHAIN: 1.98.1
   NODE_OPTIONS: --max-old-space-size=8192
-  # GramJS still reads these at build time until plan stage 3 removes it; the app never connects to Telegram
-  TELEGRAM_API_ID: '1'
-  TELEGRAM_API_HASH: unused
 
 jobs:
   preflight:

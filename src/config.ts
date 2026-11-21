@@ -19,12 +19,8 @@ export const DEBUG_CALLS = false;
 export const DEBUG_LOG_FILENAME = 'tt-log.json';
 export const STRICTERDOM_ENABLED = DEBUG;
 
-export const DEBUG_GRAMJS = false;
-
 export const PAGE_TITLE = import.meta.env.TG_APP_TITLE;
 export const PAGE_TITLE_TAURI = APP_NAME;
-export const TELEGRAM_API_ID = Number(import.meta.env.TG_TELEGRAM_API_ID);
-export const TELEGRAM_API_HASH = import.meta.env.TG_TELEGRAM_API_HASH;
 export const TEST_SESSION = import.meta.env.TG_TEST_SESSION;
 
 export const SESSION_LEGACY_USER_KEY = 'user_auth';

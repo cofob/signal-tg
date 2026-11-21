@@ -90,15 +90,7 @@ addCallback((global: GlobalState) => {
   }
 
   if (sharedSettings.language !== oldSharedSettings.language) {
-    const langCode = sharedSettings.language;
-    void loadAndChangeLanguage(langCode).then((hasChanged) => {
-      global = getGlobal();
-      if (!hasChanged || selectSharedSettings(global).language !== langCode) return undefined;
-      return callApi('setLanguageCode', { langCode });
-    }).catch((err) => {
-      // eslint-disable-next-line no-console
-      console.warn('Failed to announce language:', err);
-    });
+    void loadAndChangeLanguage(sharedSettings.language);
   }
 
   if (sharedSettings.timeFormat !== oldSharedSettings.timeFormat) {

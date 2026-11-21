@@ -43,7 +43,7 @@ import type {
 } from './misc';
 import type { ApiEmojiStatus, ApiPeerSettings } from './peers';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiPrivacyKey, LangPackStringValue, PrivacyVisibility } from './settings';
+import type { ApiPrivacyKey, PrivacyVisibility } from './settings';
 import type { ApiStory, ApiStorySkipped } from './stories';
 import type {
   ApiUser, ApiUserFullInfo, ApiUserStatus,
@@ -865,20 +865,6 @@ export type ApiUpdateEntities = {
   webPages?: ApiWebPage[];
 };
 
-export type ApiUpdateLangPackTooLong = {
-  '@type': 'updateLangPackTooLong';
-  langCode: string;
-};
-
-export type ApiUpdateLangPack = {
-  '@type': 'updateLangPack';
-  langCode: string;
-  fromVersion: number;
-  version: number;
-  strings: Record<string, LangPackStringValue>;
-  keysToRemove: string[];
-};
-
 export type ApiUpdateWebPage = {
   '@type': 'updateWebPage';
   webPage: ApiWebPage;
@@ -926,7 +912,7 @@ export type ApiUpdate = (
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
-  | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
+  | ApiUpdateEntities
   | ApiUpdateNotSupportedInFrozenAccountError
 );
 

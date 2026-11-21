@@ -91,8 +91,6 @@ export default defineConfig(({ mode }): UserConfig => {
     'Service-Worker-Allowed': '/',
   };
   const isDevelopmentMode = mode === 'development';
-  const telegramApiId = env.TELEGRAM_API_ID || '';
-  const telegramApiHash = env.TELEGRAM_API_HASH || '';
   const workerReportBundles: OutputBundle[] = [];
   const plugins: PluginOption[] = [
     buildGitInfoPlugin({
@@ -121,12 +119,6 @@ export default defineConfig(({ mode }): UserConfig => {
         watch: buildProjectPath('src/assets/localization/fallback.strings'),
         watchFile: (filePath) => Promise.resolve(isProjectFile(filePath, 'src/assets/localization/fallback.strings')),
         run: 'npm run lang:ts',
-      },
-      {
-        name: 'gramjs',
-        watch: buildProjectPath('src/lib/gramjs/tl/static'),
-        watchFile: (filePath) => Promise.resolve(isPathInsideProjectDirectory(filePath, 'src/lib/gramjs/tl/static')),
-        run: 'npm run gramjs:tl',
       },
       {
         name: 'icons',
@@ -176,10 +168,6 @@ export default defineConfig(({ mode }): UserConfig => {
 
   const shouldCollectWorkerReportBundles = bundleStatsVisualizerValue === '1' || bundleStatsValue === '1';
 
-  if (appEnv !== 'test' && (!telegramApiId || !telegramApiHash)) {
-    throw new Error('Missing required Telegram API credentials');
-  }
-
   setViteEnv({
     TG_APP_ENV: appEnv,
     TG_APP_NAME: env.APP_NAME || '',
@@ -188,8 +176,6 @@ export default defineConfig(({ mode }): UserConfig => {
     TG_CSP: csp,
     TG_APPLE_ICON: appleIcon,
     TG_SOCIAL_IMAGE_URL: socialImageUrl,
-    TG_TELEGRAM_API_ID: telegramApiId,
-    TG_TELEGRAM_API_HASH: telegramApiHash,
     TG_TEST_SESSION: env.TEST_SESSION || '',
     TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
   });

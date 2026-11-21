@@ -17,8 +17,6 @@
     ".github/workflows/*.js",
     "deploy/*.js",
     "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/lib/gramjs/tl/generateModules.ts",
-    "src/lib/gramjs/tl/types-generator"
+    "src/**/*.test.tsx"
   ]
 }

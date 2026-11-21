@@ -178,7 +178,6 @@ type UnsupportedMethodName =
   | 'setDefaultReaction'
   | 'setDiscussionGroup'
   | 'setForceHttpTransport'
-  | 'setLanguageCode'
   | 'setOpenedChannelIds'
   | 'setPhoneCallSctpEnabled'
   | 'setPrivacySettings'
