@@ -161,7 +161,8 @@ function buildFileDocument(file: SignalDocument, date: number): Document.documen
   });
 }
 
-function buildStickerDocument(sticker: SignalSticker, date: number): Document.document {
+/** The Telegram document of a sticker, which opens its pack from the sticker */
+export function buildStickerDocument(sticker: SignalSticker, date: number): Document.document {
   const {stickerSetInfo} = sticker;
   return buildDocument({
     id: sticker.id,

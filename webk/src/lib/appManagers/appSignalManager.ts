@@ -13,6 +13,7 @@ import type {
   Dialog,
   InputDialogPeer,
   InputPeer,
+  InputStickerSet,
   InputUser,
   Message,
   MessagesDialogs,
@@ -32,13 +33,15 @@ import type {
   SignalInitialArgs,
   SignalMessage,
   SignalSticker,
+  SignalStickerSet,
   SignalUser
 } from '@lib/signal/signalApi';
 import {AppManager} from '@appManagers/manager';
 import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
 import makeError from '@helpers/makeError';
-import {getSignalAvatarUrl, getSignalFileUrl, storeSignalWebPages} from '@lib/signal/media';
+import {buildStickerDocument, getSignalAvatarUrl, getSignalFileUrl, storeSignalWebPages} from '@lib/signal/media';
 import {buildOutgoingMedia, saveUploadPart} from '@lib/signal/outgoingMedia';
+import {buildStickerSet, buildStickerSetContent, buildStickerSetCovered} from '@lib/signal/stickers';
 import {ConnectionStatus} from '@lib/mtproto/connectionStatus';
 import tsNow from '@helpers/tsNow';
 import deferredPromise, {CancellablePromise} from '@helpers/cancellablePromise';
@@ -171,13 +174,13 @@ export default class AppSignalManager extends AppManager {
       'messages.getAllDrafts': emptyUpdates,
       'messages.getPeerSettings': () => ({_: 'messages.peerSettings', settings: {_: 'peerSettings', pFlags: {}}, chats: [], users: []}),
       'messages.getAttachMenuBots': () => ({_: 'attachMenuBots', hash: 0, bots: [], users: []}),
-      // * Signal's stickers and reactions are not in these lists yet
+      // * Signal's reactions are not in these lists yet
       'messages.getEmojiStickers': () => ({_: 'messages.allStickers', hash: 0, sets: []}),
-      'messages.getAllStickers': () => ({_: 'messages.allStickers', hash: 0, sets: []}),
+      'messages.getAllStickers': () => this.getAllStickers(),
       'messages.getStickers': () => ({_: 'messages.stickers', hash: 0, stickers: []}),
-      'messages.getFeaturedStickers': () => ({_: 'messages.featuredStickers', pFlags: {}, hash: 0, count: 0, sets: [], unread: []}),
+      'messages.getFeaturedStickers': () => this.getFeaturedStickers(),
       'messages.getFavedStickers': () => ({_: 'messages.favedStickers', hash: 0, packs: [], stickers: []}),
-      'messages.getRecentStickers': () => ({_: 'messages.recentStickers', hash: 0, packs: [], stickers: [], dates: []}),
+      'messages.getRecentStickers': () => this.getRecentStickers(),
       'messages.getSavedGifs': () => ({_: 'messages.savedGifs', hash: 0, gifs: []}),
       'messages.getAvailableReactions': () => ({_: 'messages.availableReactions', hash: 0, reactions: []}),
       'messages.getTopReactions': () => ({_: 'messages.reactions', hash: 0, reactions: []}),
@@ -189,7 +192,9 @@ export default class AppSignalManager extends AppManager {
       'stories.getPinnedStories': () => ({_: 'stories.stories', pFlags: {}, count: 0, stories: [], chats: [], users: [], pinned_to_top: []}),
       'messages.getScheduledHistory': () => ({_: 'messages.messages', messages: [], chats: [], users: [], topics: []}),
       'messages.getSavedDialogs': () => ({_: 'messages.savedDialogs', dialogs: [], messages: [], chats: [], users: []}),
-      'messages.getStickerSet': () => Promise.reject(makeError('STICKERSET_INVALID' as ErrorType)),
+      'messages.getStickerSet': (params) => this.getStickerSet(params),
+      'messages.installStickerSet': (params) => this.setStickerSetInstalled(params.stickerset, true),
+      'messages.uninstallStickerSet': (params) => this.setStickerSetInstalled(params.stickerset, false),
       // * every file of Web K's downloads comes from the provider's `downloadMedia`, part by part
       'upload.getFile': (params) => this.getFile(params),
       // * the files Web K sends are kept until their message is sent, which the provider does with them
@@ -570,6 +575,56 @@ export default class AppSignalManager extends AppManager {
     return true;
   }
 
+  private async getAllStickers(): Promise<MethodDeclMap['messages.getAllStickers']['res']> {
+    const result: {hash: string, sets: SignalStickerSet[]} = await this.call('fetchStickerSets', {});
+    return {_: 'messages.allStickers', hash: result?.hash ?? 0, sets: (result?.sets ?? []).map(buildStickerSet)};
+  }
+
+  private async getFeaturedStickers(): Promise<MethodDeclMap['messages.getFeaturedStickers']['res']> {
+    const result: {hash: string, sets: SignalStickerSet[]} = await this.call('fetchFeaturedStickers', {});
+    const date = tsNow(true);
+    const sets = (result?.sets ?? []).map((set) => buildStickerSetCovered(set, date)).filter(Boolean);
+    return {_: 'messages.featuredStickers', pFlags: {}, hash: result?.hash ?? 0, count: sets.length, sets, unread: []};
+  }
+
+  private async getRecentStickers(): Promise<MethodDeclMap['messages.getRecentStickers']['res']> {
+    const result: {hash: string, stickers: SignalSticker[]} = await this.call('fetchRecentStickers', {});
+    const date = tsNow(true);
+    const stickers = result?.stickers ?? [];
+    return {
+      _: 'messages.recentStickers',
+      hash: result?.hash ?? 0,
+      packs: [],
+      stickers: stickers.map((sticker) => buildStickerDocument(sticker, date)),
+      dates: stickers.map(() => date)
+    };
+  }
+
+  /** A pack by the id and key, or the short name, that its links and stickers name */
+  private async getStickerSet(params: MethodDeclMap['messages.getStickerSet']['req']): Promise<MethodDeclMap['messages.getStickerSet']['res']> {
+    const stickerSetInfo = getStickerSetInfo(params.stickerset);
+    const result: {set: SignalStickerSet} | undefined = stickerSetInfo && await this.call('fetchStickers', {stickerSetInfo})
+    .catch((): undefined => undefined);
+    if(!result) {
+      throw makeError('STICKERSET_INVALID' as ErrorType);
+    }
+
+    return {_: 'messages.stickerSet', ...buildStickerSetContent(result.set, tsNow(true))} as MethodDeclMap['messages.getStickerSet']['res'];
+  }
+
+  private async setStickerSetInstalled(stickerset: InputStickerSet, isInstalled: boolean) {
+    const stickerSetInfo = getStickerSetInfo(stickerset);
+    if(!stickerSetInfo || !('id' in stickerSetInfo)) {
+      throw makeError('STICKERSET_INVALID' as ErrorType);
+    }
+
+    await this.call(isInstalled ? 'installStickerSet' : 'uninstallStickerSet', {
+      stickerSetId: stickerSetInfo.id,
+      accessHash: stickerSetInfo.accessHash
+    });
+    return isInstalled ? {_: 'messages.stickerSetInstallResultSuccess'} : true;
+  }
+
   /** A part of a media of the provider, which Web K's download loop asks for part by part */
   private async getFile(params: MethodDeclMap['upload.getFile']['req']): Promise<UploadFile.uploadFile> {
     const {location} = params;
@@ -591,13 +646,13 @@ export default class AppSignalManager extends AppManager {
 
     const {ApiMediaFormat} = await getProvider();
     const offset = Number(params.offset);
-    const media: {arrayBuffer: ArrayBuffer} = await this.call('downloadMedia', {
+    const media: {arrayBuffer: ArrayBuffer} = await this.call("downloadMedia", {
       url,
       mediaFormat: ApiMediaFormat.Progressive,
       start: offset,
       end: offset + params.limit - 1
-    });
-    if(!media) {
+    }).catch((err: unknown) => { throw new Error("signal-debug call " + url + " " + String(err)); });
+    if(!media) { throw new Error("signal-debug unavailable " + url + " " + offset);
       throw makeError('SIGNAL_FILE_UNAVAILABLE' as ErrorType);
     }
 
@@ -898,6 +953,18 @@ export default class AppSignalManager extends AppManager {
 
 function getProvider() {
   return provider ??= import('@signal-app/provider');
+}
+
+/** The provider's way to name a sticker pack: by its id and key, or by the short name of a pack this device knows */
+function getStickerSetInfo(stickerset: InputStickerSet) {
+  switch(stickerset._) {
+    case 'inputStickerSetID':
+      return {id: String(stickerset.id), accessHash: String(stickerset.access_hash)};
+    case 'inputStickerSetShortName':
+      return {shortName: stickerset.short_name};
+    default:
+      return undefined;
+  }
 }
 
 function getInputUserId(inputUser: InputUser): UserId {

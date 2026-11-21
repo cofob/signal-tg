@@ -150,6 +150,18 @@ export type SignalAttachment = {
   uniqueId: string
 };
 
+export type SignalStickerSet = {
+  id: string,
+  accessHash: string,
+  title: string,
+  shortName: string,
+  count: number,
+  installedDate?: number,
+  covers?: SignalSticker[],
+  stickers?: SignalSticker[],
+  packs?: Record<string, SignalSticker[]>
+};
+
 export type SignalContact = {
   mediaType: 'contact',
   firstName: string,

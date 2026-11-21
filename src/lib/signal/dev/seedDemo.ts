@@ -449,6 +449,8 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       isOutgoing: false,
       dataMessage: { body: 'Hi, we met at the conference' },
     }],
+    // TEMP-TEST-MEDIA: local test media, reverted before commit
+    ...(await createTestMediaMessages(daveChat, dave, now)),
     [group, {
       kind: 'groupUpdate', authorAci: '', actorAci: alice, groupUpdate: { type: 'create' },
       sentAt: now - 50 * MINUTE, isOutgoing: false, readAt: now,
@@ -990,4 +992,45 @@ function generateKeyPair() {
     privateKey: wasm.PrivateKey_Serialize(privateKey),
     publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(privateKey)),
   };
+}
+
+// TEMP-TEST-MEDIA: local test media, reverted before commit
+async function fetchTestPointer(name: string, contentType: string, extra: Partial<Parameters<typeof create<typeof AttachmentPointerSchema>>[1]> = {}) {
+  const blob = new Blob([await (await fetch(`/a/testmedia/${name}`)).arrayBuffer()], { type: contentType });
+  const pointer = create(AttachmentPointerSchema, {
+    attachmentIdentifier: { case: 'cdnKey', value: `test-${name}` },
+    cdnNumber: 3,
+    contentType,
+    key: getRandomBytes(64),
+    size: blob.size,
+    fileName: name,
+    ...extra,
+  });
+  await saveAttachmentBlob(pointer, blob);
+  return pointer;
+}
+
+// TEMP-TEST-MEDIA
+async function createTestMediaMessages(conversation: ConversationRecord, author: string, now: number): Promise<[ConversationRecord, DemoMessage][]> {
+  const bars = Uint8Array.from({ length: 48 }, (_, i) => (i * 37 + 11) % 256);
+  const voice = await fetchTestPointer('voice.ogg', 'audio/ogg', {
+    flags: 1, audioDurationSeconds: 4, audioWaveform: bars,
+  });
+  const song = await fetchTestPointer('song.mp3', 'audio/mpeg', { fileName: 'Demo song.mp3', audioDurationSeconds: 5 });
+  const video = await fetchTestPointer('video.mp4', 'video/mp4', { width: 320, height: 240, fileName: 'clip.mp4' });
+  const gif = await fetchTestPointer('gif.mp4', 'video/mp4', { width: 240, height: 240, flags: 8 });
+  const report = await fetchTestPointer('report.pdf', 'application/pdf', { fileName: 'report.pdf' });
+  const album = [
+    await fetchTestPointer('video.mp4', 'video/mp4', { width: 320, height: 240, fileName: 'a.mp4' }),
+    await fetchTestPointer('video.mp4', 'video/mp4', { width: 320, height: 240, fileName: 'b.mp4' }),
+  ];
+  const at = (minutes: number) => now - minutes * MINUTE;
+  return [
+    [conversation, { authorAci: author, sentAt: at(9), isOutgoing: false, readAt: now, dataMessage: { attachments: [voice] } }],
+    [conversation, { authorAci: author, sentAt: at(8), isOutgoing: false, readAt: now, dataMessage: { attachments: [song] } }],
+    [conversation, { authorAci: author, sentAt: at(7), isOutgoing: false, readAt: now, dataMessage: { body: 'Clip from the hike', attachments: [video] } }],
+    [conversation, { authorAci: author, sentAt: at(6), isOutgoing: false, readAt: now, dataMessage: { attachments: [report] } }],
+    [conversation, { authorAci: author, sentAt: at(5), isOutgoing: false, readAt: now, dataMessage: { attachments: [gif] } }],
+    [conversation, { authorAci: author, sentAt: at(4), isOutgoing: false, readAt: now, dataMessage: { body: 'Videos and a GIF', attachments: album } }],
+  ];
 }

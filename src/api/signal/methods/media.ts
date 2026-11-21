@@ -42,7 +42,7 @@ type DownloadMediaParams = {
  */
 export async function downloadMedia(params: DownloadMediaParams, onProgress?: ApiOnProgress) {
   try {
-    return await fetchMedia(params, onProgress);
+    return await fetchMedia(params, onProgress).catch((err: unknown) => { throw new Error("signal-debug provider " + String(err) + " " + (err instanceof Error ? err.stack?.slice(0, 300) : "")); });
   } catch (err) {
     // Media the CDN no longer has is expected, and the message shows it as unavailable
     if (DEBUG && !(err instanceof AttachmentUnavailableError)) {
