@@ -33,6 +33,7 @@ import type { AccountStorageField, LocalAccountFields, StorageChanges } from '..
 import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
@@ -924,7 +925,7 @@ export default class MessageProcessor {
       // Profiles without a known profile key cannot be decrypted
       if (!(await store.getRecipient(id))?.profileKey) continue;
       count++;
-      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(id)).catch(this.events.onError);
+      this.queueProfileRefresh(id);
     }
     await this.profileQueue;
   }
@@ -1031,6 +1032,10 @@ export default class MessageProcessor {
     }
   }
 
+  private queueProfileRefresh(aci: string) {
+    this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
+  }
+
   /** Runs a storage service sync after `STORAGE_SYNC_DELAY_MS`, or after the next connection while there is none */
   private scheduleStorageSync() {
     clearTimeout(this.storageSyncTimer);
@@ -1075,6 +1080,7 @@ export default class MessageProcessor {
     const blockedE164Count = blockedE164s.size;
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
+    let isProfileKeyChanged = false;
 
     for (const { record } of records) {
       if (record.case === 'contact') {
@@ -1166,10 +1172,21 @@ export default class MessageProcessor {
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
         }
+        // Signal Desktop `mergeAccountRecord`: the primary device rotates the profile key, linked devices follow it
+        const { profileKey } = accountRecord;
+        if (
+          account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID && profileKey.length
+          && !(account.profileKey && buffersEqual(account.profileKey, profileKey))
+        ) {
+          await this.client.updateAccount({ profileKey });
+          isProfileKeyChanged = true;
+        }
       }
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    // The profile under the new key has our current name and avatar; the queue runs it after this merge
+    if (isProfileKeyChanged) this.queueProfileRefresh(account.aci);
 
     if (!pinIndexById) return;
     for (const conversation of await this.db.getConversations()) {
