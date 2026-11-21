@@ -1863,11 +1863,18 @@ export default class MessageProcessor {
 
     const { masterKey, revision, groupChange } = context;
     const id = getGroupId(masterKey);
+    const getIsBehind = async () => {
+      const state = (await this.db.getConversation(id))?.groupState;
+      return !state || (revision > state.revision && !(groupChange.length && revision === state.revision + 1));
+    };
+
     let isFailed = false;
     try {
-      const state = (await this.db.getConversation(id))?.groupState;
-      if (state && (revision <= state.revision || (groupChange.length && revision === state.revision + 1))) return;
+      if (!await getIsBehind()) return;
+      const isRunning = this.groupRefreshes.has(id);
       await this.refreshGroup(id, masterKey);
+      // A refresh that was running began before the message came, so its state may lack the message's revision
+      if (isRunning && await getIsBehind()) await this.refreshGroup(id, masterKey);
     } catch (err) {
       isFailed = true;
       this.events.onError(err as Error);
