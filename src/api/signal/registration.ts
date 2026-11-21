@@ -13,7 +13,7 @@ import {
   submitVerificationCode,
 } from '../../lib/signal/account/register';
 import { formatMediaDuration } from '../../util/dates/duration';
-import { logError, store } from './engine';
+import { logError, processor, store } from './engine';
 import { sendApiUpdate } from './updates';
 
 type RegistrationState = {
@@ -118,10 +118,10 @@ export async function submitRegistrationProfile({ firstName, lastName, isDiscove
       sessionId: state.session!.id,
       isDiscoverableByPhoneNumber: Boolean(isDiscoverableByPhoneNumber),
     });
-    completedAccount = await completeRegistration(store, state.account, {
-      givenName: firstName.trim(),
-      familyName: lastName?.trim() || undefined,
-    });
+    const name = { givenName: firstName.trim(), familyName: lastName?.trim() || undefined };
+    completedAccount = await completeRegistration(store, state.account, name);
+    // The first storage manifest, which the connection creates, has our name from our conversation
+    await processor.updateOwnConversation({ profileName: name.givenName, profileFamilyName: name.familyName });
     return () => resetRegistration();
   });
   return completedAccount;

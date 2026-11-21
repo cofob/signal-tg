@@ -27,7 +27,16 @@ export type StorageWrite = {
   manifest: ManifestRecord;
   inserts: Map<string, Uint8Array<ArrayBuffer>>;
   deleteIds: string[];
+  // The server deletes every stored record first, so the write replaces the whole storage
+  shouldClearAll?: boolean;
 };
+
+/** The manifest on the server is not encrypted with our storage key; `version` is the one it has */
+export class ManifestDecryptError extends Error {
+  constructor(readonly version: bigint) {
+    super(`Cannot decrypt the storage manifest of version ${version}`);
+  }
+}
 
 const STORAGE_KEY_INFO = 'Storage Service Encryption';
 const ITEM_KEY_INFO_PREFIX = '20240801_SIGNAL_STORAGE_SERVICE_ITEM_';
@@ -58,7 +67,7 @@ export async function getStorageCredentials(connection: ChatConnection): Promise
 /**
  * Fetches and decrypts the manifest when it is newer than `afterVersion`, or any manifest without one
  * (Signal Desktop `fetchManifest` in `ts/services/storage.preload.ts`). Returns `undefined` when the manifest is
- * not newer or the account has none yet.
+ * not newer or the account has none yet. Throws `ManifestDecryptError` for a manifest that the key cannot open.
  */
 export async function fetchManifest(
   credentials: Credentials, storageKey: Uint8Array<ArrayBuffer>, afterVersion?: bigint,
@@ -69,8 +78,12 @@ export async function fetchManifest(
   if (response.status !== HTTP_OK) throw new Error(`Storage manifest request failed with HTTP ${response.status}`);
 
   const { version, value } = fromBinary(StorageManifestSchema, response.body);
-  const manifestKey = await getManifestKey(storageKey, version);
-  return fromBinary(ManifestRecordSchema, await decryptAesGcmWithNonce(manifestKey, value));
+  try {
+    const manifestKey = await getManifestKey(storageKey, version);
+    return fromBinary(ManifestRecordSchema, await decryptAesGcmWithNonce(manifestKey, value));
+  } catch {
+    throw new ManifestDecryptError(version);
+  }
 }
 
 /**
@@ -102,7 +115,7 @@ export async function fetchRecords(
  * a newer manifest first.
  */
 export async function writeManifest(credentials: Credentials, storageKey: Uint8Array<ArrayBuffer>, {
-  manifest, inserts, deleteIds,
+  manifest, inserts, deleteIds, shouldClearAll,
 }: StorageWrite) {
   const insertItem = [];
   for (const [id, record] of inserts) {
@@ -116,6 +129,7 @@ export async function writeManifest(credentials: Credentials, storageKey: Uint8A
     manifest: { version: manifest.version, value },
     insertItem,
     deleteKey: deleteIds.map(bufferFromBase64),
+    clearAll: shouldClearAll,
   }));
 
   // Signal Android `PushServiceSocket.writeStorageItems`: the manifest is fetched again after a conflict

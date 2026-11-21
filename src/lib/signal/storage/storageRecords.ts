@@ -7,6 +7,7 @@ import type {
   ContactRecord,
   GroupV2Record,
   ManifestRecord,
+  ManifestRecord_Identifier,
   StorageRecord,
 } from '../proto/generated/StorageService_pb';
 import type { AccountRecord as LocalAccount } from '../store/SignalStore';
@@ -20,6 +21,7 @@ import {
   AccountRecord_PhoneNumberSharingMode,
   AccountRecord_PinnedConversationSchema,
   AccountRecord_UsernameLinkSchema,
+  AccountRecordSchema,
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
@@ -57,8 +59,9 @@ type StorageWriteSource = {
 export const ACCOUNT_KEY = 'account';
 
 const ACI_BINARY_LENGTH = 16;
-// Signal Desktop `generateStorageID` in `ts/services/storage.preload.ts`
+// Signal Desktop `generateStorageID` and `RECORD_IKM_LENGTH` in `ts/services/storage.preload.ts`
 const STORAGE_ID_LENGTH = 16;
+const RECORD_IKM_LENGTH = 32;
 // Signal Desktop `MuteExpiration` (`packages/types/src/service/MuteExpiration.std.ts`): "muted forever" is
 // `Number.MAX_SAFE_INTEGER` locally and the largest signed 64-bit number in records
 const MAX_SAFE_DATE = 8_640_000_000_000_000;
@@ -71,6 +74,10 @@ const CONVERSATION_FIELDS: Record<ConversationRecordField, keyof ConversationRec
   whitelisted: 'isAccepted',
 };
 const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationRecordField[];
+const ACCOUNT_FIELD_NAMES: AccountStorageField[] = [
+  'pinnedConversations', 'noteToSelfArchived', 'noteToSelfMarkedUnread', 'username', 'usernameLink',
+  'phoneNumberSharingMode', 'unlistedPhoneNumber', 'givenName', 'familyName', 'avatarUrlPath',
+];
 
 /**
  * The record fields that a local change of a conversation touches. Note to Self keeps its state and every pin
@@ -188,6 +195,60 @@ export function countPinnedConversations(records: Map<string, Uint8Array>, conve
   const { record } = indexRecords(records).get(ACCOUNT_KEY)?.record ?? {};
   return buildPinnedConversations(record?.case === 'account' ? record.value.pinnedConversations : [], conversations)
     .length;
+}
+
+/**
+ * A manifest with a record for the account and for each conversation that has a message request answer, all under new
+ * storage ids and a new `recordIkm` (Signal Desktop `createNewManifest` and `resetWithNewKey` in
+ * `ts/services/storage.preload.ts`). A primary device writes it as its first manifest, and with `shouldClearAll`
+ * in place of one that its storage key cannot open. Returns the write and the keys of `changes` it carries.
+ */
+export function buildNewStorageWrite({
+  version, shouldClearAll, conversations, profileKeys, selfAci, deviceId, localAccount,
+}: {
+  version: bigint;
+  shouldClearAll: boolean;
+  conversations: ConversationRecord[];
+  profileKeys: Map<string, Uint8Array>;
+  selfAci: string;
+  deviceId: number;
+  localAccount: LocalAccount;
+}) {
+  const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
+  const identifiers: ManifestRecord_Identifier[] = [];
+  const writtenKeys = [ACCOUNT_KEY];
+  const addRecord = (record: StorageRecord) => {
+    const id = bufferToBase64(getRandomBytes(STORAGE_ID_LENGTH));
+    inserts.set(id, toBinary(StorageRecordSchema, record));
+    identifiers.push(create(ManifestRecord_IdentifierSchema, { raw: bufferFromBase64(id), type: getItemType(record) }));
+  };
+
+  const account = create(AccountRecordSchema, {
+    profileKey: localAccount.profileKey,
+    readReceipts: localAccount.isReadReceiptsEnabled ?? false,
+    typingIndicators: localAccount.isTypingIndicatorsEnabled ?? true,
+    linkPreviews: localAccount.isLinkPreviewsEnabled ?? true,
+  });
+  setAccountFields(account, ACCOUNT_FIELD_NAMES, conversations, selfAci, localAccount);
+  addRecord(create(StorageRecordSchema, { record: { case: 'account', value: account } }));
+
+  for (const conversation of conversations) {
+    // Conversations that are still message requests are not part of our contacts and groups
+    if (conversation.id === selfAci || !getRecordKey(conversation)) continue;
+    if (!conversation.isAccepted && !conversation.isBlocked) continue;
+
+    const record = createConversationRecord(conversation, profileKeys.get(conversation.id));
+    setConversationFields(
+      (record.record as { value: ContactRecord | GroupV2Record }).value, conversation, CONVERSATION_FIELD_NAMES,
+    );
+    addRecord(record);
+    writtenKeys.push(conversation.id);
+  }
+
+  const manifest = create(ManifestRecordSchema, {
+    version, sourceDevice: deviceId, identifiers, recordIkm: getRandomBytes(RECORD_IKM_LENGTH),
+  });
+  return { write: { manifest, inserts, deleteIds: [], shouldClearAll } satisfies StorageWrite, writtenKeys };
 }
 
 /** Stored records by what they belong to: a contact's ACI, `group:` and a group's master key, or the account */

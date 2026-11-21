@@ -61,6 +61,7 @@ import {
 import { uuidToBytes, uuidToString } from '../serviceId';
 import {
   ACCOUNT_KEY,
+  buildNewStorageWrite,
   buildStorageWrite,
   countPinnedConversations,
   getAci,
@@ -839,10 +840,42 @@ export default class MessageProcessor {
     return countPinnedConversations(records, await this.db.getConversations());
   }
 
+  /**
+   * A write of a whole new manifest at `version` (see `buildNewStorageWrite`). With `shouldClearAll`, the records of
+   * the manifest that it replaces are dropped from this device when the write is committed.
+   */
+  buildNewStorageWrite(version: bigint, shouldClearAll: boolean) {
+    return this.runSerial(async (): Promise<PendingStorageWrite> => {
+      const { store } = this.client;
+      const account = await this.getAccount();
+      const conversations = await this.db.getConversations();
+      const profileKeys = new Map<string, Uint8Array>();
+      for (const { id, type } of conversations) {
+        const profileKey = type === 'private' ? (await store.getRecipient(id))?.profileKey : undefined;
+        if (profileKey) profileKeys.set(id, profileKey);
+      }
+
+      const built = buildNewStorageWrite({
+        version,
+        shouldClearAll,
+        conversations,
+        profileKeys,
+        selfAci: account.aci,
+        deviceId: account.deviceId,
+        localAccount: account,
+      });
+      return { ...built, changeCount: this.storageChangeCount, hasUsernameChange: false };
+    });
+  }
+
   /** Stores the records of an accepted write and clears the changes it carried */
   commitStorageWrite({ write, writtenKeys, changeCount }: PendingStorageWrite) {
     return this.runSerial(async () => {
       const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      if (write.shouldClearAll && stored) {
+        await store.removeStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored)));
+      }
       await store.setStorageRecords(write.inserts);
       await store.removeStorageRecords(write.deleteIds);
       await store.setItem('storageManifest', toBinary(ManifestRecordSchema, write.manifest));
