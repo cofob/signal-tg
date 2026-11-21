@@ -4,7 +4,6 @@ import { getGlobal, getPromiseActions } from '../../global';
 import type {
   ApiMessage,
   ApiPageBlock,
-  ApiRichMessage,
   ApiRichText,
 } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
@@ -32,7 +31,6 @@ import styles from './MessageRichText.module.scss';
 
 type OwnProps = {
   message: ApiMessage;
-  forcedRichMessage?: ApiRichMessage;
   focusedQuote?: string;
   focusedQuoteOffset?: number;
   threadId?: ThreadId;
@@ -50,7 +48,6 @@ const MIN_CUSTOM_EMOJIS_FOR_SHARED_CANVAS = 3;
 
 const MessageRichText = ({
   message,
-  forcedRichMessage,
   focusedQuote,
   focusedQuoteOffset,
   threadId,
@@ -71,7 +68,7 @@ const MessageRichText = ({
   const lang = useLang();
   const canUseGpuCanvas = useDerivedState(getIsGpuCanvasAvailable);
 
-  const richMessage = forcedRichMessage || message.content.richMessage;
+  const richMessage = message.content.richMessage;
   const messageKey = `${message.chatId}-${message.id}`;
   const cutoff = richMessage?.partCutoff;
   const hasCutoff = cutoff !== undefined;
@@ -138,15 +135,14 @@ const MessageRichText = ({
     <RichContent
       blocks={blocks}
       focusedQuoteRange={quoteRange}
-      noQuoting={Boolean(forcedRichMessage)}
       isRtl={richMessage.isRtl}
       isOwn={isOwn}
       noAvatars={noAvatars}
       canAutoLoadMedia={canAutoLoadMedia}
       isProtected={isProtected}
       noPlaylist={noPlaylist}
-      // Scheduled, ephemeral and draft messages have no media list, a translation can't be mapped to original blocks
-      withMediaNavigation={isRichMediaMessage(message) && !forcedRichMessage
+      // Scheduled, ephemeral and draft messages have no media list
+      withMediaNavigation={isRichMediaMessage(message)
         && !message.isScheduled && !message.isEphemeral && !message.isTypingDraft}
       theme={theme}
       fontSizeAdjust={messageTextSize / RICH_CONTENT_BODY_FONT_SIZE_PX}

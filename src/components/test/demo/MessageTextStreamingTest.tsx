@@ -80,18 +80,6 @@ const MessageTextStreamingTest = () => {
     const chunks: string[] = [
       lang('SuggestionBirthdaySetupTitle'),
       lang('ProfileBirthdayTodayValue', { date: 'January 1' }),
-      lang('PremiumPreviewReactionsDescription'),
-      lang('SuggestedPostAgreementReached'),
-      lang('SuggestedPostPublishScheduleYou', { peer: 'Test', date: 'April 15' }),
-      lang('MonetizationInfoGramTitle'),
-      lang('PremiumPreviewAdvancedChatManagementDescription'),
-      lang('PremiumPreviewAnimatedProfilesDescription'),
-      lang('SponsoredMessageInfoDescription1'),
-      lang('SponsoredMessageInfoDescription3'),
-      lang('SuggestedPostChargedYou', { amount: '⭐️250' }),
-      lang('PremiumPreviewStickersDescription'),
-      lang('SuggestedPostRefundYou', { peer: 'Test', duration: '48 hours' }),
-      lang('PremiumPreviewNoAdsDescription'),
       lang('AreYouSureShareMyContactInfoBot'),
     ];
     const fullText = chunks.join(' ');
@@ -172,7 +160,7 @@ const MessageTextStreamingTest = () => {
 
         <div className={styles.meta}>
           <span className={styles.statusBadge}>
-            {lang(isFinished ? 'GiftAuctionFinished' : 'Loading')}
+            {lang(isFinished ? 'Done' : 'Loading')}
           </span>
 
           <span className={styles.progress}>

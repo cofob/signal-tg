@@ -92,7 +92,6 @@ const AccountMenuItems = ({
             isCustomPeer: true,
             peerColorId: account.color,
             emojiStatusId: isSameServer ? account.emojiStatusId : undefined,
-            isPremium: account.isPremium,
           };
 
           const hasSeparator = account.userId === currentUser.id && (newAccountUrl || arr.length > 1);

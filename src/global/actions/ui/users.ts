@@ -59,19 +59,6 @@ addActionHandler('openDisableSharingAboutModal', (global, actions, payload): Act
 
 addTabStateResetterAction('closeDisableSharingAboutModal', 'disableSharingAboutModal');
 
-addActionHandler('openProfileRatingModal', (global, actions, payload): ActionReturnType => {
-  const { userId, level, tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    profileRatingModal: {
-      userId,
-      level,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeProfileRatingModal', 'profileRatingModal');
-
 addActionHandler('openRankModal', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId(), ...rest } = payload;
 

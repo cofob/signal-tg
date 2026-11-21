@@ -9,6 +9,7 @@ import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_CDN_HOSTS, SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
 import { bufferFromBase64, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import { compact } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { encodeUtf8, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
@@ -70,6 +71,9 @@ type GroupCredentialsResponse = {
 
 const HTTP_OK = 200;
 const HTTP_MULTIPLE_CHOICES = 300;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
 const PROTOBUF_CONTENT_TYPE = 'application/x-protobuf';
 const DAY_SECONDS = 24 * 60 * 60;
 const CREDENTIAL_DAYS = 7;
@@ -84,6 +88,11 @@ let cachedCredentials: { aci: string; day: number; response: GroupCredentialsRes
 export class GroupRequestError extends Error {
   constructor(readonly status: number, path: string) {
     super(`Group request ${path} failed with HTTP ${status}`);
+  }
+
+  /** The server answers 403 when we are not allowed to read or change the group, and 404 when it does not exist */
+  get isAccessDenied() {
+    return this.status === HTTP_FORBIDDEN || this.status === HTTP_NOT_FOUND;
   }
 }
 
@@ -103,7 +112,8 @@ export async function fetchGroup(
 
 /**
  * Sends a request to the storage service group API with the group authorization of `secretParams`;
- * throws `GroupRequestError` on other statuses than 2xx
+ * throws `GroupRequestError` on other statuses than 2xx. A 401 means that the server is on another day than
+ * our clock at the UTC day boundary, so the request is sent once more with the credential of the next day.
  */
 export async function sendGroupRequest(
   account: AccountRecord,
@@ -113,21 +123,30 @@ export async function sendGroupRequest(
     method, path, body, contentType, headers: extraHeaders,
   }: GroupRequest,
 ) {
-  const headers: Record<string, string> = {
-    ...extraHeaders,
-    Authorization: `Basic ${await getGroupAuthorization(account, connection, secretParams)}`,
+  const sendWithCredential = async (dayOffset: number) => {
+    const headers: Record<string, string> = {
+      ...extraHeaders,
+      Authorization: `Basic ${await getGroupAuthorization(account, connection, secretParams, dayOffset)}`,
+    };
+    if (body) headers['Content-Type'] = contentType ?? PROTOBUF_CONTENT_TYPE;
+    return sendHttpRequest(SIGNAL_STORAGE_HOST, {
+      method, path, headers, body,
+    });
   };
-  if (body) headers['Content-Type'] = contentType ?? PROTOBUF_CONTENT_TYPE;
-  const response = await sendHttpRequest(SIGNAL_STORAGE_HOST, {
-    method, path, headers, body,
-  });
+
+  let response = await sendWithCredential(0);
+  if (response.status === HTTP_UNAUTHORIZED) response = await sendWithCredential(1);
   if (response.status < HTTP_OK || response.status >= HTTP_MULTIPLE_CHOICES) {
     throw new GroupRequestError(response.status, path);
   }
   return response;
 }
 
-/** Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`) */
+/**
+ * Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`). Fields that do not
+ * decrypt are cleared and users that do not decrypt are left out, so that one bad field of a member does not keep
+ * the group from updating (Signal Desktop `decryptGroupState`). Titles and descriptions are trimmed.
+ */
 export function decryptGroupState(secretParams: Uint8Array, group: Group): GroupState {
   const decryptServiceId = (ciphertext: Uint8Array) => decryptGroupServiceId(secretParams, ciphertext);
   const title = decryptGroupAttribute(secretParams, group.title);
@@ -136,25 +155,31 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
 
   return {
     revision: group.version,
-    title: title?.case === 'title' ? title.value : undefined,
-    description: description?.case === 'descriptionText' ? description.value : undefined,
+    title: title?.case === 'title' ? title.value.trim() : undefined,
+    description: description?.case === 'descriptionText' ? description.value.trim() : undefined,
     avatarUrl: group.avatarUrl || undefined,
     expireTimer: timer?.case === 'disappearingMessagesDuration' ? timer.value : undefined,
     accessControl: buildAccessControl(group.accessControl),
-    members: group.members.map((member) => decryptMember(secretParams, member)),
-    pendingMembers: group.membersPendingProfileKey.map(({ member, addedByUserId, timestamp }) => ({
-      serviceId: decryptServiceId(member!.userId),
-      role: member!.role,
-      addedBy: addedByUserId.length ? decryptServiceId(addedByUserId) : undefined,
-      timestamp: Number(timestamp),
+    members: compact(group.members.map((member) => decryptMember(secretParams, member))),
+    pendingMembers: compact(group.membersPendingProfileKey.map(({ member, addedByUserId, timestamp }) => {
+      if (!member) return undefined;
+      const serviceId = decryptServiceId(member.userId);
+      return serviceId && {
+        serviceId,
+        role: member.role,
+        addedBy: addedByUserId.length ? decryptServiceId(addedByUserId) : undefined,
+        timestamp: Number(timestamp),
+      };
     })),
-    requestingMembers: group.membersPendingAdminApproval.map(({ userId, profileKey, timestamp }) => {
+    requestingMembers: compact(group.membersPendingAdminApproval.map(({ userId, profileKey, timestamp }) => {
       const aci = decryptServiceId(userId);
-      return { aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci), timestamp: Number(timestamp) };
-    }),
-    bannedMembers: group.membersBanned.map(({ userId, timestamp }) => ({
-      serviceId: decryptServiceId(userId),
-      timestamp: Number(timestamp),
+      return aci && {
+        aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci), timestamp: Number(timestamp),
+      };
+    })),
+    bannedMembers: compact(group.membersBanned.map(({ userId, timestamp }) => {
+      const serviceId = decryptServiceId(userId);
+      return serviceId && { serviceId, timestamp: Number(timestamp) };
     })),
     inviteLinkPassword: group.inviteLinkPassword.length ? group.inviteLinkPassword : undefined,
     isAnnouncementsOnly: group.announcementsOnly,
@@ -162,9 +187,13 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
   };
 }
 
-/** Decrypts a full member, as in a group state or an `AddMemberAction` from the server */
-export function decryptMember(secretParams: Uint8Array, member: Member): GroupMember {
+/**
+ * Decrypts a full member, as in a group state or an `AddMemberAction` from the server; `undefined` when the
+ * member's ID does not decrypt. A profile key or label that does not decrypt is left out.
+ */
+export function decryptMember(secretParams: Uint8Array, member: Member): GroupMember | undefined {
   const aci = decryptGroupServiceId(secretParams, member.userId);
+  if (!aci) return undefined;
   return {
     aci,
     role: member.role,
@@ -208,29 +237,38 @@ export function getServerPublicParams() {
 
 /**
  * Builds the storage service group authorization: hex group public params and a zero-knowledge
- * presentation of today's auth credential, separated by a colon and base64-encoded
+ * presentation of an auth credential, separated by a colon and base64-encoded. `dayOffset` picks the credential
+ * of a later day than today. The credential is received with the PNI the server reports, which is the one it
+ * issued the credential for (Signal Desktop `ts/services/groupCredentialFetcher.preload.ts`).
  */
-async function getGroupAuthorization(account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array) {
+async function getGroupAuthorization(
+  account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, dayOffset: number,
+) {
   const publicParams = wasm.GroupSecretParams_GetPublicParams(secretParams);
   const params = getServerPublicParams();
   const today = Math.floor(getServerTime() / DAY_SECONDS) * DAY_SECONDS;
-  const { credentials } = await getGroupCredentials(connection, account.aci, today);
-  const todayCredential = credentials.find(({ redemptionTime }) => redemptionTime === today);
-  if (!todayCredential) throw new Error('No group auth credential for today');
+  const { pni, credentials } = await getGroupCredentials(connection, account.aci, today);
+  const day = today + dayOffset * DAY_SECONDS;
+  const dayCredential = credentials.find(({ redemptionTime }) => redemptionTime === day);
+  if (!dayCredential) throw new Error(`No group auth credential for day ${day}`);
 
   const aci = wasm.ServiceId_ParseFromServiceIdString(account.aci);
-  const response = bufferFromBase64(todayCredential.credential);
+  const response = bufferFromBase64(dayCredential.credential);
+  const accountPni = pni ?? account.pni;
   let credential: Uint8Array;
-  if (account.pni) {
-    const pni = wasm.ServiceId_ParseFromServiceIdString(toPniServiceId(account.pni));
+  if (accountPni) {
     credential = wasm.ServerPublicParams_ReceiveAuthCredentialWithPniAsServiceId(
-      params, aci, pni, todayCredential.redemptionTime, response,
+      params,
+      aci,
+      wasm.ServiceId_ParseFromServiceIdString(toPniServiceId(accountPni)),
+      dayCredential.redemptionTime,
+      response,
     );
   } else {
     // Accounts without a phone number
     if (!account.authCredentialSalt) throw new Error('Auth credential salt is missing');
     credential = wasm.ServerPublicParams_ReceiveAuthCredentialZkcWithoutPni(
-      params, aci, account.authCredentialSalt, todayCredential.redemptionTime, response,
+      params, aci, account.authCredentialSalt, dayCredential.redemptionTime, response,
     );
   }
   const presentation = wasm.ServerPublicParams_CreateAuthCredentialWithPniPresentationDeterministic(

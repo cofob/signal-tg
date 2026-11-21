@@ -720,7 +720,7 @@ addActionHandler('setPrivacyVisibility', async (global, actions, payload): Promi
 
 addActionHandler('setPrivacySettings', async (global, actions, payload): Promise<void> => {
   const {
-    privacyKey, isAllowList, updatedIds, isPremiumAllowed, botsPrivacy,
+    privacyKey, isAllowList, updatedIds, botsPrivacy,
   } = payload;
   const {
     privacy: { [privacyKey]: settings },
@@ -733,7 +733,6 @@ addActionHandler('setPrivacySettings', async (global, actions, payload): Promise
   const rules = buildApiInputPrivacyRules(global, {
     visibility: settings.visibility,
     isUnspecified: settings.isUnspecified,
-    shouldAllowPremium: isPremiumAllowed,
     allowedIds: isAllowList ? updatedIds : [...settings.allowUserIds, ...settings.allowChatIds],
     blockedIds: !isAllowList ? updatedIds : [...settings.blockUserIds, ...settings.blockChatIds],
     botsPrivacy,

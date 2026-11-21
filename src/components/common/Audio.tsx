@@ -48,14 +48,8 @@ type OwnProps = {
   isSelectable?: boolean;
   isSelected?: boolean;
   isDownloading?: boolean;
-  isTranscribing?: boolean;
-  isTranscribed?: boolean;
   canDownload?: boolean;
-  canTranscribe?: boolean;
-  isTranscriptionHidden?: boolean;
-  isTranscriptionError?: boolean;
   autoPlay?: boolean;
-  onHideTranscription?: (isHidden: boolean) => void;
   onPlay?: (messageId: number, chatId: string, documentId?: string) => void;
   onPause?: NoneToVoidFunction;
   onReadMedia?: () => void;
@@ -93,17 +87,11 @@ const Audio = ({
   isSelectable,
   isSelected,
   isDownloading,
-  isTranscribing,
-  isTranscriptionHidden,
-  isTranscribed,
-  isTranscriptionError,
   canDownload,
-  canTranscribe,
   autoPlay,
   webPage,
   mediaDuration,
   waveformColor,
-  onHideTranscription,
   onPlay,
   onPause,
   onReadMedia,
@@ -112,7 +100,7 @@ const Audio = ({
   contextActions,
 }: OwnProps & StateProps) => {
   const {
-    cancelMediaDownload, downloadMedia, transcribeAudio, openOneTimeMediaModal,
+    cancelMediaDownload, downloadMedia, openOneTimeMediaModal,
     setAudioPlaybackSource, saveVoiceWaveform,
   } = getActions();
 
@@ -194,10 +182,6 @@ const Audio = ({
     onDateClick!(message);
   });
 
-  const handleTranscribe = useLastCallback(() => {
-    transcribeAudio({ chatId: message.chatId, messageId: message.id });
-  });
-
   const handleWaveformGenerated = useLastCallback((waveform: number[]) => {
     // Saving into the message persists the waveform, so it is not generated again after reload
     saveVoiceWaveform({ chatId: message.chatId, messageId: message.id, waveform });
@@ -233,10 +217,6 @@ const Audio = ({
       canDownload={canDownload && !isUnavailable}
       uploadProgress={uploadProgress}
       downloadProgress={downloadProgress}
-      isTranscribing={isTranscribing}
-      isTranscribed={isTranscribed}
-      isTranscriptionHidden={isTranscriptionHidden}
-      isTranscriptionError={isTranscriptionError}
       autoPlay={autoPlay}
       contextActions={contextActions}
       onBeforePlay={handleBeforePlay}
@@ -245,8 +225,6 @@ const Audio = ({
       onCancelUpload={onCancelUpload}
       onDownloadClick={handleDownloadClick}
       onDateClick={onDateClick ? handleDateClick : undefined}
-      onTranscribe={canTranscribe ? handleTranscribe : undefined}
-      onHideTranscription={onHideTranscription}
       onListened={hasTtl ? onReadMedia : undefined}
       onWaveformGenerated={handleWaveformGenerated}
     />

@@ -314,7 +314,7 @@ addActionHandler('openThread', (global, actions, payload): ActionReturnType => {
 addActionHandler('openThread', async (global, actions, payload): Promise<void> => {
   const {
     type, isComments, noForumTopicPanel, shouldReplaceHistory, shouldReplaceLast,
-    focusMessageId, todoItemId, pollOption,
+    focusMessageId, pollOption,
     tabId = getCurrentTabId(),
   } = payload;
   let { chatId } = payload;
@@ -478,7 +478,6 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
       chatId,
       threadId,
       messageId: focusMessageId,
-      todoItemId,
       pollOption,
       tabId,
     });
@@ -926,26 +925,6 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
   }
 });
 
-addActionHandler('deleteChatUser', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, userId, shouldRevokeHistory, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId);
-  const user = selectUser(global, userId);
-  if (!chat || !user) {
-    return;
-  }
-
-  global = leaveChat(global, chatId);
-  setGlobal(global);
-
-  if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
-    actions.openChat({ id: undefined, tabId });
-  }
-
-  void callApi('deleteChatUser', { chat, user, shouldRevokeHistory });
-});
-
 // Signal groups cannot be deleted for everyone; deleting one leaves it, which the last admin cannot do
 addActionHandler('deleteChat', async (global, actions, payload): Promise<void> => {
   const { chatId, tabId = getCurrentTabId() } = payload;
@@ -1331,24 +1310,6 @@ addActionHandler('loadRecommendedChatFolders', async (global): Promise<void> => 
       chatFolders: {
         ...global.chatFolders,
         recommended: recommendedChatFolders,
-      },
-    };
-    setGlobal(global);
-  }
-});
-
-addActionHandler('toggleDialogFilterTags', async (global, actions, payload): Promise<void> => {
-  const { isEnabled } = payload;
-
-  const result = await callApi('toggleDialogFilterTags', isEnabled);
-
-  if (result) {
-    global = getGlobal();
-    global = {
-      ...global,
-      chatFolders: {
-        ...global.chatFolders,
-        areTagsEnabled: isEnabled,
       },
     };
     setGlobal(global);
@@ -1749,7 +1710,7 @@ addActionHandler('openChatByAci', async (global, actions, payload): Promise<void
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
-    hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),
+    hash, isBroadcast, tabId = getCurrentTabId(),
   } = payload;
   const theme = extractCurrentThemeParams();
   const result = await callApi('importChatInvite', { hash, theme });
@@ -1772,7 +1733,7 @@ addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<v
     return;
   }
 
-  if (isRequestNeeded) {
+  if (result?.type === 'requested') {
     actions.showNotification({
       message: { key: isBroadcast ? 'RequestToJoinChannelSentDescription' : 'RequestToJoinGroupSentDescription' },
       tabId,
@@ -2533,7 +2494,7 @@ addActionHandler('toggleJoinRequest', async (global, actions, payload): Promise<
   } = payload;
 
   const chat = await ensureIsSuperGroup(global, actions, chatId, tabId);
-  if (!chat || (!isChatSuperGroup(chat) && !isChatChannel(chat))) return;
+  if (!chat) return;
 
   global = getGlobal();
   const guardBot = guardBotId ? selectUser(global, guardBotId) : undefined;
@@ -3815,16 +3776,7 @@ async function openChatByUsername<T extends GlobalState>(
     actions.openChat({ id: TMP_CHAT_ID, tabId });
   }
 
-  const starRefStartPrefixes = global.appConfig.starRefStartPrefixes;
-  let referrer = ref;
-  if (startParam && starRefStartPrefixes?.length) {
-    const prefix = starRefStartPrefixes.find((p) => startParam.startsWith(p));
-    if (prefix) {
-      referrer = startParam.slice(prefix.length);
-    }
-  }
-
-  const chat = await fetchChatByUsername(global, username, referrer);
+  const chat = await fetchChatByUsername(global, username, ref);
   if (!chat) {
     if (!isCurrentChat) {
       actions.openPreviousChat({ tabId });
@@ -3845,7 +3797,7 @@ async function openChatByUsername<T extends GlobalState>(
     messageId: channelPostId,
     startParam,
     shouldStartBot,
-    referrer,
+    referrer: ref,
     startAttach,
     attach,
     text,

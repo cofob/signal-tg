@@ -81,10 +81,6 @@ type OwnProps = {
   canDownload?: boolean;
   uploadProgress?: number;
   downloadProgress?: number;
-  isTranscribing?: boolean;
-  isTranscribed?: boolean;
-  isTranscriptionHidden?: boolean;
-  isTranscriptionError?: boolean;
   autoPlay?: boolean;
   contextActions?: MenuItemContextAction[];
   onBeforePlay?: NoneToVoidFunction;
@@ -93,8 +89,6 @@ type OwnProps = {
   onCancelUpload?: NoneToVoidFunction;
   onDownloadClick?: NoneToVoidFunction;
   onDateClick?: NoneToVoidFunction;
-  onTranscribe?: NoneToVoidFunction;
-  onHideTranscription?: (isHidden: boolean) => void;
   onListened?: NoneToVoidFunction;
   onWaveformGenerated?: (waveform: number[]) => void;
 };
@@ -133,10 +127,6 @@ const TrackRow = ({
   canDownload,
   uploadProgress,
   downloadProgress,
-  isTranscribing,
-  isTranscriptionHidden,
-  isTranscribed,
-  isTranscriptionError,
   autoPlay,
   contextActions,
   onBeforePlay,
@@ -145,8 +135,6 @@ const TrackRow = ({
   onCancelUpload,
   onDownloadClick,
   onDateClick,
-  onTranscribe,
-  onHideTranscription,
   onListened,
   onWaveformGenerated,
 }: OwnProps) => {
@@ -170,7 +158,7 @@ const TrackRow = ({
   });
 
   const isReverse = isInOneTimeModal && !capabilities.canSeek;
-  const withWaveform = variant === 'inline' || isInOneTimeModal || isTranscribed;
+  const withWaveform = variant === 'inline' || isInOneTimeModal;
   const isWaveformFilled = isMediaUnread && !isOwn && !isReverse;
 
   const {
@@ -526,12 +514,6 @@ const TrackRow = ({
           waveformCanvasRef,
           (isViewOnceLocked || isReverse) ? reversePlayProgress : playProgress,
           isMediaUnread,
-          isTranscribing,
-          isTranscriptionHidden,
-          isTranscribed,
-          isTranscriptionError,
-          onTranscribe,
-          onHideTranscription,
           variant,
           unavailableText,
         )
@@ -647,12 +629,6 @@ function renderVoice(
   waveformCanvasRef: ElementRef<HTMLCanvasElement>,
   playProgress: number,
   isMediaUnread?: boolean,
-  isTranscribing?: boolean,
-  isTranscriptionHidden?: boolean,
-  isTranscribed?: boolean,
-  isTranscriptionError?: boolean,
-  onClickTranscribe?: VoidFunction,
-  onHideTranscription?: (isHidden: boolean) => void,
   variant?: AudioVariant,
   unavailableText?: string,
 ) {
@@ -666,42 +642,6 @@ function renderVoice(
         >
           <canvas ref={waveformCanvasRef} className="waveform-canvas" />
         </div>
-        {onClickTranscribe && (
-
-          <Button onClick={() => {
-            if ((isTranscribed || isTranscriptionError) && onHideTranscription) {
-              onHideTranscription(!isTranscriptionHidden);
-            } else if (!isTranscribing) {
-              onClickTranscribe();
-            }
-          }}
-          >
-            <Icon
-              name={(isTranscribed || isTranscriptionError) ? 'down' : 'transcribe'}
-              className={buildClassName(
-                'transcribe-icon',
-                (isTranscribed || isTranscriptionError) && !isTranscriptionHidden && 'transcribe-shown',
-              )}
-            />
-            {isTranscribing && (
-              <svg viewBox="0 0 32 24" className="loading-svg">
-                <rect
-                  className="loading-rect"
-                  fill="transparent"
-                  width="32"
-                  height="24"
-                  stroke-width="3"
-                  stroke-linejoin="round"
-                  rx="6"
-                  ry="6"
-                  stroke="currentColor"
-                  stroke-dashoffset="1"
-                  stroke-dasharray="32,68"
-                />
-              </svg>
-            )}
-          </Button>
-        )}
       </div>
       <p
         className={buildClassName('voice-duration', variant !== 'oneTimeModal' && isMediaUnread && 'unread')}

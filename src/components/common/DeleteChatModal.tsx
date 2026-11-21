@@ -40,7 +40,6 @@ type StateProps = {
   isPrivateChat: boolean;
   isBasicGroup: boolean;
   isSuperGroup: boolean;
-  currentUserId: string | undefined;
   canDeleteForAll?: boolean;
   contactUser?: ApiUser;
 };
@@ -55,7 +54,6 @@ const DeleteChatModal = ({
   isBot,
   isBasicGroup,
   isSuperGroup,
-  currentUserId,
   canDeleteForAll,
   contactUser,
   onClose,
@@ -67,7 +65,6 @@ const DeleteChatModal = ({
     deleteHistory,
     deleteSavedHistory,
     deleteChannel,
-    deleteChatUser,
     blockUser,
     deleteChat,
   } = getActions();
@@ -99,8 +96,8 @@ const DeleteChatModal = ({
         deleteHistory({ chatId: chat.id, shouldDeleteForAll: true });
         deleteChat({ chatId: chat.id });
       } else {
-        deleteHistory({ chatId: chat.id, shouldDeleteForAll: false });
-        deleteChatUser({ chatId: chat.id, userId: currentUserId! });
+        // The history goes after leaving succeeded: a Signal group may refuse, as the last admin's does
+        leaveBasicGroup({ chatId: chat.id });
       }
     } else if ((isChannel || isSuperGroup) && !chat.isOwner) {
       leaveChannel({ chatId: chat.id });
@@ -260,7 +257,6 @@ export default memo(withGlobal<OwnProps>(
       isChannel: isChatChannel(chat),
       isBasicGroup: isChatBasicGroup(chat),
       isSuperGroup: isChatSuperGroup(chat),
-      currentUserId: global.currentUserId,
       canDeleteForAll,
       contactUser,
     };

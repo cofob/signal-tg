@@ -5,7 +5,6 @@ import { getActions, withGlobal } from '../../../global';
 
 import type {
   ApiChat,
-  ApiChatFolder,
   ApiChatFullInfo,
   ApiDraft,
   ApiTypingStatus,
@@ -18,7 +17,7 @@ import type { ChatAnimationTypes } from './hooks';
 import { MAIN_THREAD_ID } from '../../../api/types';
 import { StoryViewerOrigin, type TopicsInfo } from '../../../types';
 
-import { ALL_FOLDER_ID, UNMUTE_TIMESTAMP } from '../../../config';
+import { UNMUTE_TIMESTAMP } from '../../../config';
 import {
   getPeerColorKey,
   groupStatefulContent,
@@ -33,7 +32,6 @@ import {
   selectChatLastMessageInfo,
   selectCurrentMessageList,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsForumPanelClosed,
   selectIsForumPanelOpen,
   selectMonoforumChannel,
@@ -49,7 +47,6 @@ import { IS_OPEN_IN_NEW_TAB_SUPPORTED } from '../../../util/browser/windowEnviro
 import buildClassName from '../../../util/buildClassName';
 import { formatCountdown } from '../../../util/dates/duration';
 import { isUserId } from '../../../util/entities/ids';
-import { getChatFolderIds } from '../../../util/folderManager';
 import { createLocationHash } from '../../../util/routing';
 
 import { useSelectorSignal, useShallowSelector } from '../../../hooks/data/useSelector';
@@ -77,7 +74,6 @@ import ChatFolderModal from '../ChatFolderModal.async';
 import MuteChatModal from '../MuteChatModal.async';
 import ChatBadge from './ChatBadge';
 import ChatCallStatus from './ChatCallStatus';
-import ChatTags from './ChatTags';
 
 import './Chat.scss';
 
@@ -93,10 +89,8 @@ type OwnProps = {
   isPreview?: boolean;
   previewMessageId?: number;
   className?: string;
-  withTags?: boolean;
   noCommunityChevron?: boolean;
   isInCommunityPanel?: boolean;
-  isFoldersSidebarShown?: boolean;
   observeIntersection?: ObserveFn;
   onReorderAnimationEnd?: NoneToVoidFunction;
 };
@@ -120,10 +114,6 @@ type StateProps = {
   currentUserId: string;
   isSynced?: boolean;
   isAccountFrozen?: boolean;
-  chatFolderIds?: number[];
-  orderedFolderIds?: number[];
-  chatFoldersById?: Record<number, ApiChatFolder>;
-  areTagsEnabled?: boolean;
 };
 
 const AUTO_DELETE_STORY_GAP_PERCENT = 15;
@@ -159,14 +149,8 @@ const Chat = ({
   className,
   isSynced,
   isAccountFrozen,
-  chatFolderIds,
-  orderedFolderIds,
-  chatFoldersById,
-  areTagsEnabled,
-  withTags,
   noCommunityChevron,
   isInCommunityPanel,
-  isFoldersSidebarShown,
   onReorderAnimationEnd,
 }: OwnProps & StateProps) => {
   const {
@@ -229,25 +213,6 @@ const Chat = ({
 
   useEnsureMessage(isSavedDialog ? currentUserId : lastMessageChatId, lastMessageId, lastMessage);
 
-  const tagFolderIds = useMemo(() => {
-    const chatFolderIdsSet = new Set(chatFolderIds);
-
-    return orderedFolderIds?.filter((id) => {
-      if (!chatFolderIdsSet.has(id)) return undefined;
-
-      const isActive = id === folderId;
-      const isAll = id === ALL_FOLDER_ID;
-
-      const folder = chatFoldersById?.[id];
-      const hasColor = folder?.color !== undefined && folder.color !== -1;
-
-      return !isActive && !isAll && hasColor;
-    });
-  }, [orderedFolderIds, folderId, chatFoldersById, chatFolderIds]);
-
-  const isTagsMode = areTagsEnabled && withTags;
-  const shouldRenderTags = isTagsMode && Boolean(tagFolderIds?.length);
-
   const { renderSubtitle, ref } = useChatListEntry({
     chat,
     chatId,
@@ -267,7 +232,6 @@ const Chat = ({
     isPreview,
     onReorderAnimationEnd,
     topicIds: listedTopicIds,
-    hasTags: shouldRenderTags,
     shouldForceNonForumView,
   });
 
@@ -457,7 +421,6 @@ const Chat = ({
     isSelectedForum && 'selected-forum',
     isPreview && 'standalone',
     isCommunity && 'community',
-    areTagsEnabled && withTags && 'chat-item-with-tags',
     className,
   );
 
@@ -526,7 +489,7 @@ const Chat = ({
           <ChatCallStatus isMobile={isMobile} isSelected={isSelected} isActive={withInterfaceAnimations} />
         )}
       </div>
-      <div className={buildClassName('info', isTagsMode && 'has-tags')}>
+      <div className="info">
         <div className="info-row">
           <FullNameTitle
             peer={avatarPeer!}
@@ -563,14 +526,6 @@ const Chat = ({
             />
           )}
         </div>
-        {shouldRenderTags && (
-          <ChatTags
-            itemClassName="chat-tag"
-            orderedFolderIds={tagFolderIds}
-            chatFoldersById={chatFoldersById}
-            isFoldersSidebarShown={isFoldersSidebarShown}
-          />
-        )}
       </div>
       {shouldRenderDeleteModal && (
         <DeleteChatModal
@@ -613,10 +568,6 @@ export default memo(withGlobal<OwnProps>(
       } as Complete<StateProps>;
     }
 
-    const chatFolderIds = getChatFolderIds(chatId);
-    const { areTagsEnabled } = global.chatFolders;
-    const isPremium = selectIsCurrentUserPremium(global);
-
     const isCommunity = isChatCommunity(chat);
 
     const {
@@ -658,10 +609,6 @@ export default memo(withGlobal<OwnProps>(
       isSynced: global.isSynced,
       isAccountFrozen,
       monoforumChannel,
-      chatFolderIds,
-      orderedFolderIds: global.chatFolders.orderedIds,
-      chatFoldersById: global.chatFolders.byId,
-      areTagsEnabled: areTagsEnabled && isPremium,
     };
   },
 )(Chat));

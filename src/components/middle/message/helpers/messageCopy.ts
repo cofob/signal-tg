@@ -15,7 +15,6 @@ import {
   selectChatMessageOrEphemeral,
   selectChatScheduledMessages,
   selectIsMessageProtected,
-  selectMessageCopyContent,
   selectSender,
 } from '../../../../global/selectors';
 import { getTranslationFn } from '../../../../util/localization';
@@ -33,7 +32,6 @@ const EMPTY_PARAGRAPH: TiptapJsonContent = { type: 'paragraph' };
 export async function buildMessageCopyContent(
   messageList: MessageList,
   request: MessageCopyRequest,
-  tabId: number,
 ): Promise<ClipboardTextContent> {
   const messageIds = request.type === 'selection' ? [request.messageId] : request.messageIds;
   let global = getGlobal();
@@ -41,7 +39,7 @@ export async function buildMessageCopyContent(
   if (!messages.length) throw new Error('NO_MESSAGES_TO_COPY');
 
   const partialMessageIds = request.type === 'messages'
-    ? messages.filter((message) => selectMessageCopyContent(global, message, tabId).richMessage?.isPart)
+    ? messages.filter((message) => message.content.richMessage?.isPart)
       .map(({ id }) => id)
     : [];
   if (partialMessageIds.length) {
@@ -54,7 +52,7 @@ export async function buildMessageCopyContent(
     messages = getMessagesForCopy(global, messageList, messageIds);
     if (partialMessageIds.some((messageId) => {
       const message = messages.find(({ id }) => id === messageId);
-      const richMessage = message && selectMessageCopyContent(global, message, tabId).richMessage;
+      const richMessage = message && message.content.richMessage;
       return !richMessage || richMessage.isPart;
     })) {
       throw new Error('RICH_MESSAGE_LOAD_FAILED');
@@ -63,7 +61,7 @@ export async function buildMessageCopyContent(
 
   const doc = request.type === 'selection'
     ? parseMessageCopyHtml(request.html)
-    : buildMessagesDoc(global, messageList.chatId, messages, request, tabId);
+    : buildMessagesDoc(global, messageList.chatId, messages, request);
   const result = serializeMessageCopyTiptapJson(doc);
   if (!result.plainText.trim()) throw new Error('EMPTY_MESSAGE_COPY_CONTENT');
 
@@ -75,7 +73,6 @@ function buildMessagesDoc(
   chatId: string,
   messages: ApiMessage[],
   request: Extract<MessageCopyRequest, { type: 'messages' }>,
-  tabId: number,
 ): TiptapJsonContent {
   const chat = selectChat(global, chatId);
   if (!chat) throw new Error('COPY_CHAT_NOT_FOUND');
@@ -83,7 +80,7 @@ function buildMessagesDoc(
   const lang = getTranslationFn();
   const content: TiptapJsonContent[] = [];
   messages.forEach((message, index) => {
-    const { text: translatedText, richMessage } = selectMessageCopyContent(global, message, tabId);
+    const { text, richMessage } = message.content;
     const sender = isChatChannel(chat) ? chat : selectSender(global, message);
     const senderTitle = sender ? getPeerTitle(lang, sender) : message.forwardInfo?.hiddenUserName;
     if (request.withSenderHeaders && senderTitle) {
@@ -97,14 +94,10 @@ function buildMessagesDoc(
       content.push(...(buildTiptapJsonFromRichMessage(richMessage, { isForCopy: true }).content || []));
     } else if (!request.withSenderHeaders) {
       content.push(...(buildTiptapJsonFromRichMessage(
-        buildRichMessageFromFormatted(translatedText || message.content.text),
+        buildRichMessageFromFormatted(text),
       ).content || []));
     } else {
-      const copyMessage = translatedText === message.content.text ? message : {
-        ...message,
-        content: { ...message.content, text: translatedText },
-      };
-      content.push(...(parseMessageCopyHtml(renderMessageSummaryHtml(lang, copyMessage, true)).content || []));
+      content.push(...(parseMessageCopyHtml(renderMessageSummaryHtml(lang, message, true)).content || []));
     }
 
     if (index < messages.length - 1) content.push(EMPTY_PARAGRAPH);

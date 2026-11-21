@@ -27,6 +27,8 @@ import {
   buildRoleChange,
   buildTitleChange,
   buildUnbanChange,
+  checkGroupDescription,
+  checkGroupTitle,
   combineGroupChanges,
   GroupChangeRefusedError,
 } from '../../../lib/signal/groups/buildGroupChange';
@@ -53,6 +55,8 @@ const REFUSED_CHANGE_ERRORS = {
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 
+const reportedErrors = new WeakSet<Error>();
+
 /**
  * Creates a Signal group with us as its admin. Users we cannot add yet, for lack of their profile key, are
  * invited and join once they accept, so none are missing.
@@ -71,11 +75,11 @@ export async function createGroupChat({ title, users }: { title: string; users: 
 }
 
 export async function updateChatTitle(chat: ApiChat, title: string) {
-  await changeGroup(chat, buildTitleChange(title), true);
+  await changeGroup(chat, buildTitleChange(title), { check: () => checkGroupTitle(title) });
 }
 
 export async function updateChatAbout(chat: ApiChat, about: string) {
-  await changeGroup(chat, buildDescriptionChange(about), true);
+  await changeGroup(chat, buildDescriptionChange(about), { check: () => checkGroupDescription(about) });
 }
 
 /** Sets a new group avatar, or removes it without `photo`; earlier avatars cannot be chosen again in Signal */
@@ -94,9 +98,18 @@ export async function editChatPhoto({ chat, photo }: { chat: ApiChat; photo?: Ap
   }
 }
 
-/** Disappearing message timers of groups are part of the group state */
+/** Disappearing message timers of groups are part of the group state; those of private chats are sent to the contact */
 export async function setHistoryTtl({ peer, period }: { peer: ApiPeer; period: number }) {
-  const conversation = await getGroupConversation(peer);
+  const conversation = await getConversationByPeerId(peer.id);
+  if (conversation?.type === 'private') {
+    try {
+      await processor.setExpireTimer(conversation.id, period);
+      return true as const;
+    } catch (err) {
+      logError(err);
+      return undefined;
+    }
+  }
   if (!conversation) return undefined;
   return changeGroup(peer, buildExpireTimerChange(period));
 }
@@ -303,15 +316,22 @@ export async function checkChatInvite(hash: string) {
   }
 }
 
-/** Joins through a group link; a link that needs admin approval sends a join request and returns no chat yet */
+/**
+ * Joins through a group link; a link that needs admin approval sends a join request, which the result tells apart
+ * from a failure, and returns no chat yet
+ */
 export async function importChatInvite({ hash }: { hash: string; theme?: unknown }) {
   const selfAci = getCurrentAccount()?.aci;
   if (!selfAci) return undefined;
 
   try {
     const conversation = await groups.joinGroupByLink(hash);
-    if (!conversation?.memberAcis?.includes(selfAci)) return undefined;
-    return { type: 'ok' as const, chat: buildApiChat(conversation, selfAci) };
+    if (conversation.memberAcis?.includes(selfAci)) {
+      return { type: 'ok' as const, chat: buildApiChat(conversation, selfAci) };
+    }
+    return conversation.groupState?.requestingMembers.some((member) => member.aci === selfAci)
+      ? { type: 'requested' as const }
+      : undefined;
   } catch (err) {
     reportError(err, INVITE_LINK_ERROR);
     return undefined;
@@ -326,15 +346,19 @@ export async function joinChannel({ channelId }: { channelId: string; accessHash
 
 /**
  * Runs a change of the group behind `chat`; returns `true` once it is applied and `undefined` when it fails.
- * Edits of the title, description and avatar (`isAttributeEdit`) made together go as one change.
+ * Edits of the title, description and avatar made together go as one change; they pass `check`, which refuses a
+ * value over its limit before it joins the others, so that it does not keep them from being applied.
  */
-async function changeGroup(chat: Pick<ApiChat, 'id'>, build: GroupChangeBuilder, isAttributeEdit?: boolean) {
+async function changeGroup(
+  chat: Pick<ApiChat, 'id'>, build: GroupChangeBuilder, { check }: { check?: () => void } = {},
+) {
   const conversation = await getGroupConversation(chat);
   if (!conversation) return undefined;
 
   try {
     const { id } = conversation;
-    await (isAttributeEdit ? groups.editAttributes(id, build) : groups.modifyGroup(id, build));
+    check?.();
+    await (check ? groups.editAttributes(id, build) : groups.modifyGroup(id, build));
     return true as const;
   } catch (err) {
     reportError(err);
@@ -371,8 +395,15 @@ async function buildApiInvite(conversation: ConversationRecord): Promise<ApiExpo
   };
 }
 
-/** Refused changes explain why, a refused link shows as expired, and other failures show a generic group error */
+/**
+ * Refused changes explain why, a refused link shows as expired, and other failures show a generic group error.
+ * Edits that went as one change share their failure, which is shown once.
+ */
 function reportError(err: unknown, forbiddenKey = GROUP_CHANGE_ERROR) {
+  if (err instanceof Error) {
+    if (reportedErrors.has(err)) return;
+    reportedErrors.add(err);
+  }
   logError(err);
   const isForbidden = err instanceof GroupRequestError
     && (err.status === HTTP_FORBIDDEN || err.status === HTTP_NOT_FOUND);

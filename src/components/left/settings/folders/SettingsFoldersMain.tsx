@@ -10,8 +10,6 @@ import {
   ALL_FOLDER_ID, FOLDERS_POSITION_LEFT, FOLDERS_POSITION_TOP, STICKER_SIZE_FOLDER_SETTINGS,
 } from '../../../../config';
 import { getFolderDescriptionText } from '../../../../global/helpers';
-import { selectIsCurrentUserPremium } from '../../../../global/selectors';
-import buildClassName from '../../../../util/buildClassName';
 import { isBetween } from '../../../../util/math';
 import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { throttle } from '../../../../util/schedulers';
@@ -23,7 +21,6 @@ import { useFolderManagerForChatsCount } from '../../../../hooks/useFolderManage
 import useHistoryBack from '../../../../hooks/useHistoryBack';
 import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
-import { getPeerColorClass } from '../../../../hooks/usePeerColor';
 import usePreviousDeprecated from '../../../../hooks/usePreviousDeprecated';
 
 import AnimatedIconWithPreview from '../../../common/AnimatedIconWithPreview';
@@ -31,7 +28,6 @@ import Icon from '../../../common/icons/Icon';
 import Island, { IslandOutside, IslandTitle } from '../../../gili/layout/Island';
 import Surface from '../../../gili/layout/Surface';
 import Button from '../../../ui/Button';
-import Checkbox from '../../../ui/Checkbox';
 import Draggable from '../../../ui/Draggable';
 import ListItem from '../../../ui/ListItem';
 import Loading from '../../../ui/Loading';
@@ -49,8 +45,6 @@ type StateProps = {
   folderIds?: number[];
   foldersById: Record<number, ApiChatFolder>;
   recommendedChatFolders?: ApiChatFolder[];
-  isPremium?: boolean;
-  areTagsEnabled?: boolean;
   foldersPosition: FoldersPosition;
 };
 
@@ -66,9 +60,7 @@ const runThrottledForLoadRecommended = throttle((cb) => cb(), 60000, true);
 const SettingsFoldersMain = ({
   isActive,
   foldersById,
-  isPremium,
   recommendedChatFolders,
-  areTagsEnabled,
   foldersPosition,
   isMobile,
   onCreateFolder,
@@ -82,7 +74,6 @@ const SettingsFoldersMain = ({
     openLimitReachedModal,
     openDeleteChatFolderModal,
     sortChatFolders,
-    toggleDialogFilterTags,
     setSharedSettingOption,
   } = getActions();
 
@@ -160,7 +151,6 @@ const SettingsFoldersMain = ({
         title: folder.title,
         subtitle: getFolderDescriptionText(lang, folder, chatsCountByFolderId[folder.id]),
         isChatList: folder.isChatList,
-        color: folder.color,
         noTitleAnimations: folder.noTitleAnimations,
       };
     });
@@ -178,14 +168,6 @@ const SettingsFoldersMain = ({
     addChatFolder({ folder });
   }, [foldersById, addChatFolder, openLimitReachedModal]);
 
-  const handleToggleTags = useCallback(() => {
-    if (!isPremium) {
-      return;
-    }
-
-    toggleDialogFilterTags({ isEnabled: !areTagsEnabled });
-  }, [areTagsEnabled, isPremium, toggleDialogFilterTags]);
-
   const handleDrag = useCallback((translation: { x: number; y: number }, id: string | number) => {
     const delta = Math.round(translation.y / FOLDER_HEIGHT_PX);
     const index = state.orderedFolderIds?.indexOf(id as number) || 0;
@@ -195,13 +177,13 @@ const SettingsFoldersMain = ({
       return;
     }
 
-    dragOrderIds.splice(index + delta + (isPremium ? 0 : 1), 0, id as number);
+    dragOrderIds.splice(index + delta + 1, 0, id as number);
     setState((current) => ({
       ...current,
       draggedIndex: index,
       dragOrderIds,
     }));
-  }, [folderIds?.length, isPremium, state.orderedFolderIds]);
+  }, [folderIds?.length, state.orderedFolderIds]);
 
   const handleDragEnd = useCallback(() => {
     setState((current) => {
@@ -219,10 +201,6 @@ const SettingsFoldersMain = ({
     setSharedSettingOption({ foldersPosition: value as FoldersPosition });
   });
 
-  const canCreateNewFolder = useMemo(() => {
-    return !isPremium || Object.keys(foldersById).length < MAX_FOLDERS - 1;
-  }, [foldersById, isPremium]);
-
   return (
     <Surface scrollable className="settings-content no-border">
       <IslandOutside className="settings-content-header">
@@ -236,19 +214,17 @@ const SettingsFoldersMain = ({
           {lang('CreateNewFilterInfo')}
         </p>
 
-        {canCreateNewFolder && (
-          <Button
-            className="settings-button with-icon"
-            color="primary"
-            pill
-            fluid
-            onClick={handleCreateFolder}
-            isRtl={lang.isRtl}
-            iconName="add"
-          >
-            {lang('CreateNewFilter')}
-          </Button>
-        )}
+        <Button
+          className="settings-button with-icon"
+          color="primary"
+          pill
+          fluid
+          onClick={handleCreateFolder}
+          isRtl={lang.isRtl}
+          iconName="add"
+        >
+          {lang('CreateNewFilter')}
+        </Button>
       </IslandOutside>
 
       <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('Filters')}</IslandTitle>
@@ -260,8 +236,6 @@ const SettingsFoldersMain = ({
             const draggedTop = (state.orderedFolderIds?.indexOf(folder.id) ?? 0) * FOLDER_HEIGHT_PX;
             const top = (state.dragOrderIds?.indexOf(folder.id) ?? 0) * FOLDER_HEIGHT_PX;
 
-            const shouldRenderColor = folder?.color !== undefined && folder.color !== -1 && areTagsEnabled;
-
             if (folder.id === ALL_FOLDER_ID) {
               return (
                 <Draggable
@@ -271,7 +245,7 @@ const SettingsFoldersMain = ({
                   onDragEnd={handleDragEnd}
                   style={`top: ${isDragged ? draggedTop : top}px;`}
                   knobStyle={`${lang.isRtl ? 'left' : 'right'}: 0.375rem;`}
-                  isDisabled={!isPremium || !isActive}
+                  isDisabled
                 >
                   <ListItem
                     key={folder.id}
@@ -302,7 +276,7 @@ const SettingsFoldersMain = ({
                 onDrag={handleDrag}
                 onDragEnd={handleDragEnd}
                 style={`top: ${isDragged ? draggedTop : top}px;`}
-                knobStyle={`${lang.isRtl ? 'left' : 'right'}: ${shouldRenderColor ? '4rem' : '2.5rem'};`}
+                knobStyle={`${lang.isRtl ? 'left' : 'right'}: 2.5rem;`}
                 isDisabled={isBlocked || !isActive}
               >
                 <ListItem
@@ -343,16 +317,6 @@ const SettingsFoldersMain = ({
                     {folder.isChatList && <Icon name="link" className="mr-1" />}
                     {folder.subtitle}
                   </span>
-
-                  {
-                    shouldRenderColor && (
-                      <div className={buildClassName(
-                        'settings-folders-color-circle',
-                        folder.color !== undefined && folder.color !== -1 && getPeerColorClass(folder.color),
-                      )}
-                      />
-                    )
-                  }
 
                 </ListItem>
               </Draggable>
@@ -405,20 +369,6 @@ const SettingsFoldersMain = ({
           </Island>
         </>
       )}
-      <Island>
-        <div className="settings-item-relative">
-          <Checkbox
-            label={lang('ShowFolderTags')}
-            subLabel={lang('ShowFolderTagsHint')}
-            checked={isPremium && areTagsEnabled}
-            onChange={handleToggleTags}
-            onClickLabel={(event) => {
-              if (!isPremium) event.preventDefault();
-            }}
-          />
-          {!isPremium && <Icon name="lock-filled" className="settings-folders-lock-icon" />}
-        </div>
-      </Island>
       {!isMobile && (
         <>
           <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('TabsPosition')}</IslandTitle>
@@ -448,15 +398,12 @@ export default memo(withGlobal<OwnProps>(
       orderedIds: folderIds,
       byId: foldersById,
       recommended: recommendedChatFolders,
-      areTagsEnabled,
     } = global.chatFolders;
 
     return {
       folderIds,
       foldersById,
-      isPremium: selectIsCurrentUserPremium(global),
       recommendedChatFolders,
-      areTagsEnabled,
       foldersPosition: global.sharedState.settings.foldersPosition,
     };
   },

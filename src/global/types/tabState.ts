@@ -1,6 +1,4 @@
 import type {
-  ApiAiComposeTone,
-  ApiAiComposeToneExample,
   ApiAttachBot,
   ApiAudio,
   ApiBirthday,
@@ -11,13 +9,10 @@ import type {
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
-  ApiInputAiComposeTone,
-  ApiInputRichMessage,
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMissingInvitedUser,
-  ApiNewMediaTodo,
   ApiNewPoll,
   ApiNotification,
   ApiPhoneCall,
@@ -25,14 +20,12 @@ import type {
   ApiReaction,
   ApiRequestPeerType,
   ApiRichText,
-  ApiSearchPostsFlood,
   ApiSticker,
   ApiTypeStoryView,
   ApiUrlAuthResultRequest,
   ApiUser,
   ApiVideo,
 } from '../../api/types';
-import type { ParsedCheckList } from '../../components/middle/composer/helpers/parseCheckList';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
 import type {
@@ -40,7 +33,6 @@ import type {
   ActiveEmojiInteraction,
   ChatCreationProgress,
   ChatMediaSearchParams,
-  ChatRequestedTranslations,
   ConfettiStyle,
   FocusDirection,
   GlobalSearchContent,
@@ -85,30 +77,6 @@ export type PollVote = {
 export type ReactionDeletionContext = {
   peerId: string;
   count: number;
-};
-
-export type AiEditorContent = {
-  type: 'text';
-  text: ApiFormattedText;
-} | {
-  type: 'rich';
-  richMessage: ApiInputRichMessage;
-};
-
-export type AiEditorResult = {
-  type: 'text';
-  text: ApiFormattedText;
-  diffText?: ApiFormattedText;
-} | {
-  type: 'rich';
-  richMessage: ApiInputRichMessage;
-};
-
-export type AiEditorTabBase = {
-  isLoading?: boolean;
-  requestId?: number;
-  result?: AiEditorResult;
-  error?: 'floodPremium' | 'aiError' | 'generic';
 };
 
 type ReportOptionsSection = {
@@ -201,7 +169,6 @@ export type TabState = {
     gif?: ApiVideo;
     sticker?: ApiSticker;
     poll?: ApiNewPoll;
-    todo?: ApiNewMediaTodo;
     isSilent?: boolean;
     sendGrouped?: boolean;
     sendCompressed?: boolean;
@@ -222,7 +189,6 @@ export type TabState = {
     isResizingContainer?: boolean;
     quote?: string;
     quoteOffset?: number;
-    todoItemId?: number;
     pollOption?: string;
     scrollTargetPosition?: ScrollTargetPosition;
   };
@@ -282,12 +248,10 @@ export type TabState = {
     currentContent?: GlobalSearchContent;
     chatId?: string;
     foundTopicIds?: number[];
-    searchFlood?: ApiSearchPostsFlood;
     fetchingStatus?: {
       chats?: boolean;
       messages?: boolean;
       botApps?: boolean;
-      publicPosts?: boolean;
     };
     isClosing?: boolean;
     localResults?: {
@@ -364,9 +328,6 @@ export type TabState = {
       storyIdsByPeerId: Record<string, number[]>;
     };
   };
-  storyStealthModal?: {
-    targetPeerId: string;
-  } | Record<string, never>;
 
   selectedStoryAlbumId?: number;
 
@@ -519,7 +480,6 @@ export type TabState = {
     chatId: string;
     threadId?: ThreadId;
     messageListType: MessageListType;
-    isQuiz?: boolean;
   };
 
   musicPicker?: {
@@ -529,13 +489,6 @@ export type TabState = {
     shouldInsertToRichInput?: boolean;
     shared?: MusicPickerSharedResults;
     global?: MusicPickerGlobalResults;
-  };
-
-  todoListModal?: {
-    chatId: string;
-    messageId?: number;
-    forNewTask?: boolean;
-    initialCheckList?: ParsedCheckList;
   };
 
   preparedMessageModal?: {
@@ -635,42 +588,6 @@ export type TabState = {
     url: string;
   };
 
-  aiMessageEditorModal?: {
-    chatId: string;
-    threadId: ThreadId;
-    content: AiEditorContent;
-    activeTab: 'translate' | 'style' | 'fix';
-    isFromAttachment?: boolean;
-    isEditing?: boolean;
-    translateTab?: AiEditorTabBase & {
-      selectedLanguage?: string;
-      selectedTone?: ApiInputAiComposeTone;
-      shouldEmojify?: boolean;
-      cache?: Record<string, AiEditorResult>;
-    };
-    styleTab?: AiEditorTabBase & {
-      selectedTone?: ApiInputAiComposeTone;
-      customPrompt?: string;
-      shouldEmojify?: boolean;
-      cache?: Record<string, AiEditorResult>;
-    };
-    fixTab?: AiEditorTabBase & {
-      cache?: AiEditorResult;
-    };
-  };
-
-  aiToneEditorModal?: {
-    toneToEdit?: ApiAiComposeTone;
-  };
-
-  aiTonePreviewModal?: {
-    slug: string;
-    tone?: ApiAiComposeTone;
-    example?: ApiAiComposeToneExample;
-    isAlreadyAdded?: boolean;
-    hasExampleError?: boolean;
-  };
-
   languageModal?: {
     requestId: number;
     langCode: string;
@@ -678,17 +595,6 @@ export type TabState = {
     isLoading?: boolean;
     isApplying?: boolean;
     error?: 'unsupported' | 'failed';
-  };
-
-  aiMessageEditorPendingResult?: {
-    content: AiEditorContent;
-    chatId: string;
-    threadId: ThreadId;
-    shouldSend?: boolean;
-    shouldSendWithAttachments?: boolean;
-    isSilent?: boolean;
-    scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
   };
 
   deleteMessageModal?: {
@@ -738,15 +644,6 @@ export type TabState = {
     isLoading?: boolean;
   };
 
-  requestedTranslations: {
-    byChatId: Record<string, ChatRequestedTranslations>;
-  };
-  chatLanguageModal?: {
-    chatId: string;
-    messageId?: number;
-    activeLanguage?: string;
-  };
-
   chatlistModal?: {
     invite?: ApiChatlistInvite;
     removal?: {
@@ -765,16 +662,6 @@ export type TabState = {
     currentBirthday?: ApiBirthday;
     suggestForUserId?: string;
     isFromSuggestion?: boolean;
-  };
-
-  suggestMessageModal?: {
-    chatId: string;
-    messageId?: number;
-  };
-
-  suggestedPostApprovalModal?: {
-    chatId: string;
-    messageId: number;
   };
 
   inviteViaLinkModal?: {
@@ -811,11 +698,6 @@ export type TabState = {
     duration?: number;
   };
 
-  profileRatingModal?: {
-    userId: string;
-    level: number;
-  };
-
   quickPreview?: {
     chatId: string;
     threadId?: ThreadId;
@@ -838,8 +720,6 @@ export type TabState = {
 
   insertingPeerIdMention?: string;
   shouldSaveAttachmentsCompression?: boolean;
-
-  isCocoonModalOpen?: boolean;
 
   rankModal?: {
     chatId: string;

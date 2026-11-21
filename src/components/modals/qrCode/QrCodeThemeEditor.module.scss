@@ -169,18 +169,6 @@
   }
 }
 
-.giftSelected::after {
-  pointer-events: none;
-  content: "";
-
-  position: absolute;
-  inset: 0;
-
-  border-radius: inherit;
-
-  box-shadow: inset 0 0 0 0.1875rem var(--color-primary);
-}
-
 @keyframes panel-appear {
   from {
     transform: translateY(1rem);

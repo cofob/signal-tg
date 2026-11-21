@@ -72,7 +72,6 @@ export default function useChatListEntry({
   isTopic,
   isSavedDialog,
   isPreview,
-  hasTags,
   shouldForceNonForumView,
   onReorderAnimationEnd,
 }: {
@@ -90,7 +89,6 @@ export default function useChatListEntry({
   isTopic?: boolean;
   isSavedDialog?: boolean;
   isPreview?: boolean;
-  hasTags?: boolean;
 
   animationType: ChatAnimationTypes;
   orderDiff: number;
@@ -212,7 +210,6 @@ export default function useChatListEntry({
       return (
         <ChatGroupedLastMessage
           items={communityItems}
-          hasTags={hasTags}
           renderLastMessage={renderLastMessageOrTyping}
           onMainItemClick={handleCommunityMemberClick}
         />
@@ -227,7 +224,6 @@ export default function useChatListEntry({
           renderLastMessage={renderLastMessageOrTyping}
           observeIntersection={observeIntersection}
           topicIds={topicIds}
-          hasTags={hasTags}
         />
       );
     }

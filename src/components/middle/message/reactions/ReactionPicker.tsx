@@ -17,7 +17,6 @@ import {
   selectChatFullInfo,
   selectChatMessage,
   selectIsContextMenuTranslucent,
-  selectIsCurrentUserPremium,
   selectPeerStory,
   selectTabState,
 } from '../../../../global/selectors';
@@ -48,7 +47,6 @@ interface StateProps {
   shouldUseFullPicker?: boolean;
   message?: ApiMessage;
   story?: ApiStory | ApiStorySkipped;
-  isCurrentUserPremium?: boolean;
   position?: IAnchorPosition;
   isTranslucent?: boolean;
   sendAsMessage?: boolean;
@@ -66,13 +64,12 @@ const ReactionPicker = ({
   story,
   position,
   isTranslucent,
-  isCurrentUserPremium,
   shouldUseFullPicker,
   sendAsMessage,
   hasReactionCatalog,
 }: OwnProps & StateProps) => {
   const {
-    toggleReaction, closeReactionPicker, sendMessage, showNotification, sendStoryReaction,
+    toggleReaction, closeReactionPicker, sendMessage, sendStoryReaction,
   } = getActions();
 
   const renderedMessageId = useCurrentOrPrev(message?.id, true);
@@ -140,19 +137,6 @@ const ReactionPicker = ({
 
     const sticker = 'type' in item && item.type === 'custom' ? getGlobal().customEmojis.byId[item.documentId]
       : 'id' in item ? item : undefined;
-
-    if (sticker && !sticker.isFree && !isCurrentUserPremium) {
-      showNotification({
-        message: {
-          key: 'UnlockPremiumEmojiHint',
-          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-        },
-      });
-
-      closeReactionPicker();
-
-      return;
-    }
 
     if (!sendAsMessage) {
       sendStoryReaction({
@@ -288,7 +272,6 @@ export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => {
     shouldUseFullPicker: (chat?.isForbidden || areSomeReactionsAllowed || shouldUseCurrentReactions) ? false
       : (areAllReactionsAllowed || isPrivateChat || !hasReactionCatalog),
     isTranslucent: selectIsContextMenuTranslucent(global),
-    isCurrentUserPremium: selectIsCurrentUserPremium(global),
     sendAsMessage,
     hasReactionCatalog,
   };

@@ -9,7 +9,7 @@ import type { TabState } from '../../../global/types';
 
 import { getUserFullName } from '../../../global/helpers';
 import {
-  selectIsCurrentUserFrozen, selectIsCurrentUserPremium, selectStickerSet, selectUser,
+  selectIsCurrentUserFrozen, selectStickerSet, selectUser,
 } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 
@@ -30,7 +30,6 @@ export type OwnProps = {
 export type StateProps = {
   currentUser?: ApiUser;
   stickerSet?: ApiStickerSet;
-  isPremium?: boolean;
   isAccountFrozen?: boolean;
 };
 
@@ -40,7 +39,6 @@ const EmojiStatusAccessModal = ({
   modal,
   currentUser,
   stickerSet,
-  isPremium,
   isAccountFrozen,
 }: OwnProps & StateProps) => {
   const {
@@ -99,28 +97,16 @@ const EmojiStatusAccessModal = ({
     if (!modal?.bot?.id) return;
     closeEmojiStatusAccessModal();
     if (modal?.webAppKey) {
-      if (isPremium) {
-        sendWebAppEvent({
-          webAppKey: modal.webAppKey,
-          event: {
-            eventType: 'emoji_status_access_requested',
-            eventData: {
-              status: 'allowed',
-            },
+      sendWebAppEvent({
+        webAppKey: modal.webAppKey,
+        event: {
+          eventType: 'emoji_status_access_requested',
+          eventData: {
+            status: 'allowed',
           },
-        });
-        toggleUserEmojiStatusPermission({ botId: modal.bot.id, isEnabled: true, isBotAccessEmojiGranted: true });
-      } else {
-        sendWebAppEvent({
-          webAppKey: modal.webAppKey,
-          event: {
-            eventType: 'emoji_status_access_requested',
-            eventData: {
-              status: 'cancelled',
-            },
-          },
-        });
-      }
+        },
+      });
+      toggleUserEmojiStatusPermission({ botId: modal.bot.id, isEnabled: true, isBotAccessEmojiGranted: true });
     }
   });
 
@@ -138,9 +124,7 @@ const EmojiStatusAccessModal = ({
         },
       });
     }
-    if (isPremium) {
-      toggleUserEmojiStatusPermission({ botId: modal.bot.id, isEnabled: false });
-    }
+    toggleUserEmojiStatusPermission({ botId: modal.bot.id, isEnabled: false });
   });
 
   const renderStatusText = useLastCallback(() => {
@@ -191,14 +175,12 @@ const EmojiStatusAccessModal = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const currentUser = selectUser(global, global.currentUserId!);
-    const isPremium = selectIsCurrentUserPremium(global);
     const stickerSet = global.defaultStatusIconsId ? selectStickerSet(global, global.defaultStatusIconsId) : undefined;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
     return {
       currentUser,
       stickerSet,
-      isPremium,
       isAccountFrozen,
     };
   },

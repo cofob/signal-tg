@@ -11,11 +11,8 @@ import type {
 } from '../../api/types';
 import type { ChatType } from '../../lib/widget-sandbox';
 import type {
-  ChatTranslatedMessages,
   MessageListType,
-  TextSummary,
   ThreadId,
-  TranslationTone,
 } from '../../types';
 import type { IAllowedAttachmentOptions } from '../helpers';
 import type {
@@ -29,11 +26,9 @@ import {
   SERVICE_NOTIFICATIONS_USER_ID,
   TMP_CHAT_ID,
 } from '../../config';
-import { IS_TRANSLATION_SUPPORTED } from '../../util/browser/windowEnvironment';
 import { isUserId } from '../../util/entities/ids';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
 import { getMessageKey, isLocalMessageId } from '../../util/keys/messageKey';
-import { getTranslationCacheKey, parseTranslationCacheKey } from '../../util/keys/translationKey';
 import { isIpRevealingMedia } from '../../util/media/ipRevealingMedia';
 import { getServerTime } from '../../util/serverTime';
 import { getDocumentExtension } from '../../components/common/helpers/documentInfo';
@@ -65,7 +60,6 @@ import {
   isMessageDocumentSticker,
   isMessageFailed,
   isMessageLocal,
-  isMessageTranslatable,
   isOwnMessage,
   isServiceNotificationMessage,
   isUserRightBanned,
@@ -80,8 +74,6 @@ import {
   selectIsChatWithBot,
   selectIsChatWithSelf,
   selectIsMonoforumAdmin,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedChatTranslationTone,
 } from './chats';
 import { selectMessageDownloadableMedia } from './media';
 import { selectPeer } from './peers';
@@ -489,11 +481,8 @@ export function selectPollFromMessage<T extends GlobalState>(global: T, message:
 }
 
 export function selectReplyOptionText(
-  global: GlobalState, media: MediaContainer, { todoItemId, pollOption, replyOptionText }: ApiMessageReplyInfo,
+  global: GlobalState, media: MediaContainer, { pollOption, replyOptionText }: ApiMessageReplyInfo,
 ) {
-  if (todoItemId !== undefined) {
-    return media.content.todo?.todo.items.find((item) => item.id === todoItemId)?.title;
-  }
   if (pollOption !== undefined) {
     const poll = selectPollFromMessage(global, media);
     return poll?.summary.answers.find((answer) => answer.option === pollOption)?.text ?? replyOptionText;
@@ -590,7 +579,7 @@ export function selectCanPostInMessageList<T extends GlobalState>(
   if (selectShouldBlockSendInMonoforum(global, chatId, threadId)) return false;
 
   const userFullInfo = selectUserFullInfo(global, chatId);
-  if (userFullInfo?.isBlocked || userFullInfo?.isContactRequirePremium) return false;
+  if (userFullInfo?.isBlocked) return false;
 
   const chat = selectChat(global, chatId);
   if (selectIsCurrentUserFrozen(global) && (!chat || chatId !== global.botFreezeAppealId)) return false;
@@ -699,7 +688,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
 
   // https://github.com/telegramdesktop/tdesktop/blob/335095a332607c41a8d20b47e61f5bbd66366d4b/Telegram/SourceFiles/data/data_peer.cpp#L653
   const canEditMessagesIndefinitely = (() => {
-    if (content.todo) return true;
     if (isPrivate) return isChatWithSelf;
     if (isBasicGroup) return false;
     if (isSuperGroup) return canPinMessage;
@@ -1463,70 +1451,6 @@ export function selectForwardsContainVoiceMessages<T extends GlobalState>(
   });
 }
 
-export function selectMessageSummary<T extends GlobalState>(
-  global: T, chatId: string, messageId: number, toLanguageCode?: string,
-): TextSummary | undefined {
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message?.summaryLanguageCode) return undefined;
-
-  if (toLanguageCode && toLanguageCode !== message.summaryLanguageCode) {
-    const messageTranslations = selectMessageTranslations(global, chatId, toLanguageCode);
-    return messageTranslations[messageId]?.summary;
-  }
-
-  return global.messages.byChatId[chatId].summaryById[messageId];
-}
-
-export function selectChatTranslations<T extends GlobalState>(
-  global: T, chatId: string,
-): ChatTranslatedMessages {
-  return global.translations.byChatId[chatId];
-}
-
-export function selectMessageTranslations<T extends GlobalState>(
-  global: T, chatId: string, cacheKey: string,
-) {
-  return selectChatTranslations(global, chatId)?.byLangCode[cacheKey] || {};
-}
-
-export function selectMessageCopyContent<T extends GlobalState>(
-  global: T, message: ApiMessage, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  if (message.isEphemeral) return message.content;
-
-  const chatLanguage = selectRequestedChatTranslationLanguage(global, message.chatId, tabId);
-  const messageLanguage = selectRequestedMessageTranslationLanguage(global, message.chatId, message.id, tabId);
-  const cacheKey = chatLanguage
-    ? getTranslationCacheKey(chatLanguage, selectRequestedChatTranslationTone(global, message.chatId, tabId))
-    : messageLanguage;
-
-  const translation = cacheKey ? selectMessageTranslations(global, message.chatId, cacheKey)[message.id] : undefined;
-  return translation?.text || translation?.richMessage ? translation : message.content;
-}
-
-export function selectRequestedMessageTranslationLanguage<T extends GlobalState>(
-  global: T, chatId: string, messageId: number, ...[tabId = getCurrentTabId()]: TabArgs<T>
-): string | undefined {
-  const requestedInChat = selectTabState(global, tabId).requestedTranslations.byChatId[chatId];
-  return requestedInChat?.toLanguage || requestedInChat?.manualMessages?.[messageId];
-}
-
-export function selectRequestedMessageTranslationTone<T extends GlobalState>(
-  global: T, chatId: string, messageId: number, ...[tabId = getCurrentTabId()]: TabArgs<T>
-): TranslationTone | undefined {
-  const requestedInChat = selectTabState(global, tabId).requestedTranslations.byChatId[chatId];
-
-  if (requestedInChat?.toLanguage) {
-    return requestedInChat.tone || 'neutral';
-  }
-
-  const cacheKey = requestedInChat?.manualMessages?.[messageId];
-  if (!cacheKey) return undefined;
-
-  const { tone } = parseTranslationCacheKey(cacheKey);
-  return tone;
-}
-
 export function selectReplyCanBeSentToChat<T extends GlobalState>(
   global: T,
   toChatId: string,
@@ -1583,20 +1507,6 @@ function сheckMessageSendingDenied(message: ApiMessage, options: IAllowedAttach
     || (isPhoto && !options.canSendPhotos)
     || (isGif && !options.canSendGifs)
     || (isPlainText && !options.canSendPlainText);
-}
-
-export function selectCanTranslateMessage<T extends GlobalState>(
-  global: T, message: ApiMessage, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const { canTranslate: isTranslationEnabled } = global.settings.byKey;
-
-  const isTranslatable = isMessageTranslatable(message);
-
-  // Separate translations are disabled when chat translation enabled
-  const chatRequestedLanguage = selectRequestedChatTranslationLanguage(global, message.chatId, tabId);
-
-  return IS_TRANSLATION_SUPPORTED && isTranslationEnabled && isTranslatable
-    && !chatRequestedLanguage;
 }
 
 export function selectTopicLink<T extends GlobalState>(

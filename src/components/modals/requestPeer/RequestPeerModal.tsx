@@ -377,7 +377,7 @@ function isUserMatchingType(user: ApiUser, peerType: Extract<ApiRequestPeerType,
     return false;
   }
 
-  if (peerType.isPremium !== undefined && peerType.isPremium !== Boolean(user.isPremium)) {
+  if (peerType.isPremium) {
     return false;
   }
 

@@ -329,7 +329,6 @@ const TextFormatter = ({
               ariaLabel={lang('FormattingMarkedAria')}
               className={buildClassName(styles.markButton, getFormatButtonClassName('marked'))}
               iconName="mark"
-              hasPremiumBadge
               isDisabled={isFormatButtonDisabled('marked')}
               onClick={() => handleToggleEditorMark('marked')}
             />
@@ -338,7 +337,6 @@ const TextFormatter = ({
               shortcutId="subscript"
               className={getFormatButtonClassName('subscript')}
               iconName="subscript"
-              hasPremiumBadge
               isDisabled={isFormatButtonDisabled('subscript')}
               onClick={() => handleToggleEditorMark('subscript')}
             />
@@ -347,7 +345,6 @@ const TextFormatter = ({
               shortcutId="superscript"
               className={getFormatButtonClassName('superscript')}
               iconName="superscript"
-              hasPremiumBadge
               isDisabled={isFormatButtonDisabled('superscript')}
               onClick={() => handleToggleEditorMark('superscript')}
             />
@@ -403,7 +400,6 @@ function FormatButton({
   shortcutId,
   className,
   iconName,
-  hasPremiumBadge,
   isDisabled,
   onClick,
 }: {
@@ -411,7 +407,6 @@ function FormatButton({
   shortcutId?: KeyboardShortcutId;
   className?: string;
   iconName: IconName;
-  hasPremiumBadge?: boolean;
   isDisabled?: boolean;
   onClick: NoneToVoidFunction;
 }) {
@@ -423,7 +418,6 @@ function FormatButton({
       ariaLabel={label}
       className={className}
       iconName={iconName}
-      iconHasPremiumBadge={hasPremiumBadge}
       disabled={isDisabled}
       onClick={onClick}
     />

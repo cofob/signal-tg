@@ -64,7 +64,6 @@ import {
   replaceThreadLocalStateParam,
   updateThreadInfoMessagesCount,
 } from './threads';
-import { clearMessageSummary, clearMessageTranslation } from './translations';
 
 type MessageStoreSections = GlobalState['messages']['byChatId'][string];
 
@@ -78,7 +77,7 @@ export function updateCurrentMessageList<T extends GlobalState>(
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ): T {
   const {
-    messageLists, globalThemePreviewChatId, aiMessageEditorModal, aiMessageEditorPendingResult, pendingBotStart,
+    messageLists, globalThemePreviewChatId, pendingBotStart,
   } = selectTabState(global, tabId);
   let newMessageLists: MessageList[];
   if (shouldReplaceHistory || IS_TEST) {
@@ -104,17 +103,12 @@ export function updateCurrentMessageList<T extends GlobalState>(
     newMessageLists = messageLists.slice(0, -1);
   }
 
-  const previousList = messageLists[messageLists.length - 1];
   const nextList = newMessageLists[newMessageLists.length - 1];
-  const hasChanged = previousList?.chatId !== nextList?.chatId || previousList?.threadId !== nextList?.threadId
-    || previousList?.type !== nextList?.type;
 
   return updateTabState(global, {
     messageLists: newMessageLists,
     globalThemePreviewChatId: nextList?.chatId === globalThemePreviewChatId ? globalThemePreviewChatId : undefined,
     pendingBotStart: nextList?.chatId === pendingBotStart?.botId ? pendingBotStart : undefined,
-    aiMessageEditorModal: hasChanged ? undefined : aiMessageEditorModal,
-    aiMessageEditorPendingResult: hasChanged ? undefined : aiMessageEditorPendingResult,
   }, tabId);
 }
 
@@ -181,7 +175,7 @@ export function updateMessageStore<T extends GlobalState>(
 ): T {
   const { byChatId } = global.messages;
   const current = byChatId[chatId]
-    || { byId: {}, ephemeralById: {}, anchoredById: {}, threadsById: {}, summaryById: {} };
+    || { byId: {}, ephemeralById: {}, anchoredById: {}, threadsById: {} };
   const newStore = {
     ...current,
     ...update,
@@ -469,8 +463,6 @@ export function deleteChatMessages<T extends GlobalState>(
     const threadMessages = updatedThreads.get(threadId) || [];
     threadMessages.push(messageId);
     updatedThreads.set(threadId, threadMessages);
-    global = clearMessageTranslation(global, chatId, messageId);
-    global = clearMessageSummary(global, chatId, messageId);
   });
 
   const deletedForwardedPosts = Object.values(pickTruthy(byId, messageIds)).filter(
@@ -1002,7 +994,6 @@ function mergeMinPollResultByOption(
       ...currentResult,
       ...nextResult,
       isChosen: currentResult.isChosen || nextResult.isChosen,
-      isCorrect: currentResult.isCorrect || nextResult.isCorrect,
     };
   });
 

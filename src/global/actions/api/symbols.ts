@@ -103,33 +103,6 @@ addActionHandler('loadFavoriteStickers', async (global): Promise<void> => {
   setGlobal(global);
 });
 
-addActionHandler('loadPremiumStickers', async (global): Promise<void> => {
-  const { hash } = global.stickers.premium || {};
-
-  if (selectIsCurrentUserFrozen(global)) {
-    return;
-  }
-
-  const result = await callApi('fetchStickersForEmoji', { emoji: '⭐️⭐️', hash });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = {
-    ...global,
-    stickers: {
-      ...global.stickers,
-      premium: {
-        hash: result.hash,
-        stickers: result.stickers,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
 addActionHandler('loadGreetingStickers', async (global): Promise<void> => {
   const { hash } = global.stickers.greeting || {};
 
@@ -179,7 +152,6 @@ addActionHandler('loadFeaturedStickers', async (global): Promise<void> => {
       featured: {
         ...global.stickers.featured,
         setIds: featuredStickers.sets.map(({ id }) => id),
-        isPremium: featuredStickers.isPremium,
       },
     },
   };
@@ -264,31 +236,6 @@ addActionHandler('loadDefaultStatusIcons', async (global): Promise<void> => {
   global = updateStickerSet(global, fullSet.id, fullSet);
   global = { ...global, defaultStatusIconsId: fullSet.id };
   setGlobal(global);
-});
-
-addActionHandler('loadUserCollectibleStatuses', async (global, actions): Promise<void> => {
-  setGlobal(global);
-
-  const { hash } = global.collectibleEmojiStatuses || {};
-
-  const result = await callApi('fetchCollectibleEmojiStatuses', { hash });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = {
-    ...global,
-    collectibleEmojiStatuses: {
-      hash: result.hash,
-      statuses: result.statuses,
-    },
-  };
-  setGlobal(global);
-  const documentIds = result.statuses.map(({ documentId }) => documentId);
-
-  actions.loadCustomEmojis({ ids: documentIds });
 });
 
 addActionHandler('loadStickers', (global, actions, payload): ActionReturnType => {

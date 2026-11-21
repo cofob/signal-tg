@@ -23,8 +23,6 @@ import {
   selectChatFullInfo,
   selectCustomEmojiForEmojis,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
-  selectIsSetPremium,
 } from '../../../global/selectors';
 import { selectLanguageCode } from '../../../global/selectors/settings';
 import animateHorizontalScroll from '../../../util/animateHorizontalScroll';
@@ -50,7 +48,6 @@ import useAsyncRendering from '../../right/hooks/useAsyncRendering';
 import useEmojiSearch from './hooks/useEmojiSearch';
 
 import EmojiSearchResults from '../../common/EmojiSearchResults';
-import Icon from '../../common/icons/Icon';
 import InlineStickerSetView, { StickerSetToggleButton } from '../../common/InlineStickerSetView';
 import StickerButton from '../../common/StickerButton';
 import StickerSet from '../../common/StickerSet';
@@ -91,7 +88,6 @@ type StateProps = {
   chatEmojiSetId?: string;
   canAnimate?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   emojiGroups?: ApiEmojiGroup[];
 };
 
@@ -137,7 +133,6 @@ const EmojiPicker = ({
   chatEmojiSetId,
   canAnimate,
   isSavedMessages,
-  isCurrentUserPremium,
   emojiGroups,
   onEmojiSelect,
   onCustomEmojiSelect,
@@ -250,20 +245,18 @@ const EmojiPicker = ({
   const customSets = useMemo(() => {
     const defaultSets: StickerSetOrReactionsSetOrRecent[] = [];
 
-    if (isCurrentUserPremium || isSavedMessages) {
-      const recentCustomEmojis = customEmojisById && recentCustomEmojiIds
-        ? Object.values(pickTruthy(customEmojisById, recentCustomEmojiIds))
-        : undefined;
-      if (recentCustomEmojis?.length) {
-        defaultSets.push({
-          id: RECENT_SYMBOL_SET_ID,
-          accessHash: '0',
-          title: lang('RecentStickers'),
-          stickers: recentCustomEmojis,
-          count: recentCustomEmojis.length,
-          isEmoji: true,
-        });
-      }
+    const recentCustomEmojis = customEmojisById && recentCustomEmojiIds
+      ? Object.values(pickTruthy(customEmojisById, recentCustomEmojiIds))
+      : undefined;
+    if (recentCustomEmojis?.length) {
+      defaultSets.push({
+        id: RECENT_SYMBOL_SET_ID,
+        accessHash: '0',
+        title: lang('RecentStickers'),
+        stickers: recentCustomEmojis,
+        count: recentCustomEmojis.length,
+        isEmoji: true,
+      });
     }
 
     const userSetIds = [...(addedCustomEmojiIds || [])];
@@ -279,7 +272,7 @@ const EmojiPicker = ({
       ...setsToDisplay,
     ];
   }, [
-    isCurrentUserPremium, isSavedMessages, customEmojisById, recentCustomEmojiIds, addedCustomEmojiIds,
+    customEmojisById, recentCustomEmojiIds, addedCustomEmojiIds,
     chatEmojiSetId, customEmojiFeaturedIds, stickerSetsById, lang,
   ]);
 
@@ -441,10 +434,6 @@ const EmojiPicker = ({
       index === activeSetIndex && 'activated',
     );
 
-    const isLockedSet = !isCurrentUserPremium && !isSavedMessages && !section.isChatEmojiSet
-      && selectIsSetPremium(set);
-    const lockBadge = isLockedSet && <Icon name="lock" className="EmojiPicker-cover-lock" />;
-
     return (
       <Button
         key={set.id}
@@ -472,13 +461,11 @@ const EmojiPicker = ({
             noPlay={!canAnimate || !canLoadAndPlay}
             observeIntersection={observeIntersectionForCovers}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={index}
             forcePlayback
           />
         )}
-        {lockBadge}
       </Button>
     );
   }
@@ -515,7 +502,6 @@ const EmojiPicker = ({
               isNearActive={activeSetIndex >= index - 1 && activeSetIndex <= index + 1}
               isSavedMessages={isSavedMessages}
               isChatEmojiSet={section.isChatEmojiSet}
-              isCurrentUserPremium={isCurrentUserPremium}
               isTranslucent={isTranslucent}
               onStickerSelect={handleCustomEmojiSelect}
               forcePlayback
@@ -534,7 +520,6 @@ const EmojiPicker = ({
         observeIntersection={observeIntersectionForResults}
         noPlay={!canAnimate || !canLoadAndPlay}
         isSavedMessages={isSavedMessages}
-        isCurrentUserPremium={isCurrentUserPremium}
         isTranslucent={isTranslucent}
         onStickerSelect={handleCustomEmojiSelect}
       />
@@ -549,7 +534,6 @@ const EmojiPicker = ({
             nativeResults={nativeResults}
             customResults={customResults}
             customResultIds={customResultIds}
-            isCurrentUserPremium={isCurrentUserPremium}
             isSavedMessages={isSavedMessages}
             observeIntersection={observeIntersectionForResults}
             onEmojiSelect={handleEmojiSelect}
@@ -567,7 +551,6 @@ const EmojiPicker = ({
           packSets={textResults!.packSets}
           globalResults={textResults!.globalStickers}
           withSections
-          isCurrentUserPremium={isCurrentUserPremium}
           isSavedMessages={isSavedMessages}
           isLocalSectionCollapsed={isLocalSectionCollapsed}
           isGlobalSectionCollapsed={isGlobalSectionCollapsed}
@@ -677,7 +660,6 @@ export default memo(withGlobal<OwnProps>(
       chatEmojiSetId: chatFullInfo?.emojiSet?.id,
       canAnimate: selectCanPlayAnimatedEmojis(global),
       isSavedMessages,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       emojiGroups: global.emojiGroups.groups,
     };
   },

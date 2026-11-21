@@ -1,5 +1,5 @@
 import { memo, useMemo } from '../../lib/teact/teact';
-import { getActions, getGlobal } from '../../global';
+import { getGlobal } from '../../global';
 
 import type { ApiSticker, ApiStickerSet } from '../../api/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
@@ -29,7 +29,6 @@ type OwnProps = {
   packSets?: ApiStickerSet[];
   globalResults?: ApiSticker[];
   withSections?: boolean;
-  isCurrentUserPremium?: boolean;
   isSavedMessages?: boolean;
   isLocalSectionCollapsed?: boolean;
   isGlobalSectionCollapsed?: boolean;
@@ -50,7 +49,6 @@ const EmojiSearchResults = ({
   packSets,
   globalResults,
   withSections,
-  isCurrentUserPremium,
   isSavedMessages,
   isLocalSectionCollapsed,
   isGlobalSectionCollapsed,
@@ -66,14 +64,6 @@ const EmojiSearchResults = ({
   const handleGroupCustomEmojiClick = useLastCallback((documentId: string) => {
     const sticker = getGlobal().customEmojis.byId[documentId];
     if (!sticker) {
-      return;
-    }
-
-    const isLocked = !isCurrentUserPremium && !isSavedMessages && !sticker.isFree;
-    if (isLocked) {
-      getActions().showNotification({
-        message: { key: 'PremiumUnlockEmoji' },
-      });
       return;
     }
 
@@ -124,7 +114,6 @@ const EmojiSearchResults = ({
         onClick={onCustomEmojiSelect}
         clickArg={sticker}
         isSavedMessages={isSavedMessages}
-        isCurrentUserPremium={isCurrentUserPremium}
       />
     ));
   }
@@ -193,7 +182,6 @@ const EmojiSearchResults = ({
             className={pickerStyles.foundPackCover}
             observeIntersection={observeIntersection}
             noContextMenu
-            isCurrentUserPremium
             clickArg={0}
             forcePlayback
           />

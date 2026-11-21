@@ -2,7 +2,7 @@ import type { ElementRef, TeactNode } from '../../lib/teact/teact';
 import {
   getIsHeavyAnimating, memo, useMemo, useRef,
 } from '../../lib/teact/teact';
-import { getActions, getGlobal } from '../../global';
+import { getActions } from '../../global';
 
 import type { ApiMessage } from '../../api/types';
 import type { IAlbum, IDocumentGroup, MessageListType, ThreadId } from '../../types';
@@ -15,25 +15,19 @@ import { SCHEDULED_WHEN_ONLINE } from '../../config';
 import {
   getMessageHtmlId,
   getMessageOriginalId,
-  getSuggestedChangesActionText,
-  getSuggestedChangesInfo,
   isActionMessage,
   isOwnMessage,
   isServiceNotificationMessage,
 } from '../../global/helpers';
-import { getPeerTitle } from '../../global/helpers/peers';
 import { getMessageForumTopicId, isMessageInForumTopic } from '../../global/helpers/replies';
-import { selectChatMessage, selectSender } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import { isUserId } from '../../util/entities/ids';
 import { compact } from '../../util/iteratees';
-import { formatCalendarDate, formatMessageListDate, secondsToDate } from '../../util/localization/dateFormat';
-import { formatStarsAsText, formatTonAsText } from '../../util/localization/format';
+import { formatCalendarDate, formatMessageListDate } from '../../util/localization/dateFormat';
 import { isAlbum, isDocumentGroup } from './helpers/groupMessages';
 import { consumePendingTopGrowth } from './helpers/messageListReserves';
 import { consumeMessageWidgetResize } from './helpers/messageWidgetResize';
 import { preventMessageInputBlur } from './helpers/preventMessageInputBlur';
-import { renderPeerLink } from './message/helpers/messageActions';
 
 import useDerivedSignal from '../../hooks/useDerivedSignal';
 import useLang from '../../hooks/useLang';
@@ -43,7 +37,6 @@ import useMessageObservers from './hooks/useMessageObservers';
 import useScrollHooks from './hooks/useScrollHooks';
 
 import Icon from '../common/icons/Icon';
-import MiniTable, { type TableEntry } from '../common/MiniTable';
 import ActionMessage from './message/ActionMessage';
 import Message from './message/Message';
 import SenderGroupContainer from './message/SenderGroupContainer';
@@ -252,59 +245,6 @@ const MessageListContent = ({
     </div>
   );
 
-  const renderSuggestedPostInfoAction = (message: ApiMessage) => {
-    if (message.suggestedPostInfo) {
-      const { price, scheduleDate } = message.suggestedPostInfo;
-      const sender = selectSender(getGlobal(), message);
-      const userTitle = sender ? getPeerTitle(lang, sender) : '';
-      const userLink = renderPeerLink(sender?.id, userTitle || lang('ActionFallbackUser'));
-
-      const originalMessage = message.replyInfo?.type === 'message' && message.replyInfo.replyToMsgId
-        ? selectChatMessage(getGlobal(), message.chatId, message.replyInfo.replyToMsgId)
-        : undefined;
-      const changesInfo = getSuggestedChangesInfo(message, originalMessage);
-
-      const titleText = changesInfo
-        ? getSuggestedChangesActionText(lang, message, originalMessage, message.isOutgoing, userLink)
-        : message.isOutgoing
-          ? lang('ActionSuggestedPostOutgoing', undefined, { withNodes: true, withMarkdown: true })
-          : lang('ActionSuggestedPostIncoming', { user: userLink }, { withNodes: true, withMarkdown: true });
-
-      const tableData: TableEntry[] = compact([
-        [lang('TitlePrice'), price ? (price.currency === 'TON'
-          ? formatTonAsText(lang, price.amount)
-          : formatStarsAsText(lang, price.amount)) : lang('SuggestMessageNoPrice')],
-        [lang('TitleTime'),
-          scheduleDate
-            ? formatCalendarDate(lang, secondsToDate(scheduleDate), { isShort: true, withTime: true })
-            : lang('SuggestMessageAnytime'),
-        ],
-      ]);
-
-      return (
-        <div
-          className={buildClassName('local-action-message')}
-          key={`suggested-post-action-${message.id}`}
-        >
-          <span className={actionMessageStyles.suggestedPostContainer}>
-            <div
-              className={actionMessageStyles.suggestedPostTitle}
-            >
-              {titleText}
-            </div>
-            {Boolean(tableData.length) && (
-              <MiniTable
-                className={actionMessageStyles.suggestedPostInfo}
-                data={tableData}
-              />
-            )}
-          </span>
-        </div>
-      );
-    }
-    return undefined;
-  };
-
   const renderBotForumTopicAction = () => {
     if (!canManageBotForumTopics || threadId !== MAIN_THREAD_ID) return undefined;
     return (
@@ -396,7 +336,6 @@ const MessageListContent = ({
 
           return compact([
             message.id === memoUnreadDividerBeforeIdRef.current && unreadDivider,
-            message.suggestedPostInfo && renderSuggestedPostInfoAction(message),
             <Message
               key={key}
               message={message}

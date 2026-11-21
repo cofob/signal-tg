@@ -128,11 +128,6 @@ export type ApiStoryView = {
 
 export type ApiTypeStoryView = ApiStoryView | ApiStoryViewPublicForward | ApiStoryViewPublicRepost;
 
-export type ApiStealthMode = {
-  activeUntil?: number;
-  cooldownUntil?: number;
-};
-
 export type ApiMediaAreaCoordinates = {
   x: number;
   y: number;
