@@ -118,12 +118,14 @@ export default class AppSignalManager extends AppManager {
 
   private createHandlers(): AppSignalManager['handlers'] {
     const now = () => tsNow(true);
+    const emptyMessages = () => ({_: 'messages.messages', messages: [] as Message[], chats: [] as Chat[], users: [] as User[], topics: [] as any[]});
+    const emptyUpdates = () => ({_: 'updates', updates: [] as Update[], users: [] as User[], chats: [] as Chat[], date: now(), seq: 0});
     return {
       'help.getConfig': () => this.getConfig(),
       'help.getAppConfig': () => ({_: 'help.appConfig', hash: 1, config: {_: 'jsonObject', value: []}}),
       'help.getNearestDc': () => ({_: 'nearestDc', country: '', this_dc: 2, nearest_dc: 2}),
-      'help.getPeerColors': () => ({_: 'help.peerColorsNotModified'}),
-      'help.getPeerProfileColors': () => ({_: 'help.peerColorsNotModified'}),
+      'help.getPeerColors': () => ({_: 'help.peerColors', hash: 1, colors: []}),
+      'help.getPeerProfileColors': () => ({_: 'help.peerColors', hash: 1, colors: []}),
       'help.getTimezonesList': () => ({_: 'help.timezonesList', timezones: [], hash: 0}),
       'help.getPromoData': () => ({_: 'help.promoDataEmpty', expires: now() + 86400}),
       'help.getCountriesList': () => ({_: 'help.countriesList', countries: [], hash: 0}),
@@ -151,7 +153,35 @@ export default class AppSignalManager extends AppManager {
       'messages.editMessage': (params) => this.editMessage(params),
       'messages.getFullChat': (params) => this.getFullChat(params),
       'messages.getChats': (params) => this.getChats(params),
-      'messages.getMessages': () => ({_: 'messages.messages', messages: [], chats: [], users: [], topics: []}),
+      'messages.getMessages': emptyMessages,
+      // * search, shared media and pinned messages are not ported yet: they answer with nothing, as for a new chat
+      'messages.search': emptyMessages,
+      'messages.searchGlobal': emptyMessages,
+      'messages.getReplies': emptyMessages,
+      'messages.getSavedHistory': emptyMessages,
+      'messages.getSearchCounters': (params: MethodDeclMap['messages.getSearchCounters']['req']) => {
+        return params.filters.map((filter) => ({_: 'messages.searchCounter', pFlags: {}, filter, count: 0}));
+      },
+      'messages.receivedMessages': () => [],
+      'messages.getAllDrafts': emptyUpdates,
+      'messages.getPeerSettings': () => ({_: 'messages.peerSettings', settings: {_: 'peerSettings', pFlags: {}}, chats: [], users: []}),
+      'messages.getAttachMenuBots': () => ({_: 'attachMenuBots', hash: 0, bots: [], users: []}),
+      // * Signal's stickers and reactions are not in these lists yet
+      'messages.getEmojiStickers': () => ({_: 'messages.allStickers', hash: 0, sets: []}),
+      'messages.getAllStickers': () => ({_: 'messages.allStickers', hash: 0, sets: []}),
+      'messages.getStickers': () => ({_: 'messages.stickers', hash: 0, stickers: []}),
+      'messages.getFeaturedStickers': () => ({_: 'messages.featuredStickers', pFlags: {}, hash: 0, count: 0, sets: [], unread: []}),
+      'messages.getFavedStickers': () => ({_: 'messages.favedStickers', hash: 0, packs: [], stickers: []}),
+      'messages.getRecentStickers': () => ({_: 'messages.recentStickers', hash: 0, packs: [], stickers: [], dates: []}),
+      'messages.getSavedGifs': () => ({_: 'messages.savedGifs', hash: 0, gifs: []}),
+      'messages.getAvailableReactions': () => ({_: 'messages.availableReactions', hash: 0, reactions: []}),
+      'messages.getTopReactions': () => ({_: 'messages.reactions', hash: 0, reactions: []}),
+      'messages.getRecentReactions': () => ({_: 'messages.reactions', hash: 0, reactions: []}),
+      'contacts.getBirthdays': () => ({_: 'contacts.contactBirthdays', contacts: [], users: []}),
+      'account.getAuthorizations': () => ({_: 'account.authorizations', authorization_ttl_days: 0, authorizations: []}),
+      'photos.getUserPhotos': () => ({_: 'photos.photos', photos: [], users: []}),
+      'stories.getAllReadPeerStories': emptyUpdates,
+      'stories.getPinnedStories': () => ({_: 'stories.stories', pFlags: {}, count: 0, stories: [], chats: [], users: [], pinned_to_top: []}),
       'messages.getScheduledHistory': () => ({_: 'messages.messages', messages: [], chats: [], users: [], topics: []}),
       'messages.getSavedDialogs': () => ({_: 'messages.savedDialogs', dialogs: [], messages: [], chats: [], users: []}),
       'messages.getStickerSet': () => Promise.reject(makeError('STICKERSET_INVALID' as ErrorType)),
@@ -298,11 +328,14 @@ export default class AppSignalManager extends AppManager {
       isPinned: pinnedIds.has(chatId)
     }));
 
+    // * the notices that name people are built with their names
+    const users = result.users.map(buildUser);
+    this.appUsersManager.saveApiUsers(users);
     return {
       dialogs,
-      messages: result.messages.map(buildMessage),
+      messages: result.messages.map(this.buildMessage),
       chats: result.chats.filter((chat) => isGroupPeerId(chat.id)).map(buildChat),
-      users: result.users.map(buildUser)
+      users
     };
   }
 
@@ -320,13 +353,15 @@ export default class AppSignalManager extends AppManager {
     }
 
     const chats = await this.getChatsOfPeer(peerId);
+    const users = result.users.map(buildUser);
+    this.appUsersManager.saveApiUsers(users);
     return {
       _: 'messages.messagesSlice',
       pFlags: {},
       count: result.count,
-      messages: result.messages.map(buildMessage),
+      messages: result.messages.map(this.buildMessage),
       chats,
-      users: result.users.map(buildUser),
+      users,
       topics: []
     };
   }
@@ -491,6 +526,11 @@ export default class AppSignalManager extends AppManager {
     } as MethodDeclMap['contacts.getContacts']['res'];
   }
 
+  private buildMessage = (message: SignalMessage) => buildMessage(message, (signalUserId) => {
+    const user = this.appUsersManager.getUser(toPeerId(signalUserId));
+    return user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : '';
+  });
+
   private getInputPeerId(inputPeer: InputPeer): PeerId {
     switch(inputPeer?._) {
       case 'inputPeerSelf':
@@ -546,12 +586,12 @@ export default class AppSignalManager extends AppManager {
       case 'newMessage':
         // * Web K shows its own message while one is sent: the provider's local one has a fractional id
         if(Number.isInteger(update.message.id)) {
-          this.pushUpdates([{_: 'updateNewMessage', message: buildMessage(update.message), pts: 0, pts_count: 0}]);
+          this.pushUpdates([{_: 'updateNewMessage', message: this.buildMessage(update.message), pts: 0, pts_count: 0}]);
         }
         break;
       case 'updateMessage':
         if(update.message?.content && update.message.chatId) {
-          this.pushUpdates([{_: 'updateEditMessage', message: buildMessage(update.message as SignalMessage), pts: 0, pts_count: 0}]);
+          this.pushUpdates([{_: 'updateEditMessage', message: this.buildMessage(update.message as SignalMessage), pts: 0, pts_count: 0}]);
         }
         break;
       case 'updateMessageSendSucceeded':
@@ -655,7 +695,7 @@ export default class AppSignalManager extends AppManager {
 
   private onMessageSent(localId: number, message: SignalMessage) {
     const pending = this.pendingSends.get(localId);
-    const built = buildMessage(message);
+    const built = this.buildMessage(message);
     if(!pending) {
       // * sent from Web A's other tab before this one took over, or a resend: a message like any other
       this.pushUpdates([{_: 'updateNewMessage', message: built, pts: 0, pts_count: 0}]);

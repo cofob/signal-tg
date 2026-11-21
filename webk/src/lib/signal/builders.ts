@@ -124,7 +124,7 @@ export function buildNotifySettings(settings?: SignalNotifySettings): PeerNotify
   };
 }
 
-export function buildMessage(message: SignalMessage): Message.message | Message.messageService {
+export function buildMessage(message: SignalMessage, getName: SignalNameResolver = () => ''): Message.message | Message.messageService {
   const peerId = buildPeer(message.chatId);
   const fromId = message.senderId ? buildPeer(message.senderId) : undefined;
   const pFlags: Message.message['pFlags'] = {
@@ -140,7 +140,7 @@ export function buildMessage(message: SignalMessage): Message.message | Message.
       peer_id: peerId,
       from_id: fromId,
       date: message.date,
-      action: buildMessageAction(action)
+      action: buildMessageAction(message, getName)
     };
   }
 
@@ -162,7 +162,9 @@ export function buildMessage(message: SignalMessage): Message.message | Message.
     } : undefined,
     edit_date: message.isEdited ? message.editDate || message.date : undefined,
     ttl_period: message.ttlPeriod,
-    grouped_id: message.groupedId
+    grouped_id: message.groupedId,
+    // * Web K shows a message with an error as failed, as it does a send of its own that failed
+    error: message.sendingState === 'messageSendingStateFailed' ? {type: 'SIGNAL_SEND_FAILED' as ErrorType, code: 400} : undefined
   };
 }
 
@@ -199,7 +201,35 @@ function buildEntity(entity: SignalEntity): MessageEntity {
   }
 }
 
-function buildMessageAction(action: SignalMessage['content']['action']): MessageAction {
+/** The name of a user of the provider, for the notices that Web K shows as text */
+export type SignalNameResolver = (signalUserId: string) => string;
+
+// * Web A's texts of the notices Telegram has not (`ActionMessageText.tsx` and `fallback.strings` there)
+const GROUP_UPDATE_TEXTS: Record<string, [string, string]> = {
+  description: ['{from} changed the group description', 'You changed the group description'],
+  descriptionRemoved: ['{from} removed the group description', 'You removed the group description'],
+  adminAdded: ['{from} made {user} an admin', 'You made {user} an admin'],
+  adminRemoved: ['{from} revoked admin privileges from {user}', 'You revoked admin privileges from {user}'],
+  inviteDeclined: ['{from} declined the invitation to the group', 'You declined the invitation to the group'],
+  joinRequested: ['{from} requested to join via the group link', 'You sent a request to join the group'],
+  joinDenied: ['{from} denied a request to join from {user}', 'You denied a request to join from {user}'],
+  joinCanceled: ['{from} canceled the request to join', 'You canceled your request to join the group'],
+  linkOn: ['{from} turned on the group link', 'You turned on the group link'],
+  linkOnWithApproval: ['{from} turned on the group link with admin approval', 'You turned on the group link with admin approval'],
+  linkOff: ['{from} turned off the group link', 'You turned off the group link'],
+  linkReset: ['{from} reset the group link', 'You reset the group link'],
+  infoAccess: ['{from} changed who can edit group info to «{access}»', 'You changed who can edit group info to «{access}»'],
+  membersAccess: ['{from} changed who can add members to «{access}»', 'You changed who can add members to «{access}»'],
+  labelAccess: ['{from} changed who can add member labels to «{access}»', 'You changed who can add member labels to «{access}»'],
+  announcementsOn: ['{from} allowed only admins to send messages', 'You allowed only admins to send messages'],
+  announcementsOff: ['{from} allowed all members to send messages', 'You allowed all members to send messages'],
+  terminated: ['{from} ended the group', 'You ended the group'],
+  invited: ['{from} invited {count} {people} to the group', 'You invited {count} {people} to the group'],
+  inviteRevoked: ['{from} revoked {count} {invitations} to the group', 'You revoked {count} {invitations} to the group']
+};
+
+function buildMessageAction(message: SignalMessage, getName: SignalNameResolver): MessageAction {
+  const action = message.content.action;
   switch(action.type) {
     case 'setMessagesTtl':
       return {_: 'messageActionSetMessagesTTL', period: (action.period as number) || 0};
@@ -207,24 +237,71 @@ function buildMessageAction(action: SignalMessage['content']['action']): Message
       return {_: 'messageActionChatCreate', title: (action.title as string) || '', users: []};
     case 'chatEditTitle':
       return {_: 'messageActionChatEditTitle', title: (action.title as string) || ''};
+    case 'chatAddUser':
+      return {_: 'messageActionChatAddUser', users: ((action.userIds as string[]) || []).map(toPeerId)};
+    case 'chatDeleteUser':
+      return {_: 'messageActionChatDeleteUser', user_id: toPeerId(action.userId as string)};
+    case 'chatJoinedByLink':
+      return {_: 'messageActionChatJoinedByLink', inviter_id: toPeerId(action.inviterId as string)};
+    case 'chatJoinedByRequest':
+      return {_: 'messageActionChatJoinedByRequest'};
+    case 'signalCall':
+      if(action.callType !== 'group') {
+        return buildPhoneCallAction(action.callType === 'video', action.outcome as string);
+      }
     default:
-      // * the notices Signal has and Telegram has not (safety numbers, calls, group access) show as text
-      return {_: 'messageActionCustomAction', message: getActionText(action)};
+      // * the notices Signal has and Telegram has not (safety numbers, group access) show as text
+      return {_: 'messageActionCustomAction', message: getActionText(message, getName)};
   }
 }
 
-function getActionText(action: SignalMessage['content']['action']) {
+// * Web K tells incoming from outgoing calls by the message, and missed or declined ones by the reason
+function buildPhoneCallAction(isVideo: boolean, outcome: string): MessageAction.messageActionPhoneCall {
+  return {
+    _: 'messageActionPhoneCall',
+    pFlags: {video: isVideo || undefined},
+    call_id: '0',
+    reason: outcome === 'missed' ? {_: 'phoneCallDiscardReasonMissed'} : (
+      outcome === 'declined' ? {_: 'phoneCallDiscardReasonBusy'} : {_: 'phoneCallDiscardReasonHangup'}
+    )
+  };
+}
+
+function getActionText(message: SignalMessage, getName: SignalNameResolver) {
+  const {action} = message.content;
+  const from = message.senderId ? getName(message.senderId) : '';
+  const isOut = message.isOutgoing;
   switch(action.type) {
+    case 'groupUpdate': {
+      const texts = GROUP_UPDATE_TEXTS[action.update as string];
+      if(!texts) return 'Group updated';
+      const count = (action.count as number) || 0;
+      return (isOut ? texts[1] : texts[0])
+      .replace('{from}', from)
+      .replace('{user}', action.userId ? getName(action.userId as string) : '')
+      .replace('{access}', action.isAdminOnly ? 'Only admins' : 'All members')
+      .replace('{count}', '' + count)
+      .replace('{people}', count === 1 ? 'person' : 'people')
+      .replace('{invitations}', count === 1 ? 'invitation' : 'invitations');
+    }
     case 'safetyNumberChange':
-      return 'Your safety number changed';
-    case 'safetyNumberVerified':
-      return action.isVerified ? 'You marked your safety number as verified' : 'You marked your safety number as unverified';
+      return `Your safety number with ${from} has changed`;
+    case 'safetyNumberVerified': {
+      const state = action.isVerified ? 'verified' : 'unverified';
+      return `You marked your safety number with ${from} as ${state}${action.isFromOtherDevice ? ' from another device' : ''}`;
+    }
     case 'signalCall':
-      return 'Call';
+      return action.outcome === 'missed' ? 'Missed group call' : 'Group call';
+    case 'giftBadge':
+      return isOut ?
+        'You donated to Signal on behalf of this person. Tap this message on mobile to view your donation' :
+        `${from} donated to Signal on your behalf. View this message on mobile to open it`;
+    case 'payment':
+      return isOut ? 'You sent a payment' : `${from} sent you a payment`;
     case 'deleted':
-      return 'This message was deleted';
+      return isOut ? 'You deleted this message' : `${from} deleted this message`;
     case 'viewOnce':
-      return 'View-once media';
+      return action.isViewed ? 'Viewed' : 'View-once media';
     default:
       return 'Unsupported message';
   }

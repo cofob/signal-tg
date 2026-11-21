@@ -5,7 +5,8 @@ import {LangPackKey, i18n} from '@lib/langPack';
 import {REPLIES_PEER_ID, SERVICE_PEER_ID} from '@appManagers/constants';
 
 export default function getUserStatusString(user: User.user): HTMLElement {
-  if(!user) {
+  // * TeleSignal: Signal has no last seen, and its users have no status
+  if(!user || !user.status || user.status._ === 'userStatusEmpty') {
     return document.createElement('span');
   }
 

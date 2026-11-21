@@ -7,7 +7,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 // import devtools from 'solid-devtools/vite'
 import autoprefixer from 'autoprefixer';
 import {resolve} from 'path';
-import {existsSync, copyFileSync, readFileSync, realpathSync} from 'fs';
+import {existsSync, copyFileSync, cpSync, readFileSync, realpathSync} from 'fs';
 import {createHash} from 'crypto';
 import {Plugin, ServerOptions} from 'vite';
 import {vitestWorkers} from './scripts/testQueue';
@@ -239,6 +239,35 @@ if(USE_OWN_SOLID) {
 // of JS heap. V8 reads it only above the first line of code, and vite:build-import-analysis puts
 // `__vite__mapDeps` in front of a chunk in its generateBundle, so it goes on after that — not as
 // output.banner / postBanner. Workers have their own build and stay without it.
+// * TeleSignal: the files of `public/` and the Apple emoji images, which the repository's `emoji-data-ios` has (upstream
+// * keeps a copy in `public/assets/img/emoji`, and deploys `public/` together with the build)
+const EMOJI_DIR = path.join(repositoryDir, 'node_modules/emoji-data-ios/img-apple-64');
+const EMOJI_PATH = '/assets/img/emoji/';
+function signalStaticAssetsPlugin(): Plugin {
+  let outDir: string;
+  return {
+    name: 'signal-static-assets',
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = req.url?.split('?')[0].replace(/^\/k/, '');
+        if(!pathname?.startsWith(EMOJI_PATH)) return next();
+        const file = path.join(EMOJI_DIR, path.basename(pathname));
+        if(!existsSync(file)) return next();
+        res.setHeader('Content-Type', 'image/png');
+        res.end(readFileSync(file));
+      });
+    },
+    closeBundle() {
+      if(process.env.NODE_ENV === 'development' || !existsSync(outDir)) return;
+      cpSync(path.join(rootDir, 'public'), outDir, {recursive: true});
+      cpSync(EMOJI_DIR, path.join(outDir, EMOJI_PATH), {recursive: true});
+    }
+  };
+}
+
 // * TeleSignal: Web A's code reads its version from the global `APP_VERSION` (`../src/@types/global.d.ts`), which
 // * `define` does not replace in the dev server's workers
 function signalAppVersionPlugin(): Plugin {
@@ -320,6 +349,7 @@ export default defineConfig({
     watchTransformCache(),
     hotReloadPlugin(),
     signalAppVersionPlugin(),
+    signalStaticAssetsPlugin(),
     solidPlugin(),
     widgetSandboxPlugin(rootDir),
     handlebarsPlugin as any,
