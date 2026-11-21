@@ -21,7 +21,6 @@ import type {
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
-  ApiThreadInfo,
   ApiTypeStory,
   ApiUser,
   ApiWebPage,
@@ -58,9 +57,7 @@ import {
   hasMessageText,
   hasMessageTtl,
   isAnonymousOwnMessage,
-  isChatChannel,
   isChatGroup,
-  isChatPublic,
   isMessageLocal,
   isMessageLocalOnly,
   isMessageUnsupported,
@@ -74,7 +71,6 @@ import {
   selectAnimatedEmoji,
   selectCanAutoLoadMedia,
   selectCanAutoPlayMedia,
-  selectCanForwardMessage,
   selectCanReplyToMessage,
   selectChat,
   selectChatFullInfo,
@@ -113,7 +109,6 @@ import {
   selectMessageTimestampableDuration,
 } from '../../../global/selectors/media';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
-import { selectThreadInfo, selectThreadReadState } from '../../../global/selectors/threads';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_ANDROID } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
@@ -151,7 +146,6 @@ import CustomEmoji from '../../common/CustomEmoji';
 import Document from '../../common/Document';
 import EmbeddedMessage from '../../common/embedded/EmbeddedMessage';
 import EmbeddedStory from '../../common/embedded/EmbeddedStory';
-import FakeIcon from '../../common/FakeIcon';
 import Icon from '../../common/icons/Icon';
 import MessageRichText from '../../common/MessageRichText';
 import MessageText from '../../common/MessageText';
@@ -162,7 +156,6 @@ import Button from '../../ui/Button';
 import Album from './Album';
 import AnimatedCustomEmoji from './AnimatedCustomEmoji';
 import AnimatedEmoji from './AnimatedEmoji';
-import CommentButton from './CommentButton';
 import Contact from './Contact';
 import ContextMenuContainer from './ContextMenuContainer.async';
 import DiceWrapper from './dice/DiceWrapper';
@@ -198,11 +191,8 @@ type OwnProps = {
   withSenderName?: boolean;
   threadId: ThreadId;
   messageListType: MessageListType;
-  noComments: boolean;
-  noReplies: boolean;
   appearanceOrder: number;
   isJustAdded: boolean;
-  isThreadTop?: boolean;
   shouldIgnoreSendFocus?: boolean;
   isQuickPreview?: boolean;
   memoFirstUnreadIdRef?: { current: number | undefined };
@@ -222,7 +212,6 @@ type StateProps = {
   canShowSender: boolean;
   originSender?: ApiPeer;
   ephemeralBot?: ApiUser;
-  shouldHideReply?: boolean;
   replyMessage?: ApiMessage;
   replyMessageSender?: ApiPeer;
   replyMessageForwardSender?: ApiPeer;
@@ -234,7 +223,6 @@ type StateProps = {
   uploadProgress?: number;
   isInDocumentGroup: boolean;
   isProtected?: boolean;
-  canForward?: boolean;
   isFocused?: boolean;
   focusDirection?: FocusDirection;
   focusedQuote?: string;
@@ -245,7 +233,6 @@ type StateProps = {
   isResizingContainer?: boolean;
   isForwarding?: boolean;
   isChatWithSelf?: boolean;
-  isChannel?: boolean;
   isGroup?: boolean;
   canReply?: boolean;
   highlight?: string;
@@ -262,22 +249,17 @@ type StateProps = {
   isMessagePrimaryEditedDateEnabled: boolean;
   canAutoLoadMedia?: boolean;
   canAutoPlayMedia?: boolean;
-  hasLinkedChat?: boolean;
   shouldLoopStickers?: boolean;
   autoLoadFileMaxSizeMb: number;
-  repliesThreadInfo?: ApiThreadInfo;
   reactionMessage?: ApiMessage;
   availableReactions?: ApiAvailableReaction[];
   defaultReaction?: ApiReaction;
   activeEmojiInteractions?: ActiveEmojiInteraction[];
-  hasUnreadReaction?: boolean;
-  hasUnreadPollVote?: boolean;
   senderChatMember?: ApiChatMember;
   withAnimatedEffects?: boolean;
   canAnimateTextStreaming?: boolean;
   webPageStory?: ApiTypeStory;
   isConnected: boolean;
-  isLoadingComments?: boolean;
   shouldWarnAboutFiles?: boolean;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   poll?: ApiMessagePoll;
@@ -313,8 +295,6 @@ const Message = ({
   noAvatars,
   withAvatar,
   withSenderName,
-  noComments,
-  noReplies,
   appearanceOrder,
   isJustAdded,
   isFirstInGroup,
@@ -328,8 +308,6 @@ const Message = ({
   canShowSender,
   originSender,
   ephemeralBot,
-  isThreadTop,
-  shouldHideReply,
   replyMessage,
   replyMessageSender,
   replyMessageForwardSender,
@@ -340,9 +318,7 @@ const Message = ({
   outgoingStatus,
   uploadProgress,
   isInDocumentGroup,
-  isLoadingComments,
   isProtected,
-  canForward,
   isFocused,
   focusDirection,
   focusedQuote,
@@ -353,14 +329,12 @@ const Message = ({
   isResizingContainer,
   isForwarding,
   isChatWithSelf,
-  isChannel,
   isGroup,
   canReply,
   highlight,
   animatedEmoji,
   animatedCustomEmoji,
   hasActiveReactions,
-  hasLinkedChat,
   isInSelectMode,
   isSelected,
   isGroupSelected,
@@ -378,9 +352,6 @@ const Message = ({
   canAutoPlayMedia,
   shouldLoopStickers,
   autoLoadFileMaxSizeMb,
-  repliesThreadInfo,
-  hasUnreadReaction,
-  hasUnreadPollVote,
   memoFirstUnreadIdRef,
   senderChatMember,
   withAnimatedEffects,
@@ -414,7 +385,6 @@ const Message = ({
     markTypingDraftDone,
     markMessageListRead,
     markMentionsRead,
-    markPollVotesRead,
     openMessageDetailsModal,
     showNotification,
   } = getActions();
@@ -495,7 +465,7 @@ const Message = ({
     && !isLocal
     && !isLocalOnly
     && readMetricsMessage.viewsCount !== undefined;
-  const hasMessageReply = isReplyToMessage(message) && !shouldHideReply
+  const hasMessageReply = isReplyToMessage(message)
     && (!isEphemeralReply || Boolean(replyMessage))
     && (!isInDocumentGroup || isFirstInDocumentGroup);
 
@@ -515,7 +485,6 @@ const Message = ({
   } = getMessageContent(message);
 
   const hasStoryReply = Boolean(storyReplyInfo);
-  const hasThread = Boolean(repliesThreadInfo) && messageListType === 'thread';
   const isUnsupported = isMessageUnsupported(message);
   const isCustomShape = getMessageCustomShape(message);
   const hasAnimatedEmoji = isCustomShape && (animatedEmoji || animatedCustomEmoji);
@@ -612,11 +581,8 @@ const Message = ({
     handlePhotoMediaClick,
     handleVideoMediaClick,
     handleMetaClick,
-    handleOpenThread,
     handleReadMedia,
     handleCancelUpload,
-    handleGroupForward,
-    handleForward,
     handleFocus,
     handleFocusForwarded,
     handleDocumentGroupSelectAll,
@@ -678,7 +644,6 @@ const Message = ({
     message.hasUnreadMention && 'has-unread-mention',
     isSelected && 'is-selected',
     isInSelectMode && 'is-in-selection-mode',
-    isThreadTop && !withAvatar && 'is-thread-top',
     isSwiped && 'is-swiped',
     isJustAdded && 'is-just-added',
     (hasActiveReactions || shouldPlayEffect) && 'has-active-effect',
@@ -729,16 +694,6 @@ const Message = ({
     quoteSelector,
   });
 
-  const commentsThreadInfo = repliesThreadInfo?.isCommentsInfo ? repliesThreadInfo : undefined;
-  const isLocalWithCommentButton = hasLinkedChat && isChannel && isLocal;
-
-  const isMediaWithCommentButton = (commentsThreadInfo || isLocalWithCommentButton)
-    && !isInDocumentGroupNotLast
-    && messageListType === 'thread'
-    && !noComments;
-  const withCommentButton = (commentsThreadInfo || isLocalWithCommentButton)
-    && !isInDocumentGroupNotLast && messageListType === 'thread'
-    && !noComments;
   const withQuickReactionButton = !message.isEphemeral
     && !isTouchScreen && !isInSelectMode && defaultReaction
     && !isInDocumentGroupNotLast && !isStoryMention && !hasTtl && !isAccountFrozen;
@@ -756,7 +711,7 @@ const Message = ({
 
   const hasWideMedia = Boolean(
     (photo || video || isAlbum)
-    && ((text?.text.length || 0) > MIN_MESSAGE_LENGTH_FOR_WIDE_MEDIA || isMediaWithCommentButton),
+    && ((text?.text.length || 0) > MIN_MESSAGE_LENGTH_FOR_WIDE_MEDIA),
   );
   const contentClassName = buildClassName(buildContentClassName(message, album, {
     poll,
@@ -765,12 +720,8 @@ const Message = ({
     isCustomShape,
     isLastInGroup,
     asForwarded,
-    hasThread: hasThread && !noComments,
     forceSenderName,
-    hasCommentCounter: hasThread && repliesThreadInfo.messagesCount !== undefined
-      && repliesThreadInfo.messagesCount > 0,
-    hasBottomCommentButton: withCommentButton && !isCustomShape,
-    hasActionButton: canForward || canFocus || (withCommentButton && isCustomShape),
+    hasActionButton: canFocus,
     hasReactions,
     peerColorClass,
     hasOutsideReactions,
@@ -814,7 +765,7 @@ const Message = ({
     replyToMsgId,
     replyMessage,
     message.id,
-    shouldHideReply || isReplyPrivate || isEphemeralReply,
+    isReplyPrivate || isEphemeralReply,
   );
 
   useEnsureStory(
@@ -858,14 +809,6 @@ const Message = ({
       markMessageListRead({ maxId: messageId });
     }
 
-    if (hasUnreadReaction) {
-      animateUnreadReaction({ chatId, messageIds: [messageId] });
-    }
-
-    if (hasUnreadPollVote) {
-      markPollVotesRead({ chatId, messageIds: [messageId] });
-    }
-
     let unreadMentionIds: number[] = [];
     if (message.hasUnreadMention) {
       unreadMentionIds = [messageId];
@@ -879,8 +822,6 @@ const Message = ({
       markMentionsRead({ chatId, messageIds: unreadMentionIds });
     }
   }, [
-    hasUnreadReaction,
-    hasUnreadPollVote,
     album,
     chatId,
     isQuickPreview,
@@ -891,7 +832,6 @@ const Message = ({
     messageId,
     memoFirstUnreadIdRef,
     animateUnreadReaction,
-    markPollVotesRead,
     message.hasUnreadMention,
     message.wasTypingDraft,
   ]);
@@ -1005,8 +945,6 @@ const Message = ({
         isPinned={isPinned}
         withFullDate={isChatWithSelf && !isOwn}
         isMessagePrimaryEditedDateEnabled={isMessagePrimaryEditedDateEnabled}
-        noReplies={noReplies}
-        repliesThreadInfo={repliesThreadInfo}
         outgoingStatus={outgoingStatus}
         signature={signature}
         withReactionOffset={reactionsPosition === 'inside'}
@@ -1017,7 +955,6 @@ const Message = ({
         onClick={handleMetaClick}
         onOutgoingStatusClick={outgoingStatus === 'failed' || outgoingStatus === 'partial'
           ? handleOutgoingStatusClick : undefined}
-        onOpenThread={handleOpenThread}
       />
     );
 
@@ -1031,7 +968,6 @@ const Message = ({
         threadId={threadId}
         metaChildren={meta}
         observeIntersection={observeIntersectionForPlaying}
-        noRecentReactors={isChannel}
         tags={tags}
         isAccountFrozen={isAccountFrozen}
       />
@@ -1046,7 +982,7 @@ const Message = ({
       hasSubheader && 'with-subheader',
     );
     const hasCustomAppendix = isLastInGroup
-      && (!hasText || (isInvertedMedia && !hasFactCheck && reactionsPosition !== 'inside')) && !withCommentButton;
+      && (!hasText || (isInvertedMedia && !hasFactCheck && reactionsPosition !== 'inside'));
     const textContentClass = buildClassName(
       'text-content',
       'clearfix',
@@ -1472,7 +1408,6 @@ const Message = ({
                   observeIntersectionForPlaying={observeIntersectionForPlaying}
                 />
               )}
-              {senderPeer?.fakeType && <FakeIcon fakeType={senderPeer.fakeType} />}
             </span>
           </span>
         ) : NBSP}
@@ -1510,8 +1445,6 @@ const Message = ({
         data-last-message-id={album ? album.messages[album.messages.length - 1].id : undefined}
         data-album-main-id={album ? album.mainMessage.id : undefined}
         data-has-unread-mention={message.hasUnreadMention || undefined}
-        data-has-unread-poll-vote={hasUnreadPollVote || undefined}
-        data-has-unread-reaction={hasUnreadReaction || undefined}
         data-is-pinned={isPinned || undefined}
         data-should-update-views={message.viewsCount !== undefined}
       />
@@ -1551,29 +1484,7 @@ const Message = ({
           {!isInDocumentGroupNotLast && metaPosition === 'standalone' && !isStoryMention && renderReactionsAndMeta()}
           {canShowActionButton && (
             <div className="message-action-buttons-container">
-              <div className={buildClassName(
-                'message-action-buttons',
-                isLoadingComments && 'message-action-buttons-shown',
-              )}
-              >
-                {withCommentButton && isCustomShape && (
-                  <CommentButton
-                    threadInfo={commentsThreadInfo}
-                    disabled={noComments || !commentsThreadInfo}
-                    isLoading={isLoadingComments}
-                    isCustomShape
-                  />
-                )}
-                {canForward && (
-                  <Button
-                    className="message-action-button"
-                    color="translucent-white"
-                    round
-                    ariaLabel={lang('Forward')}
-                    onClick={isLastInDocumentGroup ? handleGroupForward : handleForward}
-                    iconName="share-filled"
-                  />
-                )}
+              <div className="message-action-buttons">
                 {canFocus && (
                   <Button
                     className="message-action-button"
@@ -1587,13 +1498,6 @@ const Message = ({
               </div>
             </div>
           )}
-          {withCommentButton && !isCustomShape && (
-            <CommentButton
-              threadInfo={commentsThreadInfo}
-              disabled={noComments || !commentsThreadInfo}
-              isLoading={isLoadingComments}
-            />
-          )}
           {withAppendix && <MessageAppendix isOwn={isOwn} />}
           {withQuickReactionButton && quickReactionPosition === 'in-content' && renderQuickReactionButton()}
         </div>
@@ -1603,7 +1507,6 @@ const Message = ({
             threadId={threadId}
             isOutside
             observeIntersection={observeIntersectionForPlaying}
-            noRecentReactors={isChannel}
             tags={tags}
             isAccountFrozen={isAccountFrozen}
           />
@@ -1620,8 +1523,6 @@ const Message = ({
           threadId={threadId}
           onClose={handleContextMenuClose}
           onCloseAnimationEnd={handleContextMenuHide}
-          repliesThreadInfo={repliesThreadInfo}
-          noReplies={noReplies}
         />
       )}
     </div>
@@ -1632,7 +1533,6 @@ export default memo(withGlobal<OwnProps>(
   (global, ownProps): Complete<StateProps> => {
     const {
       focusedMessage, forwardMessages, activeReactions, activeEmojiInteractions,
-      loadingThread,
     } = selectTabState(global);
     const {
       message, album, documentGroup, withSenderName, withAvatar, threadId, messageListType,
@@ -1649,7 +1549,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = selectChat(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const isChannel = chat && isChatChannel(chat);
     const isGroup = chat && isChatGroup(chat);
     const chatFullInfo = !isChatWithUser ? selectChatFullInfo(global, chatId) : undefined;
     const { adminMembersById, members } = chatFullInfo || {};
@@ -1660,7 +1559,7 @@ export default memo(withGlobal<OwnProps>(
 
     const isForwarding = forwardMessages.messageIds && forwardMessages.messageIds.includes(id);
     const forceSenderName = !isChatWithSelf && isAnonymousOwnMessage(message);
-    const canShowSender = withSenderName || withAvatar || forceSenderName;
+    const canShowSender = Boolean(withSenderName || withAvatar || forceSenderName);
     const sender = selectSender(global, message);
     const originSender = selectForwardedSender(global, message);
     const ephemeralBot = message.ephemeralBotId ? selectUser(global, message.ephemeralBotId) : undefined;
@@ -1669,12 +1568,10 @@ export default memo(withGlobal<OwnProps>(
       : undefined;
 
     const replyInfo = getMessageReplyInfo(message) || getEphemeralReplyInfo(message);
-    const replyToMsgId = replyInfo?.replyToMsgId;
     const replyToPeerId = replyInfo?.type === 'message' ? replyInfo.replyToPeerId : undefined;
     const replyFrom = replyInfo?.type === 'message' ? replyInfo.replyFrom : undefined;
     const { peerId: storyReplyPeerId, storyId: storyReplyId } = getStoryReplyInfo(message) || {};
 
-    const shouldHideReply = replyToMsgId && replyToMsgId === threadId;
     const replyMessage = selectReplyMessage(global, message);
     const forwardHeader = forwardInfo || replyFrom;
     const replyMessageSender = replyMessage ? selectSender(global, replyMessage)
@@ -1683,9 +1580,7 @@ export default memo(withGlobal<OwnProps>(
     const replyMessageForwardSender = replyMessage && selectForwardedSender(global, replyMessage);
     const replyMessageChat = replyToPeerId ? selectChat(global, replyToPeerId) : undefined;
     const isReplyPrivate = replyMessageChat
-      && !isChatPublic(replyMessageChat)
       && (replyMessageChat.isNotJoined || selectIsChatRestricted(global, replyMessageChat.id));
-    const isReplyToTopicStart = replyMessage?.content.action?.type === 'topicCreate';
     const replyStory = storyReplyId && storyReplyPeerId
       ? selectPeerStory(global, storyReplyPeerId, storyReplyId)
       : undefined;
@@ -1733,18 +1628,11 @@ export default memo(withGlobal<OwnProps>(
 
     const isInDocumentGroup = Boolean(message.groupedId) && !message.isInAlbum;
 
-    const repliesThreadInfo = selectThreadInfo(
-      global, chatId, album?.commentsMessage?.id || documentGroup?.commentsMessage?.id || id,
-    );
     const reactionMessage = isInDocumentGroup ? (
       isLastInDocumentGroup && documentGroup?.firstMessageId
         ? selectChatMessage(global, chatId, documentGroup.firstMessageId)
         : undefined
     ) : message;
-
-    const readState = selectThreadReadState(global, chatId, threadId);
-    const hasUnreadReaction = readState?.unreadReactions?.includes(message.id);
-    const hasUnreadPollVote = readState?.unreadPollVotes?.includes(message.id);
 
     const isConnected = global.connectionState === 'connectionStateReady';
 
@@ -1769,7 +1657,6 @@ export default memo(withGlobal<OwnProps>(
       canShowSender,
       originSender,
       ephemeralBot,
-      shouldHideReply: shouldHideReply || isReplyToTopicStart,
       replyMessage,
       replyMessageSender,
       replyMessageForwardSender,
@@ -1779,14 +1666,10 @@ export default memo(withGlobal<OwnProps>(
       storySender,
       isInDocumentGroup,
       isProtected: selectIsMessageProtected(global, message),
-      canForward: Boolean(
-        isChannel && messageListType !== 'scheduled' && selectCanForwardMessage(global, message),
-      ),
       isFocused,
       isForwarding,
       reactionMessage,
       isChatWithSelf,
-      isChannel,
       isGroup,
       canReply: message.isEphemeral ? getCanReplyToEphemeralMessage(message) : canReply,
       highlight,
@@ -1808,23 +1691,16 @@ export default memo(withGlobal<OwnProps>(
       canAutoPlayMedia: selectCanAutoPlayMedia(global, message),
       autoLoadFileMaxSizeMb: global.settings.byKey.autoLoadFileMaxSizeMb,
       shouldLoopStickers: selectShouldLoopStickers(global),
-      repliesThreadInfo,
       availableReactions: global.reactions.availableReactions,
       defaultReaction: message.isEphemeral || isMessageLocal(message) || messageListType === 'scheduled'
         ? undefined : selectDefaultReaction(global, chatId),
       hasActiveReactions: message.isEphemeral ? false : hasActiveReactions,
       activeEmojiInteractions,
-      hasUnreadReaction,
-      hasUnreadPollVote,
       senderChatMember,
-      hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
       withAnimatedEffects: selectPerformanceSettingsValue(global, 'stickerEffects'),
       canAnimateTextStreaming: selectPerformanceSettingsValue(global, 'textStreaming'),
       webPageStory,
       isConnected,
-      isLoadingComments: repliesThreadInfo?.isCommentsInfo
-        && loadingThread?.loadingChatId === repliesThreadInfo?.originChannelId
-        && loadingThread?.loadingMessageId === repliesThreadInfo?.originMessageId,
       shouldWarnAboutFiles,
       outgoingStatus: isOutgoing
         ? message.isEphemeral

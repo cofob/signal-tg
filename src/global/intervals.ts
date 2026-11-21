@@ -4,7 +4,6 @@ import type { GlobalState } from './types';
 
 import { EPHEMERAL_MESSAGE_TTL_SECONDS } from '../config';
 import { getServerTime } from '../util/serverTime';
-import { resetOpenedChannelShortpollState, syncOpenedShortpollChannelIds } from './openedChannelShortpoll';
 import { deleteEphemeralMessages, removePeerStory } from './reducers';
 import { selectTabState } from './selectors';
 import { getGlobal, setGlobal } from '.';
@@ -31,25 +30,14 @@ addCallback((global: GlobalState) => {
   }
 });
 
-addCallback((global: GlobalState) => {
-  if (!selectTabState(global)?.isMasterTab) {
-    return;
-  }
-
-  syncOpenedShortpollChannelIds(global);
-});
-
 function startIntervals(global: GlobalState) {
   if (intervals.length) return;
 
-  resetOpenedChannelShortpollState();
   intervals.push(window.setInterval(checkStoryExpiration, STORY_EXPIRATION_INTERVAL));
-  syncOpenedShortpollChannelIds(global);
   scheduleEphemeralExpiration(global);
 }
 
 function stopIntervals() {
-  resetOpenedChannelShortpollState();
   intervals.forEach((interval) => clearInterval(interval));
   intervals = [];
   clearTimeout(ephemeralExpirationTimer);

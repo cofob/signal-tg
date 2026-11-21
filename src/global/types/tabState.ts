@@ -63,11 +63,6 @@ export type PollVote = {
   date: number;
 };
 
-export type ReactionDeletionContext = {
-  peerId: string;
-  count: number;
-};
-
 type ReportOptionsSection = {
   type: 'options';
   title: string;
@@ -147,8 +142,6 @@ export type TabState = {
 
   activeChatFolder: number;
   tabThreads: Record<string, Record<ThreadId, TabThread>>;
-  forumPanelChatId?: string;
-  communityPanelId?: string;
 
   focusedMessage?: {
     chatId?: string;
@@ -210,7 +203,6 @@ export type TabState = {
     maxDate?: number;
     currentContent?: GlobalSearchContent;
     chatId?: string;
-    foundTopicIds?: number[];
     fetchingStatus?: {
       chats?: boolean;
       messages?: boolean;
@@ -472,7 +464,6 @@ export type TabState = {
     messageIds: number[];
     isSchedule?: boolean;
     onConfirm?: NoneToVoidFunction;
-    reactionContext?: ReactionDeletionContext;
   };
 
   deleteMemberModal?: {
@@ -493,17 +484,6 @@ export type TabState = {
   };
 
   deleteFolderDialogModal?: number;
-
-  createTopicPanel?: {
-    chatId: string;
-    isLoading?: boolean;
-  };
-
-  editTopicPanel?: {
-    chatId: string;
-    topicId: number;
-    isLoading?: boolean;
-  };
 
   deleteAccountModal?: {
     selfDestructAccountDays: number;
@@ -572,7 +552,6 @@ export type TabState = {
 
   quickPreview?: {
     chatId: string;
-    threadId?: ThreadId;
   };
 
   settingsConfirmation?: SettingsConfirmation;

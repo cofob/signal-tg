@@ -3,14 +3,13 @@ import type {
   ApiLocalSendError,
   ApiMessage,
   ApiMessageEntityTextUrl,
-  ApiPeer,
   ApiRestrictionReason,
   ApiRichMessage,
   ApiStory,
   ApiTypeStory,
 } from '../../api/types';
 import type {
-  ApiFormattedText, ApiInputDraftReplyInfo, ApiMessagePoll, ApiReplyInfo, ApiWebPage,
+  ApiFormattedText, ApiInputDraftReplyInfo, ApiMessagePoll, ApiWebPage,
   MediaContainer, StatefulMediaContent,
 } from '../../api/types/messages';
 import type { ThreadId } from '../../types';
@@ -29,7 +28,7 @@ import {
   VIDEO_STICKER_MIME_TYPE,
   WEB_APP_PLATFORM,
 } from '../../config';
-import { getRawPeerId, isUserId } from '../../util/entities/ids';
+import { isUserId } from '../../util/entities/ids';
 import { areSortedArraysIntersecting, unique } from '../../util/iteratees';
 import { isLocalMessageId } from '../../util/keys/messageKey';
 import { MEMO_EMPTY_ARRAY } from '../../util/memo';
@@ -40,9 +39,7 @@ import {
   selectScheduledMessage,
   selectWebPageFromMessage,
 } from '../selectors';
-import { selectThreadIdFromMessage } from '../selectors/threads';
 import { getRichMessagePreviewText } from './richMessage';
-import { getMainUsername } from './users';
 
 const RE_LINK = new RegExp(RE_LINK_TEMPLATE, 'i');
 
@@ -428,17 +425,6 @@ export function isUploadingFileSticker(attachment: ApiAttachment) {
     || attachment.mimeType === VIDEO_STICKER_MIME_TYPE) : undefined;
 }
 
-export function getMessageLink(peer: ApiPeer, topicId?: ThreadId, messageId?: number) {
-  const chatUsername = getMainUsername(peer);
-  const params = new URLSearchParams(chatUsername
-    ? { domain: chatUsername }
-    : { channel: getRawPeerId(peer.id).toString() });
-  if (messageId) params.set('post', String(messageId));
-  if (topicId && topicId !== MAIN_THREAD_ID) params.set('thread', String(topicId));
-
-  return `tg://${chatUsername ? 'resolve' : 'privatepost'}?${params}`;
-}
-
 export function splitMessagesForForwarding(messages: ApiMessage[], limit: number): ApiMessage[][] {
   const result: ApiMessage[][] = [];
   let currentArr: ApiMessage[] = [];
@@ -473,29 +459,19 @@ export function splitMessagesForForwarding(messages: ApiMessage[], limit: number
 export function createApiMessageFromTypingDraft({
   lastMessageId,
   chatId,
-  threadId,
   text,
   richMessage,
 }: {
   lastMessageId: number;
   chatId: string;
-  threadId: ThreadId;
   text?: ApiFormattedText;
   richMessage?: ApiRichMessage;
 }): ApiMessage {
   const localId = getNextLocalMessageId(lastMessageId);
 
-  const replyInfo: ApiReplyInfo | undefined = typeof threadId === 'number' && threadId !== MAIN_THREAD_ID ? {
-    type: 'message',
-    replyToMsgId: threadId,
-    replyToTopId: threadId,
-    isForumTopic: true,
-  } : undefined;
-
   return {
     id: localId,
     chatId,
-    replyInfo,
     isOutgoing: false,
     date: getServerTime(),
     content: {
@@ -516,7 +492,7 @@ export function groupMessageIdsByThreadId(
       : selectChatMessage(global, chatId, messageId);
     if (!message) return acc;
 
-    const threadId = selectThreadIdFromMessage(global, message);
+    const threadId = MAIN_THREAD_ID;
     acc[threadId] = acc[threadId] || [];
     acc[threadId].push(messageId);
     return acc;

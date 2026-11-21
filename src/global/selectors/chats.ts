@@ -6,7 +6,7 @@ import type { GlobalState, TabArgs } from '../types';
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
-  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MEMBERS_LOAD_SLICE, SAVED_FOLDER_ID,
+  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID,
 } from '../../config';
 import { isUserId } from '../../util/entities/ids';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
@@ -14,19 +14,12 @@ import {
   getBlockingRestrictionReasons,
   getHasAdminRight,
   isChatAdmin,
-  isChatChannel,
-  isChatCommunity,
-  isChatPublic,
-  isChatSuperGroup,
   isUserOnline,
   isUserRightBanned,
 } from '../helpers';
 import { selectChatMessage, selectOutgoingStatus, selectSender } from './messages';
-import { selectPeer } from './peers';
 import { selectPeerStory } from './stories';
 import { selectTabState } from './tabs';
-import { selectThreadIdFromMessage } from './threads';
-import { selectTopicFromMessage } from './topics';
 import {
   selectUser, selectUserFullInfo,
 } from './users';
@@ -59,18 +52,17 @@ export function selectIsChatWithSelf<T extends GlobalState>(global: T, chatId: s
 }
 
 export function selectCanSetVideoCover<T extends GlobalState>(global: T, chatId: string) {
-  const chat = selectChat(global, chatId);
-  return selectIsChatWithSelf(global, chatId) || Boolean(chat && isChatChannel(chat));
+  return selectIsChatWithSelf(global, chatId);
 }
 
 export function selectChatOnlineCount<T extends GlobalState>(global: T, chat: ApiChat) {
   const fullInfo = selectChatFullInfo(global, chat.id);
-  if (isUserId(chat.id) || isChatChannel(chat) || !fullInfo) {
+  if (isUserId(chat.id) || !fullInfo) {
     return undefined;
   }
 
-  if (!fullInfo.members || fullInfo.members.length === MEMBERS_LOAD_SLICE) {
-    return fullInfo.onlineCount;
+  if (!fullInfo.members) {
+    return undefined;
   }
 
   return fullInfo.members.reduce((onlineCount, { userId }) => {
@@ -92,14 +84,7 @@ function selectChatType<T extends GlobalState>(global: T, chatId: string): ApiCh
     return 'users';
   }
 
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  if (isChatChannel(chat)) {
-    return 'channels';
-  }
-
-  return 'chats';
+  return selectChat(global, chatId) ? 'chats' : undefined;
 }
 
 export function selectAreActiveChatsLoaded<T extends GlobalState>(global: T): boolean {
@@ -136,7 +121,7 @@ export function selectChatFolder<T extends GlobalState>(global: T, folderId: num
 export function selectIsChatPinned<T extends GlobalState>(
   global: T, chatId: string, folderId = ALL_FOLDER_ID,
 ): boolean {
-  const { active, archived, saved } = global.chats.orderedPinnedIds;
+  const { active, archived } = global.chats.orderedPinnedIds;
 
   if (folderId === ALL_FOLDER_ID) {
     return Boolean(active?.includes(chatId));
@@ -144,10 +129,6 @@ export function selectIsChatPinned<T extends GlobalState>(
 
   if (folderId === ARCHIVED_FOLDER_ID) {
     return Boolean(archived?.includes(chatId));
-  }
-
-  if (folderId === SAVED_FOLDER_ID) {
-    return Boolean(saved?.includes(chatId));
   }
 
   const { byId: chatFoldersById } = global.chatFolders;
@@ -162,16 +143,6 @@ export function selectChatByUsername<T extends GlobalState>(global: T, username:
   return Object.values(global.chats.byId).find(
     (chat) => chat.usernames?.some((c) => c.username.toLowerCase() === usernameLowered),
   );
-}
-
-export function selectSendAs<T extends GlobalState>(global: T, chatId: string) {
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  const id = selectChatFullInfo(global, chatId)?.sendAsId;
-  if (!id) return undefined;
-
-  return selectUser(global, id) || selectChat(global, id);
 }
 
 export function selectRequestedDraft<T extends GlobalState>(
@@ -212,100 +183,50 @@ export function selectCanInviteToChat<T extends GlobalState>(global: T, chatId: 
   const chat = selectChat(global, chatId);
   if (!chat) return false;
 
-  // https://github.com/TelegramMessenger/Telegram-iOS/blob/5126be83b3b9578fb014eb52ca553da9e7a8b83a/submodules/TelegramCore/Sources/TelegramEngine/Peers/Communities.swift#L6
-  return !chat.migratedTo && Boolean(!isUserId(chatId) && ((isChatChannel(chat) || isChatSuperGroup(chat)) ? (
-    getHasAdminRight(chat, 'inviteUsers')
-    || (isChatPublic(chat) && !chat.isJoinRequest)
-  ) : getHasAdminRight(chat, 'inviteUsers')));
+  return !isUserId(chatId) && getHasAdminRight(chat, 'inviteUsers');
 }
 
 export function selectCanBanUsers<T extends GlobalState>(global: T, chatId: string) {
   const chat = selectChat(global, chatId);
-  if (!chat || chat.isMonoforum) return false;
+  if (!chat) return false;
 
   return getHasAdminRight(chat, 'banUsers');
 }
 
-export function selectSimilarChannelIds<T extends GlobalState>(
-  global: T,
-  chatId: string,
-) {
-  return global.chats.similarChannelsById[chatId];
+export function selectChatLastMessageId<T extends GlobalState>(global: T, chatId: string) {
+  return global.chats.lastMessageIds.all?.[chatId];
 }
 
-export function selectChatLastMessageId<T extends GlobalState>(
-  global: T, chatId: string, listType: 'all' | 'saved' = 'all',
-) {
-  return global.chats.lastMessageIds[listType]?.[chatId];
-}
-
-export function selectChatLastMessage<T extends GlobalState>(
-  global: T, chatId: string, listType: 'all' | 'saved' = 'all',
-) {
-  const id = selectChatLastMessageId(global, chatId, listType);
+export function selectChatLastMessage<T extends GlobalState>(global: T, chatId: string) {
+  const id = selectChatLastMessageId(global, chatId);
   if (!id) return undefined;
 
-  const realChatId = listType === 'saved' ? global.currentUserId! : chatId;
-  return global.messages.byChatId[realChatId]?.byId[id];
+  return global.messages.byChatId[chatId]?.byId[id];
 }
 
 export function selectChatLastMessageInfo<T extends GlobalState>(global: T, {
-  chatId, lastMessageChatId, isSavedDialog, previewMessageId,
+  chatId, previewMessageId,
 }: {
   chatId: string;
-  lastMessageChatId: string;
-  isSavedDialog?: boolean;
   previewMessageId?: number;
 }) {
-  const chat = selectChat(global, chatId);
-  const lastMessageId = previewMessageId
-    || selectChatLastMessageId(global, lastMessageChatId, isSavedDialog ? 'saved' : 'all');
+  const lastMessageId = previewMessageId || selectChatLastMessageId(global, chatId);
   const lastMessage = previewMessageId
     ? selectChatMessage(global, chatId, previewMessageId)
-    : selectChatLastMessage(global, lastMessageChatId, isSavedDialog ? 'saved' : 'all');
-  const lastMessageThreadId = chat && isChatCommunity(chat) && lastMessage
-    && selectChat(global, lastMessageChatId)?.isForum
-    ? selectThreadIdFromMessage(global, lastMessage) : MAIN_THREAD_ID;
-  const { isOutgoing, forwardInfo } = lastMessage || {};
-  const savedDialogSender = isSavedDialog && forwardInfo?.fromId ? selectPeer(global, forwardInfo.fromId) : undefined;
+    : selectChatLastMessage(global, chatId);
+  const { isOutgoing } = lastMessage || {};
   const messageSender = lastMessage ? selectSender(global, lastMessage) : undefined;
   const storyData = lastMessage?.content.storyData;
 
   return {
     lastMessage,
     lastMessageId,
-    lastMessageSender: savedDialogSender || messageSender,
-    lastMessageOutgoingStatus: isOutgoing && lastMessage && !isSavedDialog
-      ? selectOutgoingStatus(global, lastMessageChatId, lastMessageThreadId, lastMessage.id, 'thread')
+    lastMessageSender: messageSender,
+    lastMessageOutgoingStatus: isOutgoing && lastMessage
+      ? selectOutgoingStatus(global, chatId, MAIN_THREAD_ID, lastMessage.id, 'thread')
       : undefined,
-    lastMessageTopic: lastMessage && selectTopicFromMessage(global, lastMessage),
     lastMessageStory: storyData && selectPeerStory(global, storyData.peerId, storyData.id),
   };
-}
-
-export function selectIsMonoforumAdmin<T extends GlobalState>(
-  global: T, chatId: string,
-) {
-  const chat = selectChat(global, chatId);
-  if (!chat?.isMonoforum) return;
-
-  const channel = selectMonoforumChannel(global, chatId);
-  if (!channel) return;
-
-  return getHasAdminRight(channel, 'manageDirectMessages');
-}
-
-/**
- * Only selects monoforum channel for monoforum chats.
- * Returns `undefined` for other chats, including channels that have linked monoforum.
- */
-export function selectMonoforumChannel<T extends GlobalState>(
-  global: T, chatId: string,
-) {
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  return chat.isMonoforum ? selectChat(global, chat.linkedMonoforumId!) : undefined;
 }
 
 export function selectIsChatRestricted<T extends GlobalState>(global: T, chatId: string): boolean {
@@ -356,10 +277,7 @@ export function selectCanEditOwnRank<T extends GlobalState>(global: T, chatId: s
 }
 
 export function selectIsChatUnread<T extends GlobalState>(global: T, chatId: string) {
-  const threadsById = global.messages.byChatId[chatId]?.threadsById;
-  const threads = selectChat(global, chatId)?.isForum
-    ? Object.values(threadsById || {})
-    : [threadsById?.[MAIN_THREAD_ID]];
+  const readState = global.messages.byChatId[chatId]?.threadsById?.[MAIN_THREAD_ID]?.readState;
 
-  return threads.some((thread) => thread?.readState?.unreadCount || thread?.readState?.hasUnreadMark);
+  return Boolean(readState?.unreadCount || readState?.hasUnreadMark);
 }

@@ -11,7 +11,6 @@ import {
   selectIsChatPinned,
   selectNotifyDefaults,
   selectNotifyException,
-  selectTopicsInfo,
   selectUser,
 } from '../../../global/selectors';
 import { isUserId } from '../../../util/entities/ids';
@@ -36,7 +35,6 @@ type OwnProps = {
 type StateProps = {
   chat?: ApiChat;
   user?: ApiUser;
-  listedTopicIds?: number[];
   isPinned?: boolean;
   isMuted?: boolean;
   canChangeFolder?: boolean;
@@ -47,7 +45,6 @@ const LeftSearchResultChat = ({
   withUsername,
   chat,
   user,
-  listedTopicIds,
   isPinned,
   isMuted,
   canChangeFolder,
@@ -80,14 +77,13 @@ const LeftSearchResultChat = ({
     isPinned,
     isMuted,
     canChangeFolder,
-    topicIds: listedTopicIds,
     handleMute,
     handleUnmute,
     handleChatFolderChange,
   }, true);
 
   const handleClick = useLastCallback((e: React.MouseEvent) => {
-    if (e.altKey && chat && !chat.isForum) {
+    if (e.altKey && chat) {
       e.preventDefault();
       openQuickPreview({ id: chatId });
       return;
@@ -156,15 +152,12 @@ export default memo(withGlobal<OwnProps>(
     const isPinned = selectIsChatPinned(global, chatId);
     const isMuted = chat && getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chat.id));
 
-    const listedTopicIds = selectTopicsInfo(global, chatId)?.listedTopicIds;
-
     return {
       chat,
       user,
       isPinned,
       isMuted,
       canChangeFolder: Boolean(global.chatFolders.orderedIds?.length),
-      listedTopicIds,
     };
   },
 )(LeftSearchResultChat));

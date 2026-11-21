@@ -33,10 +33,9 @@ const QuickPreviewModal = ({
   customBackground,
   backgroundColor,
 }: OwnProps & StateProps) => {
-  const { closeQuickPreview, openChat, openThread } = getActions();
+  const { closeQuickPreview, openChat } = getActions();
 
   const chatId = modal?.chatId;
-  const threadId = modal?.threadId;
   const isOpen = Boolean(chatId);
 
   const handleClose = useLastCallback(() => {
@@ -45,11 +44,7 @@ const QuickPreviewModal = ({
 
   const handleContentClick = useLastCallback(() => {
     if (chatId) {
-      if (threadId) {
-        openThread({ chatId, threadId, shouldReplaceHistory: true });
-      } else {
-        openChat({ id: chatId, shouldReplaceHistory: true });
-      }
+      openChat({ id: chatId, shouldReplaceHistory: true });
       closeQuickPreview();
     }
   });
@@ -61,7 +56,7 @@ const QuickPreviewModal = ({
     onBack: handleClose,
   });
 
-  const { chatId: renderingChatId, threadId: renderingThreadId } = useCurrentOrPrev(modal, true) || {};
+  const { chatId: renderingChatId } = useCurrentOrPrev(modal, true) || {};
 
   if (!renderingChatId) {
     return undefined;
@@ -71,7 +66,7 @@ const QuickPreviewModal = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      header={<QuickPreviewModalHeader chatId={renderingChatId} threadId={renderingThreadId} onClose={handleClose} />}
+      header={<QuickPreviewModalHeader chatId={renderingChatId} onClose={handleClose} />}
       className={styles.root}
       contentClassName={styles.content}
     >
@@ -79,7 +74,7 @@ const QuickPreviewModal = ({
         <div className={styles.messagesLayout}>
           <MessageList
             chatId={renderingChatId}
-            threadId={renderingThreadId || MAIN_THREAD_ID}
+            threadId={MAIN_THREAD_ID}
             type="thread"
             canPost={false}
             hasFooter={false}

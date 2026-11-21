@@ -64,13 +64,9 @@ export function replaceChatListLoadingParameters<T extends GlobalState>(
 }
 
 export function updateChatLastMessageId<T extends GlobalState>(
-  global: T, chatId: string, lastMessageId: number, listType?: ChatListType,
+  global: T, chatId: string, lastMessageId: number,
 ): T {
-  const key = listType === 'saved' ? 'saved' : 'all';
-
-  if (key === 'all') {
-    global = updateThreadInfoLastMessageId(global, chatId, MAIN_THREAD_ID, lastMessageId);
-  }
+  global = updateThreadInfoLastMessageId(global, chatId, MAIN_THREAD_ID, lastMessageId);
 
   return {
     ...global,
@@ -78,8 +74,8 @@ export function updateChatLastMessageId<T extends GlobalState>(
       ...global.chats,
       lastMessageIds: {
         ...global.chats.lastMessageIds,
-        [key]: {
-          ...global.chats.lastMessageIds[key],
+        all: {
+          ...global.chats.lastMessageIds.all,
           [chatId]: lastMessageId,
         },
       },
@@ -88,17 +84,16 @@ export function updateChatLastMessageId<T extends GlobalState>(
 }
 
 export function updateChatsLastMessageId<T extends GlobalState>(
-  global: T, messageIds: Record<string, number>, listType?: ChatListType,
+  global: T, messageIds: Record<string, number>,
 ): T {
-  const key = listType === 'saved' ? 'saved' : 'all';
   return {
     ...global,
     chats: {
       ...global.chats,
       lastMessageIds: {
         ...global.chats.lastMessageIds,
-        [key]: {
-          ...global.chats.lastMessageIds[key],
+        all: {
+          ...global.chats.lastMessageIds.all,
           ...messageIds,
         },
       },
@@ -392,11 +387,8 @@ export function leaveChat<T extends GlobalState>(global: T, leftChatId: string):
   return clearEphemeralMessages(global, leftChatId);
 }
 
-export function removeChatFromChatLists<T extends GlobalState>(
-  global: T, chatId: string, type: 'all' | 'saved' = 'all',
-): T {
-  const chatLists = type === 'all' ? DEFAULT_CHAT_LISTS : [type];
-  chatLists.forEach((listType) => {
+export function removeChatFromChatLists<T extends GlobalState>(global: T, chatId: string): T {
+  DEFAULT_CHAT_LISTS.forEach((listType) => {
     global = replaceChatListIds(global, listType, global.chats.listIds[listType]?.filter((id) => id !== chatId));
   });
 
@@ -472,46 +464,4 @@ export function updateChatParticipantRank<T extends GlobalState>(
   }
 
   return fullInfoUpdate ? updateChatFullInfo(global, chatId, fullInfoUpdate) : global;
-}
-
-export function replaceSimilarChannels<T extends GlobalState>(
-  global: T,
-  chatId: string,
-  similarChannelIds: string[],
-  count?: number,
-) {
-  return {
-    ...global,
-    chats: {
-      ...global.chats,
-      similarChannelsById: {
-        ...global.chats.similarChannelsById,
-        [chatId]: {
-          similarChannelIds,
-          count: count || similarChannelIds.length,
-        },
-      },
-    },
-  };
-}
-
-export function toggleSimilarChannels<T extends GlobalState>(
-  global: T,
-  chatId: string,
-) {
-  const similarChannels = global.chats.similarChannelsById[chatId];
-
-  return {
-    ...global,
-    chats: {
-      ...global.chats,
-      similarChannelsById: {
-        ...global.chats.similarChannelsById,
-        [chatId]: {
-          ...similarChannels,
-          isExpanded: !similarChannels?.isExpanded,
-        },
-      },
-    },
-  };
 }

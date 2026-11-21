@@ -6,7 +6,7 @@ import type { ApiPeer } from '../../api/types';
 import type { CustomPeer, ThemeKey } from '../../types';
 import type { IconName } from '../../types/icons';
 
-import { getPeerTitle, isApiPeerChat } from '../../global/helpers/peers';
+import { getPeerTitle } from '../../global/helpers/peers';
 import { selectPeer, selectTheme, selectUser } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import buildStyle from '../../util/buildStyle';
@@ -79,8 +79,6 @@ const PeerChip = <T,>({
     peer: anyPeer,
   });
 
-  const chat = apiPeer && isApiPeerChat(apiPeer) ? apiPeer : undefined;
-
   let iconElement: TeactNode | undefined;
   let titleElement: TeactNode | undefined;
   let titleText: string | undefined;
@@ -105,14 +103,14 @@ const PeerChip = <T,>({
 
     titleText = getPeerTitle(lang, anyPeer) || title;
     titleElement = title || (
-      <FullNameTitle peer={anyPeer} isSavedMessages={isSavedMessages} withEmojiStatus={withEmojiStatus} />
+      <FullNameTitle peer={anyPeer} isSavedMessages={isSavedMessages} />
     );
   }
 
   const fullClassName = buildClassName(
     styles.root,
     size === 'small' && styles.small,
-    (chat?.isForum || customPeer?.isAvatarSquare) && styles.squareAvatar,
+    customPeer?.isAvatarSquare && styles.squareAvatar,
     isMinimized && styles.minimized,
     canClose && styles.closeable,
     isCloseNonDestructive && styles.nonDestructive,

@@ -3,7 +3,6 @@ import { throttleWithFullyIdle } from '../../../lib/teact/heavyAnimation';
 import type { ApiUserStatus } from '../../../api/types';
 import type { ActionReturnType } from '../../types';
 
-import { isUserId } from '../../../util/entities/ids';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   deleteContact,
@@ -61,12 +60,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateUserEmojiStatus': {
-      global = updateUser(global, update.userId, { emojiStatus: update.emojiStatus });
-      global = updateChat(global, update.userId, { emojiStatus: update.emojiStatus });
-      return global;
-    }
-
     case 'updateUserStatus': {
       // Status updates come very often so we throttle them
       pendingStatusUpdates[update.userId] = update.status;
@@ -105,19 +98,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
       return updatePeerFullInfo(global, id, { ttlPeriod });
     }
-
-    case 'updatePeerTheme':
-      if (update.shouldReload) {
-        if (isUserId(update.id)) actions.loadFullUser({ userId: update.id });
-        else actions.loadFullChat({ chatId: update.id, force: true });
-        return undefined;
-      }
-      if (!selectPeerFullInfo(global, update.id)) return undefined;
-      return updatePeerFullInfo(global, update.id, { peerTheme: update.peerTheme });
-
-    case 'updatePeerWallpaper':
-      if (!selectPeerFullInfo(global, update.id)) return undefined;
-      return updatePeerFullInfo(global, update.id, { wallpaper: update.wallpaper });
   }
 
   return undefined;

@@ -13,30 +13,19 @@ import { UNMUTE_TIMESTAMP } from '../../config';
 import {
   getCanAddContact,
   getCanDeleteChat,
-  getCanManageTopic,
-  getHasAdminRight,
-  getIsSavedDialog,
-  isChatAdmin,
-  isChatChannel,
-  isChatGroup,
-  isUserRightBanned,
 } from '../../global/helpers';
 import { getIsChatMuted } from '../../global/helpers/notifications';
 import {
   selectCanManage,
   selectCanManageAutoDelete,
   selectChat,
-  selectChatFullInfo,
   selectChatHistoryTtl,
-  selectCurrentMessageList,
   selectIsChatRestricted,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
   selectIsRightColumnShown,
   selectNotifyDefaults,
   selectNotifyException,
-  selectTabState,
-  selectTopic,
   selectUser,
   selectUserFullInfo,
 } from '../../global/selectors';
@@ -48,7 +37,6 @@ import useAppLayout from '../../hooks/useAppLayout';
 import useFlag from '../../hooks/useFlag';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
-import usePrevDuringAnimation from '../../hooks/usePrevDuringAnimation';
 import useShowTransitionDeprecated from '../../hooks/useShowTransitionDeprecated';
 
 import DeleteChatModal from '../common/DeleteChatModal';
@@ -67,109 +55,60 @@ export type OwnProps = {
   threadId: ThreadId;
   isOpen: boolean;
   anchor: IAnchorPosition;
-  isChannel?: boolean;
-  canSubscribe?: boolean;
   canSearch?: boolean;
   canMute?: boolean;
-  withForumActions?: boolean;
   canLeave?: boolean;
-  pendingJoinRequests?: number;
-  channelMonoforumId?: string;
   onSearchClick: () => void;
-  onAsMessagesClick: () => void;
   onClose: () => void;
   onCloseAnimationEnd: () => void;
-  onJoinRequestsClick?: () => void;
 };
 
 type StateProps = {
   chat?: ApiChat;
   isPrivate?: boolean;
   isMuted?: boolean;
-  isTopic?: boolean;
-  isForum?: boolean;
-  isForumAsMessages?: true;
   canAddContact?: boolean;
   canDeleteChat?: boolean;
-  canReportChat?: boolean;
-  canCreateTopic?: boolean;
-  canEditTopic?: boolean;
-  hasLinkedChat?: boolean;
-  isChatInfoShown?: boolean;
   isRightColumnShown?: boolean;
   canManage?: boolean;
   isBlocked?: boolean;
   isChatWithSelf?: boolean;
-  savedDialog?: ApiChat;
   isAccountFrozen?: boolean;
-  noForwardsMyEnabled?: boolean;
-  noForwardsPeerEnabled?: boolean;
   canManageAutoDelete?: boolean;
   historyTtl?: number;
 };
 
-const CLOSE_MENU_ANIMATION_DURATION = 200;
-
 const HeaderMenuContainer = ({
   chatId,
-  threadId,
   isOpen,
   anchor,
-  isChannel,
-  canSubscribe,
-  withForumActions,
-  isTopic,
-  isForum,
-  isForumAsMessages,
-  isChatInfoShown,
-  canReportChat,
   canSearch,
   canMute,
-  pendingJoinRequests,
   canLeave,
   chat,
   isPrivate,
   isMuted,
   canDeleteChat,
-  hasLinkedChat,
   canAddContact,
-  canCreateTopic,
-  canEditTopic,
   canManage,
   isRightColumnShown,
   isBlocked,
   isChatWithSelf,
-  savedDialog,
   isAccountFrozen,
-  noForwardsMyEnabled,
-  noForwardsPeerEnabled,
   canManageAutoDelete,
   historyTtl,
-  channelMonoforumId,
-  onJoinRequestsClick,
   onSearchClick,
-  onAsMessagesClick,
   onClose,
   onCloseAnimationEnd,
 }: OwnProps & StateProps) => {
   const {
     updateChatMutedState,
     enterMessageSelectMode,
-    joinChannel,
-    openLinkedChat,
     openAddContactDialog,
     openFrozenAccountModal,
-    openThreadWithInfo,
-    openCreateTopicPanel,
-    openEditTopicPanel,
-    openChat,
     toggleManagement,
     blockUser,
     unblockUser,
-    setViewForumAsMessages,
-    reportMessages,
-    toggleNoForwards,
-    openDisableSharingAboutModal,
     setChatHistoryTtl,
     openAutoDeleteTimerModal,
   } = getActions();
@@ -185,23 +124,9 @@ const HeaderMenuContainer = ({
   const { x, y } = anchor;
 
   useShowTransitionDeprecated(isOpen, onCloseAnimationEnd, undefined, false);
-  const isViewGroupInfoShown = usePrevDuringAnimation(
-    (!isChatInfoShown && isForum) ? true : undefined, CLOSE_MENU_ANIMATION_DURATION,
-  );
-  const viewInfoLangKey = isTopic ? 'HeaderMenuViewTopicInfo' : 'HeaderMenuViewGroupInfo';
 
   const closeMuteModal = useLastCallback(() => {
     setIsMuteModalOpen(false);
-    onClose();
-  });
-
-  const handleReport = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      setIsMenuOpen(false);
-      reportMessages({ chatId, messageIds: [] });
-    }
     onClose();
   });
 
@@ -218,12 +143,6 @@ const HeaderMenuContainer = ({
   const closeMenu = useLastCallback(() => {
     setIsMenuOpen(false);
     onClose();
-  });
-
-  const handleViewGroupInfo = useLastCallback(() => {
-    openThreadWithInfo({ chatId, threadId });
-    setShouldCloseFast(!isRightColumnShown);
-    closeMenu();
   });
 
   const closeDeleteModal = useLastCallback(() => {
@@ -251,16 +170,6 @@ const HeaderMenuContainer = ({
     setIsMenuOpen(false);
   });
 
-  const handleCreateTopicClick = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      openCreateTopicPanel({ chatId });
-      setShouldCloseFast(!isRightColumnShown);
-    }
-    closeMenu();
-  });
-
   const handleEditClick = useLastCallback(() => {
     if (isAccountFrozen) {
       openFrozenAccountModal();
@@ -268,27 +177,6 @@ const HeaderMenuContainer = ({
       toggleManagement({ force: true });
       setShouldCloseFast(!isRightColumnShown);
     }
-    closeMenu();
-  });
-
-  const handleEditTopicClick = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      openEditTopicPanel({ chatId, topicId: Number(threadId) });
-      setShouldCloseFast(!isRightColumnShown);
-    }
-    closeMenu();
-  });
-
-  const handleViewAsTopicsClick = useLastCallback(() => {
-    openChat({ id: undefined });
-    setViewForumAsMessages({ chatId, isEnabled: false });
-    closeMenu();
-  });
-
-  const handleLinkedChatClick = useLastCallback(() => {
-    openLinkedChat({ id: chatId });
     closeMenu();
   });
 
@@ -315,11 +203,6 @@ const HeaderMenuContainer = ({
     closeMenu();
   });
 
-  const handleOpenAsMessages = useLastCallback(() => {
-    onAsMessagesClick();
-    closeMenu();
-  });
-
   const handleBlock = useLastCallback(() => {
     if (isAccountFrozen) {
       openFrozenAccountModal();
@@ -334,30 +217,6 @@ const HeaderMenuContainer = ({
       openFrozenAccountModal();
     } else {
       unblockUser({ userId: chatId });
-    }
-    closeMenu();
-  });
-
-  const handleToggleNoForwards = useLastCallback(() => {
-    closeMenu();
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-      return;
-    }
-
-    if (noForwardsMyEnabled || noForwardsPeerEnabled) {
-      toggleNoForwards({ userId: chatId, isEnabled: false });
-      return;
-    }
-
-    openDisableSharingAboutModal({ userId: chatId });
-  });
-
-  const handleSubscribe = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      joinChannel({ chatId });
     }
     closeMenu();
   });
@@ -380,11 +239,6 @@ const HeaderMenuContainer = ({
     closeMenu();
   });
 
-  const handleSendChannelMessage = useLastCallback(() => {
-    openChat({ id: channelMonoforumId });
-    closeMenu();
-  });
-
   useEffect(disableScrolling, []);
 
   const autoDeleteOptions = useMemo(() => {
@@ -396,10 +250,6 @@ const HeaderMenuContainer = ({
   const deleteTitle = useMemo(() => {
     if (!chat) return undefined;
 
-    if (savedDialog) {
-      return lang('Delete');
-    }
-
     if (isPrivate) {
       return lang('DeleteChat');
     }
@@ -408,12 +258,8 @@ const HeaderMenuContainer = ({
       return lang('GroupInfoDeleteAndExit');
     }
 
-    if (isChannel) {
-      return lang('ChannelLeave');
-    }
-
     return lang('GroupLeaveGroup');
-  }, [canDeleteChat, chat, isChannel, isPrivate, savedDialog, lang]);
+  }, [canDeleteChat, chat, isPrivate, lang]);
 
   return (
     <Portal>
@@ -433,80 +279,12 @@ const HeaderMenuContainer = ({
               {lang('Search')}
             </MenuItem>
           )}
-          {withForumActions && canCreateTopic && (
-            <>
-              <MenuItem
-                icon="message"
-                onClick={handleCreateTopicClick}
-              >
-                {lang('ForumCreateTopic')}
-              </MenuItem>
-              <MenuSeparator />
-            </>
-          )}
-          {canSubscribe && (
-            <MenuItem
-              icon={isChannel ? 'channel' : 'group'}
-              onClick={handleSubscribe}
-            >
-              {lang(isChannel ? 'ProfileJoinChannel' : 'ProfileJoinGroup')}
-            </MenuItem>
-          )}
-          {channelMonoforumId && (
-            <MenuItem
-              icon="message"
-              onClick={handleSendChannelMessage}
-            >
-              {lang('ChannelSendMessage')}
-            </MenuItem>
-          )}
-          {isViewGroupInfoShown && (
-            <MenuItem
-              icon="info"
-              onClick={handleViewGroupInfo}
-            >
-              {lang(viewInfoLangKey)}
-            </MenuItem>
-          )}
-          {canManage && !canEditTopic && (
+          {canManage && (
             <MenuItem
               icon="edit"
               onClick={handleEditClick}
             >
               {lang('Edit')}
-            </MenuItem>
-          )}
-          {canEditTopic && (
-            <MenuItem
-              icon="edit"
-              onClick={handleEditTopicClick}
-            >
-              {lang('ForumTopicEdit')}
-            </MenuItem>
-          )}
-          {isMobile && !withForumActions && isForum && !isTopic && (
-            <MenuItem
-              icon="forums"
-              onClick={handleViewAsTopicsClick}
-            >
-              {lang('ChatContextViewAsTopics')}
-            </MenuItem>
-          )}
-          {withForumActions && Boolean(pendingJoinRequests) && (
-            <MenuItem
-              icon="user"
-              onClick={onJoinRequestsClick}
-            >
-              {isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}
-              <div className="right-badge">{pendingJoinRequests}</div>
-            </MenuItem>
-          )}
-          {withForumActions && !isTopic && !isForumAsMessages && (
-            <MenuItem
-              icon="message"
-              onClick={handleOpenAsMessages}
-            >
-              {lang('ForumViewAsMessages')}
             </MenuItem>
           )}
           {canAddContact && (
@@ -565,38 +343,12 @@ const HeaderMenuContainer = ({
               {lang('AutoDeletePopupTitle')}
             </NestedMenuItem>
           )}
-          {hasLinkedChat && (
-            <MenuItem
-              icon={isChannel ? 'message' : 'channel'}
-              onClick={handleLinkedChatClick}
-            >
-              {lang(isChannel ? 'ViewDiscussion' : 'ProfileViewChannel')}
-            </MenuItem>
-          )}
-          {!withForumActions && (
-            <MenuItem
-              icon="select"
-              onClick={handleSelectMessages}
-            >
-              {lang('ReportSelectMessages')}
-            </MenuItem>
-          )}
-          {canReportChat && (
-            <MenuItem
-              icon="flag"
-              onClick={handleReport}
-            >
-              {lang('ReportPeerReport')}
-            </MenuItem>
-          )}
-          {isPrivate && !isChatWithSelf && (
-            <MenuItem
-              icon={noForwardsMyEnabled || noForwardsPeerEnabled ? 'allow-share' : 'no-share'}
-              onClick={handleToggleNoForwards}
-            >
-              {noForwardsMyEnabled || noForwardsPeerEnabled ? lang('EnableSharing') : lang('DisableSharing')}
-            </MenuItem>
-          )}
+          <MenuItem
+            icon="select"
+            onClick={handleSelectMessages}
+          >
+            {lang('ReportSelectMessages')}
+          </MenuItem>
           {isPrivate && !isChatWithSelf && (
             <MenuItem
               icon={isBlocked ? 'user' : 'hand-stop'}
@@ -622,8 +374,7 @@ const HeaderMenuContainer = ({
           <DeleteChatModal
             isOpen={isDeleteModalOpen}
             onClose={closeDeleteModal}
-            chat={savedDialog || chat}
-            isSavedDialog={Boolean(savedDialog)}
+            chat={chat}
           />
         )}
         {canMute && shouldRenderMuteModal && chat?.id && (
@@ -651,47 +402,25 @@ export default memo(withGlobal<OwnProps>(
     const canAddContact = user && getCanAddContact(user);
     const isMainThread = threadId === MAIN_THREAD_ID;
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const { chatId: currentChatId, threadId: currentThreadId } = selectCurrentMessageList(global) || {};
-    const canReportChat = isMainThread && !user && (isChatChannel(chat) || isChatGroup(chat)) && !isChatAdmin(chat);
 
     const userFullInfo = isPrivate ? selectUserFullInfo(global, chatId) : undefined;
-    const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
 
-    const topic = selectTopic(global, chatId, threadId);
-    const canCreateTopic = chat.isForum && (
-      !isUserRightBanned(chat, 'manageTopics') || getHasAdminRight(chat, 'manageTopics')
-    );
-    const canEditTopic = topic && getCanManageTopic(chat, topic);
     const canManage = selectCanManage(global, chatId);
 
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-    const savedDialog = isSavedDialog ? selectChat(global, String(threadId)) : undefined;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
-    const chatInfo = selectTabState(global).chatInfo;
-    const canManageAutoDelete = isMainThread && !isSavedDialog && selectCanManageAutoDelete(global, chatId);
+    const canManageAutoDelete = isMainThread && selectCanManageAutoDelete(global, chatId);
 
     return {
       chat,
       isMuted: getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chat.id)),
       isPrivate,
-      isTopic: chat?.isForum && !isMainThread,
-      isForum: chat?.isForum,
-      isForumAsMessages: chat?.isForumAsMessages,
       canAddContact,
       canDeleteChat: getCanDeleteChat(chat),
-      canReportChat,
-      hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
-      isChatInfoShown: chatInfo.isOpen && currentChatId === chatId && currentThreadId === threadId,
-      canCreateTopic,
-      canEditTopic,
       canManage,
       isRightColumnShown: selectIsRightColumnShown(global),
       isBlocked: userFullInfo?.isBlocked,
       isChatWithSelf,
-      savedDialog,
       isAccountFrozen,
-      noForwardsMyEnabled: userFullInfo?.noForwardsMyEnabled,
-      noForwardsPeerEnabled: userFullInfo?.noForwardsPeerEnabled,
       canManageAutoDelete,
       historyTtl: canManageAutoDelete ? selectChatHistoryTtl(global, chatId) : undefined,
     };

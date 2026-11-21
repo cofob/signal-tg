@@ -13,7 +13,7 @@ import {
 } from '../../types';
 
 import {
-  selectCurrentChat, selectIsChatListPanelOpen, selectIsCurrentUserFrozen, selectIsForumPanelOpen,
+  selectCurrentChat, selectIsCurrentUserFrozen,
   selectPeerHasProfileBackground, selectTabState,
 } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
@@ -58,9 +58,6 @@ type StateProps = {
   nextFoldersAction?: ReducerAction<FoldersActions>;
   isChatOpen: boolean;
   isAppUpdateAvailable?: boolean;
-  isForumPanelOpen?: boolean;
-  isChatListPanelOpen?: boolean;
-  forumPanelChatId?: string;
   isClosingSearch?: boolean;
   archiveSettings: GlobalState['archiveSettings'];
   isArchivedStoryRibbonShown?: boolean;
@@ -76,8 +73,6 @@ enum ContentType {
   Archived,
 
   NewGroup,
-
-  NewChannel,
 }
 
 const RENDER_COUNT = Object.keys(ContentType).length / 2;
@@ -98,9 +93,6 @@ function LeftColumn({
   nextFoldersAction,
   isChatOpen,
   isAppUpdateAvailable,
-  isForumPanelOpen,
-  isChatListPanelOpen,
-  forumPanelChatId,
   isClosingSearch,
   archiveSettings,
   isArchivedStoryRibbonShown,
@@ -133,10 +125,6 @@ function LeftColumn({
       break;
     case LeftColumnContent.Settings:
       contentType = ContentType.Settings;
-      break;
-    case LeftColumnContent.NewChannelStep1:
-    case LeftColumnContent.NewChannelStep2:
-      contentType = ContentType.NewChannel;
       break;
     case LeftColumnContent.NewGroupStep1:
     case LeftColumnContent.NewGroupStep2:
@@ -182,11 +170,6 @@ function LeftColumn({
 
     if (contentKey === LeftColumnContent.NewGroupStep2) {
       openLeftColumnContent({ contentKey: LeftColumnContent.NewGroupStep1 });
-      return;
-    }
-
-    if (contentKey === LeftColumnContent.NewChannelStep2) {
-      openLeftColumnContent({ contentKey: LeftColumnContent.NewChannelStep1 });
       return;
     }
 
@@ -380,17 +363,11 @@ function LeftColumn({
     }
   });
 
-  const handleTopicSearch = useLastCallback(() => {
-    openLeftColumnContent({ contentKey: LeftColumnContent.GlobalSearch });
-    setGlobalSearchQuery({ query: '' });
-    setGlobalSearchChatId({ id: forumPanelChatId });
-  });
-
   useEffect(
     () => {
       const isArchived = contentKey === LeftColumnContent.Archived;
       const isChatList = contentKey === LeftColumnContent.ChatList;
-      const noChatOrPanelOpen = !isChatOpen && !isChatListPanelOpen;
+      const noChatOrPanelOpen = !isChatOpen;
       // We listen for escape key only in these cases:
       // 1. When we are in archived chats and no chat or chat-list panel is open.
       // 2. When we are in any other screen except chat list and archived chat list.
@@ -404,7 +381,7 @@ function LeftColumn({
         return undefined;
       }
     },
-    [isFirstChatFolderActive, contentKey, handleReset, isChatOpen, isChatListPanelOpen],
+    [isFirstChatFolderActive, contentKey, handleReset, isChatOpen],
   );
 
   const handleHotkeySearch = useLastCallback(() => {
@@ -474,9 +451,7 @@ function LeftColumn({
           <ArchivedChats
             isActive={isActive}
             onReset={handleReset}
-            onTopicSearch={handleTopicSearch}
             foldersDispatch={foldersDispatch}
-            isForumPanelOpen={isForumPanelOpen}
             archiveSettings={archiveSettings}
             isStoryRibbonShown={isArchivedStoryRibbonShown}
           />
@@ -493,17 +468,6 @@ function LeftColumn({
             shouldSkipTransition={shouldSkipHistoryAnimations}
             hasProfileBackground={hasProfileBackground}
             searchSessionId={settingsSearchSessionIdRef.current}
-            onReset={handleReset}
-          />
-        );
-      case ContentType.NewChannel:
-        return (
-          <NewChat
-            key={lastResetTime}
-            isActive={isActive}
-            isChannel
-            content={contentKey}
-            animationLevel={animationLevel}
             onReset={handleReset}
           />
         );
@@ -530,8 +494,6 @@ function LeftColumn({
             onReset={handleReset}
             shouldSkipTransition={shouldSkipHistoryAnimations}
             isAppUpdateAvailable={isAppUpdateAvailable}
-            isForumPanelOpen={isForumPanelOpen}
-            onTopicSearch={handleTopicSearch}
             isAccountFrozen={isAccountFrozen}
             isFoldersSidebarShown={isFoldersSidebarShown}
           />
@@ -585,9 +547,6 @@ export default memo(withGlobal<OwnProps>(
     const { animationLevel } = selectSharedSettings(global);
     const currentChat = selectCurrentChat(global);
     const isChatOpen = Boolean(currentChat?.id);
-    const isForumPanelOpen = selectIsForumPanelOpen(global);
-    const isChatListPanelOpen = selectIsChatListPanelOpen(global);
-    const forumPanelChatId = tabState.forumPanelChatId;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
     return {
@@ -601,9 +560,6 @@ export default memo(withGlobal<OwnProps>(
       nextFoldersAction,
       isChatOpen,
       isAppUpdateAvailable,
-      isForumPanelOpen,
-      isChatListPanelOpen,
-      forumPanelChatId,
       isClosingSearch: tabState.globalSearch.isClosing,
       archiveSettings,
       isArchivedStoryRibbonShown: isArchivedRibbonShown,

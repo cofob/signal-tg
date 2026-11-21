@@ -125,20 +125,3 @@ export function renderMessageLink(
     </Link>
   );
 }
-
-export function renderTopicLink(chatId: string, topicId: number, content: TeactNode, asPreview?: boolean) {
-  if (asPreview) return content;
-
-  return (
-    <Link
-      className={styles.topicLink}
-      onClick={(e) => {
-        e.stopPropagation();
-        getActions().openThread({ chatId, threadId: topicId });
-      }}
-      withMultilineFix={IS_SAFARI}
-    >
-      {content}
-    </Link>
-  );
-}

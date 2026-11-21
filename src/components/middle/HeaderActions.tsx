@@ -9,10 +9,6 @@ import { ManagementScreens } from '../../types';
 
 import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
 import {
-  getIsSavedDialog,
-  isChatChannel, isChatSuperGroup,
-} from '../../global/helpers';
-import {
   selectCanAnimateInterface,
   selectChat,
   selectChatFullInfo,
@@ -37,20 +33,15 @@ interface OwnProps {
   chatId: string;
   threadId: ThreadId;
   messageListType: MessageListType;
-  isForForum?: boolean;
   isMobile?: boolean;
-  onTopicSearch?: NoneToVoidFunction;
 }
 
 interface StateProps {
   noMenu?: boolean;
-  isChannel?: boolean;
   isRightColumnShown?: boolean;
-  canSubscribe?: boolean;
   canSearch?: boolean;
   canMute?: boolean;
   canLeave?: boolean;
-  channelMonoforumId?: string;
   pendingJoinRequests?: number;
   noAnimation?: boolean;
   language: string;
@@ -61,24 +52,17 @@ const HeaderActions = ({
   threadId,
   noMenu,
   isMobile,
-  isChannel,
-  canSubscribe,
   canSearch,
   canMute,
   canLeave,
-  channelMonoforumId,
   pendingJoinRequests,
   isRightColumnShown,
-  isForForum,
   noAnimation,
   language,
-  onTopicSearch,
 }: OwnProps & StateProps) => {
   const {
     openMiddleSearch,
     requestNextManagementScreen,
-    openChat,
-    setViewForumAsMessages,
   } = getActions();
   const menuButtonRef = useRef<HTMLButtonElement>();
 
@@ -107,11 +91,6 @@ const HeaderActions = ({
   });
 
   const handleSearchClick = useLastCallback(() => {
-    if (isForForum) {
-      onTopicSearch?.();
-      return;
-    }
-
     openMiddleSearch();
 
     if (noAnimation) {
@@ -124,33 +103,24 @@ const HeaderActions = ({
     }
   });
 
-  const handleAsMessagesClick = useLastCallback(() => {
-    openChat({ id: chatId });
-    setViewForumAsMessages({ chatId, isEnabled: true });
-  });
-
   useKeyboardShortcuts(useMemo(() => (canSearch ? {
     searchInChat: handleSearchClick,
   } : undefined), [canSearch]));
 
   return (
     <div className="HeaderActions">
-      {!isMobile && (
-        <>
-          {canSearch && (
-            <Button
-              round
-              ripple={isRightColumnShown}
-              color="translucent"
-              size="smaller"
-              onClick={handleSearchClick}
-              ariaLabel={searchLabel}
-              iconName="search"
-            />
-          )}
-        </>
+      {!isMobile && canSearch && (
+        <Button
+          round
+          ripple={isRightColumnShown}
+          color="translucent"
+          size="smaller"
+          onClick={handleSearchClick}
+          ariaLabel={searchLabel}
+          iconName="search"
+        />
       )}
-      {!isForForum && Boolean(pendingJoinRequests) && (
+      {Boolean(pendingJoinRequests) && (
         <Button
           round
           className="badge-button"
@@ -159,7 +129,7 @@ const HeaderActions = ({
           size="smaller"
           iconName="user"
           onClick={handleJoinRequestsClick}
-          ariaLabel={isChannel ? lang('SubscribeRequests') : lang('MemberRequests')}
+          ariaLabel={lang('MemberRequests')}
         >
           <div className="badge">{pendingJoinRequests}</div>
         </Button>
@@ -182,17 +152,10 @@ const HeaderActions = ({
           threadId={threadId}
           isOpen={isMenuOpen}
           anchor={menuAnchor}
-          isChannel={isChannel}
-          canSubscribe={isForForum ? canSubscribe : undefined}
           canSearch={canSearch}
           canMute={canMute}
           canLeave={canLeave}
-          pendingJoinRequests={pendingJoinRequests}
-          onJoinRequestsClick={handleJoinRequestsClick}
-          withForumActions={isForForum}
-          channelMonoforumId={channelMonoforumId}
           onSearchClick={handleSearchClick}
-          onAsMessagesClick={handleAsMessagesClick}
           onClose={handleHeaderMenuClose}
           onCloseAnimationEnd={handleHeaderMenuHide}
         />
@@ -206,8 +169,6 @@ export default memo(withGlobal<OwnProps>(
     chatId, threadId, messageListType, isMobile,
   }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
-    const isChannel = Boolean(chat && isChatChannel(chat));
-    const isSuperGroup = Boolean(chat && isChatSuperGroup(chat));
     const language = selectLanguageCode(global);
     const isPrivate = isUserId(chatId);
 
@@ -222,34 +183,23 @@ export default memo(withGlobal<OwnProps>(
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
     const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
-    const isDiscussionThread = messageListType === 'thread' && threadId !== MAIN_THREAD_ID;
     const isRightColumnShown = selectIsRightColumnShown(global, isMobile);
 
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-
-    const canSubscribe = Boolean(
-      (isMainThread || chat.isForum) && (isChannel || isSuperGroup) && chat.isNotJoined && !chat.isMonoforum,
-    );
-    const canSearch = isMainThread || isDiscussionThread;
-    const canMute = isMainThread && !isChatWithSelf && !canSubscribe;
-    const canLeave = isSavedDialog || (isMainThread && !canSubscribe);
+    const canSearch = isMainThread;
+    const canMute = isMainThread && !isChatWithSelf;
+    const canLeave = isMainThread;
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
 
-    const channelMonoforumId = isChatChannel(chat) ? chat.linkedMonoforumId : undefined;
-
     return {
       noMenu: false,
-      isChannel,
       isRightColumnShown,
-      canSubscribe,
       canSearch,
       canMute,
       canLeave,
       pendingJoinRequests,
       noAnimation,
       language,
-      channelMonoforumId,
     };
   },
 )(HeaderActions));

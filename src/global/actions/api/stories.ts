@@ -12,7 +12,6 @@ import {
   removePeerStory,
   updateLastReadStoryForPeer,
   updateLastViewedStoryForPeer,
-  updatePeer,
   updatePeerProfileStory,
   updatePeerStoriesFullyLoaded,
   updatePeerStoriesHidden,
@@ -598,37 +597,6 @@ addActionHandler('toggleStoriesHidden', async (global, actions, payload): Promis
   global = getGlobal();
   global = updatePeerStoriesHidden(global, peerId, isHidden);
   setGlobal(global);
-});
-
-addActionHandler('loadStoriesMaxIds', async (global, actions, payload): Promise<void> => {
-  const { peerIds } = payload;
-  const peers = peerIds.map((peerId) => selectPeer(global, peerId)).filter(Boolean);
-  if (!peers.length) return;
-
-  const result = await callApi('fetchStoriesMaxIds', { peers });
-  if (!result) return;
-
-  const peerIdsToLoad: string[] = [];
-
-  global = getGlobal();
-  result.forEach((maxId: { maxId?: number }, i: number) => {
-    const peerId = peers[i].id;
-    const hasStories = Boolean(maxId.maxId);
-    const peer = selectPeer(global, peerId);
-    if (peer && (peer.maxStoryId !== maxId.maxId || peer.hasStories !== hasStories)) {
-      global = updatePeer(global, peerId, {
-        maxStoryId: maxId.maxId,
-        hasStories,
-      });
-    }
-
-    if (maxId.maxId && maxId.maxId > 0) {
-      peerIdsToLoad.push(peerId);
-    }
-  });
-  setGlobal(global);
-
-  peerIdsToLoad?.forEach((peerId) => actions.loadPeerStories({ peerId }));
 });
 
 addActionHandler('sendStoryReaction', async (global, actions, payload): Promise<void> => {

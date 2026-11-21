@@ -78,7 +78,6 @@ export function buildApiChat(conversation: ConversationRecord, selfAci: string):
     isListed,
     isForbidden: memberAcis && !memberAcis.includes(selfAci) && !isInvited ? true : undefined,
     isNotJoined: isInvited || undefined,
-    isJoinToSend: isInvited || undefined,
     adminRights: adminAcis?.includes(selfAci) ? GROUP_ADMIN_RIGHTS : undefined,
     defaultBannedRights: buildGroupBannedRights(conversation),
     areStoriesHidden: conversation.isStoryHidden || undefined,

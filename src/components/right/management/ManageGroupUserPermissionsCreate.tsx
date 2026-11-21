@@ -5,8 +5,8 @@ import { withGlobal } from '../../../global';
 import type { ApiChatMember, ApiUser, ApiUserStatus } from '../../../api/types';
 import { ManagementScreens } from '../../../types';
 
-import { isChatChannel, sortUserIds } from '../../../global/helpers';
-import { selectChat, selectChatFullInfo } from '../../../global/selectors';
+import { sortUserIds } from '../../../global/helpers';
+import { selectChatFullInfo } from '../../../global/selectors';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
@@ -28,14 +28,12 @@ type StateProps = {
   usersById: Record<string, ApiUser>;
   userStatusesById: Record<string, ApiUserStatus>;
   members?: ApiChatMember[];
-  isChannel?: boolean;
 };
 
 const ManageGroupUserPermissionsCreate: FC<OwnProps & StateProps> = ({
   usersById,
   userStatusesById,
   members,
-  isChannel,
   onScreenSelect,
   onChatMemberSelect,
   onClose,
@@ -84,7 +82,7 @@ const ManageGroupUserPermissionsCreate: FC<OwnProps & StateProps> = ({
           </Island>
         ) : (
           <NothingFound
-            text={lang(isChannel ? 'NoSubscribersFound' : 'NoMembersFound')}
+            text={lang('NoMembersFound')}
           />
         )}
       </div>
@@ -94,16 +92,13 @@ const ManageGroupUserPermissionsCreate: FC<OwnProps & StateProps> = ({
 
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
-    const chat = selectChat(global, chatId);
     const { byId: usersById, statusesById: userStatusesById } = global.users;
     const members = selectChatFullInfo(global, chatId)?.members;
-    const isChannel = chat && isChatChannel(chat);
 
     return {
       members,
       usersById,
       userStatusesById,
-      isChannel,
     };
   },
 )(ManageGroupUserPermissionsCreate));

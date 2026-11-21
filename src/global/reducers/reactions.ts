@@ -11,9 +11,8 @@ import {
   SIDE_COLUMN_MAX_WIDTH,
 } from '../../components/middle/helpers/calculateMiddleFooterTransforms';
 import { getReactionKey, updateReactionCount } from '../helpers';
-import { selectIsChatWithSelf, selectSendAs, selectTabState } from '../selectors';
+import { selectIsChatWithSelf, selectTabState } from '../selectors';
 import { updateChatMessage } from './messages';
-import { addUnreadCount, removeUnreadCount } from './unreadCounters';
 
 import { getIsMobile } from '../../hooks/useAppLayout';
 
@@ -47,7 +46,6 @@ export function addMessageReaction<T extends GlobalState>(
 ): T {
   const isInSavedMessages = selectIsChatWithSelf(global, message.chatId);
   const currentReactions = message.reactions || { results: [], areTags: isInSavedMessages };
-  const currentSendAs = selectSendAs(global, message.chatId);
 
   // Update UI without waiting for server response
   const results = updateReactionCount(currentReactions.results, userReactions);
@@ -61,7 +59,7 @@ export function addMessageReaction<T extends GlobalState>(
   userReactions.forEach((reaction) => {
     const { currentUserId } = global;
     recentReactions.unshift({
-      peerId: currentSendAs?.id || currentUserId!,
+      peerId: currentUserId!,
       reaction,
       addedDate: Math.floor(Date.now() / 1000),
       isOwn: true,
@@ -134,36 +132,4 @@ export function removePeerReactions(message: ApiMessage, peerId: string): Partia
   }
 
   return update;
-}
-
-export function addUnreadReactions<T extends GlobalState>({
-  global, chatId, ids, totalCount,
-}: {
-  global: T;
-  chatId: string;
-  ids: number[];
-  totalCount?: number;
-}): T {
-  return addUnreadCount({
-    global,
-    chatId,
-    messageIds: ids,
-    totalCount,
-    unreadCountKey: 'unreadReactionsCount',
-  });
-}
-
-export function removeUnreadReactions<T extends GlobalState>({
-  global, chatId, ids,
-}: {
-  global: T;
-  chatId: string;
-  ids: number[];
-}): T {
-  return removeUnreadCount({
-    global,
-    chatId,
-    messageIds: ids,
-    unreadCountKey: 'unreadReactionsCount',
-  });
 }

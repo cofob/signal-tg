@@ -9,7 +9,7 @@ import type {
 import { ManagementScreens } from '../../../types';
 
 import {
-  getHasAdminRight, getUserFullName, isChatBasicGroup, isChatChannel,
+  getHasAdminRight, getUserFullName, isChatBasicGroup,
 } from '../../../global/helpers';
 import {
   selectCanEditRank, selectChat, selectChatFullInfo,
@@ -76,10 +76,6 @@ const ManageGroupAdminRights = ({
   const [isDismissConfirmationDialogOpen, openDismissConfirmationDialog, closeDismissConfirmationDialog] = useFlag();
   const [rank, setRank] = useState('');
   const lang = useLang();
-
-  const isChannel = isChatChannel(chat);
-  const isForum = chat.isForum;
-  const hasDirectMessages = Boolean(chat.linkedMonoforumId);
 
   useHistoryBack({
     isActive,
@@ -205,7 +201,6 @@ const ManageGroupAdminRights = ({
   });
 
   const canDismissAdmin = currentUserId !== selectedUserId && !isFormFullyDisabled && !isNewAdmin;
-  const shouldRenderAdminActions = !isChannel || canDismissAdmin;
   const selectedAdminRights = { adminRights: permissions, isOwner };
 
   if (!selectedChatMember) {
@@ -233,7 +228,7 @@ const ManageGroupAdminRights = ({
             <Checkbox
               name="changeInfo"
               checked={getHasAdminRight(selectedAdminRights, 'changeInfo')}
-              label={lang(isChannel ? 'EditAdminChangeChannelInfo' : 'EditAdminChangeGroupInfo')}
+              label={lang('EditAdminChangeGroupInfo')}
               blocking
               disabled={getControlIsDisabled('changeInfo')}
               onChange={handlePermissionChange}
@@ -249,35 +244,11 @@ const ManageGroupAdminRights = ({
               onChange={handlePermissionChange}
             />
           </div>
-          {isChannel && (
-            <div className="ListItem">
-              <Checkbox
-                name="postMessages"
-                checked={getHasAdminRight(selectedAdminRights, 'postMessages')}
-                label={lang('EditAdminPostMessages')}
-                blocking
-                disabled={getControlIsDisabled('postMessages')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
-          {isChannel && (
-            <div className="ListItem">
-              <Checkbox
-                name="editMessages"
-                checked={getHasAdminRight(selectedAdminRights, 'editMessages')}
-                label={lang('EditAdminEditMessages')}
-                blocking
-                disabled={getControlIsDisabled('editMessages')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
           <div className="ListItem">
             <Checkbox
               name="deleteMessages"
               checked={getHasAdminRight(selectedAdminRights, 'deleteMessages')}
-              label={lang(isChannel ? 'EditAdminDeleteMessages' : 'EditAdminGroupDeleteMessages')}
+              label={lang('EditAdminGroupDeleteMessages')}
               blocking
               disabled={getControlIsDisabled('deleteMessages')}
               onChange={handlePermissionChange}
@@ -313,18 +284,6 @@ const ManageGroupAdminRights = ({
               onChange={handlePermissionChange}
             />
           </div>
-          {hasDirectMessages && (
-            <div className="ListItem">
-              <Checkbox
-                name="manageDirectMessages"
-                checked={getHasAdminRight(selectedAdminRights, 'manageDirectMessages')}
-                label={lang('EditAdminManageDirect')}
-                blocking
-                disabled={getControlIsDisabled('manageDirectMessages')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
           <div className="ListItem">
             <Checkbox
               name="banUsers"
@@ -355,25 +314,13 @@ const ManageGroupAdminRights = ({
               onChange={handlePermissionChange}
             />
           </div>
-          {!isChannel && (
-            <div className="ListItem">
-              <Checkbox
-                name="pinMessages"
-                checked={getHasAdminRight(selectedAdminRights, 'pinMessages')}
-                label={lang('EditAdminPinMessages')}
-                blocking
-                disabled={getControlIsDisabled('pinMessages')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
           <div className="ListItem">
             <Checkbox
-              name="manageCall"
-              checked={getHasAdminRight(selectedAdminRights, 'manageCall')}
-              label={lang('StartVoipChatPermission')}
+              name="pinMessages"
+              checked={getHasAdminRight(selectedAdminRights, 'pinMessages')}
+              label={lang('EditAdminPinMessages')}
               blocking
-              disabled={getControlIsDisabled('manageCall')}
+              disabled={getControlIsDisabled('pinMessages')}
               onChange={handlePermissionChange}
             />
           </div>
@@ -387,30 +334,16 @@ const ManageGroupAdminRights = ({
               onChange={handlePermissionChange}
             />
           </div>
-          {isForum && (
-            <div className="ListItem">
-              <Checkbox
-                name="manageTopics"
-                checked={getHasAdminRight(selectedAdminRights, 'manageTopics')}
-                label={lang('EditAdminManageTopics')}
-                blocking
-                disabled={getControlIsDisabled('manageTopics')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
-          {!isChannel && (
-            <div className="ListItem">
-              <Checkbox
-                name="anonymous"
-                checked={getHasAdminRight(selectedAdminRights, 'anonymous')}
-                label={lang('EditAdminSendAnonymously')}
-                blocking
-                disabled={getControlIsDisabled('anonymous')}
-                onChange={handlePermissionChange}
-              />
-            </div>
-          )}
+          <div className="ListItem">
+            <Checkbox
+              name="anonymous"
+              checked={getHasAdminRight(selectedAdminRights, 'anonymous')}
+              label={lang('EditAdminSendAnonymously')}
+              blocking
+              disabled={getControlIsDisabled('anonymous')}
+              onChange={handlePermissionChange}
+            />
+          </div>
 
           {isFormFullyDisabled && (
             <IslandDescription className="mb-4" dir="auto">
@@ -419,27 +352,23 @@ const ManageGroupAdminRights = ({
           )}
         </Island>
 
-        {shouldRenderAdminActions && (
-          <Island>
-            {!isChannel && (
-              <InputText
-                id="admin-title"
-                label={lang('EditAdminRank')}
-                className="input-admin-title"
-                onChange={handleRankChange}
-                value={rank}
-                disabled={isFormFullyDisabled || !canEditRank}
-                maxLength={CUSTOM_TITLE_MAX_LENGTH}
-              />
-            )}
+        <Island>
+          <InputText
+            id="admin-title"
+            label={lang('EditAdminRank')}
+            className="input-admin-title"
+            onChange={handleRankChange}
+            value={rank}
+            disabled={isFormFullyDisabled || !canEditRank}
+            maxLength={CUSTOM_TITLE_MAX_LENGTH}
+          />
 
-            {canDismissAdmin && (
-              <ListItem icon="delete" ripple destructive onClick={openDismissConfirmationDialog}>
-                {lang('EditAdminRemoveAdmin')}
-              </ListItem>
-            )}
-          </Island>
-        )}
+          {canDismissAdmin && (
+            <ListItem icon="delete" ripple destructive onClick={openDismissConfirmationDialog}>
+              {lang('EditAdminRemoveAdmin')}
+            </ListItem>
+          )}
+        </Island>
       </div>
 
       <FloatingActionButton

@@ -32,10 +32,7 @@ const RemoveGroupUserModal: FC<OwnProps & StateProps> = ({
   isOpen,
   onClose,
 }) => {
-  const {
-    loadMoreMembers,
-    deleteChatMember,
-  } = getActions();
+  const { deleteChatMember } = getActions();
 
   const lang = useLang();
   const [search, setSearch] = useState('');
@@ -52,10 +49,6 @@ const RemoveGroupUserModal: FC<OwnProps & StateProps> = ({
     return filterPeersByQuery({ ids: availableMemberIds, query: search, type: 'user' });
   }, [chatMembers, currentUserId, search]);
 
-  const handleLoadMore = useLastCallback(() => {
-    loadMoreMembers({ chatId: chat.id });
-  });
-
   const handleRemoveUser = useLastCallback((userId: string) => {
     deleteChatMember({ chatId: chat.id, peerId: userId });
     onClose();
@@ -69,7 +62,6 @@ const RemoveGroupUserModal: FC<OwnProps & StateProps> = ({
       searchPlaceholder={lang('Search')}
       search={search}
       onSearchChange={setSearch}
-      loadMore={handleLoadMore}
       onSelectChatOrUser={handleRemoveUser}
       onClose={onClose}
     />

@@ -4,20 +4,16 @@ import type {
   ApiChatBannedRights,
   ApiChatFolder,
   ApiChatInviteInfo,
-  ApiMessage,
   ApiPeer,
-  ApiThreadInfo,
-  ApiTopic,
 } from '../../api/types';
 import type {
-  CustomPeer, ThreadId,
+  CustomPeer,
 } from '../../types';
 import type { RegularLangKey } from '../../types/language';
 import type { LangFn } from '../../util/localization';
-import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
-  ARCHIVED_FOLDER_ID, GENERAL_TOPIC_ID, USERNAME_LINK_PREFIX,
+  ARCHIVED_FOLDER_ID, USERNAME_LINK_PREFIX,
 } from '../../config';
 import { getPeerIdDividend, isUserId } from '../../util/entities/ids';
 import { formatDateTime, secondsToDate } from '../../util/localization/dateFormat';
@@ -33,27 +29,11 @@ type AdminPermissionContainer = {
 const FOREVER_BANNED_DATE = Date.now() / 1000 + 31622400; // 366 days
 
 export function isChatGroup(chat: ApiChat) {
-  return isChatBasicGroup(chat) || isChatSuperGroup(chat);
+  return isChatBasicGroup(chat);
 }
 
 export function isChatBasicGroup(chat: ApiChat) {
   return chat.type === 'chatTypeBasicGroup';
-}
-
-export function isChatSuperGroup(chat: ApiChat) {
-  return chat.type === 'chatTypeSuperGroup';
-}
-
-export function isChatChannel(chat: ApiChat) {
-  return chat.type === 'chatTypeChannel';
-}
-
-export function isChatCommunity(chat: ApiChat) {
-  return chat.type === 'chatTypeCommunity';
-}
-
-export function isChatMonoforum(chat: ApiChat) {
-  return chat.isMonoforum;
 }
 
 export function isCommonBoxChat(chat: ApiChat) {
@@ -65,12 +45,7 @@ export function getChatTypeLangKey(chat: ApiChat): RegularLangKey {
     case 'chatTypePrivate':
       return 'ChatTypePrivate';
     case 'chatTypeBasicGroup':
-    case 'chatTypeSuperGroup':
       return 'ChatTypeGroup';
-    case 'chatTypeChannel':
-      return 'ChatTypeChannel';
-    case 'chatTypeCommunity':
-      return 'ChatTypeCommunity';
     default:
       return 'ChatTypeFallback';
   }
@@ -118,41 +93,19 @@ export function getHasAdminRight(
     || (permissionContainer.isOwner && key !== 'anonymous'));
 }
 
-export function getCanManageTopic(chat: ApiChat, topic: ApiTopic) {
-  if (topic.id === GENERAL_TOPIC_ID) return chat.isOwner;
-  return getHasAdminRight(chat, 'manageTopics') || topic.isOwner;
-}
-
 export function isUserRightBanned(chat: ApiChat, key: keyof ApiChatBannedRights) {
   return Boolean(chat.currentUserBannedRights?.[key] || chat.defaultBannedRights?.[key]);
 }
 
-export function getCanPostInChat(chat: ApiChat, topic?: ApiTopic, isMessageThread?: boolean) {
-  if (topic) {
-    if (chat.isForum) {
-      if (chat.isNotJoined) {
-        return false;
-      }
-
-      if (topic?.isClosed && !topic.isOwner && !getHasAdminRight(chat, 'manageTopics')) {
-        return false;
-      }
-    }
-  }
-
+export function getCanPostInChat(chat: ApiChat) {
   const global = getGlobal();
   const isRestricted = selectIsChatRestricted(global, chat.id);
-  if (isRestricted || chat.isForbidden || chat.migratedTo
-    || (chat.isNotJoined && !isChatMonoforum(chat) && !isMessageThread)) {
+  if (isRestricted || chat.isForbidden || chat.isNotJoined) {
     return false;
   }
 
   if (isUserId(chat.id)) {
     return true;
-  }
-
-  if (isChatChannel(chat)) {
-    return getHasAdminRight(chat, 'postMessages');
   }
 
   return isChatAdmin(chat) || !isUserRightBanned(chat, 'sendMessages');
@@ -200,7 +153,7 @@ export function getAllowedAttachmentOptions(
 
   return {
     canAttachMedia: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendMedia'),
-    canAttachPolls: !isEphemeral && !isStoryReply && !chat.isMonoforum
+    canAttachPolls: !isEphemeral && !isStoryReply
       && (isAdmin || !isUserRightBanned(chat, 'sendPolls'))
       && (!isUserId(chat.id) || isSavedMessages),
     canSendStickers: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendStickers'),
@@ -238,40 +191,12 @@ export function getMessageSendingRestrictionReason(
   return undefined;
 }
 
-export function getForumComposerPlaceholder(
-  lang: LangFn,
-  chat?: ApiChat,
-  threadId: ThreadId = MAIN_THREAD_ID,
-  topics?: Record<number, ApiTopic>,
-  isReplying?: boolean,
-) {
-  if (!chat?.isForum) {
-    return undefined;
-  }
-
-  if (threadId === MAIN_THREAD_ID) {
-    if (isReplying || (topics && !topics[GENERAL_TOPIC_ID]?.isClosed)) return undefined;
-    return lang('ForumRepliesOnly');
-  }
-
-  const topic = topics?.[Number(threadId)];
-  if (!topic) {
-    return undefined;
-  }
-
-  if (topic.isClosed && !topic.isOwner && !getHasAdminRight(chat, 'manageTopics')) {
-    return lang('TopicClosedByAdmin');
-  }
-
-  return undefined;
-}
-
 export function isChatArchived(chat: ApiChat) {
   return chat.folderId === ARCHIVED_FOLDER_ID;
 }
 
 export function getCanDeleteChat(chat: ApiChat) {
-  return isChatBasicGroup(chat) || ((isChatSuperGroup(chat) || isChatChannel(chat)) && chat.isOwner);
+  return isChatBasicGroup(chat);
 }
 
 export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, chatsCount?: number) {
@@ -307,38 +232,6 @@ export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, ch
   }
 }
 
-export function isChatPublic(chat: ApiChat) {
-  return chat.hasUsername;
-}
-
-export function getOrderedTopics(
-  topics: ApiTopic[],
-  topicThreadInfos?: Record<ThreadId, ApiThreadInfo>,
-  pinnedOrder?: number[],
-  shouldSortByLastMessage = false,
-): ApiTopic[] {
-  const lastMessageIdComparator = (a: ApiTopic, b: ApiTopic) => (
-    (topicThreadInfos?.[b.id]?.lastMessageId || 0) - (topicThreadInfos?.[a.id]?.lastMessageId || 0)
-  );
-
-  if (shouldSortByLastMessage) {
-    return topics.sort(lastMessageIdComparator);
-  } else {
-    const pinned = topics.filter((topic) => topic.isPinned);
-    const ordered = topics
-      .filter((topic) => !topic.isPinned && !topic.isHidden)
-      .sort(lastMessageIdComparator);
-    const hidden = topics.filter((topic) => !topic.isPinned && topic.isHidden)
-      .sort(lastMessageIdComparator);
-
-    const pinnedOrdered = pinnedOrder
-      ? pinnedOrder.map((id) => pinned.find((topic) => topic.id === id)).filter(Boolean)
-      : pinned;
-
-    return [...pinnedOrdered, ...ordered, ...hidden];
-  }
-}
-
 export function getPeerColorKey(peer: ApiPeer | CustomPeer | undefined, isForAvatar?: boolean) {
   if (!peer) return 0;
 
@@ -361,28 +254,21 @@ export function getPeerColorCount(peer: ApiPeer) {
   return global.peerColors?.general[key].colors?.length || 1;
 }
 
-export function getIsSavedDialog(chatId: string, threadId: ThreadId | undefined, currentUserId: string | undefined) {
-  return chatId === currentUserId && threadId !== MAIN_THREAD_ID;
-}
-
 export function getGroupStatus(lang: LangFn, chat: ApiChat) {
   const chatTypeKey = getChatTypeLangKey(chat);
-  const isChannel = isChatChannel(chat);
   const { membersCount } = chat;
 
   const global = getGlobal();
   const isRestricted = selectIsChatRestricted(global, chat.id);
   if (isRestricted) {
-    return isChannel ? lang('ChannelInaccessible') : lang('GroupInaccessible');
+    return lang('GroupInaccessible');
   }
 
   if (!membersCount) {
     return lang(chatTypeKey);
   }
 
-  return isChannel
-    ? lang('Subscribers', { count: membersCount }, { pluralValue: membersCount })
-    : lang('NMembers', { count: membersCount }, { pluralValue: membersCount });
+  return lang('NMembers', { count: membersCount }, { pluralValue: membersCount });
 }
 
 export function getCustomPeerFromInvite(invite: ApiChatInviteInfo): CustomPeer {
@@ -396,14 +282,4 @@ export function getCustomPeerFromInvite(invite: ApiChatInviteInfo): CustomPeer {
     isVerified,
     fakeType: isFake ? 'fake' : isScam ? 'scam' : undefined,
   };
-}
-
-export function getIsCommunityPeerJoined(peer: ApiChat, lastMessage?: ApiMessage) {
-  // A private chat has no membership, so its history stands in for joining
-  return isUserId(peer.id) ? Boolean(lastMessage) : !peer.isNotJoined;
-}
-
-// The last message may not be loaded yet, so fall back the same way the chat list order does
-export function getCommunityPeerDate(peer: ApiChat, lastMessage?: ApiMessage) {
-  return Math.max(peer.creationDate || 0, lastMessage?.date || 0);
 }

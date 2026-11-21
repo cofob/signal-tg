@@ -11,29 +11,19 @@ import type {
   ApiUsername,
 } from '../../../api/types';
 import type { RegularLangKey } from '../../../types/language';
-import { MAIN_THREAD_ID } from '../../../api/types';
-import { ManagementScreens } from '../../../types';
 
 import {
   MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP,
 } from '../../../config';
-import {
-  getChatLink,
-  getHasAdminRight,
-  isChatAdmin,
-  isChatChannel,
-  isUserRightBanned,
-} from '../../../global/helpers';
+import { getChatLink, getHasAdminRight, isUserRightBanned } from '../../../global/helpers';
 import { getIsChatMuted } from '../../../global/helpers/notifications';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import {
   selectChat,
   selectChatFullInfo,
-  selectCurrentMessageList,
   selectIsChatRestricted,
   selectNotifyDefaults,
   selectNotifyException,
-  selectTopicLink,
   selectUser,
   selectUserFullInfo,
 } from '../../../global/selectors';
@@ -42,7 +32,6 @@ import buildClassName from '../../../util/buildClassName';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { formatPhoneNumberWithCode } from '../../../util/phoneNumber';
 import stopEvent from '../../../util/stopEvent';
-import { ChatAnimationTypes } from '../../left/main/hooks';
 import formatUsername from '../helpers/formatUsername';
 import renderText from '../helpers/renderText';
 import { renderTextWithEntities } from '../helpers/renderTextWithEntities';
@@ -56,7 +45,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import Island from '../../gili/layout/Island';
 import Switch from '../../gili/primitives/Switch';
-import Chat from '../../left/main/Chat';
 import Button from '../../ui/Button';
 import ListItem from '../../ui/ListItem';
 import Icon from '../icons/Icon';
@@ -68,7 +56,6 @@ import styles from './ChatExtra.module.scss';
 type OwnProps = {
   chatOrUserId: string;
   isOwnProfile?: boolean;
-  isSavedDialog?: boolean;
   isInSettings?: boolean;
   className?: string;
   style?: string;
@@ -81,13 +68,8 @@ type StateProps = {
   canInviteUsers?: boolean;
   isMuted?: boolean;
   phoneCodeList: ApiCountryCode[];
-  topicId?: number;
   description?: string;
   chatInviteLink?: string;
-  topicLink?: string;
-  hasSavedMessages?: boolean;
-  personalChannel?: ApiChat;
-  canViewSubscribers?: boolean;
 };
 
 const NOTE_MAX_LINES = 3;
@@ -101,24 +83,16 @@ const ChatExtra = ({
   canInviteUsers,
   isMuted,
   phoneCodeList,
-  topicId,
   description,
   chatInviteLink,
-  topicLink,
-  hasSavedMessages,
-  personalChannel,
   className,
   style,
   isInSettings,
-  canViewSubscribers,
 }: OwnProps & StateProps) => {
   const {
     showNotification,
     updateChatMutedState,
-    updateTopicMutedState,
     loadPeerStories,
-    openSavedDialog,
-    requestNextManagementScreen,
     openQrCodeModal,
     openSafetyNumberModal,
   } = getActions();
@@ -131,11 +105,7 @@ const ChatExtra = ({
   } = user || {};
   const { id: chatId, usernames: chatUsernames } = chat || {};
   const peerId = userId || chatId;
-  const {
-    personalChannelMessageId,
-    birthday,
-    note,
-  } = userFullInfo || {};
+  const { birthday, note } = userFullInfo || {};
 
   const lang = useLang();
 
@@ -158,13 +128,10 @@ const ChatExtra = ({
 
   useEffectWithPrevDeps(([prevPeerId]) => {
     if (!peerId || prevPeerId === peerId) return;
-    if (user || (chat && isChatChannel(chat))) {
+    if (user) {
       loadPeerStories({ peerId });
     }
   }, [peerId, chat, user]);
-
-  const isTopicInfo = Boolean(topicId && topicId !== MAIN_THREAD_ID);
-  const shouldRenderAllLinks = chat && isChatChannel(chat);
 
   const activeUsernames = useMemo(() => {
     const result = usernames?.filter((u) => u.isActive);
@@ -183,24 +150,12 @@ const ChatExtra = ({
       return undefined;
     }
 
-    return isTopicInfo ? topicLink! : getChatLink(chat) || chatInviteLink;
-  }, [chat, isTopicInfo, topicLink, chatInviteLink]);
+    return getChatLink(chat) || chatInviteLink;
+  }, [chat, chatInviteLink]);
 
   const handleToggleNotifications = useLastCallback(() => {
     const mutedUntil = isMuted ? UNMUTE_TIMESTAMP : MUTE_INDEFINITE_TIMESTAMP;
-    if (isTopicInfo) {
-      updateTopicMutedState({
-        chatId: chatId!,
-        topicId: topicId!,
-        mutedUntil,
-      });
-    } else {
-      updateChatMutedState({ chatId: chatId!, mutedUntil });
-    }
-  });
-
-  const handleOpenSavedDialog = useLastCallback(() => {
-    openSavedDialog({ chatId: chatOrUserId });
+    updateChatMutedState({ chatId: chatId!, mutedUntil });
   });
 
   const canExpandNote = isNoteCollapsible && isNoteCollapsed;
@@ -231,10 +186,6 @@ const ChatExtra = ({
 
   const handleUsernameClick = useLastCallback((username: ApiUsername, isChat?: boolean) => {
     copy(formatUsername(username.username, isChat), isChat ? 'LinkCopied' : 'UsernameCopied');
-  });
-
-  const handleOpenSubscribers = useLastCallback(() => {
-    requestNextManagementScreen({ screen: ManagementScreens.ChannelSubscribers });
   });
 
   const handleOpenQrCode = useLastCallback((e: React.MouseEvent) => {
@@ -318,26 +269,6 @@ const ChatExtra = ({
           </div>
         </Island>
       )}
-      {personalChannel && (
-        <div className={styles.personalChannel} style={createVtnStyle('personalChannel')}>
-          <h3 className={styles.personalChannelTitle}>{lang('ProfileChannel')}</h3>
-          <span className={styles.personalChannelSubscribers}>
-            {personalChannel.membersCount !== undefined && lang('Subscribers', {
-              count: lang.number(personalChannel.membersCount),
-            }, { pluralValue: personalChannel.membersCount })}
-          </span>
-          <Island className={styles.personalChannelItem}>
-            <Chat
-              chatId={personalChannel.id}
-              orderDiff={0}
-              shiftDiff={0}
-              animationType={ChatAnimationTypes.None}
-              isPreview
-              previewMessageId={personalChannelMessageId}
-            />
-          </Island>
-        </div>
-      )}
       <Island>
         {Boolean(formattedNumber?.length) && (
           <ListItem
@@ -367,19 +298,13 @@ const ChatExtra = ({
             style={createVtnStyle('description')}
           >
             <span className="title word-break allow-selection" dir={lang.isRtl ? 'rtl' : undefined}>
-              {
-                renderText(description, [
-                  'br',
-                  shouldRenderAllLinks ? 'links' : 'app_links',
-                  'emoji',
-                ])
-              }
+              {renderText(description, ['br', 'app_links', 'emoji'])}
             </span>
             <span className="subtitle">{lang(userId ? 'UserBio' : 'Info')}</span>
           </ListItem>
         )}
-        {activeChatUsernames && !isTopicInfo && renderUsernames(activeChatUsernames, true)}
-        {((!activeChatUsernames && canInviteUsers) || isTopicInfo) && link && (
+        {activeChatUsernames && renderUsernames(activeChatUsernames, true)}
+        {!activeChatUsernames && canInviteUsers && link && (
           <ListItem
             icon="link"
             iconBg="orange"
@@ -474,49 +399,18 @@ const ChatExtra = ({
             </div>
           </ListItem>
         )}
-        {hasSavedMessages && !isOwnProfile && !isInSettings && (
-          <ListItem
-            icon="saved-messages-filled"
-            iconBg="blue"
-            className={styles.savedMessages}
-            narrow
-            ripple
-            onClick={handleOpenSavedDialog}
-            style={createVtnStyle('savedMessages')}
-          >
-            <span>{lang('NoteToSelf')}</span>
-          </ListItem>
-        )}
-        {canViewSubscribers && (
-          <ListItem
-            icon="group-filled"
-            iconBg="green"
-            narrow
-            multiline
-            ripple
-            className={styles.subscribers}
-            onClick={handleOpenSubscribers}
-            style={createVtnStyle('subscribers')}
-          >
-            <div className="title">{lang('ProfileItemSubscribers')}</div>
-            <span className="subtitle">{lang.number(chat?.membersCount || 0)}</span>
-          </ListItem>
-        )}
       </Island>
     </div>
   );
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { chatOrUserId, isSavedDialog }): Complete<StateProps> => {
+  (global, { chatOrUserId }): Complete<StateProps> => {
     const { countryList: { phoneCodes: phoneCodeList } } = global;
 
     const chat = chatOrUserId ? selectChat(global, chatOrUserId) : undefined;
     const user = chatOrUserId ? selectUser(global, chatOrUserId) : undefined;
-    const isForum = chat?.isForum;
     const isMuted = chat && getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chat.id));
-    const { threadId } = selectCurrentMessageList(global) || {};
-    const topicId = isForum && threadId ? Number(threadId) : undefined;
 
     const chatFullInfo = chat && selectChatFullInfo(global, chat.id);
     const userFullInfo = user && selectUserFullInfo(global, user.id);
@@ -524,19 +418,9 @@ export default memo(withGlobal<OwnProps>(
     const chatInviteLink = chatFullInfo?.inviteLink;
     const description = userFullInfo?.bio || chatFullInfo?.about;
 
-    const canViewSubscribers = chat && isChatChannel(chat) && isChatAdmin(chat);
     const canInviteUsers = chat && !user && (
-      (!isChatChannel(chat) && !isUserRightBanned(chat, 'inviteUsers'))
-      || getHasAdminRight(chat, 'inviteUsers')
+      !isUserRightBanned(chat, 'inviteUsers') || getHasAdminRight(chat, 'inviteUsers')
     );
-
-    const topicLink = topicId ? selectTopicLink(global, chatOrUserId, topicId) : undefined;
-
-    const hasSavedMessages = !isSavedDialog && global.chats.listIds.saved?.includes(chatOrUserId);
-
-    const personalChannel = userFullInfo?.personalChannelId
-      ? selectChat(global, userFullInfo.personalChannelId)
-      : undefined;
 
     return {
       phoneCodeList,
@@ -545,13 +429,8 @@ export default memo(withGlobal<OwnProps>(
       userFullInfo,
       canInviteUsers,
       isMuted,
-      topicId,
       chatInviteLink,
       description,
-      topicLink,
-      hasSavedMessages,
-      personalChannel,
-      canViewSubscribers,
     };
   },
 )(ChatExtra));

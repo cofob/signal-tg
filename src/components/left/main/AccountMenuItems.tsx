@@ -8,7 +8,6 @@ import { getCurrentProdAccountCount } from '../../../global/helpers';
 import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
 import { getAccountSlotUrl } from '../../../util/multiaccount';
 import { LIMITS } from '../../../limits';
-import { REM } from '../../common/helpers/mediaDimensions';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -112,7 +111,7 @@ const AccountMenuItems = ({
                 href={account.userId !== currentUser.id ? getAccountSlotUrl(Number(slot)) : undefined}
               >
                 {account.isTest && <span className="account-menu-item-test">T</span>}
-                <FullNameTitle peer={mockUser} withEmojiStatus emojiStatusSize={REM} />
+                <FullNameTitle peer={mockUser} />
               </MenuItem>
               {hasSeparator && <MenuSeparator />}
             </>

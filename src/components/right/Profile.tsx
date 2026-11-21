@@ -7,7 +7,6 @@ import type {
   ApiChatFullInfo,
   ApiChatMember,
   ApiMessage,
-  ApiProfileTab,
   ApiStoryAlbum,
   ApiTypeStory,
   ApiUser,
@@ -28,12 +27,10 @@ import {
 import {
   getHasAdminRight,
   getIsDownloading,
-  getIsSavedDialog,
   getMessageDocument,
   getMessageHtmlId,
   getRichMediaMessage,
   isChatBasicGroup,
-  isChatChannel,
   isChatGroup,
   isUserRightBanned,
   parseSharedMediaKey,
@@ -43,7 +40,6 @@ import {
   selectActiveDownloads,
   selectCanBanUsers,
   selectCanEditRank,
-  selectCanUpdateMainTab,
   selectChat,
   selectChatFullInfo,
   selectChatMessages,
@@ -51,10 +47,8 @@ import {
   selectIsChatRestricted,
   selectIsCurrentUserFrozen,
   selectIsRightColumnShown,
-  selectMonoforumChannel,
   selectPeerStories,
   selectPerformanceSettingsValue,
-  selectSimilarChannelIds,
   selectTabState,
   selectTheme,
   selectUser,
@@ -71,16 +65,13 @@ import {
 import { IS_TOUCH_ENV } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
 import { captureEvents, SwipeDirection } from '../../util/captureEvents';
-import { isUserId } from '../../util/entities/ids';
 import { getGridCornerClassName } from '../../util/gridCorners';
 import { buildCollectionByKey } from '../../util/iteratees.ts';
 import { resolveTransitionName } from '../../util/resolveTransitionName.ts';
-import renderText from '../common/helpers/renderText';
 import { getSenderName } from '../left/search/helpers/getSenderName';
 
 import { useViewTransition } from '../../hooks/animations/useViewTransition';
 import { useVtn } from '../../hooks/animations/useVtn.ts';
-import usePeerStoriesPolling from '../../hooks/polling/usePeerStoriesPolling';
 import useTopOverscroll from '../../hooks/scroll/useTopOverscroll.tsx';
 import useFlag from '../../hooks/useFlag';
 import { useIntersectionObserver } from '../../hooks/useIntersectionObserver';
@@ -94,7 +85,6 @@ import useProfileViewportIds from './hooks/useProfileViewportIds';
 import useTransitionFixes from './hooks/useTransitionFixes';
 
 import Audio from '../common/Audio';
-import Avatar from '../common/Avatar';
 import Document from '../common/Document';
 import GroupChatInfo from '../common/GroupChatInfo';
 import Media from '../common/Media';
@@ -106,7 +96,6 @@ import ProfilePoll from '../common/ProfilePoll';
 import WebLink from '../common/WebLink';
 import Island from '../gili/layout/Island';
 import Surface from '../gili/layout/Surface';
-import ChatList from '../left/main/ChatList';
 import MediaStory from '../story/MediaStory';
 import FloatingActionButton from '../ui/FloatingActionButton';
 import InfiniteScroll from '../ui/InfiniteScroll';
@@ -129,11 +118,7 @@ type OwnProps = {
 };
 
 type StateProps = {
-  monoforumChannel?: ApiChat;
-  linkedCommunity?: ApiChat;
-  linkedCommunityChatsCount?: number;
   theme: ThemeKey;
-  isChannel?: boolean;
   currentUserId?: string;
   messagesById?: Record<number, ApiMessage>;
   foundIds?: number[];
@@ -164,14 +149,10 @@ type StateProps = {
   chatInfo: TabState['chatInfo'];
   animationLevel: AnimationLevel;
   shouldWarnAboutFiles?: boolean;
-  similarChannels?: string[];
-  isTopicInfo?: boolean;
-  isSavedDialog?: boolean;
   isSavedMessages?: boolean;
   isSynced?: boolean;
   hasAvatar?: boolean;
   peerFullInfo?: ApiUserFullInfo | ApiChatFullInfo;
-  canUpdateMainTab?: boolean;
   canAutoPlayGifs?: boolean;
 };
 
@@ -199,12 +180,6 @@ const NESTED_CONTENT_SELECTOR = (
   `.Transition > .Transition_slide-active > .Transition > .Transition_slide-active > .${styles.content}`
 );
 
-const VALID_CHANNEL_MAIN_TAB_TYPES = new Set<StringAutocomplete<ApiProfileTab>>([
-  'stories', 'media', 'documents', 'audio', 'voice', 'links', 'gif',
-]);
-const VALID_USER_MAIN_TAB_TYPES = new Set<StringAutocomplete<ApiProfileTab>>([
-  'stories',
-]);
 const SHARED_MEDIA_TYPES = new Set<StringAutocomplete<SharedMediaType>>([
   'media', 'documents', 'links', 'audio', 'voice', 'gif', 'polls',
 ]);
@@ -231,7 +206,6 @@ const CONTENT_LIST_CLASS: Record<string, string> = {
   storiesArchive: styles.storiesArchiveList,
   members: styles.membersList,
   commonChats: styles.commonChatsList,
-  similarChannels: styles.similarChannelsList,
 };
 
 const Profile = ({
@@ -241,10 +215,6 @@ const Profile = ({
   chatInfo,
   profileState,
   theme,
-  monoforumChannel,
-  linkedCommunity,
-  linkedCommunityChatsCount,
-  isChannel,
   currentUserId,
   messagesById,
   foundIds,
@@ -274,21 +244,16 @@ const Profile = ({
   isChatProtected,
   animationLevel,
   shouldWarnAboutFiles,
-  similarChannels,
-  isTopicInfo,
-  isSavedDialog,
   isSavedMessages,
   isSynced,
   hasAvatar,
   peerFullInfo,
-  canUpdateMainTab,
   canAutoPlayGifs,
   onProfileStateChange,
   onProfileExpandedChange,
 }: OwnProps & StateProps) => {
   const {
     setSharedMediaSearchType,
-    loadMoreMembers,
     loadCommonChats,
     openChat,
     searchSharedMediaMessages,
@@ -298,15 +263,11 @@ const Profile = ({
     setNewChatMembersDialogState,
     loadPeerProfileStories,
     loadStoriesArchive,
-    loadChannelRecommendations,
     loadStoryAlbums,
     resetSelectedStoryAlbum,
     changeProfileTab,
-    setMainProfileTab,
     openEditRankModal,
     openDeleteMemberModal,
-    loadFullCommunity,
-    openCommunityPanel,
   } = getActions();
 
   const containerRef = useRef<HTMLDivElement>();
@@ -319,24 +280,15 @@ const Profile = ({
   const isClosed = !chatInfo.isOpen;
   const { profileTab, forceScrollProfileTab, isOwnProfile } = chatInfo;
 
-  const profileId = isSavedDialog ? String(threadId) : chatId;
-  const isGeneralSavedMessages = isSavedMessages && !isSavedDialog;
+  const profileId = chatId;
   const [isProfileExpanded, expandProfile, collapseProfile] = useFlag();
 
   useEffect(() => {
     onProfileExpandedChange?.(isProfileExpanded);
   }, [isProfileExpanded, onProfileExpandedChange]);
 
-  const isUser = isUserId(chatId);
-  const validMainTabTypes = isUser ? VALID_USER_MAIN_TAB_TYPES : VALID_CHANNEL_MAIN_TAB_TYPES;
-  const mainTab = peerFullInfo?.mainTab;
-
   const tabs = useMemo(() => {
     const arr: LocalTabProps[] = [];
-    if (isGeneralSavedMessages) {
-      arr.push({ type: 'dialogs', key: 'ProfileTabSavedDialogs' });
-    }
-
     if (hasStoriesTab) {
       arr.push({ type: 'stories', key: 'ProfileTabStories' });
     }
@@ -353,8 +305,7 @@ const Profile = ({
       arr.push(...TABS);
     }
 
-    // Voice messages filter currently does not work in forum topics. Return it when it's fixed on the server side.
-    if (!isTopicInfo && !isOwnProfile) {
+    if (!isOwnProfile) {
       arr.push({ type: 'voice', key: 'ProfileTabVoice' });
     }
 
@@ -366,46 +317,18 @@ const Profile = ({
       arr.push({ type: 'commonChats', key: 'ProfileTabSharedGroups' });
     }
 
-    if (isChannel && similarChannels?.length && !isOwnProfile) {
-      arr.push({ type: 'similarChannels', key: 'ProfileTabSimilarChannels' });
-    }
-
     // Fallback to prevent errors in edge cases
     // TODO: Handle no tabs case, skip shared media block
     if (!arr.length) {
       arr.push(TABS[0]);
     }
 
-    if (mainTab) {
-      const mainTabIndex = arr.findIndex((tab) => tab.type === mainTab);
-      if (mainTabIndex !== -1) {
-        const newFirstTab = arr[mainTabIndex];
-        arr.splice(mainTabIndex, 1);
-        arr.unshift(newFirstTab);
-      }
-    }
-
-    return arr.map((tab) => {
-      const contextActions: MenuItemContextAction[] | undefined = canUpdateMainTab && mainTab !== tab.type
-        && validMainTabTypes.has(tab.type) ? [{
-          title: lang('ProfileMenuSetMainTab'),
-          icon: 'reorder-tabs',
-          handler: () => {
-            setMainProfileTab({ chatId, tab: tab.type as ApiProfileTab });
-          },
-        }] : undefined;
-
-      return {
-        type: tab.type,
-        title: lang(tab.key),
-        contextActions,
-      } satisfies TabWithPropertiesAndType;
-    });
+    return arr.map((tab) => ({
+      type: tab.type,
+      title: lang(tab.key),
+    } satisfies TabWithPropertiesAndType));
   }, [
-    isGeneralSavedMessages, hasStoriesTab, hasMembersTab,
-    isTopicInfo,
-    hasCommonChatsTab, isChannel, similarChannels?.length, lang, isOwnProfile,
-    mainTab, chatId, canUpdateMainTab, validMainTabTypes,
+    hasStoriesTab, hasMembersTab, hasCommonChatsTab, lang, isOwnProfile,
   ]);
 
   const [allowAutoScrollToTabs, startAutoScrollToTabsIfNeeded, stopAutoScrollToTabs] = useFlag(false);
@@ -437,23 +360,6 @@ const Profile = ({
   const handleSwitchTab = useLastCallback((index: number) => {
     startAutoScrollToTabsIfNeeded();
     setActiveTab(tabs[index].type);
-  });
-
-  useEffect(() => {
-    if (isChannel && !similarChannels && isSynced) {
-      loadChannelRecommendations({ chatId });
-    }
-  }, [chatId, isChannel, similarChannels, isSynced]);
-
-  useEffect(() => {
-    if (isActive && linkedCommunity && linkedCommunityChatsCount === undefined) {
-      loadFullCommunity({ communityId: linkedCommunity.id });
-    }
-  }, [isActive, linkedCommunity, linkedCommunityChatsCount]);
-
-  const handleOpenLinkedCommunity = useLastCallback(() => {
-    if (!linkedCommunity) return;
-    openCommunityPanel({ communityId: linkedCommunity.id });
   });
 
   useEffect(() => {
@@ -500,18 +406,13 @@ const Profile = ({
   const handleLoadStoriesArchive = useLastCallback(({ offsetId }: { offsetId: number }) => {
     loadStoriesArchive({ peerId: chatId, offsetId });
   });
-  const handleLoadMoreMembers = useLastCallback(() => {
-    if (!isSynced) return;
-    loadMoreMembers({ chatId });
-  });
 
   const [scrollToTopKey, setScrollToTopKey] = useState(0);
   const handleScrollToTop = useLastCallback(() => {
     setScrollToTopKey(scrollToTopKey + 1);
   });
 
-  const [resultType, viewportIds, getMore, noProfileInfo] = useProfileViewportIds({
-    loadMoreMembers: handleLoadMoreMembers,
+  const [resultType, viewportIds, getMore] = useProfileViewportIds({
     searchMessages: searchSharedMediaMessages,
     loadStories: handleLoadPeerStories,
     loadStoriesArchive: handleLoadStoriesArchive,
@@ -529,7 +430,6 @@ const Profile = ({
     storyIds,
     pinnedStoryIds,
     archiveStoryIds,
-    similarChannels,
     scrollToTopKey,
   });
 
@@ -542,7 +442,7 @@ const Profile = ({
     }
   }, [getMore, viewportIds, resultType, mediaSearchType, isSynced]);
 
-  const shouldRenderProfileInfo = !noProfileInfo && !isSavedMessages;
+  const shouldRenderProfileInfo = !isSavedMessages;
 
   const isFirstTab = tabs[0].type === resultType;
   const activeKey = tabs.findIndex(({ type }) => type === resultType);
@@ -563,8 +463,6 @@ const Profile = ({
 
     return () => timers.forEach(clearTimeout);
   }, [hasStoryAlbums, markStoryAlbumsShowed]);
-
-  usePeerStoriesPolling(resultType === 'members' ? viewportIds as string[] : undefined);
 
   const handleStopAutoScrollToTabs = useLastCallback(() => {
     stopAutoScrollToTabs();
@@ -731,7 +629,7 @@ const Profile = ({
     return actions;
   }
 
-  const shouldWrapInInfiniteScroll = shouldWrapInIsland && resultType !== 'dialogs';
+  const shouldWrapInInfiniteScroll = shouldWrapInIsland;
   const shouldUseTransitionForContent = resultType === 'stories';
 
   function wrapInInfiniteScroll(content: TeactNode) {
@@ -772,22 +670,6 @@ const Profile = ({
   }
 
   function renderContent() {
-    if (resultType === 'dialogs') {
-      return wrapInIsland(
-        <ChatList
-          className={styles.savedDialogs}
-          folderType="saved"
-          isActive
-          noAbsolutePositioning
-          noVirtualization
-          noScrollRestore
-          noFastList
-          scrollContainerClosest=".Profile"
-        />,
-        styles.savedDialogsIsland,
-      );
-    }
-
     const needsMessages = MESSAGE_BASED_TABS.has(resultType);
     const noContent = !viewportIds || !canRenderContent || (needsMessages && !messagesById);
     const noSpinner = isFirstTab && !canRenderContent;
@@ -1053,20 +935,6 @@ const Profile = ({
               <GroupChatInfo chatId={id} />
             </ListItem>
           ))
-        ) : resultType === 'similarChannels' ? (
-          <div key={resultType}>
-            {(viewportIds as string[]).map((channelId, i) => (
-              <ListItem
-                key={channelId}
-                teactOrderKey={i}
-                className="chat-item-clickable search-result"
-
-                onClick={() => openChat({ id: channelId })}
-              >
-                <GroupChatInfo avatarSize="large" chatId={channelId} withFullInfo />
-              </ListItem>
-            ))}
-          </div>
         ) : undefined}
       </div>
     );
@@ -1082,12 +950,6 @@ const Profile = ({
   })();
 
   function renderProfileInfo(peerId: string, isReady: boolean) {
-    const linkedCommunityStatus = linkedCommunityChatsCount !== undefined
-      ? lang('CommunityWithChats', {
-        count: linkedCommunityChatsCount,
-      }, { pluralValue: linkedCommunityChatsCount })
-      : undefined;
-
     return (
       <div className={buildClassName(styles.profileInfo, 'profile-info')}>
         <ProfileInfo
@@ -1095,34 +957,10 @@ const Profile = ({
           isActive={isActive}
           peerId={peerId}
           canPlayVideo={isReady}
-          isForMonoforum={Boolean(monoforumChannel)}
           onExpand={handleExpandProfile}
         />
-        {linkedCommunity && (
-          <Island className={styles.linkedCommunityIsland}>
-            <ListItem
-              leftElement={(
-                <Avatar
-                  className={styles.linkedCommunityAvatar}
-                  peer={linkedCommunity}
-                  size="medium"
-                />
-              )}
-              multiline
-              narrow
-              ripple
-              onClick={handleOpenLinkedCommunity}
-            >
-              <span className="title" dir="auto">{renderText(linkedCommunity.title)}</span>
-              {linkedCommunityStatus && (
-                <span className="subtitle" dir="auto">{linkedCommunityStatus}</span>
-              )}
-            </ListItem>
-          </Island>
-        )}
         <ChatExtra
           chatOrUserId={profileId}
-          isSavedDialog={isSavedDialog}
           isOwnProfile={isOwnProfile}
           className={styles.chatExtraBlock}
         />
@@ -1169,12 +1007,12 @@ const Profile = ({
       ref={containerRef}
       scrollable
       noPadding
-      className={buildClassName(styles.root, 'Profile', isGeneralSavedMessages && 'is-saved-messages')}
+      className={buildClassName(styles.root, 'Profile')}
       onScroll={handleScroll}
     >
-      {!noProfileInfo && !isSavedMessages && (
+      {!isSavedMessages && (
         renderProfileInfo(
-          monoforumChannel?.id || profileId,
+          profileId,
           isRightColumnShown && canRenderContent,
         )
       )}
@@ -1253,26 +1091,21 @@ export default memo(withGlobal<OwnProps>(
     const { currentType: mediaSearchType, resultsByType } = selectCurrentSharedMediaSearch(global) || {};
     const { foundIds } = (resultsByType && mediaSearchType && resultsByType[mediaSearchType]) || {};
 
-    const isTopicInfo = Boolean(chat?.isForum && threadId && threadId !== MAIN_THREAD_ID);
-
     const { byId: usersById, statusesById: userStatusesById } = global.users;
     const { byId: chatsById } = global.chats;
 
     const isSavedMessages = chatId === global.currentUserId && !isOwnProfile;
-    const isSavedDialog = !isOwnProfile ? getIsSavedDialog(chatId, threadId, global.currentUserId) : undefined;
 
     const isGroup = chat && isChatGroup(chat);
-    const isChannel = chat && isChatChannel(chat);
-    const hasMembersTab = !isTopicInfo && !isSavedDialog && isGroup && !chat?.isMonoforum;
+    const hasMembersTab = isGroup;
     const members = chatFullInfo?.members;
     const adminMembersById = chatFullInfo?.adminMembersById;
     const areMembersHidden = hasMembersTab && chat
       && (chat.isForbidden || (chatFullInfo && !chatFullInfo.canViewMembers));
     const canAddMembers = hasMembersTab && chat
-      && (getHasAdminRight(chat, 'inviteUsers') || (!isChannel && !isUserRightBanned(chat, 'inviteUsers')));
+      && (getHasAdminRight(chat, 'inviteUsers') || !isUserRightBanned(chat, 'inviteUsers'));
     const canDeleteMembers = hasMembersTab && selectCanBanUsers(global, chatId);
     const activeDownloads = selectActiveDownloads(global);
-    const { similarChannelIds } = selectSimilarChannelIds(global, chatId) || {};
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
 
     const peer = user || chat;
@@ -1301,12 +1134,6 @@ export default memo(withGlobal<OwnProps>(
 
     const storyAlbums = global.stories.albumsByPeerId?.[chatId];
 
-    const monoforumChannel = selectMonoforumChannel(global, chatId);
-    const linkedCommunityId = chat?.linkedCommunityId;
-    const linkedCommunity = linkedCommunityId ? selectChat(global, linkedCommunityId) : undefined;
-    const linkedCommunityChatsCount = linkedCommunityId
-      ? selectChatFullInfo(global, linkedCommunityId)?.linkedPeers?.length
-      : undefined;
     const isRestricted = chat && selectIsChatRestricted(global, chat.id);
     const hasAvatar = Boolean(peer?.avatarPhotoId);
 
@@ -1314,7 +1141,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       theme: selectTheme(global),
-      isChannel,
       messagesById,
       foundIds,
       mediaSearchType,
@@ -1342,20 +1168,13 @@ export default memo(withGlobal<OwnProps>(
       chatInfo,
       animationLevel,
       shouldWarnAboutFiles,
-      similarChannels: similarChannelIds,
-      isTopicInfo,
-      isSavedDialog,
       isSavedMessages,
       isSynced: global.isSynced,
       members: hasMembersTab ? members : undefined,
       adminMembersById: hasMembersTab ? adminMembersById : undefined,
       commonChatIds: commonChats?.ids,
-      monoforumChannel,
-      linkedCommunity,
-      linkedCommunityChatsCount,
       hasAvatar,
       peerFullInfo,
-      canUpdateMainTab: selectCanUpdateMainTab(global, chatId),
       canAutoPlayGifs,
     };
   },

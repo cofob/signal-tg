@@ -84,24 +84,8 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateFavoriteStickers':
-      actions.loadFavoriteStickers();
-      break;
-
     case 'updateRecentStickers':
       actions.loadRecentStickers();
-      break;
-
-    case 'updateRecentReactions':
-      actions.loadRecentReactions();
-      break;
-
-    case 'updateRecentEmojiStatuses':
-      actions.loadRecentEmojiStatuses();
-      break;
-
-    case 'updateSavedReactionTags':
-      actions.loadSavedReactionTags();
       break;
 
     case 'updateMoveStickerSetToTop': {
@@ -123,10 +107,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       actions.reorderStickerSets({ order, isCustomEmoji: update.isCustomEmoji });
       break;
     }
-
-    case 'updateSavedGifs':
-      actions.loadSavedGifs();
-      break;
 
     case 'updatePrivacy':
       global = {

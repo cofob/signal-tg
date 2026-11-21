@@ -29,11 +29,9 @@ import {
   selectCanAnimateInterface,
   selectChat,
   selectChatMessage,
-  selectCurrentChat,
   selectCurrentMessageList,
   selectIsChatWithSelf,
   selectTabState,
-  selectTopic,
 } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 
@@ -513,49 +511,6 @@ addActionHandler('updateLastRenderedCustomEmojis', (global, actions, payload): A
   };
 });
 
-addActionHandler('openCreateTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
-
-  // Topic panel can be opened only if there is a selected chat
-  const currentChat = selectCurrentChat(global, tabId);
-  if (!currentChat) actions.openChat({ id: chatId, tabId });
-
-  return updateTabState(global, {
-    createTopicPanel: {
-      chatId,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeCreateTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    createTopicPanel: undefined,
-  }, tabId);
-});
-
-addActionHandler('openEditTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { chatId, topicId, tabId = getCurrentTabId() } = payload;
-
-  // Topic panel can be opened only if there is a selected chat
-  const currentChat = selectCurrentChat(global, tabId);
-  if (!currentChat) actions.openChat({ id: chatId, tabId });
-
-  return updateTabState(global, {
-    editTopicPanel: {
-      chatId,
-      topicId,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeEditTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    editTopicPanel: undefined,
-  }, tabId);
-});
-
 addActionHandler('updateArchiveSettings', (global, actions, payload): ActionReturnType => {
   const { archiveSettings } = global;
   const { isHidden = archiveSettings.isHidden, isMinimized = archiveSettings.isMinimized } = payload;
@@ -657,16 +612,10 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
   const messageList = selectCurrentMessageList(global, tabId);
 
   if (messageList && canDisplayChatInTitle && !global.passcode.isScreenLocked) {
-    const { chatId, threadId } = messageList;
+    const { chatId } = messageList;
     const currentChat = selectChat(global, chatId);
     if (currentChat) {
       const title = getChatTitle(getTranslationFn(), currentChat, chatId === currentUserId);
-      const topic = selectTopic(global, chatId, threadId);
-      if (currentChat.isForum && topic) {
-        setPageTitle(`${prefix}${title} › ${topic.title}`);
-        return;
-      }
-
       setPageTitle(`${prefix}${title}`);
       return;
     }

@@ -28,15 +28,12 @@ type StateProps = Pick<AccountSettings, (
   'canAutoLoadPhotoFromContacts' |
   'canAutoLoadPhotoInPrivateChats' |
   'canAutoLoadPhotoInGroups' |
-  'canAutoLoadPhotoInChannels' |
   'canAutoLoadVideoFromContacts' |
   'canAutoLoadVideoInPrivateChats' |
   'canAutoLoadVideoInGroups' |
-  'canAutoLoadVideoInChannels' |
   'canAutoLoadFileFromContacts' |
   'canAutoLoadFileInPrivateChats' |
   'canAutoLoadFileInGroups' |
-  'canAutoLoadFileInChannels' |
   'autoLoadFileMaxSizeMb'
 )> & {
   signalProxyUrl?: string;
@@ -48,15 +45,12 @@ const SettingsDataStorage = ({
   canAutoLoadPhotoFromContacts,
   canAutoLoadPhotoInPrivateChats,
   canAutoLoadPhotoInGroups,
-  canAutoLoadPhotoInChannels,
   canAutoLoadVideoFromContacts,
   canAutoLoadVideoInPrivateChats,
   canAutoLoadVideoInGroups,
-  canAutoLoadVideoInChannels,
   canAutoLoadFileFromContacts,
   canAutoLoadFileInPrivateChats,
   canAutoLoadFileInGroups,
-  canAutoLoadFileInChannels,
   autoLoadFileMaxSizeMb,
   signalProxyUrl,
   shouldAskWhereToSave,
@@ -117,7 +111,6 @@ const SettingsDataStorage = ({
     canAutoLoadFromContacts: boolean,
     canAutoLoadInPrivateChats: boolean,
     canAutoLoadInGroups: boolean,
-    canAutoLoadInChannels: boolean,
   ) {
     return (
       <>
@@ -139,11 +132,6 @@ const SettingsDataStorage = ({
             checked={canAutoLoadInGroups}
             onCheck={(isChecked) => setSettingOption({ [`canAutoLoad${key}InGroups`]: isChecked })}
           />
-          <Checkbox
-            label={lang('AutoDownloadSettingsChannels')}
-            checked={canAutoLoadInChannels}
-            onCheck={(isChecked) => setSettingOption({ [`canAutoLoad${key}InChannels`]: isChecked })}
-          />
           {key === 'File' && renderContentSizeSlider()}
         </Island>
       </>
@@ -158,7 +146,6 @@ const SettingsDataStorage = ({
         canAutoLoadPhotoFromContacts,
         canAutoLoadPhotoInPrivateChats,
         canAutoLoadPhotoInGroups,
-        canAutoLoadPhotoInChannels,
       )}
       {renderAutoDownloadBlock(
         lang('AutoDownloadVideosTitle'),
@@ -166,7 +153,6 @@ const SettingsDataStorage = ({
         canAutoLoadVideoFromContacts,
         canAutoLoadVideoInPrivateChats,
         canAutoLoadVideoInGroups,
-        canAutoLoadVideoInChannels,
       )}
       {renderAutoDownloadBlock(
         lang('AutoDownloadFilesTitle'),
@@ -174,7 +160,6 @@ const SettingsDataStorage = ({
         canAutoLoadFileFromContacts,
         canAutoLoadFileInPrivateChats,
         canAutoLoadFileInGroups,
-        canAutoLoadFileInChannels,
       )}
       {IS_TAURI && (
         <Island>
@@ -222,15 +207,12 @@ export default memo(withGlobal<OwnProps>(
       'canAutoLoadPhotoFromContacts',
       'canAutoLoadPhotoInPrivateChats',
       'canAutoLoadPhotoInGroups',
-      'canAutoLoadPhotoInChannels',
       'canAutoLoadVideoFromContacts',
       'canAutoLoadVideoInPrivateChats',
       'canAutoLoadVideoInGroups',
-      'canAutoLoadVideoInChannels',
       'canAutoLoadFileFromContacts',
       'canAutoLoadFileInPrivateChats',
       'canAutoLoadFileInGroups',
-      'canAutoLoadFileInChannels',
       'autoLoadFileMaxSizeMb',
     ]);
     const { signalProxyUrl, shouldAskWhereToSave } = selectSharedSettings(global);

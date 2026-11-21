@@ -175,7 +175,6 @@ const Main = ({
     loadAvailableReactions,
     loadStickerSets,
     loadDiceStickers,
-    loadDefaultTopicIcons,
     loadAddedStickers,
     ensureTimeFormat,
     closeStickerSetModal,
@@ -186,7 +185,7 @@ const Main = ({
     loadCustomEmojis,
     loadGenericEmojiEffects,
     checkAppVersion,
-    openThread,
+    openChat,
     toggleLeftColumn,
     updatePageTitle,
     loadTopReactions,
@@ -196,7 +195,6 @@ const Main = ({
     loadPeerColors,
     loadSavedReactionTags,
     openRecoveryKeyModal,
-    loadAllChats,
     loadAllStories,
     loadAllHiddenStories,
     loadStorySettings,
@@ -278,7 +276,6 @@ const Main = ({
       loadEmojiKeywords({ language: BASE_EMOJI_KEYWORD_LANG });
       loadFeaturedEmojiStickers();
       loadSavedReactionTags();
-      loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
       loadGenericEmojiEffects();
@@ -286,13 +283,6 @@ const Main = ({
       loadRestrictedEmojiStickers();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
-
-  // The saved list is keyed on the current user, who may land in the global after the first sync
-  useEffect(() => {
-    if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen && hasCurrentUser) {
-      loadAllChats({ listType: 'saved' });
-    }
-  }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen, hasCurrentUser]);
 
   // Language-based API calls
   useEffect(() => {
@@ -380,9 +370,8 @@ const Main = ({
     const parsedLocationHash = parseLocationHash(currentUserId);
     if (!parsedLocationHash) return;
 
-    openThread({
-      chatId: parsedLocationHash.chatId,
-      threadId: parsedLocationHash.threadId,
+    openChat({
+      id: parsedLocationHash.chatId,
       type: parsedLocationHash.type,
     });
   }, [currentUserId]);

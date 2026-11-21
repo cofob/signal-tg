@@ -17,7 +17,6 @@ import {
   getIsChatSilent,
   getShouldIgnoreNotificationMute,
   getShouldShowMessagePreview,
-  mergeNotifySettings,
 } from '../global/helpers/notifications';
 import { getMessageSenderName } from '../global/helpers/peers';
 import {
@@ -29,7 +28,6 @@ import {
   selectPeer,
   selectSender,
   selectSettingsKeys,
-  selectTopicFromMessage,
 } from '../global/selectors';
 import { callApi } from '../api';
 import { IS_TAURI } from './browser/globalEnvironment';
@@ -40,7 +38,6 @@ import { getTranslationFn } from './localization';
 import * as mediaLoader from './mediaLoader';
 import { getPushIdentity } from './pushNotifications';
 import { debounce } from './schedulers';
-import { getServerTime } from './serverTime';
 
 import MessageSummary from '../components/common/MessageSummary';
 
@@ -179,10 +176,7 @@ function checkIfShouldNotify(chat: ApiChat, message: Partial<ApiMessage>) {
   const global = getGlobal();
   const notifyDefaults = selectNotifyDefaults(global);
   const notifyException = getChatNotifyException(global, chat);
-  const isChatMuted = getIsChatMuted(chat, notifyDefaults, notifyException);
-  const topic = selectTopicFromMessage(global, message as ApiMessage);
-  const topicMutedUntil = topic?.notifySettings.mutedUntil;
-  const isMuted = topicMutedUntil === undefined ? isChatMuted : topicMutedUntil > getServerTime();
+  const isMuted = getIsChatMuted(chat, notifyDefaults, notifyException);
   const shouldNotifyAboutPinnedMessages = global.settings.byKey.shouldNotifyAboutPinnedMessages;
   const shouldIgnoreMute = getShouldIgnoreNotificationMute(message, shouldNotifyAboutPinnedMessages);
 
@@ -274,11 +268,9 @@ export async function notifyAboutMessage({
   const global = getGlobal();
   const { hasWebNotifications } = selectSettingsKeys(global);
   if (!checkIfShouldNotify(chat, message)) return;
-  const isChatSilent = getIsChatSilent(
+  const isSilent = getIsChatSilent(
     chat, selectNotifyDefaults(global), getChatNotifyException(global, chat),
   );
-  const topic = selectTopicFromMessage(global, message as ApiMessage);
-  const isSilent = topic?.notifySettings.hasSound === undefined ? isChatSilent : !topic.notifySettings.hasSound;
 
   const areNotificationsSupported = checkIfNotificationsSupported();
   if (!hasWebNotifications || !areNotificationsSupported) {
@@ -399,12 +391,7 @@ export function closeMessageNotifications(payload: { chatId: string; lastReadInb
 }
 
 function getChatNotifyException(global: GlobalState, chat: ApiChat) {
-  const chatNotifyException = selectNotifyException(global, chat.id);
-  const communityNotifyException = chat.linkedCommunityId
-    ? selectNotifyException(global, chat.linkedCommunityId)
-    : undefined;
-
-  return mergeNotifySettings(communityNotifyException, chatNotifyException);
+  return selectNotifyException(global, chat.id);
 }
 
 // Notify service worker that client is fully loaded

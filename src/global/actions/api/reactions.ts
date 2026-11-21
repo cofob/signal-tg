@@ -4,7 +4,6 @@ import {
   ApiMediaFormat,
   type ApiMessage,
   type ApiSavedReactionTag,
-  MAIN_THREAD_ID,
 } from '../../../api/types';
 
 import { GENERAL_REFETCH_INTERVAL } from '../../../config';
@@ -26,21 +25,18 @@ import {
   isSameReaction,
   isUserRightBanned,
 } from '../../helpers';
-import { addActionHandler, getGlobal, getPromiseActions, setGlobal } from '../../index';
+import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   replaceChatMessages,
   updateChatMessage,
-  updateUnreadCounters,
 } from '../../reducers';
 import {
   addMessageReaction,
   pauseReactionPolling,
   removePeerReactions,
-  removeUnreadReactions,
   subtractXForEmojiInteraction,
 } from '../../reducers/reactions';
 import { updateTabState } from '../../reducers/tabs';
-import { updateThreadReadState } from '../../reducers/threads';
 import {
   selectChat,
   selectChatMessage,
@@ -53,7 +49,6 @@ import {
   selectPerformanceSettingsValue,
   selectTabState,
 } from '../../selectors';
-import { selectThreadReadState } from '../../selectors/threads';
 
 const INTERACTION_RANDOM_OFFSET = 40;
 
@@ -378,41 +373,8 @@ addActionHandler('sendWatchingEmojiInteraction', (global, actions, payload): Act
   }, tabId);
 });
 
-addActionHandler('loadUnreadReactions', async (global, actions, payload): Promise<void> => {
-  const { chatId, threadId = MAIN_THREAD_ID, offsetId } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('fetchUnreadReactions', {
-    chat,
-    threadId: threadId !== MAIN_THREAD_ID ? threadId : undefined,
-    offsetId,
-  });
-
-  if (!result) return;
-
-  const { messages, topics, totalCount } = result;
-
-  global = getGlobal();
-  global = updateUnreadCounters({
-    global,
-    chatId,
-    threadId,
-    messages,
-    topics,
-    totalCount,
-    unreadCountKey: 'unreadReactionsCount',
-  });
-
-  setGlobal(global);
-});
-
 addActionHandler('animateUnreadReaction', (global, actions, payload): ActionReturnType => {
   const { chatId, messageIds, tabId = getCurrentTabId() } = payload;
-
-  global = removeUnreadReactions({ global, chatId, ids: messageIds });
-
-  setGlobal(global);
 
   actions.markMessagesRead({ chatId, messageIds });
 
@@ -432,38 +394,6 @@ addActionHandler('animateUnreadReaction', (global, actions, payload): ActionRetu
   });
 
   return undefined;
-});
-
-addActionHandler('focusNextReaction', async (global, actions, payload): Promise<void> => {
-  const { chatId, threadId = MAIN_THREAD_ID, tabId = getCurrentTabId() } = payload || {};
-  let readState = selectThreadReadState(global, chatId, threadId);
-
-  if (!readState?.unreadReactions?.length) {
-    await getPromiseActions().loadUnreadReactions({ chatId, threadId });
-
-    global = getGlobal();
-    readState = selectThreadReadState(global, chatId, threadId);
-    if (!readState?.unreadReactions?.length) return;
-  }
-
-  actions.focusMessage({
-    chatId, threadId, messageId: readState.unreadReactions[0], tabId, scrollTargetPosition: 'end',
-  });
-  actions.markMessagesRead({ chatId, messageIds: [readState.unreadReactions[0]] });
-});
-
-addActionHandler('readAllReactions', (global, actions, payload): ActionReturnType => {
-  const { chatId, threadId = MAIN_THREAD_ID } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  callApi('readAllReactions', { chat, threadId: threadId !== MAIN_THREAD_ID ? threadId : undefined });
-
-  global = updateThreadReadState(global, chatId, threadId, {
-    unreadReactionsCount: 0,
-    unreadReactions: undefined,
-  });
-  return global;
 });
 
 addActionHandler('loadTopReactions', async (global): Promise<void> => {

@@ -15,9 +15,7 @@ import {
   selectIsChatWithSelf,
   selectShouldSchedule,
   selectStickerSet,
-  selectTopic,
 } from '../../global/selectors';
-import { selectThreadInfo } from '../../global/selectors/threads';
 import buildClassName from '../../util/buildClassName';
 import { copyTextToClipboard } from '../../util/clipboard';
 import { buildStickerPackLink } from '../../util/signalLinks';
@@ -260,11 +258,8 @@ export default memo(withGlobal<OwnProps>(
     const sendOptions = chat
       ? getAllowedAttachmentOptions(chat, isSavedMessages)
       : undefined;
-    const threadInfo = chatId && threadId ? selectThreadInfo(global, chatId, threadId) : undefined;
-    const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-    const topic = chatId && threadId ? selectTopic(global, chatId, threadId) : undefined;
     const canSendStickers = Boolean(
-      chat && threadId && getCanPostInChat(chat, topic, isMessageThread)
+      chat && threadId && getCanPostInChat(chat)
       && sendOptions?.canSendStickers,
     );
 

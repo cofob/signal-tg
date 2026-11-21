@@ -7,11 +7,8 @@ import { ManagementScreens } from '../../../types';
 
 import { selectCurrentManagementType } from '../../../global/selectors';
 
-import ManageChannel from './ManageChannel';
 import ManageChatAdministrators from './ManageChatAdministrators';
-import ManageChatPrivacyType from './ManageChatPrivacyType';
 import ManageChatRemovedUsers from './ManageChatRemovedUsers';
-import ManageDiscussion from './ManageDiscussion';
 import ManageGroup from './ManageGroup';
 import ManageGroupAdminRights from './ManageGroupAdminRights';
 import ManageGroupMembers from './ManageGroupMembers';
@@ -22,9 +19,7 @@ import ManageInvite from './ManageInvite';
 import ManageInviteInfo from './ManageInviteInfo';
 import ManageInvites from './ManageInvites';
 import ManageJoinRequests from './ManageJoinRequests';
-import ManageReactions from './ManageReactions';
 import ManageUser from './ManageUser';
-import NewDiscussionGroup from './NewDiscussionGroup.tsx';
 
 export type OwnProps = {
   chatId: string;
@@ -72,8 +67,6 @@ const Management: FC<OwnProps & StateProps> = ({
               onScreenSelect={onScreenSelect}
               onClose={onClose}
               isActive={isActive || [
-                ManagementScreens.ChatPrivacyType,
-                ManagementScreens.Discussion,
                 ManagementScreens.GroupPermissions,
                 ManagementScreens.ChatAdministrators,
                 ManagementScreens.GroupRemovedUsers,
@@ -81,26 +74,6 @@ const Management: FC<OwnProps & StateProps> = ({
                 ManagementScreens.GroupUserPermissions,
                 ManagementScreens.ChatAdminRights,
                 ManagementScreens.ChatNewAdminRights,
-                ManagementScreens.GroupRecentActions,
-              ].includes(currentScreen)}
-            />
-          );
-        case 'channel':
-          return (
-            <ManageChannel
-              key={chatId}
-              chatId={chatId}
-              onScreenSelect={onScreenSelect}
-              onClose={onClose}
-              isActive={isActive || [
-                ManagementScreens.ChannelSubscribers,
-                ManagementScreens.ChatAdministrators,
-                ManagementScreens.ChannelRemovedUsers,
-                ManagementScreens.Discussion,
-                ManagementScreens.ChatPrivacyType,
-                ManagementScreens.ChatAdminRights,
-                ManagementScreens.ChatNewAdminRights,
-                ManagementScreens.GroupRecentActions,
               ].includes(currentScreen)}
             />
           );
@@ -108,25 +81,6 @@ const Management: FC<OwnProps & StateProps> = ({
 
       break;
     }
-
-    case ManagementScreens.ChatPrivacyType:
-      return (
-        <ManageChatPrivacyType
-          chatId={chatId}
-          isActive={isActive}
-          onClose={onClose}
-        />
-      );
-
-    case ManagementScreens.Discussion:
-      return (
-        <ManageDiscussion
-          chatId={chatId}
-          onScreenSelect={onScreenSelect}
-          isActive={isActive}
-          onClose={onClose}
-        />
-      );
 
     case ManagementScreens.GroupPermissions:
       return (
@@ -143,7 +97,6 @@ const Management: FC<OwnProps & StateProps> = ({
         />
       );
 
-    case ManagementScreens.ChannelRemovedUsers:
     case ManagementScreens.GroupRemovedUsers:
       return (
         <ManageChatRemovedUsers
@@ -187,18 +140,7 @@ const Management: FC<OwnProps & StateProps> = ({
           isActive={isActive || [
             ManagementScreens.ChatAdminRights,
             ManagementScreens.ChatNewAdminRights,
-            ManagementScreens.GroupRecentActions,
           ].includes(currentScreen)}
-          onClose={onClose}
-        />
-      );
-
-    case ManagementScreens.NewDiscussionGroup:
-      return (
-        <NewDiscussionGroup
-          chatId={chatId}
-          onScreenSelect={onScreenSelect}
-          isActive={isActive}
           onClose={onClose}
         />
       );
@@ -217,7 +159,6 @@ const Management: FC<OwnProps & StateProps> = ({
         />
       );
 
-    case ManagementScreens.ChannelSubscribers:
     case ManagementScreens.GroupMembers:
       return (
         <ManageGroupMembers
@@ -256,14 +197,6 @@ const Management: FC<OwnProps & StateProps> = ({
         />
       );
 
-    case ManagementScreens.Reactions:
-      return (
-        <ManageReactions
-          chatId={chatId}
-          isActive={isActive}
-          onClose={onClose}
-        />
-      );
     case ManagementScreens.InviteInfo:
       return (
         <ManageInviteInfo

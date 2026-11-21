@@ -189,32 +189,6 @@
       }
     }
 
-    .topic-item {
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-
-      padding-inline-start: 1rem;
-
-      font-size: 1rem;
-      font-weight: var(--font-weight-medium);
-      line-height: 1.6875rem;
-
-      .topic-icon {
-        --custom-emoji-size: 2rem;
-
-        width: 2rem;
-        height: 2rem;
-        margin-inline-end: 0.75rem !important;
-        font-size: 2rem !important;
-      }
-
-      .fullName {
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    }
-
     .search-result-miniapp-button {
       height: auto !important;
       padding: 0 0.4375rem !important;

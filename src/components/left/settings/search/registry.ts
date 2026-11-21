@@ -303,7 +303,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
 
   ...buildEntries(SettingsScreens.DataStorage, [
     'AutoDownloadPhotosTitle', 'AutoDownloadVideosTitle', 'AutoDownloadFilesTitle', 'AutoDownloadSettingsContacts',
-    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats', 'AutoDownloadSettingsChannels',
+    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats',
     'AutoDownloadMaxFileSize', 'SettingsDataClearMediaCache',
   ]),
   ...buildEntries(SettingsScreens.DataStorage, IS_TAURI ? ['SettingsAskWhereToSave'] : []),

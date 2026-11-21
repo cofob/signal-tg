@@ -9,7 +9,7 @@ import type {
   ApiVideo,
 } from '../api/types';
 import type {
-  IThemeSettings, MessageList, PerformanceType, ThemeKey, ThreadId, TopicsInfo,
+  IThemeSettings, MessageList, PerformanceType, ThemeKey, ThreadId,
 } from '../types';
 import type { ActionReturnType, GlobalState, SharedState } from './types';
 import { ApiMessageEntityTypes, MAIN_THREAD_ID } from '../api/types';
@@ -27,7 +27,6 @@ import {
   GLOBAL_STATE_CACHE_PREFIX,
   GLOBAL_STATE_CACHE_USER_LIST_LIMIT,
   IS_SCREEN_LOCKED_CACHE_KEY,
-  SAVED_FOLDER_ID,
   SHARED_STATE_CACHE_KEY,
 } from '../config';
 import { buildColor, serializeColor } from '../lib/color';
@@ -47,7 +46,6 @@ import { getSystemTheme } from '../util/systemTheme';
 import { getDefaultPatternColor, getThemeWallpaper } from '../util/wallpaper';
 import { migrateLegacyWallpaperBlobs, prefetchWallpaperUrl } from '../util/wallpaper/storage';
 import { selectSharedSettings } from './selectors/sharedState';
-import { selectThreadInfo } from './selectors/threads';
 import { addActionHandler, getGlobal } from './index';
 import { INITIAL_GLOBAL_STATE, SHARED_STATE_CACHE_VERSION } from './initialState';
 import { clearGlobalForLockScreen, updatePasscodeSettings } from './reducers';
@@ -56,8 +54,6 @@ import {
   selectChatMessages,
   selectCurrentMessageList,
   selectFullWebPageFromMessage,
-  selectTopics,
-  selectTopicsInfo,
   selectViewportIds,
   selectVisibleUsers,
 } from './selectors';
@@ -580,6 +576,9 @@ function removeTelegramOnlyFields(untypedCached: any) {
     delete settings.canTranslate;
     delete settings.translationLanguage;
     delete settings.translationTone;
+    delete settings.canAutoLoadPhotoInChannels;
+    delete settings.canAutoLoadVideoInChannels;
+    delete settings.canAutoLoadFileInChannels;
   }
   delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
   delete untypedCached.chatFolders?.areTagsEnabled;
@@ -587,6 +586,24 @@ function removeTelegramOnlyFields(untypedCached: any) {
   // Telegram calls
   delete untypedCached.groupCalls;
   delete untypedCached.phoneCall;
+  // Forums, channels, communities and saved dialogs
+  delete untypedCached.chats?.topicsInfoById;
+  delete untypedCached.chats?.similarChannelsById;
+  delete untypedCached.chats?.forDiscussionIds;
+  delete untypedCached.chats?.listIds?.saved;
+  delete untypedCached.chats?.orderedPinnedIds?.saved;
+  delete untypedCached.chats?.totalCount?.saved;
+  delete untypedCached.chats?.isFullyLoaded?.saved;
+  delete untypedCached.chats?.loadingParameters?.saved;
+  delete untypedCached.chats?.lastMessageIds?.saved;
+  delete untypedCached.defaultTopicIconsId;
+  // QR code share themes
+  delete untypedCached.shareThemeBackdrops;
+  // Recommended folders
+  delete untypedCached.chatFolders?.recommended;
+  Object.values(untypedCached.chatFolders?.byId || {}).forEach((folder: any) => {
+    delete folder.description;
+  });
 
   Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
     delete messageStore.summaryById;
@@ -688,7 +705,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentlyFoundSettingIds',
       'peerColors',
       'savedReactionTags',
-      'shareThemeBackdrops',
     ]),
     lastIsChatInfoShown: !getIsMobile() ? global.lastIsChatInfoShown : undefined,
     stickers: reduceStickers(global),
@@ -846,28 +862,19 @@ function reduceChats<T extends GlobalState>(global: T): GlobalState['chats'] {
     ...global.recentlyFoundChatIds || [],
     ...getOrderedIds(ARCHIVED_FOLDER_ID)?.slice(0, GLOBAL_STATE_CACHE_ARCHIVED_CHAT_LIST_LIMIT) || [],
     ...getOrderedIds(ALL_FOLDER_ID) || [],
-    ...getOrderedIds(SAVED_FOLDER_ID) || [],
     ...Object.keys(byId),
   ];
 
   let idsToSave: string[] = [];
 
   for (const id of unlinkedIdsToSave) {
-    const chat = byId[id];
-    if (!chat) continue;
-
-    idsToSave.push(id);
-
-    if (chat.linkedMonoforumId) {
-      idsToSave.push(chat.linkedMonoforumId);
-    }
+    if (byId[id]) idsToSave.push(id);
   }
 
   idsToSave = unique(idsToSave).slice(0, GLOBAL_STATE_CACHE_CHAT_LIST_LIMIT);
 
   return {
     ...global.chats,
-    similarChannelsById: {},
     isFullyLoaded: {},
     notifyExceptionById: pickTruthy(global.chats.notifyExceptionById, idsToSave),
     loadingParameters: INITIAL_GLOBAL_STATE.chats.loadingParameters,
@@ -875,25 +882,8 @@ function reduceChats<T extends GlobalState>(global: T): GlobalState['chats'] {
     fullInfoById: pickTruthy(global.chats.fullInfoById, idsToSave),
     lastMessageIds: {
       all: pickTruthy(global.chats.lastMessageIds.all || {}, idsToSave),
-      saved: global.chats.lastMessageIds.saved,
     },
-    topicsInfoById: reduceTopicsInfo(global.chats.topicsInfoById, currentChatIds),
   };
-}
-
-function reduceTopicsInfo(
-  topicsInfoById: Record<string, TopicsInfo>, chatIds: string[],
-): GlobalState['chats']['topicsInfoById'] {
-  const topicsInfoToSave = pickTruthy(topicsInfoById, chatIds);
-
-  return Object.entries(topicsInfoToSave).reduce((acc, [chatId, topicsInfo]) => {
-    acc[chatId] = {
-      ...topicsInfo,
-      isCache: true,
-    };
-
-    return acc;
-  }, {} as GlobalState['chats']['topicsInfoById']);
 }
 
 function getTopPeerIds<T extends GlobalState>(global: T) {
@@ -908,14 +898,9 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
     Object.values(global.byTabId)
       .map(({ id: tabId }) => selectCurrentMessageList(global, tabId)),
   ).map(({ chatId }) => chatId);
-  const forumPanelChatIds = compact(
-    Object.values(global.byTabId)
-      .map(({ forumPanelChatId }) => forumPanelChatId),
-  );
   const chatIdsToSave = unique([
     ...currentChatIds,
     ...currentUserId ? [currentUserId] : [],
-    ...forumPanelChatIds,
     ...getOrderedIds(ALL_FOLDER_ID) || [],
     ...getOrderedIds(ARCHIVED_FOLDER_ID)?.slice(0, GLOBAL_STATE_CACHE_ARCHIVED_CHAT_LIST_LIMIT) || [],
     ...Object.entries(global.messages.byChatId)
@@ -946,24 +931,13 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
 
     const chatLastMessageId = selectChatLastMessageId(global, chatId);
 
-    const topicsInfo = selectTopicsInfo(global, chatId);
-    const openedThreadIds = Array.from(openedChatThreadIds[chatId] || []);
-    const commentThreadIds = Object.values(global.messages.byChatId[chatId].threadsById || {})
-      .map(({ threadInfo }) => (threadInfo?.isCommentsInfo ? threadInfo?.originMessageId : undefined))
-      .filter(Boolean);
-    const threadIds = unique(openedThreadIds.concat(commentThreadIds, topicsInfo?.listedTopicIds || []));
+    const threadIds = Array.from(openedChatThreadIds[chatId] || []);
 
-    const topics = selectTopics(global, chatId);
     const threadsToSave = pickTruthy(current.threadsById, [MAIN_THREAD_ID, ...threadIds]);
 
     const viewportIdsToSave = unique(Object.values(threadsToSave)
       .flatMap((thread) => thread.localState?.lastViewportIds || []));
-    const topicLastMessageIds = topics && forumPanelChatIds.includes(chatId)
-      ? Object.values(topics).map(({ id }) => selectThreadInfo(global, chatId, id)?.lastMessageId).filter(Boolean) : [];
-    const savedLastMessageIds = chatId === currentUserId && global.chats.lastMessageIds.saved
-      ? Object.values(global.chats.lastMessageIds.saved) : [];
-    const lastMessageIdsToSave = [chatLastMessageId].concat(topicLastMessageIds).concat(savedLastMessageIds)
-      .filter(Boolean);
+    const lastMessageIdsToSave = [chatLastMessageId].filter(Boolean);
     const byId = pick(current.byId, viewportIdsToSave.concat(lastMessageIdsToSave));
     const threadsById = Object.keys(threadsToSave).reduce((acc, key) => {
       const thread = threadsToSave[Number(key)];

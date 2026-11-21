@@ -57,11 +57,8 @@ export { default as CustomEmojiTooltip } from '../components/common/tooltips/Cus
 export { default as CustomSendMenu } from '../components/middle/composer/CustomSendMenu';
 export { default as DropArea } from '../components/middle/composer/DropArea';
 export { default as EmojiTooltip } from '../components/common/tooltips/EmojiTooltip';
-export { default as SendAsMenu } from '../components/middle/composer/SendAsMenu';
 
 export { default as PollResults } from '../components/right/PollResults';
-export { default as CreateTopic } from '../components/right/CreateTopic';
-export { default as EditTopic } from '../components/right/EditTopic';
 
 export { default as Management } from '../components/right/management/Management';
 

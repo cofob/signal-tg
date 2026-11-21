@@ -10,6 +10,4 @@ export * from './settings';
 export * from './passcode';
 export * from './stories';
 export * from './peers';
-export * from './polls';
-export * from './topics';
 export * from './musicPicker';

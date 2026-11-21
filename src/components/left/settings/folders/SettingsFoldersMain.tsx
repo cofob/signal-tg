@@ -12,7 +12,6 @@ import {
 import { getFolderDescriptionText } from '../../../../global/helpers';
 import { isBetween } from '../../../../util/math';
 import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
-import { throttle } from '../../../../util/schedulers';
 import { MAX_FOLDERS } from '../../../../limits';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
 import { renderTextWithEntities } from '../../../common/helpers/renderTextWithEntities';
@@ -44,7 +43,6 @@ type OwnProps = {
 type StateProps = {
   folderIds?: number[];
   foldersById: Record<number, ApiChatFolder>;
-  recommendedChatFolders?: ApiChatFolder[];
   foldersPosition: FoldersPosition;
 };
 
@@ -55,12 +53,10 @@ type SortState = {
 };
 
 const FOLDER_HEIGHT_PX = 64;
-const runThrottledForLoadRecommended = throttle((cb) => cb(), 60000, true);
 
 const SettingsFoldersMain = ({
   isActive,
   foldersById,
-  recommendedChatFolders,
   foldersPosition,
   isMobile,
   onCreateFolder,
@@ -69,8 +65,6 @@ const SettingsFoldersMain = ({
   folderIds,
 }: OwnProps & StateProps) => {
   const {
-    loadRecommendedChatFolders,
-    addChatFolder,
     openLimitReachedModal,
     openDeleteChatFolderModal,
     sortChatFolders,
@@ -95,14 +89,6 @@ const SettingsFoldersMain = ({
       });
     }
   }, [prevFolderIds, folderIds, state.orderedFolderIds?.length]);
-
-  // Due to the parent Transition, this component never gets unmounted,
-  // that's why we use throttled API call on every update.
-  useEffect(() => {
-    runThrottledForLoadRecommended(() => {
-      loadRecommendedChatFolders();
-    });
-  }, [loadRecommendedChatFolders]);
 
   const handleCreateFolder = useCallback(() => {
     if (Object.keys(foldersById).length >= MAX_FOLDERS - 1) {
@@ -154,18 +140,6 @@ const SettingsFoldersMain = ({
       };
     });
   }, [folderIds, foldersById, lang, chatsCountByFolderId]);
-
-  const handleCreateFolderFromRecommended = useCallback((folder: ApiChatFolder) => {
-    if (Object.keys(foldersById).length >= MAX_FOLDERS - 1) {
-      openLimitReachedModal({
-        limit: 'dialogFilters',
-      });
-
-      return;
-    }
-
-    addChatFolder({ folder });
-  }, [foldersById, addChatFolder, openLimitReachedModal]);
 
   const handleDrag = useCallback((translation: { x: number; y: number }, id: string | number) => {
     const delta = Math.round(translation.y / FOLDER_HEIGHT_PX);
@@ -327,46 +301,6 @@ const SettingsFoldersMain = ({
         </div>
       </Island>
 
-      {(recommendedChatFolders && Boolean(recommendedChatFolders.length)) && (
-        <>
-          <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
-            {lang('FilterRecommended')}
-          </IslandTitle>
-          <Island>
-            {recommendedChatFolders.map((folder) => (
-              <ListItem
-                key={folder.id}
-                narrow
-                onClick={() => handleCreateFolderFromRecommended(folder)}
-              >
-                <div className="settings-folders-recommended-item">
-                  <div className="multiline-item">
-                    <span className="title">
-                      {renderTextWithEntities({
-                        text: folder.title.text,
-                        entities: folder.title.entities,
-                        noCustomEmojiPlayback: folder.noTitleAnimations,
-                      })}
-                    </span>
-                    <span className="subtitle">{folder.description}</span>
-                  </div>
-
-                  <Button
-                    className="px-3"
-                    color="primary"
-                    size="tiny"
-                    pill
-                    fluid
-                    isRtl={lang.isRtl}
-                  >
-                    {lang('Add')}
-                  </Button>
-                </div>
-              </ListItem>
-            ))}
-          </Island>
-        </>
-      )}
       {!isMobile && (
         <>
           <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('TabsPosition')}</IslandTitle>
@@ -395,13 +329,11 @@ export default memo(withGlobal<OwnProps>(
     const {
       orderedIds: folderIds,
       byId: foldersById,
-      recommended: recommendedChatFolders,
     } = global.chatFolders;
 
     return {
       folderIds,
       foldersById,
-      recommendedChatFolders,
       foldersPosition: global.sharedState.settings.foldersPosition,
     };
   },

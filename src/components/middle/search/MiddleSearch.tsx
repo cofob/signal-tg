@@ -9,12 +9,12 @@ import type {
   ApiChat, ApiMessage, ApiReaction, ApiReactionKey, ApiSavedReactionTag,
 } from '../../../api/types';
 import type {
-  CustomPeer, MiddleSearchParams, MiddleSearchType, ThreadId,
+  MiddleSearchParams, MiddleSearchType, ThreadId,
 } from '../../../types';
 
 import { requestMeasure, requestMutation, requestNextMutation } from '../../../lib/fasterdom/fasterdom';
 import {
-  getIsSavedDialog, getReactionKey, isChatGroup, isSameReaction,
+  getReactionKey, isChatGroup, isSameReaction,
 } from '../../../global/helpers';
 import {
   selectChat,
@@ -23,7 +23,6 @@ import {
   selectCurrentMiddleSearch,
   selectForwardedSender,
   selectIsChatWithSelf,
-  selectMonoforumChannel,
   selectPeer,
   selectSender,
   selectTabState,
@@ -66,7 +65,6 @@ export type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  monoforumChat?: ApiChat;
   threadId?: ThreadId;
   requestedQuery?: string;
   savedTags?: Record<ApiReactionKey, ApiSavedReactionTag>;
@@ -84,11 +82,6 @@ type StateProps = {
   isGroupChat?: boolean;
 };
 
-const CHANNELS_PEER: CustomPeer = {
-  isCustomPeer: true,
-  avatarIcon: 'megaphone-filled',
-  titleKey: 'PublicPosts',
-};
 const FOCUSED_SEARCH_TRIGGER_OFFSET = 5;
 const HIDE_TIMEOUT = 200;
 const RESULT_ITEM_CLASS_NAME = 'MiddleSearchResult';
@@ -100,7 +93,6 @@ const runDebouncedForSearch = debounce((cb) => cb(), 200, false);
 const MiddleSearch = ({
   isActive,
   chat,
-  monoforumChat,
   threadId,
   requestedQuery,
   savedTags,
@@ -181,7 +173,7 @@ const MiddleSearch = ({
 
   const hasResultsContainer = Boolean(((query || fromPeerId) && foundIds) || isHashtagQuery);
   const isOnlyHash = isHashtagQuery && !query;
-  const isNonFocusedDropdownForced = searchType === 'myChats' || searchType === 'channels';
+  const isNonFocusedDropdownForced = searchType === 'myChats';
   const hasMemberResults = !isHashtagQuery && Boolean(memberSearchResults?.length);
   const hasQueryData = Boolean((query && !isOnlyHash) || savedTag || fromPeerId);
   const hasNavigationButtons = searchType === 'chat' && Boolean(foundIds?.length);
@@ -627,16 +619,6 @@ const MiddleSearch = ({
             onClick={isForTag ? handleDeleteTag : handleChangeSearchType}
           />
         );
-      case 'channels':
-        return (
-          <PeerChip
-            className={buildClassName(styles.searchType, isSelected && styles.selectedType)}
-            customPeer={CHANNELS_PEER}
-            title={lang('ProfileTabPublicPosts')}
-            clickArg="channels"
-            onClick={isForTag ? handleDeleteTag : handleChangeSearchType}
-          />
-        );
     }
     return undefined;
   }
@@ -689,7 +671,6 @@ const MiddleSearch = ({
           >
             {renderTypeTag('chat')}
             {renderTypeTag('myChats')}
-            {renderTypeTag('channels')}
           </div>
         )}
         {Boolean(hasResultsContainer || hasMemberResults) && (
@@ -755,7 +736,7 @@ const MiddleSearch = ({
         {!isMobile && (
           <Avatar
             className={styles.avatar}
-            peer={monoforumChat || chat}
+            peer={chat}
             size="medium"
             isSavedMessages={isSavedMessages}
           />
@@ -919,15 +900,11 @@ export default memo(withGlobal<OwnProps>(
 
     const currentUserId = global.currentUserId;
     const isSavedMessages = selectIsChatWithSelf(global, chatId);
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, currentUserId);
 
-    const savedTags = isSavedMessages && !isSavedDialog ? global.savedReactionTags?.byKey : undefined;
-
-    const monoforumChat = selectMonoforumChannel(global, chatId);
+    const savedTags = isSavedMessages ? global.savedReactionTags?.byKey : undefined;
 
     return {
       chat,
-      monoforumChat,
       requestedQuery,
       totalCount,
       threadId,

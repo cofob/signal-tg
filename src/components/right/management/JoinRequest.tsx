@@ -18,7 +18,6 @@ import './JoinRequest.scss';
 type OwnProps = {
   userId: string;
   about?: string;
-  isChannel?: boolean;
   date: number;
   chatId: string;
 };
@@ -32,7 +31,6 @@ const JoinRequest = ({
   chatId,
   about,
   date,
-  isChannel,
   user,
 }: OwnProps & StateProps) => {
   const { openChat, hideChatJoinRequest } = getActions();
@@ -73,7 +71,7 @@ const JoinRequest = ({
       </div>
       <div className={buildClassName('buttons')}>
         <Button className={buildClassName('button')} onClick={handleAcceptRequest}>
-          {isChannel ? lang('ChannelAddToChannel') : lang('ChannelAddToGroup')}
+          {lang('ChannelAddToGroup')}
         </Button>
         <Button className={buildClassName('button')} isText onClick={handleRejectRequest}>
           {lang('DismissRequest')}
