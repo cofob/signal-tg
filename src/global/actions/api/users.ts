@@ -33,6 +33,7 @@ import {
   selectIsCurrentUserPremium,
   selectPeer,
   selectPeerPhotos,
+  selectTabState,
   selectUser,
   selectUserCommonChats,
   selectUserFullInfo,
@@ -656,4 +657,39 @@ addActionHandler('toggleNoForwards', async (global, actions, payload): Promise<v
   }
 
   await callApi('toggleNoForwards', { user, isEnabled, requestMsgId });
+});
+
+addActionHandler('openSafetyNumberModal', async (global, actions, payload): Promise<void> => {
+  const { userId, tabId = getCurrentTabId() } = payload;
+  const user = selectUser(global, userId);
+  if (!user) return;
+
+  global = updateTabState(global, { safetyNumberModal: { userId } }, tabId);
+  setGlobal(global);
+
+  const result = await callApi('fetchSafetyNumber', { user });
+
+  global = getGlobal();
+  if (selectTabState(global, tabId).safetyNumberModal?.userId !== userId) return;
+  global = updateTabState(global, {
+    safetyNumberModal: result ? { userId, ...result } : { userId, isUnavailable: true },
+  }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('toggleSafetyNumberVerified', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const modal = selectTabState(global, tabId).safetyNumberModal;
+  const user = modal && selectUser(global, modal.userId);
+  if (!modal?.digits || !user) return;
+
+  const isVerified = !modal.isVerified;
+  const result = await callApi('updateSafetyNumberVerified', { user, isVerified });
+  if (!result) return;
+
+  global = getGlobal();
+  const current = selectTabState(global, tabId).safetyNumberModal;
+  if (current?.userId !== modal.userId) return;
+  global = updateTabState(global, { safetyNumberModal: { ...current, isVerified } }, tabId);
+  setGlobal(global);
 });

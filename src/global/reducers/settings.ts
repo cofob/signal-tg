@@ -3,10 +3,15 @@ import type {
   AccountSettings, IThemeSettings,
   ThemeKey,
 } from '../../types';
-import type { GlobalState, SharedState } from '../types';
+import type {
+  GlobalState, SharedState, TabArgs, TabState,
+} from '../types';
 
+import { getCurrentTabId } from '../../util/establishMultitabRole';
+import { selectTabState } from '../selectors';
 import { selectSharedSettings } from '../selectors/sharedState';
 import { updateSharedState } from './sharedState';
+import { updateTabState } from './tabs';
 import { updateUserBlockedState } from './users';
 
 export function replaceSettings<T extends GlobalState>(global: T, newSettings?: Partial<AccountSettings>): T {
@@ -135,4 +140,24 @@ export function removeBlockedUser<T extends GlobalState>(global: T, contactId: s
       totalCount: global.blocked.totalCount - 1,
     },
   };
+}
+
+export function replacePrivacySettings<T extends GlobalState>(
+  global: T, privacy: GlobalState['settings']['privacy'],
+): T {
+  return {
+    ...global,
+    settings: {
+      ...global.settings,
+      privacy: { ...global.settings.privacy, ...privacy },
+    },
+  };
+}
+
+export function updateUsernameEdit<T extends GlobalState>(
+  global: T, update: NonNullable<TabState['usernameEdit']>, ...[tabId = getCurrentTabId()]: TabArgs<T>
+): T {
+  return updateTabState(global, {
+    usernameEdit: { ...selectTabState(global, tabId).usernameEdit, ...update },
+  }, tabId);
 }

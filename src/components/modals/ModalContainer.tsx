@@ -49,6 +49,7 @@ import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
+import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
 import StealthModeModal from './storyStealthMode/StealthModeModal.async';
@@ -90,6 +91,7 @@ type ModalKey = keyof Pick<TabState,
   'isAgeVerificationModalOpen' |
   'profileRatingModal' |
   'qrCodeModal' |
+  'safetyNumberModal' |
   'quickPreview' |
   'storyStealthModal' |
   'isAudioPlaylistModalOpen' |
@@ -193,6 +195,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   isAgeVerificationModalOpen: AgeVerificationModal,
   profileRatingModal: ProfileRatingModal,
   qrCodeModal: QrCodeModal,
+  safetyNumberModal: SafetyNumberModal,
   quickPreview: QuickPreviewModal,
   storyStealthModal: StealthModeModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,

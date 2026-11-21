@@ -1,0 +1,45 @@
+.inputs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0;
+}
+
+.nickname {
+  flex: 1;
+  min-width: 0;
+}
+
+.discriminator {
+  flex-shrink: 0;
+  width: 6rem;
+}
+
+.status {
+  padding: 0 1rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.success {
+  color: var(--color-green);
+}
+
+.link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+
+  padding: 1rem;
+}
+
+.linkText {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  word-break: break-all;
+}

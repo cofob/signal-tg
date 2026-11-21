@@ -40,7 +40,6 @@ type SettingsSearchEntry = {
 type EntryOptions = Omit<SettingsSearchEntry, 'screen' | 'titleKey'>;
 
 const PRIVACY_VISIBILITY_SCREENS: [SettingsScreens, RegularLangKey][] = [
-  [SettingsScreens.PrivacyPhoneNumber, 'PrivacyPhoneTitle'],
   [SettingsScreens.PrivacyLastSeen, 'LastSeenTitle'],
   [SettingsScreens.PrivacyProfilePhoto, 'PrivacyProfilePhotoTitle'],
   [SettingsScreens.PrivacyBio, 'PrivacyBioTitle'],
@@ -152,6 +151,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     screen: SettingsScreens.GeneralChatBackgroundColor,
     parent: SettingsScreens.GeneralChatBackground,
     titleKey: 'SetColor',
+  },
+  {
+    screen: SettingsScreens.Username,
+    parent: SettingsScreens.EditProfile,
+    titleKey: 'Username',
+    keywordsKey: 'SettingsKeywordsUsername',
   },
   {
     screen: SettingsScreens.SignalProxy,
@@ -287,9 +292,8 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywordsKey: 'SettingsKeywordsLogOut', icon: 'logout', iconBg: 'gray',
   }),
 
-  ...buildEntries(SettingsScreens.EditProfile, [
-    'FirstName', 'LastName', 'UserBio', 'SettingsBirthday', 'Username', 'PersonalChannelTitle',
-  ]),
+  ...buildEntries(SettingsScreens.EditProfile, ['FirstName', 'LastName', 'SignalProfileAbout']),
+  ...buildEntries(SettingsScreens.Username, ['SignalUsernameLink', 'SignalUsernameLinkReset', 'SignalUsernameDelete']),
 
   ...buildEntries(SettingsScreens.KeyboardShortcuts, [
     'SettingsSendEnter', IS_MAC_OS || IS_IOS ? 'SettingsSendCmdenter' : 'SettingsSendCtrlenter',
@@ -379,6 +383,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     ...buildEntries(screen, [titleKey], { isSectionHeader: true }),
     ...buildEntries(screen, ['P2PEverybody', 'P2PContacts', 'P2PNobody']),
   ]),
+  ...buildEntries(SettingsScreens.PrivacyPhoneNumber, ['PrivacyPhoneTitle', 'PrivacyPhoneTitle2'], {
+    isSectionHeader: true,
+  }),
+  ...buildEntries(SettingsScreens.PrivacyPhoneNumber, ['P2PEverybody', 'P2PNobody']),
   ...buildEntries(SettingsScreens.PrivacyLastSeen, ['HideReadTime'], { requires: 'canHideReadTime' }),
   ...buildEntries(SettingsScreens.PrivacyPhoneCall, ['PrivacyP2P']),
   ...buildEntries(SettingsScreens.PrivacyMessages, ['PrivacyMessagesTitle'], { isSectionHeader: true }),
