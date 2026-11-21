@@ -37,3 +37,42 @@ pub const ALLOWED_HOSTS: [&str; 9] = [
 pub fn get_allowed_host(host: &str) -> Option<&'static str> {
     ALLOWED_HOSTS.into_iter().find(|allowed| *allowed == host)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn allows_only_exact_signal_host_names() {
+        for host in ALLOWED_HOSTS {
+            assert_eq!(get_allowed_host(host), Some(host));
+        }
+        for host in [
+            "",
+            "signal.org",
+            "Chat.Signal.Org",
+            "chat.signal.org.",
+            "chat.signal.org:443",
+            "chat.signal.org/",
+            "chat.signal.org\0",
+            "chat.signal.org.evil.example",
+            "evil.chat.signal.org",
+            "1.1.1.1",
+            "127.0.0.1",
+            "[::1]",
+            "0x7f000001",
+            "localhost",
+            "telegram.org",
+        ] {
+            assert_eq!(get_allowed_host(host), None, "allowed {host:?}");
+        }
+    }
+
+    #[test]
+    fn lists_only_lowercase_signal_host_names() {
+        for host in ALLOWED_HOSTS {
+            assert!(host.ends_with(".signal.org"), "{host}");
+            assert_eq!(host, host.to_ascii_lowercase());
+        }
+    }
+}

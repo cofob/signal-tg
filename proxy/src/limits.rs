@@ -327,3 +327,133 @@ fn get_client_key(ip: IpAddr) -> IpAddr {
         ip @ IpAddr::V4(_) => ip,
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    fn build_config() -> LimitConfig {
+        LimitConfig {
+            max_tunnels: 3,
+            max_tunnels_per_ip: 2,
+            new_tunnels_per_ip_per_minute: 6000,
+            bandwidth_per_ip: 1000,
+            bandwidth_burst_per_ip: 2000,
+            hourly_bytes_per_ip: None,
+            ban_after_violations: Some(3),
+            ban_window: Duration::from_secs(600),
+            ban_duration: Duration::from_secs(900),
+            max_tracked_ips: 2,
+        }
+    }
+
+    fn get_ip(address: &str) -> IpAddr {
+        address.parse().unwrap()
+    }
+
+    fn get_refusal(result: Result<TunnelSlot, Refusal>) -> Option<Refusal> {
+        result.err()
+    }
+
+    #[test]
+    fn caps_tunnels_per_client_and_in_total() {
+        let limits = Limits::new(build_config());
+        let first = limits.acquire(get_ip("192.0.2.1")).ok();
+        let second = limits.acquire(get_ip("192.0.2.1")).ok();
+        assert!(first.is_some() && second.is_some());
+        assert!(matches!(
+            get_refusal(limits.acquire(get_ip("192.0.2.1"))),
+            Some(Refusal::TooManyClientTunnels)
+        ));
+
+        let third = limits.acquire(get_ip("192.0.2.2")).ok();
+        assert!(third.is_some());
+        assert_eq!(limits.get_open_count(), 3);
+        assert!(matches!(
+            get_refusal(limits.acquire(get_ip("192.0.2.2"))),
+            Some(Refusal::TooManyTunnels)
+        ));
+
+        // A closed tunnel frees its share at once
+        drop(first);
+        assert_eq!(limits.get_open_count(), 2);
+        assert!(limits.acquire(get_ip("192.0.2.1")).is_ok());
+    }
+
+    #[test]
+    fn keys_ipv6_clients_by_prefix() {
+        let limits = Limits::new(build_config());
+        let first = limits.acquire(get_ip("2001:db8:1:2::1")).ok();
+        let second = limits.acquire(get_ip("2001:db8:1:2:ffff::7")).ok();
+        assert!(first.is_some() && second.is_some());
+        assert!(matches!(
+            get_refusal(limits.acquire(get_ip("2001:db8:1:2:1:2:3:4"))),
+            Some(Refusal::TooManyClientTunnels)
+        ));
+        // Another /64 is another client
+        assert!(limits.acquire(get_ip("2001:db8:1:3::1")).is_ok());
+    }
+
+    #[test]
+    fn bounds_the_client_table() {
+        let limits = Limits::new(build_config());
+        let first = limits.acquire(get_ip("192.0.2.1")).ok();
+        let second = limits.acquire(get_ip("192.0.2.2")).ok();
+        assert!(first.is_some() && second.is_some());
+        assert!(matches!(
+            get_refusal(limits.acquire(get_ip("192.0.2.3"))),
+            Some(Refusal::TooManyClients)
+        ));
+    }
+
+    #[test]
+    fn bans_a_client_after_repeated_violations() {
+        let limits = Limits::new(build_config());
+        let ip = get_ip("192.0.2.1");
+        assert!(!limits.record_violation(ip));
+        assert!(!limits.record_violation(ip));
+        assert!(limits.record_violation(ip));
+        assert!(limits.check_ban(ip).is_err());
+        assert!(matches!(
+            get_refusal(limits.acquire(ip)),
+            Some(Refusal::Banned(_))
+        ));
+        // Other clients are not affected
+        assert!(limits.check_ban(get_ip("192.0.2.2")).is_ok());
+    }
+
+    #[test]
+    fn slows_a_client_above_its_burst() {
+        let limits = Limits::new(build_config());
+        let slot = limits.acquire(get_ip("192.0.2.1")).ok().unwrap();
+        // The burst of 2000 bytes passes at once; the next 1000 bytes wait about a second
+        assert_eq!(
+            slot.charge(Direction::Download, 2000).ok(),
+            Some(Duration::ZERO)
+        );
+        let wait = slot.charge(Direction::Download, 1000).ok().unwrap();
+        assert!(wait > Duration::from_millis(900) && wait <= Duration::from_secs(1));
+        // Upload has its own budget
+        assert_eq!(
+            slot.charge(Direction::Upload, 1000).ok(),
+            Some(Duration::ZERO)
+        );
+    }
+
+    #[test]
+    fn stops_a_client_at_its_hourly_bytes() {
+        let limits = Limits::new(LimitConfig {
+            hourly_bytes_per_ip: Some(10_000),
+            ..build_config()
+        });
+        let slot = limits.acquire(get_ip("192.0.2.1")).ok().unwrap();
+        assert!(slot.charge(Direction::Download, 6000).is_ok());
+        assert!(slot.charge(Direction::Upload, 6000).is_err());
+        drop(slot);
+        assert!(matches!(
+            get_refusal(limits.acquire(get_ip("192.0.2.1"))),
+            Some(Refusal::HourlyBytes(_))
+        ));
+    }
+}
