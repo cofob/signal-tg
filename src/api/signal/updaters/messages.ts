@@ -6,7 +6,7 @@ import { getServerTime } from '../../../util/serverTime';
 import {
   buildApiMessageWithPoll, createUserResolver, getIsMessageHidden,
 } from '../builders/messages';
-import { db } from '../engine';
+import { db, logError } from '../engine';
 import { getPeerId, getUserPeerId } from '../peers';
 import { sendApiUpdate } from '../updates';
 
@@ -66,7 +66,15 @@ export async function handleMessageChanges({
       continue;
     }
 
-    const { message: apiMessage, poll, webPage } = await buildApiMessageWithPoll(message, conversation, users);
+    // A message that cannot be built stays out of the app, which still gets the rest of the batch
+    let built: Awaited<ReturnType<typeof buildApiMessageWithPoll>>;
+    try {
+      built = await buildApiMessageWithPoll(message, conversation, users);
+    } catch (err) {
+      logError(err);
+      continue;
+    }
+    const { message: apiMessage, poll, webPage } = built;
     const webPages = webPage && [webPage];
     const localMessage = localMessagesById.get(message.id);
     if (localMessage) {

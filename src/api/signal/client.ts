@@ -276,20 +276,34 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles
+ * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles.
+ * A failed step does not stop the others, and the next connection runs them all again.
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
   hasSyncedThisSession = true;
 
+  let isComplete = true;
+  const runStep = async (step: () => Promise<unknown>) => {
+    try {
+      await step();
+    } catch (err) {
+      isComplete = false;
+      logError(err);
+    }
+  };
+
   const context = client.getSenderContext();
-  if (!context.account.isInitialSyncDone) {
+  await runStep(async () => {
+    if (context.account.isInitialSyncDone) return;
     await sendInitialSyncRequests(context);
     await client.updateAccount({ isInitialSyncDone: true });
-  }
+  });
   void processor.refreshProfile(context.account.aci).catch(logError);
-  await processor.syncStorage();
+  await runStep(() => processor.syncStorage());
   void processor.refreshStaleProfiles().catch(logError);
+
+  if (!isComplete) hasSyncedThisSession = false;
 }
 
 async function connect() {

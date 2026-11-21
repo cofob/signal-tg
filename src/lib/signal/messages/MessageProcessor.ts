@@ -340,7 +340,7 @@ export default class MessageProcessor {
    * sends left undelivered, which runs after each connection
    */
   start() {
-    void this.runSerial(() => this.deleteExpiredMessages());
+    this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
     void this.flushPendingSends();
     this.retryUnsentMessages(true);
   }
