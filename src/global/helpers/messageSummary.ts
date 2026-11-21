@@ -156,7 +156,6 @@ function getSummaryDescription(
     todo,
     dice,
     richMessage,
-    widget,
   } = mediaContent;
   const { poll } = statefulContent || {};
 
@@ -189,11 +188,6 @@ function getSummaryDescription(
   if (voice) {
     hasUsedTruncatedText = true;
     summary = truncatedText || lang('AttachAudio');
-  }
-
-  if (widget) {
-    hasUsedTruncatedText = true;
-    summary = truncatedText || lang('Widget');
   }
 
   if (document) {

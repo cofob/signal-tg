@@ -37,10 +37,6 @@ export interface LangPair {
   'PremiumPreviewAnimatedProfilesDescription': undefined;
   'SendMessage': undefined;
   'MessageUnsupported': undefined;
-  'Widget': undefined;
-  'WidgetStopped': undefined;
-  'WidgetUnavailable': undefined;
-  'WidgetUnsupportedBrowser': undefined;
   'PageContentUnsupported': undefined;
   'UnsupportedBlockTitle': undefined;
   'UnsupportedBlockMessage': undefined;
@@ -1554,9 +1550,6 @@ export interface LangPair {
   'ActionSharingEnabledYou': undefined;
   'ActionSharingStillDisabled': undefined;
   'ContextMenuNoForwardsYou': undefined;
-  'CopyProtectionInfoGroup': undefined;
-  'CopyProtectionInfoChannel': undefined;
-  'CopyProtectionInfoMessage': undefined;
   'DisableSharing': undefined;
   'EnableSharing': undefined;
   'NotificationSharingEnabled': undefined;

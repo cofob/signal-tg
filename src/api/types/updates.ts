@@ -405,15 +405,6 @@ export type ApiUpdateMessagePoll = {
   webPages?: ApiWebPage[];
 };
 
-export type ApiUpdateMessageWidgetData = {
-  '@type': 'updateMessageWidgetData';
-  chatId: string;
-  messageId: number;
-  chatData?: string;
-  publicData?: string;
-  publicDataHash?: string;
-};
-
 export type ApiUpdateMessagePollUnread = {
   '@type': 'updateMessagePollUnread';
   chatId: string;
@@ -968,7 +959,7 @@ export type ApiUpdate = (
   ApiUpdateChatListType | ApiUpdateChatFolder | ApiUpdateChatFoldersOrder | ApiUpdateRecommendedChatFolders |
   ApiUpdateNewMessage | ApiUpdateMessage | ApiUpdateNewEphemeralMessage | ApiUpdateEphemeralMessage
   | ApiUpdateDeleteEphemeralMessages | ApiUpdateThreadInfo | ApiUpdateCommonBoxMessages | ApiUpdatePasskeyOption |
-  ApiUpdateDeleteMessages | ApiUpdateMessageWidgetData |
+  ApiUpdateDeleteMessages |
   ApiUpdateMessagePoll | ApiUpdateMessagePollUnread | ApiUpdateMessagePollVote |
   ApiUpdateDeleteHistory |
   ApiDeleteParticipantHistory | ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed |

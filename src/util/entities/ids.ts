@@ -5,7 +5,7 @@ export function isUserId(entityId: string) {
   return !entityId.startsWith('-');
 }
 
-export function isChannelId(entityId: string) {
+function isChannelId(entityId: string) {
   const n = BigInt(entityId);
   return n < -CHANNEL_ID_BASE;
 }

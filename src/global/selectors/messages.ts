@@ -9,7 +9,6 @@ import type {
   ApiPeer,
   MediaContainer,
 } from '../../api/types';
-import type { ChatType } from '../../lib/widget-sandbox';
 import type {
   ChatTranslatedMessages,
   MessageListType,
@@ -144,16 +143,6 @@ export function selectCurrentChat<T extends GlobalState>(
 
 export function selectChatMessages<T extends GlobalState>(global: T, chatId: string) {
   return global.messages.byChatId[chatId]?.byId;
-}
-
-export function selectMessageWidgetStorage(global: GlobalState, chatId: string, messageId: number) {
-  return global.messageWidgetStorage[chatId]?.[messageId]?.storage;
-}
-
-// The stored record itself, with its `height` and `resizeAnchor`: no new object for a caller that runs on every render
-export function selectMessageWidgetHeight(global: GlobalState, chatId: string, messageId: number) {
-  const record = global.messageWidgetStorage[chatId]?.[messageId];
-  return record?.height ? record : undefined;
 }
 
 export function selectStoppableTypingDraftId<T extends GlobalState>(global: T, chatId: string, threadId: ThreadId) {
@@ -713,7 +702,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
       || getServerTime() - message.date < (global.config?.editTimeLimit || Infinity)
     ) && !(
       content.sticker || content.contact || content.pollId || content.action
-      || (content.video?.isRound) || content.location || isDocumentSticker || content.dice || content.widget
+      || (content.video?.isRound) || content.location || isDocumentSticker || content.dice
     )
     && !isForwarded
     && !message.viaBotId
@@ -1627,13 +1616,4 @@ export function selectReplyMessage<T extends GlobalState>(global: T, message: Ap
   }
 
   return selectChatMessage(global, replyInfo.replyToPeerId || message.chatId, replyInfo.replyToMsgId);
-}
-
-// The chat a widget is in, as the widget SDK names its kinds
-export function selectWidgetChatType<T extends GlobalState>(global: T, chatId: string): ChatType | undefined {
-  if (isUserId(chatId)) return 'private';
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-  if (isChatChannel(chat)) return 'channel';
-  return isChatBasicGroup(chat) ? 'group' : 'supergroup';
 }

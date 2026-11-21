@@ -259,8 +259,6 @@ addActionHandler('requestChannelDifference', (global, actions, payload): ActionR
 });
 
 addActionHandler('reset', async (global, actions): Promise<void> => {
-  global = { ...global, messageWidgetStorage: {} };
-  setGlobal(global);
   void cacheApi.clear(MEDIA_CACHE_NAME);
   void cacheApi.clear(MEDIA_CACHE_NAME_AVATARS);
   void cacheApi.clear(MEDIA_PROGRESSIVE_CACHE_NAME);

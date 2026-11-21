@@ -47,7 +47,7 @@ export function buildContentClassName(
   const {
     photo, video,
     audio, voice, document, contact, location, storyData,
-    richMessage, widget,
+    richMessage,
   } = content;
   const hasRichMessageAudio = Boolean(richMessage && getRichMessageAudios(richMessage).ids.length);
   const text = album?.hasMultipleCaptions ? undefined : getMessageContent(album?.captionMessage || message).text;
@@ -80,7 +80,7 @@ export function buildContentClassName(
     classNames.push(peerColorClass);
   }
 
-  if (!isMedia && !widget && text?.emojiOnlyCount) {
+  if (!isMedia && text?.emojiOnlyCount) {
     classNames.push('emoji-only');
     if (text.emojiOnlyCount <= EMOJI_SIZES) {
       classNames.push(`emoji-only-${text.emojiOnlyCount}`);
@@ -145,10 +145,6 @@ export function buildContentClassName(
     classNames.push('poll');
   }
 
-  if (widget) {
-    classNames.push('has-widget');
-  }
-
   if (storyData) {
     classNames.push('story');
   }
@@ -197,7 +193,7 @@ export function buildContentClassName(
       classNames.push('has-fact-check');
     }
 
-    if (isLastInGroup && !hasInlineKeyboard && !widget
+    if (isLastInGroup && !hasInlineKeyboard
       && (photo || !isMediaWithNoText || hasBottomCommentButton)) {
       classNames.push('has-appendix');
     }

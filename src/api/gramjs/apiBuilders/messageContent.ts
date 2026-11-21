@@ -1,4 +1,3 @@
-import { unzlibSync } from 'fflate';
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
@@ -25,7 +24,6 @@ import type {
   ApiWebPage,
   ApiWebPageStickerData,
   ApiWebPageStoryData,
-  ApiWidget,
   MediaContent,
 } from '../../types';
 import type { UniversalMessage } from './messages';
@@ -57,8 +55,6 @@ import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 import { buildStickerFromDocument, processStickerResult } from './symbols';
 
 export { buildApiDocument };
-
-const WIDGET_TEXT_DECODER = new TextDecoder('utf-8', { fatal: true });
 
 export function buildMessageContent(
   mtpMessage: UniversalMessage | GramJs.UpdateServiceNotification,
@@ -197,9 +193,6 @@ export function buildMessageMediaContent(
   const todo = buildTodoFromMedia(media);
   if (todo) return { todo };
 
-  const widget = buildWidgetFromMedia(media);
-  if (widget) return { widget };
-
   const webPage = buildMessageWebPageFromMedia(media);
   if (webPage) return { webPage };
 
@@ -216,52 +209,6 @@ export function buildMessageMediaContent(
   if (storyData) return { storyData };
 
   return undefined;
-}
-
-function buildWidgetFromMedia(media: GramJs.TypeMessageMedia): ApiWidget | undefined {
-  if (!(media instanceof GramJs.MessageMediaWidget)) {
-    return undefined;
-  }
-
-  return {
-    ...buildApiWidget(media),
-    isCopy: media.isCopy,
-    canQuery: media.canQuery,
-    canBackgroundQuery: media.backgroundQuery,
-  };
-}
-
-export function buildApiWidget(
-  widget: GramJs.MessageMediaWidget | GramJs.BotInlineMessageWidget,
-): ApiWidget {
-  return {
-    mediaType: 'widget',
-    width: widget.width,
-    height: widget.height,
-    html: decodeWidgetHtml(widget.payload),
-    chatData: widget.chatData,
-    publicData: widget.publicData,
-    publicDataHash: widget.publicDataHash?.toString(),
-    widgetId: widget.widgetId?.toString(),
-  };
-}
-
-export function decodeWidgetHtml(payload: Uint8Array): string | undefined {
-  if (!payload.length) {
-    return undefined;
-  }
-
-  try {
-    // The server enforces the size limits and may move them, so the client adds none of its own
-    const bytes = unzlibSync(payload);
-    if (!bytes.length) {
-      return undefined;
-    }
-
-    return WIDGET_TEXT_DECODER.decode(bytes);
-  } catch {
-    return undefined;
-  }
 }
 
 function buildSticker(media: GramJs.TypeMessageMedia): ApiSticker | undefined {

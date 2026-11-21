@@ -324,7 +324,6 @@ export interface ApiAppConfig {
   urlAuthDomains: string[];
   whitelistedDomains: string[];
   webAppAllowedProtocols: string[];
-  areWidgetsDisabled?: boolean;
   premiumBotUsername: string;
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;

@@ -2040,8 +2040,7 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
         scheduleRepeatPeriod,
         sendAs,
         withMyScore,
-        // A widget always shows which bot it is from: the server keeps its forward header (widget-sandbox sdk-v1 §5.11)
-        noAuthors: noAuthors && !slice.some((message) => message.content.widget),
+        noAuthors,
         noCaptions,
         privateForwardName,
         isCurrentUserPremium,

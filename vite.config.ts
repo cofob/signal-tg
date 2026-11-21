@@ -10,7 +10,6 @@ import { watchAndRun } from 'vite-plugin-watch-and-run';
 
 import buildGitInfoPlugin from './plugins/gitInfo.ts';
 import buildWebManifestPlugin from './plugins/webManifest.ts';
-import { createWidgetSandbox } from './src/lib/widget-sandbox/vite.ts';
 import packageJson from './package.json' with { type: 'json' };
 
 const DIR_NAME = dirname(fileURLToPath(import.meta.url));
@@ -68,7 +67,7 @@ type BundleReportHook = (
   isWrite: boolean,
 ) => void | Promise<void>;
 
-export default defineConfig(async ({ mode }): Promise<UserConfig> => {
+export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), '');
   setViteEnv(env);
   const {
@@ -87,7 +86,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   const appleIcon = isProductionApp ? 'apple-touch-icon' : 'apple-touch-icon-dev';
   const publicUrl = new URL(baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
   const socialImageUrl = new URL(isProductionApp ? 'icon-512x512.png' : 'icon-dev-512x512.png', publicUrl).href;
-  const widgetSandbox = await createWidgetSandbox();
   const csp = buildCsp(appEnv, env.SIGNAL_TUNNEL_URL);
   const responseHeaders = {
     'Content-Security-Policy': csp,
@@ -98,7 +96,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
   const telegramApiHash = env.TELEGRAM_API_HASH || '';
   const workerReportBundles: OutputBundle[] = [];
   const plugins: PluginOption[] = [
-    widgetSandbox.plugin,
     buildGitInfoPlugin({
       appEnv,
       head: HEAD,
@@ -238,7 +235,6 @@ export default defineConfig(async ({ mode }): Promise<UserConfig> => {
     },
     worker: {
       plugins: () => [
-        widgetSandbox.workerPlugin,
         ...(shouldCollectWorkerReportBundles ? [createWorkerBundleCollectorPlugin(workerReportBundles)] : []),
       ],
       rolldownOptions: {

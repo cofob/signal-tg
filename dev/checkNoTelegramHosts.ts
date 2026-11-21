@@ -16,9 +16,6 @@ const ALLOWED_DIRECTORIES = [
   // GramJS is in the bundle but no longer called; plan stage 3 deletes it with its data center hosts
   'src/lib/gramjs/',
   'src/api/gramjs/',
-  // Vendored widget runtime (kept unchanged, see its `NOTICE.md`): its SDK policy validates links that widgets ask
-  // the client to open, and the client only follows `tg:` links; it is deleted with bots and Mini Apps
-  'src/lib/widget-sandbox/',
 ];
 
 // Comments may cite Telegram's API documentation, which ported code follows

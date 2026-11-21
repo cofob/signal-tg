@@ -569,31 +569,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-  setMessageWidgetStorage: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-    area: 'local' | 'session';
-    values: Record<string, string>;
-  };
-  clearMessageWidgetStorage: undefined;
-  markMessageWidgetSeen: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-  };
-  setMessageWidgetHeight: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-    height: number;
-    resizeAnchor: 'top' | 'bottom';
-  };
-  setMessagesWidgetPublicData: {
-    messages: { chatId: string; messageId: number }[];
-    publicData: string;
-    publicDataHash: string;
-  };
   deleteParticipantHistory: {
     peerId: string;
     chatId: string;
@@ -2387,7 +2362,6 @@ export interface ActionPayloads {
   closeMapModal: WithTabId | undefined;
   toggleSafeLinkModal: {
     url?: string;
-    isWidget?: boolean;
   } & WithTabId;
   closeUrlAuthModal: WithTabId | undefined;
   showNotification: Omit<ApiNotification, 'localId'> & { localId?: string } & WithTabId;

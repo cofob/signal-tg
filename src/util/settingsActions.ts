@@ -13,7 +13,6 @@ import { getCurrentTabId } from './establishMultitabRole';
 import { validateFiles } from './files';
 import { openSystemFilesDialog } from './systemFilesDialog';
 import { buildDefaultWallpaperSettings } from './wallpaper';
-import { clearWidgetStorage } from './widgetStorage';
 
 const WALLPAPER_FILE_TYPES = 'image/jpeg';
 
@@ -95,9 +94,6 @@ export function resetWallpaper() {
 
 export function clearMediaCache(tabId?: number) {
   purgeClearableCache();
-  // Widgets' storage goes with the cache, as the widget spec asks and tdesktop does
-  clearWidgetStorage();
-  getActions().clearMessageWidgetStorage();
   getActions().showNotification({
     message: { key: 'SettingsDataClearMediaDone' },
     tabId,

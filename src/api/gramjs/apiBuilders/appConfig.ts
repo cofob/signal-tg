@@ -29,7 +29,6 @@ export interface GramJsAppConfig {
   autologin_token: string;
   url_auth_domains: string[];
   web_app_allowed_protocols?: string[];
-  web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
   premium_bot_username: string;
   premium_invoice_slug: string;
@@ -152,7 +151,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     urlAuthDomains: appConfig.url_auth_domains || [],
     whitelistedDomains: appConfig.whitelisted_domains || [],
     webAppAllowedProtocols: appConfig.web_app_allowed_protocols,
-    areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     premiumBotUsername: appConfig.premium_bot_username,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,

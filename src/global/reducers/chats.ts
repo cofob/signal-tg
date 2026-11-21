@@ -12,7 +12,6 @@ import {
 } from '../../util/iteratees';
 import { selectChatFullInfo } from '../selectors';
 import { clearEphemeralMessages } from './messages';
-import { deleteMessageWidgetStorage } from './messageWidgetStorage';
 import { updateThreadInfoLastMessageId } from './threads';
 import { addUnreadCount, removeUnreadCount } from './unreadCounters';
 
@@ -385,7 +384,6 @@ export function updateChatListSecondaryInfo<T extends GlobalState>(
 }
 
 export function leaveChat<T extends GlobalState>(global: T, leftChatId: string): T {
-  global = deleteMessageWidgetStorage(global, leftChatId);
   global = removeChatFromChatLists(global, leftChatId);
 
   global = updateChat(global, leftChatId, { isNotJoined: true });

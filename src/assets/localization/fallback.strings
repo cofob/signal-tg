@@ -58,10 +58,6 @@
 "PremiumPreviewAnimatedProfilesDescription" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
 "SendMessage" = "Send Message";
 "MessageUnsupported" = "This message is not supported on the web version of Telegram";
-"Widget" = "Widget";
-"WidgetStopped" = "Widget stopped";
-"WidgetUnavailable" = "Widget unavailable";
-"WidgetUnsupportedBrowser" = "Unsupported browser";
 "PageContentUnsupported" = "Unsupported content";
 "UnsupportedBlockTitle" = "Unsupported Block";
 "UnsupportedBlockMessage" = "This part of the message is not supported on the web version of Telegram";
@@ -1947,9 +1943,6 @@
 "ActionSharingStillDisabled" = "Sharing in this chat is still disabled";
 "ContextMenuNoForwardsPeer" = "{name} disabled copying and forwarding in this chat.";
 "ContextMenuNoForwardsYou" = "You disabled copying and forwarding in this chat.";
-"CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
-"CopyProtectionInfoChannel" = "Copying and forwarding is not allowed in this channel.";
-"CopyProtectionInfoMessage" = "Copying and forwarding is not allowed for this message.";
 "DisableSharing" = "Disable Sharing";
 "EnableSharing" = "Enable Sharing";
 "NotificationSharingEnabled" = "Sharing enabled for this chat.";

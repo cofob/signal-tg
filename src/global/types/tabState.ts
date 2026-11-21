@@ -460,7 +460,6 @@ export type TabState = {
   dialogs: ApiDialog[];
 
   safeLinkModalUrl?: string;
-  safeLinkModalIsWidget?: boolean;
   mapModal?: {
     point: ApiGeoPoint;
     zoom?: number;
