@@ -2,8 +2,7 @@
 //! of a backup before it is uploaded (upstream `rust/bridge/shared/src/account_keys.rs` and `message_backup.rs`).
 
 use libsignal_account_keys::{
-    AccountEntropyPool, BACKUP_FORWARD_SECRECY_TOKEN_LEN, BACKUP_KEY_LEN, BackupForwardSecrecyToken, BackupId, BackupKey,
-    LOCAL_BACKUP_METADATA_KEY_LEN,
+    BACKUP_FORWARD_SECRECY_TOKEN_LEN, BACKUP_KEY_LEN, BackupForwardSecrecyToken, BackupId, BackupKey,
 };
 use libsignal_message_backup::backup::{CompletedBackup, PartialBackup, Purpose, ValidateOnly};
 use libsignal_message_backup::key::MessageBackupKey as MessageBackupKeyInner;
@@ -76,26 +75,6 @@ pub fn BackupKey_DeriveEcKey(backup_key_bytes: &[u8], aci_bytes: &[u8]) -> JsRes
     let operation = "BackupKey_DeriveEcKey";
     let backup_key = backup_key(backup_key_bytes, operation)?;
     Ok(PrivateKey(backup_key.derive_ec_key(&aci(aci_bytes, operation)?)))
-}
-
-#[wasm_bindgen]
-pub fn BackupKey_DeriveLocalBackupMetadataKey(backup_key_bytes: &[u8]) -> JsResult<Vec<u8>> {
-    let key: [u8; LOCAL_BACKUP_METADATA_KEY_LEN] =
-        backup_key(backup_key_bytes, "BackupKey_DeriveLocalBackupMetadataKey")?.derive_local_backup_metadata_key();
-    Ok(key.to_vec())
-}
-
-#[wasm_bindgen]
-pub fn MessageBackupKey_FromAccountEntropyPool(
-    account_entropy: String,
-    aci_bytes: &[u8],
-    forward_secrecy_token: Option<Vec<u8>>,
-) -> JsResult<MessageBackupKey> {
-    let operation = "MessageBackupKey_FromAccountEntropyPool";
-    let pool = account_entropy.parse::<AccountEntropyPool>().or_throw_generic(operation)?;
-    let backup_key = BackupKey::derive_from_account_entropy_pool(&pool);
-    let backup_id = backup_key.derive_backup_id(&aci(aci_bytes, operation)?);
-    message_backup_key(&backup_key, &backup_id, forward_secrecy_token, operation)
 }
 
 #[wasm_bindgen]

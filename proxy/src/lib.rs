@@ -68,7 +68,7 @@ impl ClassProxies {
 }
 
 /// Hosts the client needs (`src/lib/signal/config.ts`), all on [`TARGET_PORT`]
-pub const ALLOWED_HOSTS: [&str; 9] = [
+pub const ALLOWED_HOSTS: [&str; 10] = [
     "chat.signal.org",
     "storage.signal.org",
     "cdn.signal.org",
@@ -78,6 +78,7 @@ pub const ALLOWED_HOSTS: [&str; 9] = [
     "contentproxy.signal.org",
     "sfu.voip.signal.org",
     "svr2.signal.org",
+    "svrb.signal.org",
 ];
 
 /// Returns the allowlist entry equal to `host`. The allowlist holds DNS names only, so IP literals

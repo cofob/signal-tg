@@ -193,19 +193,121 @@ export function BackupKey_DeriveEcKey(backup_key_bytes, aci_bytes) {
 }
 
 /**
- * @param {Uint8Array} backup_key_bytes
+ * What `restore_backup` gives for the pair of the metadata that the enclave could open
+ */
+export class BackupRestoreResponse {
+    static __wrap(ptr) {
+        const obj = Object.create(BackupRestoreResponse.prototype);
+        obj.__wbg_ptr = ptr;
+        BackupRestoreResponseFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        BackupRestoreResponseFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_backuprestoreresponse_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) BackupRestoreResponse.prototype[Symbol.dispose] = BackupRestoreResponse.prototype.free;
+
+/**
+ * @param {BackupRestoreResponse} response
  * @returns {Uint8Array}
  */
-export function BackupKey_DeriveLocalBackupMetadataKey(backup_key_bytes) {
-    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.BackupKey_DeriveLocalBackupMetadataKey(ptr0, len0);
-    if (ret[3]) {
-        throw takeFromExternrefTable0(ret[2]);
-    }
-    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+export function BackupRestoreResponse_GetForwardSecrecyToken(response) {
+    _assertClass(response, BackupRestoreResponse);
+    const ret = wasm.BackupRestoreResponse_GetForwardSecrecyToken(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
-    return v2;
+    return v1;
+}
+
+/**
+ * @param {BackupRestoreResponse} response
+ * @returns {Uint8Array}
+ */
+export function BackupRestoreResponse_GetNextBackupSecretData(response) {
+    _assertClass(response, BackupRestoreResponse);
+    const ret = wasm.BackupRestoreResponse_GetNextBackupSecretData(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * What `store_backup` gives, before the request that uploads the previous backup is sent
+ */
+export class BackupStoreResponse {
+    static __wrap(ptr) {
+        const obj = Object.create(BackupStoreResponse.prototype);
+        obj.__wbg_ptr = ptr;
+        BackupStoreResponseFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        BackupStoreResponseFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_backupstoreresponse_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) BackupStoreResponse.prototype[Symbol.dispose] = BackupStoreResponse.prototype.free;
+
+/**
+ * @param {BackupStoreResponse} response
+ * @returns {Uint8Array}
+ */
+export function BackupStoreResponse_GetFinalizeRequest(response) {
+    _assertClass(response, BackupStoreResponse);
+    const ret = wasm.BackupStoreResponse_GetFinalizeRequest(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * @param {BackupStoreResponse} response
+ * @returns {Uint8Array}
+ */
+export function BackupStoreResponse_GetForwardSecrecyToken(response) {
+    _assertClass(response, BackupStoreResponse);
+    const ret = wasm.BackupStoreResponse_GetForwardSecrecyToken(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * @param {BackupStoreResponse} response
+ * @returns {Uint8Array}
+ */
+export function BackupStoreResponse_GetNextBackupSecretData(response) {
+    _assertClass(response, BackupStoreResponse);
+    const ret = wasm.BackupStoreResponse_GetNextBackupSecretData(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * @param {BackupStoreResponse} response
+ * @returns {Uint8Array}
+ */
+export function BackupStoreResponse_GetOpaqueMetadata(response) {
+    _assertClass(response, BackupStoreResponse);
+    const ret = wasm.BackupStoreResponse_GetOpaqueMetadata(response.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
 }
 
 /**
@@ -1323,26 +1425,6 @@ export class MessageBackupKey {
 if (Symbol.dispose) MessageBackupKey.prototype[Symbol.dispose] = MessageBackupKey.prototype.free;
 
 /**
- * @param {string} account_entropy
- * @param {Uint8Array} aci_bytes
- * @param {Uint8Array | null} [forward_secrecy_token]
- * @returns {MessageBackupKey}
- */
-export function MessageBackupKey_FromAccountEntropyPool(account_entropy, aci_bytes, forward_secrecy_token) {
-    const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
-    const len1 = WASM_VECTOR_LEN;
-    var ptr2 = isLikeNone(forward_secrecy_token) ? 0 : passArray8ToWasm0(forward_secrecy_token, wasm.__wbindgen_malloc);
-    var len2 = WASM_VECTOR_LEN;
-    const ret = wasm.MessageBackupKey_FromAccountEntropyPool(ptr0, len0, ptr1, len1, ptr2, len2);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return MessageBackupKey.__wrap(ret[0]);
-}
-
-/**
  * @param {Uint8Array} backup_key_bytes
  * @param {Uint8Array} backup_id
  * @param {Uint8Array | null} [forward_secrecy_token]
@@ -2383,6 +2465,83 @@ export function SealedSender_MultiRecipientMessageForSingleRecipient(encoded) {
     var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v2;
+}
+
+/**
+ * The data that starts the chain of backups, which the next `SecureValueRecoveryForBackups_PrepareStore` takes
+ * @param {Uint8Array} backup_key_bytes
+ * @returns {Uint8Array}
+ */
+export function SecureValueRecoveryForBackups_CreateNewBackupChain(backup_key_bytes) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SecureValueRecoveryForBackups_CreateNewBackupChain(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Opens the token of the pair at `pair_index` with the salt that the enclave gave, and makes the data for the next
+ * backup: it keeps the enclave's key, so the next file's metadata can name it
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} metadata
+ * @param {number} pair_index
+ * @param {Uint8Array} encryption_salt
+ * @returns {BackupRestoreResponse}
+ */
+export function SecureValueRecoveryForBackups_FinishRestore(backup_key_bytes, metadata, pair_index, encryption_salt) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(metadata, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(encryption_salt, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.SecureValueRecoveryForBackups_FinishRestore(ptr0, len0, ptr1, len1, pair_index, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return BackupRestoreResponse.__wrap(ret[0]);
+}
+
+/**
+ * The salts of the passwords of a backup file's metadata, 32 bytes each: every pair is a try at the key in the enclave
+ * @param {Uint8Array} metadata
+ * @returns {Uint8Array}
+ */
+export function SecureValueRecoveryForBackups_GetMetadataSalts(metadata) {
+    const ptr0 = passArray8ToWasm0(metadata, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SecureValueRecoveryForBackups_GetMetadataSalts(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Starts a backup: gives the token for the file, the metadata to write at its start, the data for the next backup and
+ * the request that puts the previous backup's key into the enclave (`finalize_request`, empty when the previous data
+ * came from a restore, which left the enclave as it is)
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} previous_secret_data
+ * @returns {BackupStoreResponse}
+ */
+export function SecureValueRecoveryForBackups_PrepareStore(backup_key_bytes, previous_secret_data) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(previous_secret_data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.SecureValueRecoveryForBackups_PrepareStore(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return BackupStoreResponse.__wrap(ret[0]);
 }
 
 export class SenderCertificate {
@@ -3515,6 +3674,22 @@ export function SgxClientState_EstablishedSend(cli, plaintext_to_send) {
 }
 
 /**
+ * The hash of the Noise handshake, which SVR-B binds a restore request to
+ * @param {SgxClientState} cli
+ * @returns {Uint8Array}
+ */
+export function SgxClientState_GetHandshakeHash(cli) {
+    _assertClass(cli, SgxClientState);
+    const ret = wasm.SgxClientState_GetHandshakeHash(cli.__wbg_ptr);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
  * @param {SgxClientState} obj
  * @returns {Uint8Array}
  */
@@ -3772,6 +3947,188 @@ export function Svr2Client_New(mrenclave, attestation_msg, current_timestamp) {
         throw takeFromExternrefTable0(ret[1]);
     }
     return SgxClientState.__wrap(ret[0]);
+}
+
+/**
+ * The handshake with a SVR-B enclave: the raft group of the build that has the MRENCLAVE is the one that attestation
+ * expects (libsignal-net `SvrBEnv`, `PROD`)
+ * @param {Uint8Array} mrenclave
+ * @param {Uint8Array} attestation_msg
+ * @param {number} current_timestamp
+ * @returns {SgxClientState}
+ */
+export function SvrBClient_New(mrenclave, attestation_msg, current_timestamp) {
+    const ptr0 = passArray8ToWasm0(mrenclave, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(attestation_msg, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrBClient_New(ptr0, len0, ptr1, len1, current_timestamp);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return SgxClientState.__wrap(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} response
+ * @returns {number}
+ */
+export function SvrBQuery_Finalize(response) {
+    const ptr0 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrBQuery_Finalize(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] >>> 0;
+}
+
+/**
+ * The request for the tries that are left, which changes nothing in the enclave (`Query4`)
+ * @returns {Uint8Array}
+ */
+export function SvrBQuery_GetRequest() {
+    const ret = wasm.SvrBQuery_GetRequest();
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * The request that deletes the backup key from the enclave (`Remove4`)
+ * @returns {Uint8Array}
+ */
+export function SvrBRemove_GetRequest() {
+    const ret = wasm.SvrBRemove_GetRequest();
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * A started restore: its first request is out, and the enclave's answer finishes it
+ */
+export class SvrBRestore1 {
+    static __wrap(ptr) {
+        const obj = Object.create(SvrBRestore1.prototype);
+        obj.__wbg_ptr = ptr;
+        SvrBRestore1Finalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        SvrBRestore1Finalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_svrbrestore1_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) SvrBRestore1.prototype[Symbol.dispose] = SvrBRestore1.prototype.free;
+
+/**
+ * @param {SvrBRestore1} restore
+ * @returns {Uint8Array}
+ */
+export function SvrBRestore1_GetRequest(restore) {
+    _assertClass(restore, SvrBRestore1);
+    const ret = wasm.SvrBRestore1_GetRequest(restore.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Starts the restore of a pair's key: the password derives from the backup key and the pair's salt
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} password_salt
+ * @returns {SvrBRestore1}
+ */
+export function SvrBRestore1_New(backup_key_bytes, password_salt) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(password_salt, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrBRestore1_New(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return SvrBRestore1.__wrap(ret[0]);
+}
+
+/**
+ * The second request: it proves that the client knows the password, and is bound to the connection's handshake
+ * @param {SvrBRestore1} restore
+ * @param {Uint8Array} response
+ * @param {Uint8Array} handshake_hash
+ * @returns {SvrBRestore2}
+ */
+export function SvrBRestore1_Restore2(restore, response, handshake_hash) {
+    _assertClass(restore, SvrBRestore1);
+    var ptr0 = restore.__destroy_into_raw();
+    const ptr1 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(handshake_hash, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrBRestore1_Restore2(ptr0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return SvrBRestore2.__wrap(ret[0]);
+}
+
+export class SvrBRestore2 {
+    static __wrap(ptr) {
+        const obj = Object.create(SvrBRestore2.prototype);
+        obj.__wbg_ptr = ptr;
+        SvrBRestore2Finalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        SvrBRestore2Finalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_svrbrestore2_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) SvrBRestore2.prototype[Symbol.dispose] = SvrBRestore2.prototype.free;
+
+/**
+ * @param {SvrBRestore2} restore
+ * @returns {Uint8Array}
+ */
+export function SvrBRestore2_GetRequest(restore) {
+    _assertClass(restore, SvrBRestore2);
+    const ret = wasm.SvrBRestore2_GetRequest(restore.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * The salt of the key that encrypts the token, which the enclave gave back
+ * @param {SvrBRestore2} restore
+ * @param {Uint8Array} response
+ * @returns {Uint8Array}
+ */
+export function SvrBRestore2_Restore(restore, response) {
+    _assertClass(restore, SvrBRestore2);
+    var ptr0 = restore.__destroy_into_raw();
+    const ptr1 = passArray8ToWasm0(response, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrBRestore2_Restore(ptr0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
 }
 
 /**
@@ -4423,7 +4780,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 235, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 242, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },
@@ -4469,6 +4826,12 @@ function wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e
     wasm.wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
 }
 
+const BackupRestoreResponseFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_backuprestoreresponse_free(ptr, 1));
+const BackupStoreResponseFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_backupstoreresponse_free(ptr, 1));
 const CiphertextMessageFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_ciphertextmessage_free(ptr, 1));
@@ -4550,6 +4913,12 @@ const SignalMessageFinalization = (typeof FinalizationRegistry === 'undefined')
 const SignedPreKeyRecordFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_signedprekeyrecord_free(ptr, 1));
+const SvrBRestore1Finalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_svrbrestore1_free(ptr, 1));
+const SvrBRestore2Finalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_svrbrestore2_free(ptr, 1));
 const TlsClientFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_tlsclient_free(ptr, 1));

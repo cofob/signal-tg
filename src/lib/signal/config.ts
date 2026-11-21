@@ -7,6 +7,7 @@ export const SIGNAL_STORAGE_HOST = 'storage.signal.org';
 export const SIGNAL_CDSI_HOST = 'cdsi.signal.org';
 export const SIGNAL_CONTENT_PROXY_HOST = 'contentproxy.signal.org';
 export const SIGNAL_SVR2_HOST = 'svr2.signal.org';
+export const SIGNAL_SVRB_HOST = 'svrb.signal.org';
 export const SIGNAL_CDN_HOSTS: Record<number, string> = {
   0: 'cdn.signal.org',
   2: 'cdn2.signal.org',
@@ -54,6 +55,13 @@ export const SIGNAL_CDSI_MRENCLAVE = '15637fa1e54fe655176d3df1a9f94b87c01ed377ac
 export const SIGNAL_SVR2_MRENCLAVE = 'fdbbacdc0c043d0d53fe1440f62728de0386f45ab0a275bd8f99e03a02af355e';
 // The SVR2 enclave before the current one, which clients still read during the rotation
 export const SIGNAL_SVR2_PREVIOUS_MRENCLAVE = 'ced8217b26228e4b210c985786999d095c4958a94faf37b14acaf25c4cbb02a4';
+
+// The SVR-B enclaves of libsignal `rust/net/src/env.rs` (`PROD.svr_b`): a backup's key goes to both, and the raft
+// configurations that attestation expects are in `rust/attest/src/constants.rs`
+export const SIGNAL_SVRB_MRENCLAVES = [
+  'fdbbacdc0c043d0d53fe1440f62728de0386f45ab0a275bd8f99e03a02af355e',
+  '2048e20fcd07d0992c4907e8e04c5a85f1f993d195004c7342675343ca2e524b',
+];
 
 // TLS root of every Signal service host; the tunnel transport trusts only this certificate
 export const SIGNAL_CA_PEM = `-----BEGIN CERTIFICATE-----

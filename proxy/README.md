@@ -39,7 +39,7 @@ never sees the connections without credentials, and the second never sees the ac
 ## Protocol
 
 - `GET /tunnel?host=<host>&port=443` with a WebSocket upgrade opens a tunnel. `host` must be one of
-  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy`, `sfu.voip` or `svr2` `.signal.org`, and
+  `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`, `contentproxy`, `sfu.voip`, `svr2` or `svrb` `.signal.org`, and
   `port` must be 443. Binary messages carry raw TCP bytes in both directions; the client sends
   messages of at most 64 KiB (`src/lib/signal/net/TlsTunnel.ts`).
 - The first bytes from the client must be a TLS ClientHello whose only server name is `host`.

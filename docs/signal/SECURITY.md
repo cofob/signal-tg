@@ -218,8 +218,8 @@ before the ClientHello check (a bad client costs a connection of 10 seconds at m
 
 `RootCertStore` holds only `SIGNAL_CA_PEM` (Signal's root, valid to 2032-01-24), the server name is the host being
 contacted, rustls verifies the chain and the name, ALPN is `h2` or `http/1.1`, there is no client authentication and no
-way to disable verification. Every host in use (chat, storage, cdn, cdn2, cdn3, cdsi, contentproxy, svr2, sfu) is both
-in `src/lib/signal/config.ts` and in the tunnel's allowlist. CDSI and SVR2 use the attested connections of libsignal's
+way to disable verification. Every host in use (chat, storage, cdn, cdn2, cdn3, cdsi, contentproxy, svr2, svrb, sfu) is both
+in `src/lib/signal/config.ts` and in the tunnel's allowlist. CDSI, SVR2 and SVR-B use the attested connections of libsignal's
 `attest` with the production MRENCLAVE values in `config.ts` and tests that reject another enclave, an expired report
 and a modified byte (see PLAN.md). Certificate dates use the device clock, so a wrong clock fails closed.
 
