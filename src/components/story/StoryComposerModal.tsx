@@ -42,7 +42,8 @@ const TEXT_STYLES: ApiTextStoryStyle[] = ['default', 'bold', 'serif', 'script', 
 const BACKGROUNDS = STORY_BACKGROUNDS.map(getStoryBackgroundCss);
 // Signal Android `StoryTextPostView`: text stories take up to 700 characters
 const MAX_TEXT_LENGTH = 700;
-const MEDIA_ACCEPT = [...SUPPORTED_PHOTO_CONTENT_TYPES, ...SUPPORTED_VIDEO_CONTENT_TYPES].join(',');
+const SUPPORTED_STORY_MEDIA_TYPES = new Set([...SUPPORTED_PHOTO_CONTENT_TYPES, ...SUPPORTED_VIDEO_CONTENT_TYPES]);
+const MEDIA_ACCEPT = [...SUPPORTED_STORY_MEDIA_TYPES].join(',');
 
 /**
  * Composes a Signal story: text on a preset background in one of the story fonts, or a photo or video with a caption,
@@ -54,10 +55,13 @@ const StoryComposerModal = ({
   chatsById,
   orderedChatIds,
 }: OwnProps & StateProps) => {
-  const { closeStoryComposer, sendStory, loadStoryDistributionLists } = getActions();
+  const {
+    closeStoryComposer, sendStory, loadStoryDistributionLists, showNotification,
+  } = getActions();
 
   const lang = useLang();
   const isOpen = Boolean(modal);
+  const isSending = Boolean(modal?.isSending);
   const [mode, setMode] = useState<Mode>('text');
   const [text, setText] = useState('');
   const [textStyle, setTextStyle] = useState<ApiTextStoryStyle>('default');
@@ -66,8 +70,10 @@ const StoryComposerModal = ({
   const [caption, setCaption] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>();
+  const isDefaultAudienceSelectedRef = useRef(false);
 
   useEffect(() => {
+    isDefaultAudienceSelectedRef.current = false;
     if (!isOpen) return;
     loadStoryDistributionLists();
     setMode('text');
@@ -79,7 +85,10 @@ const StoryComposerModal = ({
 
   const myStoryId = distributionLists?.find(({ isMyStory }) => isMyStory)?.id;
   useEffect(() => {
-    if (isOpen && myStoryId) setSelectedIds((ids) => (ids.length ? ids : [myStoryId]));
+    // My Story is selected once per composer, so the person can clear it
+    if (!isOpen || !myStoryId || isDefaultAudienceSelectedRef.current) return;
+    isDefaultAudienceSelectedRef.current = true;
+    setSelectedIds((ids) => (ids.length ? ids : [myStoryId]));
   }, [isOpen, myStoryId]);
 
   const audienceOptions = useMemo((): IRadioOption[] => {
@@ -96,13 +105,23 @@ const StoryComposerModal = ({
   }, [chatsById, distributionLists, lang, orderedChatIds]);
 
   const listIds = useMemo(() => new Set(distributionLists?.map(({ id }) => id)), [distributionLists]);
-  const canSend = Boolean(selectedIds.length && (mode === 'text' ? text.trim() : attachment));
+  const canSend = Boolean(!isSending && selectedIds.length && (mode === 'text' ? text.trim() : attachment));
 
   const handleFileChange = useLastCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
     e.currentTarget.value = '';
     if (!file) return;
-    setAttachment(await buildAttachment(file.name, file));
+
+    try {
+      const built = await buildAttachment(file.name, file);
+      if (SUPPORTED_STORY_MEDIA_TYPES.has(built.mimeType)) {
+        setAttachment(built);
+      } else {
+        showNotification({ message: { key: 'StoryMediaUnsupported' } });
+      }
+    } catch {
+      showNotification({ message: { key: 'StoryMediaUnsupported' } });
+    }
   });
 
   const handleChooseFile = useLastCallback(() => {

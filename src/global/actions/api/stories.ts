@@ -664,8 +664,20 @@ addActionHandler('sendStory', async (global, actions, payload): Promise<void> =>
     story, listIds, groupIds, tabId = getCurrentTabId(),
   } = payload;
 
-  actions.closeStoryComposer({ tabId });
+  // The composer stays open until the story went out, so a failed story can be sent again
+  global = updateTabState(global, { storyComposerModal: { isSending: true } }, tabId);
+  setGlobal(global);
   const result = await callApi('sendStory', { story, listIds, groupIds });
+  if (result) {
+    actions.closeStoryComposer({ tabId });
+  } else {
+    global = getGlobal();
+    // A composer closed meanwhile stays closed
+    if (selectTabState(global, tabId).storyComposerModal) {
+      global = updateTabState(global, { storyComposerModal: { isSending: undefined } }, tabId);
+      setGlobal(global);
+    }
+  }
   actions.showNotification({ message: { key: result ? 'StorySent' : 'StorySendFailed' }, tabId });
 });
 

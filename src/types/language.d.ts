@@ -1824,6 +1824,7 @@ export interface LangPair {
   'StoryModeMedia': undefined;
   'StoryTextPlaceholder': undefined;
   'StoryChooseMedia': undefined;
+  'StoryMediaUnsupported': undefined;
   'StoryCaption': undefined;
   'StorySendTo': undefined;
   'StorySend': undefined;
@@ -1845,6 +1846,7 @@ export interface LangPair {
   'StoriesSettingCustomLists': undefined;
   'StoriesSettingCustomList': undefined;
   'StoriesSettingNewList': undefined;
+  'StoriesSettingDeleteList': undefined;
   'SettingsKeywordsStories': undefined;
   'StarGift': undefined;
   'SettingsItemPrivacyPasskeys': undefined;
@@ -3401,6 +3403,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'StoryBackground': {
     'index': V;
   };
+  'StoriesSettingDeleteListInfo': {
+    'name': V;
+  };
   'GiftAuctionRoundValue': {
     'current': V;
     'total': V;
@@ -4279,7 +4284,8 @@ export interface LangKeyGroups {
       | 'MediaAccessCameraText'
       | 'MediaAccessMicrophoneText'
       | 'MediaAccessCameraMicrophoneText'
-      | 'ContextMenuNoForwardsPeer';
+      | 'ContextMenuNoForwardsPeer'
+      | 'StoriesSettingDeleteListInfo';
     variables: 'name';
   };
   'date,time': {

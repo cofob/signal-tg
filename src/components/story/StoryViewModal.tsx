@@ -199,8 +199,9 @@ function StoryViewModal({
           items={sortedViews}
           onLoadMore={handleLoadMore}
         >
-          {sortedViews?.map((view) => (
-            <StoryView key={`${view.peerId}-${view.date}-${view.type}`} storyView={view} />
+          {sortedViews?.map((view, index) => (
+            // A person may reply several times in a second
+            <StoryView key={`${view.peerId}-${view.date}-${view.type}-${index}`} storyView={view} />
           ))}
           {isLoading && Array.from({ length: placeholderCount }).map((_, i) => (
             <ListItem

@@ -234,12 +234,6 @@ function Story({
   useStoryPreloader(peerId, storyId);
 
   useEffect(() => {
-    if (storyId) {
-      viewStory({ peerId, storyId });
-    }
-  }, [storyId, peerId]);
-
-  useEffect(() => {
     loadPeerSkippedStories({ peerId });
   }, [peerId]);
 
@@ -307,10 +301,18 @@ function Story({
   );
 
   const hasAllData = fullMediaData && (!altMediaHash || altMediaData);
+  const isStoryShown = Boolean(hasAllData || isUnsupportedVideo || isUnsupportedStory || textStory);
   useEffect(() => {
     // Start progress to the nest slide after media has been downloaded or it is unsupported
     if (hasAllData || isUnsupportedVideo || isUnsupportedStory || textStory) handlePlayStory();
   }, [hasAllData, isUnsupportedVideo, isUnsupportedStory, textStory]);
+
+  useEffect(() => {
+    // The author gets a viewed receipt once the story shows, so a story that fails to load stays unviewed
+    if (storyId && isStoryShown) {
+      viewStory({ peerId, storyId });
+    }
+  }, [storyId, peerId, isStoryShown]);
 
   useBackgroundMode(unmarkAppFocused, markAppFocused);
 

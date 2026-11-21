@@ -11,6 +11,7 @@ import useLastCallback from '../../../hooks/useLastCallback';
 
 import Island, { IslandDescription, IslandTitle } from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
+import ConfirmDialog from '../../ui/ConfirmDialog';
 import ListItem from '../../ui/ListItem';
 import RadioGroup from '../../ui/RadioGroup';
 import StoryListEditorModal from './StoryListEditorModal';
@@ -49,6 +50,7 @@ const SettingsStories = ({
 
   const lang = useLang();
   const [editing, setEditing] = useState<Editing | undefined>();
+  const [deletingListId, setDeletingListId] = useState<string | undefined>();
 
   useHistoryBack({ isActive, onBack: onReset });
 
@@ -65,6 +67,7 @@ const SettingsStories = ({
   const editingList = editing && 'listId' in editing
     ? customLists?.find(({ id }) => id === editing.listId)
     : undefined;
+  const deletingList = customLists?.find(({ id }) => id === deletingListId);
 
   const handleStoriesChange = useLastCallback((isEnabled: boolean) => {
     updateStorySettings({ areStoriesDisabled: !isEnabled });
@@ -93,6 +96,15 @@ const SettingsStories = ({
 
   const handleCloseEditor = useLastCallback(() => {
     setEditing(undefined);
+  });
+
+  const handleConfirmDeleteList = useLastCallback(() => {
+    if (deletingListId) deleteStoryDistributionList({ id: deletingListId });
+    setDeletingListId(undefined);
+  });
+
+  const handleCloseDeleteList = useLastCallback(() => {
+    setDeletingListId(undefined);
   });
 
   const handleSaveList = useLastCallback((memberIds: string[], name?: string) => {
@@ -186,7 +198,7 @@ const SettingsStories = ({
                 narrow
                 secondaryIcon="delete"
                 onClick={() => setEditing({ listId: list.id })}
-                onSecondaryIconClick={() => deleteStoryDistributionList({ id: list.id })}
+                onSecondaryIconClick={() => setDeletingListId(list.id)}
               >
                 <div className="multiline-item">
                   <span className="title">{list.name}</span>
@@ -210,6 +222,15 @@ const SettingsStories = ({
         memberIds={editorMemberIds}
         onSave={handleSaveList}
         onClose={handleCloseEditor}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deletingList)}
+        title={lang('StoriesSettingDeleteList')}
+        text={deletingList ? lang('StoriesSettingDeleteListInfo', { name: deletingList.name }) : undefined}
+        confirmHandler={handleConfirmDeleteList}
+        confirmIsDestructive
+        confirmLabel={lang('Delete')}
+        onClose={handleCloseDeleteList}
       />
     </div>
   );

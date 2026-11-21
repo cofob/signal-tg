@@ -328,7 +328,10 @@ export type TabState = {
       storyIdsByPeerId: Record<string, number[]>;
     };
   };
-  storyComposerModal?: Record<string, never>;
+  storyComposerModal?: {
+    // The story is on its way, so it cannot be sent again
+    isSending?: boolean;
+  };
 
   selectedStoryAlbumId?: number;
 

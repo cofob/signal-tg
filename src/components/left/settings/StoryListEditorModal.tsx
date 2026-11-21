@@ -26,7 +26,7 @@ type OwnProps = {
 
 type StateProps = {
   currentUserId?: string;
-  orderedChatIds?: string[];
+  contactIds?: string[];
 };
 
 /** Picks the people of a story distribution list, and the name of a custom list */
@@ -36,7 +36,7 @@ const StoryListEditorModal = ({
   name,
   memberIds,
   currentUserId,
-  orderedChatIds,
+  contactIds,
   onSave,
   onClose,
 }: OwnProps & StateProps) => {
@@ -53,10 +53,12 @@ const StoryListEditorModal = ({
     setQuery('');
   }, [isOpen, memberIds, name]);
 
+  // Stories go to connections: the people we accepted and our contacts. Members stay listed, whatever the search.
   const itemIds = useMemo(() => {
-    const userIds = (orderedChatIds ?? []).filter((id) => isUserId(id) && id !== currentUserId);
-    return query ? filterPeersByQuery({ ids: userIds, query }) : [...new Set([...memberIds, ...userIds])];
-  }, [currentUserId, memberIds, orderedChatIds, query]);
+    const userIds = (contactIds ?? []).filter((id) => isUserId(id) && id !== currentUserId);
+    const foundIds = query ? filterPeersByQuery({ ids: userIds, query }) : userIds;
+    return [...new Set([...memberIds, ...foundIds])];
+  }, [contactIds, currentUserId, memberIds, query]);
 
   const handleNameChange = useLastCallback((e: ChangeEvent<HTMLInputElement>) => {
     setNewName(e.currentTarget.value);
@@ -100,5 +102,5 @@ const StoryListEditorModal = ({
 
 export default memo(withGlobal<OwnProps>((global): Complete<StateProps> => ({
   currentUserId: global.currentUserId,
-  orderedChatIds: global.chats.listIds.active,
+  contactIds: global.contactList?.userIds,
 }))(StoryListEditorModal));

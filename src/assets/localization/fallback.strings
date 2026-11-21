@@ -2306,6 +2306,7 @@
 "StoryTextPlaceholder" = "Type something";
 "StoryBackground" = "Background {index}";
 "StoryChooseMedia" = "Choose a photo or video";
+"StoryMediaUnsupported" = "This file cannot be used in a story. Choose a photo or a video.";
 "StoryCaption" = "Caption";
 "StorySendTo" = "Send to";
 "StorySend" = "Send Story";
@@ -2333,6 +2334,8 @@
 "StoriesSettingCustomLists" = "Custom stories";
 "StoriesSettingCustomList" = "Custom story";
 "StoriesSettingNewList" = "New custom story";
+"StoriesSettingDeleteList" = "Delete custom story?";
+"StoriesSettingDeleteListInfo" = "{name} will be deleted. Stories you already sent stay as they are.";
 "SettingsKeywordsStories" = "stories, my story, view receipts, distribution list, replies";
 "GiftAuctionRoundValue" = "{current} of {total}";
 "StarGift" = "Star Gift";
