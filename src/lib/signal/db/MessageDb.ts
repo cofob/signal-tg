@@ -438,7 +438,15 @@ export default class MessageDb {
           stories.createIndex(BY_EXPIRES_AT, 'expiresAt');
         }
       };
-      openRequest.onsuccess = () => resolve(openRequest.result);
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        // A newer version of the app in another tab upgrades the database once this connection is closed
+        db.onversionchange = () => {
+          db.close();
+          this.db = undefined;
+        };
+        resolve(db);
+      };
       openRequest.onerror = () => reject(openRequest.error);
     });
     return this.db;

@@ -1,5 +1,4 @@
 import type { Verified_State } from '../proto/generated/SignalService_pb';
-import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
@@ -105,8 +104,9 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
-  // Storage record types this device has merged from records it stored before supporting them (`MessageProcessor`)
-  storageMergedRecordTypes: NonNullable<StorageRecord['record']['case']>[];
+  // Merges of stored storage records that this device has done after learning to read more of them
+  // (`MessageProcessor`)
+  storageMergedRecordTypes: string[];
   // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
   stickerPacks: Record<string, StickerPackRecord>;
   // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
@@ -128,6 +128,8 @@ export type StoryDistributionList = {
   name: string;
   // With `isBlockList`, the people My Story leaves out; otherwise the people the list goes to
   memberAcis: string[];
+  // Binary service ids of members that are no ACIs, such as PNIs, which the storage service record keeps as they are
+  otherMemberIds?: Uint8Array[];
   areRepliesAllowed: boolean;
   isBlockList: boolean;
   // Deleted lists stay until the storage service drops them

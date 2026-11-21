@@ -17,7 +17,8 @@ import type { StorageWrite } from './storageService';
 
 import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
-import { uuidToBytes, uuidToString } from '../serviceId';
+import { isPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
+import { MY_STORY_ID } from '../stories/storyLists';
 
 import {
   AccountRecord_PhoneNumberSharingMode,
@@ -70,6 +71,9 @@ const STICKER_PACK_KEY_PREFIX = 'stickerPack:';
 const STORY_LIST_KEY_PREFIX = 'storyList:';
 
 const ACI_BINARY_LENGTH = 16;
+// PNIs have a prefix byte in binary service id fields and a `PNI:` prefix in strings
+const PNI_BINARY_PREFIX = 1;
+const PNI_STRING_PREFIX_LENGTH = 4;
 // Signal Desktop `generateStorageID` in `ts/services/storage.preload.ts`
 const STORAGE_ID_LENGTH = 16;
 // Signal Desktop `MuteExpiration` (`packages/types/src/service/MuteExpiration.std.ts`): "muted forever" is
@@ -141,17 +145,34 @@ export function getStoryListKey(listId: string) {
 export function parseStoryDistributionList(record: StoryDistributionListRecord): StoryDistributionList | undefined {
   if (record.identifier.length !== ACI_BINARY_LENGTH) return undefined;
   // Android writes binary service ids only, older clients strings (Signal Desktop `mergeStoryDistributionListRecord`)
-  const memberAcis = record.recipientServiceIdsBinary.length
-    ? record.recipientServiceIdsBinary.filter((id) => id.length === ACI_BINARY_LENGTH).map(uuidToString)
-    : record.recipientServiceIds.filter((id) => !id.startsWith('PNI:'));
+  const memberIds = record.recipientServiceIdsBinary.length
+    ? record.recipientServiceIdsBinary
+    : record.recipientServiceIds.flatMap(parseServiceIdString);
+  const memberAcis = memberIds.filter((id) => id.length === ACI_BINARY_LENGTH).map(uuidToString);
+  // PNIs and other service ids stay as they are, so that writing the list back keeps its members
+  const otherMemberIds = memberIds.filter((id) => id.length !== ACI_BINARY_LENGTH);
+  const id = uuidToString(record.identifier);
   return {
-    id: uuidToString(record.identifier),
-    name: record.name,
+    id,
+    // Signal Desktop names My Story by its identifier; here it has no name of its own
+    name: id === MY_STORY_ID ? '' : record.name,
     memberAcis,
+    otherMemberIds: otherMemberIds.length ? otherMemberIds : undefined,
     areRepliesAllowed: record.allowsReplies,
     isBlockList: record.isBlockList,
     deletedAt: record.deletedAtTimestamp ? Number(record.deletedAtTimestamp) : undefined,
   };
+}
+
+/** The binary service id of a service id string: an ACI is its UUID, a PNI has a prefix byte; invalid ones are skipped */
+function parseServiceIdString(serviceId: string) {
+  const isPni = isPniServiceId(serviceId);
+  try {
+    const uuidBytes = uuidToBytes(isPni ? serviceId.slice(PNI_STRING_PREFIX_LENGTH) : serviceId);
+    return [isPni ? Uint8Array.of(PNI_BINARY_PREFIX, ...uuidBytes) : uuidBytes];
+  } catch {
+    return [];
+  }
 }
 
 /** `storyViewReceiptsEnabled` of the account record; unset means view receipts follow read receipts */
@@ -360,11 +381,12 @@ function setConversationFields(
 /** Signal Desktop `toStoryDistributionListRecord` in `ts/services/storageRecordOps.preload.ts` */
 function setStoryListFields(record: StoryDistributionListRecord, list: StoryDistributionList) {
   record.identifier = uuidToBytes(list.id);
-  record.name = list.name;
+  // Signal Desktop names My Story by its identifier
+  record.name = list.id === MY_STORY_ID ? MY_STORY_ID : list.name;
   record.allowsReplies = list.areRepliesAllowed;
   record.isBlockList = list.isBlockList;
   record.deletedAtTimestamp = list.deletedAt ? BigInt(list.deletedAt) : 0n;
-  record.recipientServiceIdsBinary = list.memberAcis.map(uuidToBytes);
+  record.recipientServiceIdsBinary = [...list.memberAcis.map(uuidToBytes), ...list.otherMemberIds ?? []];
   record.recipientServiceIds = [];
 }
 

@@ -501,9 +501,19 @@ async function sendWithLocalMessage(conversation: ConversationRecord, init: Data
  * arrive in the chat as stored messages; group story replies stay with the story.
  */
 async function sendStoryReply({
-  replyInfo, text, entities, isReaction,
+  replyInfo, text, entities, isReaction, attachment, attachments, sticker, gif, audio, poll, dice, contact, story,
+  richMessage,
 }: SendMessageParams) {
-  if (replyInfo?.type !== 'story' || !text) return;
+  if (replyInfo?.type !== 'story') return;
+  // Signal story replies are text or an emoji reaction
+  const hasOtherContent = Boolean(
+    attachment || attachments?.length || sticker || gif || audio || poll || dice || contact || story || richMessage,
+  );
+  if (!text || hasOtherContent) {
+    sendError(SEND_ERROR);
+    return;
+  }
+
   try {
     const reply = isReaction ? { emoji: text } : await buildOutgoingBody({ text, entities });
     await processor.sendStoryReply(replyInfo.storyId, reply);
