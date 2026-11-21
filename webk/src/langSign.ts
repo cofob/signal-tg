@@ -67,13 +67,13 @@ const lang = {
   'Contacts.PhoneNumber.Placeholder': 'Phone Number',
   'Login.Next': 'Next',
   'Login.ContinueOnLanguage': 'Continue in English',
-  'Login.QR.Title': 'Log in by QR Code',
-  'Login.QR.Help1': 'Open Telegram on your phone',
-  'Login.QR.Help2': 'Go to **Settings** > **Devices** > **Add Device**',
-  'Login.QR.Help3': 'Point your phone at this screen to confirm login',
+  'Login.QR.Title': 'Link TeleSignal to Signal',
+  'Login.QR.Help1': 'Open Signal on your phone',
+  'Login.QR.Help2': 'Go to **Settings** > **Linked devices** > **Link new device**',
+  'Login.QR.Help3': 'Point your phone at this screen to scan the code',
   'Login.QR.Cancel': 'Log in by phone number >',
   'Login.QR.Login': 'Log in by QR Code >',
-  'Login.QR.Subtitle': 'Scan with Telegram app on your phone',
+  'Login.QR.Subtitle': 'Scan the code with Signal on your phone',
   // the link target stays empty on purpose: tweb's formatter takes the anchor from the arguments
   // for `[]()`, while a `%1$@` inside the target makes it start looking at argument 1 and crash
   // on the missing one (the macOS string this came from substitutes the url into the target)

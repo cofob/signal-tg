@@ -64,6 +64,7 @@ import AppPromoManager from '@appManagers/appPromoManager';
 import AppAccountManager from '@appManagers/appAccountManager';
 import {AiTonesManager} from '@lib/appManagers/aiTonesManager';
 import AppWalletManager from '@appManagers/appWalletManager';
+import AppSignalManager from '@appManagers/appSignalManager';
 
 export default function createManagers(
   appStoragesManager: AppStoragesManager,
@@ -133,7 +134,8 @@ export default function createManagers(
     appPromoManager: new AppPromoManager,
     appAccountManager: new AppAccountManager,
     aiTonesManager: new AiTonesManager,
-    appWalletManager: new AppWalletManager
+    appWalletManager: new AppWalletManager,
+    appSignalManager: new AppSignalManager
   };
 
   managers.authorizer = new Authorizer({

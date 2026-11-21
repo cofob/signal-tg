@@ -77,7 +77,8 @@ export class AccountController extends StaticUtilityClass {
   }
 
   static isSignedIn(accountData: AccountSessionData) {
-    return !!accountData.userId && !this.isForeign(accountData);
+    // * TeleSignal: a slot of Telegram's earlier versions holds no Signal account
+    return !!accountData.userId && !!accountData.isLinked && !this.isForeign(accountData);
   }
 
   /**

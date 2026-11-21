@@ -48,6 +48,7 @@ import MEDIA_MIME_TYPES_SUPPORTED from '@environment/mediaMimeTypesSupport';
 import {doubleRaf} from '@helpers/schedulers';
 import {getCurrentAccount} from '@lib/accounts/getCurrentAccount';
 import AccountController from '@lib/accounts/accountController';
+import {isSignalPasscodeEnabled, showSignalPasscodeScreen} from '@lib/signal/frontend';
 import {changeAccount} from '@lib/accounts/changeAccount';
 import {getValidatedAccount} from '@lib/accounts/getValidatedAccount';
 import {MAX_ACCOUNTS_FREE, MAX_ACCOUNTS_PREMIUM} from '@lib/accounts/constants';
@@ -117,25 +118,6 @@ function getPermanentWebVersion() {
     // * as an older K wrote it
     return value;
   }
-}
-
-async function checkLastActiveAccountFromTMe() {
-  try {
-    if(
-      App.isMainDomain &&
-      document.referrer &&
-      /^(t|telegram)\.me/i.test(new URL(document.referrer).host)
-    ) {
-      const [totalAccounts, {accountNumber}] = await Promise.all([
-        AccountController.getUnencryptedTotalAccounts(),
-        sessionStorage.get('xt_instance')
-      ]);
-
-      if(accountNumber <= totalAccounts && accountNumber !== getCurrentAccount()) {
-        changeAccount(accountNumber, false, true);
-      }
-    }
-  } catch(err) {}
 }
 
 function setManifest() {
@@ -355,6 +337,11 @@ function onInstanceDeactivated(reason: InstanceDeactivateReason) {
 
     if(reason === 'otherClient') {
       singleInstance.onMyClient();
+      // * the other frontend took the engine over (`src/lib/signal/engineLock.ts`): this one takes it back
+      rootScope.managers.appSignalManager.start({
+        platform: navigator.platform,
+        langCode: I18n.getLastRequestedLangCode()
+      });
     } else {
       singleInstance.activateInstance();
     }
@@ -476,8 +463,6 @@ if(import.meta.env.DEV || import.meta.env.VITE_PREVIEW) {
   setHotReloadGuardLoader(() => import('./pages/bootstrapIm').then(({importAppTopLevel}) => importAppTopLevel()));
 
   rootScope.managers = getProxiedManagers();
-  await checkLastActiveAccountFromTMe();
-
   if(IS_INSTALL_PROMPT_SUPPORTED) {
     cacheInstallPrompt();
   }
@@ -602,7 +587,23 @@ if(import.meta.env.DEV || import.meta.env.VITE_PREVIEW) {
   appChatBackground.attach();
   appChatBackground.setBackground({transition: 'instant'});
 
-  let authState = stateResult.state.authState;
+  // * TeleSignal: the account is the Signal engine's, and the slot marker of Web A says whether this slot has one
+  // * (`isLinked`). Without one the link QR code is the way in: Telegram's sign-in by phone number is not used
+  const isLinked = AccountController.isSignedIn(await AccountController.get(getCurrentAccount()));
+  let authState: AuthState = isLinked ? {_: 'authStateSignedIn'} : {_: 'authStateSignQr'};
+  if(stateResult.state.authState._ !== authState._) {
+    rootScope.managers.appStateManager.pushToState('authState', authState);
+  }
+
+  if(isSignalPasscodeEnabled()) {
+    showSignalPasscodeScreen();
+    return;
+  }
+
+  rootScope.managers.appSignalManager.start({
+    platform: navigator.platform,
+    langCode: I18n.getLastRequestedLangCode()
+  });
 
   const hash = location.hash;
   const splitted = hash.split('?');

@@ -1,21 +1,13 @@
 import {onCleanup, onMount} from 'solid-js';
 
-import Button from '@components/buttonTsx';
 import LanguageChangeButton from '@components/languageChangeButton';
-import PasskeyLoginButton from '@components/passkeyLoginButton';
 import {putPreloader} from '@components/putPreloader';
 import MediaHeader from '@components/mediaHeader';
 import mediaHeaderStyles from '@components/mediaHeader.module.scss';
-import bytesCmp from '@helpers/bytes/bytesCmp';
-import bytesToBase64 from '@helpers/bytes/bytesToBase64';
-import fixBase64String from '@helpers/fixBase64String';
-import pause from '@helpers/schedulers/pause';
 import {paintQrCode} from '@helpers/qrCode/paintQrCode';
-import type {DcId} from '@types';
-import {AuthAuthorization, AuthLoginToken} from '@layer';
 import {LangPackKey, i18n} from '@lib/langPack';
-import AccountController from '@lib/accounts/accountController';
 import rootScope from '@lib/rootScope';
+import type {SignalLinkCode} from '@appManagers/appSignalManager';
 
 import AuthCard from '@/pages/AuthCard';
 import {CardSpec, useAuthFlow} from '@/pages/authFlow';
@@ -25,17 +17,14 @@ if(import.meta.hot) import.meta.hot.accept();
 
 type Spec = Extract<CardSpec, {name: 'signQR'}>;
 
-const FETCH_INTERVAL = 3;
 const QR_SIZE = 240;
 
 /**
- * Card variant of `pageSignQR`. Polls `auth.exportLoginToken` in a loop, painting
- * the QR code into the `auth-image` slot. On `loginTokenSuccess` we go to IM; on
- * `SESSION_PASSWORD_NEEDED` to the password card; on cancel/back to the signIn
- * card. The loop terminates when the card unmounts (cleanup flips `stopped`).
+ * Card variant of `pageSignQR`: the Signal device link code, painted into the `auth-image` slot; once the
+ * phone links this device we go to IM. Linking a new account by phone number is in the A version for now.
  */
 export default function SignQRCard(_props: {spec: Spec}) {
-  const {accountNumber, managers, navigate, toIm} = useAuthFlow();
+  const {accountNumber, managers, toIm} = useAuthFlow();
 
   // Persistent host for the QR canvas (qr-code-styling injects its canvas
   // into this div). We hand it to <MediaHeader.Sticker element={...}>.
@@ -45,7 +34,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
 
   // Latest token we've drawn — kept so the theme_changed listener can repaint
   // synchronously without waiting for the next `iterate` cycle to come around.
-  let lastDrawnToken: Uint8Array | number[] | undefined;
+  let lastDrawnToken: string | undefined;
   let QRCodeStylingCtor: any;
 
   /* ---------- description list ---------- */
@@ -75,11 +64,8 @@ export default function SignQRCard(_props: {spec: Spec}) {
   // theme's CSS variables. Called on token rotation from `iterate` and on theme
   // change from the `theme_changed` listener so the QR repaints with the new
   // colors without waiting for the next 3-second polling tick.
-  async function paintQR(token: Uint8Array | number[]) {
+  async function paintQR(url: string) {
     if(!QRCodeStylingCtor) return;
-
-    const encoded = bytesToBase64(token);
-    const url = 'tg://login?token=' + fixBase64String(encoded, true);
 
     const style = window.getComputedStyle(document.documentElement);
     const surfaceColor = style.getPropertyValue('--light-filled-primary-color').trim();
@@ -114,7 +100,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
       Array.from(stickerHost.children).slice(0, -1).forEach((el) => el.remove());
     }
 
-    lastDrawnToken = token;
+    lastDrawnToken = url;
   }
 
   /* ---------- theme_changed: repaint with new CSS-variable colors ---------- */
@@ -125,69 +111,26 @@ export default function SignQRCard(_props: {spec: Spec}) {
   };
   rootScope.addEventListener('theme_changed', onThemeChanged);
 
-  /* ---------- iterate loop ---------- */
+  /* ---------- link code ---------- */
 
-  // * the DC the account behind the QR lives on, once the server has said so
-  let migratedDcId: DcId | undefined;
-  let prevToken: Uint8Array | number[] | undefined;
+  // * TeleSignal: the code is the Signal engine's device link URL (`sgnl://linkdevice?...`), which the
+  // * provisioning socket replaces while it waits (@appManagers/appSignalManager). The engine starts the
+  // * account's session once the phone scanned it, and `signal_authorized` comes once the slot holds it
+  let lastUrl: string | undefined;
+  const onLinkCode = (code: SignalLinkCode) => {
+    if(stopped || !code || code.url === lastUrl) return;
+    lastUrl = code.url;
+    paintQR(code.url);
+  };
 
-  async function iterate(QRCodeStyling: any, isLoop: boolean): Promise<boolean> {
-    try {
-      const userIds = await AccountController.getUserIds();
-      let loginToken = await managers.appAccountManager.exportLoginToken(userIds.map((userId) => userId.toUserId()));
+  const onAuthorized = () => {
+    if(stopped) return;
+    stopped = true;
+    toIm();
+  };
 
-      if(loginToken._ === 'auth.loginTokenMigrateTo') {
-        if(!migratedDcId) {
-          migratedDcId = loginToken.dc_id as DcId;
-          managers.apiManager.setBaseDcId(loginToken.dc_id);
-        }
-
-        loginToken = await managers.appAccountManager.importLoginToken(loginToken.token, migratedDcId) as AuthLoginToken.authLoginToken;
-      }
-
-      if(loginToken._ === 'auth.loginTokenSuccess') {
-        const authorization = loginToken.authorization as any as AuthAuthorization.authAuthorization;
-        await managers.apiManager.setUser(authorization.user);
-        toIm();
-        return true;
-      }
-
-      if(!prevToken || !bytesCmp(prevToken, loginToken.token)) {
-        prevToken = loginToken.token;
-        QRCodeStylingCtor = QRCodeStyling;
-        await paintQR(loginToken.token);
-      }
-
-      if(isLoop) {
-        const timestamp = Date.now() / 1000;
-        const diff = loginToken.expires - timestamp - await managers.timeManager.getServerTimeOffset();
-        await pause(diff > FETCH_INTERVAL ? 1e3 * FETCH_INTERVAL : 1e3 * diff | 0);
-      }
-    } catch(err) {
-      // * the card is gone: what was on its way is dropped, not an error of the login
-      if(stopped) {
-        return true;
-      }
-
-      switch((err as ApiError).type) {
-        case 'SESSION_PASSWORD_NEEDED':
-          navigate({name: 'password'});
-          stopped = true;
-          break;
-        case 'AUTH_TOKEN_EXPIRED':
-          console.warn('SignQRCard: AUTH_TOKEN_EXPIRED');
-          return false;
-        default:
-          console.error('SignQRCard: default error:', err);
-          stopped = true;
-          break;
-      }
-
-      return true;
-    }
-
-    return false;
-  }
+  rootScope.addEventListener('signal_link_code', onLinkCode);
+  rootScope.addEventListener('signal_authorized', onAuthorized);
 
   /* ---------- lifecycle ---------- */
 
@@ -201,17 +144,16 @@ export default function SignQRCard(_props: {spec: Spec}) {
     ]);
 
     if(stopped) return;
-
-    while(!stopped) {
-      const needBreak = await iterate(QRCodeStyling, true);
-      if(needBreak || stopped) break;
-    }
+    QRCodeStylingCtor = QRCodeStyling;
+    onLinkCode(await managers.appSignalManager.getLinkCode());
   });
 
   onCleanup(() => {
     stopped = true;
     rootScope.removeEventListener('user_auth', onUserAuth);
     rootScope.removeEventListener('theme_changed', onThemeChanged);
+    rootScope.removeEventListener('signal_link_code', onLinkCode);
+    rootScope.removeEventListener('signal_authorized', onAuthorized);
   });
 
   /* ---------- render ---------- */
@@ -234,16 +176,7 @@ export default function SignQRCard(_props: {spec: Spec}) {
       }
     >
       {helpList}
-      <Button
-        class="btn-primary btn-secondary btn-primary-transparent primary"
-        onClick={() => {
-          stopped = true;
-          navigate({name: 'signIn'});
-        }}
-        text="Login.QR.Cancel"
-      />
       {accountNumber === 1 && <LanguageChangeButton />}
-      <PasskeyLoginButton />
     </AuthCard>
   );
 }

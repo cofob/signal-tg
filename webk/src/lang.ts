@@ -373,6 +373,8 @@ const lang = {
   'Deactivated.Subtitle': 'Telegram supports only one active tab with the app.\nClick anywhere to continue using this tab.',
   'Deactivated.Version.Title': 'WebK has updated...',
   'Deactivated.Version.Subtitle': 'Another tab is running a newer version of Telegram.\nClick anywhere to reload this tab.',
+  'Signal.Passcode.Title': 'Passcode is on',
+  'Signal.Passcode.Subtitle': 'Your account is locked with the passcode of the A version.\nClick anywhere to unlock it there.',
   'Deactivated.OtherClient.Title': 'App is inactive...',
   'Deactivated.OtherClient.Subtitle': 'Another app is running.\nClick anywhere to continue using this app.',
   'Deactivated.LoadFailed.Title': 'Telegram didn\'t load...',

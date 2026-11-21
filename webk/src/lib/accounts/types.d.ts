@@ -37,7 +37,9 @@ type A = Record<DcAuthKey, string> &
     // * by `${dcId}` or `${dcId}-media` (PFS, see @lib/mtproto/tempAuthKeys)
     temp_auth_keys?: Record<string, StoredTempAuthKey>,
     // * Web A's account of the test servers: they share the slots with the production ones there
-    isTest?: true
+    isTest?: true,
+    // * TeleSignal: Web A's marker of a linked Signal account in the slot (`ApiSessionData` of `src/api/types`)
+    isLinked?: true
   };
 
 export type AccountSessionData = Partial<A>;

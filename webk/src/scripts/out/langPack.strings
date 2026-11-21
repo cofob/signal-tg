@@ -365,6 +365,8 @@
 "Deactivated.Subtitle" = "Telegram supports only one active tab with the app.\nClick anywhere to continue using this tab.";
 "Deactivated.Version.Title" = "WebK has updated...";
 "Deactivated.Version.Subtitle" = "Another tab is running a newer version of Telegram.\nClick anywhere to reload this tab.";
+"Signal.Passcode.Title" = "Passcode is on";
+"Signal.Passcode.Subtitle" = "Your account is locked with the passcode of the A version.\nClick anywhere to unlock it there.";
 "Deactivated.OtherClient.Title" = "App is inactive...";
 "Deactivated.OtherClient.Subtitle" = "Another app is running.\nClick anywhere to continue using this app.";
 "Deactivated.LoadFailed.Title" = "Telegram didn't load...";
@@ -6253,13 +6255,13 @@
 "Contacts.PhoneNumber.Placeholder" = "Phone Number";
 "Login.Next" = "Next";
 "Login.ContinueOnLanguage" = "Continue in English";
-"Login.QR.Title" = "Log in by QR Code";
-"Login.QR.Help1" = "Open Telegram on your phone";
-"Login.QR.Help2" = "Go to **Settings** > **Devices** > **Add Device**";
-"Login.QR.Help3" = "Point your phone at this screen to confirm login";
+"Login.QR.Title" = "Link TeleSignal to Signal";
+"Login.QR.Help1" = "Open Signal on your phone";
+"Login.QR.Help2" = "Go to **Settings** > **Linked devices** > **Link new device**";
+"Login.QR.Help3" = "Point your phone at this screen to scan the code";
 "Login.QR.Cancel" = "Log in by phone number >";
 "Login.QR.Login" = "Log in by QR Code >";
-"Login.QR.Subtitle" = "Scan with Telegram app on your phone";
+"Login.QR.Subtitle" = "Scan the code with Signal on your phone";
 "PhoneNumber.Code.Fragment.Info" = "Get the code in the Numbers section on [Fragment]()";
 "PHONE_CODE_INVALID" = "Invalid code";
 "PHONE_CODE_EXPIRED" = "Code expired";

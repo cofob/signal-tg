@@ -65,6 +65,7 @@
       "@vendor/*": ["./src/vendor/*"],
       "@layer": ["./src/layer.d.ts"],
       "@types": ["./src/types.d.ts"],
+      "@signal-app/provider": ["./src/lib/signal/signalApi.d.ts"],
       "@/*": ["./src/*"]
     },
     // "rootDirs": [],                        /* List of root folders whose combined content represents the structure of the project at runtime. */
