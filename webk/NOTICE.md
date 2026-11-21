@@ -32,7 +32,17 @@ Every file tracked at the commit above, except:
 
 The port to Signal changes Web K in place; `git log -- webk` lists the changes after the import commit. In summary:
 
-- Build: `vite.config.ts` serves and builds the app under `/k/`, `package.json` drops Telegram-only dependencies.
+- Build: `vite.config.ts` serves the app at `/k/` behind the repository's dev server, builds it to `../dist/k`, takes the
+  page's policy from `../plugins/csp.ts`, the environment from the repository and the emoji images from `emoji-data-ios`;
+  the dev checks of upstream run only with `TWEB_DEV_CHECKS`.
+- Telegram API: `src/lib/appManagers/apiManager.ts` no longer uses MTProto; `appSignalManager.ts` answers the managers
+  from the shared Signal provider (`src/lib/signal/`). The link screen (`src/pages/cards/SignQRCard.tsx`) shows the
+  Signal device link, the account slot needs Web A's `isLinked` marker, peer ids are offset (`builders.ts`).
+- Telegram hosts: links of Telegram-only features point to reserved `.invalid` names (the comments keep the original
+  hosts); support and bug report links point to Signal and to this project; the web manifests name TeleSignal.
+- Threaded workers are copied under query strings instead of `blob:` URLs, which the policy does not allow.
+- Frontend switch: the main menu's "Switch to A version" opens `../a/`.
+- `src/components/popupSandbox/stories/misc.ts`: the two stories that read the unvendored test fixtures are removed.
 
 ## Updating
 

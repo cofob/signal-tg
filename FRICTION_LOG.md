@@ -85,9 +85,21 @@ each caller to find this out.
 
 ## Five npm dependencies come from GitHub, so every install needs `git` and GitHub access
 
+Web K adds one more: `webk/package.json` takes `@ton/wallet-engine` (the TON wallet, a Telegram-only feature) from a
+GitHub release tarball, so `npm run install:webk` needs GitHub access too until the wallet is removed.
+
 `package.json` pins `opus-recorder`, `emoji-data-ios`, `eslint-plugin-react-hooks-static-deps`, `eslint-plugin-tt-multitab`
 and `@mytonwallet/stylelint-whole-pixel` as `github:` references (`.npmrc` sets `allow-git=root` for them). Verified with
 the container build (`Dockerfile`): `npm ci` fails on a machine without GitHub access or, in a plain `node` Alpine image,
 without `git`, and fetching them took most of the two minutes that the install needs. A registry copy or a vendored
 tarball would make installs hermetic and let the image build run offline from a registry mirror. The two ESLint and one
 Stylelint plugins are needed by checks only, which the image build does not run, but `npm ci` installs them all.
+
+## Web K describes the Signal provider's API by hand
+
+Web K (`webk/`) runs Web A's Signal provider (`src/api/signal`) in its worker, but its type check cannot include the
+provider's sources: Web K's `tsconfig.json` has other settings (`strictNullChecks` off, an ES2015 library), and the
+provider's `Methods` type reaches Web A's UI code, which fails there. So `webk/src/lib/signal/signalApi.d.ts` describes
+the provider calls and the `Api*` fields that `appSignalManager` reads, and Vite resolves `@signal-app/provider` to the
+real module. A change of a provider method or of an `Api*` field that Web K reads type-checks in both trees and breaks
+Web K at run time only. A types-only package of the provider's API, shared by both trees, would close the gap.
