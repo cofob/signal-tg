@@ -2,7 +2,7 @@ import type { TabThread, ThreadId, ThreadLocalState } from '../../types';
 import type { GlobalState, TabArgs } from '../types';
 import { type ApiMessage, MAIN_THREAD_ID } from '../../api/types';
 
-import { ANONYMOUS_USER_ID, GENERAL_TOPIC_ID } from '../../config';
+import { GENERAL_TOPIC_ID } from '../../config';
 import { getCurrentTabId } from '../../util/establishMultitabRole';
 import { isChatBasicGroup, isChatSuperGroup } from '../helpers';
 import { getMessageForumTopicId, getMessageReplyInfo } from '../helpers/replies';
@@ -141,10 +141,6 @@ export function selectSavedDialogIdFromMessage<T extends GlobalState>(
 
   if (forwardInfo?.fromId) {
     return forwardInfo.fromId;
-  }
-
-  if (forwardInfo?.hiddenUserName) {
-    return ANONYMOUS_USER_ID;
   }
 
   return senderId;

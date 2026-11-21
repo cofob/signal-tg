@@ -1254,7 +1254,6 @@
 "NoAudioFilesInfo" = "Your music library is empty.";
 "AttachContact" = "Contact";
 "AttachStory" = "Story";
-"ServiceNotifications" = "service notifications";
 "Bot" = "bot";
 "ALongTimeAgo" = "last seen a long time ago";
 "WithinAMonth" = "last seen within a month";
@@ -2262,7 +2261,6 @@
 "AccDescrTopic" = "Topic";
 "AllReactions" = "All reactions";
 "AllViewers" = "All viewers";
-"AnonymousForward" = "Author Hidden";
 "AreYouSure" = "Are you sure?";
 "AttachMenu" = "Attach...";
 "August" = "August";
@@ -2625,9 +2623,6 @@
 "SettingsStartWave" = "Start wave";
 "SettingsVaporizeButton" = "Vaporize this button";
 "DebugDownloadLog" = "Download log";
-"SettingsAllowHttp" = "Allow HTTP Transport";
-"SettingsForceHttp" = "Force HTTP Transport";
-"DebugExportedSenders" = "Enable exported senders debug";
 "TestServer" = "Test server";
 "CodeLanguagePlainText" = "Plain text";
 "ErrorChatRestricted" = "You can't send messages in this chat, you were restricted";

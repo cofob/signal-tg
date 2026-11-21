@@ -8,7 +8,6 @@ import { type ActiveDownloads, FocusDirection } from '../../../types';
 import {
   ANIMATION_END_DELAY,
   SCROLL_MAX_DURATION,
-  SERVICE_NOTIFICATIONS_USER_ID,
 } from '../../../config';
 import { cancelScrollBlockingAnimation, isAnimatingScroll } from '../../../util/animateScroll';
 import { areDeepEqual } from '../../../util/areDeepEqual';
@@ -71,7 +70,6 @@ import { getIsMobile } from '../../../hooks/useAppLayout';
 const FOCUS_DURATION = 1500;
 const FOCUS_NO_HIGHLIGHT_DURATION = SCROLL_MAX_DURATION + ANIMATION_END_DELAY;
 const POLL_RESULT_OPEN_DELAY_MS = 450;
-const SERVICE_NOTIFICATIONS_MAX_AMOUNT = 1e3;
 
 let blurTimeout: number | undefined;
 
@@ -898,44 +896,6 @@ addActionHandler('openPollModal', (global, actions, payload): ActionReturnType =
   }, tabId);
 });
 addTabStateResetterAction('closePollModal', 'pollModal');
-
-addActionHandler('createServiceNotification', (global, actions, payload): ActionReturnType => {
-  const { message } = payload;
-  const { serviceNotifications } = global;
-
-  const maxId = Math.max(
-    selectChatLastMessageId(global, SERVICE_NOTIFICATIONS_USER_ID) || 0,
-    ...serviceNotifications.map(({ id }) => id),
-  );
-  const fractionalPart = (serviceNotifications.length + 1) / SERVICE_NOTIFICATIONS_MAX_AMOUNT;
-  // The fractional ID is made of the largest integer ID and an incremented fractional part
-  const id = Math.floor(maxId) + fractionalPart;
-
-  message.previousLocalId = message.id;
-  message.id = id;
-
-  const serviceNotification = {
-    id,
-    message,
-    isUnread: true,
-  };
-
-  global = {
-    ...global,
-    serviceNotifications: [
-      ...serviceNotifications.slice(-SERVICE_NOTIFICATIONS_MAX_AMOUNT),
-      serviceNotification,
-    ],
-  };
-  setGlobal(global);
-
-  actions.apiUpdate({
-    '@type': 'newMessage',
-    id: message.id,
-    chatId: message.chatId,
-    message,
-  });
-});
 
 addActionHandler('openReactorListModal', (global, actions, payload): ActionReturnType => {
   const { chatId, messageId, tabId = getCurrentTabId() } = payload;

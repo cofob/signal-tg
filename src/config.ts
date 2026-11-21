@@ -19,15 +19,9 @@ export const DEBUG_CALLS = false;
 export const DEBUG_LOG_FILENAME = 'tt-log.json';
 export const STRICTERDOM_ENABLED = DEBUG;
 
-export const DEBUG_GRAMJS = false;
-
 export const PAGE_TITLE = import.meta.env.TG_APP_TITLE;
 export const PAGE_TITLE_TAURI = APP_NAME;
-export const TELEGRAM_API_ID = Number(import.meta.env.TG_TELEGRAM_API_ID);
-export const TELEGRAM_API_HASH = import.meta.env.TG_TELEGRAM_API_HASH;
-export const TEST_SESSION = import.meta.env.TG_TEST_SESSION;
 
-export const SESSION_LEGACY_USER_KEY = 'user_auth';
 export const SESSION_ACCOUNT_PREFIX = 'account';
 
 export const GLOBAL_STATE_CACHE_DISABLED = false;
@@ -59,7 +53,6 @@ export const DATA_BROADCAST_CHANNEL_PREFIX = 'tt-global';
 export const ESTABLISH_BROADCAST_CHANNEL_PREFIX = 'tt-establish';
 export const MULTITAB_LOCALSTORAGE_KEY_PREFIX = 'tt-multitab';
 export const INTERCLIENT_BROADCAST_CHANNEL = 'tgweb';
-export const DC_IDS = [1, 2, 3, 4, 5] as const;
 
 export const DOWNLOAD_WORKERS = 16;
 export const UPLOAD_WORKERS = 16;
@@ -331,11 +324,6 @@ export const HEART_REACTION: ApiReactionEmoji = {
   emoticon: '❤',
 };
 
-// MTProto constants
-export const SERVICE_NOTIFICATIONS_USER_ID = '777000';
-export const REPLIES_USER_ID = '1271266957'; // TODO For Test connection ID must be equal to 708513
-export const ANONYMOUS_USER_ID = '2666000';
-export const RESTRICTED_EMOJI_SET_ID = '7173162320003080';
 export const LOCAL_MESSAGES_LIMIT = 1e6; // 1M
 export const CHANNEL_ID_BASE = 10n ** 12n;
 export const DEFAULT_GIF_SEARCH_BOT_USERNAME = 'gif';
@@ -343,7 +331,6 @@ export const ALL_FOLDER_ID = 0;
 export const ARCHIVED_FOLDER_ID = 1;
 export const SAVED_FOLDER_ID = -1;
 export const FOLDER_TITLE_MAX_LENGTH = 12;
-export const DELETED_COMMENTS_CHANNEL_ID = (-CHANNEL_ID_BASE - 777n).toString();
 export const MAX_MEDIA_FILES_FOR_ALBUM = 10;
 export const MAX_ACTIVE_PINNED_CHATS = 5;
 export const SCHEDULED_WHEN_ONLINE = 0x7FFFFFFE;

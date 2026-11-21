@@ -10,7 +10,7 @@ import { timestampPlusDay } from '../../../util/dates/dateMath';
 import { isDeepLink, tryParseDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { throttle } from '../../../util/schedulers';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addActionHandler, getActions, getGlobal, setGlobal } from '../..';
 import { isChatChannel, isChatGroup } from '../../helpers/chats';
 import { isApiPeerChat } from '../../helpers/peers';

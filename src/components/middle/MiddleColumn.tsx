@@ -9,7 +9,6 @@ import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
   ANIMATION_END_DELAY,
-  ANONYMOUS_USER_ID,
   EDITABLE_INPUT_CSS_SELECTOR,
   EDITABLE_INPUT_ID,
   SUPPORTED_PHOTO_CONTENT_TYPES,
@@ -775,9 +774,7 @@ export default memo(withGlobal<OwnProps>(
     const topics = selectTopics(global, chatId);
 
     const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-    const canShowOpenChatButton = isSavedDialog
-      && threadId !== ANONYMOUS_USER_ID
-      && threadId !== global.currentUserId;
+    const canShowOpenChatButton = isSavedDialog && threadId !== global.currentUserId;
 
     const canUnpin = chat && (
       isPrivate || (

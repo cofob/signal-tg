@@ -1,7 +1,5 @@
 import {
-  DC_IDS,
   SESSION_ACCOUNT_PREFIX,
-  SESSION_LEGACY_USER_KEY,
   SHOULD_DELETE_LEGACY_PASSCODE_DATA,
 } from '../../config';
 import { PASSCODE_IDB_STORE } from '../browser/idb';
@@ -632,14 +630,7 @@ function getSessionStorageKeys() {
       const slot = Number(key.slice(SESSION_ACCOUNT_PREFIX.length));
       return slot > 0 && Number.isInteger(slot);
     });
-  return [
-    ...new Set(slotKeys),
-    SESSION_LEGACY_USER_KEY,
-    'dc',
-    ...DC_IDS.map((dcId) => `dc${dcId}_auth_key`),
-    ...DC_IDS.map((dcId) => `dc${dcId}_hash`),
-    ...DC_IDS.map((dcId) => `dc${dcId}_server_salt`),
-  ];
+  return [...new Set(slotKeys)];
 }
 
 function createGeneration() {

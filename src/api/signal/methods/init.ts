@@ -1,22 +1,19 @@
-import type { MethodArgs, MethodResponse, Methods } from '../../gramjs/methods/types';
 import type { ApiInitialArgs, ApiOnProgress, OnApiUpdate } from '../../types';
+import type { MethodArgs, MethodResponse, Methods } from './types';
 
 import { DEBUG } from '../../../config';
 import { startClient } from '../client';
 import { initUpdates } from '../updates';
 import * as methods from './index';
 
-// Each Signal method keeps the name and signature of the GramJS method it replaces; authorization methods
-// define their own signatures (`Methods`)
 const SIGNAL_METHODS: Partial<Methods> = methods;
 
-// The worker passes the GramJS local cache as the third argument; Signal keeps its state in IndexedDB
-export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs, _initialLocalDb?: unknown) {
+export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs) {
   initUpdates(onUpdate);
   return startClient(initialArgs);
 }
 
-/** Calls a Signal method; methods without a Signal counterpart return `undefined` */
+/** Calls a Signal method; a method the engine does not implement returns `undefined` */
 export function callApi<T extends keyof Methods>(fnName: T, ...args: MethodArgs<T>): MethodResponse<T> {
   const method = SIGNAL_METHODS[fnName] as ((...methodArgs: MethodArgs<T>) => MethodResponse<T>) | undefined;
   if (!method) {

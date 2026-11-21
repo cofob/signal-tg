@@ -96,7 +96,7 @@ const MAIN_ENTRY_KEY = 'main';
 const MAIN_ENTRY_LABEL = '🏠 Main';
 const ENTRY_ORDER = [
   MAIN_ENTRY_KEY,
-  'gramjs-worker',
+  'engine-worker',
   'fasttext-worker',
   'media-worker',
   'video-processing-worker',
@@ -116,7 +116,7 @@ const MANUAL_BUNDLES: BundleDefinition[] = [
 const MANUAL_BUNDLE_ASSET_EXTENSIONS = ['.js', '.css'];
 const KNOWN_WORKERS = [
   { pattern: /^service\.worker-[\w-]+\.js$/, key: 'service-worker', label: '🛠️ Service worker' },
-  { pattern: /^worker-[\w-]+\.js$/, key: 'gramjs-worker', label: '⚙️ GramJS worker' },
+  { pattern: /^worker-[\w-]+\.js$/, key: 'engine-worker', label: '⚙️ Signal engine worker' },
   { pattern: /^fasttext\.worker-[\w-]+\.js$/, key: 'fasttext-worker', label: '🌐 FastText worker' },
   { pattern: /^index\.worker-[\w-]+\.js$/, key: 'media-worker', label: '🎞️ Media worker' },
   {

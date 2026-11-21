@@ -293,9 +293,6 @@ export interface ActionPayloads {
   uploadWallpaper: File;
   loadChatThemes: undefined;
   applyChatTheme: { emoticon?: string; isSignalTheme?: boolean } & WithTabId;
-  createServiceNotification: {
-    message: ApiMessage;
-  };
   saveCloseFriends: {
     userIds: string[];
   };
@@ -896,7 +893,6 @@ export interface ActionPayloads {
   onTabFocusChange: {
     isBlurred: boolean;
   } & WithTabId;
-  onSomeTabSwitchedMultitabRole: undefined;
   afterHangUp: undefined;
   requestMasterAndCallAction: CallbackAction & WithTabId;
   clearMultitabNextAction: WithTabId | undefined;
@@ -1996,7 +1992,6 @@ export interface ActionPayloads {
   setPasscodeError: { errorKey: RegularLangFnParameters };
   clearPasscodeError: undefined;
   // Settings
-  updateShouldDebugExportedSenders: undefined;
   updateShouldEnableDebugLog: undefined;
   loadConfig: undefined;
   loadAppConfig: {

@@ -3,7 +3,7 @@ import type { ActionReturnType, GlobalState } from '../../types';
 
 import { unique } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { selectPeer } from '../../selectors';
 
@@ -49,11 +49,13 @@ addActionHandler('loadTopPeers', async (global, actions, payload): Promise<void>
     return;
   }
 
-  const ratingsByPeerId = result.topPeers.reduce((acc, { peerId, rating }) => {
+  const ratingsByPeerId = result.topPeers.reduce((
+    acc: Record<string, number>, { peerId, rating }: { peerId: string; rating: number },
+  ) => {
     acc[peerId] = rating;
     return acc;
-  }, {} as Record<string, number>);
-  const peerIds = result.topPeers.map(({ peerId }) => peerId);
+  }, {});
+  const peerIds = result.topPeers.map(({ peerId }: { peerId: string }) => peerId);
 
   global = updateTopPeerCategory(global, category, {
     peerIds,

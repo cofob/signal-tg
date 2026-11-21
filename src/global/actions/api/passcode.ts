@@ -12,7 +12,7 @@ import { updateFolderManager } from '../../../util/folderManager';
 import { cloneDeep } from '../../../util/iteratees';
 import { clearMemoryCache } from '../../../util/mediaLoader';
 import {
-  ACCOUNT_SLOT, getAccountSlots, getAccountSlotUrl, loadSlotSession,
+  ACCOUNT_SLOT, getAccountSlots, getAccountSlotUrl, loadSlotSession, normalizeLegacySlotSession,
 } from '../../../util/multiaccount';
 import { parseJsonWithBigInt } from '../../../util/numbers';
 import {
@@ -73,7 +73,7 @@ import {
   restoreWallpaperBlobsFromPasscode,
   syncLockScreenWallpaperBlobs,
 } from '../../../util/wallpaper/storage';
-import { closeApi } from '../../../api/gramjs';
+import { closeApi } from '../../../api';
 import {
   cacheGlobalForSlot,
   cacheSharedState,
@@ -700,7 +700,9 @@ async function unlockLegacySession(passcode: string) {
     migrateCache(legacyGlobal, cloneDeep(INITIAL_GLOBAL_STATE));
     if (sharedState) legacyGlobal.sharedState = sharedState;
     if (sharedState) await cacheSharedState(sharedState);
-    const session = parseJsonWithBigInt<Parameters<typeof storeSession>[0] & { userId?: string }>(sessionJson);
+    const session = normalizeLegacySlotSession(
+      parseJsonWithBigInt<Parameters<typeof normalizeLegacySlotSession>[0]>(sessionJson),
+    );
     enableEncryptedSessionStore(collectSessionStorageSnapshot());
     await storeSession(session);
     if (session.userId) await updateSessionUserId(session.userId);
@@ -986,7 +988,7 @@ function preparePasscodeForLock(generation?: string) {
 }
 
 async function teardownApi() {
-  await closeApi(true);
+  await closeApi();
 }
 
 async function waitForApiTeardown() {

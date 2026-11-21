@@ -27,7 +27,6 @@ export default defineConfig(
   globalIgnores([
     '.cache/',
     'src/lib/video-preview/polyfill',
-    'src/lib/gramjs/tl/',
     'src/lib/signal/wasm/generated/',
     'src/lib/signal/proto/generated/',
     'src/lib/lovely-chart/**',
@@ -96,7 +95,7 @@ export default defineConfig(
               '^react',
               '^@?\\w',
               'dist(/.*|$)',
-              '^(\\.+/)+(lib/(teact|gramjs))(/.*|$)',
+              '^(\\.+/)+(lib/teact)(/.*|$)',
               '^(\\.+/)+global$',
             ],
             // Type imports
@@ -108,7 +107,7 @@ export default defineConfig(
             // Config, utils, helpers
             [
               '^(\\.+/)+config',
-              '^(\\.+/)+(lib)(?!/(gramjs|teact))(/.*|$)',
+              '^(\\.+/)+(lib)(?!/teact)(/.*|$)',
               '^(\\.+/)+global/.+',
               '^(\\.+/)+(util)(/.*|$)',
               '^\\.\\.(?!/?$)',

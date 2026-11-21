@@ -40,7 +40,7 @@ import type {
 import type { Signal } from '../../../util/signals';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import { EMOJI_STATUS_LOOP_LIMIT, MESSAGE_APPEARANCE_DELAY, REPLIES_USER_ID } from '../../../config';
+import { EMOJI_STATUS_LOOP_LIMIT, MESSAGE_APPEARANCE_DELAY } from '../../../config';
 import {
   areReactionsEmpty,
   extractMessageText,
@@ -57,7 +57,6 @@ import {
   getSendErrorKey,
   hasMessageText,
   hasMessageTtl,
-  isAnonymousForwardsChat,
   isAnonymousOwnMessage,
   isChatChannel,
   isChatGroup,
@@ -247,8 +246,6 @@ type StateProps = {
   isResizingContainer?: boolean;
   isForwarding?: boolean;
   isChatWithSelf?: boolean;
-  isRepliesChat?: boolean;
-  isAnonymousForwards?: boolean;
   isChannel?: boolean;
   isGroup?: boolean;
   canReply?: boolean;
@@ -357,8 +354,6 @@ const Message = ({
   isResizingContainer,
   isForwarding,
   isChatWithSelf,
-  isRepliesChat,
-  isAnonymousForwards,
   isChannel,
   isGroup,
   canReply,
@@ -530,9 +525,7 @@ const Message = ({
   const asForwarded = (
     forwardInfo
     && (!isChatWithSelf || isScheduled)
-    && !isRepliesChat
     && !forwardInfo.isLinkedChannelPost
-    && !isAnonymousForwards
   ) || Boolean(storyData && !storyData.isMention);
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
@@ -549,7 +542,7 @@ const Message = ({
   );
   const canFocus = Boolean(isPinnedList
     || (forwardInfo
-      && (forwardInfo.isChannelPost || isChatWithSelf || isRepliesChat || isAnonymousForwards)
+      && (forwardInfo.isChannelPost || isChatWithSelf)
       && forwardInfo.fromMessageId
     ));
 
@@ -572,7 +565,7 @@ const Message = ({
   const messageSender = canShowSender ? sender : undefined;
 
   const shouldPreferOriginSender = forwardInfo
-    && (isChatWithSelf || isRepliesChat || isAnonymousForwards || !messageSender);
+    && (isChatWithSelf || !messageSender);
   const avatarPeer = shouldPreferOriginSender ? originSender : messageSender;
 
   const messageColorPeer = asForwarded ? originSender : sender;
@@ -643,7 +636,6 @@ const Message = ({
     senderPeer,
     story: replyStory && 'content' in replyStory ? replyStory : undefined,
     isReplyPrivate,
-    isRepliesChat,
     isSavedMessages: isChatWithSelf,
     lastPlaybackTimestamp,
   });
@@ -1669,8 +1661,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = selectChat(global, chatId);
     const isChatWithSelf = selectIsChatWithSelf(global, chatId);
-    const isRepliesChat = chatId === REPLIES_USER_ID;
-    const isAnonymousForwards = isAnonymousForwardsChat(chatId);
     const isChannel = chat && isChatChannel(chat);
     const isGroup = chat && isChatGroup(chat);
     const chatFullInfo = !isChatWithUser ? selectChatFullInfo(global, chatId) : undefined;
@@ -1700,11 +1690,11 @@ export default memo(withGlobal<OwnProps>(
     const replyMessage = selectReplyMessage(global, message);
     const forwardHeader = forwardInfo || replyFrom;
     const replyMessageSender = replyMessage ? selectSender(global, replyMessage)
-      : forwardHeader && !isRepliesChat && !isAnonymousForwards
+      : forwardHeader
         ? selectSenderFromHeader(global, forwardHeader) : undefined;
     const replyMessageForwardSender = replyMessage && selectForwardedSender(global, replyMessage);
     const replyMessageChat = replyToPeerId ? selectChat(global, replyToPeerId) : undefined;
-    const isReplyPrivate = !isRepliesChat && !isAnonymousForwards && replyMessageChat
+    const isReplyPrivate = replyMessageChat
       && !isChatPublic(replyMessageChat)
       && (replyMessageChat.isNotJoined || selectIsChatRestricted(global, replyMessageChat.id));
     const isReplyToTopicStart = replyMessage?.content.action?.type === 'topicCreate';
@@ -1808,8 +1798,6 @@ export default memo(withGlobal<OwnProps>(
       isForwarding,
       reactionMessage,
       isChatWithSelf,
-      isRepliesChat,
-      isAnonymousForwards,
       isChannel,
       isGroup,
       canReply: message.isEphemeral ? getCanReplyToEphemeralMessage(message) : canReply,

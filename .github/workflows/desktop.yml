@@ -60,9 +60,6 @@ jobs:
               tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage*
     runs-on: ${{ matrix.runner }}
     env:
-      # GramJS still reads these at build time until plan stage 3 removes it; the app never connects to Telegram
-      TELEGRAM_API_ID: '1'
-      TELEGRAM_API_HASH: unused
       # Optional configuration, see `tauri/README.md`
       UPDATER_ENDPOINT: ${{ vars.UPDATER_ENDPOINT }}
       UPDATER_PUBLIC_KEY: ${{ vars.UPDATER_PUBLIC_KEY }}

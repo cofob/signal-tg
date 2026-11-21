@@ -1,4 +1,4 @@
-import type { ApiUser } from '../../../api/types';
+import type { ApiAudio, ApiUser } from '../../../api/types';
 import type { ActionReturnType } from '../../types';
 import { ManagementProgress } from '../../../types';
 
@@ -6,7 +6,7 @@ import { SAVED_MUSIC_SLICE } from '../../../config';
 import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByKey, unique } from '../../../util/iteratees';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
@@ -216,7 +216,7 @@ addActionHandler('loadSavedMusic', async (global, actions, payload): Promise<voi
   const { audios, count } = result;
 
   const prevIds = latestSavedMusic?.ids || [];
-  const ids = unique(prevIds.concat(audios.map(({ id }) => id)));
+  const ids = unique(prevIds.concat(audios.map(({ id }: ApiAudio) => id)));
 
   global = updateUserSavedMusic(global, userId, {
     byId: { ...latestSavedMusic?.byId, ...buildCollectionByKey(audios, 'id') },

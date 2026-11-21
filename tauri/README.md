@@ -27,8 +27,7 @@ page's worker, in WebAssembly.
 ## Building
 
 Requirements on every system: Rust 1.97 or newer ([rustup](https://rustup.rs)), Node.js and npm as in
-`package.json` `engines`, and `npm ci` in the repository root. Until GramJS is removed, the web build
-needs any values for `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` in `.env` or the environment.
+`package.json` `engines`, and `npm ci` in the repository root.
 
 ```sh
 npm run tauri:build                                  # this system's default bundles
@@ -105,7 +104,7 @@ names a tunnel. The commands in `src/transport.rs` open the connections:
 The engine runs in a web worker, where Tauri's `invoke` and `Channel` do not exist: Tauri injects them
 into the page only. The page therefore serves the transport to the worker
 (`src/util/tauri/serveNativeTransport.ts`) over a `MessagePort` that it hands to the worker before the
-API starts (`src/api/gramjs/worker/connector.ts`). Buffers move between the threads without copies. The
+API starts (`src/api/worker/connector.ts`). Buffers move between the threads without copies. The
 page runs one `signal_send` at a time per connection, which keeps the order of the bytes; the worker
 counts the bytes it posted and not yet sent as `bufferedAmount`, which uploads wait on.
 

@@ -11,14 +11,7 @@ const TELEGRAM_DOMAINS = [
   'cdn-telegram.org', 'telegram-cdn.org',
 ];
 
-// Each entry is removed by a planned change, so the list only shrinks
-const ALLOWED_DIRECTORIES = [
-  // GramJS is in the bundle but no longer called; plan stage 3 deletes it with its data center hosts
-  'src/lib/gramjs/',
-  'src/api/gramjs/',
-];
-
-// Comments may cite Telegram's API documentation, which ported code follows
+// Comments may cite Telegram's API documentation
 const DOCUMENTATION_HOST = 'core.telegram.org';
 
 const RE_ESCAPED_DOT = /\\\./g;
@@ -53,8 +46,6 @@ function listFiles(path: string): string[] {
 
 function checkFile(absolutePath: string): Finding[] {
   const path = relative(ROOT, absolutePath).split(sep).join('/');
-  if (ALLOWED_DIRECTORIES.some((directory) => path.startsWith(directory))) return [];
-
   const content = readFileSync(absolutePath);
   if (content.includes(NUL_BYTE)) return [];
 

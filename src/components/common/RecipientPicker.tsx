@@ -8,7 +8,7 @@ import type { ApiChatFolder, ApiChatType } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 import type { ThreadId } from '../../types';
 
-import { ALL_FOLDER_ID, API_CHAT_TYPES, REPLIES_USER_ID } from '../../config';
+import { ALL_FOLDER_ID, API_CHAT_TYPES } from '../../config';
 import {
   getCanPostInChat,
   getChatTitle,
@@ -353,8 +353,6 @@ function getIsRecipientAllowed(
   isForwarding?: boolean,
   shouldFilterInviteable?: boolean,
 ) {
-  if (id === REPLIES_USER_ID) return false;
-
   const chat = selectChat(global, id);
   const user = selectUser(global, id);
   const hasAdminRights = chat && getHasAdminRight(chat, 'postMessages');

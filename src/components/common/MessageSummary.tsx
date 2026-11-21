@@ -33,7 +33,6 @@ type OwnProps = {
   noEmoji?: boolean;
   truncateLength?: number;
   withTranslucentThumbs?: boolean;
-  inChatList?: boolean;
   emojiSize?: number;
   observeIntersectionForLoading?: ObserveFn;
   observeIntersectionForPlaying?: ObserveFn;
@@ -51,7 +50,6 @@ function MessageSummary({
   noEmoji,
   truncateLength = TRUNCATED_SUMMARY_LENGTH,
   withTranslucentThumbs,
-  inChatList,
   emojiSize,
   poll,
   story,
@@ -60,7 +58,7 @@ function MessageSummary({
   observeIntersectionForPlaying,
 }: OwnProps & StateProps) {
   const lang = useLang();
-  const extractedText = extractMessageText(message, inChatList);
+  const extractedText = extractMessageText(message);
   const hasPoll = Boolean(getMessagePollId(message));
   const isAction = isActionMessage(message);
 
@@ -116,7 +114,6 @@ function MessageSummary({
         observeIntersectionForPlaying={observeIntersectionForPlaying}
         withTranslucentThumbs={withTranslucentThumbs}
         truncateLength={truncateLength}
-        inChatList={inChatList}
         emojiSize={emojiSize}
       />
     );

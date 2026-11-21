@@ -1,7 +1,7 @@
 import type { ThreadId } from '../types';
 import type { GlobalState } from './types';
 
-import { callApi } from '../api/gramjs';
+import { callApi } from '../api';
 import { isChatChannel, isChatSuperGroup } from './helpers';
 import { selectCurrentMessageList, selectTabState } from './selectors';
 

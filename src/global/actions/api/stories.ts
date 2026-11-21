@@ -3,7 +3,7 @@ import type { ActionReturnType, ReportSection } from '../../types';
 import { DEBUG, MESSAGE_ID_REQUIRED_ERROR } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getServerTime } from '../../../util/serverTime';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { buildApiInputPrivacyRules } from '../../helpers';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
@@ -611,7 +611,7 @@ addActionHandler('loadStoriesMaxIds', async (global, actions, payload): Promise<
   const peerIdsToLoad: string[] = [];
 
   global = getGlobal();
-  result.forEach((maxId, i) => {
+  result.forEach((maxId: { maxId?: number }, i: number) => {
     const peerId = peers[i].id;
     const hasStories = Boolean(maxId.maxId);
     const peer = selectPeer(global, peerId);

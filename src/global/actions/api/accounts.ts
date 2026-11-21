@@ -4,7 +4,7 @@ import type { GlobalState } from '../../types';
 
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { unique } from '../../../util/iteratees';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { updateUserFullInfo, updateUserSavedMusic } from '../../reducers';
 import { appendShufflePlaylist, removeTrackFromShuffle } from '../../reducers/audioPlayer';
@@ -23,7 +23,7 @@ addActionHandler('loadSavedMusicIds', async (global): Promise<void> => {
 
   const savedMusicIds = await callApi('fetchSavedMusicIds');
   const savedMusicById: Record<string, true> = {};
-  savedMusicIds?.forEach((id) => {
+  savedMusicIds?.forEach((id: string) => {
     savedMusicById[id] = true;
   });
 

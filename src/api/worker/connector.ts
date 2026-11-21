@@ -1,20 +1,18 @@
-import type { Api } from '../../../lib/gramjs';
-import type { TypedBroadcastChannel } from '../../../util/browser/multitab';
-import type { ApiError, ApiInitialArgs, ApiOnProgress, OnApiUpdate } from '../../types';
-import type { LocalDb } from '../localDb';
-import type { MethodArgs, MethodResponse, Methods } from '../methods/types';
+import type { TypedBroadcastChannel } from '../../util/browser/multitab';
+import type { MethodArgs, MethodResponse, Methods } from '../signal/methods/types';
+import type { ApiError, ApiInitialArgs, ApiOnProgress, OnApiUpdate } from '../types';
 import type { OriginPayload, ThenArg, WorkerMessageEvent } from './types';
 
-import { DEBUG, IGNORE_UNHANDLED_ERRORS } from '../../../config';
-import { IS_TAURI } from '../../../util/browser/globalEnvironment';
-import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
-import { logDebugMessage } from '../../../util/debugConsole';
-import Deferred from '../../../util/Deferred';
-import { getCurrentTabId, subscribeToMasterChange } from '../../../util/establishMultitabRole';
-import generateUniqueId from '../../../util/generateUniqueId';
-import { ACCOUNT_SLOT, DATA_BROADCAST_CHANNEL_NAME } from '../../../util/multiaccount';
-import { pause, throttleWithTickEnd } from '../../../util/schedulers';
-import serveNativeTransport from '../../../util/tauri/serveNativeTransport';
+import { DEBUG, IGNORE_UNHANDLED_ERRORS } from '../../config';
+import { IS_TAURI } from '../../util/browser/globalEnvironment';
+import { IS_SAFARI } from '../../util/browser/windowEnvironment';
+import { logDebugMessage } from '../../util/debugConsole';
+import Deferred from '../../util/Deferred';
+import { getCurrentTabId, subscribeToMasterChange } from '../../util/establishMultitabRole';
+import generateUniqueId from '../../util/generateUniqueId';
+import { ACCOUNT_SLOT, DATA_BROADCAST_CHANNEL_NAME } from '../../util/multiaccount';
+import { pause, throttleWithTickEnd } from '../../util/schedulers';
+import serveNativeTransport from '../../util/tauri/serveNativeTransport';
 
 type RequestState = {
   messageId: string;
@@ -38,8 +36,6 @@ const requestStates = new Map<string, RequestState>();
 const requestStatesByCallback = new Map<AnyToVoidFunction, RequestState>();
 
 let pendingPayloads: OriginPayload[] = [];
-
-let savedLocalDb = createSavedLocalDb();
 
 let isMasterTab = true;
 subscribeToMasterChange((isMasterTabNew) => {
@@ -113,7 +109,7 @@ export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs) {
   const currentWorker = worker;
   return makeRequest({
     type: 'initApi',
-    args: [initialArgs, savedLocalDb],
+    args: [initialArgs],
   }).then(() => {
     if (worker !== currentWorker) return;
 
@@ -157,11 +153,11 @@ function resetApi() {
   apiRequestsQueue = [];
 }
 
-export async function closeApi(shouldClearLocalDb: boolean) {
+export async function closeApi() {
   const currentWorker = worker;
   if (isInited) {
     const isDestroyed = await Promise.race([
-      callApiLocal('destroy', true, !shouldClearLocalDb).then(() => true).catch(() => false),
+      callApiLocal('destroy', true).then(() => true).catch(() => false),
       pause(API_DESTROY_TIMEOUT_MS).then(() => false),
     ]);
     if (worker !== currentWorker) return false;
@@ -174,36 +170,14 @@ export async function closeApi(shouldClearLocalDb: boolean) {
   } else {
     destroyApi();
   }
-  if (shouldClearLocalDb) savedLocalDb = createSavedLocalDb();
 
   return true;
 }
 
 export async function reconnectApi() {
-  if (!await closeApi(false)) return;
+  if (!await closeApi()) return;
 
   updateCallback({ '@type': 'requestReconnectApi' });
-}
-
-export function updateLocalDb(name: keyof LocalDb, prop: string, value: any) {
-  savedLocalDb[name][prop] = value;
-}
-
-export function updateFullLocalDb(initial: LocalDb) {
-  Object.assign(savedLocalDb, initial);
-}
-
-function createSavedLocalDb(): LocalDb {
-  return {
-    chats: {},
-    users: {},
-    documents: {},
-    stickerSets: {},
-    photos: {},
-    webDocuments: {},
-    commonBoxState: {},
-    channelPtsById: {},
-  };
 }
 
 export function callApiOnMasterTab(payload: any) {
@@ -245,29 +219,6 @@ export function callApiLocal<T extends keyof Methods>(
     args,
   });
 
-  // Some TypeScript magic to make sure `VirtualClass` is never returned from any method
-  if (DEBUG) {
-    (async () => {
-      try {
-        type ForbiddenTypes =
-          Api.VirtualClass<any>
-          | (Api.VirtualClass<any> | undefined)[];
-        type ForbiddenResponses =
-          ForbiddenTypes
-          | (AnyLiteral & Record<string, ForbiddenTypes>);
-
-        // Unwrap all chained promises
-        const response = await promise;
-        // Make sure responses do not include `VirtualClass` instances
-        const allowedResponse: Exclude<typeof response, ForbiddenResponses> = response;
-        // Suppress "unused variable" constraint
-        void allowedResponse;
-      } catch (err) {
-        // Do noting
-      }
-    })();
-  }
-
   return promise as EnsurePromise<MethodResponse<T>>;
 }
 
@@ -291,29 +242,6 @@ export function callApi<T extends keyof Methods>(fnName: T, ...args: MethodArgs<
     name: fnName,
     args,
   });
-
-  // Some TypeScript magic to make sure `VirtualClass` is never returned from any method
-  if (DEBUG) {
-    (async () => {
-      try {
-        type ForbiddenTypes =
-          Api.VirtualClass<any>
-          | (Api.VirtualClass<any> | undefined)[];
-        type ForbiddenResponses =
-          ForbiddenTypes
-          | (AnyLiteral & Record<string, ForbiddenTypes>);
-
-        // Unwrap all chained promises
-        const response = await promise;
-        // Make sure responses do not include `VirtualClass` instances
-        const allowedResponse: Exclude<typeof response, ForbiddenResponses> = response;
-        // Suppress "unused variable" constraint
-        void allowedResponse;
-      } catch (err) {
-        // Do noting
-      }
-    })();
-  }
 
   return promise as EnsurePromise<MethodResponse<T>>;
 }

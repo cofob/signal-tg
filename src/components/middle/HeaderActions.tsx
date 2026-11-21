@@ -11,7 +11,6 @@ import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterd
 import {
   getHasAdminRight,
   getIsSavedDialog,
-  isAnonymousForwardsChat,
   isChatChannel, isChatSuperGroup,
 } from '../../global/helpers';
 import {
@@ -266,8 +265,7 @@ export default memo(withGlobal<OwnProps>(
       (isMainThread || chat.isForum) && (isChannel || isSuperGroup) && chat.isNotJoined && !chat.isMonoforum,
     );
     const canSearch = isMainThread || isDiscussionThread;
-    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !chat.isSupport
-      && !isAnonymousForwardsChat(chat.id);
+    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !chat.isSupport;
     const canMute = isMainThread && !isChatWithSelf && !canSubscribe;
     const canLeave = isSavedDialog || (isMainThread && !canSubscribe);
     const canEnterVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && chat.isCallActive;

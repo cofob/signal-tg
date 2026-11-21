@@ -92,7 +92,6 @@ interface StateProps {
   isMuted: boolean;
   orderedIds?: number[];
   shouldForcePause?: boolean;
-  storyChangelogUserId?: string;
   isChatExist?: boolean;
   arePeerSettingsLoaded?: boolean;
   withHeaderAnimation?: boolean;
@@ -121,7 +120,6 @@ function Story({
   isSingleStory,
   dimensions,
   shouldForcePause,
-  storyChangelogUserId,
   isChatExist,
   arePeerSettingsLoaded,
   getIsAnimating,
@@ -175,7 +173,6 @@ function Story({
   } = useStoryProps(story, isDropdownMenuOpen);
 
   const isLoadedStory = story && 'content' in story;
-  const isChangelog = peerId === storyChangelogUserId;
   const isUserStory = isUserId(peerId);
   const isChatStory = !isUserStory;
   const isChannelStory = isChatStory && isChatChannel(peer as ApiChat);
@@ -196,7 +193,7 @@ function Story({
     ? story.content.video.duration
     : undefined;
 
-  const shouldShowComposer = !(isOut && isUserStory) && !isChangelog && !isChannelStory && !isAccountFrozen
+  const shouldShowComposer = !(isOut && isUserStory) && !isChannelStory && !isAccountFrozen
     && !(isLoadedStory && story.noReplies);
   const shouldShowFooter = isLoadedStory && !shouldShowComposer && (isOut || isChannelStory);
   const headerAnimation = isMobile && withHeaderAnimation ? 'slideFade' : 'none';
@@ -781,7 +778,6 @@ export default memo(withGlobal<OwnProps>((global, {
   storyId,
   isDeleteModalOpen,
 }): Complete<StateProps> => {
-  const { appConfig } = global;
   const user = selectUser(global, peerId);
   const chat = selectChat(global, peerId);
   const userFullInfo = selectUserFullInfo(global, peerId);
@@ -820,7 +816,6 @@ export default memo(withGlobal<OwnProps>((global, {
     orderedIds: storyList?.storyIdsByPeerId[peerId],
     isMuted,
     shouldForcePause,
-    storyChangelogUserId: appConfig.storyChangelogUserId,
     isChatExist: Boolean(chat),
     arePeerSettingsLoaded: Boolean(userFullInfo?.settings),
     withHeaderAnimation,

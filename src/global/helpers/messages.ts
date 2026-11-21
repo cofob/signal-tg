@@ -23,7 +23,6 @@ import {
   LOTTIE_STICKER_MIME_TYPE,
   NSFW_RESTRICTION_REASON,
   RE_LINK_TEMPLATE,
-  SERVICE_NOTIFICATIONS_USER_ID,
   SUPPORTED_AUDIO_CONTENT_TYPES,
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
@@ -309,10 +308,6 @@ export function isActionMessage(message: ApiMessage) {
   return Boolean(message.content.action);
 }
 
-export function isServiceNotificationMessage(message: ApiMessage) {
-  return message.chatId === SERVICE_NOTIFICATIONS_USER_ID && Math.round(message.id) !== message.id;
-}
-
 export function isAnonymousOwnMessage(message: ApiMessage) {
   return Boolean(message.senderId) && !isUserId(message.senderId) && isOwnMessage(message);
 }
@@ -390,7 +385,7 @@ export function mergeIdRanges(ranges: number[][], idsUpdate: number[]): number[]
   return newOutlyingLists;
 }
 
-export function extractMessageText(message: ApiMessage | ApiStory, inChatList = false) {
+export function extractMessageText(message: ApiMessage | ApiStory) {
   const contentText = message.content.text;
   if (!contentText) {
     const richMessageText = message.content.richMessage && getRichMessagePreviewText(message.content.richMessage);
@@ -398,25 +393,7 @@ export function extractMessageText(message: ApiMessage | ApiStory, inChatList = 
     return richMessageText ? { text: richMessageText } : undefined;
   }
 
-  const { text } = contentText;
-  let { entities } = contentText;
-
-  if (text && 'chatId' in message) {
-    if (message.chatId === SERVICE_NOTIFICATIONS_USER_ID) {
-      const authCode = text.match(/^\D*([\d-]{5,7})\D/)?.[1];
-      if (authCode) {
-        entities = [
-          ...entities || [],
-          {
-            type: inChatList ? ApiMessageEntityTypes.Spoiler : ApiMessageEntityTypes.Code,
-            offset: text.indexOf(authCode),
-            length: authCode.length,
-          },
-        ];
-        entities.sort((a, b) => (a.offset > b.offset ? 1 : -1));
-      }
-    }
-  }
+  const { text, entities } = contentText;
 
   return { text, entities };
 }

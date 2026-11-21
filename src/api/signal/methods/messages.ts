@@ -4,7 +4,6 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { ConversationRecord, MessageRecord } from '../../../lib/signal/db/MessageDb';
 import type { DataMessage_QuoteSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type { ForwardMessagesParams, SendMessageParams, ThreadId } from '../../../types';
-import type { MethodResponse } from '../../gramjs/methods/types';
 import type {
   ApiAttachment,
   ApiChat,
@@ -55,7 +54,6 @@ import { sendApiUpdate } from '../updates';
 import { addRecentSticker } from './stickers';
 
 type DataMessageInit = MessageInitShape<typeof DataMessageSchema>;
-type LocalMessage = NonNullable<Awaited<MethodResponse<'sendMessageLocal'>>>;
 
 type OutgoingTyping = {
   refreshTimer: ReturnType<typeof setInterval>;
@@ -150,7 +148,6 @@ export function sendMessageLocal(params: SendMessageParams) {
 
   const localPoll: ApiMessagePoll | undefined = poll && { mediaType: 'poll', summary: poll.summary, results: {} };
   const media = attachment ? buildUploadingMedia(attachment) : { sticker, contact };
-  // The GramJS result type is the literal type of its local message builder, which the app reads as `ApiMessage`
   return showLocalMessage(chat, lastMessageId, {
     ...media,
     text: text ? { text, entities } : undefined,
@@ -160,7 +157,7 @@ export function sendMessageLocal(params: SendMessageParams) {
     poll: localPoll,
     groupedId: getIsAlbumItem(params) ? groupedId : undefined,
     wasDrafted,
-  }) as Promise<LocalMessage>;
+  });
 }
 
 /**

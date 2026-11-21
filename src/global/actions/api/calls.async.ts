@@ -11,7 +11,7 @@ import {
 } from '../../../lib/vibecalls';
 import { logDebugMessage } from '../../../util/debugConsole';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import {
   removeGroupCall,

@@ -1,6 +1,6 @@
 import { ApiMediaFormat } from '../api/types';
 
-import { callApi } from '../api/gramjs';
+import { callApi } from '../api';
 
 const MB = 1024 * 1024;
 const DEFAULT_PART_SIZE = 0.25 * MB;

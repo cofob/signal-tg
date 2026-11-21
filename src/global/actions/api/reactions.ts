@@ -1,7 +1,9 @@
 import type { ActionReturnType } from '../../types';
 import {
+  type ApiAvailableReaction,
   ApiMediaFormat,
   type ApiMessage,
+  type ApiSavedReactionTag,
   MAIN_THREAD_ID,
 } from '../../../api/types';
 
@@ -13,7 +15,7 @@ import {
 import { getMessageKey } from '../../../util/keys/messageKey';
 import * as mediaLoader from '../../../util/mediaLoader';
 import requestActionTimeout from '../../../util/requestActionTimeout';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { LIMITS } from '../../../limits';
 import {
   getDocumentMediaHash,
@@ -64,7 +66,7 @@ addActionHandler('loadAvailableReactions', async (global): Promise<void> => {
   }
 
   // Preload animations
-  result.forEach((availableReaction) => {
+  result.forEach((availableReaction: ApiAvailableReaction) => {
     if (availableReaction.aroundAnimation) {
       mediaLoader.fetch(`sticker${availableReaction.aroundAnimation.id}`, ApiMediaFormat.BlobUrl);
     }
@@ -560,7 +562,9 @@ addActionHandler('loadSavedReactionTags', async (global): Promise<void> => {
 
   global = getGlobal();
 
-  const tagsByKey = buildCollectionByCallback(result.tags, (tag) => ([getReactionKey(tag.reaction), tag]));
+  const tagsByKey = buildCollectionByCallback(
+    result.tags, (tag: ApiSavedReactionTag) => ([getReactionKey(tag.reaction), tag]),
+  );
 
   global = {
     ...global,

@@ -4,7 +4,7 @@ import { getGlobal } from '../../../../global';
 import type { ApiVideo } from '../../../../api/types';
 
 import { throttle } from '../../../../util/schedulers';
-import { callApi } from '../../../../api/gramjs';
+import { callApi } from '../../../../api';
 
 import useLastCallback from '../../../../hooks/useLastCallback';
 
@@ -86,7 +86,7 @@ export default function useGifSearch({ query }: { query?: string }) {
 
           return {
             ...prev,
-            gifs: [...prev.gifs, ...result.gifs.filter(({ id }) => !currentIds.has(id))],
+            gifs: [...prev.gifs, ...result.gifs.filter(({ id }: ApiVideo) => !currentIds.has(id))],
             nextOffset: result.nextOffset,
           };
         });

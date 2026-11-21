@@ -12,7 +12,6 @@ import type {
   CustomPeer, MiddleSearchParams, MiddleSearchType, ThreadId,
 } from '../../../types';
 
-import { ANONYMOUS_USER_ID, REPLIES_USER_ID } from '../../../config';
 import { requestMeasure, requestMutation, requestNextMutation } from '../../../lib/fasterdom/fasterdom';
 import {
   getIsSavedDialog, getReactionKey, isChatGroup, isSameReaction,
@@ -449,8 +448,7 @@ const MiddleSearch = ({
         return undefined;
       }
 
-      const originalSender = (isSavedMessages || chatId === REPLIES_USER_ID || chatId === ANONYMOUS_USER_ID)
-        ? selectForwardedSender(global, message) : undefined;
+      const originalSender = isSavedMessages ? selectForwardedSender(global, message) : undefined;
       const messageSender = selectSender(global, message);
       const messageChat = selectChat(global, message.chatId);
 

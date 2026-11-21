@@ -84,6 +84,7 @@ const SHARED_STATE_V1_LIGHT_PATTERN_COLOR = '#77854b66';
 const SHARED_STATE_V1_DARK_PATTERN_COLOR = '#27308a66';
 const SHARED_STATE_HEX_PATTERN_COLORS_CACHE_VERSION = 5;
 const SHARED_STATE_REMOVED_SETTINGS_CACHE_VERSION = 6;
+const SHARED_STATE_REMOVED_TRANSPORT_SETTINGS_CACHE_VERSION = 7;
 const updateCacheThrottled = throttle(() => onFullyIdle(() => updateCache()), UPDATE_THROTTLE, false);
 const updateCacheForced = () => updateCache(true);
 
@@ -363,6 +364,18 @@ export function migrateSharedCache(
     };
   }
 
+  if (cacheVersion < SHARED_STATE_REMOVED_TRANSPORT_SETTINGS_CACHE_VERSION) {
+    // Settings of the removed Telegram HTTP transport and exported senders
+    const {
+      shouldAllowHttpTransport, shouldForceHttpTransport, shouldDebugExportedSenders, ...settingsWithoutRemoved
+    } = migrated.settings as AnyLiteral;
+
+    migrated = {
+      ...migrated,
+      settings: settingsWithoutRemoved as SharedState['settings'],
+    };
+  }
+
   return migrated;
 }
 
@@ -570,6 +583,7 @@ function removeTelegramOnlyFields(untypedCached: any) {
   }
   delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
   delete untypedCached.chatFolders?.areTagsEnabled;
+  delete untypedCached.serviceNotifications;
 
   Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
     delete messageStore.summaryById;
@@ -660,7 +674,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentEmojis',
       'recentCustomEmojis',
       'emojiGroups',
-      'serviceNotifications',
       'attachmentSettings',
       'mediaEditorSettings',
       'leftColumnWidth',

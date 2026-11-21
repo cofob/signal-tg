@@ -11,7 +11,7 @@ import {
   DEBUG, MEDIA_CACHE_DISABLED, MEDIA_CACHE_NAME,
   MEDIA_CACHE_NAME_AVATARS,
 } from '../config';
-import { callApi, cancelApiProgress } from '../api/gramjs';
+import { callApi, cancelApiProgress } from '../api';
 import {
   IS_OPUS_SUPPORTED, IS_PROGRESSIVE_SUPPORTED,
 } from './browser/windowEnvironment';

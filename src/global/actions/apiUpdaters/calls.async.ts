@@ -16,7 +16,7 @@ import { logDebugMessage } from '../../../util/debugConsole';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { omit } from '../../../util/iteratees';
 import { EMOJI_DATA, EMOJI_OFFSETS } from '../../../util/phoneCallEmojiConstants';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { runForAllTabs } from '../../helpers';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { updateGroupCall, updateGroupCallParticipant } from '../../reducers/calls';

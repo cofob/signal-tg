@@ -13,7 +13,7 @@ import {
 import { buildCollectionByKey, uniqueByField } from '../../../../util/iteratees';
 import { throttle } from '../../../../util/schedulers';
 import searchWords from '../../../../util/text/searchWords';
-import { callApi } from '../../../../api/gramjs';
+import { callApi } from '../../../../api';
 
 import useFlag from '../../../../hooks/useFlag';
 import useLastCallback from '../../../../hooks/useLastCallback';
@@ -216,7 +216,7 @@ export default function useEmojiSearch({
             ...prev,
             globalStickers: [
               ...(prev.globalStickers || []),
-              ...globalResult.stickers.filter(({ id }) => !currentIds.has(id)),
+              ...globalResult.stickers.filter(({ id }: ApiSticker) => !currentIds.has(id)),
             ],
             globalNextOffset: globalResult.nextOffset,
           };

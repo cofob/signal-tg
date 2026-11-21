@@ -33,7 +33,7 @@ import {
   selectSettingsKeys,
   selectTopicFromMessage,
 } from '../global/selectors';
-import { callApi } from '../api/gramjs';
+import { callApi } from '../api';
 import { IS_TAURI } from './browser/globalEnvironment';
 import { IS_SERVICE_WORKER_SUPPORTED, IS_TOUCH_ENV } from './browser/windowEnvironment';
 import jsxToHtml from './element/jsxToHtml';

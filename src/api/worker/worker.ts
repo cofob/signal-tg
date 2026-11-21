@@ -1,16 +1,14 @@
 /* eslint-disable no-console */
 
-import type { DebugLevel } from '../../../util/debugConsole';
-import type { ApiOnProgress, ApiUpdate } from '../../types';
+import type { DebugLevel } from '../../util/debugConsole';
+import type { ApiOnProgress, ApiUpdate } from '../types';
 import type { OriginMessageEvent, WorkerPayload } from './types';
 
-import { DEBUG } from '../../../config';
-import { setNativeTransportPort } from '../../../lib/signal/net/NativeTransport';
-import { DEBUG_LEVELS } from '../../../util/debugConsole';
-import { throttleWithTickEnd } from '../../../util/schedulers';
-// TeleSignal runs the Signal provider; GramJS stays in the bundle until plan stage 3 removes it
-import { callApi, cancelApiProgress, initApi } from '../../signal/methods/init';
-import { buildApiError, log } from '../helpers/misc';
+import { DEBUG } from '../../config';
+import { setNativeTransportPort } from '../../lib/signal/net/NativeTransport';
+import { DEBUG_LEVELS } from '../../util/debugConsole';
+import { throttleWithTickEnd } from '../../util/schedulers';
+import { callApi, cancelApiProgress, initApi } from '../signal/methods/init';
 
 declare const self: WorkerGlobalScope;
 
@@ -56,7 +54,7 @@ onmessage = ({ data }: OriginMessageEvent) => {
     switch (payload.type) {
       case 'initApi': {
         const { messageId, args } = payload;
-        initApi(onUpdate, args[0], args[1]).then(() => {
+        initApi(onUpdate, args[0]).then(() => {
           if (messageId) {
             sendToOrigin({
               type: 'methodResponse',
@@ -90,10 +88,6 @@ onmessage = ({ data }: OriginMessageEvent) => {
 
           const response = await callApi(name, ...args);
 
-          if (DEBUG && typeof response === 'object' && 'CONSTRUCTOR_ID' in response) {
-            log('UNEXPECTED RESPONSE', `${name}: ${response.className}`);
-          }
-
           const { arrayBuffer } = (typeof response === 'object' && 'arrayBuffer' in response && response) || {};
 
           if (messageId) {
@@ -112,7 +106,7 @@ onmessage = ({ data }: OriginMessageEvent) => {
             sendToOrigin({
               type: 'methodResponse',
               messageId,
-              error: buildApiError(error),
+              error: { message: error.message },
             });
           }
         }
@@ -201,7 +195,7 @@ function sendToOrigin(payload: WorkerPayload, transferable?: Transferable) {
 
 function onUpdate(update: ApiUpdate) {
   if (DEBUG && update['@type'] !== 'updateUserStatus' && update['@type'] !== 'updateServerTimeOffset') {
-    log('UPDATE', update['@type'], update);
+    console.debug('[signal] Update', update['@type'], update);
   }
 
   pendingUpdates.push(update);

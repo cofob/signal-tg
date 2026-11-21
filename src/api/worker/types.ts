@@ -1,9 +1,8 @@
-import type { DebugLevel } from '../../../util/debugConsole';
+import type { DebugLevel } from '../../util/debugConsole';
+import type { MethodArgs, MethodResponse, Methods } from '../signal/methods/types';
 import type {
   ApiError, ApiInitialArgs, ApiUpdate,
-} from '../../types';
-import type { LocalDb } from '../localDb';
-import type { MethodArgs, MethodResponse, Methods } from '../methods/types';
+} from '../types';
 
 export type ThenArg<T> = T extends Promise<infer U> ? U : T;
 
@@ -55,7 +54,7 @@ export type OriginPayload =
   {
     type: 'initApi';
     messageId?: string;
-    args: [ApiInitialArgs, LocalDb];
+    args: [ApiInitialArgs];
   }
   |
   {
