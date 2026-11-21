@@ -4,6 +4,8 @@ import type { ApiMessageOutgoingStatus } from '../../api/types';
 
 import buildClassName from '../../util/buildClassName';
 
+import useLang from '../../hooks/useLang';
+
 import Transition from '../ui/Transition';
 import Icon from './icons/Icon';
 
@@ -20,6 +22,8 @@ enum Keys {
 }
 
 const MessageOutgoingStatus = ({ status, onClick }: OwnProps) => {
+  const lang = useLang();
+
   const className = buildClassName(
     'MessageOutgoingStatus',
     status === 'delivered' && 'MessageOutgoingStatus--delivered',
@@ -50,7 +54,11 @@ const MessageOutgoingStatus = ({ status, onClick }: OwnProps) => {
   }
 
   return (
-    <div className={className} onClick={onClick ? handleClick : undefined}>
+    <div
+      className={className}
+      title={onClick ? lang(status === 'partial' ? 'MessagePartiallySent' : 'MessageSendFailed') : undefined}
+      onClick={onClick ? handleClick : undefined}
+    >
       <Transition name="reveal" activeKey={Keys[status]}>
         {renderIcon()}
       </Transition>

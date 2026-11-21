@@ -176,7 +176,7 @@ export interface LangPair {
   'MessageDetailsDelivered': undefined;
   'MessageDetailsRead': undefined;
   'MessageDetailsViewed': undefined;
-  'MessageDetailsLocalFailed': undefined;
+  'MessageDetailsPartial': undefined;
   'MessagePartiallySent': undefined;
   'MessageSendFailed': undefined;
   'MessageResend': undefined;

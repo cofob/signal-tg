@@ -199,7 +199,7 @@
 "MessageDetailsDelivered" = "Delivered to";
 "MessageDetailsRead" = "Read by";
 "MessageDetailsViewed" = "Viewed by";
-"MessageDetailsLocalFailed" = "The message was not sent";
+"MessageDetailsPartial" = "Some recipients did not get this message.";
 "MessagePartiallySent" = "Partially sent, click for details";
 "MessageSendFailed" = "Send failed, click for details";
 "MessageResend" = "Resend";

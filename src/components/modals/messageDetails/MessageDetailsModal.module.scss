@@ -18,9 +18,13 @@
   color: var(--color-text-secondary);
 }
 
-.groupTitleFailed,
-.reason :global(.status) {
+.groupTitleFailed {
   color: var(--color-error);
+}
+
+// The status line of a recipient that failed names the reason
+.reason {
+  --color-text-secondary: var(--color-error);
 }
 
 .notice {

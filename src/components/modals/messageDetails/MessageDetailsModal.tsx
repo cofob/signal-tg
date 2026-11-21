@@ -95,7 +95,7 @@ const MessageDetailsModal = ({
       <ListItem
         key={userId}
         narrow
-        className={buildClassName(error && styles.reason, isSafetyNumberChange && 'chat-item-clickable')}
+        className={buildClassName('chat-item-clickable', error && styles.reason)}
         rightElement={isSafetyNumberChange
           ? <span className={styles.verify}>{lang('SafetyNumberView')}</span>
           : undefined}
@@ -120,7 +120,7 @@ const MessageDetailsModal = ({
       contentClassName={styles.content}
       onClose={handleClose}
     >
-      {sendingState === 'partial' && <p className={styles.notice}>{lang('MessagePartiallySent')}</p>}
+      {sendingState === 'partial' && <p className={styles.notice}>{lang('MessageDetailsPartial')}</p>}
       {STATUS_ORDER.map((status) => {
         const recipients = recipientsByStatus.get(status);
         if (!recipients) return undefined;
