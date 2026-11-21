@@ -10,6 +10,10 @@ import type {
 import type { GroupState } from '../groups/fetchGroup';
 import type { DecryptedGroupChange } from '../groups/groupChange';
 import type {
+  NotificationProfileDraft, NotificationProfilesState,
+} from '../notificationProfiles/NotificationProfileManager';
+import type { NotificationProfile } from '../notificationProfiles/notificationProfiles';
+import type {
   AddressableMessage,
   AddressableMessageSchema,
   ConversationIdentifier,
@@ -83,12 +87,15 @@ import {
   countPinnedConversations,
   getAci,
   getMutedUntil,
+  getNotificationProfileKey,
   getOptionalBool,
   getStickerPackStorageKey,
   getStorageChanges,
   getStoryListKey,
   mergeStorageChanges,
   omitChangedFields,
+  parseNotificationProfile,
+  parseNotificationProfileOverride,
   parseStoryDistributionList,
 } from '../storage/storageRecords';
 import { syncStorageService } from '../storage/syncStorage';
@@ -103,6 +110,7 @@ import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './s
 import { getFailedRecipients } from './sendState';
 
 import { applyCallEvent, applyCallLogEvent, applyGroupCallUpdate, clearCallLog } from '../calls/CallHistory';
+import NotificationProfileManager from '../notificationProfiles/NotificationProfileManager';
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
@@ -184,6 +192,8 @@ type MessageProcessorEvents = {
   onError(error: Error): void;
   // Ids of sticker packs installed or removed here or on another device
   onStickerPacksChange?(ids: string[]): void;
+  // The notification profiles, the one that is on, or the manual override changed
+  onNotificationProfilesChange?(state: NotificationProfilesState): void;
 };
 
 type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
@@ -248,6 +258,8 @@ const STORAGE_SYNC_DELAY_MS = 500;
 const STORAGE_MERGE_PASSES: { id: string; cases: NonNullable<StorageRecord['record']['case']>[] }[] = [
   { id: 'installedStickerPack', cases: ['installedStickerPack'] },
   { id: 'storyDistributionList', cases: ['storyDistributionList'] },
+  // Notification profiles, and the manual override and sync setting of the account record
+  { id: 'notificationProfiles', cases: ['notificationProfile', 'account'] },
   // `hideStory` of contacts and groups, `storiesDisabled` and `storyViewReceiptsEnabled` of the account
   { id: 'storyFields', cases: ['contact', 'groupV2', 'account'] },
 ];
@@ -346,6 +358,8 @@ export default class MessageProcessor {
   // What call history changes in messages and chats goes through the processor, which serializes it
   private callHistory: CallHistoryHost;
 
+  private notificationProfiles: NotificationProfileManager;
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -361,6 +375,12 @@ export default class MessageProcessor {
         this.changes.calls.push(call);
       },
     };
+    this.notificationProfiles = new NotificationProfileManager({
+      store: client.store,
+      markStorageChanges: (added) => this.markStorageChanges(added),
+      runSerial: (task) => this.runSerial(task),
+      onChange: (state) => this.events.onNotificationProfilesChange?.(state),
+    });
   }
 
   /** Handles one decrypted envelope; `SignalClient.connect` passes it as `onContent` */
@@ -375,6 +395,7 @@ export default class MessageProcessor {
    */
   start() {
     this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
+    this.runSerial(() => this.notificationProfiles.refresh(true)).catch(this.events.onError);
     void this.flushPendingSends();
     this.retryUnsentMessages(true);
   }
@@ -387,6 +408,7 @@ export default class MessageProcessor {
     clearTimeout(this.storageSyncTimer);
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    this.notificationProfiles.stop();
     this.sendsInFlight.clear();
     this.retryPass = Promise.resolve();
     this.deliveryReceiptTimer = undefined;
@@ -958,6 +980,24 @@ export default class MessageProcessor {
     });
   }
 
+  /** The notification profiles and which one is on */
+  getNotificationProfiles() {
+    return this.runSerial(() => this.notificationProfiles.refresh());
+  }
+
+  saveNotificationProfile(draft: NotificationProfileDraft) {
+    return this.runSerial(() => this.notificationProfiles.saveProfile(draft));
+  }
+
+  deleteNotificationProfile(id: string) {
+    return this.runSerial(() => this.notificationProfiles.deleteProfile(id));
+  }
+
+  /** Turns a profile on by hand until `endsAt`, or without a profile turns all profiles off by hand */
+  setNotificationProfileOverride(profileId: string | undefined, endsAt?: number) {
+    return this.runSerial(() => this.notificationProfiles.setOverride(profileId, endsAt));
+  }
+
   /** The calls of the call history that were not cleared, newest first */
   getCallLog(limit: number) {
     return this.db.getCallLog(limit);
@@ -1314,6 +1354,8 @@ export default class MessageProcessor {
         deviceId: account.deviceId,
         localAccount: account,
         storyLists: await store.getItem('storyDistributionLists') ?? [],
+        notificationProfiles: await store.getItem('notificationProfiles') ?? [],
+        notificationProfileOverride: await store.getItem('notificationProfileOverride'),
       });
       if (!built) return undefined;
 
@@ -1865,6 +1907,9 @@ export default class MessageProcessor {
     const blockedE164Count = blockedE164s.size;
     // Lists changed here since the last write keep their local state
     const remoteStoryLists: StoryDistributionList[] = [];
+    // The same for notification profiles; the account record brings the manual override and the sync setting
+    const remoteNotificationProfiles: NotificationProfile[] = [];
+    let notificationProfileAccount: Parameters<NotificationProfileManager['mergeRemote']>[1];
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
     let isProfileKeyChanged = false;
@@ -1971,6 +2016,11 @@ export default class MessageProcessor {
           }, accountChanges),
         });
         if (accountRecord.storiesDisabled && !accountChanges.has('storiesDisabled')) await this.removeAllStories();
+        notificationProfileAccount = {
+          override: parseNotificationProfileOverride(accountRecord),
+          isOverrideChanged: accountChanges.has('notificationProfileManualOverride'),
+          isSyncDisabled: accountRecord.notificationProfileSyncDisabled,
+        };
         const username = accountRecord.username || undefined;
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
@@ -1987,6 +2037,9 @@ export default class MessageProcessor {
       } else if (record.case === 'storyDistributionList') {
         const list = parseStoryDistributionList(record.value);
         if (list && !changes[getStoryListKey(list.id)]) remoteStoryLists.push(list);
+      } else if (record.case === 'notificationProfile') {
+        const profile = parseNotificationProfile(record.value, getGroupId);
+        if (profile && !changes[getNotificationProfileKey(profile.id)]) remoteNotificationProfiles.push(profile);
       } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
         // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
         const { packId, packKey, position, deletedAtTimestamp } = record.value;
@@ -2009,6 +2062,10 @@ export default class MessageProcessor {
       await store.setItem('storyDistributionLists', [
         ...local.filter(({ id }) => !remoteIds.has(id)), ...remoteStoryLists,
       ]);
+    }
+
+    if (remoteNotificationProfiles.length || notificationProfileAccount) {
+      await this.notificationProfiles.mergeRemote(remoteNotificationProfiles, notificationProfileAccount);
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
