@@ -129,8 +129,8 @@ export function groupMessages(
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle
-        || (isActionMessage(message) && message.content.action?.type !== 'phoneCall')
-        || (isActionMessage(nextMessage) && nextMessage.content.action?.type !== 'phoneCall')
+        || isActionMessage(message)
+        || isActionMessage(nextMessage)
         || (nextMessage.date - message.date) > GROUP_INTERVAL_SECONDS
         || (topMessageId
           && (message.id === topMessageId

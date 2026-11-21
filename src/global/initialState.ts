@@ -192,10 +192,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     hasNextInArchive: true,
   },
 
-  groupCalls: {
-    byId: {},
-  },
-
   attachmentSettings: {
     shouldCompress: true,
     defaultAttachmentCompression: 'compress',

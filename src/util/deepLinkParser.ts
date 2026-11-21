@@ -53,12 +53,6 @@ interface PublicUsernameOrBotLink {
   isDirect?: boolean;
 }
 
-interface GroupCallLink {
-  type: 'groupCallLink';
-  username: string;
-  inviteHash?: string;
-}
-
 interface PrivateChannelLink {
   type: 'privateChannelLink';
   channelId: string;
@@ -81,7 +75,6 @@ type DeepLink =
   PrivateMessageLink |
   ShareLink |
   PublicUsernameOrBotLink |
-  GroupCallLink |
   PrivateChannelLink |
   ContactLink |
   SettingsScreenLink;
@@ -172,11 +165,6 @@ function parseTgLink(url: URL) {
         text: queryParams.text,
         direct: queryParams.direct,
       });
-    case 'groupCallLink':
-      return buildGroupCallLink({
-        username: queryParams.domain,
-        inviteHash: getGroupCallInviteHash(queryParams),
-      });
     case 'privateChannelLink': {
       return buildPrivateChannelLink({ channelId: queryParams.channel });
     }
@@ -201,7 +189,6 @@ function getTgDeepLinkType(
     case 'resolve': {
       const { domain, post } = queryParams;
       if (domain && isUsernameValid(domain)) {
-        if (getGroupCallInviteHash(queryParams) !== undefined) return 'groupCallLink';
         return post ? 'publicMessageLink' : 'publicUsernameOrBotLink';
       }
       break;
@@ -337,19 +324,6 @@ function buildPublicUsernameOrBotLink(
   };
 }
 
-function buildGroupCallLink(params: BuilderParams<GroupCallLink>): BuilderReturnType<GroupCallLink> {
-  const { username, inviteHash } = params;
-  if (!username || !isUsernameValid(username)) {
-    return undefined;
-  }
-
-  return {
-    type: 'groupCallLink',
-    username,
-    inviteHash: inviteHash || undefined,
-  };
-}
-
 function buildPrivateChannelLink(params: BuilderParams<PrivateChannelLink>): BuilderReturnType<PrivateChannelLink> {
   const {
     channelId,
@@ -379,10 +353,6 @@ function buildContactLink(params: BuilderParams<ContactLink>): BuilderReturnType
 
 function isNumber(s: string) {
   return /^-?\d+$/.test(s);
-}
-
-function getGroupCallInviteHash(queryParams: Record<string, string>) {
-  return queryParams.livestream ?? queryParams.videochat ?? queryParams.voicechat;
 }
 
 function getPathParams(url: URL) {

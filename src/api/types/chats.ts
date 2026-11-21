@@ -64,8 +64,6 @@ export interface ApiChat {
   level?: number;
 
   // Calls
-  isCallActive?: boolean;
-  isCallNotEmpty?: boolean;
 
   // Current user permissions
   isNotJoined?: boolean;
@@ -138,7 +136,6 @@ export interface ApiChatFullInfo {
   canViewMembers?: boolean;
   isPreHistoryHidden?: boolean;
   inviteLink?: string;
-  groupCallId?: string;
   slowMode?: {
     seconds: number;
     nextSendDate?: number;

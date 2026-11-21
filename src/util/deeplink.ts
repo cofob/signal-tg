@@ -61,12 +61,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
           isDirect: parsedLink.isDirect,
         });
         return true;
-      case 'groupCallLink':
-        actions.joinVoiceChatByLink({
-          username: parsedLink.username,
-          inviteHash: parsedLink.inviteHash,
-        });
-        return true;
       case 'contactLink':
         actions.openChatByContactToken({
           token: parsedLink.token,

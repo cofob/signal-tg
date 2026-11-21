@@ -1,15 +1,5 @@
-import type {
-  GroupCallConnectionData,
-  GroupCallConnectionState,
-  GroupCallParticipant,
-  VideoRotation,
-  VideoState,
-} from '../../lib/vibecalls';
 import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
-import type {
-  ApiGroupCall, ApiPhoneCall,
-} from './calls';
 import type {
   ApiChat,
   ApiChatFolder,
@@ -675,78 +665,11 @@ export type ApiUpdateServerTimeOffset = {
   serverTimeOffset: number;
 };
 
-export type ApiUpdateGroupCall = {
-  '@type': 'updateGroupCall';
-  call: ApiGroupCall;
-};
-
-export type ApiUpdateGroupCallChatId = {
-  '@type': 'updateGroupCallChatId';
-  call: Partial<ApiGroupCall>;
-  chatId: string;
-};
-
-export type ApiUpdateGroupCallLeavePresentation = {
-  '@type': 'updateGroupCallLeavePresentation';
-};
-
-export type ApiUpdateGroupCallParticipants = {
-  '@type': 'updateGroupCallParticipants';
-  groupCallId: string;
-  participants: GroupCallParticipant[];
-  nextOffset?: string;
-};
-
 export type ApiUpdatePendingJoinRequests = {
   '@type': 'updatePendingJoinRequests';
   chatId: string;
   recentRequesterIds: string[];
   requestsPending: number;
-};
-
-export type ApiUpdateGroupCallConnection = {
-  '@type': 'updateGroupCallConnection';
-  data: GroupCallConnectionData;
-  presentation: boolean;
-};
-
-export type ApiUpdateGroupCallStreams = {
-  '@type': 'updateGroupCallStreams';
-  userId: string;
-  hasAudioStream: boolean;
-  hasVideoStream: boolean;
-  hasPresentationStream: boolean;
-};
-
-export type ApiUpdateGroupCallConnectionState = {
-  '@type': 'updateGroupCallConnectionState';
-  connectionState: GroupCallConnectionState;
-  isSpeakerDisabled?: boolean;
-};
-
-export type ApiUpdatePhoneCall = {
-  '@type': 'updatePhoneCall';
-  call: ApiPhoneCall;
-};
-
-export type ApiUpdatePhoneCallSignalingData = {
-  '@type': 'updatePhoneCallSignalingData';
-  callId: string;
-  data: number[];
-};
-
-export type ApiUpdatePhoneCallMediaState = {
-  '@type': 'updatePhoneCallMediaState';
-  isMuted: boolean;
-  videoState: VideoState;
-  videoRotation: VideoRotation;
-  screencastState: VideoState;
-  isBatteryLow: boolean;
-};
-
-export type ApiUpdatePhoneCallConnectionState = {
-  '@type': 'updatePhoneCallConnectionState';
-  connectionState: RTCPeerConnectionState;
 };
 
 export type ApiUpdatePinnedTopic = {
@@ -894,11 +817,7 @@ export type ApiUpdate = (
   ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode |
   ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings | ApiUpdatePeerBlocked | ApiUpdatePrivacy |
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
-  ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
-  ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
-  ApiUpdatePendingJoinRequests |
-  ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
-  ApiUpdatePhoneCallConnectionState | ApiUpdateUserEmojiStatus |
+  ApiUpdatePendingJoinRequests | ApiUpdateUserEmojiStatus |
   ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |

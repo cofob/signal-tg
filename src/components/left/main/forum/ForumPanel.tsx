@@ -44,7 +44,6 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 import usePreviousDeprecated from '../../../../hooks/usePreviousDeprecated';
 import useOrderDiff from '../hooks/useOrderDiff';
 
-import GroupCallTopPane from '../../../calls/group/GroupCallTopPane';
 import GroupChatInfo from '../../../common/GroupChatInfo';
 import PrivateChatInfo from '../../../common/PrivateChatInfo';
 import HeaderActions from '../../../middle/HeaderActions';
@@ -309,8 +308,6 @@ const ForumPanel = ({
           onTopicSearch={onTopicSearch}
         />
       </div>
-
-      {!isUserId(chat.id) && <GroupCallTopPane chatId={chat.id} className="standalone-pill" />}
 
       <div className={styles.notch} />
 

@@ -51,11 +51,9 @@ import type {
 } from '../../api/types';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
-import type { P2pMessage } from '../../lib/vibecalls';
 import type {
   AccountSettings,
   AttachmentCompression,
-  CallSound,
   ChatListType,
   ConfettiParams,
   EditingDraft,
@@ -893,12 +891,6 @@ export interface ActionPayloads {
   onTabFocusChange: {
     isBlurred: boolean;
   } & WithTabId;
-  afterHangUp: undefined;
-  requestMasterAndCallAction: CallbackAction & WithTabId;
-  clearMultitabNextAction: WithTabId | undefined;
-  requestMasterAndJoinGroupCall: ActionPayloads['joinGroupCall'];
-  requestMasterAndRequestCall: ActionPayloads['requestCall'];
-  requestMasterAndAcceptCall: WithTabId | undefined;
 
   // Initial
   signOut: { forceInitApi?: boolean } | undefined;
@@ -1911,68 +1903,6 @@ export interface ActionPayloads {
     peerId: string;
   } & WithTabId;
   closeQrCodeModal: WithTabId | undefined;
-
-  // Calls
-  joinGroupCall: {
-    chatId?: string;
-    id?: string;
-    accessHash?: string;
-    inviteHash?: string;
-  } & WithTabId;
-  toggleGroupCallMute: {
-    participantId: string;
-    value: boolean;
-  } | undefined;
-  toggleGroupCallPresentation: {
-    value?: boolean;
-  } | undefined;
-  leaveGroupCall: ({
-    isFromLibrary?: boolean;
-    shouldDiscard?: boolean;
-    shouldRemove?: boolean;
-    rejoin?: ActionPayloads['joinGroupCall'];
-    isPageUnload?: boolean;
-  } & WithTabId) | undefined;
-
-  toggleGroupCallVideo: undefined;
-  requestToSpeak: {
-    value: boolean;
-  } | undefined;
-  setGroupCallParticipantVolume: {
-    participantId: string;
-    volume: number;
-  };
-  toggleGroupCallPanel: ({ force?: boolean } & WithTabId) | undefined;
-
-  createGroupCall: {
-    chatId: string;
-  } & WithTabId;
-  joinVoiceChatByLink: {
-    username: string;
-    inviteHash?: string;
-  } & WithTabId;
-  closeJoinGroupCallModal: WithTabId | undefined;
-  createGroupCallInviteLink: WithTabId | undefined;
-
-  loadMoreGroupCallParticipants: undefined;
-  connectToActiveGroupCall: WithTabId | undefined;
-
-  requestCall: {
-    userId: string;
-    isVideo?: boolean;
-  } & WithTabId;
-  sendSignalingData: P2pMessage;
-  hangUp: ({ isPageUnload?: boolean } & WithTabId) | undefined;
-  acceptCall: undefined;
-  setCallRating: {
-    rating: number;
-    comment: string;
-  } & WithTabId;
-  closeCallRatingModal: WithTabId | undefined;
-  playGroupCallSound: {
-    sound: CallSound;
-  };
-  connectToActivePhoneCall: undefined;
 
   // Passcode
   setPasscode: { passcode: string } & WithTabId;

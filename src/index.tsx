@@ -137,9 +137,3 @@ async function loadPasscodeActions() {
   await Promise.all([loadBundle(Bundles.Main), initializationPromise]);
   return getActions();
 }
-
-onBeforeUnload(() => {
-  const actions = getActions();
-  actions.leaveGroupCall?.({ isPageUnload: true });
-  actions.hangUp?.({ isPageUnload: true });
-});

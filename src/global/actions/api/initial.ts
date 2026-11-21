@@ -198,9 +198,6 @@ addActionHandler('saveSession', async (global, actions, payload): Promise<void> 
 });
 
 addActionHandler('signOut', async (global, actions, payload): Promise<void> => {
-  if ('hangUp' in actions) actions.hangUp({ tabId: getCurrentTabId() });
-  if ('leaveGroupCall' in actions) actions.leaveGroupCall({ tabId: getCurrentTabId() });
-
   try {
     resetInitialLocationHash();
     resetLocationHash();

@@ -9,7 +9,6 @@ import { ManagementScreens } from '../../types';
 
 import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
 import {
-  getHasAdminRight,
   getIsSavedDialog,
   isChatChannel, isChatSuperGroup,
 } from '../../global/helpers';
@@ -19,12 +18,10 @@ import {
   selectChatFullInfo,
   selectIsChatRestricted,
   selectIsChatWithSelf,
-  selectIsCurrentUserFrozen,
   selectIsInSelectMode,
   selectIsRightColumnShown,
   selectLanguageCode,
 } from '../../global/selectors';
-import { ARE_CALLS_SUPPORTED } from '../../util/browser/windowEnvironment';
 import { isUserId } from '../../util/entities/ids';
 import focusNoScroll from '../../util/focusNoScroll';
 
@@ -51,16 +48,12 @@ interface StateProps {
   isRightColumnShown?: boolean;
   canSubscribe?: boolean;
   canSearch?: boolean;
-  canCall?: boolean;
   canMute?: boolean;
   canLeave?: boolean;
-  canEnterVoiceChat?: boolean;
-  canCreateVoiceChat?: boolean;
   channelMonoforumId?: string;
   pendingJoinRequests?: number;
   noAnimation?: boolean;
   language: string;
-  isAccountFrozen?: boolean;
 }
 
 const HeaderActions = ({
@@ -71,27 +64,21 @@ const HeaderActions = ({
   isChannel,
   canSubscribe,
   canSearch,
-  canCall,
   canMute,
   canLeave,
-  canEnterVoiceChat,
-  canCreateVoiceChat,
   channelMonoforumId,
   pendingJoinRequests,
   isRightColumnShown,
   isForForum,
   noAnimation,
   language,
-  isAccountFrozen,
   onTopicSearch,
 }: OwnProps & StateProps) => {
   const {
     openMiddleSearch,
-    requestMasterAndRequestCall,
     requestNextManagementScreen,
     openChat,
     setViewForumAsMessages,
-    openFrozenAccountModal,
   } = getActions();
   const menuButtonRef = useRef<HTMLButtonElement>();
 
@@ -142,14 +129,6 @@ const HeaderActions = ({
     setViewForumAsMessages({ chatId, isEnabled: true });
   });
 
-  const handleRequestCall = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-      return;
-    }
-    requestMasterAndRequestCall({ userId: chatId });
-  });
-
   useKeyboardShortcuts(useMemo(() => (canSearch ? {
     searchInChat: handleSearchClick,
   } : undefined), [canSearch]));
@@ -167,16 +146,6 @@ const HeaderActions = ({
               onClick={handleSearchClick}
               ariaLabel={searchLabel}
               iconName="search"
-            />
-          )}
-          {canCall && (
-            <Button
-              round
-              color="translucent"
-              size="smaller"
-              onClick={handleRequestCall}
-              ariaLabel={lang('Call')}
-              iconName="phone"
             />
           )}
         </>
@@ -216,11 +185,8 @@ const HeaderActions = ({
           isChannel={isChannel}
           canSubscribe={isForForum ? canSubscribe : undefined}
           canSearch={canSearch}
-          canCall={canCall}
           canMute={canMute}
           canLeave={canLeave}
-          canEnterVoiceChat={canEnterVoiceChat}
-          canCreateVoiceChat={canCreateVoiceChat}
           pendingJoinRequests={pendingJoinRequests}
           onJoinRequestsClick={handleJoinRequestsClick}
           withForumActions={isForForum}
@@ -265,16 +231,10 @@ export default memo(withGlobal<OwnProps>(
       (isMainThread || chat.isForum) && (isChannel || isSuperGroup) && chat.isNotJoined && !chat.isMonoforum,
     );
     const canSearch = isMainThread || isDiscussionThread;
-    const canCall = ARE_CALLS_SUPPORTED && isUserId(chat.id) && !isChatWithSelf && !chat.isSupport;
     const canMute = isMainThread && !isChatWithSelf && !canSubscribe;
     const canLeave = isSavedDialog || (isMainThread && !canSubscribe);
-    const canEnterVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && chat.isCallActive;
-    const canCreateVoiceChat = ARE_CALLS_SUPPORTED && isMainThread && !chat.isCallActive
-      && getHasAdminRight(chat, 'manageCall') && !chat.isMonoforum;
     const pendingJoinRequests = isMainThread ? chatFullInfo?.requestsPending : undefined;
     const noAnimation = !selectCanAnimateInterface(global);
-
-    const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
     const channelMonoforumId = isChatChannel(chat) ? chat.linkedMonoforumId : undefined;
 
@@ -284,15 +244,11 @@ export default memo(withGlobal<OwnProps>(
       isRightColumnShown,
       canSubscribe,
       canSearch,
-      canCall,
       canMute,
       canLeave,
-      canEnterVoiceChat,
-      canCreateVoiceChat,
       pendingJoinRequests,
       noAnimation,
       language,
-      isAccountFrozen,
       channelMonoforumId,
     };
   },

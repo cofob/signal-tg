@@ -200,13 +200,6 @@ function onUpdateConnectionState<T extends GlobalState>(
 ) {
   const { connectionState } = update;
 
-  const tabState = selectTabState(global, getCurrentTabId());
-  if (connectionState === 'connectionStateReady' && tabState.isMasterTab && tabState.multitabNextAction) {
-    // @ts-ignore
-    actions[tabState.multitabNextAction.action](tabState.multitabNextAction.payload);
-    actions.clearMultitabNextAction({ tabId: tabState.id });
-  }
-
   if (connectionState === global.connectionState) {
     return;
   }
@@ -218,6 +211,7 @@ function onUpdateConnectionState<T extends GlobalState>(
   setGlobal(global);
 
   if (global.isSynced) {
+    const tabState = selectTabState(global, getCurrentTabId());
     const channelStackIds = getOpenedShortpollChannelIds(global);
 
     if (connectionState === 'connectionStateReady' && tabState.isMasterTab && channelStackIds.length) {

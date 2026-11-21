@@ -22,13 +22,11 @@ import {
   selectTopic,
 } from '../../../global/selectors';
 import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
-import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
-import { formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
+import { formatCountdown } from '../../../util/dates/duration';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 import {
-  getCallMessageKey,
   getPinnedMediaValue,
   renderMessageLink,
   renderPeerLink,
@@ -427,57 +425,6 @@ const ActionMessageText = ({
         return translateWithYou(lang, 'ActionKickUser', isOutgoing, { from: senderLink, user: userLink });
       }
 
-      case 'groupCall': {
-        const { duration } = action;
-        const durationText = duration ? formatShortDuration(lang, duration) : undefined;
-        if (durationText) {
-          if (isChannel) {
-            return lang('ActionGroupCallFinishedChannel', { duration: durationText });
-          }
-          return lang(
-            'ActionGroupCallFinishedGroup', { from: senderLink, duration: durationText }, { withNodes: true },
-          );
-        }
-
-        if (isChannel) return lang('ActionGroupCallStartedChannel');
-        return lang('ActionGroupCallStartedGroup', { from: senderLink }, { withNodes: true });
-      }
-
-      case 'groupCallScheduled': {
-        const { scheduleDate } = action;
-        const formattedDate = formatDateTime(lang, secondsToDate(scheduleDate), { date: 'short', time: 'short' });
-
-        if (isChannel) return lang('ActionGroupCallScheduledChannel', { date: formattedDate });
-        return lang('ActionGroupCallScheduledGroup', { from: senderLink, date: formattedDate }, { withNodes: true });
-      }
-
-      case 'inviteToGroupCall': {
-        const { userIds } = action;
-
-        if (userIds.length === 1) {
-          const user = selectPeer(global, userIds[0]);
-          const userTitle = (user && getPeerTitle(lang, user)) || userFallbackText;
-          const userLink = renderPeerLink(user?.id, userTitle, asPreview);
-          return translateWithYou(lang, 'ActionVideoInvited', isOutgoing, { from: senderLink, user: userLink });
-        }
-
-        const users = userIds.map((userId) => selectPeer(global, userId)).filter(Boolean);
-
-        if (!users.length) {
-          return translateWithYou(
-            lang, 'ActionVideoInvited', isOutgoing, { from: senderLink, user: userFallbackText },
-          );
-        }
-
-        const userLinks = users.map((user) => (
-          renderPeerLink(user.id, getPeerTitle(lang, user) || userFallbackText, asPreview)
-        ));
-
-        return translateWithYou(
-          lang, 'ActionVideoInvitedMany', isOutgoing, { from: senderLink, users: conjuctionWithNodes(lang, userLinks) },
-        );
-      }
-
       case 'suggestProfilePhoto': {
         const actionPeer = (isOutgoing ? chat : sender)!;
         const actionPeerLink = renderPeerLink(
@@ -607,9 +554,6 @@ const ActionMessageText = ({
           },
         );
       }
-
-      case 'phoneCall': // Rendered as a regular message, but considered an action for the summary
-        return lang(getCallMessageKey(action, isOutgoing));
 
       case 'noForwardsToggle': {
         const { prevValue, newValue } = action;

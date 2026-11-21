@@ -253,7 +253,6 @@ const MessageListContent = ({
         && !isAlbum(senderGroup[0])
         && !isDocumentGroup(senderGroup[0])
         && isActionMessage(senderGroup[0])
-        && senderGroup[0].content.action?.type !== 'phoneCall'
       ) {
         const message = senderGroup[0];
         const isLastInList = (

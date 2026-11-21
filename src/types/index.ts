@@ -690,10 +690,6 @@ export type WebPageMediaSize = 'large' | 'small';
 
 export type AttachmentCompression = 'compress' | 'original';
 
-export type CallSound = (
-  'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
-);
-
 export type SendMessageParams = {
   chat?: ApiChat;
   attachments?: ApiAttachment[];

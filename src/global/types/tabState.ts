@@ -13,7 +13,6 @@ import type {
   ApiMissingInvitedUser,
   ApiNewPoll,
   ApiNotification,
-  ApiPhoneCall,
   ApiReaction,
   ApiRichText,
   ApiSticker,
@@ -58,7 +57,6 @@ import type {
 } from '../../types';
 import type { RegularLangKey } from '../../types/language';
 import type { SearchResultKey } from '../../util/keys/searchResultKey';
-import type { CallbackAction } from './actions';
 
 export type PollVote = {
   peerId: string;
@@ -133,10 +131,6 @@ export type TabState = {
     isOwnProfile?: boolean;
   };
   nextFoldersAction?: ReducerAction<FoldersActions>;
-
-  isCallPanelVisible?: boolean;
-  multitabNextAction?: CallbackAction;
-  ratingPhoneCall?: ApiPhoneCall;
 
   messageLists: MessageList[];
   globalThemePreviewChatId?: string;
@@ -484,13 +478,6 @@ export type TabState = {
   deleteMemberModal?: {
     chatId: string;
     peerId: string;
-  };
-
-  joinGroupCallModal?: {
-    chatId: string;
-    id: string;
-    accessHash: string;
-    inviteHash?: string;
   };
 
   isQuickChatPickerOpen?: boolean;

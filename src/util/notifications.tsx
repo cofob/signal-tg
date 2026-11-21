@@ -2,7 +2,6 @@ import { getActions, getGlobal, setGlobal } from '../global';
 
 import type {
   ApiChat, ApiMessage, ApiPeer, ApiPeerReaction,
-  ApiPhoneCall, ApiUser,
 } from '../api/types';
 import type { GlobalState } from '../global/types';
 import { ApiMediaFormat } from '../api/types';
@@ -12,7 +11,6 @@ import {
   getChatAvatarHash,
   getChatTitle,
   getMessageRecentReaction,
-  getUserFullName,
 } from '../global/helpers';
 import {
   getIsChatMuted,
@@ -190,8 +188,7 @@ function checkIfShouldNotify(chat: ApiChat, message: Partial<ApiMessage>) {
 
   const isPinMessage = message.content?.action?.type === 'pinMessage';
   const shouldSkipPinnedMessageNotification = isPinMessage && !shouldNotifyAboutPinnedMessages;
-  const shouldNotifyAboutMessage = message.content?.action?.type !== 'phoneCall';
-  if (shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute) || !shouldNotifyAboutMessage
+  if (shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute)
     || chat.isNotJoined || !chat.isListed || selectIsChatWithSelf(global, chat.id)) {
     return false;
   }
@@ -267,40 +264,6 @@ function getReactionEmoji(reaction: ApiPeerReaction) {
     emoji = selectCustomEmoji(getGlobal(), reaction.reaction.documentId)?.emoji;
   }
   return emoji || '❤️';
-}
-
-export async function notifyAboutCall({
-  call, user,
-}: {
-  call: ApiPhoneCall; user: ApiUser;
-}) {
-  const { hasWebNotifications } = selectSettingsKeys(getGlobal());
-  if (document.hasFocus() || !hasWebNotifications) return;
-  const areNotificationsSupported = checkIfNotificationsSupported();
-  if (!areNotificationsSupported) return;
-
-  const icon = await getAvatar(user);
-
-  const options: NotificationOptions = {
-    body: getUserFullName(getTranslationFn(), user),
-    icon,
-    badge: icon,
-    tag: `call_${call.id}`,
-  };
-
-  if ('vibrate' in navigator) {
-    // @ts-ignore
-    options.vibrate = [200, 100, 200];
-  }
-
-  const notification = new Notification(getTranslationFn()('VoipIncoming'), options);
-
-  notification.onclick = () => {
-    notification.close();
-    if (window.focus) {
-      window.focus();
-    }
-  };
 }
 
 export async function notifyAboutMessage({

@@ -1,4 +1,3 @@
-import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
   ApiPhoto, ApiPollAnswer, ApiVideo,
 } from './messages';
@@ -96,14 +95,6 @@ export interface ApiMessageActionSetChatWallpaper extends ActionMediaType {
   wallpaper?: ApiWallpaper;
 }
 
-export interface ApiMessageActionPhoneCall extends ActionMediaType {
-  type: 'phoneCall';
-  isVideo?: true;
-  callId: string;
-  reason?: ApiPhoneCallDiscardReason;
-  duration?: number;
-}
-
 export interface ApiMessageActionScreenshotTaken extends ActionMediaType {
   type: 'screenshotTaken';
 }
@@ -115,24 +106,6 @@ export interface ApiMessageActionCustomAction extends ActionMediaType {
 
 export interface ApiMessageActionContactSignUp extends ActionMediaType {
   type: 'contactSignUp';
-}
-
-export interface ApiMessageActionGroupCall extends ActionMediaType {
-  type: 'groupCall';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  duration?: number;
-}
-
-export interface ApiMessageActionInviteToGroupCall extends ActionMediaType {
-  type: 'inviteToGroupCall';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  userIds: string[];
-}
-
-export interface ApiMessageActionGroupCallScheduled extends ActionMediaType {
-  type: 'groupCallScheduled';
-  call: Pick<ApiGroupCall, 'id' | 'accessHash'>;
-  scheduleDate: number;
 }
 
 export interface ApiMessageActionChatJoinedByRequest extends ActionMediaType {
@@ -259,10 +232,8 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage
   | ApiMessageActionHistoryClear | ApiMessageActionSetMessagesTtl
   | ApiMessageActionSetChatTheme | ApiMessageActionSetChatWallpaper
-  | ApiMessageActionPhoneCall
   | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction
   | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
-  | ApiMessageActionGroupCall | ApiMessageActionInviteToGroupCall | ApiMessageActionGroupCallScheduled
   | ApiMessageActionChatJoinedByRequest | ApiMessageActionChatJoinedViaCommunity
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday

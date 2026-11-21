@@ -169,7 +169,6 @@ import DiceWrapper from './dice/DiceWrapper';
 import FactCheck from './FactCheck';
 import MessageAppendix from './MessageAppendix';
 import MessageMeta from './MessageMeta';
-import MessagePhoneCall from './MessagePhoneCall';
 import Photo from './Photo';
 import Poll from './poll/Poll';
 import Reactions from './reactions/Reactions';
@@ -512,7 +511,7 @@ const Message = ({
   const {
     photo, video, audio,
     voice, document, sticker, contact,
-    action, storyData, dice,
+    storyData, dice,
   } = getMessageContent(message);
 
   const hasStoryReply = Boolean(storyReplyInfo);
@@ -730,8 +729,6 @@ const Message = ({
     quoteSelector,
   });
 
-  const phoneCall = action?.type === 'phoneCall' ? action : undefined;
-
   const commentsThreadInfo = repliesThreadInfo?.isCommentsInfo ? repliesThreadInfo : undefined;
   const isLocalWithCommentButton = hasLinkedChat && isChannel && isLocal;
 
@@ -743,7 +740,7 @@ const Message = ({
     && !isInDocumentGroupNotLast && messageListType === 'thread'
     && !noComments;
   const withQuickReactionButton = !message.isEphemeral
-    && !isTouchScreen && !phoneCall && !isInSelectMode && defaultReaction
+    && !isTouchScreen && !isInSelectMode && defaultReaction
     && !isInDocumentGroupNotLast && !isStoryMention && !hasTtl && !isAccountFrozen;
 
   const hasOutsideReactions = hasReactions
@@ -783,9 +780,7 @@ const Message = ({
   const emojiSize = getCustomEmojiSize(text?.emojiOnlyCount);
 
   let metaPosition!: MetaPosition;
-  if (phoneCall) {
-    metaPosition = 'none';
-  } else if (isInDocumentGroupNotLast) {
+  if (isInDocumentGroupNotLast) {
     metaPosition = 'none';
   } else if (isUnsupported) {
     // The plate replaces the text, so the meta stands over its corner, as on a sticker
@@ -1155,13 +1150,6 @@ const Message = ({
             messageId={messageId}
             chatId={chatId}
             activeEmojiInteractions={activeEmojiInteractions}
-          />
-        )}
-        {phoneCall && (
-          <MessagePhoneCall
-            message={message}
-            phoneCall={phoneCall}
-            chatId={chatId}
           />
         )}
         {!isAlbum && isRoundVideo && (

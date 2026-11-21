@@ -400,7 +400,7 @@ const ActionMessage = ({
     action, message, observeIntersectionForLoading, isInsideTopic,
   ]);
 
-  if ((isInsideTopic && action.type === 'topicCreate') || action.type === 'phoneCall') {
+  if (isInsideTopic && action.type === 'topicCreate') {
     return undefined;
   }
 

@@ -9,7 +9,7 @@ import {
 } from '../../../config';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_WAVE_TRANSFORM_SUPPORTED } from '../../../util/browser/windowEnvironment';
-import { getAllMultitabTokens, getCurrentTabId, reestablishMasterToSelf } from '../../../util/establishMultitabRole';
+import { getAllMultitabTokens, getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getAllNotificationsCount } from '../../../util/folderManager';
 import getIsAppUpdateNeeded from '../../../util/getIsAppUpdateNeeded';
 import { shouldShowErrorDialog } from '../../../util/getReadableErrorText';
@@ -590,11 +590,6 @@ addActionHandler('checkAppVersion', (global): ActionReturnType => {
         console.error('[checkAppVersion failed] ', err);
       }
     });
-});
-
-addActionHandler('afterHangUp', (global): ActionReturnType => {
-  if (!selectTabState(global, getCurrentTabId()).multitabNextAction) return;
-  reestablishMasterToSelf();
 });
 
 let notificationInterval: number | undefined;

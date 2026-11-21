@@ -19,7 +19,6 @@ export { default as ReportModal } from '../components/modals/reportModal/ReportM
 export { default as CalendarModal } from '../components/common/CalendarModal';
 export { default as DeleteMessageModal } from '../components/common/DeleteMessageModal';
 export { default as DeleteMemberModal } from '../components/modals/deleteMember/DeleteMemberModal';
-export { default as JoinGroupCallModal } from '../components/modals/joinGroupCall/JoinGroupCallModal';
 export { default as PinMessageModal } from '../components/common/PinMessageModal';
 export { default as UnpinAllMessagesModal } from '../components/common/UnpinAllMessagesModal';
 export { default as SeenByModal } from '../components/common/SeenByModal';

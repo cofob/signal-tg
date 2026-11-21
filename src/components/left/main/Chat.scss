@@ -47,10 +47,6 @@
     .avatar-badge-wrapper {
       --outline-color: var(--color-chat-hover);
     }
-
-    .ChatCallStatus {
-      border-color: var(--color-chat-hover);
-    }
   }
 
   &:not(.standalone):last-of-type {
@@ -372,10 +368,6 @@
       .avatar-badge {
         --_color-outline: var(--color-chat-hover);
       }
-
-      .ChatCallStatus {
-        border-color: var(--color-chat-hover);
-      }
     }
   }
 
@@ -399,10 +391,6 @@
 
       .avatar-online {
         background-color: var(--color-white);
-      }
-
-      .ChatCallStatus {
-        border-color: var(--color-chat-active) !important;
       }
 
       .ListItem-button {

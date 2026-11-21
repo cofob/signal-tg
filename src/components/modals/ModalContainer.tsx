@@ -21,7 +21,6 @@ import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
 import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
-import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
 import MessageDetailsModal from './messageDetails/MessageDetailsModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
@@ -69,12 +68,11 @@ type ModalKey = keyof Pick<TabState,
   'languageModal' |
   'autoDeleteTimerModal' |
   'settingsConfirmation' |
-  'joinGroupCallModal' |
   'phoneNumberLookupModal' |
   'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
-  | 'settingsConfirmation' | 'joinGroupCallModal'
+  | 'settingsConfirmation'
   | 'phoneNumberLookupModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
@@ -161,7 +159,6 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   safeLinkModalUrl: SafeLinkModal,
   autoDeleteTimerModal: AutoDeleteTimerModal,
   settingsConfirmation: SettingsConfirmationModal,
-  joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
   signalLinkModal: SignalLinkModal,
 };

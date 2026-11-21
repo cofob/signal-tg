@@ -70,12 +70,9 @@ export type OwnProps = {
   isChannel?: boolean;
   canSubscribe?: boolean;
   canSearch?: boolean;
-  canCall?: boolean;
   canMute?: boolean;
   withForumActions?: boolean;
   canLeave?: boolean;
-  canEnterVoiceChat?: boolean;
-  canCreateVoiceChat?: boolean;
   pendingJoinRequests?: number;
   channelMonoforumId?: string;
   onSearchClick: () => void;
@@ -127,12 +124,9 @@ const HeaderMenuContainer = ({
   isChatInfoShown,
   canReportChat,
   canSearch,
-  canCall,
   canMute,
   pendingJoinRequests,
   canLeave,
-  canEnterVoiceChat,
-  canCreateVoiceChat,
   chat,
   isPrivate,
   isMuted,
@@ -161,13 +155,10 @@ const HeaderMenuContainer = ({
   const {
     updateChatMutedState,
     enterMessageSelectMode,
-    requestMasterAndJoinGroupCall,
-    createGroupCall,
     joinChannel,
     openLinkedChat,
     openAddContactDialog,
     openFrozenAccountModal,
-    requestMasterAndRequestCall,
     openThreadWithInfo,
     openCreateTopicPanel,
     openEditTopicPanel,
@@ -296,22 +287,6 @@ const HeaderMenuContainer = ({
     closeMenu();
   });
 
-  const handleEnterVoiceChatClick = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else if (canCreateVoiceChat) {
-      // TODO Show popup to schedule
-      createGroupCall({
-        chatId,
-      });
-    } else {
-      requestMasterAndJoinGroupCall({
-        chatId,
-      });
-    }
-    closeMenu();
-  });
-
   const handleLinkedChatClick = useLastCallback(() => {
     openLinkedChat({ id: chatId });
     closeMenu();
@@ -322,24 +297,6 @@ const HeaderMenuContainer = ({
       openFrozenAccountModal();
     } else {
       openAddContactDialog({ userId: chatId });
-    }
-    closeMenu();
-  });
-
-  const handleVideoCall = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      requestMasterAndRequestCall({ userId: chatId, isVideo: true });
-    }
-    closeMenu();
-  });
-
-  const handleCall = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      requestMasterAndRequestCall({ userId: chatId });
     }
     closeMenu();
   });
@@ -560,22 +517,6 @@ const HeaderMenuContainer = ({
               {lang('AddContact')}
             </MenuItem>
           )}
-          {isMobile && canCall && (
-            <MenuItem
-              icon="phone"
-              onClick={handleCall}
-            >
-              {lang('Call')}
-            </MenuItem>
-          )}
-          {canCall && (
-            <MenuItem
-              icon="video-outlined"
-              onClick={handleVideoCall}
-            >
-              {lang('VideoCall')}
-            </MenuItem>
-          )}
           {canMute && (isMuted ? (
             <MenuItem
               icon="unmute"
@@ -623,14 +564,6 @@ const HeaderMenuContainer = ({
             >
               {lang('AutoDeletePopupTitle')}
             </NestedMenuItem>
-          )}
-          {(canEnterVoiceChat || canCreateVoiceChat) && (
-            <MenuItem
-              icon="voice-chat"
-              onClick={handleEnterVoiceChatClick}
-            >
-              {lang(canCreateVoiceChat ? 'StartVoipChat' : 'VoipGroupJoinCall')}
-            </MenuItem>
           )}
           {hasLinkedChat && (
             <MenuItem

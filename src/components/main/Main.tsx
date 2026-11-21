@@ -56,10 +56,6 @@ import useBeforeUnload from '../../hooks/window/useBeforeUnload';
 import { useFullscreenStatus } from '../../hooks/window/useFullscreen';
 import { PANE_GAP_REM, type PaneState } from '../middle/hooks/useHeaderPane';
 
-import ActiveCallHeader from '../calls/ActiveCallHeader.async';
-import GroupCall from '../calls/group/GroupCall.async';
-import PhoneCall from '../calls/phone/PhoneCall.async';
-import RatePhoneCallModal from '../calls/phone/RatePhoneCallModal.async';
 import CustomEmojiSetsModal from '../common/CustomEmojiSetsModal.async';
 import DeleteMessageModal from '../common/DeleteMessageModal.async';
 import StickerSetModal from '../common/StickerSetModal.async';
@@ -109,13 +105,10 @@ type StateProps = {
   shouldSkipHistoryAnimations?: boolean;
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];
-  activeGroupCallId?: string;
   wasTimeFormatSetManually?: boolean;
-  isPhoneCallActive?: boolean;
   addedSetIds?: string[];
   newContactUserId?: string;
   newContactByPhoneNumber?: boolean;
-  isRatePhoneCallModalOpen?: boolean;
   requestedDraft?: TabState['requestedDraft'];
   limitReached?: ApiLimitTypeWithModal;
   deleteFolderDialog?: ApiChatFolder;
@@ -131,7 +124,6 @@ type StateProps = {
 };
 
 const APP_OUTDATED_TIMEOUT_MS = 5 * 60 * 1000; // 5 min
-const CALL_BUNDLE_LOADING_DELAY_MS = 5000; // 5 sec
 const EDITOR_BUNDLE_LOADING_DELAY_MS = 10000; // 10 sec
 
 let DEBUG_isLogged = false;
@@ -145,7 +137,6 @@ const Main = ({
   isMediaViewerOpen,
   isStoryViewerOpen,
   isForwardModalOpen,
-  activeGroupCallId,
   isHistoryCalendarOpen,
   shouldSkipHistoryAnimations,
   limitReached,
@@ -154,10 +145,8 @@ const Main = ({
   withInterfaceAnimations,
   wasTimeFormatSetManually,
   addedSetIds,
-  isPhoneCallActive,
   newContactUserId,
   newContactByPhoneNumber,
-  isRatePhoneCallModalOpen,
   requestedDraft,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
@@ -222,11 +211,6 @@ const Main = ({
   }
 
   const lang = useLang();
-
-  // Preload Calls bundle to initialize sounds for iOS
-  useTimeout(() => {
-    void loadBundle(Bundles.Calls);
-  }, CALL_BUNDLE_LOADING_DELAY_MS);
 
   useTimeout(() => {
     onFullyIdle(() => {
@@ -579,8 +563,6 @@ const Main = ({
         customEmojiSetIds={openedCustomEmojiSetIds}
         onClose={handleCustomEmojiSetsModalClose}
       />
-      {activeGroupCallId && <GroupCall groupCallId={activeGroupCallId} />}
-      <ActiveCallHeader isActive={Boolean(activeGroupCallId || isPhoneCallActive)} />
       <NewContactModal
         isOpen={Boolean(newContactUserId || newContactByPhoneNumber)}
         userId={newContactUserId}
@@ -589,9 +571,7 @@ const Main = ({
       <DownloadManager />
       <ConfettiContainer />
       {IS_WAVE_TRANSFORM_SUPPORTED && <WaveContainer />}
-      <PhoneCall isActive={isPhoneCallActive} />
       <UnreadCount isForAppBadge />
-      <RatePhoneCallModal isOpen={isRatePhoneCallModalOpen} />
       <MessageListHistoryHandler />
       <LimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
@@ -615,7 +595,6 @@ export default memo(withGlobal<OwnProps>(
       isLeftColumnShown,
       historyCalendarSelectedAt,
       newContact,
-      ratingPhoneCall,
       deleteMessageModal,
       isMasterTab,
       limitReachedModal,
@@ -646,14 +625,11 @@ export default memo(withGlobal<OwnProps>(
       shouldSkipHistoryAnimations,
       openedStickerSetShortName,
       openedCustomEmojiSetIds,
-      activeGroupCallId: isMasterTab ? global.groupCalls.activeGroupCallId : undefined,
       withInterfaceAnimations: selectCanAnimateInterface(global),
       wasTimeFormatSetManually,
-      isPhoneCallActive: isMasterTab ? Boolean(global.phoneCall) : undefined,
       addedSetIds: global.stickers.added.setIds,
       newContactUserId: newContact?.userId,
       newContactByPhoneNumber: newContact?.isByPhoneNumber,
-      isRatePhoneCallModalOpen: Boolean(ratingPhoneCall),
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

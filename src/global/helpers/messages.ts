@@ -83,7 +83,7 @@ export function getMessageOriginalId(message: ApiMessage) {
 
 export function hasMessageText(message: MediaContainer) {
   const {
-    action, text, sticker, photo, video, audio, voice, document, pollId, dice,
+    text, sticker, photo, video, audio, voice, document, pollId, dice,
     webPage, contact, storyData,
   } = message.content;
 
@@ -92,7 +92,6 @@ export function hasMessageText(message: MediaContainer) {
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || webPage
     || storyData || dice
-    || action?.type === 'phoneCall'
   );
 }
 

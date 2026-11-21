@@ -73,7 +73,6 @@ import ListItem from '../../ui/ListItem';
 import ChatFolderModal from '../ChatFolderModal.async';
 import MuteChatModal from '../MuteChatModal.async';
 import ChatBadge from './ChatBadge';
-import ChatCallStatus from './ChatCallStatus';
 
 import './Chat.scss';
 
@@ -408,8 +407,7 @@ const Chat = ({
   const avatarColorClassName = shouldShowAutoDeleteBadge
     ? getPeerColorClass(getPeerColorKey(avatarPeer, true)!)
     : undefined;
-  const hasActiveCall = Boolean(chat.isCallActive && chat.isCallNotEmpty);
-  const hasAvatarCornerBadge = isAvatarOnlineShown || shouldShowAutoDeleteBadge || hasActiveCall;
+  const hasAvatarCornerBadge = isAvatarOnlineShown || shouldShowAutoDeleteBadge;
 
   const chatClassName = buildClassName(
     'Chat chat-item-clickable',
@@ -483,9 +481,6 @@ const Chat = ({
             </div>
           )}
         </div>
-        {hasActiveCall && (
-          <ChatCallStatus isMobile={isMobile} isSelected={isSelected} isActive={withInterfaceAnimations} />
-        )}
       </div>
       <div className="info">
         <div className="info-row">
