@@ -1,8 +1,7 @@
 import pause from '@helpers/schedulers/pause';
-import textToSvgURL from '@helpers/textToSvgURL';
 
 /**
- * Builds a Telegram-styled QR canvas for `data` using the supplied palette.
+ * Builds a styled QR canvas for `data` using the supplied palette. TeleSignal: the center has no logo.
  * Shared between the auth-flow `SignQRCard` and the in-app "My QR code" popup.
  *
  * The host element receives the canvas as its last child; existing children
@@ -20,8 +19,8 @@ export type PaintQrOptions = {
   background: string;
   /** Dot color — the "ink" of the QR code. */
   foreground: string;
-  /** Color used to tint the embedded Telegram logo. */
-  logoColor: string;
+  /** The color of the logo upstream embeds in the center, which TeleSignal leaves out */
+  logoColor?: string;
   /**
    * Device-pixel multiplier for the rendered QR bitmap. Defaults to the screen
    * DPR. The My QR popup passes max(screenDPR, 3) so the QR stays crisp in its
@@ -39,33 +38,15 @@ export type PaintQrOptions = {
   QRCodeStylingCtor: any;
 };
 
-// The Telegram logo SVG is identical for a given tint every paint; fetch +
-// recolor + data-URL it once per colour instead of on every QR regenerate.
-const logoUrlCache = new Map<string, Promise<string>>();
-function getLogoUrl(logoColor: string): Promise<string> {
-  let url = logoUrlCache.get(logoColor);
-  if(!url) {
-    url = fetch('assets/img/logo_padded.svg')
-    .then((res) => res.text())
-    .then((text) => textToSvgURL(text.replace(/(fill:).+?(;)/, `$1${logoColor}$2`)));
-    logoUrlCache.set(logoColor, url);
-  }
-  return url;
-}
-
 export async function paintQrCode(options: PaintQrOptions) {
-  const {data, size, host, background, foreground, logoColor, pixelRatio = window.devicePixelRatio, QRCodeStylingCtor} = options;
-
-  const logoUrl = await getLogoUrl(logoColor);
+  const {data, size, host, background, foreground, pixelRatio = window.devicePixelRatio, QRCodeStylingCtor} = options;
 
   const qrCode = new QRCodeStylingCtor({
     width: size * pixelRatio,
     height: size * pixelRatio,
     data,
-    image: logoUrl,
     dotsOptions: {color: foreground, type: 'rounded'},
     cornersSquareOptions: {type: 'extra-rounded', color: foreground},
-    imageOptions: {imageSize: 1, margin: 0},
     backgroundOptions: {color: background},
     qrOptions: {errorCorrectionLevel: 'L'}
   });

@@ -330,53 +330,48 @@ export const DEFAULT_THEME: Theme = {
     _: 'themeSettings',
     pFlags: {},
     base_theme: {_: 'baseThemeClassic'},
-    accent_color: 0x3390ec,
-    message_colors: [0x5CA853],
+    // * TeleSignal: Signal's ultramarine and plain background (Web A's Signal theme, `DESIGN.md`)
+    accent_color: 0x2c6bed,
+    message_colors: [0x2c6bed],
     wallpaper: {
       _: 'wallPaper',
       pFlags: {
-        default: true,
-        pattern: true
+        default: true
       },
       access_hash: '',
       document: undefined,
       id: '',
-      slug: 'pattern',
+      // * no pattern: a plain color
+      slug: '',
       settings: {
         _: 'wallPaperSettings',
         pFlags: {},
-        intensity: 50,
-        background_color: 0xdbddbb,
-        second_background_color: 0x6ba587,
-        third_background_color: 0xd5d88d,
-        fourth_background_color: 0x88b884
+        intensity: 0,
+        background_color: 0xffffff
       }
     }
   }, {
     _: 'themeSettings',
     pFlags: {},
     base_theme: {_: 'baseThemeNight'},
-    accent_color: 0x8774E1,
-    message_colors: [0x8774E1],
+    accent_color: 0x2c6bed,
+    message_colors: [0x2c6bed],
     wallpaper: {
       _: 'wallPaper',
       pFlags: {
         default: true,
-        pattern: true,
         dark: true
       },
       access_hash: '',
       document: undefined,
       id: '',
-      slug: 'pattern',
+      // * no pattern: a plain color
+      slug: '',
       settings: {
         _: 'wallPaperSettings',
         pFlags: {},
-        intensity: -50,
-        background_color: 0xfec496,
-        second_background_color: 0xdd6cb9,
-        third_background_color: 0x962fbf,
-        fourth_background_color: 0x4f5bd5
+        intensity: 0,
+        background_color: 0x121212
       }
     }
   }, {
