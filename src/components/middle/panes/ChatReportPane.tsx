@@ -34,7 +34,6 @@ type OwnProps = {
 };
 
 type StateProps = {
-  currentUserId?: string;
   peer?: ApiPeer;
 };
 
@@ -49,7 +48,6 @@ const ChatReportPane = ({
   canAddContact,
   canBlockContact,
   peer,
-  currentUserId,
   onPaneStateChange,
 }: OwnProps & StateProps) => {
   const {
@@ -57,7 +55,7 @@ const ChatReportPane = ({
     blockUser,
     reportSpam,
     leaveChannel,
-    deleteChatUser,
+    leaveBasicGroup,
     deleteHistory,
     toggleChatArchived,
     hidePeerSettingsBar,
@@ -114,8 +112,8 @@ const ChatReportPane = ({
     closeBlockUserModal();
     reportSpam({ chatId: renderingChatId });
     if (isBasicGroup) {
-      deleteChatUser({ chatId: renderingChatId, userId: currentUserId! });
-      deleteHistory({ chatId: renderingChatId, shouldDeleteForAll: false });
+      // The history goes after leaving succeeded: a Signal group may refuse, as the last admin's does
+      leaveBasicGroup({ chatId: renderingChatId });
     } else {
       leaveChannel({ chatId: renderingChatId });
     }
@@ -317,7 +315,6 @@ const ChatReportPane = ({
 
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => ({
-    currentUserId: global.currentUserId,
     peer: selectPeer(global, chatId),
   }),
 )(ChatReportPane));

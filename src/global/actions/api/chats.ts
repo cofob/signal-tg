@@ -926,26 +926,6 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
   }
 });
 
-addActionHandler('deleteChatUser', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, userId, shouldRevokeHistory, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId);
-  const user = selectUser(global, userId);
-  if (!chat || !user) {
-    return;
-  }
-
-  global = leaveChat(global, chatId);
-  setGlobal(global);
-
-  if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
-    actions.openChat({ id: undefined, tabId });
-  }
-
-  void callApi('deleteChatUser', { chat, user, shouldRevokeHistory });
-});
-
 // Signal groups cannot be deleted for everyone; deleting one leaves it, which the last admin cannot do
 addActionHandler('deleteChat', async (global, actions, payload): Promise<void> => {
   const { chatId, tabId = getCurrentTabId() } = payload;

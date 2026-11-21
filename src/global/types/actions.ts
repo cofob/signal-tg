@@ -809,11 +809,6 @@ export interface ActionPayloads {
   replyToNextMessage: {
     targetIndexDelta: number;
   } & WithTabId;
-  deleteChatUser: {
-    chatId: string;
-    userId: string;
-    shouldRevokeHistory?: boolean;
-  } & WithTabId;
   deleteChat: { chatId: string } & WithTabId;
 
   // chat creation
