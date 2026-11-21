@@ -30,6 +30,7 @@ import {
   forgetDek,
   getDek,
   getDekGeneration,
+  getEngineKey,
   hasLegacyEncryptedSession,
   InvalidPasscodeError,
   loadPasscodeMeta,
@@ -73,7 +74,7 @@ import {
   restoreWallpaperBlobsFromPasscode,
   syncLockScreenWallpaperBlobs,
 } from '../../../util/wallpaper/storage';
-import { closeApi } from '../../../api';
+import { callApi, closeApi } from '../../../api';
 import {
   cacheGlobalForSlot,
   cacheSharedState,
@@ -130,6 +131,8 @@ addActionHandler('setPasscode', async (global, actions, payload): Promise<void> 
       const context = await createPasscode(passcode, snapshots);
       setupGeneration = context.generation;
       await finishPasscodeSetup(context);
+      // A failure here locks the passcode, and the next start of the engine finishes the encryption
+      await encryptEngineStorage();
     });
 
     await refreshPushNotificationState().catch(logPasscodeWarning);
@@ -182,6 +185,8 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
     localStorage.setItem(IS_SCREEN_LOCKED_CACHE_KEY, 'disabling');
 
     try {
+      // The key goes with the passcode, so the engine's stores are readable again before that
+      await callApi('disableStorageEncryption');
       passkeyCredentialId = (await loadPasscodeMeta())?.passkey?.credentialId;
       global = getGlobal();
       await restoreGlobalCaches(global);
@@ -198,6 +203,7 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
           localStorage.setItem(IS_SCREEN_LOCKED_CACHE_KEY, 'false');
           await restoreSessionsFromVault(generation);
           await protectPasscodeStorage();
+          await encryptEngineStorage();
           forceUpdateCache();
           broadcastPasscodeState(getDek(), generation);
         } catch (cleanupErr) {
@@ -765,6 +771,11 @@ async function finishPasscodeSetup({
   await protectPasscodeStorage();
   localStorage.setItem(IS_SCREEN_LOCKED_CACHE_KEY, 'false');
   broadcastPasscodeState(dek, generation);
+}
+
+/** Gives the engine the key of its stores, which it encrypts with it; it also encrypts them again after a failed disable */
+async function encryptEngineStorage() {
+  await callApi('enableStorageEncryption', await getEngineKey());
 }
 
 async function protectPasscodeStorage() {

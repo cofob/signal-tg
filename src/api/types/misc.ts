@@ -18,6 +18,8 @@ export interface ApiInitialArgs {
   langCode: string;
   // The tunnel for Signal hosts; `undefined` uses the build default
   signalProxyUrl?: string;
+  // The key of the engine's stores, while a passcode exists (`getEngineKey` in `src/util/passcode`)
+  storageKey?: ArrayBuffer;
 }
 
 export type ApiPasskeyOption = {

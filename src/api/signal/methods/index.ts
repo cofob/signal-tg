@@ -24,7 +24,9 @@ export {
   toggleDialogUnread,
   updateChatNotifySettings,
 } from './chats';
-export { destroy, disconnect, reconnectNow } from './client';
+export {
+  destroy, disableStorageEncryption, disconnect, enableStorageEncryption, reconnectNow,
+} from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
   addChatMemberByPhoneNumber,

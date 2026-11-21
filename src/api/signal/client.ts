@@ -11,6 +11,7 @@ import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from 
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
+import { applyStorageKey, forgetStorageKey } from '../../lib/signal/store/atRestMigration';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
@@ -31,6 +32,7 @@ const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
 const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
+const STORAGE_LOCKED_ERROR = 'SIGNAL_STORAGE_LOCKED';
 const SIGNAL_SESSION_DATA: ApiSessionData = { isLinked: true };
 
 let currentAccount: AccountRecord | undefined;
@@ -59,6 +61,14 @@ export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
   applyProxyUrl(args.signalProxyUrl);
+  try {
+    await applyStorageKey(args.storageKey, store, db);
+  } catch (err) {
+    // Stopping keeps the link screen from replacing local data that the key can still read
+    logError(err);
+    sendApiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
+    return;
+  }
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
@@ -124,6 +134,7 @@ export async function stopClient(shouldForget: boolean) {
     await store.clear();
     await db.clear();
     await clearAttachmentCache();
+    await forgetStorageKey();
   }
 }
 
@@ -428,7 +439,10 @@ function handlePrimaryDeregistered() {
  */
 async function handleUnlinked(account: AccountRecord) {
   await stopClient(false);
+  const encryptionState = await store.getEncryptionState();
   await store.clear();
+  // The messages stay, so they keep being read as they are stored
+  if (encryptionState) await store.setEncryptionState(encryptionState);
   await store.setItem('unlinkedAci', account.aci);
   isDestroyed = false;
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateLoggingOut' });

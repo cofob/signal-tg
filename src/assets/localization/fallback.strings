@@ -233,6 +233,7 @@
 "SignalHistorySyncNote" = "This may take a few minutes";
 "SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
 "SignalPinnedLimit" = "You have reached the limit of pinned chats. Unpin a chat to pin another one.";
+"SignalStorageLocked" = "Your local data is encrypted with the passcode and cannot be opened right now. Reload the app and unlock it with the passcode.";
 "SignalPrimaryUnauthorized" = "Signal no longer accepts this device, for example because your number is registered on another device. Your messages stay here until you log out.";
 "SignalRegisterLink" = "Register with a phone number";
 "SignalLinkExisting" = "Link to an existing account";

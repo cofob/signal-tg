@@ -196,6 +196,28 @@ async function removeFromCache(resolvedCacheName: string, key: string) {
   }
 }
 
+/**
+ * Rewrites the entries of a cache one at a time: `transform` gets an entry's body and returns the new body, or
+ * `undefined` to keep the entry. An entry keeps its other headers, so its access time stays.
+ */
+export async function rewriteBlobs(cacheName: string, transform: (blob: Blob) => Promise<Blob | undefined>) {
+  if (!cacheApi) return;
+
+  const cache = await cacheApi.open(getAccountScopedCacheName(cacheName));
+  for (const request of await cache.keys()) {
+    const response = await cache.match(request);
+    if (!response) continue;
+
+    const body = await transform(await response.blob());
+    if (!body) continue;
+
+    const headers = new Headers(response.headers);
+    headers.set('Content-Type', body.type);
+    headers.delete('Content-Length');
+    await cache.put(request, new Response(body, { headers }));
+  }
+}
+
 export async function clear(cacheName: string) {
   return clearCache(getAccountScopedCacheName(cacheName));
 }
