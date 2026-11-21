@@ -161,6 +161,19 @@ and bans apply to everyone together.
 The build web app reaches the tunnel at `/tunnel` on its own origin unless `SIGNAL_TUNNEL_URL` is
 set at build time.
 
+### Container image
+
+Releases publish `ghcr.io/<owner>/telesignal-tunnel` (`linux/amd64` and `linux/arm64`): the static binary on an
+empty image that runs as an unprivileged user. It listens on `0.0.0.0:8787` inside the container, so publish the
+port only to the reverse proxy and set the origin:
+
+```sh
+docker run --rm -p 127.0.0.1:8787:8787 -e ALLOWED_ORIGINS=https://signal.example.com -e TRUST_PROXY=1 \
+  ghcr.io/<owner>/telesignal-tunnel:<version>
+```
+
+The image has no shell, so check `GET /health` from outside. `docker build proxy` compiles the tunnel from source.
+
 ## Threat model
 
 What the tunnel sees: client addresses, the requested Signal host, the TLS ClientHello (including

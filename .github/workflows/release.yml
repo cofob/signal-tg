@@ -1,0 +1,492 @@
+# Publishes a GitHub release for every `v*` tag: the static web bundle, the tunnel binaries and container image, the
+# desktop packages (`desktop.yml`) and `SHA256SUMS`, with the notes from `CHANGELOG.md`. The tag must equal the version
+# in `package.json` (`npm run release:bump`). Every asset goes to a draft release first, and the release becomes visible
+# only after all of them succeeded. A tag with a pre-release suffix, such as `v0.2.0-rc.1`, publishes a pre-release
+# that is never the latest release. Procedure: `docs/RELEASING.md`.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v-prefixed tag to release; select the same tag as the workflow ref
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # Keep in line with `ci.yml` and `rust/signal-wasm/rust-toolchain`
+  RUST_TOOLCHAIN: 1.98.1
+  NODE_OPTIONS: --max-old-space-size=8192
+  # GramJS still reads these at build time until plan stage 3 removes it; the app never connects to Telegram
+  TELEGRAM_API_ID: '1'
+  TELEGRAM_API_HASH: unused
+
+jobs:
+  preflight:
+    name: Validate release tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.metadata.outputs.tag }}
+      version: ${{ steps.metadata.outputs.version }}
+      prerelease: ${{ steps.metadata.outputs.prerelease }}
+      source_date_epoch: ${{ steps.metadata.outputs.source_date_epoch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          fetch-depth: 0
+
+      - name: Derive and validate release metadata
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          TRIGGER_REF: ${{ github.ref }}
+          TRIGGER_EVENT: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [[ "$TRIGGER_EVENT" == workflow_dispatch && "$TRIGGER_REF" != "refs/tags/$RELEASE_TAG" ]]; then
+            echo "::error::Select the tag $RELEASE_TAG as the workflow ref of a manual release"
+            exit 1
+          fi
+          # The tag, the version files and the changelog must agree
+          node deploy/release.js check "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "source_date_epoch=$(git show --no-patch --format=%ct HEAD)" >> "$GITHUB_OUTPUT"
+          # A stable release comes from the default branch; pre-releases may come from any branch
+          if ! grep -q '^prerelease=true$' "$GITHUB_OUTPUT" \
+            && ! git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"; then
+            echo "::error::$RELEASE_TAG is not on $DEFAULT_BRANCH. Merge the release commit before tagging a stable release."
+            exit 1
+          fi
+
+  draft:
+    name: Create draft release
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - name: Write the release notes
+        env:
+          VERSION: ${{ needs.preflight.outputs.version }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner=${REPOSITORY%%/*}
+          {
+            node deploy/release.js notes "$VERSION"
+            echo
+            echo '---'
+            echo
+            echo "Check the downloads with \`sha256sum -c SHA256SUMS\`. The tunnel image is \`ghcr.io/${owner,,}/telesignal-tunnel:${VERSION}\`."
+            echo "Full changelog: https://github.com/${REPOSITORY}/blob/${TAG}/CHANGELOG.md"
+          } > release-notes.md
+
+      - name: Create or update the draft
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.preflight.outputs.tag }}
+          PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --json isDraft --jq .isDraft > is-draft.txt 2> view.err; then
+            # A visible release is immutable; a draft left by a failed run is updated and completed
+            if [[ "$(cat is-draft.txt)" != true ]]; then
+              echo "::error::Release $TAG is published already"
+              exit 1
+            fi
+            gh release edit "$TAG" --title "TeleSignal $TAG" --notes-file release-notes.md --prerelease="$PRERELEASE"
+          elif grep -Eq 'HTTP 404|release not found' view.err; then
+            gh release create "$TAG" --draft --verify-tag --title "TeleSignal $TAG" --notes-file release-notes.md \
+              --prerelease="$PRERELEASE"
+          else
+            cat view.err
+            exit 1
+          fi
+          ids=$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id")
+          echo "release_id=${ids%%$'\n'*}" >> "$GITHUB_OUTPUT"
+
+  web:
+    name: Build web bundle
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build:production
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.preflight.outputs.version }}
+          SOURCE_DATE_EPOCH: ${{ needs.preflight.outputs.source_date_epoch }}
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          name="telesignal-web-${VERSION}"
+          mkdir -p "staging/${name}" assets
+          cp -R dist/. "staging/${name}/"
+          tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@${SOURCE_DATE_EPOCH}" \
+            -C staging -cf - "$name" | gzip -9n > "assets/${name}.tar.gz"
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-web
+          path: assets/*
+          if-no-files-found: error
+
+  tunnel:
+    name: Build tunnel (${{ matrix.target }})
+    needs: preflight
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+            image_arch: amd64
+            is_static: true
+            can_run: true
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+            image_arch: arm64
+            is_static: true
+            can_run: true
+          - target: aarch64-apple-darwin
+            runner: macos-latest
+            can_run: true
+          - target: x86_64-apple-darwin
+            runner: macos-latest
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc # master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: proxy
+          prefix-key: v0-rust-release-tunnel
+          key: ${{ matrix.target }}
+
+      - name: Install musl tools
+        if: matrix.is_static
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build
+        shell: bash
+        run: cargo build --locked --release --manifest-path proxy/Cargo.toml --target "${{ matrix.target }}"
+
+      - name: Check that the binary is static
+        if: matrix.is_static
+        run: |
+          set -euo pipefail
+          binary="proxy/target/${{ matrix.target }}/release/telesignal-tunnel"
+          file "$binary"
+          if readelf --program-headers "$binary" | grep -q INTERP || readelf --dynamic "$binary" 2> /dev/null | grep -q '(NEEDED)'; then
+            echo "::error::The musl binary links dynamically"
+            exit 1
+          fi
+
+      # `/health` answers without a client origin; the binary must start and serve it
+      - name: Smoke-test the binary
+        if: matrix.can_run
+        shell: bash
+        env:
+          PORT: '18787'
+        run: |
+          set -euo pipefail
+          "proxy/target/${{ matrix.target }}/release/telesignal-tunnel" &
+          pid=$!
+          trap 'kill $pid' EXIT
+          for _ in $(seq 1 20); do
+            if body=$(curl -fsS "http://127.0.0.1:${PORT}/health" 2> /dev/null); then
+              [[ "$body" == ok ]] && exit 0
+              echo "::error::Unexpected /health response: $body"
+              exit 1
+            fi
+            sleep 0.5
+          done
+          echo "::error::The tunnel did not answer /health"
+          exit 1
+
+      - name: Package
+        shell: bash
+        env:
+          VERSION: ${{ needs.preflight.outputs.version }}
+        run: |
+          set -euo pipefail
+          name="telesignal-tunnel-${VERSION}-${{ matrix.target }}"
+          binary=telesignal-tunnel
+          [[ "${{ matrix.target }}" == *-windows-* ]] && binary=telesignal-tunnel.exe
+          mkdir -p "staging/${name}" assets
+          cp "proxy/target/${{ matrix.target }}/release/${binary}" proxy/README.md LICENSE "staging/${name}/"
+          if [[ "$binary" == *.exe ]]; then
+            (cd staging && 7z a -tzip "../assets/${name}.zip" "$name" > /dev/null)
+          else
+            COPYFILE_DISABLE=1 tar -C staging -czf "assets/${name}.tar.gz" "$name"
+          fi
+          # The container image copies the raw static binaries
+          if [[ -n "${{ matrix.image_arch }}" ]]; then
+            mkdir -p "binary/${{ matrix.image_arch }}"
+            cp "proxy/target/${{ matrix.target }}/release/${binary}" "binary/${{ matrix.image_arch }}/"
+          fi
+
+      - name: Upload archive
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-tunnel-${{ matrix.target }}
+          path: assets/*
+          if-no-files-found: error
+
+      - name: Upload binary for the image
+        if: matrix.image_arch
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tunnel-binary-${{ matrix.image_arch }}
+          path: binary/${{ matrix.image_arch }}/telesignal-tunnel
+          if-no-files-found: error
+
+  image:
+    name: Publish tunnel image
+    needs: [preflight, tunnel]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - name: Download the amd64 binary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tunnel-binary-amd64
+          path: proxy/bin/amd64
+
+      - name: Download the arm64 binary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tunnel-binary-arm64
+          path: proxy/bin/arm64
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize the image name
+        id: image
+        run: echo "name=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/telesignal-tunnel" >> "$GITHUB_OUTPUT"
+
+      # Pre-release versions get only their own tag; `latest` follows stable versions
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.preflight.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.preflight.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.preflight.outputs.tag }}
+          flavor: latest=auto
+
+      # The image gets its release tags only after the smoke test below
+      - name: Build and push to a staging tag
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: proxy
+          target: prebuilt
+          platforms: linux/amd64,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.image.outputs.name }}:staging-${{ github.run_id }}-${{ github.run_attempt }}
+          push: true
+
+      - name: Smoke-test both platforms
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          for platform in linux/amd64 linux/arm64; do
+            docker run --rm --detach --name tunnel --platform "$platform" --publish 127.0.0.1:18787:8787 "$IMAGE"
+            ok=false
+            for _ in $(seq 1 30); do
+              if [[ "$(curl -fsS http://127.0.0.1:18787/health 2> /dev/null || true)" == ok ]]; then
+                ok=true
+                break
+              fi
+              sleep 1
+            done
+            docker logs tunnel || true
+            docker stop tunnel > /dev/null
+            if [[ "$ok" != true ]]; then
+              echo "::error::The $platform image did not answer /health"
+              exit 1
+            fi
+          done
+
+      - name: Publish the release tags
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          args=()
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] && args+=(--tag "$tag")
+          done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" "$IMAGE"
+
+  desktop:
+    name: Desktop
+    needs: [preflight, draft]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/desktop.yml
+    with:
+      release_id: ${{ needs.draft.outputs.release_id }}
+    secrets: inherit
+
+  publish:
+    name: Checksum and publish release
+    needs: [preflight, draft, web, tunnel, image, desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.preflight.outputs.tag }}
+      PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
+    steps:
+      - name: Download the web bundle and tunnel archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: assets
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Upload the web bundle and tunnel archives
+        run: gh release upload "$TAG" assets/* --clobber
+
+      # The desktop packages are on the release already; the checksums cover whatever it holds
+      - name: Write the checksums
+        run: |
+          set -euo pipefail
+          mkdir all
+          gh release download "$TAG" --dir all --pattern '*' --clobber
+          rm -f all/SHA256SUMS
+          (cd all && sha256sum -- * > SHA256SUMS)
+          cat all/SHA256SUMS
+
+      - name: Check that every expected asset is there
+        run: |
+          set -euo pipefail
+          missing=0
+          expect() {
+            if ! compgen -G "all/$1" > /dev/null; then
+              echo "::error::No asset matches $1"
+              missing=1
+            fi
+          }
+          expect 'telesignal-web-*.tar.gz'
+          expect 'telesignal-tunnel-*-x86_64-unknown-linux-musl.tar.gz'
+          expect 'telesignal-tunnel-*-aarch64-unknown-linux-musl.tar.gz'
+          expect 'telesignal-tunnel-*-aarch64-apple-darwin.tar.gz'
+          expect 'telesignal-tunnel-*-x86_64-apple-darwin.tar.gz'
+          expect 'telesignal-tunnel-*-x86_64-pc-windows-msvc.zip'
+          expect '*.dmg'
+          expect '*.exe'
+          expect '*.deb'
+          expect '*.AppImage'
+          exit "$missing"
+
+      - name: Attest the provenance of the assets
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: all/*
+
+      - name: Upload the checksums
+        run: gh release upload "$TAG" all/SHA256SUMS --clobber
+
+      # A pre-release is never the latest release
+      - name: Publish the release
+        run: |
+          set -euo pipefail
+          latest=true
+          [[ "$PRERELEASE" == true ]] && latest=false
+          gh release edit "$TAG" --draft=false --prerelease="$PRERELEASE" --latest="$latest"
+          {
+            echo "### Released $TAG"
+            echo
+            echo "$(gh release view "$TAG" --json url --jq .url)"
+            echo
+            gh release view "$TAG" --json assets --jq '.assets[] | "- `\(.name)` (\(.size) bytes)"'
+          } >> "$GITHUB_STEP_SUMMARY"
