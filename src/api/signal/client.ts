@@ -43,6 +43,8 @@ let hasSyncedThisSession = false;
 // Whether the session reached its first connection attempt, from which it stays connected until it stops
 let isConnectionStarted = false;
 let isConnecting = false;
+// A reconnect that was asked for while a connection attempt was under way, which runs when the attempt ends
+let isReconnectPending = false;
 // Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
 let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
@@ -108,6 +110,7 @@ export function getCurrentAccount() {
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
   isConnectionStarted = false;
+  isReconnectPending = false;
   clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
@@ -311,6 +314,15 @@ async function syncAfterConnect() {
 }
 
 async function connect() {
+  await attemptConnection();
+
+  if (isReconnectPending) {
+    isReconnectPending = false;
+    reconnectClient();
+  }
+}
+
+async function attemptConnection() {
   if (isDestroyed) return;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateConnecting' });
 
@@ -342,14 +354,28 @@ async function connect() {
 /**
  * Replaces the chat connection at once, for the page to call after the computer slept or the network changed: the
  * old socket can look alive for up to the keepalive timeout, and after failed attempts the next one waits for the
- * backoff. An attempt that is already under way is left to finish.
+ * backoff. An attempt that is already under way is left to finish, and the reconnect follows it.
  */
 export function reconnectClient() {
-  if (isDestroyed || !isConnectionStarted || isConnecting || currentAccount?.isDemo) return;
+  if (isDestroyed || !isConnectionStarted || currentAccount?.isDemo) return;
+  if (isConnecting) {
+    isReconnectPending = true;
+    return;
+  }
 
+  void reconnect();
+}
+
+async function reconnect() {
+  isConnecting = true;
   // The close reaches `scheduleReconnect`, whose timer the connection below makes unnecessary
-  client.close();
+  const drained = client.close();
   clearTimeout(reconnectTimer);
+  // The new connection loads the envelopes that are stored but not processed, and the old one still processes them
+  await drained;
+  isConnecting = false;
+
+  if (isDestroyed) return;
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   void connect();
 }
