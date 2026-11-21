@@ -10,10 +10,11 @@ export default function setupTauriListeners() {
   if (isSetup) return;
   isSetup = true;
 
-  // Disable default tauri context menu in production build
+  // Show the system context menu only in text fields (cut, copy, paste, spelling suggestions) in production builds,
+  // which have no inspector; elsewhere it holds browser items such as Reload and Back
   if (!DEBUG) {
     document.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
+      if (!getIsEditableTarget(event.target)) event.preventDefault();
     });
   }
 
@@ -59,6 +60,11 @@ export default function setupTauriListeners() {
   // Run after Teact's delegated handlers so links can require confirmation
   window.addEventListener('click', handleClick);
   window.addEventListener('auxclick', handleClick);
+}
+
+function getIsEditableTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement
+    && (target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
 }
 
 async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
