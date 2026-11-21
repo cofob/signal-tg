@@ -84,10 +84,12 @@ export const INITIAL_SHARED_STATE: SharedState = {
     themes: {
       light: {
         isBlurred: true,
+        isSignalTheme: true,
         patternColor: getDefaultPatternColor('light'),
       },
       dark: {
         isBlurred: true,
+        isSignalTheme: true,
         patternColor: getDefaultPatternColor('dark'),
       },
     },
@@ -236,10 +238,8 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     defaultTags: [],
     topReactions: [],
     recentReactions: [],
-    effectReactions: [],
     hash: {},
   },
-  availableEffectById: {},
 
   stickers: {
     setsById: {},
@@ -258,10 +258,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     },
     featured: {
       setIds: [],
-    },
-    effect: {
-      stickers: [],
-      emojis: [],
     },
     forEmoji: {},
   },
@@ -319,15 +315,10 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       notificationSoundVolume: NOTIFICATION_MAX_VOLUME / 2,
       shouldSuggestStickers: true,
       shouldSuggestCustomEmoji: true,
-      shouldPaidMessageAutoApprove: false,
       shouldUpdateStickerSetOrder: true,
       shouldArchiveAndMuteNewNonContact: false,
-      shouldNewNonContactPeersRequirePremium: false,
-      nonContactPeersPaidStars: 0,
       shouldHideReadMarks: false,
       canTranslate: false,
-      canTranslateChats: true,
-      doNotTranslate: [],
       translationTone: 'neutral',
     },
     privacy: {},

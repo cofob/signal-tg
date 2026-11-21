@@ -11,7 +11,7 @@ use tauri::{
 #[cfg(not(target_os = "macos"))]
 mod badge;
 
-pub use crate::{AppState, BASE_URL, DEFAULT_WINDOW_TITLE, LAST_URL};
+pub use crate::{AppState, DEFAULT_WINDOW_TITLE, LAST_URL};
 
 // Platform-specific tray icon assets
 #[cfg(target_os = "macos")]
@@ -25,9 +25,9 @@ pub(crate) static TRAY_BASE_ICON: LazyLock<Image<'static>> =
 
 // Menu constants
 pub const MENU_ITEM_QUIT_ID: &str = "quit";
-pub const MENU_ITEM_QUIT_LABEL: &str = "Quit Telegram";
+pub const MENU_ITEM_QUIT_LABEL: &str = "Quit TeleSignal";
 pub const MENU_ITEM_OPEN_ID: &str = "open";
-pub const MENU_ITEM_OPEN_LABEL: &str = "Open Telegram";
+pub const MENU_ITEM_OPEN_LABEL: &str = "Open TeleSignal";
 
 static MENU_TRANSLATIONS: LazyLock<std::sync::Mutex<HashMap<String, String>>> =
   LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
@@ -77,7 +77,7 @@ impl TrayManager {
         MENU_ITEM_QUIT_ID => app.exit(0),
         _ => {}
       })
-      .on_tray_icon_event(|tray, event| tray_click_handler(tray, event));
+      .on_tray_icon_event(tray_click_handler);
 
     // Set icon as template on macOS for proper system theme integration
     #[cfg(target_os = "macos")]
@@ -115,7 +115,7 @@ fn handle_icon_click(app: &AppHandle, only_open: bool) {
     let url = if let Ok(last_url) = LAST_URL.lock() {
       last_url.clone()
     } else {
-      BASE_URL.to_string()
+      crate::get_app_url().to_string()
     };
 
     if let Err(err) = crate::open_new_window(app.clone(), url) {
@@ -143,18 +143,16 @@ fn handle_icon_click(app: &AppHandle, only_open: bool) {
       }
 
       // Update icon with notification count
-      if let Some(webview_window) = window.get_webview_window(window.label()) {
-        if let Some(state) = app.try_state::<AppState>() {
-          if let Ok(app_state) = state.lock() {
-            if app_state.notification_count > 0 {
-              crate::tray::set_notifications_count(
-                &webview_window,
-                app_state.notification_count,
-                app_state.is_muted,
-              );
-            }
-          }
-        }
+      if let Some(webview_window) = window.get_webview_window(window.label())
+        && let Some(state) = app.try_state::<AppState>()
+        && let Ok(app_state) = state.lock()
+        && app_state.notification_count > 0
+      {
+        crate::tray::set_notifications_count(
+          &webview_window,
+          app_state.notification_count,
+          app_state.is_muted,
+        );
       }
     }
     return;
@@ -165,7 +163,7 @@ fn handle_icon_click(app: &AppHandle, only_open: bool) {
   }
 
   // If there's a visible window, close it and remember its URL.
-  crate::save_window_url(&app, visible_window.label());
+  crate::save_window_url(app, visible_window.label());
   if let Err(err) = visible_window.close() {
     log::error!("Failed to close visible window: {:?}", err);
   }

@@ -139,7 +139,7 @@ export default function selectViewableMedia(
   }
 
   const {
-    action, document, photo, video, paidMedia,
+    action, document, photo, video,
   } = getMessageContent(params.message);
 
   if (action?.type === 'chatEditPhoto' || action?.type === 'suggestProfilePhoto') {
@@ -165,16 +165,6 @@ export default function selectViewableMedia(
       return {
         media,
         isSingle: true,
-      };
-    }
-  }
-
-  if (paidMedia) {
-    const extendedMedia = paidMedia.extendedMedia[params.mediaIndex || 0];
-    if (!('mediaType' in extendedMedia)) {
-      const { photo: extendedPhoto, video: extendedVideo } = extendedMedia;
-      return {
-        media: (extendedPhoto || extendedVideo)!,
       };
     }
   }

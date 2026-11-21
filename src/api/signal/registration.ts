@@ -220,6 +220,10 @@ function showError(screen: ApiUpdateAuthorizationStateType, err: unknown) {
       sendScreen(screen);
       sendAuthError({ key: 'SignalRegisterErrorRejected' });
       break;
+    case 'network':
+      sendScreen(screen);
+      sendAuthError({ key: 'SignalRegisterErrorNetwork' });
+      break;
   }
 }
 

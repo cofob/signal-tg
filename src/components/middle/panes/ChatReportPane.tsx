@@ -26,6 +26,7 @@ type OwnProps = {
   chatId: string;
   className?: string;
   isAutoArchived?: boolean;
+  isMessageRequest?: boolean;
   canReportSpam?: boolean;
   canAddContact?: boolean;
   canBlockContact?: boolean;
@@ -37,10 +38,13 @@ type StateProps = {
   peer?: ApiPeer;
 };
 
+type MessageRequestDialog = 'block' | 'delete' | 'report';
+
 const ChatReportPane = ({
   chatId,
   className,
   isAutoArchived,
+  isMessageRequest,
   canReportSpam,
   canAddContact,
   canBlockContact,
@@ -63,8 +67,10 @@ const ChatReportPane = ({
   const [isBlockUserModalOpen, openBlockUserModal, closeBlockUserModal] = useFlag();
   const [shouldReportSpam, setShouldReportSpam] = useState<boolean>(true);
   const [shouldDeleteChat, setShouldDeleteChat] = useState<boolean>(true);
+  const [requestDialog, setRequestDialog] = useState<MessageRequestDialog | undefined>();
+  const [shouldBlockReported, setShouldBlockReported] = useState<boolean>(true);
 
-  const hasAnyButton = canAddContact || canBlockContact || canReportSpam;
+  const hasAnyButton = isMessageRequest || canAddContact || canBlockContact || canReportSpam;
   const isRendering = Boolean(hasAnyButton && peer);
 
   const {
@@ -74,8 +80,9 @@ const ChatReportPane = ({
     canBlockContact: renderingCanBlockContact,
     canReportSpam: renderingCanReportSpam,
     isAutoArchived: renderingIsAutoArchived,
+    isMessageRequest: renderingIsMessageRequest,
   } = useFrozenProps({
-    chatId, peer, canAddContact, canBlockContact, canReportSpam, isAutoArchived,
+    chatId, peer, canAddContact, canBlockContact, canReportSpam, isAutoArchived, isMessageRequest,
   }, !isRendering);
   const chat = renderingPeer && isApiPeerChat(renderingPeer) ? renderingPeer : undefined;
   const user = renderingPeer && isApiPeerUser(renderingPeer) ? renderingPeer : undefined;
@@ -114,10 +121,37 @@ const ChatReportPane = ({
     }
   });
 
+  const handleAcceptRequest = useLastCallback(() => {
+    hidePeerSettingsBar({ peerId: renderingChatId });
+  });
+
+  const handleDeleteRequestClick = useLastCallback(() => setRequestDialog('delete'));
+  const handleBlockRequestClick = useLastCallback(() => setRequestDialog('block'));
+  const handleReportRequestClick = useLastCallback(() => setRequestDialog('report'));
+
+  const handleCloseRequestDialog = useLastCallback(() => {
+    setRequestDialog(undefined);
+  });
+
+  const handleConfirmRequestDialog = useLastCallback(() => {
+    setRequestDialog(undefined);
+    if (requestDialog === 'block') {
+      blockUser({ userId: renderingChatId });
+    } else if (requestDialog === 'delete') {
+      deleteHistory({ chatId: renderingChatId, shouldDeleteForAll: false });
+    } else {
+      // The report goes first: it names messages of the request
+      reportSpam({ chatId: renderingChatId });
+      if (shouldBlockReported) blockUser({ userId: renderingChatId });
+    }
+  });
+
   useEffect(() => {
     closeBlockUserModal();
     setShouldReportSpam(true);
     setShouldDeleteChat(true);
+    setRequestDialog(undefined);
+    setShouldBlockReported(true);
   }, [chatId, isRendering, closeBlockUserModal]);
 
   const { ref, shouldRender } = useHeaderPane({
@@ -127,6 +161,77 @@ const ChatReportPane = ({
   });
 
   if (!shouldRender) return undefined;
+
+  if (renderingIsMessageRequest) {
+    return (
+      <div
+        ref={ref}
+        className={buildClassName('ChatReportPane', className)}
+        dir={lang.isRtl ? 'rtl' : undefined}
+      >
+        <Button isText fluid size="tiny" className="ChatReportPane--Button" onClick={handleAcceptRequest}>
+          {lang('MessageRequestAccept')}
+        </Button>
+        <Button
+          color="danger"
+          isText
+          fluid
+          size="tiny"
+          className="ChatReportPane--Button"
+          onClick={handleDeleteRequestClick}
+        >
+          {lang('MessageRequestDelete')}
+        </Button>
+        <Button
+          color="danger"
+          isText
+          fluid
+          size="tiny"
+          className="ChatReportPane--Button"
+          onClick={handleBlockRequestClick}
+        >
+          {lang('MessageRequestBlock')}
+        </Button>
+        {user && (
+          <Button
+            color="danger"
+            isText
+            fluid
+            size="tiny"
+            className="ChatReportPane--Button"
+            onClick={handleReportRequestClick}
+          >
+            {lang('MessageRequestReport')}
+          </Button>
+        )}
+        <ConfirmDialog
+          isOpen={Boolean(requestDialog)}
+          onClose={handleCloseRequestDialog}
+          title={requestDialog === 'block'
+            ? lang('MessageRequestBlockTitle', {
+              title: user ? getUserFirstOrLastName(lang, user) : getChatTitle(lang, chat!),
+            })
+            : lang(requestDialog === 'delete' ? 'MessageRequestDeleteTitle' : 'MessageRequestReportTitle')}
+          text={requestDialog === 'block'
+            ? lang(user ? 'MessageRequestBlockText' : 'MessageRequestBlockGroupText')
+            : lang(requestDialog === 'delete' ? 'MessageRequestDeleteText' : 'MessageRequestReportText')}
+          confirmIsDestructive
+          confirmLabel={lang(requestDialog === 'block' ? 'MessageRequestBlock'
+            : requestDialog === 'delete' ? 'MessageRequestDelete' : 'MessageRequestReport')}
+          confirmHandler={handleConfirmRequestDialog}
+        >
+          {requestDialog === 'report' && (
+            <Checkbox
+              className="dialog-checkbox"
+              label={lang('MessageRequestReportAndBlock')}
+              checked={shouldBlockReported}
+              onCheck={setShouldBlockReported}
+            />
+          )}
+        </ConfirmDialog>
+      </div>
+    );
+  }
 
   return (
     <div

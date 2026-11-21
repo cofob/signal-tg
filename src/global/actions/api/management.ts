@@ -1,6 +1,7 @@
 import type { ActionReturnType } from '../../types';
 import { ManagementProgress } from '../../../types';
 
+import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getTranslationFn } from '../../../util/localization';
 import { callApi } from '../../../api/gramjs';
@@ -11,6 +12,7 @@ import {
 } from '../../reducers';
 import {
   selectChat, selectCurrentMessageList, selectIsCurrentUserFrozen,
+  selectPeer,
   selectTabState, selectUser,
 } from '../../selectors';
 import { ensureIsSuperGroup } from './chats';
@@ -408,16 +410,17 @@ addActionHandler('hideAllChatJoinRequests', async (global, actions, payload): Pr
 
 addActionHandler('hidePeerSettingsBar', async (global, actions, payload): Promise<void> => {
   const { peerId } = payload;
-  const user = selectUser(global, peerId);
-  if (!user) return;
+  // Signal groups have the bar of a message request too
+  const peer = selectPeer(global, peerId);
+  if (!peer) return;
 
-  const result = await callApi('hidePeerSettingsBar', user);
+  const result = await callApi('hidePeerSettingsBar', peer);
   if (!result) return;
 
   global = getGlobal();
-  global = updateUserFullInfo(global, peerId, {
-    settings: undefined,
-  });
+  global = isUserId(peerId)
+    ? updateUserFullInfo(global, peerId, { settings: undefined })
+    : updateChatFullInfo(global, peerId, { settings: undefined });
   setGlobal(global);
 });
 

@@ -5,7 +5,6 @@ import { getActions } from '../../../global';
 import type {
   ApiAvailableReaction,
   ApiReaction,
-  ApiReactionWithPaid,
   ApiShareThemeBackdrop,
   ApiSticker,
 } from '../../../api/types';
@@ -79,9 +78,7 @@ const QrCodeThemeEditor = ({
     onThemeChange(buildEmojiBackdropTheme(option.backdropId, emojis));
   });
 
-  const handleReactionSelect = useLastCallback((reaction: ApiReactionWithPaid) => {
-    if (reaction.type === 'paid') return;
-
+  const handleReactionSelect = useLastCallback((reaction: ApiReaction) => {
     const isPicked = emojis.some((emoji) => isSameReaction(emoji, reaction));
     if (!isPicked && !isCurrentUserPremium && getIsPremiumReaction(reaction, presetIds, availableReactions)) {
       showNotification({ message: { key: 'PremiumUnlockEmoji' } });

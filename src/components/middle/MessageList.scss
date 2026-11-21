@@ -320,6 +320,32 @@
     }
   }
 
+  // Signal Desktop `.SystemMessage`: service text has no chip on the plain background. A stuck date keeps its chip
+  // above the messages scrolling under it.
+  html.theme-signal &.with-default-bg {
+    .sticky-date:not(.stuck) > span,
+    .local-action-message > span {
+      color: var(--color-text-secondary);
+      background: none;
+    }
+
+    .ActionMessage {
+      --message-service-text: var(--color-text-secondary);
+      --message-service-background: transparent;
+    }
+
+    // Signal Desktop `.module-last-seen-indicator`: a rule with the label under it
+    .unread-divider {
+      padding-top: 0.25rem;
+      border-top: 1px solid var(--color-borders);
+
+      > span {
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text);
+      }
+    }
+  }
+
   .empty {
     display: flex;
     align-items: center;

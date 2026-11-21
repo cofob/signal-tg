@@ -80,6 +80,13 @@ export type OriginPayload =
   {
     type: 'cancelProgress';
     messageId: string;
+  }
+  |
+  {
+    // The page's end of the desktop app's native transport (`src/util/tauri/serveNativeTransport.ts`)
+    type: 'initNativeTransport';
+    messageId?: string;
+    port: MessagePort;
   };
 
 export type OriginMessageData = {

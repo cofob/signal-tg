@@ -55,8 +55,18 @@ const DAY_LINK_COLOR = themeColors['--color-links'][0];
 const CLASSIC_SATURATION = 14;
 const CLASSIC_BASE_BRIGHTNESS = 79;
 const CLASSIC_ACCENT_BRIGHTNESS_WEIGHT = 0.21;
+// Signal Desktop `stylesheets/_variables.scss`: ultramarine accent and gray scale; `[light, dark]`
+const SIGNAL_ACCENT = '#2c6bed';
+const SIGNAL_DARK_LINK_COLOR = '#6191f3';
+const SIGNAL_SURFACES = [
+  ['#ffffff', '#f6f6f6', '#e9e9e9', '#e9e9e9'],
+  ['#1b1b1b', '#121212', '#3b3b3b', '#2e2e2e'],
+];
+const SIGNAL_TEXT_SECONDARY = ['#5e5e5e', '#b9b9b9'];
+const SIGNAL_INCOMING_COLOR = ['#e9e9e9', '#3b3b3b'];
 const PALETTE_CACHE = new WeakMap<ApiThemeSettings, Partial<Record<ThemeKey, ThemePalette>>>();
 const DEFAULT_PALETTE_CACHE: Partial<Record<ThemeKey, ThemePalette>> = {};
+const SIGNAL_PALETTE_CACHE: Partial<Record<ThemeKey, ThemePalette>> = {};
 
 export type ThemePalette = {
   variables: Record<string, string>;
@@ -104,24 +114,30 @@ export function setVariable(name: string, lightValueOrGeneral: string, darkValue
 
 // These variables are applied inline alongside the base theme colors
 export function buildThemeColorOverrides(settings?: IThemeSettings, theme: ThemeKey = 'light'): Record<string, string> {
-  return buildThemePalette(theme, settings?.serverThemeSettings).variables;
+  return buildThemePalette(theme, settings?.serverThemeSettings, settings?.isSignalTheme).variables;
 }
 
-export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings): ThemePalette {
-  const cached = settings ? PALETTE_CACHE.get(settings)?.[theme] : DEFAULT_PALETTE_CACHE[theme];
+// A server theme takes precedence over the Signal palette
+export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings, isSignalTheme?: boolean): ThemePalette {
+  const isSignal = !settings && Boolean(isSignalTheme);
+  const defaultCache = isSignal ? SIGNAL_PALETTE_CACHE : DEFAULT_PALETTE_CACHE;
+  const cached = settings ? PALETTE_CACHE.get(settings)?.[theme] : defaultCache[theme];
   if (cached) return cached;
 
   const isDark = theme === 'dark';
   const themeIndex = isDark ? 1 : 0;
   const appText = isDark ? WHITE : BLACK;
-  const appSurfaces = [
+  const appSurfaces = isSignal ? [...SIGNAL_SURFACES[themeIndex]] : [
     themeColors['--color-background'][themeIndex],
     themeColors['--color-background-secondary'][themeIndex],
     themeColors['--color-background-selected'][themeIndex],
     themeColors['--color-background-secondary-accent'][themeIndex],
   ];
-  const accent = settings ? buildThemeAccent(settings) : themeColors['--color-primary'][themeIndex];
-  const chatActive = accent;
+  const accent = settings ? buildThemeAccent(settings)
+    : isSignal ? SIGNAL_ACCENT : themeColors['--color-primary'][themeIndex];
+  // Signal marks the open chat with a gray row instead of the accent
+  const chatActive = isSignal ? appSurfaces[2] : accent;
+  const links = isSignal && isDark ? SIGNAL_DARK_LINK_COLOR : accent;
   const isTinted = settings?.baseTheme === 'tinted';
   if (isTinted) {
     appSurfaces[0] = multiplyHsv(accent, INCOMING_HSV_MULTIPLIERS);
@@ -130,17 +146,19 @@ export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings):
     appSurfaces[3] = appSurfaces[1];
   }
   const secondary = isTinted ? `${multiplyHsv(accent, TINTED_SECONDARY_HSV_MULTIPLIERS)}80`
-    : themeColors['--color-text-secondary'][themeIndex];
+    : isSignal ? SIGNAL_TEXT_SECONDARY[themeIndex] : themeColors['--color-text-secondary'][themeIndex];
   const error = settings?.baseTheme === 'tinted' ? '#ff6767' : isDark ? '#eb5545' : '#ff3b30';
   const incomingFill = settings ? buildDefaultIncomingColor(settings, accent)
-    : themeColors['--color-background'][themeIndex];
+    : isSignal ? SIGNAL_INCOMING_COLOR[themeIndex] : themeColors['--color-background'][themeIndex];
   const outgoingFills = settings?.outgoingColors?.length ? settings.outgoingColors
-    : settings ? buildDefaultOutgoingColors(settings) : [themeColors['--color-background-own'][themeIndex]];
+    : settings ? buildDefaultOutgoingColors(settings)
+      : [isSignal ? SIGNAL_ACCENT : themeColors['--color-background-own'][themeIndex]];
   const primaryForeground = isDark
     ? getFilledForeground(accent, isTinted ? TINTED_BRIGHTNESS_THRESHOLD : NIGHT_BRIGHTNESS_THRESHOLD) : WHITE;
-  const incoming = buildBubblePalette([incomingFill], appText, accent,
+  // Signal's dark accent text is lighter than its filled controls
+  const incoming = buildBubblePalette([incomingFill], appText, links,
     isTinted ? secondary : isDark ? `${WHITE}80` : LIGHT_INCOMING_SECONDARY);
-  if (!isDark) {
+  if (!isSignal && !isDark) {
     incoming.fileDescription = '#999999';
     incoming.links = DAY_LINK_COLOR;
   }
@@ -188,7 +206,7 @@ export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings):
     '--color-selection-highlight-emoji': `${accent}${TEXT_SELECTION_ALPHA}`,
     '--color-chat-active': chatActive,
     '--color-chat-active-greyed': greyed,
-    '--color-links': accent,
+    '--color-links': links,
     '--color-active': accent,
     '--color-active-darker': shade,
     '--color-background-own': outgoing.fill,
@@ -234,7 +252,7 @@ export function buildThemePalette(theme: ThemeKey, settings?: ApiThemeSettings):
     outgoingTextColor: outgoing.text,
   };
   if (settings) PALETTE_CACHE.set(settings, { ...PALETTE_CACHE.get(settings), [theme]: palette });
-  else DEFAULT_PALETTE_CACHE[theme] = palette;
+  else defaultCache[theme] = palette;
   return palette;
 }
 

@@ -274,7 +274,7 @@ const MiddleHeader = ({
     const savedMessagesStatus = isSavedDialog
       ? (messagesCount !== undefined
         ? lang('Messages', { count: messagesCount }, { pluralValue: messagesCount })
-        : lang('SavedMessages'))
+        : lang('NoteToSelf'))
       : undefined;
 
     const realChatId = isSavedDialog ? String(threadId) : chatId;

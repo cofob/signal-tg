@@ -5,6 +5,7 @@ import type { ApiOnProgress, ApiUpdate } from '../../types';
 import type { OriginMessageEvent, WorkerPayload } from './types';
 
 import { DEBUG } from '../../../config';
+import { setNativeTransportPort } from '../../../lib/signal/net/NativeTransport';
 import { DEBUG_LEVELS } from '../../../util/debugConsole';
 import { throttleWithTickEnd } from '../../../util/schedulers';
 // TeleSignal runs the Signal provider; GramJS stays in the bundle until plan stage 3 removes it
@@ -144,6 +145,11 @@ onmessage = ({ data }: OriginMessageEvent) => {
         } else {
           disableDebugLog();
         }
+        break;
+      }
+      case 'initNativeTransport': {
+        setNativeTransportPort(payload.port);
+        break;
       }
     }
   });

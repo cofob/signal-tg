@@ -41,7 +41,6 @@ import {
   buildCollectionByKey, omit, unique,
 } from '../../../util/iteratees';
 import { isLocalMessageId } from '../../../util/keys/messageKey';
-import { getTranslationFn } from '../../../util/localization';
 import { notifyAboutMessage } from '../../../util/notifications';
 import { debounce, pause, throttle } from '../../../util/schedulers';
 import { extractCurrentThemeParams } from '../../../util/themeStyle';
@@ -49,7 +48,6 @@ import { callApi } from '../../../api/gramjs';
 import { LIMITS, MAX_FOLDERS } from '../../../limits';
 import {
   getIsSavedDialog,
-  getUserFirstOrLastName,
   isChatArchived,
   isChatBasicGroup,
   isChatChannel,
@@ -99,7 +97,6 @@ import {
   updateTopicsInfo,
   updateTopicWithState,
   updateUser,
-  updateUserFullInfo,
   updateUsers,
 } from '../../reducers';
 import { updateGroupCall } from '../../reducers/calls';
@@ -159,8 +156,6 @@ const CHATLIST_LIMIT_ERROR_LIST = new Set([
   'CHATLISTS_TOO_MUCH',
   'INVITES_TOO_MUCH',
 ]);
-
-const pendingNoPaidMessagesTokenImports = new Map<string, Promise<void>>();
 
 const runThrottledForLoadTopChats = throttle((cb) => cb(), 3000, true);
 const runDebouncedForLoadFullChat = debounce((cb) => cb(), 500, false, true);
@@ -595,6 +590,9 @@ addActionHandler('loadAllChats', async (global, actions, payload): Promise<void>
     setGlobal(global);
     global = getGlobal();
   }
+
+  // A list loaded before a reconnect is complete already, and `sync` still waits for its first batch
+  if (!isCallbackFired) await whenFirstBatchDone?.();
 });
 
 addActionHandler('loadPinnedDialogs', async (global, actions, payload): Promise<void> => {
@@ -1664,7 +1662,7 @@ addActionHandler('checkChatInvite', async (global, actions, payload): Promise<vo
 
 addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Promise<void> => {
   const {
-    phoneNumber, startAttach, attach, text, noPaidMessagesToken, tabId = getCurrentTabId(),
+    phoneNumber, startAttach, attach, text, tabId = getCurrentTabId(),
   } = payload;
 
   // Open temporary empty chat to make the click response feel faster
@@ -1686,10 +1684,6 @@ addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Prom
     return;
   }
 
-  if (noPaidMessagesToken) {
-    await applyNoPaidMessagesToken(global, actions, chat.id, noPaidMessagesToken, tabId);
-  }
-
   if (text) {
     actions.openChatWithDraft({ chatId: chat.id, text: { text }, tabId });
   } else {
@@ -1703,7 +1697,7 @@ addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Prom
 });
 
 addActionHandler('openChatByContactToken', async (global, actions, payload): Promise<void> => {
-  const { token, noPaidMessagesToken, tabId = getCurrentTabId() } = payload;
+  const { token, tabId = getCurrentTabId() } = payload;
 
   actions.openChat({ id: TMP_CHAT_ID, tabId });
 
@@ -1717,10 +1711,6 @@ addActionHandler('openChatByContactToken', async (global, actions, payload): Pro
   global = getGlobal();
   global = updateUser(global, result.id, result);
   setGlobal(global);
-
-  if (noPaidMessagesToken) {
-    await applyNoPaidMessagesToken(global, actions, result.id, noPaidMessagesToken, tabId);
-  }
 
   actions.openChat({ id: result.id, tabId });
 });
@@ -1769,7 +1759,7 @@ addActionHandler('openChatByUsername', async (global, actions, payload): Promise
   const {
     username, messageId, commentId, startParam, shouldStartBot, startGroup, startAttach, attach, threadId,
     originalParts, startApp, shouldStartMainApp, mode, isDirect,
-    text, onChatChanged, choose, ref, timestamp, linkContext, noPaidMessagesToken,
+    text, onChatChanged, choose, ref, timestamp, linkContext,
     tabId = getCurrentTabId(),
   } = payload;
 
@@ -1837,7 +1827,6 @@ addActionHandler('openChatByUsername', async (global, actions, payload): Promise
           timestamp,
           linkContext,
           isDirect,
-          noPaidMessagesToken,
         }, tabId,
       );
       if (onChatChanged) {
@@ -3206,33 +3195,6 @@ addActionHandler('openDeleteChatFolderModal', async (global, actions, payload): 
   setGlobal(global);
 });
 
-addActionHandler('updateChatDetectedLanguage', (global, actions, payload): ActionReturnType => {
-  const { chatId, detectedLanguage } = payload;
-
-  global = getGlobal();
-  global = updateChat(global, chatId, {
-    detectedLanguage,
-  });
-
-  return global;
-});
-
-addActionHandler('togglePeerTranslations', async (global, actions, payload): Promise<void> => {
-  const { chatId, isEnabled } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('togglePeerTranslations', { chat, isEnabled });
-
-  if (result === undefined) return;
-
-  global = getGlobal();
-  global = updatePeerFullInfo(global, chatId, {
-    isTranslationDisabled: isEnabled ? undefined : true,
-  });
-  setGlobal(global);
-});
-
 addActionHandler('setViewForumAsMessages', (global, actions, payload): ActionReturnType => {
   const { chatId, isEnabled } = payload;
 
@@ -3398,40 +3360,6 @@ addActionHandler('toggleCommunityCollapsed', async (global, actions, payload): P
       setGlobal(global);
     }
   }
-});
-
-addActionHandler('updatePaidMessagesPrice', async (global, actions, payload): Promise<void> => {
-  const { chatId, paidMessagesStars, tabId = getCurrentTabId() } = payload;
-  const chat = chatId ? selectChat(global, chatId) : undefined;
-  if (!chat) return;
-
-  global = updateManagementProgress(global, ManagementProgress.InProgress, tabId);
-  setGlobal(global);
-
-  const result = await callApi('updatePaidMessagesPrice', {
-    chat,
-    paidMessagesStars,
-  });
-
-  if (!result) return;
-
-  global = getGlobal();
-  global = updateManagementProgress(global, ManagementProgress.Complete, tabId);
-  global = updateChat(global, chatId, { paidMessagesStars });
-  setGlobal(global);
-});
-
-addActionHandler('toggleAutoTranslation', async (global, actions, payload): Promise<void> => {
-  const { chatId, isEnabled } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleAutoTranslation', { chat, isEnabled });
-  if (!result) return;
-
-  global = getGlobal();
-  global = updateChat(global, chatId, { hasAutoTranslation: isEnabled || undefined });
-  setGlobal(global);
 });
 
 addActionHandler('setMainProfileTab', async (global, actions, payload): Promise<void> => {
@@ -3842,13 +3770,12 @@ async function openChatByUsername<T extends GlobalState>(
     timestamp?: number;
     linkContext?: LinkContext;
     isDirect?: boolean;
-    noPaidMessagesToken?: string;
   },
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
   const {
     username, threadId, channelPostId, startParam, shouldStartBot, ref, startAttach, attach, text, timestamp,
-    linkContext, isDirect, noPaidMessagesToken,
+    linkContext, isDirect,
   } = params;
   const currentChat = selectCurrentChat(global, tabId);
 
@@ -3905,11 +3832,6 @@ async function openChatByUsername<T extends GlobalState>(
 
   const targetChat = (isDirect && monoforumChat) || chat;
 
-  if (noPaidMessagesToken && isUserId(chat.id)) {
-    await applyNoPaidMessagesToken(global, actions, chat.id, noPaidMessagesToken, tabId);
-    global = getGlobal();
-  }
-
   openChatWithParams(global, actions, targetChat, {
     isCurrentChat,
     threadId,
@@ -3923,71 +3845,6 @@ async function openChatByUsername<T extends GlobalState>(
     timestamp,
     linkContext,
   }, tabId);
-}
-
-async function applyNoPaidMessagesToken<T extends GlobalState>(
-  global: T,
-  actions: RequiredGlobalActions,
-  userId: string,
-  token: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const importKey = `${userId}:${token}`;
-  const pendingImport = pendingNoPaidMessagesTokenImports.get(importKey);
-  if (pendingImport) {
-    await pendingImport;
-    return;
-  }
-
-  const importPromise = importNoPaidMessagesToken(global, actions, userId, token, tabId);
-  pendingNoPaidMessagesTokenImports.set(importKey, importPromise);
-  await importPromise;
-  pendingNoPaidMessagesTokenImports.delete(importKey);
-}
-
-async function importNoPaidMessagesToken<T extends GlobalState>(
-  global: T,
-  actions: RequiredGlobalActions,
-  userId: string,
-  token: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  global = getGlobal();
-  const user = selectUser(global, userId);
-  if (!user || user.isSelf || isUserBot(user)) return;
-
-  const wasPaid = Boolean(user.paidMessagesStars);
-
-  const result = await callApi('importNoPaidMessagesToken', { user, token });
-  if (!result) return;
-
-  if ('messageKey' in result) {
-    actions.showNotification({
-      message: result.errorMessage === 'USER_ID_INVALID' ? { key: 'NoPaidTokenUserInvalid' } : result.messageKey,
-      tabId,
-    });
-    return;
-  }
-
-  global = getGlobal();
-  global = updateUser(global, userId, result);
-  if (selectUserFullInfo(global, userId)) {
-    global = updateUserFullInfo(global, userId, { paidMessagesStars: undefined });
-  }
-  setGlobal(global);
-
-  actions.loadFullUser({ userId });
-
-  if (wasPaid && !result.paidMessagesStars) {
-    actions.showNotification({
-      message: {
-        key: 'NoPaidTokenImported',
-        variables: { user: getUserFirstOrLastName(getTranslationFn(), result) },
-        options: { withNodes: true, withMarkdown: true },
-      },
-      tabId,
-    });
-  }
 }
 
 async function openChatWithParams<T extends GlobalState>(

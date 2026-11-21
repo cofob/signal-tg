@@ -53,13 +53,11 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useResizeObserver from '../../../hooks/useResizeObserver';
 import useSyncEffect from '../../../hooks/useSyncEffect';
-import useFreeMessagesCode from './hooks/useFreeMessagesCode';
 import useQrCodeSwap from './hooks/useQrCodeSwap';
 
 import AnimatedIcon from '../../common/AnimatedIcon';
 import Loading from '../../ui/Loading';
 import Modal from '../../ui/Modal';
-import QrCodeFeePill from './QrCodeFeePill';
 import QrCodeThemeEditor from './QrCodeThemeEditor';
 import QrFloatingLayer from './QrFloatingLayer';
 import QrThemeWave from './QrThemeWave';
@@ -79,8 +77,6 @@ type StateProps = {
   restrictedEmoji?: ApiStickerSet;
   isCurrentUserPremium?: boolean;
   isSelf?: boolean;
-  paidMessagesStars?: number;
-  permanentFreeLink?: string;
   canEditTheme?: boolean;
   canAnimate?: boolean;
   canPlayAnimatedEmojis?: boolean;
@@ -105,8 +101,6 @@ const QrCodeModal = ({
   restrictedEmoji,
   isCurrentUserPremium,
   isSelf,
-  paidMessagesStars,
-  permanentFreeLink,
   canEditTheme,
   canAnimate,
   canPlayAnimatedEmojis,
@@ -118,16 +112,11 @@ const QrCodeModal = ({
     loadFullUser,
     loadFullChat,
     setPeerShareTheme,
-    loadGlobalPrivacySettings,
   } = getActions();
 
   const url = username ? formatUsername(username, true) : undefined;
   const isOpen = Boolean(modal) && Boolean(peer) && Boolean(url);
-  const {
-    mode: freeMode, timerEndsAt, link, isLinkPending, getIsCodeExpiring, removeFee, toggleTimer, resetCode, restoreFee,
-  } = useFreeMessagesCode({
-    isOpen, price: paidMessagesStars, plainLink: url, permanentLink: permanentFreeLink,
-  });
+  const link = url;
 
   const surfaceRef = useRef<HTMLDivElement>();
   const cardWrapperRef = useRef<HTMLDivElement>();
@@ -219,10 +208,6 @@ const QrCodeModal = ({
       setDraftTheme(shareTheme);
     }
   }, [isOpen, shareTheme]);
-
-  useEffect(() => {
-    if (isOpen && isSelf) loadGlobalPrivacySettings();
-  }, [isOpen, isSelf, loadGlobalPrivacySettings]);
 
   const { holdQrCode, presentQrCode, releaseQrCode } = useQrCodeSwap({
     isOpen,
@@ -371,16 +356,6 @@ const QrCodeModal = ({
   const handleCopyQr = useLastCallback(() => {
     if (!link) return;
 
-    if (isLinkPending) {
-      showNotification({ message: lang('PleaseWait') });
-      return;
-    }
-
-    if (getIsCodeExpiring()) {
-      showNotification({ message: lang('QrFreeToastExpiring') });
-      return;
-    }
-
     if (CAN_COPY_QR_IMAGE) {
       // The previous slide stays mounted while a wave reveals the new one
       const slide = surfaceRef.current?.querySelector<HTMLElement>(`[data-wave-key="${backgroundKey}"]`) || undefined;
@@ -478,20 +453,6 @@ const QrCodeModal = ({
             </div>
             {usernameText && <div ref={usernameRef} className={styles.username}>{usernameText}</div>}
           </div>
-          {Boolean(paidMessagesStars) && (
-            <QrCodeFeePill
-              price={paidMessagesStars}
-              mode={freeMode}
-              timerEndsAt={timerEndsAt}
-              ink={colors.ink}
-              foreground={colors.foreground}
-              canAnimate={canAnimate}
-              onRemoveFee={removeFee}
-              onToggleTimer={toggleTimer}
-              onReset={resetCode}
-              onRestoreFee={restoreFee}
-            />
-          )}
         </div>
         {canEditTheme && (
           <QrCodeThemeEditor
@@ -538,8 +499,6 @@ export default memo(withGlobal<OwnProps>(
       restrictedEmoji: global.restrictedEmoji,
       isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isSelf,
-      paidMessagesStars: isSelf ? global.settings.byKey.nonContactPeersPaidStars : undefined,
-      permanentFreeLink: global.settings.byKey.permanentFreeMessagesLink,
       canEditTheme: isSelf || canEditChatTheme,
       canAnimate: selectCanAnimateInterface(global),
       canPlayAnimatedEmojis: selectCanPlayAnimatedEmojis(global),

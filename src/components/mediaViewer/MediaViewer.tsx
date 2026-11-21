@@ -22,7 +22,6 @@ import { ANIMATION_END_DELAY } from '../../config';
 import { requestMutation } from '../../lib/fasterdom/fasterdom';
 import {
   getMediaSearchType,
-  getMessagePaidMedia,
   getSharedMediaKey,
   getSharedMediaKeys,
   isChatAdmin,
@@ -466,15 +465,6 @@ const MediaViewer = ({
     }
 
     const { message: fromMessage, mediaIndex: fromMediaIndex } = from;
-
-    const paidMedia = getMessagePaidMedia(fromMessage);
-    if (paidMedia) {
-      const nextIndex = fromMediaIndex! + direction;
-
-      if (nextIndex >= 0 && nextIndex < paidMedia.extendedMedia.length) {
-        return { type: 'message', message: fromMessage, mediaIndex: nextIndex };
-      }
-    }
 
     const index = mediaKeys?.indexOf(getSharedMediaKey(fromMessage, fromMediaIndex));
     if (index === undefined || index === -1) return undefined;

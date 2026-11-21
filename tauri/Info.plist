@@ -6,10 +6,10 @@
     <array>
       <dict>
         <key>CFBundleURLName</key>
-        <string>org.telegram.TelegramAir</string>
+        <string>org.telesignal.desktop</string>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>tg</string>
+          <string>sgnl</string>
         </array>
       </dict>
     </array>

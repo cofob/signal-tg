@@ -12,8 +12,6 @@ import type { StickerSetOrReactionsSetOrRecent, ThreadId } from '../../../types'
 import {
   BASE_EMOJI_KEYWORD_LANG,
   CHAT_STICKER_SET_ID,
-  EFFECT_EMOJIS_SET_ID,
-  EFFECT_STICKERS_SET_ID,
   FAVORITE_SYMBOL_SET_ID,
   RECENT_SYMBOL_SET_ID,
   SLIDE_TRANSITION_DURATION,
@@ -87,15 +85,12 @@ type OwnProps = {
   onStickerSelect: (
     sticker: ApiSticker, isSilent?: boolean, shouldSchedule?: boolean, canUpdateStickerSetsOrder?: boolean,
   ) => void;
-  isForEffects?: boolean;
 };
 
 type StateProps = {
   chat?: ApiChat;
   recentStickers: ApiSticker[];
   favoriteStickers: ApiSticker[];
-  effectStickers?: ApiSticker[];
-  effectEmojis?: ApiSticker[];
   stickerSetsById: Record<string, ApiStickerSet>;
   chatStickerSetId?: string;
   addedSetIds?: string[];
@@ -131,8 +126,6 @@ const StickerPicker = ({
   withInstantThumbs,
   recentStickers,
   favoriteStickers,
-  effectStickers,
-  effectEmojis,
   addedSetIds,
   featuredIds,
   isTrendingPremium,
@@ -148,7 +141,6 @@ const StickerPicker = ({
   noContextMenus,
   idPrefix,
   onStickerSelect,
-  isForEffects,
 }: OwnProps & StateProps) => {
   const {
     loadRecentStickers,
@@ -189,30 +181,6 @@ const StickerPicker = ({
   const areAddedLoaded = Boolean(addedSetIds);
 
   const allSets = useMemo(() => {
-    if (isForEffects && effectStickers) {
-      const effectSets: StickerSetOrReactionsSetOrRecent[] = [];
-      if (effectEmojis?.length) {
-        effectSets.push({
-          id: EFFECT_EMOJIS_SET_ID,
-          accessHash: '0',
-          title: '',
-          stickers: effectEmojis,
-          count: effectEmojis.length,
-          isEmoji: true,
-        });
-      }
-      if (effectStickers?.length) {
-        effectSets.push({
-          id: EFFECT_STICKERS_SET_ID,
-          accessHash: '0',
-          title: lang('StickerEffects'),
-          stickers: effectStickers,
-          count: effectStickers.length,
-        });
-      }
-      return effectSets;
-    }
-
     if (!addedSetIds) {
       return MEMO_EMPTY_ARRAY;
     }
@@ -257,9 +225,6 @@ const StickerPicker = ({
     recentStickers,
     chatStickerSetId,
     lang,
-    effectStickers,
-    isForEffects,
-    effectEmojis,
   ]);
 
   const noPopulatedSets = useMemo(() => (
@@ -268,12 +233,8 @@ const StickerPicker = ({
   ), [allSets, areAddedLoaded]);
 
   const searchableStickers = useMemo(() => {
-    if (isForEffects) {
-      return undefined;
-    }
-
     return uniqueByField(allSets.flatMap((set) => set.stickers || []), 'id');
-  }, [allSets, isForEffects]);
+  }, [allSets]);
 
   const {
     query,
@@ -298,7 +259,6 @@ const StickerPicker = ({
   const { results: searchResults, searchMore } = useStickerSearch({
     query: effectiveQuery || undefined,
     noPacks: activeGroup ? true : undefined,
-    isDisabled: isForEffects,
   });
 
   const [openedPack, setOpenedPack] = useState<ApiStickerSet | undefined>();
@@ -358,7 +318,7 @@ const StickerPicker = ({
   }, [canSendStickers, loadAndPlay, loadRecentStickers, loadFeaturedStickers, sendMessageAction]);
 
   const trendingSets = useMemo(() => {
-    if (isForEffects || !featuredIds?.length || hiddenTrendingSetId === featuredIds[0]) {
+    if (!featuredIds?.length || hiddenTrendingSetId === featuredIds[0]) {
       return undefined;
     }
 
@@ -367,11 +327,10 @@ const StickerPicker = ({
       .filter((set) => set && !(getIsStickerSetInstalled(set) && !set.isArchived));
 
     return sets.length ? sets : undefined;
-  }, [isForEffects, featuredIds, hiddenTrendingSetId, stickerSetsById]);
+  }, [featuredIds, hiddenTrendingSetId, stickerSetsById]);
 
   const canRenderContents = useAsyncRendering([], noRenderDelay ? undefined : SLIDE_TRANSITION_DURATION);
-  const shouldRenderContents = areAddedLoaded && canRenderContents
-    && !(isForEffects && noPopulatedSets) && (canSendStickers || isForEffects);
+  const shouldRenderContents = areAddedLoaded && canRenderContents && canSendStickers;
 
   useHorizontalScroll(headerRef, !shouldRenderContents || !headerRef.current);
 
@@ -772,13 +731,12 @@ const StickerPicker = ({
     !shouldHideTopBorder && styles.headerWithBorder,
   );
 
-  const isLoading = !shouldRenderContents && (canSendStickers || isForEffects)
-    && !(isForEffects && noPopulatedSets);
+  const isLoading = !shouldRenderContents && canSendStickers;
 
   return (
     <Transition className={fullClassName} activeKey={isLoading ? 0 : 1} name="fade" shouldCleanup>
       {!shouldRenderContents ? (
-        !canSendStickers && !isForEffects ? (
+        !canSendStickers ? (
           <div className={styles.pickerDisabled}>{lang('ErrorSendRestrictedStickersAll')}</div>
         ) : noPopulatedSets ? (
           <div className={styles.pickerDisabled}>{lang('NoStickers')}</div>
@@ -789,21 +747,19 @@ const StickerPicker = ({
         <div
           className={buildClassName(
             styles.inner,
-            !isForEffects && styles.withSearch,
-            !isForEffects && isSearchActive && styles.searchActive,
+            styles.withSearch,
+            isSearchActive && styles.searchActive,
           )}
         >
-          {!isForEffects && (
-            <div ref={headerRef} className={headerClassName}>
-              <div className="shared-canvas-container">
-                <SharedCanvas>
-                  {allSets.slice(0, STICKER_PICKER_MAX_SHARED_COVERS).map(renderCover)}
-                </SharedCanvas>
-                {allSets.slice(STICKER_PICKER_MAX_SHARED_COVERS)
-                  .map((stickerSet, i) => renderCover(stickerSet, i + STICKER_PICKER_MAX_SHARED_COVERS))}
-              </div>
+          <div ref={headerRef} className={headerClassName}>
+            <div className="shared-canvas-container">
+              <SharedCanvas>
+                {allSets.slice(0, STICKER_PICKER_MAX_SHARED_COVERS).map(renderCover)}
+              </SharedCanvas>
+              {allSets.slice(STICKER_PICKER_MAX_SHARED_COVERS)
+                .map((stickerSet, i) => renderCover(stickerSet, i + STICKER_PICKER_MAX_SHARED_COVERS))}
             </div>
-          )}
+          </div>
           <div
             ref={containerRef}
             onMouseMove={handleMouseMove}
@@ -812,26 +768,24 @@ const StickerPicker = ({
               buildClassName(
                 styles.main,
                 IS_TOUCH_ENV ? 'no-scrollbar' : 'custom-scroll',
-                !isForEffects && styles.mainWithSearch,
+                styles.mainWithSearch,
               )
             }
           >
-            {!isForEffects && (
-              <EmojiSearch
-                value={query}
-                groups={stickerGroups}
-                activeGroup={activeGroup}
-                placeholder={lang('SearchStickers')}
-                isLoading={isSearchLoading || isOpenedSetLoading}
-                hasBackButton={Boolean(openedSet)}
-                className={styles.search}
-                onChange={handleQueryChange}
-                onGroupSelect={handleGroupSelect}
-                onBackClick={handlePackBackClick}
-                onFocus={markSearchFocused}
-                onBlur={unmarkSearchFocused}
-              />
-            )}
+            <EmojiSearch
+              value={query}
+              groups={stickerGroups}
+              activeGroup={activeGroup}
+              placeholder={lang('SearchStickers')}
+              isLoading={isSearchLoading || isOpenedSetLoading}
+              hasBackButton={Boolean(openedSet)}
+              className={styles.search}
+              onChange={handleQueryChange}
+              onGroupSelect={handleGroupSelect}
+              onBackClick={handlePackBackClick}
+              onFocus={markSearchFocused}
+              onBlur={unmarkSearchFocused}
+            />
             <Transition
               name="fade"
               activeKey={contentActiveKey}
@@ -867,7 +821,6 @@ const StickerPicker = ({
                       onStickerFave={handleStickerFave}
                       onStickerRemoveRecent={handleRemoveRecentSticker}
                       forcePlayback
-                      shouldHideHeader={stickerSet.id === EFFECT_EMOJIS_SET_ID}
                     />
                   ))}
                 </div>
@@ -888,7 +841,6 @@ export default memo(withGlobal<OwnProps>(
       added,
       recent,
       favorite,
-      effect,
       featured,
     } = global.stickers;
 
@@ -903,8 +855,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       chat,
-      effectStickers: effect?.stickers,
-      effectEmojis: effect?.emojis,
       recentStickers: recent.stickers,
       favoriteStickers: favorite.stickers,
       stickerSetsById: setsById,

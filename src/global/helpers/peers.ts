@@ -46,7 +46,7 @@ export function filterPeersByQuery({
 
     const localizedTitle = isApiPeerChat(peer)
       ? getChatTitle(lang, peer)
-      : id === global.currentUserId ? lang('SavedMessages') : undefined;
+      : id === global.currentUserId ? lang('NoteToSelf') : undefined;
     const isFoundInLocalized = localizedTitle ? searchWords(localizedTitle) : undefined;
 
     const name = getPeerFullTitle(lang, peer);

@@ -11,7 +11,6 @@ import {
 import { getActions, withGlobal } from '../../../global';
 
 import type {
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiChat,
   ApiChatMember,
@@ -116,7 +115,6 @@ import {
   selectRequestedMessageTranslationLanguage,
   selectSender,
   selectSenderFromHeader,
-  selectShouldDetectChatLanguage,
   selectShouldLoopStickers,
   selectTabState,
   selectTheme,
@@ -147,7 +145,6 @@ import { getStickerDimensions, REM } from '../../common/helpers/mediaDimensions'
 import renderText from '../../common/helpers/renderText';
 import { getCustomEmojiSize } from '../composer/helpers/customEmoji';
 import { buildContentClassName } from './helpers/buildContentClassName';
-import getSingularPaidMedia from './helpers/getSingularPaidMedia';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
@@ -162,8 +159,6 @@ import usePeerColor from '../../../hooks/usePeerColor';
 import usePreviousDeprecated from '../../../hooks/usePreviousDeprecated';
 import useShowTransition from '../../../hooks/useShowTransition';
 import useTextHighlight from '../../../hooks/useTextHighlight';
-import useTextLanguage from '../../../hooks/useTextLanguage';
-import useDetectChatLanguage from './hooks/useDetectChatLanguage';
 import useFocusMessageListElement from './hooks/useFocusMessageListElement';
 import useInnerHandlers from './hooks/useInnerHandlers';
 import useMessageReadMetrics from './hooks/useMessageReadMetrics';
@@ -203,10 +198,8 @@ import Game from './Game';
 import InlineButtons from './InlineButtons';
 import Location from './Location';
 import MessageAppendix from './MessageAppendix';
-import MessageEffect from './MessageEffect';
 import MessageMeta from './MessageMeta';
 import MessagePhoneCall from './MessagePhoneCall';
-import PaidMediaOverlay from './PaidMediaOverlay';
 import Photo from './Photo';
 import Poll from './poll/Poll';
 import Reactions from './reactions/Reactions';
@@ -326,7 +319,6 @@ type StateProps = {
   messageTopic?: ApiTopic;
   chatTranslations?: ChatTranslatedMessages;
   areTranslationsEnabled?: boolean;
-  shouldDetectChatLanguage?: boolean;
   requestedTranslationLanguage?: string;
   requestedChatTranslationLanguage?: string;
   requestedTranslationTone?: TranslationTone;
@@ -339,12 +331,10 @@ type StateProps = {
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
   canTranscribeVoice?: boolean;
   guestFromSender?: ApiPeer;
-  effect?: ApiAvailableEffect;
   poll?: ApiMessagePoll;
   webPage?: ApiWebPage;
   maxTimestamp?: number;
   lastPlaybackTimestamp?: number;
-  paidMessageStars?: number;
   isChatWithUser?: boolean;
   isAccountFrozen?: boolean;
   minFutureTime?: number;
@@ -459,7 +449,6 @@ const Message = ({
   messageTopic,
   chatTranslations,
   areTranslationsEnabled,
-  shouldDetectChatLanguage,
   requestedTranslationLanguage,
   requestedChatTranslationLanguage,
   requestedTranslationTone,
@@ -473,13 +462,11 @@ const Message = ({
   tags,
   canTranscribeVoice,
   guestFromSender,
-  effect,
   poll,
   maxTimestamp,
   lastPlaybackTimestamp,
   isMediaNsfw,
   isReplyMediaNsfw,
-  paidMessageStars,
   isChatWithUser,
   isAccountFrozen,
   minFutureTime,
@@ -605,11 +592,8 @@ const Message = ({
     isMessageListActive,
   });
 
-  const { paidMedia } = getMessageContent(message);
-  const { photo: paidMediaPhoto, video: paidMediaVideo } = getSingularPaidMedia(paidMedia);
-
   const {
-    photo = paidMediaPhoto, video = paidMediaVideo, audio,
+    photo, video, audio,
     voice, document, sticker, contact,
     location,
     action, game, storyData, todo, dice, widget,
@@ -636,10 +620,8 @@ const Message = ({
   const isStoryMention = storyData?.isMention;
   const isRoundVideo = video?.mediaType === 'video' && video.isRound;
   const isAlbum = Boolean(album)
-    && (
-      (album.isPaidMedia && paidMedia!.extendedMedia.length > 1)
-      || album.messages.length > 1
-    ) && !album.messages.some((msg) => Object.keys(msg.content).length === 0);
+    && album.messages.length > 1
+    && !album.messages.some((msg) => Object.keys(msg.content).length === 0);
   const isInDocumentGroupNotFirst = isInDocumentGroup && !isFirstInDocumentGroup;
   const isInDocumentGroupNotLast = isInDocumentGroup && !isLastInDocumentGroup;
   const isContextMenuShown = contextMenuAnchor !== undefined;
@@ -767,12 +749,6 @@ const Message = ({
     }
   }, [hasSummary, chatId, messageId, requestedTranslationLanguage, isShowingSummary, summary, hideSummary]);
 
-  const handleEffectClick = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-
-    requestEffect();
-  });
-
   const handleFocusSelf = useLastCallback(() => {
     focusMessage({
       chatId,
@@ -850,12 +826,12 @@ const Message = ({
   const { peerId: storyReplyPeerId, storyId: storyReplyId } = storyReplyInfo || {};
 
   useEffect(() => {
-    if ((sticker?.hasEffect || effect) && ((
+    if (sticker?.hasEffect && ((
       memoFirstUnreadIdRef?.current && messageId >= memoFirstUnreadIdRef.current
     ) || isLocal)) {
       requestEffect();
     }
-  }, [effect, isLocal, memoFirstUnreadIdRef, messageId, sticker?.hasEffect]);
+  }, [isLocal, memoFirstUnreadIdRef, messageId, sticker?.hasEffect]);
 
   useEffect(() => {
     if (dice && ((
@@ -866,13 +842,6 @@ const Message = ({
   }, [dice, memoFirstUnreadIdRef, messageId, isLocal]);
 
   const textForLanguageDetection = useMemo(() => textMessage && extractMessageText(textMessage)?.text, [textMessage]);
-  const detectedLanguage = useTextLanguage(
-    textForLanguageDetection,
-    !(areTranslationsEnabled && shouldDetectChatLanguage) || isTypingDraft,
-    getIsMessageListReady,
-  );
-  useDetectChatLanguage(message, detectedLanguage, !shouldDetectChatLanguage, getIsMessageListReady);
-
   const shouldTranslate = isMessageTranslatable(message, !requestedChatTranslationLanguage);
 
   const isManualMessageTranslation = !requestedChatTranslationLanguage && requestedTranslationLanguage;
@@ -981,10 +950,6 @@ const Message = ({
 
   const withAppendix = contentClassName.includes('has-appendix');
   const emojiSize = getCustomEmojiSize(text?.emojiOnlyCount);
-
-  const paidMessageStarsInMeta = !isChatWithUser
-    ? (isAlbum && paidMessageStars ? album.messages.length * paidMessageStars : paidMessageStars)
-    : undefined;
 
   let metaPosition!: MetaPosition;
   if (phoneCall) {
@@ -1232,12 +1197,9 @@ const Message = ({
         }
         availableReactions={availableReactions}
         isTranslated={Boolean(requestedTranslationLanguage && (currentTranslatedText || currentTranslatedRichMessage))}
-        effectEmoji={effect?.emoticon}
         onClick={handleMetaClick}
-        onEffectClick={handleEffectClick}
         onTranslationClick={handleTranslationClick}
         onOpenThread={handleOpenThread}
-        paidMessageStars={paidMessageStarsInMeta}
       />
     );
 
@@ -1369,7 +1331,7 @@ const Message = ({
         {hasAnimatedEmoji && animatedCustomEmoji && (
           <AnimatedCustomEmoji
             customEmojiId={animatedCustomEmoji}
-            withEffects={withAnimatedEffects && isChatWithUser && !effect}
+            withEffects={withAnimatedEffects && isChatWithUser}
             isOwn={isOwn}
             observeIntersection={observeIntersectionForLoading}
             forceLoadPreview={isLocal}
@@ -1381,24 +1343,13 @@ const Message = ({
         {hasAnimatedEmoji && animatedEmoji && (
           <AnimatedEmoji
             emoji={animatedEmoji}
-            withEffects={withAnimatedEffects && isChatWithUser && !effect}
+            withEffects={withAnimatedEffects && isChatWithUser}
             isOwn={isOwn}
             observeIntersection={observeIntersectionForLoading}
             forceLoadPreview={isLocal}
             messageId={messageId}
             chatId={chatId}
             activeEmojiInteractions={activeEmojiInteractions}
-          />
-        )}
-        {withAnimatedEffects && effect && !isLocal && (
-          <MessageEffect
-            shouldPlay={shouldPlayEffect}
-            messageId={message.id}
-            isMirrored={!message.isOutgoing}
-            effect={effect}
-            observeIntersectionForLoading={observeIntersectionForLoading}
-            observeIntersectionForPlaying={observeIntersectionForPlaying}
-            onStop={hideEffect}
           />
         )}
         {phoneCall && (
@@ -1701,19 +1652,11 @@ const Message = ({
       </>
     );
 
-    if (paidMedia) {
-      return (
-        <PaidMediaOverlay paidMedia={paidMedia} isOutgoing={isOwn}>
-          {content}
-        </PaidMediaOverlay>
-      );
-    }
-
     return content;
   }
 
   function shouldRenderSenderName() {
-    const media = photo || video || location || paidMedia;
+    const media = photo || video || location;
     return !(isCustomShape && !hasViaSender) && (
       (withSenderName && !media) || asForwarded || viaBotId
       || (guestChatViaId && isFirstInGroup) || forceSenderName
@@ -2107,7 +2050,6 @@ const Message = ({
           onCloseAnimationEnd={handleContextMenuHide}
           repliesThreadInfo={repliesThreadInfo}
           noReplies={noReplies}
-          detectedLanguage={detectedLanguage}
         />
       )}
       {isDeclineDialogOpen && (
@@ -2148,7 +2090,6 @@ export default memo(withGlobal<OwnProps>(
     } = ownProps;
     const {
       id, chatId, viaBotId, guestChatViaId, isOutgoing, forwardInfo, transcriptionId, isPinned,
-      effectId, paidMessageStars,
     } = message;
 
     const webPage = selectFullWebPageFromMessage(global, message);
@@ -2282,8 +2223,6 @@ export default memo(withGlobal<OwnProps>(
     const canTranscribeVoice = !message.isEphemeral
       && (isPremium || Boolean(transcribeMinLevel && chatLevel >= transcribeMinLevel));
 
-    const effect = effectId ? global.availableEffectById[effectId] : undefined;
-
     const poll = selectPollFromMessage(global, message);
 
     const maxTimestamp = selectMessageTimestampableDuration(global, message);
@@ -2367,7 +2306,6 @@ export default memo(withGlobal<OwnProps>(
       messageTopic,
       chatTranslations,
       areTranslationsEnabled,
-      shouldDetectChatLanguage: selectShouldDetectChatLanguage(global, chatId),
       requestedTranslationLanguage,
       requestedChatTranslationLanguage,
       requestedTranslationTone,
@@ -2397,11 +2335,9 @@ export default memo(withGlobal<OwnProps>(
       tags: global.savedReactionTags?.byKey,
       canTranscribeVoice,
       minFutureTime,
-      effect,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,
-      paidMessageStars,
       isChatWithUser,
       isAccountFrozen,
       isMediaNsfw,

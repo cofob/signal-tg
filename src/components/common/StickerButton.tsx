@@ -44,7 +44,6 @@ type OwnProps<T> = {
   withTranslucentThumb?: boolean;
   withInstantThumb?: boolean;
   forcePlayback?: boolean;
-  isEffectEmoji?: boolean;
   noShowPremium?: boolean;
   noIcons?: boolean;
   clickArg: T;
@@ -83,7 +82,6 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   withTranslucentThumb,
   withInstantThumb,
   forcePlayback,
-  isEffectEmoji,
   noIcons,
   clickArg,
   onClick,
@@ -106,7 +104,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
   } = sticker;
 
   const isPremium = !sticker.isFree || sticker.hasEffect;
-  const isCustomEmoji = sticker.isCustomEmoji || isEffectEmoji;
+  const isCustomEmoji = sticker.isCustomEmoji;
   const isPremiumSticker = !isCustomEmoji && isPremium;
   const isLocked = !isCurrentUserPremium && isPremium && !shouldIgnorePremium && !isSavedMessages;
 
@@ -138,7 +136,7 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
     if (isContextMenuOpen) return;
     if (isLocked) {
       showNotification({
-        message: { key: isCustomEmoji || isEffectEmoji
+        message: { key: isCustomEmoji
           ? 'PremiumUnlockEmoji'
           : 'PremiumUnlockStickers' },
       });
@@ -201,7 +199,6 @@ const StickerButton = <T extends number | ApiSticker | ApiBotInlineMediaResult |
     onClick && 'interactive',
     isSelected && 'selected',
     isCustomEmoji && 'custom-emoji',
-    isEffectEmoji && 'effect-emoji',
     className,
   );
 

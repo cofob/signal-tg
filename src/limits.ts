@@ -22,7 +22,8 @@ export const LIMITS = {
   savedGifs: 200,
   dialogFiltersChats: 100,
   dialogFilters: 10,
-  dialogFolderPinned: 5,
+  // Signal pins up to 4 chats
+  dialogFolderPinned: 4,
   messageLength: 4096,
   captionLength: 1024,
   channels: 500,
@@ -65,7 +66,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   starRefStartPrefixes: [
     '_tgr_',
   ],
-  paidReactionMaxAmount: 2500,
   starsUsdWithdrawRateX1000: 1300,
   storyChangelogUserId: '777000',
   maxPinnedStoriesCount: 3,

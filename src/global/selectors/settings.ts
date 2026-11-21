@@ -1,7 +1,7 @@
 import type { GlobalState } from '../types';
 import { SettingsScreens, UPLOADING_WALLPAPER_SLUG } from '../../types';
 
-import { IS_TRANSLATION_SUPPORTED, IS_WEBAUTHN_SUPPORTED } from '../../util/browser/windowEnvironment';
+import { IS_WEBAUTHN_SUPPORTED } from '../../util/browser/windowEnvironment';
 import memoized from '../../util/memoized';
 import { getThemeWallpaper } from '../../util/wallpaper';
 import { MAX_FOLDERS } from '../../limits';
@@ -54,11 +54,6 @@ export function selectAvailableSettingsScreen<T extends GlobalState>(global: T, 
     case SettingsScreens.AutoDeleteMessages:
       if (selectIsCurrentUserFrozen(global) || global.settings.byKey.defaultHistoryTtl === undefined) return undefined;
       return screen;
-    case SettingsScreens.DoNotTranslate: {
-      const { canTranslate, canTranslateChats } = global.settings.byKey;
-      const isTranslationEnabled = canTranslate || (canTranslateChats && selectIsCurrentUserPremium(global));
-      return IS_TRANSLATION_SUPPORTED && isTranslationEnabled ? screen : undefined;
-    }
     case SettingsScreens.QuickReaction:
       return global.config?.defaultReaction ? screen : undefined;
     default:
@@ -97,20 +92,11 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
     areStickerSetsLoaded: Boolean(global.stickers.added.setIds),
     areCustomEmojiSetsLoaded: Boolean(global.customEmojis.added.setIds),
     isQuickReactionAvailable: selectAvailableSettingsScreen(global, SettingsScreens.QuickReaction) !== undefined,
-    isDoNotTranslateAvailable: selectAvailableSettingsScreen(global, SettingsScreens.DoNotTranslate) !== undefined,
   };
 }
 
 export function selectTranslationLanguage<T extends GlobalState>(global: T) {
   return global.settings.byKey.translationLanguage || selectLanguageCode(global);
-}
-
-export function selectNewNoncontactPeersRequirePremium<T extends GlobalState>(global: T) {
-  return global.settings.byKey.shouldNewNonContactPeersRequirePremium;
-}
-
-export function selectNonContactPeersPaidStars<T extends GlobalState>(global: T) {
-  return global.settings.byKey.nonContactPeersPaidStars;
 }
 
 export function selectShouldHideReadMarks<T extends GlobalState>(global: T) {

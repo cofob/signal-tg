@@ -7,7 +7,6 @@ import { withGlobal } from '../../../../global';
 import type {
   ApiAvailableReaction, ApiChatReactions, ApiMessage,
   ApiReaction,
-  ApiReactionWithPaid,
 } from '../../../../api/types';
 
 import {
@@ -30,15 +29,13 @@ type OwnProps = {
   loadAndPlay: boolean;
   selectedReactionIds?: string[];
   message?: ApiMessage;
-  onReactionSelect: (reaction: ApiReactionWithPaid) => void;
-  onReactionContext?: (reaction: ApiReactionWithPaid) => void;
+  onReactionSelect: (reaction: ApiReaction) => void;
 };
 
 type StateProps = {
   enabledReactions?: ApiChatReactions;
   availableReactions?: ApiAvailableReaction[];
   topReactions: ApiReaction[];
-  isWithPaidReaction?: boolean;
   reactionsLimit?: number;
 };
 
@@ -56,11 +53,9 @@ const ReactionPickerLimited = ({
   availableReactions,
   topReactions,
   selectedReactionIds,
-  isWithPaidReaction,
   message,
   reactionsLimit,
   onReactionSelect,
-  onReactionContext,
 }: OwnProps & StateProps) => {
   const { width: windowWidth } = useWindowSize();
   const { isTouchScreen } = useAppLayout();
@@ -72,11 +67,7 @@ const ReactionPickerLimited = ({
 
   const allAvailableReactions = useMemo(() => {
     if (shouldUseCurrentReactions) {
-      const reactions = currentReactions.map(({ reaction }) => reaction);
-      if (isWithPaidReaction) {
-        reactions.unshift({ type: 'paid' });
-      }
-      return reactions;
+      return currentReactions.map(({ reaction }) => reaction);
     }
 
     if (!enabledReactions) {
@@ -84,21 +75,13 @@ const ReactionPickerLimited = ({
     }
 
     if (enabledReactions.type === 'all') {
-      const reactionsToSort: ApiReactionWithPaid[] = (availableReactions || []).map(({ reaction }) => reaction);
-      if (isWithPaidReaction) {
-        reactionsToSort.unshift({ type: 'paid' });
-      }
+      const reactionsToSort = (availableReactions || []).map(({ reaction }) => reaction);
       return sortReactions(reactionsToSort, topReactions);
     }
 
-    const reactionsToSort: ApiReactionWithPaid[] = enabledReactions.allowed.slice();
-    if (isWithPaidReaction) {
-      reactionsToSort.unshift({ type: 'paid' });
-    }
-
-    return sortReactions(reactionsToSort, topReactions);
+    return sortReactions(enabledReactions.allowed, topReactions);
   }, [
-    availableReactions, enabledReactions, topReactions, shouldUseCurrentReactions, currentReactions, isWithPaidReaction,
+    availableReactions, enabledReactions, topReactions, shouldUseCurrentReactions, currentReactions,
   ]);
 
   const pickerHeight = useMemo(() => {
@@ -131,7 +114,6 @@ const ReactionPickerLimited = ({
                   loadAndPlay={loadAndPlay}
                   availableReactions={availableReactions}
                   onClick={onReactionSelect}
-                  onContextMenu={onReactionContext}
                 />
               );
             })}
@@ -147,14 +129,13 @@ export default memo(withGlobal<OwnProps>(
     const { availableReactions, topReactions } = global.reactions;
 
     const { maxUniqueReactions } = global.appConfig;
-    const { enabledReactions, isPaidReactionAvailable } = selectChatFullInfo(global, chatId) || {};
+    const { enabledReactions } = selectChatFullInfo(global, chatId) || {};
 
     return {
       enabledReactions,
       availableReactions,
       topReactions,
       reactionsLimit: maxUniqueReactions,
-      isWithPaidReaction: isPaidReactionAvailable,
     };
   },
 )(ReactionPickerLimited));

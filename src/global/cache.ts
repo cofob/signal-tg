@@ -636,7 +636,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'peerColors',
       'savedReactionTags',
       'shareThemeBackdrops',
-      'availableEffectById',
     ]),
     lastIsChatInfoShown: !getIsMobile() ? global.lastIsChatInfoShown : undefined,
     stickers: reduceStickers(global),
@@ -653,7 +652,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
         'defaultTags',
         'recentReactions',
         'topReactions',
-        'effectReactions',
         'hash',
       ]),
       availableReactions: reduceAvailableReactions(global.reactions.availableReactions),
@@ -957,8 +955,7 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
     const cleanedById = Object.values(byId).reduce((acc, message) => {
       if (!message || message.isTypingDraft) return acc;
 
-      let cleanedMessage = omitLocalMedia(message);
-      cleanedMessage = omitLocalPaidReactions(cleanedMessage);
+      const cleanedMessage = omitLocalMedia(message);
       acc[message.id] = cleanedMessage;
 
       if (message.content.pollId) {
@@ -1003,25 +1000,6 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
     pollById: pickTruthy(global.messages.pollById, pollIdsToSave),
     webPageById: pickTruthy(global.messages.webPageById, webPageIdsToSave),
     playbackByChatId: {},
-  };
-}
-
-function omitLocalPaidReactions(message: ApiMessage): ApiMessage {
-  if (!message.reactions?.results.length) return message;
-  return {
-    ...message,
-    reactions: {
-      ...message.reactions,
-      results: message.reactions.results.map((reaction) => {
-        if (reaction.localAmount) {
-          return {
-            ...reaction,
-            localAmount: undefined,
-          };
-        }
-        return reaction;
-      }),
-    },
   };
 }
 

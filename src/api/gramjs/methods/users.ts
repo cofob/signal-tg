@@ -4,7 +4,6 @@ import type {
   ApiBirthday, ApiEmojiStatusType, ApiFormattedText, ApiPeer, ApiUser,
 } from '../../types';
 
-import { toJSNumber } from '../../../util/numbers';
 import { buildApiChatFromPreview } from '../apiBuilders/chats';
 import { buildApiPhoto } from '../apiBuilders/common';
 import { buildApiAudioFromDocument } from '../apiBuilders/media';
@@ -130,23 +129,6 @@ export async function fetchSavedMusic({ user, offset, limit }: {
   }).filter(Boolean);
 
   return { audios, count: result.count };
-}
-
-export async function fetchPaidMessagesStarsAmount(user: ApiUser) {
-  const result = await invokeRequest(new GramJs.users.GetRequirementsToContact({
-    id: [buildInputUser(user.id, user.accessHash)],
-  }));
-
-  if (!result?.[0]) {
-    return undefined;
-  }
-  const requirement = result[0];
-
-  if (requirement instanceof GramJs.RequirementToContactPaidMessages) {
-    return toJSNumber(requirement.starsAmount);
-  }
-
-  return undefined;
 }
 
 export async function fetchNearestCountry() {
@@ -277,58 +259,6 @@ export async function deleteContact({
     '@type': 'deleteContact',
     id,
   });
-}
-
-export async function toggleNoPaidMessagesException({ user, shouldRefundCharged }: {
-  user: ApiUser;
-  shouldRefundCharged?: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.account.ToggleNoPaidMessagesException ({
-    refundCharged: shouldRefundCharged ? true : undefined,
-    userId: buildInputUser(user.id, user.accessHash),
-  }));
-  return result;
-}
-
-export async function exportNoPaidMessagesToken({ isTemporary, shouldRevoke }: {
-  isTemporary?: true;
-  shouldRevoke?: true;
-}) {
-  const result = await invokeRequest(new GramJs.contacts.ExportNoPaidMessagesToken({
-    temporary: isTemporary,
-    revoke: shouldRevoke,
-  }), {
-    shouldIgnoreErrors: true,
-  });
-  if (!result) return undefined;
-
-  return {
-    url: result.url,
-    expires: result.expires,
-  };
-}
-
-export async function importNoPaidMessagesToken({ user, token }: {
-  user: ApiUser;
-  token: string;
-}) {
-  try {
-    const result = await invokeRequest(new GramJs.contacts.ImportNoPaidMessagesToken({
-      userId: buildInputUser(user.id, user.accessHash),
-      token,
-    }), {
-      shouldThrow: true,
-    });
-
-    if (!(result instanceof GramJs.User)) return undefined;
-
-    addUserToLocalDb(result);
-
-    return buildApiUser(result);
-  } catch (err) {
-    if (!checkErrorType(err)) return undefined;
-    return wrapError(err);
-  }
 }
 
 export async function importContactToken({ token }: { token: string }) {

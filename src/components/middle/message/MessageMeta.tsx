@@ -11,7 +11,6 @@ import buildClassName from '../../../util/buildClassName';
 import {
   formatCalendarDate, formatCompactTimestamp, formatDateTime, isSameLocalDay, secondsToDate,
 } from '../../../util/localization/dateFormat';
-import { formatStarsAsIcon } from '../../../util/localization/format';
 import { getRepeatPeriodText } from '../../../util/scheduledMessages';
 import { formatIntegerCompact } from '../../../util/text/textFormat';
 import renderText from '../../common/helpers/renderText';
@@ -37,13 +36,10 @@ type OwnProps = {
   isPinned?: boolean;
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
-  effectEmoji?: string;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   onTranslationClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onEffectClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
-  paidMessageStars?: number;
 };
 
 const MessageMeta = ({
@@ -57,12 +53,9 @@ const MessageMeta = ({
   isTranslated,
   isPinned,
   withFullDate,
-  effectEmoji,
   onClick,
   onTranslationClick,
-  onEffectClick,
   onOpenThread,
-  paidMessageStars,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
   const { showNotification } = getActions();
@@ -171,11 +164,6 @@ const MessageMeta = ({
       onClick={onClick}
       data-ignore-on-paste
     >
-      {effectEmoji && (
-        <span className="message-effect-icon" onClick={onEffectClick}>
-          {renderText(effectEmoji)}
-        </span>
-      )}
       {isTranslated && (
         <Icon name="language" className="message-translated" onClick={onTranslationClick} />
       )}
@@ -200,15 +188,6 @@ const MessageMeta = ({
       )}
       {signature && (
         <span className="message-signature">{renderText(signature)}</span>
-      )}
-      {Boolean(paidMessageStars) && (
-        <span className="message-price">
-          {
-            formatStarsAsIcon(lang, paidMessageStars, {
-              asFont: true,
-            })
-          }
-        </span>
       )}
       <span className="message-time" title={dateTitle} onMouseEnter={markActivated}>
         {Boolean(message.anchorMsgId) && `${lang('EphemeralUpdated')} `}

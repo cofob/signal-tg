@@ -643,7 +643,7 @@ const MessageInput = ({
 
   function handleClick() {
     if (isAttachmentModalInput || canSendPlainText || (isStoryInput && isNeedPremium)) return;
-    showAllowedMessageTypesNotification({ chatId, messageListType });
+    showAllowedMessageTypesNotification({ chatId });
   }
 
   useEffect(() => {

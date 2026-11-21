@@ -17,13 +17,10 @@ import { MAIN_THREAD_ID } from '../../../api/types';
 import { requestMeasure } from '../../../lib/fasterdom/fasterdom';
 import { isChatChannel } from '../../../global/helpers';
 import { getChatNotifySettings } from '../../../global/helpers/notifications';
-import { getPeerTitle } from '../../../global/helpers/peers';
 import {
   selectChat,
   selectNotifyDefaults,
   selectNotifyException,
-  selectPeerPaidMessagesStars,
-  selectTabState,
 } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { formatShortDuration } from '../../../util/dates/duration';
@@ -39,12 +36,10 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useReorderableList from '../../../hooks/useReorderableList';
 import useSchedule from '../../../hooks/useSchedule';
-import usePaidMessageConfirmation from '../../middle/composer/hooks/usePaidMessageConfirmation';
 
 import CalendarModal from '../../common/CalendarModal.async';
 import CountryPickerModal from '../../common/CountryPickerModal.async';
 import Icon from '../../common/icons/Icon';
-import PaymentMessageConfirmDialog from '../../common/PaymentMessageConfirmDialog';
 import CustomSendMenu from '../../middle/composer/CustomSendMenu.async';
 import Button from '../../ui/Button';
 import InputText from '../../ui/InputText';
@@ -74,7 +69,6 @@ import Switch from '@gili/primitives/Switch';
 
 import styles from './PollModal.module.scss';
 
-const PAYMENT_DIALOG_KEY = 'poll';
 const MAX_OPTION_LENGTH = 100;
 const MAX_QUESTION_LENGTH = 255;
 const MAX_SOLUTION_LENGTH = 200;
@@ -113,8 +107,6 @@ type StateProps = {
   pollCountriesMax: number;
   phoneCountryIso2?: string;
   countryList: ApiCountry[];
-  paidMessagesStars?: number;
-  paymentMessageConfirmDialogKey?: string;
   isSilentPosting?: boolean;
 };
 
@@ -152,8 +144,6 @@ const PollModal = ({
   pollCountriesMax,
   phoneCountryIso2,
   countryList,
-  paidMessagesStars,
-  paymentMessageConfirmDialogKey,
   isSilentPosting,
 }: OwnProps & StateProps) => {
   const {
@@ -204,18 +194,6 @@ const PollModal = ({
     handleContextMenuClose: handleDurationMenuClose,
     handleContextMenuHide: handleDurationMenuHide,
   } = useContextMenuHandlers(durationMenuRef, !isOpen);
-
-  const {
-    closeConfirmDialog,
-    dialogHandler,
-    shouldAutoApprove,
-    setAutoApprove,
-    handleWithConfirmation,
-  } = usePaidMessageConfirmation(
-    PAYMENT_DIALOG_KEY,
-    paidMessagesStars || 0,
-    true,
-  );
 
   useEffect(() => {
     if (!isChannel) {
@@ -273,7 +251,7 @@ const PollModal = ({
 
   const trimmedQuestion = useMemo(() => question.trim().substring(0, MAX_QUESTION_LENGTH), [question]);
   const isInScheduledList = modal.messageListType === 'scheduled';
-  const canSchedule = Boolean(!paidMessagesStars && !chat?.isMonoforum);
+  const canSchedule = !chat?.isMonoforum;
   const isCorrectAnswerInvalid = hasSubmitted && isQuizMode && !correctAnswerPositions.length;
   const isAddAnswersDisabled = isQuizMode || !isPublic;
   const minOptionsCount = isQuizMode ? MIN_QUIZ_OPTIONS_COUNT : MIN_OPTIONS_COUNT;
@@ -563,7 +541,7 @@ const PollModal = ({
       return;
     }
 
-    handleWithConfirmation(submitPoll, poll, isSilent);
+    submitPoll(poll, isSilent);
   });
 
   const handleSendScheduled = useLastCallback((scheduledAt: number, scheduleRepeatPeriod?: number) => {
@@ -573,7 +551,7 @@ const PollModal = ({
       return;
     }
 
-    handleWithConfirmation(submitPoll, poll, undefined, scheduledAt, scheduleRepeatPeriod);
+    submitPoll(poll, undefined, scheduledAt, scheduleRepeatPeriod);
   });
 
   const handlePrimarySend = useLastCallback(() => {
@@ -934,16 +912,6 @@ const PollModal = ({
         onSubmit={handleCountrySelectionSubmit}
         onSelectionLimit={handleCountrySelectionLimit}
       />
-      <PaymentMessageConfirmDialog
-        isOpen={paymentMessageConfirmDialogKey === PAYMENT_DIALOG_KEY}
-        onClose={closeConfirmDialog}
-        userName={chat ? getPeerTitle(lang, chat) : undefined}
-        messagePriceInStars={paidMessagesStars || 0}
-        messagesCount={1}
-        shouldAutoApprove={shouldAutoApprove}
-        setAutoApprove={setAutoApprove}
-        confirmHandler={dialogHandler}
-      />
     </>
   );
 };
@@ -1023,7 +991,6 @@ function normalizeOptions(options: PollOption[], maxOptionsCount: number) {
 
 export default memo(withGlobal<OwnProps>(
   (global, { modal }): Complete<StateProps> => {
-    const tabState = selectTabState(global);
     const { chatId } = modal;
     const chat = selectChat(global, chatId);
 
@@ -1035,8 +1002,6 @@ export default memo(withGlobal<OwnProps>(
       pollCountriesMax: global.appConfig.pollCountriesMax,
       phoneCountryIso2: global.appConfig.phoneCountryIso2,
       countryList: global.countryList.general,
-      paidMessagesStars: selectPeerPaidMessagesStars(global, chatId),
-      paymentMessageConfirmDialogKey: tabState.paymentMessageConfirmDialogKey,
       isSilentPosting: chat ? getChatNotifySettings(
         chat,
         selectNotifyDefaults(global),

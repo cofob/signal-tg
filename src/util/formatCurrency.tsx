@@ -76,7 +76,7 @@ export function formatCurrency(
   return formatCurrencyAsString(totalPrice, currency, lang.code, options);
 }
 
-export function formatCurrencyAsString(
+function formatCurrencyAsString(
   totalPrice: number,
   currency: string,
   locale: string = FALLBACK_LANG_CODE,

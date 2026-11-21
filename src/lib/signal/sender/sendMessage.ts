@@ -1,7 +1,14 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
-import type { DataMessageSchema, EditMessageSchema, ReceiptMessage_Type } from '../proto/generated/SignalService_pb';
+import type {
+  DataMessageSchema,
+  EditMessageSchema,
+  ReceiptMessage_Type,
+  SyncMessage_BlockedSchema,
+  SyncMessage_DeleteForMeSchema,
+  SyncMessage_MessageRequestResponseSchema,
+} from '../proto/generated/SignalService_pb';
 import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
 import type { GroupTarget } from './sendToGroup';
 
@@ -131,6 +138,27 @@ export function sendViewOnceOpenSync(context: SenderContext, view: { senderAci: 
       value: { senderAci: view.senderAci, timestamp: BigInt(view.timestamp) },
     },
   }, Date.now());
+}
+
+/** Tells our other devices how we answered a message request (Signal Desktop `getMessageRequestResponseSync`) */
+export function sendMessageRequestResponseSync(
+  context: SenderContext, response: MessageInitShape<typeof SyncMessage_MessageRequestResponseSchema>,
+) {
+  return syncToOtherDevices(context, {
+    content: { case: 'messageRequestResponse', value: response },
+  }, Date.now());
+}
+
+/** Sends the whole blocked list to our other devices; the primary device replaces its list with it */
+export function sendBlockedSync(context: SenderContext, blocked: MessageInitShape<typeof SyncMessage_BlockedSchema>) {
+  return syncToOtherDevices(context, { content: { case: 'blocked', value: blocked } }, Date.now());
+}
+
+/** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */
+export function sendDeleteForMeSync(
+  context: SenderContext, deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>,
+) {
+  return syncToOtherDevices(context, { content: { case: 'deleteForMe', value: deleteForMe } }, Date.now());
 }
 
 /** A null message starts a new session after the old one was archived */

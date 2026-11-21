@@ -7,7 +7,7 @@ import type {
   ApiAvailableReaction,
   ApiEmojiGroup,
   ApiEmojiStatusType,
-  ApiReaction, ApiReactionWithPaid, ApiSticker, ApiStickerSet,
+  ApiReaction, ApiSticker, ApiStickerSet,
 } from '../../api/types';
 import type { StickerSetOrReactionsSetOrRecent } from '../../types';
 
@@ -81,8 +81,7 @@ type OwnProps = {
   // Free custom emoji shown in place of the top reactions
   topCustomEmojis?: ApiSticker[];
   onCustomEmojiSelect: (sticker: ApiSticker) => void;
-  onReactionSelect?: (reaction: ApiReactionWithPaid) => void;
-  onReactionContext?: (reaction: ApiReactionWithPaid) => void;
+  onReactionSelect?: (reaction: ApiReaction) => void;
   onDismiss?: NoneToVoidFunction;
 };
 
@@ -104,7 +103,6 @@ type StateProps = {
   canAnimate?: boolean;
   isSavedMessages?: boolean;
   isCurrentUserPremium?: boolean;
-  isWithPaidReaction?: boolean;
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
   emojiGroups?: ApiEmojiGroup[];
@@ -159,13 +157,11 @@ const CustomEmojiPicker = ({
   defaultTopicIconsId,
   defaultStatusIconsId,
   defaultTagReactions,
-  isWithPaidReaction,
   baseEmojiKeywords,
   emojiKeywords,
   emojiGroups,
   onCustomEmojiSelect,
   onReactionSelect,
-  onReactionContext,
   onDismiss,
 }: OwnProps & StateProps) => {
   const containerRef = useRef<HTMLDivElement>();
@@ -221,12 +217,9 @@ const CustomEmojiPicker = ({
     }
 
     if (isReactionPicker && !isSavedMessages) {
-      const topReactionsSlice: ApiReactionWithPaid[] = topCustomEmojis
+      const topReactionsSlice: ApiReaction[] = topCustomEmojis
         ? []
         : topReactions?.slice(0, TOP_REACTIONS_COUNT) || [];
-      if (isWithPaidReaction) {
-        topReactionsSlice.unshift({ type: 'paid' });
-      }
       if (topCustomEmojis?.length) {
         defaultSets.push({
           id: TOP_SYMBOL_SET_ID,
@@ -331,7 +324,7 @@ const CustomEmojiPicker = ({
     addedCustomEmojiIds, isReactionPicker, isStatusPicker, withDefaultTopicIcons, recentCustomEmojis,
     customEmojiFeaturedIds, stickerSetsById, topReactions, availableReactions, lang, recentReactions,
     defaultStatusIconsId, defaultTopicIconsId, isSavedMessages, defaultTagReactions, chatEmojiSetId,
-    isWithPaidReaction, collectibleStatusEmojis, topCustomEmojis,
+    collectibleStatusEmojis, topCustomEmojis,
   ]);
 
   const noPopulatedSets = useMemo(() => (
@@ -616,7 +609,6 @@ const CustomEmojiPicker = ({
                         availableReactions={availableReactions}
                         isTranslucent={isTranslucent}
                         onReactionSelect={onReactionSelect}
-                        onReactionContext={onReactionContext}
                         onStickerSelect={handleEmojiSelect}
                         onDismiss={onDismiss}
                         forcePlayback
@@ -678,7 +670,6 @@ export default memo(withGlobal<OwnProps>(
       topReactions: isReactionPicker ? topReactions : undefined,
       recentReactions: isReactionPicker ? recentReactions : undefined,
       chatEmojiSetId: chatFullInfo?.emojiSet?.id,
-      isWithPaidReaction: isReactionPicker && chatFullInfo?.isPaidReactionAvailable,
       availableReactions: isReactionPicker ? availableReactions : undefined,
       defaultTagReactions: isReactionPicker ? defaultTags : undefined,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,

@@ -2,10 +2,10 @@ import type {
   ApiAvailableReaction,
   ApiChatReactions,
   ApiMessage,
+  ApiReaction,
   ApiReactionCount,
   ApiReactionKey,
   ApiReactions,
-  ApiReactionWithPaid,
 } from '../../api/types';
 import type { GlobalState } from '../types';
 
@@ -20,17 +20,15 @@ export function checkIfHasUnreadReactions(global: GlobalState, reactions: ApiRea
 }
 
 export function areReactionsEmpty(reactions: ApiReactions) {
-  return !reactions.results.some(({ count, localAmount }) => count || localAmount);
+  return !reactions.results.some(({ count }) => count);
 }
 
-export function getReactionKey(reaction: ApiReactionWithPaid): ApiReactionKey {
+export function getReactionKey(reaction: ApiReaction): ApiReactionKey {
   switch (reaction.type) {
     case 'emoji':
       return `emoji-${reaction.emoticon}`;
     case 'custom':
       return `document-${reaction.documentId}`;
-    case 'paid':
-      return 'paid';
     default: {
       // Legacy reactions
       const uniqueValue = (reaction as any).emoticon || (reaction as any).documentId;
@@ -39,7 +37,7 @@ export function getReactionKey(reaction: ApiReactionWithPaid): ApiReactionKey {
   }
 }
 
-export function isSameReaction(first?: ApiReactionWithPaid, second?: ApiReactionWithPaid) {
+export function isSameReaction(first?: ApiReaction, second?: ApiReaction) {
   if (first === second) {
     return true;
   }
@@ -51,7 +49,7 @@ export function isSameReaction(first?: ApiReactionWithPaid, second?: ApiReaction
   return getReactionKey(first) === getReactionKey(second);
 }
 
-export function canSendReaction(reaction: ApiReactionWithPaid, chatReactions: ApiChatReactions) {
+export function canSendReaction(reaction: ApiReaction, chatReactions: ApiChatReactions) {
   if (chatReactions.type === 'all') {
     return reaction.type === 'emoji' || chatReactions.areCustomAllowed;
   }
@@ -63,21 +61,18 @@ export function canSendReaction(reaction: ApiReactionWithPaid, chatReactions: Ap
   return false;
 }
 
-export function sortReactions<T extends ApiAvailableReaction | ApiReactionWithPaid>(
+export function sortReactions<T extends ApiAvailableReaction | ApiReaction>(
   reactions: T[],
-  topReactions?: ApiReactionWithPaid[],
+  topReactions?: ApiReaction[],
 ): T[] {
   return reactions.slice().sort((left, right) => {
-    const reactionOne: ApiReactionWithPaid | undefined = left ? (
+    const reactionOne: ApiReaction | undefined = left ? (
       'reaction' in left ? left.reaction : left
     ) : undefined;
 
-    const reactionTwo: ApiReactionWithPaid | undefined = right ? (
+    const reactionTwo: ApiReaction | undefined = right ? (
       'reaction' in right ? right.reaction : right
     ) : undefined;
-
-    if (reactionOne?.type === 'paid') return -1;
-    if (reactionTwo?.type === 'paid') return 1;
 
     const indexOne = topReactions?.findIndex((reaction) => isSameReaction(reaction, reactionOne)) || 0;
     const indexTwo = topReactions?.findIndex((reaction) => isSameReaction(reaction, reactionTwo)) || 0;
@@ -87,7 +82,7 @@ export function sortReactions<T extends ApiAvailableReaction | ApiReactionWithPa
   });
 }
 
-export function getUserReactions(message: ApiMessage): ApiReactionWithPaid[] {
+export function getUserReactions(message: ApiMessage): ApiReaction[] {
   return message.reactions?.results?.filter((r): r is Required<ApiReactionCount> => isReactionChosen(r))
     .sort((a, b) => a.chosenOrder - b.chosenOrder)
     .map((r) => r.reaction) || [];
@@ -97,7 +92,7 @@ export function isReactionChosen(reaction: ApiReactionCount) {
   return reaction.chosenOrder !== undefined;
 }
 
-export function updateReactionCount(reactionCount: ApiReactionCount[], newReactions: ApiReactionWithPaid[]) {
+export function updateReactionCount(reactionCount: ApiReactionCount[], newReactions: ApiReaction[]) {
   const results = reactionCount.map((current) => (
     isReactionChosen(current) ? {
       ...current,
@@ -124,42 +119,4 @@ export function updateReactionCount(reactionCount: ApiReactionCount[], newReacti
   });
 
   return results;
-}
-
-export function addPaidReaction(
-  reactionCount: ApiReactionCount[], count: number, isAnonymous?: boolean, peerId?: string,
-): ApiReactionCount[] {
-  const results: ApiReactionCount[] = [];
-  const hasPaid = reactionCount.some((current) => current.reaction.type === 'paid');
-  if (hasPaid) {
-    reactionCount.forEach((current) => {
-      if (current.reaction.type === 'paid') {
-        results.push({
-          ...current,
-          localAmount: (current.localAmount || 0) + count,
-          chosenOrder: -1,
-          localIsPrivate: isAnonymous !== undefined ? isAnonymous : current.localIsPrivate,
-          localPeerId: peerId || current.localPeerId,
-          localPreviousChosenOrder: current.chosenOrder,
-        });
-        return;
-      }
-
-      results.push(current);
-    });
-
-    return results;
-  }
-
-  return [
-    {
-      reaction: { type: 'paid' },
-      count: 0,
-      chosenOrder: -1,
-      localAmount: count,
-      localIsPrivate: isAnonymous,
-      localPeerId: peerId,
-    },
-    ...reactionCount,
-  ];
 }

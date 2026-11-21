@@ -75,6 +75,10 @@ export function selectThemeValues<T extends GlobalState>(global: T, themeKey: Th
   return selectSharedSettings(global).themes[themeKey];
 }
 
+export function selectIsSignalTheme<T extends GlobalState>(global: T) {
+  return selectThemeValues(global, selectTheme(global))?.isSignalTheme;
+}
+
 export function selectActionMessageBg<T extends GlobalState>(
   global: T,
   chatId?: string,
@@ -108,7 +112,9 @@ export function selectChatThemePalette<T extends GlobalState>(
   chatId?: string,
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
-  return buildThemePalette(selectTheme(global), selectChatThemeSettings(global, chatId, tabId));
+  return buildThemePalette(
+    selectTheme(global), selectChatThemeSettings(global, chatId, tabId), selectIsSignalTheme(global),
+  );
 }
 
 export function selectPeerWallpaper<T extends GlobalState>(

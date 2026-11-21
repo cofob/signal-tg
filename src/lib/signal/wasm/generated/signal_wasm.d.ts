@@ -5,6 +5,8 @@ export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8A
 
 export function AccountEntropyPool_Generate(): string;
 
+export function BackupKey_DeriveBackupId(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): Uint8Array;
+
 export class CiphertextMessage {
     private constructor();
     free(): void;
@@ -195,6 +197,18 @@ export class KyberSecretKey {
 export function KyberSecretKey_Deserialize(data: Uint8Array): KyberSecretKey;
 
 export function KyberSecretKey_Serialize(obj: KyberSecretKey): Uint8Array;
+
+export class MessageBackupKey {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function MessageBackupKey_FromBackupKeyAndBackupId(backup_key_bytes: Uint8Array, backup_id: Uint8Array, forward_secrecy_token?: Uint8Array | null): MessageBackupKey;
+
+export function MessageBackupKey_GetAesKey(key: MessageBackupKey): Uint8Array;
+
+export function MessageBackupKey_GetHmacKey(key: MessageBackupKey): Uint8Array;
 
 export class PlaintextContent {
     private constructor();
@@ -657,6 +671,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
     readonly AccountEntropyPool_Generate: () => [number, number];
+    readonly BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
     readonly CiphertextMessage_Type: (a: number) => number;
@@ -710,6 +725,9 @@ export interface InitOutput {
     readonly KyberPublicKey_Equals: (a: number, b: number) => number;
     readonly KyberPublicKey_Serialize: (a: number) => [number, number];
     readonly KyberSecretKey_Deserialize: (a: number, b: number) => [number, number, number];
+    readonly MessageBackupKey_FromBackupKeyAndBackupId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+    readonly MessageBackupKey_GetAesKey: (a: number) => [number, number];
+    readonly MessageBackupKey_GetHmacKey: (a: number) => [number, number];
     readonly PlaintextContent_Deserialize: (a: number, b: number) => [number, number, number];
     readonly PlaintextContent_FromDecryptionErrorMessage: (a: number) => number;
     readonly PlaintextContent_GetBody: (a: number) => [number, number];
@@ -836,6 +854,7 @@ export interface InitOutput {
     readonly __wbg_kyberkeypair_free: (a: number, b: number) => void;
     readonly __wbg_kyberprekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_kyberpublickey_free: (a: number, b: number) => void;
+    readonly __wbg_messagebackupkey_free: (a: number, b: number) => void;
     readonly __wbg_prekeybundle_free: (a: number, b: number) => void;
     readonly __wbg_prekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_prekeysignalmessage_free: (a: number, b: number) => void;
@@ -886,7 +905,7 @@ export interface InitOutput {
     readonly publickey_cloneHandle: (a: number) => number;
     readonly signedprekeyrecord_cloneHandle: (a: number) => number;
     readonly wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_1462b0d19075b55d___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined___js_sys_e4fc5239a9904755___Function_fn_wasm_bindgen_97461482e016b7d2___JsValue_____wasm_bindgen_97461482e016b7d2___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

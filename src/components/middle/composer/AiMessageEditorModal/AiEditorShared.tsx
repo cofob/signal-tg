@@ -31,13 +31,6 @@ const MIN_HEIGHT = 100;
 const HEIGHT_PADDING = 4;
 const LOADING_LINES = 6;
 
-export function getAiEditorText(content: AiEditorContent) {
-  if (content.type === 'text') return content.text.text;
-  return serializeMessageCopyTiptapJson(
-    buildTiptapJsonFromRichMessage(content.richMessage, { isForCopy: true }),
-  ).plainText;
-}
-
 export const AiEditorPreview = memo(({ content, shouldShowDiff }: {
   content?: AiEditorResult;
   shouldShowDiff?: boolean;

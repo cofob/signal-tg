@@ -6,7 +6,7 @@ import type {
   ApiReaction,
   ApiReactionCount,
   ApiReactionCustomEmoji,
-  ApiReactionPaid,
+  ApiReactionEmoji,
 } from '../../../../api/types';
 import type { IAnchorPosition } from '../../../../types';
 
@@ -24,14 +24,13 @@ import ReactionSelectorReaction from './ReactionSelectorReaction';
 
 import './ReactionSelector.scss';
 
-type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji | ApiReactionPaid)[];
+type RenderableReactions = (ApiAvailableReaction | ApiReactionCustomEmoji | ApiReactionEmoji)[];
 
 type OwnProps = {
   enabledReactions?: ApiChatReactions;
   isPrivate?: boolean;
   topReactions?: ApiReaction[];
   defaultTagReactions?: ApiReaction[];
-  effectReactions?: ApiReaction[];
   allAvailableReactions?: ApiAvailableReaction[];
   currentReactions?: ApiReactionCount[];
   reactionsLimit?: number;
@@ -41,16 +40,17 @@ type OwnProps = {
   className?: string;
   isInSavedMessages?: boolean;
   isInStoryViewer?: boolean;
-  isForEffects?: boolean;
-  isWithPaidReaction?: boolean;
   onToggleReaction: (reaction: ApiReaction) => void;
-  onSendPaidReaction?: NoneToVoidFunction;
-  onShowPaidReactionModal?: NoneToVoidFunction;
   onShowMore: (position: IAnchorPosition) => void;
 };
 
 const cn = createClassNameBuilder('ReactionSelector');
 const REACTIONS_AMOUNT = 7;
+// Without a reaction catalog any emoji is a reaction, as in Signal; these come first
+// (Signal Desktop `DEFAULT_PREFERRED_REACTION_EMOJI` in `ts/axo/emoji.std.ts`)
+const DEFAULT_EMOJI_REACTIONS: ApiReactionEmoji[] = ['❤️', '👍', '👎', '😂', '😮', '😢'].map((emoticon) => ({
+  type: 'emoji', emoticon,
+}));
 const FADE_IN_DELAY = 20;
 
 const ReactionSelector = ({
@@ -67,12 +67,7 @@ const ReactionSelector = ({
   isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
-  isForEffects,
-  effectReactions,
-  isWithPaidReaction,
   onToggleReaction,
-  onSendPaidReaction,
-  onShowPaidReactionModal,
   onShowMore,
 }: OwnProps) => {
   const ref = useRef<HTMLDivElement>();
@@ -82,13 +77,14 @@ const ReactionSelector = ({
 
   const shouldUseCurrentReactions = Boolean(reactionsLimit
     && currentReactions && currentReactions.length >= reactionsLimit);
+  const hasReactionCatalog = Boolean(allAvailableReactions?.length);
 
   const availableReactions = useMemo(() => {
     const reactions = (() => {
       if (shouldUseCurrentReactions) return currentReactions?.map((reaction) => reaction.reaction);
-      if (isForEffects) return effectReactions;
       if (isInSavedMessages) return defaultTagReactions;
       if (enabledReactions?.type === 'some') return enabledReactions.allowed;
+      if (!hasReactionCatalog) return DEFAULT_EMOJI_REACTIONS;
       return allAvailableReactions?.map((reaction) => reaction.reaction);
     })();
 
@@ -96,26 +92,21 @@ const ReactionSelector = ({
       const isCustomReaction = reaction.type === 'custom';
       const availableReaction = allAvailableReactions?.find((r) => isSameReaction(r.reaction, reaction));
 
-      if (isForEffects) return availableReaction;
-
-      if ((!isCustomReaction && !availableReaction) || availableReaction?.isInactive) return undefined;
+      const isPlainEmoji = !hasReactionCatalog && reaction.type === 'emoji';
+      if ((!isCustomReaction && !availableReaction && !isPlainEmoji) || availableReaction?.isInactive) return undefined;
 
       if (!isPrivate && !shouldUseCurrentReactions
         && (!enabledReactions || !canSendReaction(reaction, enabledReactions))) {
         return undefined;
       }
 
-      return isCustomReaction ? reaction : availableReaction;
+      return availableReaction || reaction;
     }).filter(Boolean) || [];
 
-    const sortedReactions = sortReactions(filteredReactions, topReactions);
-    if (isWithPaidReaction) {
-      sortedReactions.unshift({ type: 'paid' });
-    }
-    return sortedReactions;
+    return sortReactions(filteredReactions, topReactions);
   }, [
     allAvailableReactions, currentReactions, defaultTagReactions, enabledReactions, isInSavedMessages, isPrivate,
-    topReactions, isForEffects, effectReactions, shouldUseCurrentReactions, isWithPaidReaction,
+    topReactions, shouldUseCurrentReactions, hasReactionCatalog,
   ]);
 
   const reactionsToRender = useMemo(() => {
@@ -124,7 +115,9 @@ const ReactionSelector = ({
       ? availableReactions
       : availableReactions.slice(0, REACTIONS_AMOUNT);
   }, [availableReactions]);
-  const withMoreButton = reactionsToRender.length < availableReactions.length;
+  // Without a catalog, more opens the full emoji set
+  const withMoreButton = reactionsToRender.length < availableReactions.length
+    || (!hasReactionCatalog && !shouldUseCurrentReactions && !isInSavedMessages);
 
   const userReactionIndexes = useMemo(() => {
     const chosenReactions = currentReactions?.filter(({ chosenOrder }) => chosenOrder !== undefined) || [];
@@ -154,12 +147,8 @@ const ReactionSelector = ({
       return lang('StoryReactionsHint');
     }
 
-    if (isForEffects) {
-      return lang('AddEffectMessageHint');
-    }
-
     return undefined;
-  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang, isForEffects]);
+  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang]);
 
   if (!reactionsToRender.length) return undefined;
 
@@ -187,8 +176,6 @@ const ReactionSelector = ({
                   key={getReactionKey(reaction)}
                   isReady={isReady}
                   onToggleReaction={onToggleReaction}
-                  onSendPaidReaction={onSendPaidReaction}
-                  onShowPaidReactionModal={onShowPaidReactionModal}
                   reaction={reaction}
                   noAppearAnimation={!canPlayAnimatedEmojis}
                   chosen={userReactionIndexes.has(i)}

@@ -251,36 +251,6 @@ const MessageListContent = ({
       <span>{lang('UnreadMessages')}</span>
     </div>
   );
-  const renderPaidMessageAction = (message: ApiMessage, album?: IAlbum) => {
-    if (message.paidMessageStars) {
-      const messagesLength = album?.messages?.length || 1;
-      const amount = message.paidMessageStars * messagesLength;
-      return (
-        <div
-          className={buildClassName('local-action-message')}
-          key={`paid-messages-action-${message.id}`}
-        >
-          <span>
-            {
-              message.isOutgoing
-                ? lang('ActionPaidOneMessageOutgoing', {
-                  amount: formatStarsAsText(lang, amount),
-                })
-                : (() => {
-                  const sender = selectSender(getGlobal(), message);
-                  const userTitle = sender ? getPeerTitle(lang, sender) : '';
-                  return lang('ActionPaidOneMessageIncoming', {
-                    user: userTitle,
-                    amount: formatStarsAsText(lang, amount),
-                  });
-                })()
-            }
-          </span>
-        </div>
-      );
-    }
-    return undefined;
-  };
 
   const renderSuggestedPostInfoAction = (message: ApiMessage) => {
     if (message.suggestedPostInfo) {
@@ -426,7 +396,6 @@ const MessageListContent = ({
 
           return compact([
             message.id === memoUnreadDividerBeforeIdRef.current && unreadDivider,
-            message.paidMessageStars && !withUsers && renderPaidMessageAction(message, album),
             message.suggestedPostInfo && renderSuggestedPostInfoAction(message),
             <Message
               key={key}

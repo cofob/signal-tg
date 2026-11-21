@@ -3,9 +3,8 @@ import { withGlobal } from '../../global';
 
 import type { ApiPeer } from '../../api/types';
 
-import { getPeerTitle, isApiPeerUser } from '../../global/helpers/peers';
+import { getPeerTitle } from '../../global/helpers/peers';
 import { selectPeer, selectTheme, selectThemeValues } from '../../global/selectors';
-import { formatStarsAsIcon } from '../../util/localization/format';
 import { LOCAL_TGS_URLS } from '../common/helpers/animatedAssets';
 import renderText from '../common/helpers/renderText';
 
@@ -18,7 +17,6 @@ import styles from './RequirementToContactMessage.module.scss';
 
 type OwnProps = {
   peerId: string;
-  paidMessagesStars?: number;
 };
 
 type StateProps = {
@@ -27,7 +25,7 @@ type StateProps = {
 };
 
 function RequirementToContactMessage({
-  patternColor, peer, paidMessagesStars,
+  patternColor, peer,
 }: OwnProps & StateProps) {
   const lang = useLang();
 
@@ -46,22 +44,7 @@ function RequirementToContactMessage({
           <Icon name="comments" className={styles.commentsIcon} />
         </div>
         <span className={styles.description}>
-          {
-            paidMessagesStars
-              ? lang(isApiPeerUser(peer) ? 'MessagesPlaceholderPaidUser' : 'MessagesPlaceholderPaidChannel', {
-                peer: getPeerTitle(lang, peer),
-                amount: formatStarsAsIcon(lang,
-                  paidMessagesStars,
-                  {
-                    asFont: true,
-                    containerClassName: styles.starIconContainer,
-                  }),
-              }, {
-                withNodes: true,
-                withMarkdown: true,
-              })
-              : renderText(lang('MessageLockedPremium', { peer: getPeerTitle(lang, peer) }), ['simple_markdown'])
-          }
+          {renderText(lang('MessageLockedPremium', { peer: getPeerTitle(lang, peer) }), ['simple_markdown'])}
         </span>
       </div>
     </div>

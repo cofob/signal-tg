@@ -18,7 +18,6 @@ import { getUsernameFromDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { pick } from '../../../util/iteratees.ts';
 import { type AdvancedLangFnParameters, getTranslationFn } from '../../../util/localization';
-import { formatStarsAsText } from '../../../util/localization/format';
 import requestActionTimeout from '../../../util/requestActionTimeout';
 import { debounce } from '../../../util/schedulers';
 import { extractCurrentThemeParams } from '../../../util/themeStyle';
@@ -77,7 +76,7 @@ import {
 } from '../../selectors';
 import { selectDraft, selectThreadIdFromMessage } from '../../selectors/threads.ts';
 import { fetchChatByUsername } from './chats';
-import { getPeerStarsForMessage, sendEphemeralMessages } from './messages';
+import { sendEphemeralMessages } from './messages';
 
 import { getIsWebAppsFullscreenSupported } from '../../../hooks/useAppLayout';
 
@@ -465,7 +464,7 @@ addActionHandler('switchBotInline', (global, actions, payload): ActionReturnType
 
 addActionHandler('sendInlineBotApiResult', async (global, actions, payload): Promise<void> => {
   const {
-    chat, id, queryId, replyInfo, sendAs, isSilent, scheduledAt, allowPaidStars,
+    chat, id, queryId, replyInfo, sendAs, isSilent, scheduledAt,
   } = payload;
 
   await callApi('sendInlineBotResult', {
@@ -476,13 +475,10 @@ addActionHandler('sendInlineBotApiResult', async (global, actions, payload): Pro
     sendAs,
     isSilent,
     scheduleDate: scheduledAt,
-    allowPaidStars,
   });
-
-  if (allowPaidStars) actions.loadStarStatus();
 });
 
-addActionHandler('sendInlineBotResult', async (global, actions, payload): Promise<void> => {
+addActionHandler('sendInlineBotResult', (global, actions, payload): ActionReturnType => {
   const {
     id, queryId, isSilent, scheduledAt, threadId, chatId,
     tabId = getCurrentTabId(),
@@ -501,7 +497,6 @@ addActionHandler('sendInlineBotResult', async (global, actions, payload): Promis
   actions.resetDraftReplyInfo({ chatId, threadId });
   actions.clearWebPagePreview({ chatId, threadId });
 
-  const starsForOneMessage = await getPeerStarsForMessage(global, chatId);
   const params = {
     chat,
     id,
@@ -510,32 +505,13 @@ addActionHandler('sendInlineBotResult', async (global, actions, payload): Promis
     sendAs: selectSendAs(global, chatId),
     isSilent,
     scheduledAt,
-    allowPaidStars: starsForOneMessage,
   };
 
   if (!scheduledAt) {
     actions.animateMessageSending({ chatId, threadId, tabId });
   }
 
-  if (!starsForOneMessage) {
-    actions.sendInlineBotApiResult(params);
-    return;
-  }
-
-  actions.sendInlineBotApiResult({ ...params });
-
-  actions.showNotification({
-    localId: queryId,
-    title: { key: 'MessageSentPaidToastTitle', variables: { count: 1 }, options: { pluralValue: 1 } },
-    message: {
-      key: 'MessageSentPaidToastText', variables: { amount: formatStarsAsText(getTranslationFn(), starsForOneMessage) },
-    },
-
-    icon: 'star',
-    shouldUseCustomIcon: true,
-    type: 'paidMessage',
-    tabId,
-  });
+  actions.sendInlineBotApiResult(params);
 });
 
 addActionHandler('resetInlineBot', (global, actions, payload): ActionReturnType => {

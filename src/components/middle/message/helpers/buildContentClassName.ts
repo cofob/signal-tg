@@ -3,7 +3,6 @@ import type { IAlbum } from '../../../../types';
 
 import { EMOJI_SIZES, MESSAGE_CONTENT_CLASS_NAME } from '../../../../config';
 import { getMessageContent, getRichMessageAudios, isMessageUnsupported } from '../../../../global/helpers';
-import getSingularPaidMedia from './getSingularPaidMedia';
 
 export function buildContentClassName(
   message: ApiMessage,
@@ -44,12 +43,9 @@ export function buildContentClassName(
     hasOutsideReactions?: boolean;
   } = {},
 ) {
-  const { paidMedia } = getMessageContent(message);
-  const { photo: paidMediaPhoto, video: paidMediaVideo } = getSingularPaidMedia(paidMedia);
-
   const content = getMessageContent(message);
   const {
-    photo = paidMediaPhoto, video = paidMediaVideo,
+    photo, video,
     audio, voice, document, contact, location, storyData,
     richMessage, widget,
   } = content;
@@ -63,7 +59,7 @@ export function buildContentClassName(
 
   const classNames = [MESSAGE_CONTENT_CLASS_NAME];
   const pollMedia = poll?.attachedMedia;
-  const isMedia = storyData || photo || video || location || paidMedia
+  const isMedia = storyData || photo || video || location
     || pollMedia?.photo || pollMedia?.video || pollMedia?.location;
   const hasText = text || location?.mediaType === 'venue' || isGeoLiveActive || hasFactCheck || poll;
   const isMediaWithNoText = isMedia && !hasText;

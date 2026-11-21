@@ -18,23 +18,15 @@
 
   background: rgba(#999999, 0.6);
 
-  .message-price,
   .message-time,
   .message-imported,
   .message-signature,
   .message-views,
   .message-replies,
   .message-translated,
-  .message-pinned,
-  .message-effect-icon {
+  .message-pinned {
     font-size: 0.75rem;
     white-space: nowrap;
-  }
-
-  .message-price {
-    display: inline-flex;
-    align-items: center;
-    margin-inline-end: 0.25rem;
   }
 
   .message-replies-wrapper {
@@ -52,15 +44,6 @@
 
   .message-translated {
     margin-inline-end: 0.25rem;
-  }
-
-  .message-effect-icon {
-    margin-inline-end: 0.25rem;
-    color: inherit;
-    & > .emoji {
-      width: 1rem !important;
-      height: 1rem !important;
-    }
   }
 
   .message-pinned {
@@ -165,6 +148,16 @@
 
     .Message.own & {
       color: var(--color-accent-own);
+    }
+
+    // Delivered checks are grey; over media they keep the overlay text color
+    .Message.own &.MessageOutgoingStatus--delivered {
+      color: var(--color-icon-secondary);
+    }
+
+    .media.no-footer &.MessageOutgoingStatus--delivered,
+    .message-content.widget-time-overlay &.MessageOutgoingStatus--delivered {
+      color: inherit;
     }
   }
 

@@ -63,8 +63,7 @@ import {
 } from '../../../util/iteratees';
 import { getMessageKey, isLocalMessageId } from '../../../util/keys/messageKey';
 import { parseTranslationCacheKey } from '../../../util/keys/translationKey';
-import { getTranslationFn, type RegularLangFnParameters } from '../../../util/localization';
-import { formatStarsAsText } from '../../../util/localization/format';
+import { getTranslationFn } from '../../../util/localization';
 import { debounce, onTickEnd, rafPromise } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
 import { cancelVideoAttachmentProcessing, processVideoAttachment } from '../../../util/videoProcessingQueue';
@@ -85,8 +84,6 @@ import {
   runForFocusedTabs,
   splitMessagesForForwarding,
 } from '../../helpers';
-import { isChatAdmin } from '../../helpers/chats';
-import { isApiPeerChat } from '../../helpers/peers';
 import {
   addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
 } from '../../index';
@@ -150,14 +147,12 @@ import {
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
-  selectIsMonoforumAdmin,
   selectLanguageCode,
   selectListedIds,
   selectMessageIdsByGroupId,
   selectMessageReplyInfo,
   selectOutlyingListByMessageId,
   selectPeer,
-  selectPeerPaidMessagesStars,
   selectPeerStory,
   selectPinnedIds,
   selectPollFromMessage,
@@ -174,7 +169,7 @@ import {
   selectViewportIds,
   selectWebPage,
 } from '../../selectors';
-import { makeTrackKeyFromItem, selectPlaybackMedia } from '../../selectors/audioPlayer';
+import { selectPlaybackMedia } from '../../selectors/audioPlayer';
 import {
   selectDraft,
   selectEditingId,
@@ -217,7 +212,6 @@ const VIDEO_PROCESSING_FAILED_ERROR = 'VIDEO_PROCESSING_FAILED';
 const VIDEO_PROCESSING_PROGRESS_SHARE = 0.33;
 
 const ttlCleanupTimersByChatId = new Map<string, { timer: number; expiresAt: number }>();
-const audioForwardTokens = new Map<number, symbol>();
 // Latest preview request per thread, so a slower older response can't overwrite a newer one or a clear
 const webPagePreviewTokens = new Map<string, symbol>();
 
@@ -614,8 +608,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const lastMessageId = threadId === MAIN_THREAD_ID
     ? selectChatLastMessageId(global, chatId!) : threadInfo?.lastMessageId;
 
-  const messagePriceInStars = await getPeerStarsForMessage(global, chatId!);
-
   const suggestedMessage = draftReplyInfo && draftSuggestedPostInfo
     ? selectChatMessage(global, chatId!, draftReplyInfo.replyToMsgId) : undefined;
   let suggestedMedia: MediaContent | undefined;
@@ -651,13 +643,11 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     noWebPage: selectNoWebPage(global, chatId!, threadId!),
     sendAs: selectSendAs(global, chatId!),
     lastMessageId,
-    messagePriceInStars,
     isStoryReply,
     dice,
     text: !dice && !payload.richMessage ? payload.text : undefined,
     entities: payload.richMessage ? undefined : payload.entities,
     richMessage: payload.richMessage,
-    isPending: messagePriceInStars ? true : undefined,
     ...suggestedMessage && { isInvertedMedia: suggestedMessage?.isInvertedMedia },
   };
 
@@ -692,7 +682,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
 
   const isSingle = (!payload.attachments || payload.attachments.length <= 1) && !isForwarding;
   const isGrouped = !isSingle && payload.shouldGroupMessages;
-  const localMessages: SendMessageParams[] = [];
   const queuedSends: SendMessageParams[] = [];
 
   if (isSingle) {
@@ -799,15 +788,10 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     global = updateTabState(global, { forwardMessages: {}, isShareMessageModalShown: false }, tabId);
     setGlobal(global);
   }
-  await sendWithVideoProcessing(global, queuedSends, localMessages, tabId);
+  await sendWithVideoProcessing(global, queuedSends, tabId);
   if (isForwarding) {
-    const localForwards = await executeForwardMessages(forwardingGlobal, params, tabId);
-    if (localForwards) {
-      localMessages.push(...localForwards);
-    }
+    executeForwardMessages(forwardingGlobal, params, tabId);
   }
-  global = getGlobal();
-  if (localMessages?.length) sendMessagesWithNotification(global, localMessages);
 });
 
 addActionHandler('sendInviteMessages', async (global, actions, payload): Promise<void> => {
@@ -961,7 +945,6 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
     text: richMessage ? undefined : text,
     richMessage,
     replyInfo: currentDraft?.replyInfo,
-    effectId: currentDraft?.effectId,
     suggestedPostInfo: currentDraft?.suggestedPostInfo,
   };
 
@@ -1150,27 +1133,6 @@ addActionHandler('initDraftFromSuggestedMessage', (global, actions, payload): Ac
   });
 });
 
-addActionHandler('saveEffectInDraft', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, threadId, effectId,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const currentDraft = selectDraft(global, chatId, threadId);
-  if (chat?.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
-    return; // Monoforum doesn't support drafts outside threads
-  }
-
-  const newDraft = {
-    ...currentDraft,
-    effectId,
-  };
-
-  saveDraft({
-    global, chatId, threadId, draft: newDraft, isLocalOnly: true, noLocalTimeUpdate: true,
-  });
-});
-
 addActionHandler('updateInsertingPeerIdMention', (global, actions, payload): ActionReturnType => {
   const { peerId, tabId = getCurrentTabId() } = payload || {};
   return updateTabState(global, {
@@ -1332,25 +1294,6 @@ addActionHandler('deleteEphemeralMessage', async (global, actions, payload): Pro
       actions.showNotification({ message: { key: 'ErrorUnspecified' }, tabId });
     });
   }
-});
-
-addActionHandler('resetLocalPaidMessages', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  const notifications = selectTabState(global, tabId).notifications;
-  if (!notifications || !notifications.length) return global;
-
-  notifications.forEach((notification) => {
-    if (notification.type === 'paidMessage') {
-      const action = notification.dismissAction;
-      if (action && !Array.isArray(action)) {
-        // @ts-ignore
-        actions[action.action](action.payload);
-      }
-      actions.dismissNotification({ localId: notification.localId, tabId });
-    }
-  });
-  return global;
 });
 
 addActionHandler('deleteParticipantHistory', (global, actions, payload): ActionReturnType => {
@@ -2049,14 +1992,12 @@ addActionHandler('forwardMessages', (global, actions, payload): ActionReturnType
   executeForwardMessages(global, { chat: toChat, isSilent, scheduledAt, scheduleRepeatPeriod }, tabId);
 });
 
-async function executeForwardMessages(global: GlobalState, sendParams: SendMessageParams, tabId: number) {
+function executeForwardMessages(global: GlobalState, sendParams: SendMessageParams, tabId: number) {
   const { forwardMessages } = selectTabState(global, tabId);
   const {
     fromChatId, messageIds, toChatId, withMyScore, noAuthors, noCaptions, toThreadId = MAIN_THREAD_ID,
   } = forwardMessages;
-  const { messagePriceInStars, isSilent, scheduledAt, scheduleRepeatPeriod, effectId, attachments } = sendParams;
-  const isForwardOnly = !sendParams.text && !sendParams.richMessage && !attachments?.length;
-  const forwardEffectId = isForwardOnly ? effectId : undefined;
+  const { isSilent, scheduledAt, scheduleRepeatPeriod } = sendParams;
 
   const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const isToMainThread = toThreadId === MAIN_THREAD_ID;
@@ -2078,7 +2019,6 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
   const sendAs = selectSendAs(global, toChatId!);
   const draft = selectDraft(global, toChatId!, toThreadId || MAIN_THREAD_ID);
   const lastMessageId = selectChatLastMessageId(global, toChat.id);
-  const localMessages: SendMessageParams[] = [];
 
   const [realMessages, serviceMessages] = partition(messages, (m) => !isServiceNotificationMessage(m));
   const forwardableRealMessages = realMessages.filter((message) => selectCanForwardMessage(global, message));
@@ -2107,20 +2047,9 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
         isCurrentUserPremium,
         wasDrafted: Boolean(draft),
         lastMessageId,
-        messagePriceInStars,
-        effectId: forwardEffectId,
       };
 
-      if (!messagePriceInStars) {
-        callApi('forwardMessages', forwardParams);
-      } else {
-        const forwardedLocalMessagesSlice = await callApi('forwardMessagesLocal', forwardParams);
-        localMessages.push({
-          ...sendParams,
-          forwardParams: { ...forwardParams, forwardedLocalMessagesSlice },
-          forwardedLocalMessagesSlice,
-        });
-      }
+      callApi('forwardMessages', forwardParams);
     }
   }
 
@@ -2143,7 +2072,7 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
       lastMessageId,
     };
 
-    await sendMessageOrReduceLocal(global, params, localMessages);
+    sendMessage(global, params);
   }
 
   global = getGlobal();
@@ -2154,7 +2083,6 @@ async function executeForwardMessages(global: GlobalState, sendParams: SendMessa
     }, tabId);
     setGlobal(global);
   }
-  return localMessages;
 }
 
 function cleanupExpiredMessagesForChat(
@@ -2408,58 +2336,14 @@ function getViewportSlice(
   return { newViewportIds, areSomeLocal, areAllLocal };
 }
 
-export async function getPeerStarsForMessage<T extends GlobalState>(
-  global: T,
-  peerId: string,
-): Promise<number | undefined> {
-  const peer = selectPeer(global, peerId);
-  if (!peer) return undefined;
-
-  if (isApiPeerChat(peer)) {
-    if (isChatAdmin(peer) || selectIsMonoforumAdmin(global, peerId)) {
-      return undefined;
-    }
-    return peer.paidMessagesStars;
-  }
-
-  if (!peer?.paidMessagesStars) return undefined;
-
-  const fullInfo = selectUserFullInfo(global, peer.id);
-  if (fullInfo) {
-    return fullInfo.paidMessagesStars;
-  }
-
-  const result = await callApi('fetchPaidMessagesStarsAmount', peer);
-  return result;
-}
-
-async function sendMessageOrReduceLocal<T extends GlobalState>(
-  global: T,
-  sendParams: SendMessageParams,
-  localMessages: SendMessageParams[],
-) {
-  if (!sendParams.messagePriceInStars) {
-    sendMessage(global, sendParams);
-  } else {
-    const message = sendParams.localMessage || await callApi('sendMessageLocal', sendParams);
-    if (message) {
-      localMessages.push({
-        ...sendParams,
-        localMessage: message,
-      });
-    }
-  }
-}
-
 async function sendWithVideoProcessing<T extends GlobalState>(
   global: T,
   sends: SendMessageParams[],
-  localMessages: SendMessageParams[],
   tabId: number,
 ) {
   if (!sends.some(({ attachment }) => attachment?.videoProcessing)) {
     for (const sendParams of sends) {
-      await sendMessageOrReduceLocal(global, sendParams, localMessages);
+      sendMessage(global, sendParams);
     }
     return;
   }
@@ -2492,7 +2376,7 @@ async function sendWithVideoProcessing<T extends GlobalState>(
     const content = { ...localMessage!.content, text: orphanMessage!.content.text };
     return { ...sendParams, text, entities, localMessage: updateLocalMessageContent(localMessage!, content) };
   };
-  const flushPendingGroup = async () => {
+  const flushPendingGroup = () => {
     const group = pendingGroup.filter((sendParams) => {
       if (hasLocalMessage(sendParams)) return true;
       dropSend(sendParams);
@@ -2505,13 +2389,13 @@ async function sendWithVideoProcessing<T extends GlobalState>(
     if (group.length === 1) group[0] = { ...group[0], groupedId: undefined };
 
     for (const sendParams of group) {
-      await sendMessageOrReduceLocal(global, sendParams, localMessages);
+      sendMessage(global, sendParams);
     }
   };
 
   for (const sendParams of withLocalMessages) {
     if (pendingGroup.length && pendingGroup[0].groupedId !== sendParams.groupedId) {
-      await flushPendingGroup();
+      flushPendingGroup();
     }
 
     let prepared: SendMessageParams | undefined = hasLocalMessage(sendParams) ? sendParams : undefined;
@@ -2538,11 +2422,11 @@ async function sendWithVideoProcessing<T extends GlobalState>(
     if (prepared.groupedId) {
       pendingGroup.push(prepared);
     } else {
-      await sendMessageOrReduceLocal(global, takeOrphanCaption(prepared), localMessages);
+      sendMessage(global, takeOrphanCaption(prepared));
     }
   }
 
-  await flushPendingGroup();
+  flushPendingGroup();
 }
 
 function hasLocalMessage({ localMessage }: SendMessageParams) {
@@ -2774,90 +2658,6 @@ function cancelMessageUpload(message: ApiMessage) {
   if (progressCallback) cancelApiProgress(progressCallback);
 }
 
-async function sendMessagesWithNotification<T extends GlobalState>(
-  global: T,
-  allSendParams: SendMessageParams[],
-) {
-  const chat = allSendParams[0]?.chat;
-  if (!chat || !allSendParams.length) return;
-  const starsForOneMessage = await getPeerStarsForMessage(global, chat.id);
-  const sendParams = allSendParams.filter((params) => {
-    if (!params.localMessage || hasLocalMessage(params)) return true;
-    clearProcessedVideoProgress(getMessageKey(params.localMessage));
-    return false;
-  });
-  if (!sendParams.length) return;
-  if (!starsForOneMessage) {
-    getActions().sendMessages({ sendParams });
-    return;
-  }
-  const messageIdsForUndo = sendParams.reduce((ids, params) => {
-    if (params.localMessage?.id) {
-      ids.push(params.localMessage.id);
-    } else if (params.forwardedLocalMessagesSlice?.localMessages) {
-      const forwardedIds = Object.values(params.forwardedLocalMessagesSlice.localMessages)
-        .map((forwardedMessage) => forwardedMessage.id)
-        .filter(Boolean);
-      ids.push(...forwardedIds);
-    }
-    return ids;
-  }, [] as number[]);
-
-  const localForwards = sendParams[0]?.forwardedLocalMessagesSlice?.localMessages;
-  const firstMessage = sendParams[0]?.localMessage
-    || (localForwards && Object.values(localForwards)[0]);
-  if (!firstMessage) return;
-
-  const messagesCount = messageIdsForUndo.length;
-
-  const firstSendParam = sendParams[0];
-  let storySendMessage: RegularLangFnParameters | undefined;
-  if (sendParams.length === 1 && firstSendParam.isStoryReply) {
-    const { gif, sticker, isReaction } = firstSendParam;
-
-    if (gif) {
-      storySendMessage = { key: 'MessageSentPaidToastTitle', variables: { count: 1 }, options: { pluralValue: 1 } };
-    } else if (sticker) {
-      storySendMessage = { key: 'StoryTooltipStickerSent' };
-    } else if (isReaction) {
-      storySendMessage = { key: 'StoryTooltipReactionSent' };
-    }
-  }
-
-  const titleKey: RegularLangFnParameters = storySendMessage || {
-    key: 'MessageSentPaidToastTitle',
-    variables: { count: messagesCount },
-    options: { pluralValue: messagesCount },
-  };
-
-  getActions().sendMessages({ sendParams });
-
-  getActions().showNotification({
-    localId: getMessageKey(firstMessage),
-    title: titleKey,
-    message: {
-      key: 'MessageSentPaidToastText',
-      variables: { amount: formatStarsAsText(getTranslationFn(), starsForOneMessage * messagesCount) },
-    },
-    icon: 'star',
-    shouldUseCustomIcon: true,
-    type: 'paidMessage',
-  });
-}
-
-addActionHandler('sendMessages', async (global, actions, payload): Promise<void> => {
-  const { sendParams } = payload;
-  await Promise.all(sendParams.map(async (params) => {
-    if (params.forwardedLocalMessagesSlice && params.forwardParams) {
-      await rafPromise();
-      await callApi('forwardApiMessages', params.forwardParams);
-    } else {
-      await sendMessage(global, params);
-    }
-  }));
-  if (sendParams.length > 0 && sendParams[0].messagePriceInStars) actions.loadStarStatus();
-});
-
 addActionHandler('loadPinnedMessages', async (global, actions, payload): Promise<void> => {
   const { chatId, threadId } = payload;
   const chat = selectChat(global, chatId);
@@ -2933,29 +2733,6 @@ addActionHandler('loadSendAs', async (global, actions, payload): Promise<void> =
 
   global = getGlobal();
   global = updateChat(global, chatId, { sendAsPeerIds: result });
-  setGlobal(global);
-});
-
-addActionHandler('loadSendPaidReactionsAs', async (global, actions, payload): Promise<void> => {
-  const { chatId } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return;
-  }
-
-  const result = await callApi('fetchSendAs', { chat, isForPaidReactions: true });
-  if (!result) {
-    global = getGlobal();
-    global = updateChat(global, chatId, {
-      sendPaidReactionsAsPeerIds: [],
-    });
-    setGlobal(global);
-
-    return;
-  }
-
-  global = getGlobal();
-  global = updateChat(global, chatId, { sendPaidReactionsAsPeerIds: result });
   setGlobal(global);
 });
 
@@ -3412,7 +3189,6 @@ function forwardMessagesToChat({
   const lastMessageId = toThreadId === MAIN_THREAD_ID
     ? selectChatLastMessageId(global, toChat.id)
     : threadInfo?.lastMessageId;
-  const messagePriceInStars = selectPeerPaidMessagesStars(global, toChat.id);
   const targetMessageList = {
     chatId: toChat.id,
     threadId: toThreadId,
@@ -3426,7 +3202,6 @@ function forwardMessagesToChat({
       text: comment,
       sendAs,
       lastMessageId,
-      messagePriceInStars,
     });
   }
 
@@ -3454,7 +3229,6 @@ function forwardMessagesToChat({
           isCurrentUserPremium,
           wasDrafted: false,
           lastMessageId,
-          messagePriceInStars,
         };
 
         callApi('forwardMessages', forwardParams);
@@ -3475,7 +3249,6 @@ function forwardMessagesToChat({
       isSilent: true,
       sendAs,
       lastMessageId,
-      messagePriceInStars,
     });
   }
 }
@@ -3569,9 +3342,9 @@ addActionHandler('forwardStory', (global, actions, payload): ActionReturnType =>
   setGlobal(global);
 });
 
-addActionHandler('forwardAudio', async (global, actions, payload): Promise<void> => {
+addActionHandler('forwardAudio', (global, actions, payload): ActionReturnType => {
   const {
-    toChatId, toThreadId = MAIN_THREAD_ID, confirmedStars, tabId = getCurrentTabId(),
+    toChatId, toThreadId = MAIN_THREAD_ID, tabId = getCurrentTabId(),
   } = payload;
 
   const { audioItem } = selectTabState(global, tabId).forwardMessages;
@@ -3580,22 +3353,6 @@ addActionHandler('forwardAudio', async (global, actions, payload): Promise<void>
     return;
   }
 
-  const forwardToken = Symbol('audioForward');
-  audioForwardTokens.set(tabId, forwardToken);
-
-  const messagePriceInStars = await getPeerStarsForMessage(global, toChatId);
-
-  global = getGlobal();
-  if (audioForwardTokens.get(tabId) !== forwardToken) {
-    return;
-  }
-  const currentItem = selectTabState(global, tabId).forwardMessages.audioItem;
-  if (!currentItem || makeTrackKeyFromItem(currentItem) !== makeTrackKeyFromItem(audioItem)) {
-    return;
-  }
-  audioForwardTokens.delete(tabId);
-
-  // Resolved after the await, since the source message may have changed meanwhile
   const media = selectPlaybackMedia(global, audioItem);
   const audio = media?.mediaType === 'audio' ? media : undefined;
   const canForward = audioItem.type !== 'message'
@@ -3604,34 +3361,18 @@ addActionHandler('forwardAudio', async (global, actions, payload): Promise<void>
     return;
   }
 
-  if (messagePriceInStars) {
-    const shouldAutoApprove = global.settings.byKey.shouldPaidMessageAutoApprove;
-    if (messagePriceInStars !== confirmedStars && !shouldAutoApprove) {
-      global = updateTabState(global, {
-        forwardMessages: {
-          ...selectTabState(global, tabId).forwardMessages,
-          audioPendingSend: { toChatId, toThreadId, stars: messagePriceInStars },
-        },
-      }, tabId);
-      setGlobal(global);
-      return;
-    }
-  }
-
   const lastMessageId = selectChatLastMessageId(global, toChatId);
   const topicId = typeof toThreadId === 'number' && toThreadId !== MAIN_THREAD_ID ? toThreadId : undefined;
   void sendMessage(global, {
     chat: toChat,
     audio,
     lastMessageId,
-    messagePriceInStars,
-    isPending: messagePriceInStars ? true : undefined,
     replyInfo: topicId ? { type: 'message', replyToMsgId: topicId, replyToTopId: topicId } : undefined,
   });
 
   actions.showNotification({
     message: toChatId === global.currentUserId ? {
-      key: 'AudioForwardedToSaved',
+      key: 'AudioForwardedToNoteToSelf',
       options: { withNodes: true, withMarkdown: true },
     } : { key: 'AudioForwardedToChat' },
     tabId,
@@ -3658,7 +3399,7 @@ addActionHandler('sendAudioToSavedMessages', (global, actions, payload): ActionR
   });
 
   actions.showNotification({
-    message: { key: 'AudioForwardedToSaved', options: { withNodes: true, withMarkdown: true } },
+    message: { key: 'AudioForwardedToNoteToSelf', options: { withNodes: true, withMarkdown: true } },
     tabId,
   });
 });
@@ -3910,11 +3651,6 @@ addActionHandler('loadFactChecks', async (global, actions, payload): Promise<voi
   });
 
   setGlobal(global);
-});
-
-addActionHandler('loadPaidReactionPrivacy', (): ActionReturnType => {
-  callApi('fetchPaidReactionPrivacy');
-  return undefined;
 });
 
 addActionHandler('loadOutboxReadDate', async (global, actions, payload): Promise<void> => {

@@ -1,15 +1,12 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiAvailableEffect,
   ApiAvailableReaction,
   ApiMessageReactor,
-  ApiPaidReactionPrivacyType,
   ApiPeerReaction,
   ApiReaction,
   ApiReactionCount,
   ApiReactions,
-  ApiReactionWithPaid,
   ApiSavedReactionTag,
 } from '../../types';
 
@@ -31,9 +28,6 @@ export function buildMessageReactions(reactions: GramJs.MessageReactions): ApiRe
 }
 
 function reactionCountComparator(a: ApiReactionCount, b: ApiReactionCount) {
-  if (a.reaction.type === 'paid') return -1;
-  if (b.reaction.type === 'paid') return 1;
-
   const diff = b.count - a.count;
   if (diff) return diff;
 
@@ -49,7 +43,7 @@ function reactionCountComparator(a: ApiReactionCount, b: ApiReactionCount) {
 export function buildReactionCount(reactionCount: GramJs.ReactionCount): ApiReactionCount | undefined {
   const { chosenOrder, count, reaction } = reactionCount;
 
-  const apiReaction = buildApiReaction(reaction, true);
+  const apiReaction = buildApiReaction(reaction);
   if (!apiReaction) return undefined;
 
   return {
@@ -91,9 +85,7 @@ export function buildMessagePeerReaction(userReaction: GramJs.MessagePeerReactio
   };
 }
 
-export function buildApiReaction(reaction: GramJs.TypeReaction, withPaid?: never): ApiReaction | undefined;
-export function buildApiReaction(reaction: GramJs.TypeReaction, withPaid: true): ApiReactionWithPaid | undefined;
-export function buildApiReaction(reaction: GramJs.TypeReaction, withPaid?: true): ApiReactionWithPaid | undefined {
+export function buildApiReaction(reaction: GramJs.TypeReaction): ApiReaction | undefined {
   if (reaction instanceof GramJs.ReactionEmoji) {
     return {
       type: 'emoji',
@@ -105,12 +97,6 @@ export function buildApiReaction(reaction: GramJs.TypeReaction, withPaid?: true)
     return {
       type: 'custom',
       documentId: reaction.documentId.toString(),
-    };
-  }
-
-  if (withPaid && reaction instanceof GramJs.ReactionPaid) {
-    return {
-      type: 'paid',
     };
   }
 
@@ -149,34 +135,4 @@ export function buildApiAvailableReaction(availableReaction: GramJs.AvailableRea
     isInactive: inactive,
     isPremium: premium,
   };
-}
-
-export function buildApiAvailableEffect(availableEffect: GramJs.AvailableEffect): ApiAvailableEffect {
-  const {
-    id, emoticon, premiumRequired, staticIconId, effectStickerId, effectAnimationId,
-  } = availableEffect;
-
-  return {
-    id: id.toString(),
-    emoticon,
-    isPremium: premiumRequired,
-    staticIconId: staticIconId?.toString(),
-    effectStickerId: effectStickerId.toString(),
-    effectAnimationId: effectAnimationId?.toString(),
-  };
-}
-
-export function buildApiPaidReactionPrivacy(privacy: GramJs.TypePaidReactionPrivacy): ApiPaidReactionPrivacyType {
-  if (privacy instanceof GramJs.PaidReactionPrivacyAnonymous) {
-    return { type: 'anonymous' };
-  }
-
-  if (privacy instanceof GramJs.PaidReactionPrivacyPeer) {
-    return {
-      type: 'peer',
-      peerId: getApiChatIdFromMtpPeer(privacy.peer),
-    };
-  }
-
-  return { type: 'default' };
 }

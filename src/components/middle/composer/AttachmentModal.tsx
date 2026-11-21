@@ -26,7 +26,6 @@ import buildClassName from '../../../util/buildClassName';
 import captureEscKeyListener from '../../../util/captureEscKeyListener';
 import calcTextLineHeightAndCount from '../../../util/element/calcTextLineHeightAndCount';
 import { validateFiles } from '../../../util/files';
-import { formatStarsAsIcon } from '../../../util/localization/format';
 import { removeAllSelections } from '../../../util/selection';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
 import { LIMITS } from '../../../limits';
@@ -79,7 +78,6 @@ export type OwnProps = {
   canScheduleUntilOnline?: boolean;
   canSchedule?: boolean;
   canSendGifs?: boolean;
-  paidMessagesStars?: number;
   onSend: (sendCompressed: boolean, sendGrouped: boolean, isInvertedMedia?: true) => void;
   onFileAppend: (files: File[], isSpoiler?: boolean) => void;
   onAttachmentsUpdate: StateHookSetter<ApiAttachment[]>;
@@ -143,7 +141,6 @@ const AttachmentModal = ({
   canScheduleUntilOnline,
   canSchedule,
   canSendGifs,
-  paidMessagesStars,
   shouldOpenMessageMediaEditor,
   messageMediaEditorVideoTime,
   aiMessageEditorPendingResult,
@@ -828,14 +825,6 @@ const AttachmentModal = ({
     );
   }
 
-  const paidSendButtonCaption = paidMessagesStars ? formatStarsAsIcon(
-    lang,
-    attachmentsLength * paidMessagesStars,
-    {
-      asFont: true,
-    },
-  ) : undefined;
-
   return (
     <Modal
       isOpen={isOpen}
@@ -954,11 +943,11 @@ const AttachmentModal = ({
                 disabled={hasPreparingAttachments}
                 onClick={handleSendClick}
                 onContextMenu={canShowCustomSendMenu ? handleContextMenu : undefined}
-                iconName={!editingMessage && !shouldSchedule && !paidMessagesStars ? 'new-send' : undefined}
+                iconName={!editingMessage && !shouldSchedule ? 'new-send' : undefined}
                 iconClassName={styles.sendIcon}
               >
                 {shouldSchedule && !editingMessage ? lang('Next')
-                  : editingMessage ? lang('Save') : paidSendButtonCaption}
+                  : editingMessage ? lang('Save') : undefined}
               </Button>
               {canShowCustomSendMenu && (
                 <CustomSendMenu

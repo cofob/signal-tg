@@ -42,6 +42,8 @@
   background-color: var(--color-background-secondary);
   background-position: center;
   background-size: cover;
+  // Outlines tiles that match the settings surface, such as Signal's white chat background
+  box-shadow: inset 0 0 0 1px var(--color-borders);
 }
 
 .wallpaper,
@@ -137,7 +139,13 @@
   transform: scale(1);
 }
 
-.defaultIcon {
-  font-size: 1.5rem;
-  color: var(--color-text-secondary);
+.label {
+  position: absolute;
+  right: 0;
+  bottom: 0.625rem;
+  left: 0;
+
+  font-size: 0.8125rem;
+  font-weight: var(--font-weight-medium);
+  text-align: center;
 }

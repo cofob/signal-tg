@@ -39,7 +39,9 @@ export type RegistrationErrorReason =
   | 'codeSendFailed'
   | 'codeNotDeliverable'
   | 'registrationLock'
-  | 'rejected';
+  | 'rejected'
+  // The request did not reach Signal: the tunnel is down or does not answer
+  | 'network';
 
 type SessionResponse = Omit<VerificationSession, 'id' | 'requestedInformation'> & {
   id?: string;
@@ -65,6 +67,7 @@ type RegistrationKeys = {
 export class RegistrationError extends Error {
   constructor(
     readonly reason: RegistrationErrorReason,
+    // 0 when the request did not reach Signal
     readonly status: number,
     // Seconds from `Retry-After` of a 429 response
     readonly retryAfter?: number,
@@ -225,8 +228,6 @@ export async function registerAccount(store: SignalStore, {
     isRegistrationPending: true,
   };
   await store.setItem('account', account);
-  // Our own profile is fetched like a contact's, with the key from our recipient record
-  await store.updateRecipient(aci, { profileKey });
   return account;
 }
 
@@ -264,7 +265,7 @@ function getSessionPath(sessionId: string) {
   return `${SESSION_PATH}/${sessionId}`;
 }
 
-function sendRegistrationRequest(
+async function sendRegistrationRequest(
   method: string,
   path: string,
   json: unknown,
@@ -273,9 +274,13 @@ function sendRegistrationRequest(
 ) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...extraHeaders };
   if (credentials) headers.Authorization = getBasicAuthorization(credentials);
-  return sendHttpRequest(SIGNAL_CHAT_HOST, {
-    method, path, headers, body: encodeUtf8(JSON.stringify(json)),
-  });
+  try {
+    return await sendHttpRequest(SIGNAL_CHAT_HOST, {
+      method, path, headers, body: encodeUtf8(JSON.stringify(json)),
+    });
+  } catch {
+    throw new RegistrationError('network', 0);
+  }
 }
 
 /** Maps the statuses that verification session endpoints share (libsignal-net `ws/registration/error.rs`) */

@@ -4,6 +4,7 @@
 #![allow(non_snake_case)]
 
 mod account_keys;
+mod backups;
 mod cipher;
 mod error;
 mod handles;

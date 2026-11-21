@@ -14,6 +14,7 @@ import useHistoryBack from '../../hooks/useHistoryBack';
 import Transition from '../ui/Transition';
 import AuthCaptcha from './AuthCaptcha';
 import AuthCode from './AuthCode.async';
+import AuthHistorySync from './AuthHistorySync';
 import AuthPassword from './AuthPassword.async';
 import AuthPhoneNumber from './AuthPhoneNumber';
 import AuthQrCode from './AuthQrCode';
@@ -23,10 +24,12 @@ import './Auth.scss';
 
 type StateProps = {
   authState: GlobalState['auth']['state'];
+  isSyncingHistory: boolean;
 };
 
 const Auth = ({
   authState,
+  isSyncingHistory,
 }: StateProps) => {
   const { goToAuthQrCode } = getActions();
 
@@ -54,6 +57,8 @@ const Auth = ({
         return <AuthPhoneNumber />;
       case 'authorizationStateWaitCaptcha':
         return <AuthCaptcha />;
+      case 'authorizationStateWaitQrCode':
+        return isSyncingHistory ? <AuthHistorySync /> : <AuthQrCode />;
       default:
         return <AuthQrCode />;
     }
@@ -70,7 +75,9 @@ const Auth = ({
       case 'authorizationStateWaitPhoneNumber':
         return 3;
       case 'authorizationStateWaitCaptcha':
-        return 5;
+        return 6;
+      case 'authorizationStateWaitQrCode':
+        return isSyncingHistory ? 5 : 4;
       default:
         return 4;
     }
@@ -92,6 +99,7 @@ export default memo(withGlobal(
   (global): Complete<StateProps> => {
     return {
       authState: global.auth.state,
+      isSyncingHistory: Boolean(global.auth.historySync),
     };
   },
 )(Auth));

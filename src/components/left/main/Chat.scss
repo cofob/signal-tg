@@ -468,3 +468,26 @@
     }
   }
 }
+
+// Signal marks the open chat with a gray row, which keeps the regular colors
+@media (min-width: 600px) {
+  html.theme-signal .Chat.selected:not(.forum) {
+    .title .custom-emoji {
+      color: var(--color-primary);
+    }
+
+    .icon-muted {
+      color: var(--color-list-icon) !important;
+    }
+
+    .ListItem-button {
+      --color-text: inherit;
+      --color-text-meta-colored: inherit;
+      --color-text-meta: inherit;
+      --color-text-secondary: inherit;
+      --color-error: inherit;
+      --color-list-icon: inherit;
+      --color-chat-username: inherit;
+    }
+  }
+}

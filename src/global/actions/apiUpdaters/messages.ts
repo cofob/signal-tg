@@ -1,5 +1,5 @@
 import type {
-  ApiMediaExtendedPreview, ApiMessage, ApiReactions,
+  ApiMessage, ApiReactions,
   ApiWebPage,
 } from '../../../api/types';
 import type { ActiveEmojiInteraction, ThreadId } from '../../../types';
@@ -24,7 +24,6 @@ import { onTickEnd } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
 import { callApi } from '../../../api/gramjs';
 import {
-  addPaidReaction,
   checkIfHasUnreadReactions,
   createApiMessageFromTypingDraft,
   getIsSavedDialog,
@@ -1141,34 +1140,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
-    case 'updateMessageExtendedMedia': {
-      const {
-        chatId, id, extendedMedia, isBought,
-      } = update;
-      const message = selectChatMessage(global, chatId, id);
-      const chat = selectChat(global, update.chatId);
-
-      if (!chat || !message) return;
-
-      if (message.content.paidMedia) {
-        const paidMediaUpdate = isBought ? { isBought, extendedMedia }
-          : { extendedMedia: extendedMedia as ApiMediaExtendedPreview[], isBought: undefined };
-
-        global = updateChatMessage(global, chatId, id, {
-          content: {
-            ...message.content,
-            paidMedia: {
-              ...message.content.paidMedia,
-              ...paidMediaUpdate,
-            },
-          },
-        });
-        setGlobal(global);
-      }
-
-      break;
-    }
-
     case 'updateTranscribedAudio': {
       const { transcriptionId, text, isPending } = update;
 
@@ -1363,13 +1334,6 @@ function updateReactions<T extends GlobalState>(
   // `updateMessageReactions` happens with an interval, so we try to avoid redundant global state updates
   if (currentReactions && areDeepEqual(reactions, currentReactions)) {
     return global;
-  }
-
-  const localPaidReaction = currentReactions?.results.find((r) => r.localAmount);
-  // Save local count on update, but reset if we sent reaction
-  if (localPaidReaction?.localAmount) {
-    const { localIsPrivate: isPrivate, localAmount, localPeerId } = localPaidReaction;
-    reactions.results = addPaidReaction(reactions.results, localAmount, isPrivate, localPeerId);
   }
 
   global = updateChatMessage(global, chatId, id, { reactions });

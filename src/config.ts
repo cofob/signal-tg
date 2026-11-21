@@ -4,7 +4,7 @@ import type {
 
 export const APP_CODE_NAME = 'A';
 export const APP_ENV = import.meta.env.TG_APP_ENV;
-export const APP_NAME = import.meta.env.TG_APP_NAME || `Telegram Web ${APP_CODE_NAME}`;
+export const APP_NAME = import.meta.env.TG_APP_NAME || 'TeleSignal';
 
 export const BASE_URL = import.meta.env.TG_PUBLIC_URL;
 export const ACCOUNT_QUERY = 'account';
@@ -22,7 +22,7 @@ export const STRICTERDOM_ENABLED = DEBUG;
 export const DEBUG_GRAMJS = false;
 
 export const PAGE_TITLE = import.meta.env.TG_APP_TITLE;
-export const PAGE_TITLE_TAURI = 'Telegram Air';
+export const PAGE_TITLE_TAURI = APP_NAME;
 export const TELEGRAM_API_ID = Number(import.meta.env.TG_TELEGRAM_API_ID);
 export const TELEGRAM_API_HASH = import.meta.env.TG_TELEGRAM_API_HASH;
 export const TEST_SESSION = import.meta.env.TG_TEST_SESSION;
@@ -119,11 +119,6 @@ export const TOPICS_SLICE = 20;
 export const TOPICS_SLICE_SECOND_LOAD = 500;
 
 export const TOP_CHAT_MESSAGES_PRELOAD_LIMIT = 20;
-
-
-export const DEFAULT_CHARGE_FOR_MESSAGES = 250;
-export const MINIMUM_CHARGE_FOR_MESSAGES = 1;
-export const DEFAULT_MAXIMUM_CHARGE_FOR_MESSAGES = 10000;
 
 export const DEFAULT_VOLUME = 1;
 export const DEFAULT_PLAYBACK_RATE = 1;
@@ -276,8 +271,6 @@ export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
 export const COLLECTIBLE_STATUS_SET_ID = 'collectibleStatus';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
-export const EFFECT_STICKERS_SET_ID = 'effectStickers';
-export const EFFECT_EMOJIS_SET_ID = 'effectEmojis';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
 export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
 export const DEFAULT_STATUS_ICON_ID = 'status-default-icon';
@@ -383,7 +376,6 @@ export const REPLIES_USER_ID = '1271266957'; // TODO For Test connection ID must
 export const VERIFICATION_CODES_USER_ID = '489000';
 export const ANONYMOUS_USER_ID = '2666000';
 export const RESTRICTED_EMOJI_SET_ID = '7173162320003080';
-export const COCOON_EMOJI_ID = '5197252827247841976';
 export const LOCAL_MESSAGES_LIMIT = 1e6; // 1M
 export const CHANNEL_ID_BASE = 10n ** 12n;
 export const DEFAULT_GIF_SEARCH_BOT_USERNAME = 'gif';

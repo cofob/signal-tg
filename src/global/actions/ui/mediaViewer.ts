@@ -15,7 +15,7 @@ import { selectTimestampableMedia } from '../../selectors/media';
 addActionHandler('openMediaViewer', (global, actions, payload): ActionReturnType => {
   const {
     chatId, threadId = MAIN_THREAD_ID, messageId, timestamp, mediaIndex, isAvatarView, origin,
-    withDynamicLoading, standaloneMedia, pageMedia, tabId = getCurrentTabId(),
+    withDynamicLoading, standaloneMedia, pageMedia, viewOnceMessage, tabId = getCurrentTabId(),
   } = payload;
 
   const tabState = selectTabState(global, tabId);
@@ -35,6 +35,7 @@ addActionHandler('openMediaViewer', (global, actions, payload): ActionReturnType
       withDynamicLoading,
       timestamp,
       shouldLandInMediaEditor: undefined,
+      viewOnceMessage,
     },
     forwardMessages: {},
     isShareMessageModalShown: false,
@@ -44,8 +45,13 @@ addActionHandler('openMediaViewer', (global, actions, payload): ActionReturnType
 addActionHandler('closeMediaViewer', (global, actions, payload): ActionReturnType => {
   const { shouldLandInMediaEditor, tabId = getCurrentTabId() } = payload || {};
   const {
-    volume, isMuted, playbackRate, isHidden,
+    volume, isMuted, playbackRate, isHidden, viewOnceMessage,
   } = selectTabState(global, tabId).mediaViewer;
+
+  // Marking view-once media viewed erases it, so it waits until the viewer that loads it closes
+  if (viewOnceMessage) {
+    actions.markMessagesRead({ chatId: viewOnceMessage.chatId, messageIds: [viewOnceMessage.messageId] });
+  }
 
   return updateTabState(global, {
     mediaViewer: {

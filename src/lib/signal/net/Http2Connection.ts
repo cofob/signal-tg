@@ -757,8 +757,9 @@ function readUint32(bytes: Uint8Array, offset: number) {
   return new DataView(bytes.buffer, bytes.byteOffset + offset, 4).getUint32(0);
 }
 
-function concatBytes(chunks: Uint8Array[]) {
-  if (chunks.length === 1) return chunks[0];
+function concatBytes(chunks: Uint8Array[]): Uint8Array<ArrayBuffer> {
+  // `slice` copies into a fresh `ArrayBuffer`, which `HttpResponse.body` requires
+  if (chunks.length === 1) return chunks[0].slice();
   const result = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.length, 0));
   let offset = 0;
   for (const chunk of chunks) {

@@ -73,14 +73,20 @@ addCallback((global: GlobalState) => {
   const oldThemeSettings = oldSharedSettings.themes[oldSharedSettings.theme];
 
   if (sharedSettings.theme !== oldSharedSettings.theme
-    || themeSettings?.serverThemeSettings !== oldThemeSettings?.serverThemeSettings) {
+    || themeSettings?.serverThemeSettings !== oldThemeSettings?.serverThemeSettings
+    || themeSettings?.isSignalTheme !== oldThemeSettings?.isSignalTheme) {
     const withThemeAnimation = document.hasFocus() && selectCanAnimateInterface(global);
-    const palette = buildThemePalette(sharedSettings.theme, themeSettings?.serverThemeSettings);
-    const oldPalette = buildThemePalette(oldSharedSettings.theme, oldThemeSettings?.serverThemeSettings);
+    const palette = buildThemePalette(
+      sharedSettings.theme, themeSettings?.serverThemeSettings, themeSettings?.isSignalTheme,
+    );
+    const oldPalette = buildThemePalette(
+      oldSharedSettings.theme, oldThemeSettings?.serverThemeSettings, oldThemeSettings?.isSignalTheme,
+    );
     const shouldSnapMessageColors = hasActiveThemeTransition(document.documentElement)
       || !isThemePaletteTransitionSafe(oldPalette, palette);
 
-    switchTheme(sharedSettings.theme, withThemeAnimation, palette.variables, shouldSnapMessageColors);
+    switchTheme(sharedSettings.theme, withThemeAnimation, palette.variables, shouldSnapMessageColors,
+      themeSettings?.isSignalTheme);
   }
 
   if (sharedSettings.language !== oldSharedSettings.language) {

@@ -1,5 +1,7 @@
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
-import type { ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem } from './messages';
+import type {
+  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem, ApiVideo,
+} from './messages';
 import type { ApiWallpaper } from './misc';
 import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiBirthday } from './users';
@@ -204,22 +206,6 @@ export interface ApiMessageActionExpiredContent extends ActionMediaType {
   isRoundVideo?: true;
 }
 
-export interface ApiMessageActionPaidMessagesRefunded extends ActionMediaType {
-  type: 'paidMessagesRefunded';
-  count: number;
-  stars: number;
-}
-
-export interface ApiMessageActionNoPaidMessagesTokenUsed extends ActionMediaType {
-  type: 'noPaidMessagesTokenUsed';
-}
-
-export interface ApiMessageActionPaidMessagesPrice extends ActionMediaType {
-  type: 'paidMessagesPrice';
-  stars: number;
-  isAllowedInChannel?: boolean;
-}
-
 export interface ApiMessageActionSuggestedPostApproval extends ActionMediaType {
   type: 'suggestedPostApproval';
   isRejected?: boolean;
@@ -287,7 +273,23 @@ export interface ApiMessageActionUnsupported extends ActionMediaType {
   type: 'unsupported';
 }
 
-export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle
+// Signal: the placeholder of a message its author or a group admin deleted for everyone
+export interface ApiMessageActionDeleted extends ActionMediaType {
+  type: 'deleted';
+  // The group admin who deleted another member's message
+  adminId?: string;
+}
+
+// Signal: view-once media, `isViewed` once it was opened on any of our devices. `media` is the photo or video of
+// an incoming message not opened yet, which opens once in the media viewer.
+export interface ApiMessageActionViewOnce extends ActionMediaType {
+  type: 'viewOnce';
+  isViewed?: true;
+  media?: ApiPhoto | ApiVideo;
+}
+
+export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
+  | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate
   | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage
@@ -303,7 +305,6 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionCha
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined
-  | ApiMessageActionPaidMessagesRefunded | ApiMessageActionNoPaidMessagesTokenUsed | ApiMessageActionPaidMessagesPrice
   | ApiMessageActionSuggestedPostApproval
   | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund | ApiMessageActionTodoCompletions
   | ApiMessageActionTodoAppendTasks | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer

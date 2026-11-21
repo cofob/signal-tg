@@ -46,7 +46,6 @@ import {
   selectIsUserBlocked,
   selectNotifyDefaults,
   selectNotifyException,
-  selectPeerPaidMessagesStars,
   selectPinnedIds,
   selectShouldBlockSendInMonoforum,
   selectTabState,
@@ -164,7 +163,6 @@ type StateProps = {
   canShowOpenChatButton?: boolean;
   isContactRequirePremium?: boolean;
   topics?: Record<number, ApiTopic>;
-  paidMessagesStars?: number;
   isAccountFrozen?: boolean;
   freezeAppealChat?: ApiChat;
   shouldBlockSendInMonoforum?: boolean;
@@ -241,7 +239,6 @@ function MiddleColumn({
   canShowOpenChatButton,
   isContactRequirePremium,
   topics,
-  paidMessagesStars,
   isAccountFrozen,
   freezeAppealChat,
   shouldBlockSendInMonoforum,
@@ -642,7 +639,6 @@ function MiddleColumn({
                 onScrollDownToggle={setIsScrollDownNeeded}
                 isReady={isReady}
                 isContactRequirePremium={isContactRequirePremium}
-                paidMessagesStars={paidMessagesStars}
                 withBottomShift={withMessageListBottomShift}
                 withDefaultBg={Boolean(!customBackground && !backgroundColor)}
                 onIntersectPinnedMessage={renderingHandleIntersectPinnedMessage}
@@ -827,7 +823,6 @@ export default memo(withGlobal<OwnProps>(
     const userFull = selectUserFullInfo(global, chatId);
 
     const isContactRequirePremium = userFull?.isContactRequirePremium;
-    const paidMessagesStars = selectPeerPaidMessagesStars(global, chatId);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const botFreezeAppealId = global.botFreezeAppealId;
     const freezeAppealChat = botFreezeAppealId
@@ -874,7 +869,6 @@ export default memo(withGlobal<OwnProps>(
       canShowOpenChatButton,
       isContactRequirePremium,
       topics,
-      paidMessagesStars,
       isAccountFrozen,
       freezeAppealChat,
       shouldBlockSendInMonoforum,
