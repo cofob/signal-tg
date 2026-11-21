@@ -14,20 +14,25 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 // Encryption and decryption of group fields with the group's secret params (`GroupSecretParams_DeriveFromMasterKey`),
-// as `ClientZkGroupCipher` of `@signalapp/libsignal-client` does
+// as `ClientZkGroupCipher` of `@signalapp/libsignal-client` does. Any member can set fields, such as an invited
+// user or a label, to what does not decrypt, so the decrypt functions return `undefined` for such a field and
+// callers leave it out like Signal Desktop does (`ts/groups.preload.ts`, `decryptGroupState`).
 
 export function encryptGroupServiceId(secretParams: Uint8Array, serviceId: string) {
   return wasm.GroupSecretParams_EncryptServiceId(secretParams, wasm.ServiceId_ParseFromServiceIdString(serviceId));
 }
 
 export function decryptGroupServiceId(secretParams: Uint8Array, ciphertext: Uint8Array) {
-  return wasm.ServiceId_ServiceIdString(wasm.GroupSecretParams_DecryptServiceId(secretParams, ciphertext));
+  return tryDecrypt(() => (
+    wasm.ServiceId_ServiceIdString(wasm.GroupSecretParams_DecryptServiceId(secretParams, ciphertext))
+  ));
 }
 
 export function decryptGroupProfileKey(secretParams: Uint8Array, ciphertext: Uint8Array, aci: string) {
-  return ciphertext.length
-    ? wasm.GroupSecretParams_DecryptProfileKey(secretParams, ciphertext, wasm.ServiceId_ParseFromServiceIdString(aci))
-    : undefined;
+  if (!ciphertext.length) return undefined;
+  return tryDecrypt(() => (
+    wasm.GroupSecretParams_DecryptProfileKey(secretParams, ciphertext, wasm.ServiceId_ParseFromServiceIdString(aci))
+  ));
 }
 
 /** Encrypts a `GroupAttributeBlob`, such as a title or an avatar, without padding as Signal clients do */
@@ -37,12 +42,14 @@ export function encryptGroupAttribute(secretParams: Uint8Array, content: GroupAt
 }
 
 export function decryptGroupAttribute(secretParams: Uint8Array, blob: Uint8Array) {
-  return blob.length ? fromBinary(GroupAttributeBlobSchema, decryptGroupBlob(secretParams, blob)).content : undefined;
+  if (!blob.length) return undefined;
+  return tryDecrypt(() => fromBinary(GroupAttributeBlobSchema, decryptGroupBlob(secretParams, blob)).content);
 }
 
 /** Member labels are encrypted UTF-8 text without a `GroupAttributeBlob` */
 export function decryptGroupText(secretParams: Uint8Array, blob: Uint8Array) {
-  return blob.length ? textDecoder.decode(decryptGroupBlob(secretParams, blob)) : undefined;
+  if (!blob.length) return undefined;
+  return tryDecrypt(() => textDecoder.decode(decryptGroupBlob(secretParams, blob)));
 }
 
 export function encryptGroupText(secretParams: Uint8Array, text: string) {
@@ -53,6 +60,14 @@ function encryptGroupBlob(secretParams: Uint8Array, plaintext: Uint8Array) {
   return wasm.GroupSecretParams_EncryptBlobWithPaddingDeterministic(
     secretParams, getRandomBytes(RANDOMNESS_LENGTH), plaintext, 0,
   );
+}
+
+function tryDecrypt<T>(decrypt: () => T) {
+  try {
+    return decrypt();
+  } catch {
+    return undefined;
+  }
 }
 
 function decryptGroupBlob(secretParams: Uint8Array, blob: Uint8Array) {

@@ -9,6 +9,7 @@ import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_CDN_HOSTS, SIGNAL_STORAGE_HOST, SIGNAL_ZKGROUP_SERVER_PUBLIC_PARAMS } from '../config';
 import { bufferFromBase64, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import { compact } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { encodeUtf8, getRandomBytes } from '../crypto';
 import { sendHttpRequest } from '../net/http';
@@ -127,7 +128,11 @@ export async function sendGroupRequest(
   return response;
 }
 
-/** Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`) */
+/**
+ * Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`). Fields that do not
+ * decrypt are cleared and users that do not decrypt are left out, so that one bad field of a member does not keep
+ * the group from updating (Signal Desktop `decryptGroupState`).
+ */
 export function decryptGroupState(secretParams: Uint8Array, group: Group): GroupState {
   const decryptServiceId = (ciphertext: Uint8Array) => decryptGroupServiceId(secretParams, ciphertext);
   const title = decryptGroupAttribute(secretParams, group.title);
@@ -141,20 +146,26 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
     avatarUrl: group.avatarUrl || undefined,
     expireTimer: timer?.case === 'disappearingMessagesDuration' ? timer.value : undefined,
     accessControl: buildAccessControl(group.accessControl),
-    members: group.members.map((member) => decryptMember(secretParams, member)),
-    pendingMembers: group.membersPendingProfileKey.map(({ member, addedByUserId, timestamp }) => ({
-      serviceId: decryptServiceId(member!.userId),
-      role: member!.role,
-      addedBy: addedByUserId.length ? decryptServiceId(addedByUserId) : undefined,
-      timestamp: Number(timestamp),
+    members: compact(group.members.map((member) => decryptMember(secretParams, member))),
+    pendingMembers: compact(group.membersPendingProfileKey.map(({ member, addedByUserId, timestamp }) => {
+      if (!member) return undefined;
+      const serviceId = decryptServiceId(member.userId);
+      return serviceId && {
+        serviceId,
+        role: member.role,
+        addedBy: addedByUserId.length ? decryptServiceId(addedByUserId) : undefined,
+        timestamp: Number(timestamp),
+      };
     })),
-    requestingMembers: group.membersPendingAdminApproval.map(({ userId, profileKey, timestamp }) => {
+    requestingMembers: compact(group.membersPendingAdminApproval.map(({ userId, profileKey, timestamp }) => {
       const aci = decryptServiceId(userId);
-      return { aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci), timestamp: Number(timestamp) };
-    }),
-    bannedMembers: group.membersBanned.map(({ userId, timestamp }) => ({
-      serviceId: decryptServiceId(userId),
-      timestamp: Number(timestamp),
+      return aci && {
+        aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci), timestamp: Number(timestamp),
+      };
+    })),
+    bannedMembers: compact(group.membersBanned.map(({ userId, timestamp }) => {
+      const serviceId = decryptServiceId(userId);
+      return serviceId && { serviceId, timestamp: Number(timestamp) };
     })),
     inviteLinkPassword: group.inviteLinkPassword.length ? group.inviteLinkPassword : undefined,
     isAnnouncementsOnly: group.announcementsOnly,
@@ -162,9 +173,13 @@ export function decryptGroupState(secretParams: Uint8Array, group: Group): Group
   };
 }
 
-/** Decrypts a full member, as in a group state or an `AddMemberAction` from the server */
-export function decryptMember(secretParams: Uint8Array, member: Member): GroupMember {
+/**
+ * Decrypts a full member, as in a group state or an `AddMemberAction` from the server; `undefined` when the
+ * member's ID does not decrypt. A profile key or label that does not decrypt is left out.
+ */
+export function decryptMember(secretParams: Uint8Array, member: Member): GroupMember | undefined {
   const aci = decryptGroupServiceId(secretParams, member.userId);
+  if (!aci) return undefined;
   return {
     aci,
     role: member.role,

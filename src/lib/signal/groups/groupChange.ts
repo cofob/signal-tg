@@ -6,6 +6,7 @@ import type {
 import type { GroupMember, GroupState } from './fetchGroup';
 
 import { bufferToBase64 } from '../../../util/encoding/buffer';
+import { compact } from '../../../util/iteratees';
 import { wasm } from '../wasm';
 import { decryptMember, getServerPublicParams } from './fetchGroup';
 import {
@@ -15,6 +16,8 @@ import {
 import { GroupChange_ActionsSchema, Member_Role } from '../proto/generated/Groups_pb';
 
 type ProfileKeyMember = { aci: string; profileKey?: Uint8Array };
+
+type DecryptedAttribute = NonNullable<ReturnType<typeof decryptGroupAttribute>>;
 
 // A field that a change sets, possibly to nothing
 type FieldChange<T> = { value?: T };
@@ -68,77 +71,103 @@ export function verifyGroupChange(groupChange: GroupChange, groupId: string) {
   return bufferToBase64(actions.groupId) === groupId ? actions : undefined;
 }
 
-/** Decrypts change actions as the server returns and signs them (Signal Desktop `decryptGroupChange`) */
+/**
+ * Decrypts change actions as the server returns and signs them (Signal Desktop `decryptGroupChange`). Entries
+ * of users that do not decrypt are dropped, and so are attributes that do not decrypt, which leaves them as they
+ * are, so that one bad entry of a member does not keep the group from updating.
+ */
 export function decryptGroupChange(secretParams: Uint8Array, actions: GroupChange_Actions): DecryptedGroupChange {
   const decryptServiceId = (ciphertext: Uint8Array) => decryptGroupServiceId(secretParams, ciphertext);
+  const decryptServiceIds = (ciphertexts: Uint8Array[]) => compact(ciphertexts.map(decryptServiceId));
   const decryptProfileKeyMember = (userId: Uint8Array, profileKey: Uint8Array) => {
     const aci = decryptServiceId(userId);
-    return { aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci) };
+    return aci ? { aci, profileKey: decryptGroupProfileKey(secretParams, profileKey, aci) } : undefined;
   };
-  const title = actions.modifyTitle && decryptGroupAttribute(secretParams, actions.modifyTitle.title);
-  const description = actions.modifyDescription
-    && decryptGroupAttribute(secretParams, actions.modifyDescription.description);
-  const timer = actions.modifyDisappearingMessageTimer
-    && decryptGroupAttribute(secretParams, actions.modifyDisappearingMessageTimer.timer);
+  const decryptAttribute = <T>(
+    blob: Uint8Array | undefined, getValue: (content: DecryptedAttribute) => T | undefined,
+  ): FieldChange<T> | undefined => {
+    if (blob === undefined) return undefined;
+    // An empty attribute clears the field
+    if (!blob.length) return {};
+    const content = decryptGroupAttribute(secretParams, blob);
+    return content && { value: getValue(content) };
+  };
 
   return {
     revision: actions.version,
     sourceServiceId: actions.sourceUserId.length ? decryptServiceId(actions.sourceUserId) : undefined,
-    addMembers: actions.addMembers.map(({ added, joinFromInviteLink }) => ({
-      ...decryptMember(secretParams, added!),
-      isFromInviteLink: joinFromInviteLink || undefined,
+    addMembers: compact(actions.addMembers.map(({ added, joinFromInviteLink }) => {
+      const member = decryptMember(secretParams, added!);
+      return member && { ...member, isFromInviteLink: joinFromInviteLink || undefined };
     })),
-    deleteMembers: actions.deleteMembers.map(({ deletedUserId }) => decryptServiceId(deletedUserId)),
-    modifyMemberRoles: actions.modifyMemberRoles.map(({ userId, role }) => ({ aci: decryptServiceId(userId), role })),
-    modifyMemberLabels: actions.modifyMemberLabels.map(({ userId, labelEmoji, labelString }) => ({
-      aci: decryptServiceId(userId),
-      labelEmoji: decryptGroupText(secretParams, labelEmoji),
-      label: decryptGroupText(secretParams, labelString),
+    deleteMembers: decryptServiceIds(actions.deleteMembers.map(({ deletedUserId }) => deletedUserId)),
+    modifyMemberRoles: compact(actions.modifyMemberRoles.map(({ userId, role }) => {
+      const aci = decryptServiceId(userId);
+      return aci && { aci, role };
     })),
-    modifyMemberProfileKeys: actions.modifyMemberProfileKeys.map(({ userId, profileKey }) => (
-      decryptProfileKeyMember(userId, profileKey)
-    )),
-    addPendingMembers: actions.addMembersPendingProfileKey.map(({ added }) => ({
-      serviceId: decryptServiceId(added!.member!.userId),
-      role: added!.member!.role,
-      addedBy: added!.addedByUserId.length ? decryptServiceId(added!.addedByUserId) : undefined,
-      timestamp: Number(added!.timestamp),
+    modifyMemberLabels: compact(actions.modifyMemberLabels.map(({ userId, labelEmoji, labelString }) => {
+      const aci = decryptServiceId(userId);
+      return aci && {
+        aci,
+        labelEmoji: decryptGroupText(secretParams, labelEmoji),
+        label: decryptGroupText(secretParams, labelString),
+      };
     })),
-    deletePendingMembers: actions.deleteMembersPendingProfileKey.map(({ deletedUserId }) => (
-      decryptServiceId(deletedUserId)
-    )),
-    promotePendingMembers: [
+    // A profile key that does not decrypt must not replace the one we have
+    modifyMemberProfileKeys: compact(actions.modifyMemberProfileKeys.map(({ userId, profileKey }) => {
+      const member = decryptProfileKeyMember(userId, profileKey);
+      return member?.profileKey && member;
+    })),
+    addPendingMembers: compact(actions.addMembersPendingProfileKey.map(({ added }) => {
+      if (!added?.member) return undefined;
+      const serviceId = decryptServiceId(added.member.userId);
+      return serviceId && {
+        serviceId,
+        role: added.member.role,
+        addedBy: added.addedByUserId.length ? decryptServiceId(added.addedByUserId) : undefined,
+        timestamp: Number(added.timestamp),
+      };
+    })),
+    deletePendingMembers: decryptServiceIds(actions.deleteMembersPendingProfileKey.map(({ deletedUserId }) => (
+      deletedUserId
+    ))),
+    promotePendingMembers: compact([
       ...actions.promoteMembersPendingProfileKey.map(({ userId, profileKey }) => (
         decryptProfileKeyMember(userId, profileKey)
       )),
-      ...actions.promoteMembersPendingPniAciProfileKey.map(({ userId, pni, profileKey }) => ({
-        ...decryptProfileKeyMember(userId, profileKey),
-        pni: decryptServiceId(pni),
-      })),
-    ],
-    addRequestingMembers: actions.addMembersPendingAdminApproval.map(({ added }) => ({
-      ...decryptProfileKeyMember(added!.userId, added!.profileKey),
-      timestamp: Number(added!.timestamp),
+      ...actions.promoteMembersPendingPniAciProfileKey.map(({ userId, pni, profileKey }) => {
+        const member = decryptProfileKeyMember(userId, profileKey);
+        const pniServiceId = decryptServiceId(pni);
+        return member && pniServiceId && { ...member, pni: pniServiceId };
+      }),
+    ]),
+    addRequestingMembers: compact(actions.addMembersPendingAdminApproval.map(({ added }) => {
+      const member = decryptProfileKeyMember(added!.userId, added!.profileKey);
+      return member && { ...member, timestamp: Number(added!.timestamp) };
     })),
-    deleteRequestingMembers: actions.deleteMembersPendingAdminApproval.map(({ deletedUserId }) => (
-      decryptServiceId(deletedUserId)
+    deleteRequestingMembers: decryptServiceIds(actions.deleteMembersPendingAdminApproval.map(({ deletedUserId }) => (
+      deletedUserId
+    ))),
+    promoteRequestingMembers: compact(actions.promoteMembersPendingAdminApproval.map(({ userId, role }) => {
+      const aci = decryptServiceId(userId);
+      return aci && { aci, role };
+    })),
+    addBannedMembers: compact(actions.addMembersBanned.map(({ added }) => {
+      if (!added) return undefined;
+      const serviceId = decryptServiceId(added.userId);
+      return serviceId && { serviceId, timestamp: Number(added.timestamp) };
+    })),
+    deleteBannedMembers: decryptServiceIds(actions.deleteMembersBanned.map(({ deletedUserId }) => deletedUserId)),
+    title: decryptAttribute(actions.modifyTitle?.title, (content) => (
+      content.case === 'title' ? content.value.trim() : undefined
     )),
-    promoteRequestingMembers: actions.promoteMembersPendingAdminApproval.map(({ userId, role }) => ({
-      aci: decryptServiceId(userId), role,
-    })),
-    addBannedMembers: actions.addMembersBanned.map(({ added }) => ({
-      serviceId: decryptServiceId(added!.userId),
-      timestamp: Number(added!.timestamp),
-    })),
-    deleteBannedMembers: actions.deleteMembersBanned.map(({ deletedUserId }) => decryptServiceId(deletedUserId)),
-    title: actions.modifyTitle && { value: title?.case === 'title' ? title.value.trim() : undefined },
-    description: actions.modifyDescription && {
-      value: description?.case === 'descriptionText' ? description.value : undefined,
-    },
+    description: decryptAttribute(actions.modifyDescription?.description, (content) => (
+      content.case === 'descriptionText' ? content.value : undefined
+    )),
     avatarUrl: actions.modifyAvatar && { value: actions.modifyAvatar.avatar || undefined },
-    expireTimer: actions.modifyDisappearingMessageTimer && {
-      value: timer?.case === 'disappearingMessagesDuration' ? timer.value || undefined : undefined,
-    },
+    expireTimer: decryptAttribute(actions.modifyDisappearingMessageTimer?.timer, (content) => (
+      content.case === 'disappearingMessagesDuration' ? content.value || undefined : undefined
+    )),
     attributesAccess: actions.modifyAttributesAccess?.attributesAccess,
     membersAccess: actions.modifyMemberAccess?.membersAccess,
     addFromInviteLinkAccess: actions.modifyAddFromInviteLinkAccess?.addFromInviteLinkAccess,
