@@ -1,3 +1,7 @@
+# Telegram Web A release notes
+
+The history of the project that TeleSignal is based on, up to version 10.0.0. TeleSignal's own changes are in [CHANGELOG.md](../CHANGELOG.md).
+
 ## 10.0.0 (2023-08-14)
 
 **Introducing Telegram Web A v10.0!**
