@@ -11,7 +11,8 @@ export type AccountRecord = {
   pni?: string;
   number?: string;
   deviceId: number;
-  deviceName: string;
+  // Linked devices only: a registered primary device has no name
+  deviceName?: string;
   password: string;
   registrationId: number;
   pniRegistrationId: number;
@@ -25,6 +26,10 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Registered primary devices only: the account attribute that lets people find us by phone number
+  isDiscoverableByPhoneNumber?: boolean;
+  // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
+  isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects

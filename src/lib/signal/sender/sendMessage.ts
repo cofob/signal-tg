@@ -2,9 +2,10 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
 import type { DataMessageSchema, EditMessageSchema, ReceiptMessage_Type } from '../proto/generated/SignalService_pb';
-import type { RecipientResult, SenderContext, SendOptions } from './sendContent';
+import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
 import type { GroupTarget } from './sendToGroup';
 
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
 import { sendWithSenderKey } from './sendToGroup';
@@ -153,9 +154,17 @@ async function sendToRecipients(
   return [...results, ...await sendToEach(context, remaining, content, options)];
 }
 
-function syncToOtherDevices(
+async function syncToOtherDevices(
   context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number,
-) {
+): Promise<SendResult> {
+  // A primary device without linked devices has nobody to sync with (Signal Android
+  // `SignalServiceMessageSender.sendSyncMessage`); linked devices become known from their sessions with us
+  const { store, account } = context;
+  if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID
+    && !(await store.getSessionDeviceIds(account.aci)).some((deviceId) => deviceId !== account.deviceId)) {
+    return { isSealedSender: false };
+  }
+
   const syncMessage = create(SyncMessageSchema, init);
   syncMessage.padding = getRandomPadding();
   return sendContent(context, context.account.aci, {

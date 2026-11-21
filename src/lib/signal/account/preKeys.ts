@@ -20,6 +20,17 @@ type PreKeyUpload = {
   publicKey: string;
 };
 
+type GeneratedPreKey = {
+  record: Uint8Array;
+  upload: SignedPreKeyUpload;
+};
+
+export type LastResortPreKeys = {
+  keyId: number;
+  signedPreKey: GeneratedPreKey;
+  pqLastResortPreKey: GeneratedPreKey;
+};
+
 const MAX_KEY_ID = 0xffffff;
 const PRE_KEY_BATCH_SIZE = 100;
 
@@ -45,36 +56,76 @@ async function allocateKeyIds(
 
 export async function generateSignedPreKey(store: SignalStore, serviceId: string, identityKey: KeyPairBytes) {
   const [keyId] = await allocateKeyIds(store, serviceId, 'signedPreKey', 1);
-  const identityPrivateKey = wasm.PrivateKey_Deserialize(identityKey.privateKey);
-  const privateKey = wasm.PrivateKey_Generate();
-  const publicKey = wasm.PrivateKey_GetPublicKey(privateKey);
-  const serializedPublicKey = wasm.PublicKey_Serialize(publicKey);
-  const signature = wasm.PrivateKey_Sign(identityPrivateKey, serializedPublicKey);
-  const record = wasm.SignedPreKeyRecord_New(keyId, Date.now(), publicKey, privateKey, signature);
-
-  await store.setSignedPreKey(serviceId, keyId, wasm.SignedPreKeyRecord_Serialize(record));
-  return { keyId, publicKey: bufferToBase64(serializedPublicKey), signature: bufferToBase64(signature) };
+  const { record, upload } = createSignedPreKey(keyId, identityKey);
+  await store.setSignedPreKey(serviceId, keyId, record);
+  return upload;
 }
 
 export async function generateKyberPreKeys(
   store: SignalStore, serviceId: string, identityKey: KeyPairBytes, count: number, isLastResort?: boolean,
 ) {
   const keyIds = await allocateKeyIds(store, serviceId, 'kyberPreKey', count);
-  const identityPrivateKey = wasm.PrivateKey_Deserialize(identityKey.privateKey);
   const uploads: SignedPreKeyUpload[] = [];
   const entries: [number, { record: Uint8Array; isLastResort?: boolean }][] = [];
 
   for (const keyId of keyIds) {
-    const keyPair = wasm.KyberKeyPair_Generate();
-    const serializedPublicKey = wasm.KyberPublicKey_Serialize(wasm.KyberKeyPair_GetPublicKey(keyPair));
-    const signature = wasm.PrivateKey_Sign(identityPrivateKey, serializedPublicKey);
-    const record = wasm.KyberPreKeyRecord_New(keyId, Date.now(), keyPair, signature);
-    entries.push([keyId, { record: wasm.KyberPreKeyRecord_Serialize(record), isLastResort }]);
-    uploads.push({ keyId, publicKey: bufferToBase64(serializedPublicKey), signature: bufferToBase64(signature) });
+    const { record, upload } = createKyberPreKey(keyId, identityKey);
+    entries.push([keyId, { record, isLastResort }]);
+    uploads.push(upload);
   }
 
   await store.setKyberPreKeys(serviceId, entries);
   return uploads;
+}
+
+/**
+ * Signed and Kyber last-resort prekeys for a new account. Registration needs them before the server
+ * assigns the service id they are stored under, so `saveLastResortPreKeys` stores them afterwards.
+ */
+export function createLastResortPreKeys(identityKey: KeyPairBytes): LastResortPreKeys {
+  const keyId = getInitialKeyId();
+  return {
+    keyId,
+    signedPreKey: createSignedPreKey(keyId, identityKey),
+    pqLastResortPreKey: createKyberPreKey(keyId, identityKey),
+  };
+}
+
+/** Stores the last-resort prekeys of a new account; later key ids follow theirs */
+export async function saveLastResortPreKeys(store: SignalStore, serviceId: string, keys: LastResortPreKeys) {
+  const { keyId, signedPreKey, pqLastResortPreKey } = keys;
+  await store.setSignedPreKey(serviceId, keyId, signedPreKey.record);
+  await store.setKyberPreKeys(serviceId, [[keyId, { record: pqLastResortPreKey.record, isLastResort: true }]]);
+
+  const nextKeyIds = await store.getItem('nextKeyIds') ?? {};
+  const nextKeyId = (keyId % MAX_KEY_ID) + 1;
+  nextKeyIds[serviceId] = { preKey: getInitialKeyId(), signedPreKey: nextKeyId, kyberPreKey: nextKeyId };
+  await store.setItem('nextKeyIds', nextKeyIds);
+}
+
+function createSignedPreKey(keyId: number, identityKey: KeyPairBytes) {
+  const identityPrivateKey = wasm.PrivateKey_Deserialize(identityKey.privateKey);
+  const privateKey = wasm.PrivateKey_Generate();
+  const publicKey = wasm.PrivateKey_GetPublicKey(privateKey);
+  const serializedPublicKey = wasm.PublicKey_Serialize(publicKey);
+  const signature = wasm.PrivateKey_Sign(identityPrivateKey, serializedPublicKey);
+  const record = wasm.SignedPreKeyRecord_New(keyId, Date.now(), publicKey, privateKey, signature);
+  return {
+    record: wasm.SignedPreKeyRecord_Serialize(record),
+    upload: { keyId, publicKey: bufferToBase64(serializedPublicKey), signature: bufferToBase64(signature) },
+  };
+}
+
+function createKyberPreKey(keyId: number, identityKey: KeyPairBytes) {
+  const identityPrivateKey = wasm.PrivateKey_Deserialize(identityKey.privateKey);
+  const keyPair = wasm.KyberKeyPair_Generate();
+  const serializedPublicKey = wasm.KyberPublicKey_Serialize(wasm.KyberKeyPair_GetPublicKey(keyPair));
+  const signature = wasm.PrivateKey_Sign(identityPrivateKey, serializedPublicKey);
+  const record = wasm.KyberPreKeyRecord_New(keyId, Date.now(), keyPair, signature);
+  return {
+    record: wasm.KyberPreKeyRecord_Serialize(record),
+    upload: { keyId, publicKey: bufferToBase64(serializedPublicKey), signature: bufferToBase64(signature) },
+  };
 }
 
 export async function generatePreKeys(store: SignalStore, serviceId: string, count: number) {

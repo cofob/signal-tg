@@ -1,4 +1,4 @@
-import { compareBuffersConstantTime } from '../../util/encoding/buffer';
+import { compareBuffersConstantTime, concat } from '../../util/encoding/buffer';
 import { wasm } from './wasm';
 
 const PADDING_BLOCK = 80;
@@ -73,6 +73,14 @@ export async function decryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, data:
   const iv = data.slice(0, AES_GCM_NONCE_LENGTH);
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, data.slice(AES_GCM_NONCE_LENGTH));
   return new Uint8Array(plaintext);
+}
+
+/** AES-256-GCM with a random 12-byte nonce prepended to the ciphertext */
+export async function encryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>) {
+  const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['encrypt']);
+  const iv = getRandomBytes(AES_GCM_NONCE_LENGTH);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, plaintext);
+  return concat(iv, new Uint8Array(ciphertext));
 }
 
 /** HKDF-SHA256 */
