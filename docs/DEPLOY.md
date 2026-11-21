@@ -87,6 +87,12 @@ removes `ALLOW_PUBLIC_BIND`, so an orchestrator's own `PORT` cannot collide with
 
 The container refuses to start, with exit status 64 and a message, when a setting is invalid.
 
+The Sealed sender proxy setting of the app names a second tunnel for the connections that carry no account
+credentials (see [proxy/README.md](../proxy/README.md#separate-tunnel-for-sealed-sender)). Run it as another instance of
+the tunnel-only image `ghcr.io/cofob/telesignal-tunnel` with its own `UPSTREAM_PROXY` and `ALLOWED_ORIGINS` set to the
+app's origin, behind its own TLS proxy; the image of the app needs no change for it, because `connect-src` allows every
+`wss:` origin.
+
 The app finds its tunnel at `/tunnel` on its own origin. The image is built with that default, and the Proxy server
 setting of the app (Data and Storage, or the link screen) still selects another tunnel at run time.
 
