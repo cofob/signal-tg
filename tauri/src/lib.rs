@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
-use serde_json::json;
 use tauri::{
-  Emitter, LogicalPosition, Manager,
+  LogicalPosition, Manager,
   webview::{DownloadEvent, PageLoadEvent},
 };
 use url::Url;
@@ -11,6 +10,9 @@ use uuid::Uuid;
 
 mod deeplink;
 use deeplink::{Deeplink, PendingLinks};
+
+mod files;
+use files::Files;
 
 pub mod transport;
 use transport::Transport;
@@ -109,6 +111,13 @@ pub fn run() {
     .plugin(tauri_plugin_os::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_dialog::init())
+    // The page gets no permission for the plugin's commands; `files.rs` calls it
+    .plugin(
+      tauri_plugin_opener::Builder::new()
+        .open_js_links_on_click(false)
+        .build(),
+    )
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_log::Builder::default().build())
     .plugin(tauri_plugin_window_state::Builder::default().build())
@@ -161,16 +170,18 @@ pub fn run() {
       window
         .state::<Arc<Transport>>()
         .close_owned_by(window.label());
+      window.state::<Files>().abort_owned_by(window.label());
     }
     _ => {}
   });
 
-  // A reloaded page starts its engine again, so the connections of the previous page end
+  // A reloaded page starts its engine again, so the connections and the saves of the previous page end
   let app = app.on_page_load(|webview, payload| {
     if payload.event() == PageLoadEvent::Started {
       webview
         .state::<Arc<Transport>>()
         .close_owned_by(webview.label());
+      webview.state::<Files>().abort_owned_by(webview.label());
     }
   });
 
@@ -179,6 +190,7 @@ pub fn run() {
     app.manage(AppState::new(AppStateStruct::default()));
     app.manage(Arc::new(Transport::from_env()));
     app.manage(PendingLinks::default());
+    app.manage(Files::new(app.path().app_data_dir().ok()));
 
     let app_url = resolve_base_app_url(app.handle());
     if let Ok(mut last_url) = LAST_URL.lock() {
@@ -217,12 +229,25 @@ pub fn run() {
     transport::signal_connect,
     transport::signal_send,
     transport::signal_ack,
-    transport::signal_close
+    transport::signal_close,
+    files::begin_file_save,
+    files::write_file_chunk,
+    files::finish_file_save,
+    files::abort_file_save,
+    files::list_saved_files,
+    files::open_saved_file,
+    files::reveal_saved_file
   ]);
 
   app
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app, event| {
+      // Saves that the exit interrupts leave temporary files, so they end here
+      if matches!(event, tauri::RunEvent::Exit) {
+        app.state::<Files>().abort_all();
+      }
+    });
 }
 
 #[tauri::command]
@@ -360,34 +385,13 @@ pub(crate) fn open_new_window(
     has_updater(&app),
   ))
   .on_navigation(move |url| is_allowed_app_url(url, &base_url))
-  .on_download(|window, event| {
-    match event {
-      #[allow(unused_variables)]
-      DownloadEvent::Requested { destination, .. } => {
-        // On macOS, Webview does not provide basic download logic
-        #[cfg(target_os = "macos")]
-        if let Some(filename) = destination.file_name() {
-          if let Ok(downloads_dir) = window.app_handle().path().download_dir() {
-            let new_destination = downloads_dir.join(filename);
-            *destination = new_destination;
-          }
-        }
-      }
-      DownloadEvent::Finished { url, success, .. } => {
-        window
-          .emit_to(
-            window.label(),
-            "download-finished",
-            json!({
-              "url": url.to_string(),
-              "success": success
-            }),
-          )
-          .unwrap_or_default();
-      }
-      _ => {}
-    };
-    true
+  // The page saves files through `files.rs`; a download that the webview starts on its own has no
+  // sanitized name or checked destination, so none is allowed
+  .on_download(|_, event| {
+    if let DownloadEvent::Requested { url, .. } = event {
+      log::warn!("Blocked a webview download from a {} URL", url.scheme());
+    }
+    false
   });
 
   if let Ok(mut states) = WINDOW_STATES.lock() {

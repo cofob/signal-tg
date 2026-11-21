@@ -828,6 +828,23 @@ export function addActiveMediaDownload<T extends GlobalState>(
   return global;
 }
 
+export function updateSavedFiles<T extends GlobalState>(
+  global: T,
+  added: string[] | undefined,
+  removed: string[] | undefined,
+  ...[tabId = getCurrentTabId()]: TabArgs<T>
+) {
+  const savedFiles = { ...selectTabState(global, tabId).savedFiles };
+  added?.forEach((key) => {
+    savedFiles[key] = true;
+  });
+  removed?.forEach((key) => {
+    delete savedFiles[key];
+  });
+
+  return updateTabState(global, { savedFiles }, tabId);
+}
+
 export function cancelMessageMediaDownload<T extends GlobalState>(
   global: T,
   mediaHashes: string[],

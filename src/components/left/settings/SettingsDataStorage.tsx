@@ -6,6 +6,7 @@ import { SettingsScreens } from '../../../types';
 
 import { AUTODOWNLOAD_FILESIZE_MB_LIMITS } from '../../../config';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
+import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { pick } from '../../../util/iteratees';
 import { clearMediaCache } from '../../../util/settingsActions';
 
@@ -39,6 +40,7 @@ type StateProps = Pick<AccountSettings, (
   'autoLoadFileMaxSizeMb'
 )> & {
   signalProxyUrl?: string;
+  shouldAskWhereToSave?: boolean;
 };
 
 const SettingsDataStorage = ({
@@ -57,9 +59,10 @@ const SettingsDataStorage = ({
   canAutoLoadFileInChannels,
   autoLoadFileMaxSizeMb,
   signalProxyUrl,
+  shouldAskWhereToSave,
   onReset,
 }: OwnProps & StateProps) => {
-  const { setSettingOption, openSettingsScreen } = getActions();
+  const { setSettingOption, setSharedSettingOption, openSettingsScreen } = getActions();
 
   const lang = useLang();
 
@@ -81,6 +84,10 @@ const SettingsDataStorage = ({
 
   const handleFileSizeChange = useLastCallback((value: number) => {
     setSettingOption({ autoLoadFileMaxSizeMb: AUTODOWNLOAD_FILESIZE_MB_LIMITS[value] });
+  });
+
+  const handleAskWhereToSaveChange = useLastCallback((isChecked: boolean) => {
+    setSharedSettingOption({ shouldAskWhereToSave: isChecked });
   });
 
   const handleOpenSignalProxy = useLastCallback(() => {
@@ -169,6 +176,16 @@ const SettingsDataStorage = ({
         canAutoLoadFileInGroups,
         canAutoLoadFileInChannels,
       )}
+      {IS_TAURI && (
+        <Island>
+          <Checkbox
+            label={lang('SettingsAskWhereToSave')}
+            subLabel={lang('SettingsAskWhereToSaveDescription')}
+            checked={Boolean(shouldAskWhereToSave)}
+            onCheck={handleAskWhereToSaveChange}
+          />
+        </Island>
+      )}
       <Island>
         <ListItem
           onClick={handleClearMediaCache}
@@ -216,11 +233,12 @@ export default memo(withGlobal<OwnProps>(
       'canAutoLoadFileInChannels',
       'autoLoadFileMaxSizeMb',
     ]);
-    const { signalProxyUrl } = selectSharedSettings(global);
+    const { signalProxyUrl, shouldAskWhereToSave } = selectSharedSettings(global);
 
     return {
       ...accountSettings,
       signalProxyUrl,
+      shouldAskWhereToSave,
     };
   },
 )(SettingsDataStorage));

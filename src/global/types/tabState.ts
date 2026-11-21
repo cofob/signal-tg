@@ -412,6 +412,8 @@ export type TabState = {
   };
 
   activeDownloads: ActiveDownloads;
+  // Keys (media hashes) of the files that the desktop app saved and that still exist
+  savedFiles: Record<string, true>;
 
   newContact?: {
     userId?: string;

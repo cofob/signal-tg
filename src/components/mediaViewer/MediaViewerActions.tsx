@@ -26,6 +26,7 @@ import {
   selectPerformanceSettingsValue,
   selectTabState,
 } from '../../global/selectors';
+import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import { isUserId } from '../../util/entities/ids';
 import selectViewableMedia from './helpers/getViewableMedia';
 import { getMediaViewerMedia } from './helpers/ghostAnimation';
@@ -137,6 +138,8 @@ const MediaViewerActions = ({
   const { media } = viewableMedia || {};
   const fileName = media && getMediaFilename(media);
   const isDownloading = media && getIsDownloading(activeDownloads, media);
+  // A link would start a webview download, which the desktop app does not allow: it saves files itself
+  const shouldDownloadByAction = isVideo || IS_TAURI;
 
   const { loadProgress: downloadProgress } = useMediaWithLoadProgress(
     media && getMediaHash(media, 'download'),
@@ -240,7 +243,7 @@ const MediaViewerActions = ({
       return undefined;
     }
 
-    return isVideo ? (
+    return shouldDownloadByAction ? (
       <Button
         round
         size="smaller"
@@ -307,7 +310,7 @@ const MediaViewerActions = ({
       });
     }
     if (!isProtected) {
-      if (isVideo) {
+      if (shouldDownloadByAction) {
         menuItems.push({
           icon: isDownloading ? 'close' : 'download',
           onClick: handleDownloadClick,

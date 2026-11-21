@@ -49,6 +49,8 @@ const Notification = ({
     message,
     action,
     actionText,
+    secondaryAction,
+    secondaryActionText,
     cacheBreaker,
     className,
     disableClickDismiss,
@@ -103,17 +105,21 @@ const Notification = ({
     }
   });
 
-  const handleActionClick = useLastCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (action && !actionActivationRef.current) {
-      actionActivationRef.current = true;
-      if (Array.isArray(action)) {
-        // @ts-ignore
-        action.forEach((cb) => actions[cb.action](cb.payload));
-      } else {
-        // @ts-ignore
-        actions[action.action](action.payload);
-      }
+  // A click on the toast or on a button runs one action only
+  const runAction = useLastCallback((callbacks: NonNullable<typeof action>) => {
+    if (actionActivationRef.current) return;
+    actionActivationRef.current = true;
+    if (Array.isArray(callbacks)) {
+      // @ts-ignore
+      callbacks.forEach((cb) => actions[cb.action](cb.payload));
+    } else {
+      // @ts-ignore
+      actions[callbacks.action](callbacks.payload);
     }
+  });
+
+  const handleActionClick = useLastCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    if (action) runAction(action);
     if (disableClickDismiss) {
       setIsOpen(false);
       setTimeout(handleDismiss, ANIMATION_DURATION + ANIMATION_END_DELAY);
@@ -121,17 +127,13 @@ const Notification = ({
     closeAndDismiss();
   });
 
+  const handleSecondaryActionClick = useLastCallback(() => {
+    if (secondaryAction) runAction(secondaryAction);
+    closeAndDismiss();
+  });
+
   const handleClick = useLastCallback(() => {
-    if (action && !actionActivationRef.current) {
-      actionActivationRef.current = true;
-      if (Array.isArray(action)) {
-        // @ts-ignore
-        action.forEach((cb) => actions[cb.action](cb.payload));
-      } else {
-        // @ts-ignore
-        actions[action.action](action.payload);
-      }
-    }
+    if (action) runAction(action);
     closeAndDismiss();
   });
 
@@ -200,6 +202,15 @@ const Notification = ({
     return actionText;
   }, [lang, actionText]);
 
+  const renderedSecondaryActionText = useMemo(() => {
+    if (!secondaryActionText) return undefined;
+    if (typeof secondaryActionText === 'object') {
+      return lang.with(secondaryActionText);
+    }
+
+    return secondaryActionText;
+  }, [lang, secondaryActionText]);
+
   const renderedIcon = useMemo(() => {
     if (customEmojiIconId) {
       return (
@@ -214,6 +225,16 @@ const Notification = ({
 
     return <Icon name={icon || 'info-filled'} className="notification-icon" />;
   }, [customEmojiIconId, icon]);
+
+  const actionButton = (
+    <Button
+      color="translucent-white"
+      onClick={handleActionClick}
+      className="notification-button"
+    >
+      {renderedActionText}
+    </Button>
+  );
 
   return (
     <Portal
@@ -235,13 +256,18 @@ const Notification = ({
           {renderedMessage}
         </div>
         {Boolean(renderedActionText) && (
-          <Button
-            color="translucent-white"
-            onClick={handleActionClick}
-            className="notification-button"
-          >
-            {renderedActionText}
-          </Button>
+          renderedSecondaryActionText ? (
+            <div className="notification-buttons">
+              {actionButton}
+              <Button
+                color="translucent-white"
+                onClick={handleSecondaryActionClick}
+                className="notification-button"
+              >
+                {renderedSecondaryActionText}
+              </Button>
+            </div>
+          ) : actionButton
         )}
         {shouldShowTimer && (
           <RoundTimer className="notification-timer" key={cacheBreaker} duration={Math.ceil(duration / 1000)} />

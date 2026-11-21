@@ -31,6 +31,7 @@ import {
   getCanPostInChat,
   getCanReplyToEphemeralMessage,
   getIsDownloading,
+  getMediaHash,
   getMessageAudio,
   getMessageCustomEmojis,
   getMessageVideo,
@@ -56,6 +57,7 @@ import {
   selectChatFullInfo,
   selectCustomEmoji,
   selectIsChatWithSelf,
+  selectIsFileSaved,
   selectIsMessageProtected,
   selectIsMessageUnread,
   selectIsReactionPickerOpen,
@@ -140,6 +142,8 @@ type StateProps = {
   canLoadReadDate?: boolean;
   shouldRenderShowWhen?: boolean;
   activeDownloads: ActiveDownloads;
+  // The key of the message's file when the desktop app saved it
+  savedFileKey?: string;
   canShowSeenBy?: boolean;
   enabledReactions?: ApiChatReactions;
   canScheduleUntilOnline?: boolean;
@@ -207,6 +211,7 @@ const ContextMenuContainer = ({
   canLoadReadDate,
   shouldRenderShowWhen,
   activeDownloads,
+  savedFileKey,
   noReplies,
   canShowSeenBy,
   canViewDetails,
@@ -241,6 +246,8 @@ const ContextMenuContainer = ({
     rescheduleMessage,
     downloadMedia,
     cancelMediaDownload,
+    openSavedFile,
+    showSavedFileInFolder,
     loadSeenBy,
     openSeenByModal,
     openMessageDetailsModal,
@@ -649,6 +656,16 @@ const ContextMenuContainer = ({
     closeMenu();
   });
 
+  const handleOpenSavedFile = useLastCallback(() => {
+    openSavedFile({ key: savedFileKey! });
+    closeMenu();
+  });
+
+  const handleShowSavedFileInFolder = useLastCallback(() => {
+    showSavedFileInFolder({ key: savedFileKey! });
+    closeMenu();
+  });
+
   const handleSaveGif = useLastCallback(() => {
     const video = getMessageVideo(message);
     saveGif({ gif: video! });
@@ -724,6 +741,7 @@ const ContextMenuContainer = ({
         canCopyLink={canCopyLink}
         canSelect={canSelect}
         canDownload={canDownload}
+        canOpenSavedFile={Boolean(savedFileKey)}
         canSaveGif={canSaveGif}
         canManageMusicInProfile={canManageMusicInProfile}
         isMusicProfileStatusLoaded={isMusicProfileStatusLoaded}
@@ -764,6 +782,8 @@ const ContextMenuContainer = ({
         onCopyMessages={handleCopyMessages}
         onCopyNumber={handleCopyNumber}
         onDownload={handleDownloadClick}
+        onOpenSavedFile={handleOpenSavedFile}
+        onShowSavedFileInFolder={handleShowSavedFileInFolder}
         onSaveGif={handleSaveGif}
         onToggleMusicInProfile={handleToggleMusicInProfile}
         onCancelVote={handleCancelVote}
@@ -795,10 +815,16 @@ const ContextMenuContainer = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { message, messageListType, threadId }): Complete<StateProps> => {
+  (global, {
+    message, album, messageListType, threadId,
+  }): Complete<StateProps> => {
     const { defaultTags, topReactions, availableReactions } = global.reactions;
 
     const activeDownloads = selectActiveDownloads(global);
+    // An album holds several files, so its menu has no actions for a saved one
+    const downloadableMedia = album ? undefined : selectMessageDownloadableMedia(global, message);
+    const mediaHash = downloadableMedia && getMediaHash(downloadableMedia, 'download');
+    const savedFileKey = selectIsFileSaved(global, mediaHash) ? mediaHash : undefined;
     const chat = selectChat(global, message.chatId);
     const isPrivate = chat && isUserId(chat.id);
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, message.chatId) : undefined;
@@ -922,6 +948,7 @@ export default memo(withGlobal<OwnProps>(
       canViewDetails: !message.isEphemeral && !isScheduled && canViewDetails,
       canResend: !message.isEphemeral && !isScheduled && canResend,
       activeDownloads,
+      savedFileKey,
       canShowSeenBy: !message.isEphemeral && canShowSeenBy,
       canLoadReadDate: !message.isEphemeral && canLoadReadDate,
       shouldRenderShowWhen: !message.isEphemeral && shouldRenderShowWhen,

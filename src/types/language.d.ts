@@ -1550,6 +1550,14 @@ export interface LangPair {
   'InputTitle': undefined;
   'TitleTask': undefined;
   'NativeDownloadFailed': undefined;
+  'FileShowInFinder': undefined;
+  'FileShowInExplorer': undefined;
+  'FileShowInFolder': undefined;
+  'FileNotFound': undefined;
+  'FileOpenFailed': undefined;
+  'FileSaveDialogTitle': undefined;
+  'SettingsAskWhereToSave': undefined;
+  'SettingsAskWhereToSaveDescription': undefined;
   'MediaSpoilerSensitive': undefined;
   'TextSensitiveModal': undefined;
   'ButtonSensitiveView': undefined;
@@ -2962,6 +2970,10 @@ export interface LangPairWithVariables<V = LangVariable> {
   'MessageActionPollDeleteAnswerYou': {
     'option': V;
   };
+  'FileSaved': {
+    'fileName': V;
+    'folder': V;
+  };
   'TitleSensitiveModal': {
     'years': V;
   };
@@ -4072,6 +4084,11 @@ export interface LangKeyGroups {
       | 'MessageActionPollAppendAnswerYou'
       | 'MessageActionPollDeleteAnswerYou';
     variables: 'option';
+  };
+  'fileName,folder': {
+    keys:
+      | 'FileSaved';
+    variables: 'fileName' | 'folder';
   };
   'years': {
     keys:

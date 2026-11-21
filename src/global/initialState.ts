@@ -379,4 +379,6 @@ export const INITIAL_TAB_STATE: TabState = {
 
   activeDownloads: {},
 
+  savedFiles: {},
+
 };

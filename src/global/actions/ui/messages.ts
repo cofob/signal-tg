@@ -19,6 +19,7 @@ import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { compact } from '../../../util/iteratees';
 import { clearMediaSession } from '../../../util/mediaSession';
 import { Bundles, loadBundle } from '../../../util/moduleLoader';
+import { openSavedFile, revealSavedFile } from '../../../util/tauri/nativeFiles';
 import {
   getMediaFilename,
   getMediaFormat,
@@ -36,6 +37,7 @@ import {
   toggleMessageSelection,
   updateChatMessage,
   updateFocusedMessage,
+  updateSavedFiles,
 } from '../../reducers';
 import { pushPlayedTrack } from '../../reducers/audioPlayer';
 import { updateTabState } from '../../reducers/tabs';
@@ -760,6 +762,24 @@ addActionHandler('cancelMediaHashDownloads', (global, actions, payload): ActionR
   global = cancelMessageMediaDownload(global, mediaHashes, tabId);
 
   return global;
+});
+
+addActionHandler('updateSavedFiles', (global, actions, payload): ActionReturnType => {
+  const { added, removed, tabId = getCurrentTabId() } = payload;
+
+  return updateSavedFiles(global, added, removed, tabId);
+});
+
+addActionHandler('openSavedFile', (global, actions, payload): ActionReturnType => {
+  const { key, tabId = getCurrentTabId() } = payload;
+
+  void openSavedFile(key, tabId);
+});
+
+addActionHandler('showSavedFileInFolder', (global, actions, payload): ActionReturnType => {
+  const { key, tabId = getCurrentTabId() } = payload;
+
+  void revealSavedFile(key, tabId);
 });
 
 addActionHandler('downloadMedia', (global, actions, payload): ActionReturnType => {

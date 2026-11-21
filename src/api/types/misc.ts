@@ -173,6 +173,9 @@ export type ApiNotification = {
   cacheBreaker?: string;
   actionText?: string | AdvancedLangFnParameters;
   action?: CallbackAction | CallbackAction[];
+  // A second button below `actionText`
+  secondaryActionText?: string | AdvancedLangFnParameters;
+  secondaryAction?: CallbackAction | CallbackAction[];
   className?: string;
   duration?: number;
   disableClickDismiss?: boolean;

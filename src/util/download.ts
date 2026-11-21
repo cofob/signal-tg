@@ -1,3 +1,5 @@
+import { IS_TAURI } from './browser/globalEnvironment';
+import { saveFile } from './tauri/nativeFiles';
 import { pause } from './schedulers';
 
 type PendingDownload = {
@@ -12,7 +14,16 @@ const BATCH_INTERVAL = 1000;
 let pendingDownloads: PendingDownload[] = [];
 let planned = false;
 
-export default function download(url: string, filename: string) {
+/**
+ * @param key Names the saved file in the desktop app, for opening it afterwards; attachments pass their media hash
+ */
+export default function download(url: string, filename: string, key?: string) {
+  // The system webview does not download blobs reliably, so the desktop app writes the file itself
+  if (IS_TAURI) {
+    void saveFile(url, filename, key);
+    return;
+  }
+
   pendingDownloads.push({ url, filename });
   if (!planned) {
     planned = true;

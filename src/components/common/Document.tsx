@@ -1,10 +1,12 @@
 import {
-  memo, useEffect, useMemo, useRef, useState,
+  memo, useCallback, useEffect, useMemo, useRef, useState,
 } from '../../lib/teact/teact';
 import { getActions } from '../../global';
 
 import type { ApiDocument, ApiMessage, MediaContent } from '../../api/types';
+import type { GlobalState } from '../../global/types';
 import type { ObserveFn } from '../../hooks/useIntersectionObserver';
+import type { IconName } from '../../types/icons';
 import type { MenuItemContextAction } from '../ui/ListItem';
 
 import {
@@ -13,10 +15,12 @@ import {
   getMediaTransferState,
   isDocumentVideo,
 } from '../../global/helpers';
+import { selectIsFileSaved } from '../../global/selectors';
 import { isIpRevealingMedia } from '../../util/media/ipRevealingMedia';
 import { getDocumentExtension, getDocumentHasPreview } from './helpers/documentInfo';
 import { preloadDocumentMedia } from './helpers/preloadDocumentMedia';
 
+import useSelector from '../../hooks/data/useSelector';
 import useFlag from '../../hooks/useFlag';
 import { useIsIntersecting } from '../../hooks/useIntersectionObserver';
 import useLang from '../../hooks/useLang';
@@ -81,7 +85,9 @@ const Document = ({
   onDateClick,
   contextActions,
 }: OwnProps) => {
-  const { cancelMediaDownload, downloadMedia, setSharedSettingOption } = getActions();
+  const {
+    cancelMediaDownload, downloadMedia, openSavedFile, setSharedSettingOption,
+  } = getActions();
 
   const ref = useRef<HTMLDivElement>();
 
@@ -110,6 +116,9 @@ const Document = ({
   const shouldDownload = !isUnavailable && Boolean(isDownloading || (isLoadAllowed && wasIntersected));
 
   const documentHash = getDocumentMediaHash(document, 'download');
+  // The desktop app saved the file, so activating the document opens it
+  const selectIsSaved = useCallback((global: GlobalState) => selectIsFileSaved(global, documentHash), [documentHash]);
+  const isSaved = useSelector(selectIsSaved);
   const { loadProgress: downloadProgress, mediaData } = useMediaWithLoadProgress(
     documentHash, !shouldDownload, getMediaFormat(document, 'download'),
   );
@@ -151,6 +160,10 @@ const Document = ({
 
   const handleDownload = useLastCallback(() => {
     if (noDownload) return;
+    if (isSaved) {
+      openSavedFile({ key: documentHash! });
+      return;
+    }
     downloadMedia({ media: document, originMessage: message });
   });
 
@@ -195,6 +208,11 @@ const Document = ({
     handleDownload();
   });
 
+  let actionIcon: IconName = isSaved ? 'open-in-new-tab' : 'download';
+  if (withMediaViewer) {
+    actionIcon = isDocumentVideo(document) ? 'play' : 'eye';
+  }
+
   const handleDateClick = useLastCallback(() => {
     onDateClick?.(message);
   });
@@ -218,7 +236,7 @@ const Document = ({
       isSelectable={isSelectable}
       isSelected={isSelected}
       isUnavailable={isUnavailable}
-      actionIcon={withMediaViewer ? (isDocumentVideo(document) ? 'play' : 'eye') : 'download'}
+      actionIcon={actionIcon}
       contextActions={contextActions}
       onClick={!isUnavailable && (!noDownload || withMediaViewer || (isUploading && onCancelUpload))
         ? handleClick : undefined}

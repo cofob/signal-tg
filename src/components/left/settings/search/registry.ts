@@ -4,6 +4,7 @@ import type { RegularLangKey } from '../../../../types/language';
 import type { IconBackdropColor } from '../../../gili/primitives/IconBackdrop';
 import { SettingsScreens } from '../../../../types';
 
+import { IS_TAURI } from '../../../../util/browser/globalEnvironment';
 import { IS_IOS, IS_MAC_OS } from '../../../../util/browser/windowEnvironment';
 import { unique } from '../../../../util/iteratees';
 import { getIsKeyboardShortcutAvailable } from '../../../../util/keyboardShortcuts';
@@ -305,6 +306,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats', 'AutoDownloadSettingsChannels',
     'AutoDownloadMaxFileSize', 'SettingsDataClearMediaCache',
   ]),
+  ...buildEntries(SettingsScreens.DataStorage, IS_TAURI ? ['SettingsAskWhereToSave'] : []),
 
   ...buildEntries(SettingsScreens.Performance, [
     'SettingsPerformanceSliderTitle', 'SettingsPerformanceGranularTitle', 'SettingsPerformanceInterfaceAnimations',
