@@ -72,7 +72,8 @@ export async function sendMessage(
       content: {
         case: 'sent',
         value: {
-          destinationServiceId: !groupId ? others[0] : undefined,
+          // A message to ourselves names us, so our other devices file it under Note to Self
+          destinationServiceId: !groupId ? others[0] ?? account.aci : undefined,
           timestamp: BigInt(options.timestamp),
           message: message.case === 'dataMessage' ? message.value : undefined,
           editMessage: message.case === 'editMessage' ? message.value : undefined,
