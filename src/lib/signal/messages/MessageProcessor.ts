@@ -175,6 +175,8 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
+// Storage record cases supported after earlier versions stored such records without reading them
+const STORAGE_RECORD_TYPES_ADDED_LATER: NonNullable<StorageRecord['record']['case']>[] = ['installedStickerPack'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Signal Desktop `ts/routineProfileRefresh.preload.ts`
 const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
@@ -749,6 +751,30 @@ export default class MessageProcessor {
     const sync = this.storageSync.then(() => syncStorageService(this.client.getSenderContext(), this));
     this.storageSync = sync.catch(() => undefined);
     return sync;
+  }
+
+  /**
+   * Merges stored storage records of types this device learned to handle after storing them, once per type. Records
+   * are fetched only when new, so a type supported later would otherwise stay unread until another device rewrites it
+   * (Signal Desktop reprocesses its unknown records after an upgrade the same way).
+   */
+  mergeStoredRecordsOfNewTypes() {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const merged = new Set(await store.getItem('storageMergedRecordTypes'));
+      const types = STORAGE_RECORD_TYPES_ADDED_LATER.filter((type) => !merged.has(type));
+      if (!types.length) return;
+
+      const stored = await store.getItem('storageManifest');
+      if (stored) {
+        const records = (await store.getStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored))))
+          .filter(Boolean)
+          .map((record) => fromBinary(StorageRecordSchema, record))
+          .filter(({ record }) => record.case && types.includes(record.case));
+        if (records.length) await this.mergeStorageRecords(records);
+      }
+      await store.setItem('storageMergedRecordTypes', [...merged, ...types]);
+    });
   }
 
   /**

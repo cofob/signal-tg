@@ -24,6 +24,7 @@ const MAX_WRITE_ATTEMPTS = 3;
 export async function syncStorageService(context: SenderContext, processor: MessageProcessor) {
   const storageKey = await getStorageKey(context.account);
   const credentials = await getStorageCredentials(context.connection);
+  await processor.mergeStoredRecordsOfNewTypes();
 
   for (let attempt = 1; ; attempt++) {
     const stored = await context.store.getItem('storageManifest');
