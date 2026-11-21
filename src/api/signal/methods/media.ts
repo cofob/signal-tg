@@ -5,8 +5,10 @@ import { DEBUG, MEDIA_CACHE_DISABLED, MEDIA_CACHE_NAME, MEDIA_CACHE_NAME_AVATARS
 import { AttachmentUnavailableError } from '../../../lib/signal/attachments/downloadAttachment';
 import { downloadGroupAvatar } from '../../../lib/signal/groups/fetchGroup';
 import { downloadProfileAvatar } from '../../../lib/signal/profiles/fetchProfile';
+import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import * as cacheApi from '../../../util/cacheApi';
-import { parseAttachmentMediaId, STICKER_SLOT } from '../builders/media';
+import { parseAttachmentMediaId, PREVIEW_SLOT, STICKER_SLOT } from '../builders/media';
+import { parsePackStickerId } from '../builders/stickers';
 import { getCurrentAccount } from '../client';
 import { processor, store } from '../engine';
 import { fetchAttachmentBlob, getAttachmentPointer } from '../media/attachments';
@@ -14,9 +16,9 @@ import { renderBlurHash } from '../media/blurHash';
 import { getConversationByPeerId } from '../peers';
 
 // Hashes from `src/global/helpers/messageMedia.ts` and `getChatAvatarHash`: `photo<mediaId>?size=x`,
-// `document<mediaId>?download`, `avatar<peerId>?<avatarPhotoId>`. Streamed parts arrive as full
-// `./progressive/<hash>` and `./download/<hash>` URLs.
-const MEDIA_HASH_REGEX = /^(photo|document|avatar|profile)(-?\d+(?:_\w+)?)(?:\?(.*))?$/;
+// `document<mediaId>?download`, `avatar<peerId>?<avatarPhotoId>`, and `document<pack sticker id>` for stickers of
+// packs. Streamed parts arrive as full `./progressive/<hash>` and `./download/<hash>` URLs.
+const MEDIA_HASH_REGEX = /^(photo|document|avatar|profile)(-?\d+(?:_\w+)?|pack[0-9a-f_]+)(?:\?(.*))?$/;
 const STREAM_URL_PREFIX_REGEX = /^.*\/(?:progressive|download)\//;
 // Signal clients encode avatars as JPEG; image decoders also sniff the actual format
 const AVATAR_MIME_TYPE = 'image/jpeg';
@@ -55,9 +57,12 @@ async function fetchMedia(
   const [, type, id, query] = url.replace(STREAM_URL_PREFIX_REGEX, '').match(MEDIA_HASH_REGEX) ?? [];
   if (!type) throw new Error(`Unsupported media ${url}`);
 
-  const blob = type === 'avatar' || type === 'profile'
-    ? await fetchAvatar(url, id)
-    : await fetchMessageMedia(id, new URLSearchParams(query).has('size'), onProgress);
+  const packSticker = parsePackStickerId(id);
+  const blob = packSticker
+    ? await fetchStickerImage(packSticker.packId, packSticker.packKey, packSticker.stickerId)
+    : type === 'avatar' || type === 'profile'
+      ? await fetchAvatar(url, id)
+      : await fetchMessageMedia(id, new URLSearchParams(query).has('size'), onProgress);
 
   const { type: mimeType, size: fullSize } = blob;
   // Streamed parts take bytes `start` to `end`, inclusive
@@ -81,7 +86,8 @@ async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgre
     return fetchAttachmentBlob(pointer, onProgress).catch(async (err: unknown) => {
       // The message then shows the media as unavailable and stops asking for it
       const { messageId, slot } = parseAttachmentMediaId(mediaId)!;
-      if (err instanceof AttachmentUnavailableError) {
+      // A link preview without its image still shows
+      if (err instanceof AttachmentUnavailableError && slot !== PREVIEW_SLOT) {
         await processor.markAttachmentUnavailable(messageId, slot === STICKER_SLOT ? 'sticker' : slot);
       }
       throw err;

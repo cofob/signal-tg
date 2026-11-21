@@ -950,7 +950,6 @@
 "SettingsPerformanceAutoplayGif" = "Autoplay GIFs";
 "SettingsPerformanceAutoplayVideo" = "Autoplay Videos";
 "SettingsPerformanceGranularTitle" = "Resource-Intensive Processes";
-"FavoriteStickers" = "Favorites";
 "GroupStickers" = "Group Stickers";
 "ErrorSendRestrictedStickersAll" = "Sorry, sending stickers is not allowed in this group";
 "ErrorPhoneNumberInvalid" = "Invalid phone number, please try again";
@@ -1361,8 +1360,7 @@
 "StickerSearchResult" = "Search Result";
 "StickerSearchGlobalResult" = "Global Search Result";
 "NoStickersFound" = "No stickers found";
-"TrendingStickers" = "Trending Stickers";
-"TrendingPremiumStickers" = "Trending Premium Stickers";
+"StickersArtistSeries" = "Signal Artist Series";
 "AccDescrCloseTrendingStickers" = "Close trending stickers";
 "SearchGifsTitle" = "Search GIFs";
 "SharedMedia" = "Shared Media";

@@ -1,4 +1,6 @@
 import type { Verified_State } from '../proto/generated/SignalService_pb';
+import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
 
@@ -100,10 +102,16 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // Storage record types this device has merged from records it stored before supporting them (`MessageProcessor`)
+  storageMergedRecordTypes: NonNullable<StorageRecord['record']['case']>[];
+  // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
+  stickerPacks: Record<string, StickerPackRecord>;
+  // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
+  recentStickers: string[];
   cdsiToken: CdsiToken;
 };
 
-/** The contact discovery token for the numbers of earlier lookups, which later lookups send again */
+/** The contact discovery token for the numbers of earlier contact refreshes, which later refreshes send again */
 export type CdsiToken = {
   token: Uint8Array;
   e164s: string[];
@@ -318,6 +326,15 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Decrypted manifests of sticker packs by hex pack id; they never change, so they are kept for any pack seen */
+  getStickerPackManifest(id: string) {
+    return this.db.get<StickerPackManifest>(`stickerPackManifest:${id}`);
+  }
+
+  setStickerPackManifest(id: string, manifest: StickerPackManifest) {
+    return this.db.set(`stickerPackManifest:${id}`, manifest);
   }
 
   /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */

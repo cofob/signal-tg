@@ -92,6 +92,8 @@ export type ScrollTargetPosition = ScrollLogicalPosition | 'centerOrTop';
 
 export interface IAlbum {
   albumId: string;
+  // Signal: one message with several photos and videos (`MediaContent.album`) instead of grouped messages
+  isSingleMessage?: true;
   messages: ApiMessage[];
   mainMessage: ApiMessage;
   captionMessage?: ApiMessage;

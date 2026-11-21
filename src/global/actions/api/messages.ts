@@ -45,6 +45,7 @@ import {
   SUPPORTED_PHOTO_CONTENT_TYPES,
   SUPPORTED_VIDEO_CONTENT_TYPES,
 } from '../../../config';
+import { parseStickerPackLink } from '../../../lib/signal/stickers/stickerPackLinks';
 import { revokeAttachmentUrls } from '../../../util/attachments';
 import { ensureProtocol } from '../../../util/browser/url';
 import { IS_IOS } from '../../../util/browser/windowEnvironment';
@@ -2944,6 +2945,12 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
 
   if (!ignoreDeepLinks && RE_SIGNAL_GROUP_LINK.test(urlWithProtocol)) {
     actions.checkChatInvite({ hash: urlWithProtocol, tabId });
+    return;
+  }
+
+  const stickerPack = !ignoreDeepLinks ? parseStickerPackLink(urlWithProtocol) : undefined;
+  if (stickerPack) {
+    actions.openStickerSet({ stickerSetInfo: { id: stickerPack.id, accessHash: stickerPack.key }, tabId });
     return;
   }
 

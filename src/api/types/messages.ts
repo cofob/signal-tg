@@ -196,6 +196,10 @@ export interface ApiContact {
   lastName: string;
   phoneNumber: string;
   userId: string;
+  // Signal: the shared contact as a vCard, which the message offers to save
+  vcard?: string;
+  // Signal: the contact's ACI when no chat with it exists yet; messaging it creates one
+  aci?: string;
 }
 
 export interface ApiPollAnswer {
@@ -668,11 +672,21 @@ export interface ApiComposedMessageWithAI {
   diffText?: ApiFormattedText;
 }
 
+/**
+ * Signal: the photos and videos of one message, which it shows as an album. The message's `photo` or `video` is the
+ * first of them.
+ */
+export interface ApiMessageAlbum {
+  mediaType: 'album';
+  items: Pick<MediaContent, 'photo' | 'video'>[];
+}
+
 export type MediaContent = {
   text?: ApiFormattedTextWithEmojiOnlyCount;
   richMessage?: ApiRichMessage;
   photo?: ApiPhoto;
   video?: ApiVideo;
+  album?: ApiMessageAlbum;
   document?: ApiDocument;
   sticker?: ApiSticker;
   contact?: ApiContact;

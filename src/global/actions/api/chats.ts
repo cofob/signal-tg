@@ -1734,6 +1734,19 @@ addActionHandler('openChatByUsernameLink', async (global, actions, payload): Pro
   actions.openChatByUsername({ username, tabId });
 });
 
+/** Opens the chat with a Signal user by ACI, such as a shared contact that has no chat yet */
+addActionHandler('openChatByAci', async (global, actions, payload): Promise<void> => {
+  const { aci, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('getChatByAci', aci);
+  if (!result) return;
+
+  global = getGlobal();
+  global = updateChat(global, result.chat.id, result.chat);
+  global = updateUser(global, result.user.id, result.user);
+  setGlobal(global);
+  actions.openChat({ id: result.chat.id, tabId });
+});
+
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
     hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),

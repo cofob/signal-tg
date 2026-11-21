@@ -105,5 +105,15 @@ export {
   updateNotificationSettings,
 } from './settings';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
+  clearRecentStickers,
+  fetchFeaturedStickers,
+  fetchRecentStickers,
+  fetchStickers,
+  fetchStickerSets,
+  installStickerSet,
+  removeRecentSticker,
+  uninstallStickerSet,
+} from './stickers';
+export {
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, getChatByAci, reportSpam,
 } from './users';

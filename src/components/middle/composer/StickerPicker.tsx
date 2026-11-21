@@ -4,15 +4,11 @@ import {
 import { setExtraStyles } from '../../../lib/teact/teact-dom';
 import { getActions, withGlobal } from '../../../global';
 
-import type {
-  ApiChat, ApiEmojiGroup, ApiSticker, ApiStickerSet,
-} from '../../../api/types';
+import type { ApiChat, ApiSticker, ApiStickerSet } from '../../../api/types';
 import type { StickerSetOrReactionsSetOrRecent, ThreadId } from '../../../types';
 
 import {
   BASE_EMOJI_KEYWORD_LANG,
-  CHAT_STICKER_SET_ID,
-  FAVORITE_SYMBOL_SET_ID,
   RECENT_SYMBOL_SET_ID,
   SLIDE_TRANSITION_DURATION,
   STICKER_PICKER_MAX_SHARED_COVERS,
@@ -21,22 +17,16 @@ import {
 } from '../../../config';
 import { requestForcedReflow } from '../../../lib/fasterdom/fasterdom';
 import { getIsStickerSetInstalled } from '../../../global/helpers';
-import {
-  selectChat,
-  selectChatFullInfo,
-  selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
-  selectShouldLoopStickers,
-} from '../../../global/selectors';
+import { selectChat, selectIsChatWithSelf, selectShouldLoopStickers } from '../../../global/selectors';
 import { selectLanguageCode } from '../../../global/selectors/settings';
 import animateHorizontalScroll from '../../../util/animateHorizontalScroll';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import { waitForTransitionEnd } from '../../../util/cssAnimationEndListeners';
-import { isUserId } from '../../../util/entities/ids';
 import { pickTruthy, uniqueByField } from '../../../util/iteratees';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import resetScroll from '../../../util/resetScroll';
+import searchWords from '../../../util/text/searchWords';
 import { REM } from '../../common/helpers/mediaDimensions';
 
 import { useTransitionActiveKey } from '../../../hooks/animations/useTransitionActiveKey';
@@ -51,9 +41,7 @@ import useSyncEffect from '../../../hooks/useSyncEffect';
 import { useStickerPickerObservers } from '../../common/hooks/useStickerPickerObservers';
 import useAsyncRendering from '../../right/hooks/useAsyncRendering';
 import useEmojiSearch from './hooks/useEmojiSearch';
-import useStickerSearch from './hooks/useStickerSearch';
 
-import Avatar from '../../common/Avatar';
 import CollapsibleSection from '../../common/CollapsibleSection';
 import FoundPacksRow from '../../common/FoundPacksRow';
 import Icon from '../../common/icons/Icon';
@@ -90,19 +78,14 @@ type OwnProps = {
 type StateProps = {
   chat?: ApiChat;
   recentStickers: ApiSticker[];
-  favoriteStickers: ApiSticker[];
   stickerSetsById: Record<string, ApiStickerSet>;
-  chatStickerSetId?: string;
   addedSetIds?: string[];
   featuredIds?: string[];
-  isTrendingPremium?: boolean;
   hiddenTrendingSetId?: string;
   canAnimate?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
-  stickerGroups?: ApiEmojiGroup[];
 };
 
 const HEADER_BUTTON_WIDTH = 2.5 * REM; // px (including margin)
@@ -111,7 +94,6 @@ const TRENDING_COVER_SIZE = 1.5 * REM;
 const TRENDING_DISMISS_DURATION = 250;
 const TRENDING_DISMISS_FALLBACK_MS = TRENDING_DISMISS_DURATION + 100;
 const RESULTS_INTERSECTION_THROTTLE = 200;
-const LOAD_MORE_THRESHOLD = 500;
 
 const StickerPicker = ({
   chatId,
@@ -125,19 +107,14 @@ const StickerPicker = ({
   noRenderDelay,
   withInstantThumbs,
   recentStickers,
-  favoriteStickers,
   addedSetIds,
   featuredIds,
-  isTrendingPremium,
   hiddenTrendingSetId,
   stickerSetsById,
-  chatStickerSetId,
   canAnimate,
   isSavedMessages,
-  isCurrentUserPremium,
   baseEmojiKeywords,
   emojiKeywords,
-  stickerGroups,
   noContextMenus,
   idPrefix,
   onStickerSelect,
@@ -145,8 +122,6 @@ const StickerPicker = ({
   const {
     loadRecentStickers,
     addRecentSticker,
-    unfaveSticker,
-    faveSticker,
     removeRecentSticker,
     loadStickers,
     loadFeaturedStickers,
@@ -187,16 +162,6 @@ const StickerPicker = ({
 
     const defaultSets = [];
 
-    if (favoriteStickers.length) {
-      defaultSets.push({
-        id: FAVORITE_SYMBOL_SET_ID,
-        accessHash: '0',
-        title: lang('FavoriteStickers'),
-        stickers: favoriteStickers,
-        count: favoriteStickers.length,
-      });
-    }
-
     if (recentStickers.length) {
       defaultSets.push({
         id: RECENT_SYMBOL_SET_ID,
@@ -207,23 +172,14 @@ const StickerPicker = ({
       });
     }
 
-    const userSetIds = [...(addedSetIds || [])];
-    if (chatStickerSetId) {
-      userSetIds.unshift(chatStickerSetId);
-    }
-
-    const existingAddedSetIds = Object.values(pickTruthy(stickerSetsById, userSetIds));
-
     return [
       ...defaultSets,
-      ...existingAddedSetIds,
+      ...Object.values(pickTruthy(stickerSetsById, addedSetIds)),
     ];
   }, [
     addedSetIds,
     stickerSetsById,
-    favoriteStickers,
     recentStickers,
-    chatStickerSetId,
     lang,
   ]);
 
@@ -238,11 +194,9 @@ const StickerPicker = ({
 
   const {
     query,
-    activeGroup,
     isSearchActive,
     customResults,
     setQuery,
-    selectGroup,
     markSearchFocused,
     unmarkSearchFocused,
   } = useEmojiSearch({
@@ -253,50 +207,28 @@ const StickerPicker = ({
     noNativeResults: true,
   });
 
-  const effectiveQuery = activeGroup ? activeGroup.emoticons.join(' ') : query.trim();
-  const hasSearch = Boolean(effectiveQuery);
-
-  const { results: searchResults, searchMore } = useStickerSearch({
-    query: effectiveQuery || undefined,
-    noPacks: activeGroup ? true : undefined,
-  });
+  // Signal has no sticker search on the server: results are stickers of installed packs with matching emoji, and
+  // installed and known packs with matching titles
+  const effectiveQuery = query.trim();
+  const isShowingSearchResults = Boolean(effectiveQuery);
 
   const [openedPack, setOpenedPack] = useState<ApiStickerSet | undefined>();
   const pendingSetIndexRef = useRef<number>();
   const [isLocalSectionCollapsed, setIsLocalSectionCollapsed] = useState(false);
-  const [isGlobalSectionCollapsed, setIsGlobalSectionCollapsed] = useState(false);
 
   useSyncEffect(() => {
     setIsLocalSectionCollapsed(false);
-    setIsGlobalSectionCollapsed(false);
   }, [effectiveQuery]);
   const openedSet = openedPack && (stickerSetsById[openedPack.id] || openedPack);
   const isOpenedSetLoading = Boolean(openedSet && (openedSet.stickers?.length || 0) < openedSet.count);
 
-  const searchDisplayRef = useRef<{
-    key: string;
-    isCategory?: boolean;
-    packSets?: ApiStickerSet[];
-    localStickers?: ApiSticker[];
-    globalStickers?: ApiSticker[];
-  }>();
-  if (hasSearch && searchResults?.key === effectiveQuery) {
-    searchDisplayRef.current = {
-      key: effectiveQuery,
-      isCategory: Boolean(activeGroup),
-      // Full sets loaded on demand (e.g. for covers) land in `stickerSetsById`, so prefer them over search snapshots
-      packSets: searchResults.packSets?.map((set) => stickerSetsById[set.id] || set),
-      localStickers: customResults,
-      globalStickers: searchResults.globalStickers,
-    };
-  } else if (searchDisplayRef.current?.key === effectiveQuery && !searchDisplayRef.current.isCategory) {
-    searchDisplayRef.current.localStickers = customResults;
-  }
-  const searchDisplay = hasSearch ? searchDisplayRef.current : undefined;
-  const isShowingSearchResults = Boolean(searchDisplay);
-  const isSearchLoading = hasSearch && searchDisplay?.key !== effectiveQuery;
+  const foundPackSets = useMemo(() => {
+    if (!effectiveQuery) return undefined;
+    const setIds = [...new Set([...(addedSetIds || []), ...(featuredIds || [])])];
+    return Object.values(pickTruthy(stickerSetsById, setIds)).filter(({ title }) => searchWords(title, effectiveQuery));
+  }, [addedSetIds, effectiveQuery, featuredIds, stickerSetsById]);
 
-  const contentActiveKey = useTransitionActiveKey([isShowingSearchResults, searchDisplay?.key, openedSet?.id]);
+  const contentActiveKey = useTransitionActiveKey([isShowingSearchResults, effectiveQuery, openedSet?.id]);
 
   const { observe: observeIntersectionForResults } = useIntersectionObserver({
     rootRef: containerRef,
@@ -307,7 +239,7 @@ const StickerPicker = ({
     if (containerRef.current) {
       resetScroll(containerRef.current, 0);
     }
-  }, [isShowingSearchResults, searchDisplay?.key, openedSet?.id]);
+  }, [isShowingSearchResults, effectiveQuery, openedSet?.id]);
 
   useEffect(() => {
     if (!loadAndPlay) return;
@@ -355,14 +287,6 @@ const StickerPicker = ({
     addRecentSticker({ sticker });
   });
 
-  const handleStickerUnfave = useLastCallback((sticker: ApiSticker) => {
-    unfaveSticker({ sticker });
-  });
-
-  const handleStickerFave = useLastCallback((sticker: ApiSticker) => {
-    faveSticker({ sticker });
-  });
-
   const handleMouseMove = useLastCallback(() => {
     if (!canSendStickers) return;
     sendMessageAction({ type: 'chooseSticker' });
@@ -370,19 +294,6 @@ const StickerPicker = ({
 
   const handleRemoveRecentSticker = useLastCallback((sticker: ApiSticker) => {
     removeRecentSticker({ sticker });
-  });
-
-  const handleScroll = useLastCallback((e: React.UIEvent<HTMLDivElement>) => {
-    handleContentScroll(e);
-
-    if (!isShowingSearchResults || openedSet || isGlobalSectionCollapsed) {
-      return;
-    }
-
-    const container = e.currentTarget;
-    if (container.scrollHeight - container.scrollTop - container.clientHeight < LOAD_MORE_THRESHOLD) {
-      searchMore();
-    }
   });
 
   const handleFoundPackClick = useLastCallback((set: ApiStickerSet) => {
@@ -453,18 +364,9 @@ const StickerPicker = ({
     setIsLocalSectionCollapsed(!isLocalSectionCollapsed);
   });
 
-  const handleGlobalSectionToggle = useLastCallback(() => {
-    setIsGlobalSectionCollapsed(!isGlobalSectionCollapsed);
-  });
-
   const handleQueryChange = useLastCallback((value: string) => {
     setOpenedPack(undefined);
     setQuery(value);
-  });
-
-  const handleGroupSelect = useLastCallback((group?: ApiEmojiGroup) => {
-    setOpenedPack(undefined);
-    selectGroup(group);
   });
 
   if (chatId && !chat) return undefined;
@@ -473,29 +375,20 @@ const StickerPicker = ({
     const firstSticker = stickerSet.stickers?.[0];
     const buttonClassName = buildClassName(styles.stickerCover, index === activeSetIndex && styles.activated);
 
-    if (stickerSet.id === RECENT_SYMBOL_SET_ID
-      || stickerSet.id === FAVORITE_SYMBOL_SET_ID
-      || stickerSet.id === CHAT_STICKER_SET_ID
-      || stickerSet.hasThumbnail
-      || !firstSticker
-    ) {
+    if (stickerSet.id === RECENT_SYMBOL_SET_ID || stickerSet.hasThumbnail || !firstSticker) {
       return (
         <Button
           key={stickerSet.id}
           className={buttonClassName}
           ariaLabel={stickerSet.title}
           round
-          faded={stickerSet.id === RECENT_SYMBOL_SET_ID || stickerSet.id === FAVORITE_SYMBOL_SET_ID}
+          faded={stickerSet.id === RECENT_SYMBOL_SET_ID}
           color="translucent"
 
           onClick={() => handleCoverClick(index)}
         >
           {stickerSet.id === RECENT_SYMBOL_SET_ID ? (
             <Icon name="clock" />
-          ) : stickerSet.id === FAVORITE_SYMBOL_SET_ID ? (
-            <Icon name="star-regular" />
-          ) : stickerSet.id === CHAT_STICKER_SET_ID ? (
-            <Avatar peer={chat} size="small" />
           ) : (
             <StickerSetCover
               stickerSet={stickerSet as ApiStickerSet}
@@ -517,7 +410,6 @@ const StickerPicker = ({
           noPlay={!canAnimate || !loadAndPlay}
           observeIntersection={observeIntersectionForCovers}
           noContextMenu
-          isCurrentUserPremium
           withTranslucentThumb={isTranslucent}
           onClick={handleCoverClick}
           clickArg={index}
@@ -555,7 +447,6 @@ const StickerPicker = ({
             noPlay={!canAnimate || !loadAndPlay}
             observeIntersection={observeIntersectionForResults}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={index}
             forcePlayback
@@ -594,7 +485,6 @@ const StickerPicker = ({
             noPlay={!canAnimate || !loadAndPlay}
             observeIntersection={observeIntersectionForResults}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={undefined}
             forcePlayback
@@ -610,7 +500,7 @@ const StickerPicker = ({
         <div className="symbol-set-header">
           <p className="symbol-set-title">
             <span className="symbol-set-name">
-              {lang(isTrendingPremium ? 'TrendingPremiumStickers' : 'TrendingStickers')}
+              {lang('StickersArtistSeries')}
             </span>
           </p>
           <Button
@@ -641,7 +531,6 @@ const StickerPicker = ({
         observeIntersection={observeIntersectionForResults}
         noPlay={!canAnimate || !loadAndPlay}
         noContextMenu={noContextMenus}
-        isCurrentUserPremium={isCurrentUserPremium}
         withTranslucentThumb={isTranslucent}
         onClick={canSendStickers ? handleStickerSelect : undefined}
         clickArg={sticker}
@@ -676,7 +565,6 @@ const StickerPicker = ({
         noPlay={!canAnimate || !loadAndPlay}
         noContextMenus={noContextMenus}
         isSavedMessages={isSavedMessages}
-        isCurrentUserPremium={isCurrentUserPremium}
         isTranslucent={isTranslucent}
         onStickerSelect={canSendStickers ? handleStickerSelect : undefined}
       />
@@ -684,41 +572,19 @@ const StickerPicker = ({
   }
 
   function renderSearchResults() {
-    const {
-      isCategory, packSets, localStickers, globalStickers,
-    } = searchDisplay!;
-    const localStickerIds = new Set((localStickers || []).map(({ id }) => id));
-    const dedupedGlobalStickers = globalStickers?.filter(({ id }) => !localStickerIds.has(id));
-
-    if (isCategory) {
-      if (!globalStickers?.length) {
-        return <div className={styles.pickerDisabled}>{lang('NoStickersFound')}</div>;
-      }
-      return (
-        <div className={styles.resultGrid}>
-          {renderResultStickers(globalStickers)}
-        </div>
-      );
-    }
-
-    const hasAny = Boolean(packSets?.length || localStickers?.length || dedupedGlobalStickers?.length);
-
-    if (!hasAny) {
+    if (!foundPackSets?.length && !customResults?.length) {
       return <div className={styles.pickerDisabled}>{lang('NoStickersFound')}</div>;
     }
 
     return (
       <div>
-        {Boolean(packSets?.length) && (
+        {Boolean(foundPackSets?.length) && (
           <FoundPacksRow>
-            {packSets.map(renderFoundPack)}
+            {foundPackSets.map(renderFoundPack)}
           </FoundPacksRow>
         )}
-        {Boolean(localStickers?.length) && renderResultSection(
-          lang('StickerSearchResult'), localStickers, isLocalSectionCollapsed, handleLocalSectionToggle,
-        )}
-        {Boolean(dedupedGlobalStickers?.length) && renderResultSection(
-          lang('StickerSearchGlobalResult'), dedupedGlobalStickers, isGlobalSectionCollapsed, handleGlobalSectionToggle,
+        {Boolean(customResults?.length) && renderResultSection(
+          lang('StickerSearchResult'), customResults, isLocalSectionCollapsed, handleLocalSectionToggle,
         )}
       </div>
     );
@@ -763,7 +629,7 @@ const StickerPicker = ({
           <div
             ref={containerRef}
             onMouseMove={handleMouseMove}
-            onScroll={handleScroll}
+            onScroll={handleContentScroll}
             className={
               buildClassName(
                 styles.main,
@@ -774,14 +640,12 @@ const StickerPicker = ({
           >
             <EmojiSearch
               value={query}
-              groups={stickerGroups}
-              activeGroup={activeGroup}
               placeholder={lang('SearchStickers')}
-              isLoading={isSearchLoading || isOpenedSetLoading}
+              isLoading={isOpenedSetLoading}
               hasBackButton={Boolean(openedSet)}
               className={styles.search}
               onChange={handleQueryChange}
-              onGroupSelect={handleGroupSelect}
+              onGroupSelect={handlePackBackClick}
               onBackClick={handlePackBackClick}
               onFocus={markSearchFocused}
               onBlur={unmarkSearchFocused}
@@ -810,15 +674,10 @@ const StickerPicker = ({
                       observeIntersectionForPlayingItems={observeIntersectionForPlayingItems}
                       observeIntersectionForShowingItems={observeIntersectionForShowingItems}
                       isNearActive={i >= activeSetIndex - 1 && i <= lastVisibleSetIndex + 1}
-                      favoriteStickers={favoriteStickers}
                       isSavedMessages={isSavedMessages}
-                      isCurrentUserPremium={isCurrentUserPremium}
                       isTranslucent={isTranslucent}
                       withInstantThumbs={withInstantThumbs}
-                      isChatStickerSet={stickerSet.id === chatStickerSetId}
                       onStickerSelect={handleStickerSelect}
-                      onStickerUnfave={handleStickerUnfave}
-                      onStickerFave={handleStickerFave}
                       onStickerRemoveRecent={handleRemoveRecentSticker}
                       forcePlayback
                     />
@@ -840,14 +699,11 @@ export default memo(withGlobal<OwnProps>(
       setsById,
       added,
       recent,
-      favorite,
       featured,
     } = global.stickers;
 
     const isSavedMessages = chatId ? selectIsChatWithSelf(global, chatId) : undefined;
     const chat = chatId ? selectChat(global, chatId) : undefined;
-    const chatStickerSetId = chatId && !isUserId(chatId)
-      ? selectChatFullInfo(global, chatId)?.stickerSet?.id : undefined;
 
     const language = selectLanguageCode(global);
     const baseEmojiKeywords = global.emojiKeywords[BASE_EMOJI_KEYWORD_LANG];
@@ -856,19 +712,14 @@ export default memo(withGlobal<OwnProps>(
     return {
       chat,
       recentStickers: recent.stickers,
-      favoriteStickers: favorite.stickers,
       stickerSetsById: setsById,
       addedSetIds: added.setIds,
       featuredIds: featured.setIds,
-      isTrendingPremium: featured.isPremium,
       hiddenTrendingSetId: featured.hiddenSetId,
       canAnimate: selectShouldLoopStickers(global),
       isSavedMessages,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
-      chatStickerSetId,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,
       emojiKeywords: emojiKeywords?.keywords,
-      stickerGroups: global.emojiGroups.stickerGroups,
     };
   },
 )(StickerPicker));

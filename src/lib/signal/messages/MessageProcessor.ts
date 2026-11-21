@@ -34,7 +34,7 @@ import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
-import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
@@ -54,17 +54,21 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStickerPackSync,
   sendTyping,
   sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
+import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
   ACCOUNT_KEY,
   buildStorageWrite,
   getAci,
   getMutedUntil,
+  getStickerPackStorageKey,
   getStorageChanges,
   mergeStorageChanges,
   omitChangedFields,
@@ -85,6 +89,7 @@ import {
   ReceiptMessage_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
   Verified_State,
 } from '../proto/generated/SignalService_pb';
@@ -129,7 +134,11 @@ type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
   onTyping(event: TypingEvent): void;
   onError(error: Error): void;
+  // Ids of sticker packs installed or removed here or on another device
+  onStickerPacksChange?(ids: string[]): void;
 };
+
+type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
 
 type MessageSource = {
   authorAci: string;
@@ -168,7 +177,12 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
 // Signal Desktop `runStorageServiceSyncJob` and `runStorageServiceUploadJob` in `ts/services/storage.preload.ts`
 const STORAGE_SYNC_DELAY_MS = 500;
+// Storage record cases supported after earlier versions stored such records without reading them
+const STORAGE_RECORD_TYPES_ADDED_LATER: NonNullable<StorageRecord['record']['case']>[] = ['installedStickerPack'];
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Signal Desktop `ts/routineProfileRefresh.preload.ts`
+const PROFILE_MAX_AGE_MS = 3 * DAY_MS;
+const MAX_PROFILES_TO_REFRESH = 50;
 // Signal Desktop `ts/util/canEditMessage.dom.ts` and `ts/util/getDeleteMaxAgeMs.std.ts`
 const EDIT_MAX_AGE_MS = DAY_MS;
 const MAX_EDIT_COUNT = 10;
@@ -742,6 +756,30 @@ export default class MessageProcessor {
   }
 
   /**
+   * Merges stored storage records of types this device learned to handle after storing them, once per type. Records
+   * are fetched only when new, so a type supported later would otherwise stay unread until another device rewrites it
+   * (Signal Desktop reprocesses its unknown records after an upgrade the same way).
+   */
+  mergeStoredRecordsOfNewTypes() {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const merged = new Set(await store.getItem('storageMergedRecordTypes'));
+      const types = STORAGE_RECORD_TYPES_ADDED_LATER.filter((type) => !merged.has(type));
+      if (!types.length) return;
+
+      const stored = await store.getItem('storageManifest');
+      if (stored) {
+        const records = (await store.getStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored))))
+          .filter(Boolean)
+          .map((record) => fromBinary(StorageRecordSchema, record))
+          .filter(({ record }) => record.case && types.includes(record.case));
+        if (records.length) await this.mergeStorageRecords(records);
+      }
+      await store.setItem('storageMergedRecordTypes', [...merged, ...types]);
+    });
+  }
+
+  /**
    * Merges a newer storage manifest: records new to this device go into the local state, except for fields changed
    * here since the last write, and are stored with the manifest for later writes
    */
@@ -793,6 +831,7 @@ export default class MessageProcessor {
         records,
         changes,
         conversations: await this.db.getConversations(),
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
@@ -865,6 +904,23 @@ export default class MessageProcessor {
   }
 
   /**
+   * Installs or removes a sticker pack on this device. Other devices learn it from a `stickerPackOperation` sync and
+   * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
+   */
+  async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
+    const isChanged = await this.runSerial(async () => {
+      const state: StickerPackState = isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() };
+      if (!await this.applyStickerPackState(id, key, state)) return false;
+      await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+      return true;
+    });
+    if (!isChanged) return;
+    await this.sendWhenConnected(async (context) => {
+      await sendStickerPackSync(context, [{ id, key, isInstalled }]);
+    });
+  }
+
+  /**
    * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
    * is in the account, other profile keys are in their recipients.
    */
@@ -890,9 +946,35 @@ export default class MessageProcessor {
         about: profile.about,
         aboutEmoji: profile.aboutEmoji,
         avatarPath: profile.avatarPath,
+        profileFetchedAt: Date.now(),
       });
     });
     this.flush();
+  }
+
+  /**
+   * Fetches the profiles of up to 50 private conversations whose profile is missing or older than three days,
+   * most recently active first (Signal Desktop `routineProfileRefresh`). Conversations created before the
+   * connection, such as those from history transfer or storage service, get their names and avatars this way.
+   */
+  async refreshStaleProfiles() {
+    const { store, account } = this.client.getSenderContext();
+    const now = Date.now();
+    const candidates = (await this.db.getConversations())
+      .filter(({ id, type, profileFetchedAt }) => (
+        type === 'private' && id !== account.aci && (!profileFetchedAt || now - profileFetchedAt > PROFILE_MAX_AGE_MS)
+      ))
+      .sort((a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0));
+
+    let count = 0;
+    for (const { id } of candidates) {
+      if (count >= MAX_PROFILES_TO_REFRESH) break;
+      // Profiles without a known profile key cannot be decrypted
+      if (!(await store.getRecipient(id))?.profileKey) continue;
+      count++;
+      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(id)).catch(this.events.onError);
+    }
+    await this.profileQueue;
   }
 
   /**
@@ -1121,6 +1203,19 @@ export default class MessageProcessor {
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
         }
+      } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
+        // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
+        const { packId, packKey, position, deletedAtTimestamp } = record.value;
+        const id = bufferToHex(packId);
+        if (changes[getStickerPackStorageKey(id)]) continue;
+        await this.applyStickerPackState(
+          id,
+          packKey.length ? bufferToHex(packKey) : undefined,
+          // An unset position reads as 0 and leaves the local one (Signal Desktop keeps it when the field is absent)
+          deletedAtTimestamp
+            ? { uninstalledAt: Number(deletedAtTimestamp) }
+            : { isInstalled: true, position: position || undefined },
+        );
       }
     }
 
@@ -1189,6 +1284,35 @@ export default class MessageProcessor {
       if (profileKey) acisAndAccessKeys.push({ aci: id, accessKey: wasm.ProfileKey_DeriveAccessKey(profileKey) });
     }
     return acisAndAccessKeys;
+  }
+
+  /**
+   * Stores whether a sticker pack is installed and returns whether that changed. A pack installed without a position
+   * goes after the others; a removal of a pack this device never had needs no record.
+   */
+  private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
+    const { store } = this.client;
+    const packs = await store.getItem('stickerPacks') ?? {};
+    const current = packs[id];
+    const packKey = key ?? current?.key;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return false;
+
+    const wasInstalled = current?.installedAt !== undefined;
+    if ('isInstalled' in state) {
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return false;
+      packs[id] = {
+        id,
+        key: packKey,
+        installedAt: current?.installedAt ?? Date.now(),
+        position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
+      };
+    } else {
+      if (!wasInstalled) return false;
+      packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
+    }
+    await store.setItem('stickerPacks', packs);
+    this.events.onStickerPacksChange?.([id]);
+    return true;
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1429,6 +1553,13 @@ export default class MessageProcessor {
         viewed.senderAci || uuidToString(viewed.senderAciBinary), Number(viewed.timestamp),
       );
       if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
+    }
+    for (const { packId, packKey, type } of sync.stickerPackOperation) {
+      await this.applyStickerPackState(
+        bufferToHex(packId),
+        bufferToHex(packKey),
+        type === SyncMessage_StickerPackOperation_Type.REMOVE ? { uninstalledAt: Date.now() } : { isInstalled: true },
+      );
     }
 
     const { content } = sync;
