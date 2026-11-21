@@ -1,15 +1,20 @@
+import type { Event } from '@tauri-apps/api/event';
 import { memo, useEffect } from '../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
 import type { TabState } from '../../global/types';
+import type { SavedFilesChange } from '../../util/tauri/nativeFiles';
 import { ApiMediaFormat } from '../../api/types';
 
 import { selectTabState } from '../../global/selectors';
+import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import { IS_OPFS_SUPPORTED, IS_SERVICE_WORKER_SUPPORTED, MAX_BUFFER_SIZE } from '../../util/browser/windowEnvironment';
 import download from '../../util/download';
 import generateUniqueId from '../../util/generateUniqueId';
 import * as mediaLoader from '../../util/mediaLoader';
+import { loadSavedFiles } from '../../util/tauri/nativeFiles';
 
+import useTauriEvent from '../../hooks/tauri/useTauriEvent';
 import useLastCallback from '../../hooks/useLastCallback';
 import useRunDebounced from '../../hooks/useRunDebounced';
 
@@ -25,7 +30,7 @@ const downloadedHashes = new Set<string>();
 const DownloadManager = ({
   activeDownloads,
 }: StateProps) => {
-  const { cancelMediaHashDownloads, showNotification } = getActions();
+  const { cancelMediaHashDownloads, showNotification, updateSavedFiles } = getActions();
 
   const runDebounced = useRunDebounced(GLOBAL_UPDATE_DEBOUNCE, true);
 
@@ -38,6 +43,18 @@ const DownloadManager = ({
       }
     });
   });
+
+  // The desktop app tells every window when it saves a file or finds one gone
+  const handleSavedFilesChange = useLastCallback((event: Event<SavedFilesChange>) => {
+    updateSavedFiles(event.payload);
+  });
+  useTauriEvent('saved-files-changed', handleSavedFilesChange);
+
+  useEffect(() => {
+    if (IS_TAURI) {
+      loadSavedFiles().catch(() => undefined);
+    }
+  }, []);
 
   useEffect(() => {
     if (!Object.keys(activeDownloads).length) {
@@ -56,7 +73,7 @@ const DownloadManager = ({
       const mediaData = mediaLoader.getFromMemory(mediaHash);
 
       if (mediaData) {
-        download(mediaData, filename);
+        download(mediaData, filename, mediaHash);
         handleMediaDownloaded(mediaHash);
         return;
       }
@@ -89,7 +106,7 @@ const DownloadManager = ({
             });
           }, { once: true });
         } else if (result) {
-          download(result, filename);
+          download(result, filename, mediaHash);
         }
 
         handleMediaDownloaded(mediaHash);

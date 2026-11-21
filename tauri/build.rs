@@ -11,6 +11,13 @@ fn main() {
       "signal_send",
       "signal_ack",
       "signal_close",
+      "begin_file_save",
+      "write_file_chunk",
+      "finish_file_save",
+      "abort_file_save",
+      "list_saved_files",
+      "open_saved_file",
+      "reveal_saved_file",
     ]),
   ))
   .expect("Failed to build Tauri application")

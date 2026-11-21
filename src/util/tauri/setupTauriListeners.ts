@@ -4,11 +4,6 @@ import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
 
-type DownloadFinishedEvent = {
-  success: boolean;
-  url: string;
-};
-
 let isSetup = false;
 export default function setupTauriListeners() {
   if (isSetup) return;
@@ -20,17 +15,6 @@ export default function setupTauriListeners() {
       event.preventDefault();
     });
   }
-
-  const eventPromise = import('@tauri-apps/api/event');
-  eventPromise.then(({ listen }) => {
-    listen<DownloadFinishedEvent>('download-finished', (event) => {
-      if (event.payload.success) return;
-
-      getActions().showNotification({
-        message: { key: 'NativeDownloadFailed' },
-      });
-    });
-  });
 
   // Disable Backspace handling as back navigation
   document.addEventListener('keydown', (event: KeyboardEvent) => {

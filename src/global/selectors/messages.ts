@@ -901,6 +901,14 @@ export function selectActiveDownloads<T extends GlobalState>(
   return selectTabState(global, tabId).activeDownloads;
 }
 
+export function selectIsFileSaved<T extends GlobalState>(
+  global: T,
+  key: string | undefined,
+  ...[tabId = getCurrentTabId()]: TabArgs<T>
+) {
+  return Boolean(key && selectTabState(global, tabId).savedFiles[key]);
+}
+
 export function selectUploadProgress<T extends GlobalState>(global: T, message: ApiMessage) {
   return global.fileUploads.byMessageKey[getMessageKey(message)]?.progress;
 }

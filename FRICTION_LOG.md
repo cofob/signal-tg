@@ -18,6 +18,33 @@ every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revisi
 conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
 is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.
 
+## Desktop notifications cannot open the chat that they announce
+
+`src/util/notifications.tsx` shows the desktop app's notifications with `sendNotification({ title, body })` of
+`@tauri-apps/plugin-notification`. On desktop the plugin shows the notification through `notify-rust` and drops the
+handle (`tauri-plugin-notification` 2.5.1, `src/desktop.rs`), and `onAction` exists on mobile only, so a click reaches
+the page as nothing, and the plugin offers no inline reply or grouping either. Verified by reading the plugin's source;
+not tried on macOS or Windows. Opening the chat needs native code per system (a `notify-rust` handle on Linux, a
+`UNUserNotificationCenter` delegate on macOS, a toast activation on Windows), or a heuristic: remember the last
+notified chat and open it when the window gains focus soon after.
+
+## The desktop app ships the webview inspector, so production turns off the context menu
+
+`tauri/Cargo.toml` enables the `devtools` feature of `tauri`, which keeps the inspector in release builds, and
+`src/util/tauri/setupTauriListeners.ts` cancels every `contextmenu` event outside `DEBUG` to hide it. The same line
+removes the system menu of text fields (cut, copy, paste, select all, spellcheck suggestions), and the inputs turn
+spellcheck off (`spellCheck={IS_TAURI ? false : undefined}`). Verified by reading both places; the inspector in a
+release build is not tried. Either dropping the feature or showing the system menu on editable targets only, with
+the inspector off, would restore text field menus.
+
+## The demo account has no downloadable document and no file with a risky name
+
+`seedDemo` (`src/lib/signal/dev/seedDemo.ts`) draws its photos into the attachment cache, but the one document in it,
+`report.pdf`, is marked unavailable. In the desktop app the Open confirmation for a dangerous type (`.exe`, `.sh`,
+...), the document click that opens a saved file and the "moved or deleted" answer for a document cannot be tried
+without a linked account. Only photos could be saved and opened in the Xvfb run; the confirmation is covered by unit
+tests of `is_file_dangerous` alone, and its native dialog was not shown.
+
 ## The app cannot tell whether this device is the primary device of the account
 
 Features that only a primary device has, such as the recovery key (`fetchRecoveryKey` in

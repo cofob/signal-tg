@@ -31,6 +31,7 @@ import buildClassName from '../../../util/buildClassName';
 import { isUserId } from '../../../util/entities/ids';
 import { EXTENDED_MENU_KEY } from '../../../util/keyboardShortcuts/registry';
 import { disableScrolling } from '../../../util/scrollLock';
+import { getShowInFolderLangKey } from '../../../util/tauri/nativeFiles';
 import { REM } from '../../common/helpers/mediaDimensions';
 import renderText from '../../common/helpers/renderText';
 import { getMessageCopyOptions } from './helpers/copyOptions';
@@ -92,6 +93,7 @@ type OwnProps = {
   canSelect?: boolean;
   isPrivate?: boolean;
   canDownload?: boolean;
+  canOpenSavedFile?: boolean;
   canSaveGif?: boolean;
   canManageMusicInProfile?: boolean;
   isMusicProfileStatusLoaded?: boolean;
@@ -128,6 +130,8 @@ type OwnProps = {
   onCopyMessages?: (request: MessageCopyRequest, textFormat?: ClipboardTextFormat) => void;
   onCopyNumber?: NoneToVoidFunction;
   onDownload?: NoneToVoidFunction;
+  onOpenSavedFile?: NoneToVoidFunction;
+  onShowSavedFileInFolder?: NoneToVoidFunction;
   onSaveGif?: NoneToVoidFunction;
   onToggleMusicInProfile?: NoneToVoidFunction;
   onCancelVote?: NoneToVoidFunction;
@@ -178,6 +182,7 @@ const MessageContextMenu = ({
   canCopyLink,
   canSelect,
   canDownload,
+  canOpenSavedFile,
   canSaveGif,
   canManageMusicInProfile,
   isMusicProfileStatusLoaded,
@@ -215,6 +220,8 @@ const MessageContextMenu = ({
   onCopyLink,
   onCopyNumber,
   onDownload,
+  onOpenSavedFile,
+  onShowSavedFileInFolder,
   onSaveGif,
   onToggleMusicInProfile,
   onCancelVote,
@@ -474,6 +481,10 @@ const MessageContextMenu = ({
           <MenuItem icon="download" onClick={onDownload}>
             {isDownloading ? lang('ContextCancelDownload') : lang('AccActionDownload')}
           </MenuItem>
+        )}
+        {canOpenSavedFile && <MenuItem icon="open-in-new-tab" onClick={onOpenSavedFile}>{lang('Open')}</MenuItem>}
+        {canOpenSavedFile && (
+          <MenuItem icon="folder" onClick={onShowSavedFileInFolder}>{lang(getShowInFolderLangKey())}</MenuItem>
         )}
         {canForward && <MenuItem icon="forward" onClick={onForward}>{lang('Forward')}</MenuItem>}
         {canSelect && <MenuItem icon="select" onClick={onSelect}>{lang('CommonSelect')}</MenuItem>}

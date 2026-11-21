@@ -14,6 +14,8 @@ page's worker, in WebAssembly.
   `deeplink` events. The page does not act on them yet: opening a chat from a username, phone number or
   group link needs engine support. The app handles `tg:` links from its own pages internally and never
   passes them to the system.
+- Files that the page downloads are saved by the app, which then offers to open them or show them in the file
+  manager; see [Files](#files).
 - The updater is off unless a build configures it; see [Releases](#releases).
 
 ## Building
@@ -134,6 +136,45 @@ A tunnel named in the Proxy server setting sees the app's page as the origin `ta
 `UPSTREAM_PROXY=http://[user:password@]host:port` in the app's environment sends the connections
 through an HTTP `CONNECT` proxy, as for the tunnel. The proxy then resolves names, so the address check
 does not apply.
+
+## Files
+
+The page holds a downloaded attachment as a blob, and system webviews do not download blobs reliably (WKWebView).
+The app therefore refuses every download that the webview starts (`on_download` in `src/lib.rs`) and saves files
+through the commands in `src/files.rs`. `src/util/tauri/nativeFiles.ts` sends the bytes in 2 MiB chunks as raw
+request bodies, one at a time, so a large video builds no JSON array and does not block the page.
+
+| Command | Purpose |
+| --- | --- |
+| `begin_file_save(fileName, key, shouldAskWhere, dialogTitle)` | Sanitizes the name and creates a hidden temporary file `.<name>.<id>.part` in the destination folder: the system Downloads folder, or the folder of the path that the user picks in the native save dialog when `shouldAskWhere` is set (the "Ask where to save each file" setting, Data and Storage). Returns a save ID, or nothing when the user cancels the dialog |
+| `write_file_chunk` | Appends the raw request body to the save named by the `save-id` header |
+| `finish_file_save(id)` | Moves the file to its final name (`name (1).ext` when the name is taken, the picked path for the dialog), marks it as downloaded from the Internet (quarantine attribute on macOS, Mark of the Web on Windows), records it under `key` and emits `saved-files-changed` to every window. Returns the final file and folder names for the toast |
+| `abort_file_save(id)` | Removes the temporary file. A window that closes or reloads ends its unfinished saves the same way |
+| `list_saved_files` | Returns the keys of the recorded files that still exist and drops the records of the others |
+| `open_saved_file(key, prompt)` | Opens a recorded file with the default app |
+| `reveal_saved_file(key)` | Shows a recorded file in Finder, Explorer or the file manager |
+
+The page names a file by a key, the media hash for an attachment, and keeps the keys that `saved-files-changed` and
+`list_saved_files` report in tab state, so that the toast after a save, the message context menu and a click on a
+document offer Open and "Show in Finder" (Explorer, Folder). A file that was moved or deleted answers `missing`, and
+the page says so.
+
+### Security
+
+- A file name never leaves the chosen folder: `sanitize_file_name` removes path separators, control, bidi and
+  zero-width characters and the characters that Windows rejects, trims trailing dots and spaces, prefixes the reserved
+  Windows device names, and limits the length, keeping the extension. Free names are claimed with `create_new`, so two
+  saves never take the same name.
+- `open_saved_file` and `reveal_saved_file` take a key, never a path, and act only on records that `finish_file_save`
+  made. The records persist in `saved_files.json` in the app data directory (at most 5000, the oldest go first). A
+  record whose file is gone, or is a link or a folder now, is dropped.
+- Opening a file of a dangerous type (`DANGEROUS_EXTENSIONS`: Signal Desktop's list from
+  `ts/util/isFileDangerous.std.ts` plus the macOS and Linux types it lacks) asks in a native dialog, with the texts
+  of the page's language. The page cannot skip it.
+- The `dialog` and `opener` plugins are registered without permissions for the page; only the commands above are in
+  `capabilities/default.json`. The opener's reveal uses Finder on macOS, `SHOpenFolderAndSelectItems` on Windows and the
+  `org.freedesktop.FileManager1` D-Bus interface on Linux; when that fails, the app opens the folder with the default
+  app (`xdg-open`).
 
 ## Releases
 

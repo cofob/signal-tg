@@ -1650,6 +1650,16 @@ export interface ActionPayloads {
   cancelMediaHashDownloads: {
     mediaHashes: string[];
   } & WithTabId;
+  updateSavedFiles: {
+    added?: string[];
+    removed?: string[];
+  } & WithTabId;
+  openSavedFile: {
+    key: string;
+  } & WithTabId;
+  showSavedFileInFolder: {
+    key: string;
+  } & WithTabId;
 
   // Users
   loadNearestCountry: undefined;

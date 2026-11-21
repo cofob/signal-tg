@@ -40,6 +40,8 @@ export interface SharedSettings {
   // The tunnel for Signal hosts from the proxy server setting; `undefined` uses the build default
   signalProxyUrl?: string;
   shouldWarnAboutFiles?: boolean;
+  // The desktop app shows a save dialog for each download instead of using the Downloads folder
+  shouldAskWhereToSave?: boolean;
   shouldSkipBrowserCloseConfirmation: boolean;
   shouldKeepLockScreenBackground: boolean;
 }

@@ -76,6 +76,12 @@
     margin-inline: 0.75rem;
   }
 
+  .notification-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
   .notification-button {
     width: auto;
     height: 2rem;
