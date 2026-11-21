@@ -59,11 +59,12 @@ if (IS_SERVICE_WORKER_SUPPORTED) {
 
   window.addEventListener('load', async () => {
     try {
-      // Versions served from the root of the origin registered their worker there, where it would control Web K's
-      // pages at `/k/` too; each frontend now has a worker of its own directory
+      // Versions that served Web A from the directory above (`/`, or the subpath of a deployment) registered their worker
+      // there, where it would control Web K's pages too; each frontend now has a worker of its own directory
+      const parentScope = new URL('../', window.location.href).href;
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations
-        .filter(({ scope }) => scope === `${window.location.origin}/`)
+        .filter(({ scope }) => scope === parentScope)
         .map((registration) => registration.unregister()));
 
       await navigator.serviceWorker.register(serviceWorkerUrl, SERVICE_WORKER_OPTIONS);

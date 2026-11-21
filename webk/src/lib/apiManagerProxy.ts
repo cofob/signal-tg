@@ -818,6 +818,13 @@ class ApiManagerProxy extends MTProtoMessagePort {
     //   return;
     // }
 
+    // * TeleSignal: versions that served Web A from the directory above (`/` before `/a/` and `/k/`) registered their
+    // * worker there, where it would control this page too
+    const parentScope = new URL('../', location.href).href;
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.filter(({scope}) => scope === parentScope).forEach((registration) => registration.unregister());
+    }).catch(noop);
+
     navigator.serviceWorker.register(
       // * doesn't work
       // new URL('../../../sw.ts', import.meta.url),
@@ -878,7 +885,8 @@ class ApiManagerProxy extends MTProtoMessagePort {
 
     if(Modes.noServiceWorker) {
       navigator.serviceWorker.getRegistrations().then(regs => {
-        for(const reg of regs) {
+        // * TeleSignal: only this frontend's worker; Web A's at `../a/` stays
+        for(const reg of regs.filter(({scope}) => scope === new URL('./', location.href).href)) {
           reg.unregister().then((success) => {
             success &&
               window.location.reload();
