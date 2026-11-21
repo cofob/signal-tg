@@ -24,7 +24,6 @@ export const NON_NAVIGABLE_SECTIONS = new Set([
   'AppTwoStepVerificationEmailTab',
   'AppTwoStepVerificationEmailConfirmationTab',
   'AppTwoStepVerificationSetTab',
-  'AppPasscodeEnterPasswordTab',
   'AppSessionTab',
   'AppConnectedBotSessionTab',
   'AppEditFolderTab',
@@ -120,8 +119,6 @@ const SECTION_OPENERS: {[sectionId: string]: SectionOpener} = {
   AppBusinessLocationTab: (slider) => hotReloadGuard.tabs.openBusinessEditorTab(slider, hotReloadGuard.tabs.AppBusinessLocationTab),
   AppBusinessChatLinksTab: (slider) => hotReloadGuard.tabs.openBusinessEditorTab(slider, hotReloadGuard.tabs.AppBusinessChatLinksTab),
   AppBusinessIntroTab: (slider) => hotReloadGuard.tabs.openBusinessEditorTab(slider, hotReloadGuard.tabs.AppBusinessIntroTab),
-  // the current passcode is asked for first, as it is from Privacy and Security
-  AppPasscodeLockTab: (slider) => hotReloadGuard.tabs.AppPasscodeLockTab.openChecked(slider),
   // and so is the cloud password while one is set
   AppTwoStepVerificationTab: async(slider, middleware) => {
     const state = await rootScope.managers.passwordManager.getState();
