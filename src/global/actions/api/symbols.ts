@@ -124,33 +124,6 @@ addActionHandler('loadFavoriteStickers', async (global): Promise<void> => {
   setGlobal(global);
 });
 
-addActionHandler('loadPremiumStickers', async (global): Promise<void> => {
-  const { hash } = global.stickers.premium || {};
-
-  if (selectIsCurrentUserFrozen(global)) {
-    return;
-  }
-
-  const result = await callApi('fetchStickersForEmoji', { emoji: '⭐️⭐️', hash });
-  if (!result) {
-    return;
-  }
-
-  global = getGlobal();
-
-  global = {
-    ...global,
-    stickers: {
-      ...global.stickers,
-      premium: {
-        hash: result.hash,
-        stickers: result.stickers,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
 addActionHandler('loadGreetingStickers', async (global): Promise<void> => {
   const { hash } = global.stickers.greeting || {};
 

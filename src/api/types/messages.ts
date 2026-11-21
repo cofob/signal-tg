@@ -722,7 +722,6 @@ export interface ApiAvailableReaction {
   reaction: ApiReactionEmoji;
   title: string;
   isInactive?: boolean;
-  isPremium?: boolean;
   isLocalCache?: true;
 }
 

@@ -781,8 +781,6 @@ export interface LangPair {
   'PollViewResults': undefined;
   'PollBackToVote': undefined;
   'ChatPollTotalVotesResultEmpty': undefined;
-  'PremiumStickerTooltip': undefined;
-  'ViewAction': undefined;
   'RichMessageMore': undefined;
   'AriaComposerOpenRichInput': undefined;
   'RichTextMathPreview': undefined;

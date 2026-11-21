@@ -2492,7 +2492,6 @@ export interface ActionPayloads {
   };
 
   loadDefaultTopicIcons: undefined;
-  loadPremiumStickers: undefined;
 
   setEmojiStatus: {
     emojiStatus: ApiEmojiStatus;

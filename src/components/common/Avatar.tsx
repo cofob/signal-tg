@@ -84,7 +84,6 @@ type OwnProps = {
   isSavedDialog?: boolean;
   withVideo?: boolean;
   withStory?: boolean;
-  forPremiumPromo?: boolean;
   withStoryGap?: boolean;
   storyGapPercent?: number;
   withStorySolid?: boolean;
@@ -119,7 +118,6 @@ const Avatar = ({
   isSavedDialog,
   withVideo,
   withStory,
-  forPremiumPromo,
   withStoryGap,
   storyGapPercent,
   withStorySolid,
@@ -335,7 +333,7 @@ const Avatar = ({
     isCommunity && 'community',
     asMessageBubble && 'message-bubble',
     (photo || webPhoto) && styles.forceFit,
-    ((withStory && realPeer?.hasStories) || forPremiumPromo) && 'with-story-circle',
+    withStory && realPeer?.hasStories && 'with-story-circle',
     withStorySolid && realPeer?.hasStories && 'with-story-solid',
     withStorySolid && forceFriendStorySolid && 'close-friend',
     withStorySolid && (realPeer?.hasUnreadStories || forceUnreadStorySolid) && 'has-unread-story',

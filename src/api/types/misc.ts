@@ -324,7 +324,6 @@ export interface ApiAppConfig {
   whitelistedDomains: string[];
   webAppAllowedProtocols: string[];
   areWidgetsDisabled?: boolean;
-  premiumBotUsername: string;
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
@@ -338,7 +337,6 @@ export interface ApiAppConfig {
   storyViewersExpirePeriod: number;
   storyChangelogUserId: string;
   maxPinnedStoriesCount: number;
-  canLimitNewMessagesWithoutPremium: boolean;
   starsUsdWithdrawRateX1000: number;
   starsUsdSellRateX1000?: number;
   channelAutoTranslationLevelMin?: number;

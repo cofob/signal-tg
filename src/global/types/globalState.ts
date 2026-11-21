@@ -345,10 +345,6 @@ export type GlobalState = {
       hash?: string;
       stickers: ApiSticker[];
     };
-    premium: {
-      hash?: string;
-      stickers: ApiSticker[];
-    };
     featured: {
       hash?: string;
       setIds?: string[];

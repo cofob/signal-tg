@@ -938,8 +938,6 @@
 "VoteCount_other" = "{count} votes";
 "PollResultsAnswerTitle" = "{answer} - {percent}%";
 "TimeIn" = "in {time}";
-"PremiumStickerTooltip" = "This set contains premium stickers like this one.";
-"ViewAction" = "View";
 "RichMessageMore" = "Show more";
 "AriaComposerOpenRichInput" = "Open full editor";
 "RichTextMathPreview" = "[formula]";

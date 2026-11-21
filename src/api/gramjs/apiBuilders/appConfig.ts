@@ -31,7 +31,6 @@ export interface GramJsAppConfig {
   web_app_allowed_protocols?: string[];
   web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
-  premium_bot_username: string;
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
   autoarchive_setting_available: boolean;
@@ -44,7 +43,6 @@ export interface GramJsAppConfig {
   stories_changelog_user_id: number;
   stories_pinned_to_top_count_max: number;
   // Boosts
-  new_noncontact_peers_require_premium_without_ownpremium?: boolean;
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
   stars_usd_withdraw_rate_x1000?: number;
@@ -126,7 +124,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     webAppAllowedProtocols: appConfig.web_app_allowed_protocols,
     areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
-    premiumBotUsername: appConfig.premium_bot_username,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
     hiddenMembersMinCount: appConfig.hidden_members_group_size_min,
@@ -142,7 +139,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     storyViewersExpirePeriod: appConfig.story_viewers_expire_period,
     storyChangelogUserId: appConfig.stories_changelog_user_id?.toString(),
     maxPinnedStoriesCount: appConfig.stories_pinned_to_top_count_max,
-    canLimitNewMessagesWithoutPremium: appConfig.new_noncontact_peers_require_premium_without_ownpremium,
     starsUsdWithdrawRateX1000: appConfig.stars_usd_withdraw_rate_x1000,
     starsUsdSellRateX1000: appConfig.stars_usd_sell_rate_x1000,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,

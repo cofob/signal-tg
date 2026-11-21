@@ -8,7 +8,7 @@ import Icon from '../../common/icons/Icon';
 
 import styles from './IconBackdrop.module.scss';
 
-export type IconBackdropColor = 'blue' | 'gray' | 'green' | 'orange' | 'pink' | 'premium' | 'purple' | 'red';
+export type IconBackdropColor = 'blue' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red';
 
 type OwnProps = {
   color: IconBackdropColor;

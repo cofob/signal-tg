@@ -108,7 +108,6 @@ The reference column describes the initialized defaults. In particular, matching
 | <a id="color-deleted-account"></a>`--color-deleted-account` | Deleted account | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-archive"></a>`--color-archive` | Archive | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-heart"></a>`--color-heart` | Heart | `#ff3c32` | `#ff3c32` | No; literal or Sass-computed value |
-| <a id="premium-gradient"></a>`--premium-gradient` | Premium gradient | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | No; literal or Sass-computed value |
 | <a id="color-web-app-browser"></a>`--color-web-app-browser` | Web app browser | `#FFFFFFBB` | `#0303038F` | No; literal or Sass-computed value |
 | <a id="color-chat-active-greyed"></a>`--color-chat-active-greyed` | Chat active greyed | `#2973bd` | `#6c5db4` | No CSS alias; [--color-primary](#color-primary) mixed 20% toward the selected neutral |
 | <a id="color-topic-blue"></a>`--color-topic-blue` | Topic blue | `#2F7772` | `#6ff9f0` | No; literal or Sass-computed value |
