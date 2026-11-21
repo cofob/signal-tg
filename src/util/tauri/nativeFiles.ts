@@ -85,7 +85,9 @@ async function runSave(url: string, fileName: string, key: string) {
 /** Opens a saved file with the default app; the app confirms first when the file type is dangerous */
 export async function openSavedFile(key: string, tabId?: number) {
   try {
-    handleOutcome(await invoke<SavedFileOutcome>('open_saved_file', { key }), tabId);
+    // The app words the confirmation for a dangerous type itself, in the language that this code names
+    const langCode = getTranslationFn().rawCode;
+    handleOutcome(await invoke<SavedFileOutcome>('open_saved_file', { key, langCode }), tabId);
   } catch (err) {
     handleFailure(err, tabId);
   }
