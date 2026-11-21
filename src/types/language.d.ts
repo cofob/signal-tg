@@ -71,7 +71,6 @@ export interface LangPair {
   'UserRestrictionsEditRank': undefined;
   'StatsMessagePublicShares': undefined;
   'WrongNumber': undefined;
-  'SentAppCode': undefined;
   'LoginJustSentSms': undefined;
   'Code': undefined;
   'Open': undefined;
@@ -365,7 +364,7 @@ export interface LangPair {
   'ChatListEmptyChatListFilterText': undefined;
   'ChatEmptyChat': undefined;
   'ChatListEmptyChatListEditFilter': undefined;
-  'UpdateTelegram': undefined;
+  'UpdateApp': undefined;
   'AriaLabelOpenMenu': undefined;
   'AriaLabelBackChatList': undefined;
   'SearchFriends': undefined;
@@ -413,7 +412,6 @@ export interface LangPair {
   'PasscodeTurnOff': undefined;
   'EnablePasscode': undefined;
   'AuthKeepSignedIn': undefined;
-  'AuthTitle': undefined;
   'AutoDownloadMaxFileSize': undefined;
   'AutoDownloadSettingsContacts': undefined;
   'AutoDownloadSettingsPrivateChats': undefined;
@@ -425,7 +423,6 @@ export interface LangPair {
   'FirstName': undefined;
   'LastName': undefined;
   'SettingsAboutBio': undefined;
-  'UsernameHelp': undefined;
   'SettingsExperimentalAbout': undefined;
   'EmptyChatAppearanceLight': undefined;
   'EmptyChatAppearanceDark': undefined;
@@ -514,6 +511,7 @@ export interface LangPair {
   'SetColor': undefined;
   'ThemeResetToDefaults': undefined;
   'ThemeSignal': undefined;
+  'ThemeClassic': undefined;
   'BackgroundBlurred': undefined;
   'BackgroundPatternIntensity': undefined;
   'SettingsInformation': undefined;
@@ -554,7 +552,7 @@ export interface LangPair {
   'AccDescrGoBack': undefined;
   'SureLogout': undefined;
   'AccountSettingsLogout': undefined;
-  'TelegramGeneralSettingsViewController': undefined;
+  'SettingsGeneralTitle': undefined;
   'UserInfoNotificationsEnabled': undefined;
   'UserInfoNotificationsDisabled': undefined;
   'AutodownloadPrivateChats': undefined;
@@ -966,7 +964,6 @@ export interface LangPair {
   'NoEmojiFound': undefined;
   'GroupInfoDeleteAndExit': undefined;
   'HidAccount': undefined;
-  'Telegram': undefined;
   'ChatListUnpinFromTop': undefined;
   'ChatListPinToTop': undefined;
   'ChatListOpenInNewWindow': undefined;
@@ -2101,10 +2098,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'UsernameAvailable': {
     'username': V;
-  };
-  'LimitReachedChatInFolders': {
-    'limit': V;
-    'limit2': V;
   };
   'LimitReachedChatInFoldersPremium': {
     'limit': V;
@@ -3317,11 +3310,6 @@ export interface LangKeyGroups {
       | 'UsernameAvailable'
       | 'SignalUsernameDeleteConfirm';
     variables: 'username';
-  };
-  'limit,limit2': {
-    keys:
-      | 'LimitReachedChatInFolders';
-    variables: 'limit' | 'limit2';
   };
   'limit': {
     keys:

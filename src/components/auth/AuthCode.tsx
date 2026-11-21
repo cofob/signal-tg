@@ -16,7 +16,6 @@ import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
 import Icon from '../common/icons/Icon';
-import TrackingMonkey from '../common/TrackingMonkey';
 import Button from '../ui/Button';
 import InputText from '../ui/InputText';
 import Loading from '../ui/Loading';
@@ -48,8 +47,6 @@ const AuthCode = ({
   const inputRef = useRef<HTMLInputElement>();
 
   const [code, setCode] = useState<string>('');
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingDirection, setTrackingDirection] = useState(1);
 
   useEffect(() => {
     if (!IS_TOUCH_ENV) {
@@ -76,22 +73,10 @@ const AuthCode = ({
 
     setCode(target.value);
 
-    if (!isTracking) {
-      setIsTracking(true);
-    } else if (!target.value.length) {
-      setIsTracking(false);
-    }
-
-    if (code && code.length > target.value.length) {
-      setTrackingDirection(-1);
-    } else {
-      setTrackingDirection(1);
-    }
-
     if (target.value.length === CODE_LENGTH) {
       setAuthCode({ code: target.value });
     }
-  }, [errorKey, code, isTracking]);
+  }, [errorKey, code]);
 
   function handleReturnToAuthPhoneNumber() {
     returnToAuthPhoneNumber();
@@ -132,12 +117,7 @@ const AuthCode = ({
   return (
     <div id="auth-code-form" className="custom-scroll">
       <div className="auth-form">
-        <TrackingMonkey
-          code={code}
-          codeLength={CODE_LENGTH}
-          isTracking={isTracking}
-          trackingDirection={trackingDirection}
-        />
+        <div id="logo" />
         <h1>
           {phoneNumber}
           <div

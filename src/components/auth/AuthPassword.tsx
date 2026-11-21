@@ -8,7 +8,6 @@ import { pick } from '../../util/iteratees';
 import useLang from '../../hooks/useLang';
 
 import PasswordForm from '../common/PasswordForm';
-import MonkeyPassword from '../common/PasswordMonkey';
 
 type StateProps = {
   auth: GlobalState['auth'];
@@ -34,7 +33,7 @@ const AuthPassword = ({
   return (
     <div id="auth-password-form" className="custom-scroll">
       <div className="auth-form">
-        <MonkeyPassword isPasswordVisible={showPassword} />
+        <div id="logo" />
         <h1>{lang('SignalPinTitle')}</h1>
         <p className="note">{lang('SignalPinDescription')}</p>
         <PasswordForm

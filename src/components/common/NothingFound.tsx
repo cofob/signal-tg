@@ -36,8 +36,8 @@ const NothingFound = ({
         <AnimatedIconWithPreview
           className="sticker"
           size={120}
-          tgsUrl={LOCAL_TGS_URLS.DuckNothingFound}
-          previewUrl={LOCAL_TGS_PREVIEW_URLS.DuckNothingFound}
+          tgsUrl={LOCAL_TGS_URLS.Search}
+          previewUrl={LOCAL_TGS_PREVIEW_URLS.Search}
           nonInteractive
           noLoop={false}
         />

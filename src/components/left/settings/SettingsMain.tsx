@@ -95,7 +95,7 @@ const SettingsMain = ({
             narrow
             onClick={() => openSettingsScreen({ screen: SettingsScreens.General })}
           >
-            <span className="title">{lang('TelegramGeneralSettingsViewController')}</span>
+            <span className="title">{lang('SettingsGeneralTitle')}</span>
             <span className="subtitle">{lang('SettingsGeneralDesc')}</span>
           </ListItem>
 

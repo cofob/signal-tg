@@ -8,7 +8,6 @@ import type { GlobalState } from '../../global/types';
 
 import { requestMeasure } from '../../lib/fasterdom/fasterdom';
 import { IS_SAFARI, IS_TOUCH_ENV } from '../../util/browser/windowEnvironment';
-import { preloadImage } from '../../util/files';
 import preloadFonts from '../../util/fonts';
 import { loadAndChangeLanguage } from '../../util/localization';
 import { getAccountSlotUrl } from '../../util/multiaccount';
@@ -26,8 +25,6 @@ import Button from '../ui/Button';
 import InputText from '../ui/InputText';
 import Loading from '../ui/Loading';
 import CountryCodeInput from './CountryCodeInput';
-
-import monkeyPath from '../../assets/monkey.svg';
 
 type StateProps = {
   auth: GlobalState['auth'];
@@ -183,7 +180,6 @@ const AuthPhoneNumber = ({
     if (!isPreloadInitiated) {
       isPreloadInitiated = true;
       preloadFonts();
-      void preloadImage(monkeyPath);
     }
 
     const { value, selectionStart, selectionEnd } = e.target;

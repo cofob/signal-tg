@@ -1,10 +1,13 @@
 import { memo, useCallback, useState } from '../../../lib/teact/teact';
 
+import { STICKER_SIZE_PASSCODE } from '../../../config';
+import { LOCAL_TGS_PREVIEW_URLS, LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
+
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 
+import AnimatedIconWithPreview from '../../common/AnimatedIconWithPreview';
 import PasswordForm from '../../common/PasswordForm';
-import PasswordMonkey from '../../common/PasswordMonkey';
 import Island from '../../gili/layout/Island';
 
 type OwnProps = {
@@ -64,7 +67,12 @@ const SettingsPasswordForm = ({
   return (
     <div className="settings-content password-form custom-scroll">
       <div className="settings-content-header no-border">
-        <PasswordMonkey isBig isPasswordVisible={shouldShowPassword} />
+        <AnimatedIconWithPreview
+          tgsUrl={LOCAL_TGS_URLS.Lock}
+          previewUrl={LOCAL_TGS_PREVIEW_URLS.Lock}
+          size={STICKER_SIZE_PASSCODE}
+          className="settings-content-icon"
+        />
       </div>
 
       <Island>

@@ -39,19 +39,18 @@
 "UsernameAvailable" = "{username} is available.";
 "CreateGroupError" = "Sorry, you can't create a group with these users because of their privacy settings.";
 "PasscodeControllerErrorCurrent" = "invalid passcode";
-"LimitReachedChatInFolders" = "Sorry, you can't add more than **{limit}** chats to a folder. You can increase this limit to **{limit2}** by subscribing to **Telegram Premium**.";
 "LimitReachedChatInFoldersPremium" = "Sorry, you can't add more than **{limit}** chats to a folder. Please create a new one.";
 "LimitReachedFileSizePremium" = "The document can't be sent, because it is larger than **{limit}**.";
 "LimitReachedFoldersPremium" = "You have reached the limit of **{limit}** folders for this account.";
 "LimitReachedPinDialogsPremium" = "Sorry, you can't pin more than {limit} chats to the top. Unpin some that are currently pinned.";
 "SendMessage" = "Send Message";
-"MessageUnsupported" = "This message is not supported on the web version of Telegram";
+"MessageUnsupported" = "This message is not supported in TeleSignal";
 "PageContentUnsupported" = "Unsupported content";
 "UnsupportedBlockTitle" = "Unsupported Block";
-"UnsupportedBlockMessage" = "This part of the message is not supported on the web version of Telegram";
+"UnsupportedBlockMessage" = "This part of the message is not supported in TeleSignal";
 "UnsupportedMessageTitle" = "Unsupported Message";
 "RemoveUnsupportedBlocksTitle" = "Remove Unsupported Blocks?";
-"RemoveUnsupportedBlocksText" = "This message contains blocks that the web version of Telegram can't send. Remove them to send the message.";
+"RemoveUnsupportedBlocksText" = "This message contains blocks that TeleSignal can't send. Remove them to send the message.";
 "RemoveUnsupportedBlocks" = "Remove";
 "PageContentEmbed" = "Embedded content";
 "ConversationDefaultRestrictedMedia" = "Sending media isn't allowed in this group.";
@@ -89,7 +88,6 @@
 "UserRestrictionsEditRank" = "Edit Own Label";
 "StatsMessagePublicShares" = "Public Shares";
 "WrongNumber" = "Wrong number?";
-"SentAppCode" = "We've sent the code to the **Telegram** app on your other device.";
 "LoginJustSentSms" = "We've sent you a code via SMS. Please enter it above.";
 "Code" = "Code";
 "Open" = "Open";
@@ -424,7 +422,7 @@
 "ChatListEmptyChatListFilterText" = "No chats currently belong to this folder.";
 "ChatEmptyChat" = "No messages here yet";
 "ChatListEmptyChatListEditFilter" = "Edit Folder";
-"UpdateTelegram" = "Update Telegram";
+"UpdateApp" = "Update TeleSignal";
 "AriaLabelOpenMenu" = "Open menu";
 "AriaLabelBackChatList" = "Return to chat list";
 "SearchFriends" = "Search contacts";
@@ -478,7 +476,6 @@
 "Months_one" = "{count} month";
 "Months_other" = "{count} months";
 "AuthKeepSignedIn" = "Keep me signed in";
-"AuthTitle" = "Telegram";
 "AutodownloadSizeLimitUpTo" = "up to {limit}";
 "AutoDownloadMaxFileSize" = "Maximum file size";
 "AutoDownloadSettingsContacts" = "Contacts";
@@ -491,7 +488,6 @@
 "FirstName" = "First name (required)";
 "LastName" = "Last name";
 "SettingsAboutBio" = "Any details such as age, occupation or city.\nExample: 23 y.o. designer from San Francisco";
-"UsernameHelp" = "You can choose a username on **Telegram**. If you do, people will be able to find you by this username and contact you without knowing your phone number.\n\nYou can use **a–z**, **0–9** and underscores.\nMinimum length is **5** characters.";
 "SettingsExperimentalAbout" = "Warning! These are experimental settings. Some may not work. Others may break the app. Any of them may disappear in the next version without a trace. Use at your own risk.";
 "EmptyChatAppearanceLight" = "Light";
 "EmptyChatAppearanceDark" = "Dark";
@@ -587,6 +583,7 @@
 "SetColor" = "Set a color";
 "ThemeResetToDefaults" = "Reset to default";
 "ThemeSignal" = "Signal";
+"ThemeClassic" = "Classic";
 "BackgroundBlurred" = "Blurred";
 "BackgroundPatternIntensity" = "Pattern Intensity";
 "SettingsInformation" = "Edit profile";
@@ -597,7 +594,7 @@
 "LanguageTitle" = "Change language?";
 "LanguageAlert" = "You are about to apply a language pack ({language}) that is {percent}% complete.\n\nThis will translate the entire interface. You can suggest corrections via the {link}.\n\nYou can change your language back at any time in {settings}.";
 "LanguageCustomAlert" = "You are about to apply a custom language pack ({language}) that is {percent}% complete.\n\nThis will translate the entire interface. You can suggest corrections via the {link}.\n\nYou can change your language back at any time in {settings}.";
-"LanguageUnknownCustomAlert" = "Unfortunately, this language pack ({language}) doesn't contain data for Telegram Web A. You can contribute to this language pack using the {link}.";
+"LanguageUnknownCustomAlert" = "Unfortunately, this language pack ({language}) doesn't contain data for TeleSignal. You can contribute to this language pack using the {link}.";
 "LanguageAlready" = "You're already using this language pack. You can change your language back at any time in {settings}.";
 "LanguageNotFound" = "Sorry, this language pack doesn't exist.";
 "LanguageLoadFailed" = "Couldn't load this language pack. Please try again.";
@@ -638,7 +635,7 @@
 "AccDescrGoBack" = "Go back";
 "SureLogout" = "Are you sure you want to log out?";
 "AccountSettingsLogout" = "Log Out";
-"TelegramGeneralSettingsViewController" = "General Settings";
+"SettingsGeneralTitle" = "General Settings";
 "UserInfoNotificationsEnabled" = "Enabled";
 "UserInfoNotificationsDisabled" = "Disabled";
 "AutodownloadPrivateChats" = "Private Chats";
@@ -687,7 +684,7 @@
 "JoinGroup" = "JOIN GROUP";
 "MemberRequestsRequestToJoinChannel" = "Request to Join Channel";
 "MemberRequestsRequestToJoinGroup" = "Request to Join Group";
-"AreYouSureShareMyContactInfoBot" = "The bot will know your phone number. This can be useful for integration with other services.\n\n⚠️ Warning! Never enter your Telegram login codes in mini apps.";
+"AreYouSureShareMyContactInfoBot" = "The bot will know your phone number. This can be useful for integration with other services.\n\n⚠️ Warning! Never enter your login codes in mini apps.";
 "ContactShare" = "Share Contact";
 "OK" = "OK";
 "ShareWith" = "Share with";
@@ -719,7 +716,7 @@
 "NewContactBlock" = "Block user";
 "ReportSpamAndLeave" = "Report spam and leave";
 "BlockUserTitle" = "Block {user}";
-"UserInfoBlockConfirmationTitle" = "Do you want to block {user} from messaging and calling you on Telegram?";
+"UserInfoBlockConfirmationTitle" = "Do you want to block {user} from messaging and calling you on Signal?";
 "ChatConfirmReportSpamChannel" = "Report Spam and Leave Channel?";
 "Block" = "BLOCK";
 "DeleteThisChat" = "Delete this chat";
@@ -1035,7 +1032,7 @@
 "InviteLinkExpiresIn" = "expires in {time}";
 "InviteLinkExpired" = "expired";
 "DeleteLink" = "Delete Link";
-"PrimaryLinkHelp" = "Anyone on Telegram will be able to join your group by following this link.";
+"PrimaryLinkHelp" = "Anyone on Signal will be able to join your group by following this link.";
 "PublicLink" = "Public link";
 "CreatePermanentLinkTitle" = "Primary link";
 "CreateNewLink" = "Create a New Link";
@@ -1085,7 +1082,7 @@
 "LimitReachedFavoriteStickers" = "Limit of {count} Stickers Reached";
 "LimitReachedFavoriteStickersSubtitlePremium" = "An older sticker was replaced with this one.";
 "StickerPackErrorNotFound" = "Sorry, this sticker set doesn't seem to exist.";
-"ContactsPhoneNumberNotRegistred" = "The person with this phone number is not registered on Telegram yet.";
+"ContactsPhoneNumberNotRegistred" = "The person with this phone number is not registered on Signal yet.";
 "VoipPeerIncompatible" = "**{user}**'s app is using an incompatible protocol. They need to update their app before you can call them.";
 "NoUsernameFound" = "Username not found";
 "HiddenName" = "Deleted Account";
@@ -1158,7 +1155,6 @@
 "GroupInfoDeleteAndExit" = "Delete and Leave";
 "HidAccount" = "The account was hidden by the user";
 "ChatOutgoingContextMixedReactionCount" = "{count}/{total} reacted";
-"Telegram" = "Telegram";
 "ChatListUnpinFromTop" = "Unpin from Top";
 "ChatListPinToTop" = "Pin to Top";
 "ChatListOpenInNewWindow" = "Open in New Window";
@@ -1204,8 +1200,8 @@
 "SettingsFolderCreate" = "Create folder";
 "SettingsFoldersEmpty" = "You have no folders yet";
 "SettingsPasscodeSuccess" = "Congratulations!\nNow you can lock the app with a passcode so that others can't open it.";
-"SettingsPasscodeStart1" = "When you set up an additional passcode, a lock icon will appear on the chats page.\nTap it to lock and unlock your Telegram Web A.";
-"SettingsPasscodeStart2" = "Note: if you forget your local passcode, you'll need to log out of Telegram Web A and log in again.";
+"SettingsPasscodeStart1" = "When you set up an additional passcode, a lock icon will appear on the chats page.\nTap it to lock and unlock your TeleSignal.";
+"SettingsPasscodeStart2" = "Note: if you forget your local passcode, you'll need to log out of TeleSignal and log in again.";
 "PasscodeTooManyAttempts" = "Too many attempts. Please try again later.";
 "PasscodeUsePasskey" = "Unlock with Passkey";
 "PasscodePasskeyTitle" = "Passkey";
@@ -1226,7 +1222,7 @@
 "PasscodeAutoLock1Hour" = "If away for 1 hour";
 "PasscodeCloseOtherAccounts" = "Close the other accounts of this app before turning the passcode off, so that their data can be decrypted.";
 "PasscodeStorageNotDecrypted" = "Some local data could not be decrypted, so the passcode stays on.";
-"PasscodeDataCorrupted" = "Your encrypted data could not be restored. To continue using Telegram, log out of all accounts and log in again.";
+"PasscodeDataCorrupted" = "Your encrypted data could not be restored. To continue using TeleSignal, log out of all accounts and log in again.";
 "PasscodeLogOutAllAccounts" = "Log Out All Accounts";
 "PasscodeLogOutAllConfirm" = "Remove all accounts and local data from this browser? These sessions will remain active until you terminate them in Settings > Devices.";
 "PasscodeForgotHelp" = "Note: if you forget your passcode, you'll need to {logOut}.";
@@ -1595,7 +1591,7 @@
 "ActionGroupAnnouncementsOffYou" = "You allowed all members to send messages";
 "ActionVideoInvitedYou" = "You invited {user} to the video chat";
 "ActionVideoInvitedManyYou" = "You invited {users} to the video chat";
-"ActionUserRegistered" = "{from} joined Telegram";
+"ActionUserRegistered" = "{from} joined Signal";
 "ActionRemovedPhoto" = "{from} removed group photo";
 "ActionRemovedPhotoYou" = "You removed group photo";
 "ActionChangedPhoto" = "{from} updated group photo";
@@ -1647,8 +1643,8 @@
 "ActionStarGiftNoConvertTextYou" = "You can add this gift to your profile.";
 "ActionStarGiftConvertedTextYou" = "You converted this gift to {amount}.";
 "ActionStarGiftUpgradeTextYou" = "Tap “Unpack” to turn this gift into a unique collectible.";
-"ActionSuggestedPhotoYou" = "You suggested this photo for {user}'s Telegram profile.";
-"ActionSuggestedPhoto" = "{user} suggests this photo for your Telegram profile.";
+"ActionSuggestedPhotoYou" = "You suggested this photo for {user}'s Signal profile.";
+"ActionSuggestedPhoto" = "{user} suggests this photo for your Signal profile.";
 "ActionSuggestedBirthdayYou" = "You suggested {user} to add a birthday";
 "ActionSuggestedBirthday" = "{user} suggested you add your birthday";
 "ActionSuggestedPhotoButton" = "View Photo";
@@ -1666,7 +1662,7 @@
 "DescriptionRestrictedMedia" = "Posting media content is not allowed in this group.";
 "FrozenAccountModalTitle" = "Your Account is Frozen";
 "FrozenAccountViolationTitle" = "Violation of Terms";
-"FrozenAccountViolationSubtitle" = "Your account was frozen for breaking Telegram’s Terms of Service";
+"FrozenAccountViolationSubtitle" = "Your account was frozen for breaking the Terms of Service";
 "FrozenAccountReadOnlyTitle" = "Read-Only Mode";
 "FrozenAccountReadOnlySubtitle" = "You can access your account but can't send messages or take actions.";
 "FrozenAccountAppealTitle" = "Appeal Before Deactivation";
@@ -1677,7 +1673,7 @@
 "NotificationMessageNotSupportedInFrozenAccount" = "This action is not available";
 "NotificationMessageTextHidden" = "New message";
 "PushPreviewsWhenLocked" = "Show previews when locked";
-"PushPreviewsWhenLockedInfo" = "Show chat names and message text in background notifications, even when Telegram is locked.";
+"PushPreviewsWhenLockedInfo" = "Show chat names and message text in background notifications, even when TeleSignal is locked.";
 "ComposerTitleForwardFrom" = "From: **{users}**";
 "ContextMenuItemMention" = "Mention";
 "SendInStandardQuality" = "Send In Standard Quality";
@@ -1709,7 +1705,7 @@
 "TitleAgeVerificationModal" = "Age Verification";
 "TextAgeVerificationModal_one" = "To access such content, you must confirm that you are at least **{count}** year old as required by UK law.";
 "TextAgeVerificationModal_other" = "To access such content, you must confirm that you are at least **{count}** years old as required by UK law.";
-"DescriptionAgeVerificationModal" = "This is a one-time process using your phone's camera. Your selfie will not be stored by Telegram.";
+"DescriptionAgeVerificationModal" = "This is a one-time process using your phone's camera. Your selfie will not be stored.";
 "ButtonAgeVerification" = "Verify My Age";
 "LinkPreview" = "Link Preview";
 "ContextMoveTextUp" = "Move Caption Up";
@@ -1758,7 +1754,7 @@
 "EditorTrimEnd" = "Trim end";
 "AvatarChooseFrame" = "Choose a frame for your profile photo";
 "AvatarChooseFrameOther" = "Choose a frame for this video";
-"AvatarVideoUnsupported" = "Sorry, Telegram can't process that type of video.";
+"AvatarVideoUnsupported" = "Sorry, TeleSignal can't process that type of video.";
 "AccActionPause" = "Pause";
 "VideoProcessingFailed" = "Couldn't process the video.";
 "VideoEditorLoadFailed" = "Couldn't open this video for editing.";
@@ -1963,7 +1959,7 @@
 "ReminderSetToast" = "You set up a reminder in **Saved Messages**";
 "NoForwardsRequestReject" = "Reject";
 "NoForwardsRequestAccept" = "Accept";
-"UnofficialSecurityRisk" = "{peer} uses an unofficial Telegram client — messages to this user may be less secure.";
+"UnofficialSecurityRisk" = "{peer} uses an unofficial Signal client — messages to this user may be less secure.";
 "PollModalQuestionTitle" = "Question";
 "PollModalOptionsTitle" = "Options";
 "PollModalSettingsTitle" = "Settings";
@@ -2143,8 +2139,8 @@
 "PrivacyBioTitle" = "Who can see my bio?";
 "PrivacyBirthday" = "Date of Birth";
 "PrivacyBirthdayTitle" = "Who can see my birthday?";
-"PrivacyPhoneInfo" = "Users who have your number saved in their contacts will also see it on Telegram.";
-"PrivacyPhoneInfo3" = "Users who add your number to their contacts will see it on Telegram only if they are your contacts.";
+"PrivacyPhoneInfo" = "Users who have your number saved in their contacts will also see it on Signal.";
+"PrivacyPhoneInfo3" = "Users who add your number to their contacts will see it on Signal only if they are your contacts.";
 "PrivacyPhoneTitle2" = "Who can find me by my number?";
 "PrivacyVoiceMessages" = "Voice Messages";
 "PrivacyVoiceMessagesInfo" = "You can restrict who can send you voice or video messages with granular precision.";
@@ -2239,8 +2235,8 @@
 "UserRestrictionsNoSendVideos" = "no videos";
 "UserRestrictionsNoSendVoice" = "no voice";
 "UsernameCopied" = "Username copied to clipboard.";
-"VideoUnsupportedDesktop" = "Unfortunately, this video can't be played on Telegram Web. Try opening it with our **desktop app** instead.";
-"VideoUnsupportedMobile" = "Unfortunately, this video can't be played on Telegram Web. Try opening it with our **mobile app** instead.";
+"VideoUnsupportedDesktop" = "Unfortunately, this video can't be played in TeleSignal. Try opening it with the **Signal desktop app** instead.";
+"VideoUnsupportedMobile" = "Unfortunately, this video can't be played in TeleSignal. Try opening it with the **Signal mobile app** instead.";
 "Views_one" = "{count} view";
 "Views_other" = "{count} views";
 "Voice_one" = "{count} voice message";

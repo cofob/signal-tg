@@ -66,7 +66,7 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     screen: SettingsScreens.General,
     parent: SettingsScreens.Main,
     titleKey: 'General',
-    aliasKey: 'TelegramGeneralSettingsViewController',
+    aliasKey: 'SettingsGeneralTitle',
     icon: 'settings-filled',
     iconBg: 'orange',
   },
