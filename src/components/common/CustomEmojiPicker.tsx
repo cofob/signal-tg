@@ -23,7 +23,6 @@ import {
   selectCanPlayAnimatedEmojis,
   selectChatFullInfo,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
 } from '../../global/selectors';
 import { selectLanguageCode } from '../../global/selectors/settings';
 import animateHorizontalScroll from '../../util/animateHorizontalScroll';
@@ -99,7 +98,6 @@ type StateProps = {
   customEmojiFeaturedIds?: string[];
   canAnimate?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
   emojiGroups?: ApiEmojiGroup[];
@@ -148,7 +146,6 @@ const CustomEmojiPicker = ({
   noAddButton,
   topCustomEmojis,
   isSavedMessages,
-  isCurrentUserPremium,
   withDefaultTopicIcons,
   defaultTopicIconsId,
   defaultStatusIconsId,
@@ -474,7 +471,6 @@ const CustomEmojiPicker = ({
             noPlay={!canAnimate || !canLoadAndPlay}
             observeIntersection={observeIntersectionForCovers}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={index}
             forcePlayback
@@ -550,7 +546,6 @@ const CustomEmojiPicker = ({
                   <EmojiSearchResults
                     nativeResults={nativeReactionResults}
                     customResults={customResults}
-                    isCurrentUserPremium={isCurrentUserPremium}
                     observeIntersection={observeIntersectionForResults}
                     onEmojiSelect={isReactionPicker ? handleNativeReactionSelect : undefined}
                     onCustomEmojiSelect={handleEmojiSelect}
@@ -584,7 +579,6 @@ const CustomEmojiPicker = ({
                         withDefaultTopicIcon={withDefaultTopicIcons && stickerSet.id === RECENT_SYMBOL_SET_ID}
                         withDefaultStatusIcon={isStatusPicker && stickerSet.id === RECENT_SYMBOL_SET_ID}
                         isChatEmojiSet={isChatEmojiSet}
-                        isCurrentUserPremium={isCurrentUserPremium}
                         selectedReactionIds={selectedReactionIds}
                         withSelectionOrder={withSelectionOrder}
                         availableReactions={availableReactions}
@@ -642,7 +636,6 @@ export default memo(withGlobal<OwnProps>(
       addedCustomEmojiIds: global.customEmojis.added.setIds,
       canAnimate: selectCanPlayAnimatedEmojis(global),
       isSavedMessages,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       customEmojiFeaturedIds,
       defaultTopicIconsId: global.defaultTopicIconsId,
       defaultStatusIconsId: global.defaultStatusIconsId,

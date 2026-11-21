@@ -57,7 +57,6 @@ import {
   selectChatFullInfo,
   selectCustomEmoji,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectIsMessageProtected,
   selectIsMessageUnread,
   selectIsReactionPickerOpen,
@@ -130,7 +129,6 @@ type StateProps = {
   canUnfaveSticker?: boolean;
   canCopy?: boolean;
   isPrivate?: boolean;
-  isCurrentUserPremium?: boolean;
   hasFullInfo?: boolean;
   canCopyLink?: boolean;
   canSelect?: boolean;
@@ -194,7 +192,6 @@ const ContextMenuContainer = ({
   enabledReactions,
   reactionsLimit,
   isPrivate,
-  isCurrentUserPremium,
   canForward,
   canFaveSticker,
   canUnfaveSticker,
@@ -652,11 +649,9 @@ const ContextMenuContainer = ({
   });
 
   const handleToggleReaction = useLastCallback((reaction: ApiReaction) => {
-    if (!isInSavedMessages || isCurrentUserPremium) {
-      toggleReaction({
-        chatId: message.chatId, messageId: message.id, reaction, shouldAddToRecent: true,
-      });
-    }
+    toggleReaction({
+      chatId: message.chatId, messageId: message.id, reaction, shouldAddToRecent: true,
+    });
     closeMenu();
   });
 
@@ -692,7 +687,6 @@ const ContextMenuContainer = ({
         threadId={threadId}
         messageListType={messageListType}
         isPrivate={isPrivate}
-        isCurrentUserPremium={isCurrentUserPremium}
         isOpen={isMenuOpen}
         enabledReactions={enabledReactions}
         reactionsLimit={reactionsLimit}
@@ -873,7 +867,6 @@ export default memo(withGlobal<OwnProps>(
       && !areReactionsEmpty(message.reactions) && message.reactions.canSeeList;
     const isProtected = selectIsMessageProtected(global, message);
     const canCopyNumber = Boolean(message.content.contact);
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
     const isInSavedMessages = selectIsChatWithSelf(global, message.chatId);
 
@@ -918,7 +911,6 @@ export default memo(withGlobal<OwnProps>(
       enabledReactions: message.isEphemeral || chat?.isForbidden ? undefined : chatFullInfo?.enabledReactions,
       reactionsLimit,
       isPrivate,
-      isCurrentUserPremium,
       hasFullInfo: Boolean(chatFullInfo),
       canShowReactionsCount: !message.isEphemeral && canShowReactionsCount,
       canShowReactionList: !message.isEphemeral && !isLocal && !isAction && !isScheduled && !hasTtl

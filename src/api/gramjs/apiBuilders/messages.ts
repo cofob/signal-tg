@@ -30,7 +30,7 @@ import type {
   ApiVideo,
 } from '../../types';
 import type { ApiMessageAction } from '../../types/messageActions';
-import { ApiMessageEntityTypes, MAIN_THREAD_ID } from '../../types';
+import { MAIN_THREAD_ID } from '../../types';
 
 import {
   DELETED_COMMENTS_CHANNEL_ID,
@@ -522,7 +522,6 @@ export function buildLocalForwardedMessage({
   noAuthors,
   noCaptions,
   privateForwardName,
-  isCurrentUserPremium,
   lastMessageId,
   sendAs,
 }: {
@@ -534,7 +533,6 @@ export function buildLocalForwardedMessage({
   noAuthors?: boolean;
   noCaptions?: boolean;
   privateForwardName?: string;
-  isCurrentUserPremium?: boolean;
   lastMessageId?: number;
   sendAs?: ApiPeer;
 }): ApiMessage {
@@ -551,12 +549,7 @@ export function buildLocalForwardedMessage({
     toChat.id === currentUserId && (fromChatId !== toChat.id || message.forwardInfo)
   );
   const shouldHideText = Object.keys(content).length > 1 && content.text && noCaptions;
-  const shouldDropCustomEmoji = !isCurrentUserPremium;
-  const strippedText = content.text?.entities && shouldDropCustomEmoji ? {
-    text: content.text.text,
-    entities: content.text.entities.filter((entity) => entity.type !== ApiMessageEntityTypes.CustomEmoji),
-  } : content.text;
-  const textWithTimestamps = strippedText && addTimestampEntities(strippedText);
+  const textWithTimestamps = content.text && addTimestampEntities(content.text);
   const emojiOnlyCount = getEmojiOnlyCountForMessage(content, groupedId);
   if (emojiOnlyCount && textWithTimestamps) textWithTimestamps.emojiOnlyCount = emojiOnlyCount;
   const forwardInfo = buildLocalForwardInfo(message, privateForwardName, noAuthors);

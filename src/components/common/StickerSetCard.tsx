@@ -69,7 +69,6 @@ const StickerSetCard = ({
           noPlay={noPlay}
           observeIntersection={observeIntersection}
           noContextMenu
-          isCurrentUserPremium
           clickArg={undefined}
         />
       );

@@ -1238,7 +1238,6 @@
 "StickerSearchGlobalResult" = "Global Search Result";
 "NoStickersFound" = "No stickers found";
 "TrendingStickers" = "Trending Stickers";
-"TrendingPremiumStickers" = "Trending Premium Stickers";
 "AccDescrCloseTrendingStickers" = "Close trending stickers";
 "SearchGifsTitle" = "Search GIFs";
 "SharedMedia" = "Shared Media";
@@ -1332,7 +1331,6 @@
 "StickerPackAddStickerCount_one" = "Add {count} sticker";
 "StickerPackAddStickerCount_other" = "Add {count} stickers";
 "PremiumUnlockEmoji" = "Subscribe to Telegram Premium to unlock premium emoji.";
-"PremiumUnlockStickers" = "Subscribe to Telegram Premium to unlock premium stickers.";
 "StickerPackRemoveEmojiCount_one" = "Remove {count} emoji";
 "StickerPackRemoveEmojiCount_other" = "Remove {count} emoji";
 "StickerPackAddEmojiCount_one" = "Add {count} emoji";
@@ -1538,7 +1536,7 @@
 "FormattingAddLinkAria" = "Add Link";
 "FormattingClearAria" = "Clear formatting";
 "RemoveRichFormattingTitle" = "Remove Formatting?";
-"RemoveRichFormattingText" = "This message uses rich formatting, which requires **Telegram Premium**.";
+"RemoveRichFormattingText" = "This message uses rich formatting, which Signal messages can't keep.";
 "RemoveRichFormatting" = "Remove Formatting";
 "RichEditorBlockMenu" = "Insert block";
 "RichEditorBlockPlaceholder" = "Type something";
@@ -2733,8 +2731,6 @@
 "TopicClosedByAdmin" = "The topic is closed";
 "TwoStepAuthConfirmEmailDescription" = "Please enter the code we've just emailed at {recoveryEmail}.";
 "Unlock" = "Unlock";
-"UnlockPremiumEmojiHint" = "Subscribe to **Telegram Premium** to unlock this emoji.";
-"UnlockPremiumEmojiHint2" = "Try sending these emoji in **Saved Messages** for free to test.";
 "UserInfoCustomPhoto" = "photo set by you";
 "UserInfoCustomPhotoInfo" = "You can replace {user}’s photo with another photo that only you will see.";
 "UserInfoCustomVideo" = "photo set by you";
@@ -2782,7 +2778,6 @@
 "ContextQuoteAndReply" = "Quote & Reply";
 "CustomEmojiUsedSets" = "Sets of used emoji";
 "Edited" = "edited";
-"EmojiPremiumRestore" = "Restore";
 "ForumCreateTopic" = "Create topic";
 "ForumNoMessages" = "No messages";
 "ForumRepliesOnly" = "You can reply to messages in topics.";
@@ -2811,8 +2806,6 @@
 "ReportPleaseSelectMessages" = "Please select messages to report.";
 "SettingsTitleChatName" = "Show chat name";
 "SettingsWindowSystem" = "Window title bar";
-"SubscribeTagAbout" = "Organize your Saved Messages with tags. {link}";
-"SubscribeTagLink" = "Learn More...";
 "UsernameAppNotFound" = "Bot application not found.";
 "UsernamePurchaseAvailable" = "Sorry, this link is taken. But it's available for purchase. {link}";
 "UsernamesActive" = "active";

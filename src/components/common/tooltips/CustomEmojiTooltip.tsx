@@ -22,7 +22,6 @@ export type OwnProps = {
   isOpen: boolean;
   customEmoji?: ApiSticker[];
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   noPlay?: boolean;
   addRecentCustomEmoji: GlobalActions['addRecentCustomEmoji'];
   onCustomEmojiSelect: (customEmoji: ApiSticker) => void;
@@ -36,7 +35,6 @@ const CustomEmojiTooltip = ({ isOpen, ...props }: OwnProps) => {
     onCustomEmojiSelect,
     customEmoji,
     isSavedMessages,
-    isCurrentUserPremium,
     noPlay,
   } = useFrozenProps(props, !isOpen);
 
@@ -86,7 +84,6 @@ const CustomEmojiTooltip = ({ isOpen, ...props }: OwnProps) => {
             clickArg={sticker}
             isSavedMessages={isSavedMessages}
             canViewSet
-            isCurrentUserPremium={isCurrentUserPremium}
             noPlay={noPlay}
           />
         ))}

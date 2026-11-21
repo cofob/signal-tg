@@ -2166,7 +2166,7 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
   const {
     toChat, toThreadId, messages,
     scheduledAt, scheduleRepeatPeriod, sendAs, noAuthors, noCaptions,
-    privateForwardName, isCurrentUserPremium, wasDrafted, lastMessageId,
+    privateForwardName, wasDrafted, lastMessageId,
   } = params;
 
   const messageIds = messages.map(({ id }) => id);
@@ -2182,7 +2182,6 @@ export function forwardMessagesLocal(params: ForwardMessagesParams) {
       noAuthors,
       noCaptions,
       privateForwardName,
-      isCurrentUserPremium,
       lastMessageId,
       sendAs,
     });

@@ -25,7 +25,6 @@ import {
   selectChat,
   selectChatFullInfo,
   selectIsChatWithSelf,
-  selectIsCurrentUserPremium,
   selectShouldLoopStickers,
 } from '../../../global/selectors';
 import { selectLanguageCode } from '../../../global/selectors/settings';
@@ -95,11 +94,9 @@ type StateProps = {
   chatStickerSetId?: string;
   addedSetIds?: string[];
   featuredIds?: string[];
-  isTrendingPremium?: boolean;
   hiddenTrendingSetId?: string;
   canAnimate?: boolean;
   isSavedMessages?: boolean;
-  isCurrentUserPremium?: boolean;
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
   stickerGroups?: ApiEmojiGroup[];
@@ -128,13 +125,11 @@ const StickerPicker = ({
   favoriteStickers,
   addedSetIds,
   featuredIds,
-  isTrendingPremium,
   hiddenTrendingSetId,
   stickerSetsById,
   chatStickerSetId,
   canAnimate,
   isSavedMessages,
-  isCurrentUserPremium,
   baseEmojiKeywords,
   emojiKeywords,
   stickerGroups,
@@ -517,7 +512,6 @@ const StickerPicker = ({
           noPlay={!canAnimate || !loadAndPlay}
           observeIntersection={observeIntersectionForCovers}
           noContextMenu
-          isCurrentUserPremium
           withTranslucentThumb={isTranslucent}
           onClick={handleCoverClick}
           clickArg={index}
@@ -555,7 +549,6 @@ const StickerPicker = ({
             noPlay={!canAnimate || !loadAndPlay}
             observeIntersection={observeIntersectionForResults}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={index}
             forcePlayback
@@ -594,7 +587,6 @@ const StickerPicker = ({
             noPlay={!canAnimate || !loadAndPlay}
             observeIntersection={observeIntersectionForResults}
             noContextMenu
-            isCurrentUserPremium
             withTranslucentThumb={isTranslucent}
             clickArg={undefined}
             forcePlayback
@@ -610,7 +602,7 @@ const StickerPicker = ({
         <div className="symbol-set-header">
           <p className="symbol-set-title">
             <span className="symbol-set-name">
-              {lang(isTrendingPremium ? 'TrendingPremiumStickers' : 'TrendingStickers')}
+              {lang('TrendingStickers')}
             </span>
           </p>
           <Button
@@ -641,7 +633,6 @@ const StickerPicker = ({
         observeIntersection={observeIntersectionForResults}
         noPlay={!canAnimate || !loadAndPlay}
         noContextMenu={noContextMenus}
-        isCurrentUserPremium={isCurrentUserPremium}
         withTranslucentThumb={isTranslucent}
         onClick={canSendStickers ? handleStickerSelect : undefined}
         clickArg={sticker}
@@ -676,7 +667,6 @@ const StickerPicker = ({
         noPlay={!canAnimate || !loadAndPlay}
         noContextMenus={noContextMenus}
         isSavedMessages={isSavedMessages}
-        isCurrentUserPremium={isCurrentUserPremium}
         isTranslucent={isTranslucent}
         onStickerSelect={canSendStickers ? handleStickerSelect : undefined}
       />
@@ -812,7 +802,6 @@ const StickerPicker = ({
                       isNearActive={i >= activeSetIndex - 1 && i <= lastVisibleSetIndex + 1}
                       favoriteStickers={favoriteStickers}
                       isSavedMessages={isSavedMessages}
-                      isCurrentUserPremium={isCurrentUserPremium}
                       isTranslucent={isTranslucent}
                       withInstantThumbs={withInstantThumbs}
                       isChatStickerSet={stickerSet.id === chatStickerSetId}
@@ -860,11 +849,9 @@ export default memo(withGlobal<OwnProps>(
       stickerSetsById: setsById,
       addedSetIds: added.setIds,
       featuredIds: featured.setIds,
-      isTrendingPremium: featured.isPremium,
       hiddenTrendingSetId: featured.hiddenSetId,
       canAnimate: selectShouldLoopStickers(global),
       isSavedMessages,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       chatStickerSetId,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,
       emojiKeywords: emojiKeywords?.keywords,

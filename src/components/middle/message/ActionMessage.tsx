@@ -28,7 +28,6 @@ import {
   selectChat,
   selectChatMessage,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectIsInSelectMode,
   selectIsMessageFocused,
   selectSender,
@@ -89,7 +88,6 @@ type StateProps = {
   focusDirection?: FocusDirection;
   noFocusHighlight?: boolean;
   replyMessage?: ApiMessage;
-  isCurrentUserPremium?: boolean;
   isInSelectMode?: boolean;
   hasUnreadReaction?: boolean;
   hasUnreadPollVote?: boolean;
@@ -131,7 +129,6 @@ const ActionMessage = ({
   focusDirection,
   noFocusHighlight,
   replyMessage,
-  isCurrentUserPremium,
   isInSelectMode,
   hasUnreadReaction,
   hasUnreadPollVote,
@@ -481,7 +478,6 @@ const ActionMessage = ({
           message={message}
           threadId={threadId}
           observeIntersection={observeIntersectionForPlaying}
-          isCurrentUserPremium={isCurrentUserPremium}
           isAccountFrozen={isAccountFrozen}
         />
       )}
@@ -510,8 +506,6 @@ export default memo(withGlobal<OwnProps>(
       isResizingContainer, scrollTargetPosition,
     } = (isFocused && tabState.focusedMessage) || {};
 
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
-
     const readState = selectThreadReadState(global, message.chatId, threadId);
     const hasUnreadReaction = readState?.unreadReactions?.includes(message.id);
     const hasUnreadPollVote = readState?.unreadPollVotes?.includes(message.id);
@@ -521,7 +515,6 @@ export default memo(withGlobal<OwnProps>(
       actionMessageBg: selectActionMessageBg(global, message.chatId),
       sender,
       currentUserId: global.currentUserId,
-      isCurrentUserPremium,
       isFocused,
       focusDirection,
       noFocusHighlight,

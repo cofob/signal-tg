@@ -34,7 +34,6 @@ export type RichEditorTooltipContext = {
   chatBotCommands?: ApiBotCommand[];
   isSavedMessages?: boolean;
   isInScheduledList?: boolean;
-  isCurrentUserPremium?: boolean;
   canSendGifs?: boolean;
   isRichInputExpanded?: boolean;
   isFormatterDisabled?: boolean;

@@ -811,7 +811,6 @@ export type ForwardMessagesParams = {
   noAuthors?: boolean;
   noCaptions?: boolean;
   privateForwardName?: string;
-  isCurrentUserPremium?: boolean;
   wasDrafted?: boolean;
   lastMessageId?: number;
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;

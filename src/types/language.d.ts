@@ -1015,7 +1015,6 @@ export interface LangPair {
   'StickerSearchGlobalResult': undefined;
   'NoStickersFound': undefined;
   'TrendingStickers': undefined;
-  'TrendingPremiumStickers': undefined;
   'AccDescrCloseTrendingStickers': undefined;
   'SearchGifsTitle': undefined;
   'SharedMedia': undefined;
@@ -1082,7 +1081,6 @@ export interface LangPair {
   'MessageRepeatPeriodYearly': undefined;
   'MessageScheduledRepeatPremium': undefined;
   'PremiumUnlockEmoji': undefined;
-  'PremiumUnlockStickers': undefined;
   'ChatListFilterErrorEmpty': undefined;
   'ChatListFilterErrorTitleEmpty': undefined;
   'FilterMuted': undefined;
@@ -2162,8 +2160,6 @@ export interface LangPair {
   'SupportStatus': undefined;
   'TopicClosedByAdmin': undefined;
   'Unlock': undefined;
-  'UnlockPremiumEmojiHint': undefined;
-  'UnlockPremiumEmojiHint2': undefined;
   'UserInfoCustomPhoto': undefined;
   'UserInfoCustomVideo': undefined;
   'UserInfoPublicPhoto': undefined;
@@ -2197,7 +2193,6 @@ export interface LangPair {
   'ContextQuoteAndReply': undefined;
   'CustomEmojiUsedSets': undefined;
   'Edited': undefined;
-  'EmojiPremiumRestore': undefined;
   'ForumCreateTopic': undefined;
   'ForumNoMessages': undefined;
   'ForumRepliesOnly': undefined;
@@ -2225,7 +2220,6 @@ export interface LangPair {
   'ReportPleaseSelectMessages': undefined;
   'SettingsTitleChatName': undefined;
   'SettingsWindowSystem': undefined;
-  'SubscribeTagLink': undefined;
   'UsernameAppNotFound': undefined;
   'UsernamesActive': undefined;
   'UsernamesDescription': undefined;
@@ -3420,9 +3414,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'MiniAppsDisclaimerButton': {
     'link': V;
   };
-  'SubscribeTagAbout': {
-    'link': V;
-  };
   'UsernamePurchaseAvailable': {
     'link': V;
   };
@@ -4313,7 +4304,6 @@ export interface LangKeyGroups {
       | 'SettingsPasskeysFooter'
       | 'BirthdayPrivacySuggestion'
       | 'MiniAppsDisclaimerButton'
-      | 'SubscribeTagAbout'
       | 'UsernamePurchaseAvailable';
     variables: 'link';
   };

@@ -91,7 +91,6 @@ type OwnProps = {
   canCopyLink?: boolean;
   canSelect?: boolean;
   isPrivate?: boolean;
-  isCurrentUserPremium?: boolean;
   canDownload?: boolean;
   canSaveGif?: boolean;
   canManageMusicInProfile?: boolean;
@@ -158,7 +157,6 @@ const MessageContextMenu = ({
   webPage,
   story,
   isPrivate,
-  isCurrentUserPremium,
   enabledReactions,
   reactionsLimit,
   anchor,
@@ -390,7 +388,6 @@ const MessageContextMenu = ({
           onToggleReaction={onToggleReaction!}
           isPrivate={isPrivate}
           isReady={isReady}
-          isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isInSavedMessages}
           canPlayAnimatedEmojis={canPlayAnimatedEmojis}
           onShowMore={handleOpenMessageReactionPicker}

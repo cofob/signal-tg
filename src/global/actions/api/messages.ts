@@ -136,7 +136,6 @@ import {
   selectIsChatRestricted,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
   selectListedIds,
   selectMessageIdsByGroupId,
   selectMessageReplyInfo,
@@ -1801,7 +1800,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
   } = forwardMessages;
   const { isSilent, scheduledAt, scheduleRepeatPeriod } = sendParams;
 
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
   const isToMainThread = toThreadId === MAIN_THREAD_ID;
 
   const fromChat = fromChatId ? selectChat(global, fromChatId) : undefined;
@@ -1846,7 +1844,6 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
         noAuthors: noAuthors && !slice.some((message) => message.content.widget),
         noCaptions,
         privateForwardName,
-        isCurrentUserPremium,
         wasDrafted: Boolean(draft),
         lastMessageId,
       };
@@ -2929,7 +2926,6 @@ interface ForwardToChatOptions {
   withMyScore?: boolean;
   noAuthors?: boolean;
   noCaptions?: boolean;
-  isCurrentUserPremium: boolean;
 }
 
 function forwardMessagesToChat({
@@ -2943,7 +2939,6 @@ function forwardMessagesToChat({
   withMyScore,
   noAuthors,
   noCaptions,
-  isCurrentUserPremium,
 }: ForwardToChatOptions) {
   const privateForwardName = selectUserFullInfo(global, fromChat.id)?.privateForwardName;
   const sendAs = selectSendAs(global, toChat.id);
@@ -2988,7 +2983,6 @@ function forwardMessagesToChat({
           noAuthors,
           noCaptions,
           privateForwardName,
-          isCurrentUserPremium,
           wasDrafted: false,
           lastMessageId,
         };
@@ -3023,7 +3017,6 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
   } = selectTabState(global, tabId).forwardMessages;
 
   const fromChat = fromChatId ? selectChat(global, fromChatId) : undefined;
-  const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
   const messages = fromChatId && messageIds
     ? messageIds
@@ -3057,7 +3050,6 @@ addActionHandler('forwardToMultipleChats', (global, actions, payload): ActionRet
       withMyScore,
       noAuthors,
       noCaptions,
-      isCurrentUserPremium,
     });
   }
 

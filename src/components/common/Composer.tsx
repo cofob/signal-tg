@@ -75,7 +75,6 @@ import {
 import { getChatNotifySettings } from '../../global/helpers/notifications';
 import { getPeerTitle } from '../../global/helpers/peers';
 import { getRichMessageUsage } from '../../global/helpers/richMessage';
-import { containsCustomEmoji, stripCustomEmoji } from '../../global/helpers/symbols';
 import {
   selectBot,
   selectCanManageAutoDelete,
@@ -510,8 +509,7 @@ const Composer = ({
   const canMediaBeReplaced = isEditingMedia && canEditMedia(editingMessage!);
 
   const isMonoforum = chat?.isMonoforum;
-  const { emojiSet, members: groupChatMembers, botCommands: chatBotCommands } = chatFullInfo || {};
-  const chatEmojiSetId = emojiSet?.id;
+  const { members: groupChatMembers, botCommands: chatBotCommands } = chatFullInfo || {};
 
   const isEphemeralReply = draft?.replyInfo?.type === 'ephemeral';
   const canSchedule = !isMonoforum && !isEphemeralReply;
@@ -536,8 +534,6 @@ const Composer = ({
   );
 
   const isSentStoryReactionHeart = sentStoryReaction && isSameReaction(sentStoryReaction, HEART_REACTION);
-
-  const customEmojiNotificationNumberRef = useRef(0);
 
   const [requestCalendar, calendar] = useSchedule(
     isInMessageList && canSchedule && canScheduleUntilOnline,
@@ -618,17 +614,7 @@ const Composer = ({
   const richMessage = richEditor.value;
   const richMessageAsFormatted = richMessage ? getRichInputAsFormatted(richMessage) : undefined;
   const hasInputContent = richEditor.isReady ? !richEditor.isEmpty() : false;
-  const isOverRegularMessageLimit = Boolean(
-    richMessageAsFormatted
-    && getUtf8Length(richMessageAsFormatted.text) > LIMITS.messageLength,
-  );
-  const hasRichOnlyContent = Boolean(
-    hasInputContent
-    && (
-      !richMessageAsFormatted
-      || (isCurrentUserPremium && isOverRegularMessageLimit)
-    ),
-  );
+  const hasRichOnlyContent = Boolean(hasInputContent && !richMessageAsFormatted);
 
   const expandRichInput = useLastCallback(() => {
     setIsRichInputExpanded({ isRichInputExpanded: true });
@@ -657,14 +643,6 @@ const Composer = ({
   });
 
   const updateRichMessage = useLastCallback((value?: ApiInputRichMessage, shouldKeepHistory?: boolean) => {
-    if (value && !isCurrentUserPremium && !isChatWithSelf) {
-      const formattedValue = getRichInputAsFormatted(value);
-      if (formattedValue && containsCustomEmoji(formattedValue)) {
-        showCustomEmojiPremiumNotification();
-        value = buildRichMessageFromFormatted(stripCustomEmoji(formattedValue));
-      }
-    }
-
     if (value && shouldKeepHistory) {
       richEditor.replaceValue(value);
     } else {
@@ -683,7 +661,7 @@ const Composer = ({
       return false;
     }
 
-    if (!isInMessageList || isCurrentUserPremium) {
+    if (!isInMessageList) {
       return true;
     }
 
@@ -734,7 +712,7 @@ const Composer = ({
 
   useEffect(() => {
     handleCloseRemoveFormattingModal();
-  }, [chatId, threadId, isCurrentUserPremium, handleCloseRemoveFormattingModal]);
+  }, [chatId, threadId, handleCloseRemoveFormattingModal]);
 
   useEffect(() => {
     if (!attachments.length || !attachments) {
@@ -1123,25 +1101,6 @@ const Composer = ({
       resetComposerRef.current(false, true);
     };
   }, [chatId, threadId, resetComposerRef, cancelRecordingVoiceRef]);
-
-  const showCustomEmojiPremiumNotification = useLastCallback(() => {
-    const notificationNumber = customEmojiNotificationNumberRef.current;
-    if (!notificationNumber) {
-      showNotification({
-        message: lang('UnlockPremiumEmojiHint'),
-      });
-    } else {
-      showNotification({
-        message: lang('UnlockPremiumEmojiHint2'),
-        action: {
-          action: 'openChat',
-          payload: { id: currentUserId, shouldReplaceHistory: true },
-        },
-        actionText: lang('Open'),
-      });
-    }
-    customEmojiNotificationNumberRef.current = Number(!notificationNumber);
-  });
 
   const isStoryReactionPickerOpen = isInStoryViewer && Boolean(isReactionPickerOpen);
   const isComposerEngaged = isInputHasFocus || isSymbolMenuOpen || isSymbolMenuForced || isBotKeyboardOpen
@@ -1767,12 +1726,6 @@ const Composer = ({
   }, [requestedDraftFiles, updateShouldSaveAttachmentsCompression, applyDefaultAttachmentsCompression]);
 
   const handleCustomEmojiSelect = useLastCallback((emoji: ApiSticker) => {
-    const emojiSetId = 'id' in emoji.stickerSetInfo && emoji.stickerSetInfo.id;
-    if (!emoji.isFree && !isCurrentUserPremium && !isChatWithSelf && emojiSetId !== chatEmojiSetId) {
-      showCustomEmojiPremiumNotification();
-      return;
-    }
-
     insertCustomEmojiAndUpdateCursor(emoji);
   });
 
@@ -2369,10 +2322,6 @@ const Composer = ({
         return;
       }
 
-      if (!sticker.isFree && !isCurrentUserPremium && !isChatWithSelf) {
-        showCustomEmojiPremiumNotification();
-        return;
-      }
       text = sticker.emoji || '';
       entities = text ? [{
         type: ApiMessageEntityTypes.CustomEmoji,
@@ -2527,7 +2476,6 @@ const Composer = ({
           onToggleReaction={handleToggleReaction}
           isPrivate
           isReady={isReady}
-          isCurrentUserPremium={isCurrentUserPremium}
           isInSavedMessages={isChatWithSelf}
           isInStoryViewer={isInStoryViewer}
           canPlayAnimatedEmojis={canPlayAnimatedEmojis}
@@ -2754,7 +2702,7 @@ const Composer = ({
             onBlur={unmarkInputHasFocus}
             messageListType={messageListType}
             isRichOnlyContent={hasRichOnlyContent}
-            maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : LIMITS.messageLength}
+            maxLength={hasRichOnlyContent ? richMessageLengthLimit : LIMITS.messageLength}
           />
           {isInMessageList && !isRichInputExpansionActive && (
             <>

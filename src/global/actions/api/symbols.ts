@@ -200,7 +200,6 @@ addActionHandler('loadFeaturedStickers', async (global): Promise<void> => {
       featured: {
         ...global.stickers.featured,
         setIds: featuredStickers.sets.map(({ id }) => id),
-        isPremium: featuredStickers.isPremium,
       },
     },
   };

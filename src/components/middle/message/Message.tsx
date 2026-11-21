@@ -1104,7 +1104,6 @@ const Message = ({
         observeIntersection={observeIntersectionForPlaying}
         noRecentReactors={isChannel}
         tags={tags}
-        isCurrentUserPremium={isPremium}
         isAccountFrozen={isAccountFrozen}
       />
     );
@@ -1814,7 +1813,6 @@ const Message = ({
             message={reactionMessage!}
             threadId={threadId}
             isOutside
-            isCurrentUserPremium={isPremium}
             observeIntersection={observeIntersectionForPlaying}
             noRecentReactors={isChannel}
             tags={tags}
