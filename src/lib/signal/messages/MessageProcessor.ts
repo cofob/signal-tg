@@ -1427,18 +1427,22 @@ export default class MessageProcessor {
    * is in the account, other profile keys are in their recipients.
    */
   async refreshProfile(aci: string) {
-    const { store, connection, account } = this.client.getSenderContext();
+    const {
+      store, connection, unauthenticatedChat, account,
+    } = this.client.getSenderContext();
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
+    // Other users' profiles are fetched without account credentials
+    const chat = aci === account.aci ? undefined : unauthenticatedChat;
     let profile;
     try {
-      profile = await fetchProfile(connection, aci, profileKey);
+      profile = await fetchProfile(connection, aci, profileKey, chat);
     } catch (err) {
       if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
       // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
       // try again after the usual interval instead of on every connection
-      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      const identityKey = await fetchProfileIdentityKey(connection, aci, profileKey, chat);
       if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
       await this.runSerial(async () => {
         await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });

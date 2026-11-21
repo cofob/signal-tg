@@ -150,6 +150,7 @@ async function requestLookup(
   const connection = await AttestedConnection.connect(
     SIGNAL_CDSI_HOST,
     `/v1/${SIGNAL_CDSI_MRENCLAVE}/discovery`,
+    'unauthenticated',
     credentials,
     (attestation, now) => wasm.Cds2ClientState_New(mrenclave, attestation, now),
   );

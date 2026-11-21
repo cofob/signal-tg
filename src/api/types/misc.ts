@@ -18,6 +18,8 @@ export interface ApiInitialArgs {
   langCode: string;
   // The tunnel for Signal hosts; `undefined` uses the build default
   signalProxyUrl?: string;
+  // The tunnel for connections without account credentials; `undefined` uses `signalProxyUrl`
+  signalSealedSenderProxyUrl?: string;
 }
 
 export type ApiPasskeyOption = {

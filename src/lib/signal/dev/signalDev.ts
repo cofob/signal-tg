@@ -143,10 +143,13 @@ const signalDev = {
 
   /** Prints a decrypted profile; defaults to our own */
   async profile(aci?: string) {
-    const { account, connection } = getContext();
+    const { account, connection, unauthenticatedChat } = getContext();
     const profileKey = aci ? (await store.getRecipient(aci))?.profileKey : account.profileKey;
     if (!profileKey) throw new Error('No profile key');
-    console.log('[signal] Profile', await fetchProfile(connection, aci ?? account.aci, profileKey));
+    console.log(
+      '[signal] Profile',
+      await fetchProfile(connection, aci ?? account.aci, profileKey, aci ? unauthenticatedChat : undefined),
+    );
   },
 
   /** Replaces local data with a demo account, contacts, a group and messages; reload the page afterwards */

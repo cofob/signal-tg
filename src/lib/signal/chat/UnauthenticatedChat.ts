@@ -9,7 +9,7 @@ const CHAT_PATH = '/v1/websocket/';
 /**
  * The chat socket without account credentials, for requests that must not reveal the sender: sealed sender
  * sends and prekey fetches with access keys (Signal Desktop `SocketManager.getUnauthenticatedApi`).
- * It connects on first use and again after it closes.
+ * It connects on first use and again after it closes, through the sealed sender proxy when that is set.
  */
 export default class UnauthenticatedChat {
   private socket?: Promise<ResourceSocket>;
@@ -33,7 +33,7 @@ export default class UnauthenticatedChat {
   private getSocket() {
     if (this.socket) return this.socket;
 
-    const socket = ResourceSocket.connect(SIGNAL_CHAT_HOST, CHAT_PATH).then((connected) => {
+    const socket = ResourceSocket.connect(SIGNAL_CHAT_HOST, CHAT_PATH, 'unauthenticated').then((connected) => {
       connected.onClose = () => {
         if (this.socket === socket) this.socket = undefined;
       };

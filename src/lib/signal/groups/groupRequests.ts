@@ -165,6 +165,7 @@ export async function uploadGroupAvatar(
   const tail = `\r\n--${boundary}--\r\n`;
 
   const response = await sendHttpRequest(SIGNAL_CDN_HOSTS[AVATAR_CDN_NUMBER], {
+    trafficClass: 'unauthenticated',
     method: 'POST',
     path: '/',
     headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },

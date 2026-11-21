@@ -7,7 +7,9 @@ import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/sign
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { resumePendingRegistration } from '../../lib/signal/account/register';
 import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
-import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from '../../lib/signal/config';
+import {
+  getSignalTunnelUrl, setSignalProxyUrl, setSignalSealedSenderProxyUrl, SIGNAL_PRIMARY_DEVICE_ID,
+} from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
@@ -58,7 +60,7 @@ let historyTransferController: AbortController | undefined;
 export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
-  applyProxyUrl(args.signalProxyUrl);
+  applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
@@ -127,10 +129,12 @@ export async function stopClient(shouldForget: boolean) {
   }
 }
 
-function applyProxyUrl(url: string | undefined) {
-  const prevTunnelUrl = getSignalTunnelUrl();
-  setSignalProxyUrl(url);
-  if (getSignalTunnelUrl() !== prevTunnelUrl) closeIdleHttpConnections();
+function applyProxyUrls(proxyUrl: string | undefined, sealedSenderProxyUrl: string | undefined) {
+  const prevTunnelUrls = [getSignalTunnelUrl('authenticated'), getSignalTunnelUrl('unauthenticated')];
+  setSignalProxyUrl(proxyUrl);
+  setSignalSealedSenderProxyUrl(sealedSenderProxyUrl);
+  const tunnelUrls = [getSignalTunnelUrl('authenticated'), getSignalTunnelUrl('unauthenticated')];
+  if (tunnelUrls.some((url, i) => url !== prevTunnelUrls[i])) closeIdleHttpConnections();
 }
 
 function stopDeviceLink() {

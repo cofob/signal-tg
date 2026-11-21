@@ -1,3 +1,4 @@
+import type { TrafficClass } from '../config';
 import type { SgxClientState } from '../wasm/generated/signal_wasm';
 import type { Credentials } from './rest';
 
@@ -52,8 +53,12 @@ export default class AttestedConnection {
     };
   }
 
-  static async connect(host: string, path: string, credentials: Credentials, createClient: CreateEnclaveClient) {
-    const socket = await WebSocketClient.connect(host, path, { Authorization: getBasicAuthorization(credentials) });
+  static async connect(
+    host: string, path: string, trafficClass: TrafficClass, credentials: Credentials, createClient: CreateEnclaveClient,
+  ) {
+    const socket = await WebSocketClient.connect(host, path, trafficClass, {
+      Authorization: getBasicAuthorization(credentials),
+    });
     const connection = new AttestedConnection(socket);
     try {
       const attestation = await connection.receiveFrame();

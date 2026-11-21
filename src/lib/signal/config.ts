@@ -18,19 +18,35 @@ export const SIGNAL_USER_AGENT = `TeleSignal/${APP_VERSION}`;
 // The device id of an account's primary device; linked devices get higher ids
 export const SIGNAL_PRIMARY_DEVICE_ID = 1;
 
+/**
+ * Whether a connection carries credentials of the account. Every connection is opened for one class, and the two
+ * classes never share pools, sockets or TLS sessions, so a separate tunnel can keep requests without credentials
+ * (sealed sender sends, profile and prekey fetches, group requests, CDSI, SVR2, CDN downloads) from being linked to the
+ * account by that tunnel's operator or by network observers.
+ */
+export type TrafficClass = 'authenticated' | 'unauthenticated';
+
 let signalProxyUrl: string | undefined;
+let signalSealedSenderProxyUrl: string | undefined;
 
 /**
- * The tunnel for new connections: the proxy server setting, else `SIGNAL_TUNNEL_URL` outside the desktop app.
+ * The tunnel for new connections of a class: the sealed sender proxy setting for `unauthenticated` when it is set,
+ * else the proxy server setting, else `SIGNAL_TUNNEL_URL` outside the desktop app.
  * `undefined` is the desktop app's native transport, or the tunnel on the app's origin.
  */
-export function getSignalTunnelUrl() {
-  return signalProxyUrl ?? (hasNativeTransport() ? undefined : SIGNAL_TUNNEL_URL);
+export function getSignalTunnelUrl(trafficClass: TrafficClass) {
+  const sealedSenderUrl = trafficClass === 'unauthenticated' ? signalSealedSenderProxyUrl : undefined;
+  return sealedSenderUrl ?? signalProxyUrl ?? (hasNativeTransport() ? undefined : SIGNAL_TUNNEL_URL);
 }
 
 /** Sets the proxy server from settings; `undefined` restores the default tunnel */
 export function setSignalProxyUrl(url: string | undefined) {
   signalProxyUrl = url;
+}
+
+/** Sets the sealed sender proxy from settings; `undefined` sends both classes through the proxy server */
+export function setSignalSealedSenderProxyUrl(url: string | undefined) {
+  signalSealedSenderProxyUrl = url;
 }
 
 // Production enclaves of libsignal `rust/net/src/env.rs` (`PROD`) with the ids of `rust/attest/src/constants.rs`

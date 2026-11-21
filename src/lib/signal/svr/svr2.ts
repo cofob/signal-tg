@@ -158,6 +158,7 @@ async function exchange(credentials: Credentials, mrenclave: string, inner: Requ
     connection = await AttestedConnection.connect(
       SIGNAL_SVR2_HOST,
       `/v1/${mrenclave}`,
+      'unauthenticated',
       credentials,
       (attestation, now) => wasm.Svr2Client_New(mrenclaveBytes, attestation, now),
     );
