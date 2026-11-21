@@ -6,6 +6,7 @@ import type {
   EditMessageSchema,
   ReceiptMessage_Type,
   StoryMessageSchema,
+  SyncMessage_AttachmentBackfillRequestSchema,
   SyncMessage_BlockedSchema,
   SyncMessage_CallLogEventSchema,
   SyncMessage_ConfigurationSchema,
@@ -298,6 +299,18 @@ export function sendCallLogEventSync(
   context: SenderContext, callLogEvent: MessageInitShape<typeof SyncMessage_CallLogEventSchema>,
 ) {
   return syncToOtherDevices(context, { content: { case: 'callLogEvent', value: callLogEvent } }, Date.now());
+}
+
+/**
+ * Asks our primary device for the attachments of a message that the CDN no longer has (Signal Desktop
+ * `getAttachmentBackfillSyncMessage`)
+ */
+export function sendAttachmentBackfillRequestSync(
+  context: SenderContext, request: MessageInitShape<typeof SyncMessage_AttachmentBackfillRequestSchema>,
+) {
+  return syncToOtherDevices(
+    context, { content: { case: 'attachmentBackfillRequest', value: request } }, Date.now(), true,
+  );
 }
 
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */

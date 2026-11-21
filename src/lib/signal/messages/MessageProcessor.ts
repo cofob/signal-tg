@@ -24,12 +24,11 @@ import type {
   ReceiptMessage,
   StoryMessage,
   SyncMessage,
-  SyncMessage_DeleteForMe,
+  SyncMessage_AttachmentBackfillResponse, SyncMessage_DeleteForMe,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_Sent,
   TypingMessage,
-  Verified,
-} from '../proto/generated/SignalService_pb';
+  Verified } from '../proto/generated/SignalService_pb';
 import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
@@ -42,6 +41,7 @@ import type { AccountRecord, EarlyReceiptRecord, StoryDistributionList } from '.
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import { applyBackfillResponse, ATTACHMENT_BACKFILL_TIMEOUT_MS } from '../attachments/attachmentBackfill';
 import { getAttachmentCacheKey, removeAttachmentBlob } from '../attachments/attachmentCache';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { getCallEvent, getCallLogEvent } from '../calls/callDisposition';
@@ -60,6 +60,7 @@ import {
   describeSendError, getSendErrorKind, GroupTerminatedError, NotGroupMemberError, UnregisteredUserError,
 } from '../sender/sendErrors';
 import {
+  sendAttachmentBackfillRequestSync,
   sendBlockedSync,
   sendCallLogEventSync,
   sendConfigurationSync,
@@ -360,6 +361,10 @@ export default class MessageProcessor {
 
   private notificationProfiles: NotificationProfileManager;
 
+  // Requests for attachments that the primary device has not completed, by message id; the timer ends a request that
+  // gets no answer, and is gone once the phone answered
+  private backfillRequests = new Map<number, ReturnType<typeof setTimeout> | undefined>();
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
@@ -409,6 +414,8 @@ export default class MessageProcessor {
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
     this.notificationProfiles.stop();
+    this.backfillRequests.forEach(clearTimeout);
+    this.backfillRequests.clear();
     this.sendsInFlight.clear();
     this.retryPass = Promise.resolve();
     this.deliveryReceiptTimer = undefined;
@@ -851,20 +858,102 @@ export default class MessageProcessor {
 
   /**
    * Remembers that the CDN no longer has an attachment, an index in `DataMessage.attachments` or the sticker,
-   * so it is not downloaded again
+   * so it is not downloaded again, and asks the primary device for it (`requestAttachmentBackfill`)
    */
   async markAttachmentUnavailable(messageId: number, attachment: number | 'sticker') {
     await this.runSerial(async () => {
       const message = await this.db.getMessage(messageId);
       if (!message) return;
       if (attachment === 'sticker') {
-        if (!message.isStickerUnavailable) await this.putMessage({ ...message, isStickerUnavailable: true });
+        if (message.isStickerUnavailable) return;
+        await this.requestAttachmentBackfill(await this.putMessage({ ...message, isStickerUnavailable: true }));
         return;
       }
       if (message.unavailableAttachmentIndexes?.includes(attachment)) return;
-      await this.putMessage({
+      await this.requestAttachmentBackfill(await this.putMessage({
         ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], attachment],
+      }));
+    });
+  }
+
+  /**
+   * Asks the primary device for the attachments of a message that the CDN no longer has, as Signal Desktop does
+   * (`AttachmentBackfill.request` in `ts/jobs/helpers/attachmentBackfill.preload.ts`): one request at a time for
+   * a message, and not again once the phone could not get them or did not answer in time. The response brings new
+   * pointers (`applyAttachmentBackfillResponse`). Stories, link previews and quotes have no request.
+   */
+  private async requestAttachmentBackfill(message: MessageRecord) {
+    const { deviceId } = this.client.getSenderContext().account;
+    // A primary device keeps the attachments itself, and only addressable messages can be named to it
+    if (deviceId === SIGNAL_PRIMARY_DEVICE_ID || !isAddressableMessage(message) || !message.dataMessage) return;
+    if (message.isBackfillFailed || this.backfillRequests.has(message.id) || message.deletedAt) return;
+    const conversation = await this.db.getConversation(message.conversationId);
+    if (!conversation) return;
+
+    this.backfillRequests.set(message.id, setTimeout(() => {
+      this.backfillRequests.delete(message.id);
+      void this.runSerial(() => this.failAttachmentBackfill(message.id)).catch(this.events.onError);
+    }, ATTACHMENT_BACKFILL_TIMEOUT_MS));
+    void this.sendWhenConnected(async (context) => {
+      await sendAttachmentBackfillRequestSync(context, {
+        targetMessage: buildAddressableMessage(message),
+        targetConversation: buildConversationIdentifier(conversation),
       });
+    }).catch(this.events.onError);
+  }
+
+  /** The request ran out of time, or the phone gave up: the attachments stay unavailable and are not asked for again */
+  private async failAttachmentBackfill(messageId: number) {
+    const message = await this.db.getMessage(messageId);
+    if (message && !message.isBackfillFailed) await this.putMessage({ ...message, isBackfillFailed: true });
+  }
+
+  /**
+   * Applies the response to our request for attachments (Signal Desktop `AttachmentBackfill.handleResponse`): the
+   * pointers that the primary device sends replace those that failed, and the message shows its media again. An
+   * answer that the phone has not finished leaves the request open, an error ends it. Answers to requests of other
+   * devices update the pointers too, which is why they are not ignored.
+   */
+  private async applyAttachmentBackfillResponse(response: SyncMessage_AttachmentBackfillResponse) {
+    const conversation = await this.findConversation(response.targetConversation);
+    const message = conversation && response.targetMessage
+      && await this.findAddressableMessage(conversation.id, response.targetMessage);
+    if (!message?.dataMessage) return;
+
+    const isRequested = this.backfillRequests.has(message.id);
+    clearTimeout(this.backfillRequests.get(message.id));
+    const { data } = response;
+    if (data.case !== 'attachments') {
+      // The phone does not have the message (`MESSAGE_NOT_FOUND`)
+      if (isRequested) {
+        this.backfillRequests.delete(message.id);
+        await this.failAttachmentBackfill(message.id);
+      }
+      return;
+    }
+
+    const result = applyBackfillResponse({
+      dataMessage: fromBinary(DataMessageSchema, message.dataMessage),
+      unavailableAttachmentIndexes: message.unavailableAttachmentIndexes ?? [],
+      isStickerUnavailable: Boolean(message.isStickerUnavailable),
+      isRequested,
+      response: data.value,
+      longTextContentType: LONG_TEXT_CONTENT_TYPE,
+    });
+    if (isRequested) {
+      // The phone is working on what it has not sent yet, and sends it when it has it
+      if (result.pendingCount) this.backfillRequests.set(message.id, undefined);
+      else this.backfillRequests.delete(message.id);
+    }
+    await this.putMessage({
+      ...message,
+      dataMessage: result.isChanged ? toBinary(DataMessageSchema, result.dataMessage) : message.dataMessage,
+      unavailableAttachmentIndexes: result.unavailableAttachmentIndexes.length
+        ? result.unavailableAttachmentIndexes
+        : undefined,
+      isStickerUnavailable: result.isStickerUnavailable || undefined,
+      // Attachments that the phone could not get stay unavailable
+      isBackfillFailed: result.failedCount ? true : message.isBackfillFailed,
     });
   }
 
@@ -2627,6 +2716,9 @@ export default class MessageProcessor {
       case 'usernameChange':
         // Another device changed our username and wrote it to the storage service
         this.scheduleStorageSync();
+        break;
+      case 'attachmentBackfillResponse':
+        await this.applyAttachmentBackfillResponse(content.value);
         break;
       case 'callEvent': {
         const event = getCallEvent(content.value);
