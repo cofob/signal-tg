@@ -255,37 +255,6 @@ export interface ApiMessagePoll {
   attachedMedia?: MediaContent;
 }
 
-export interface ApiGeoPoint {
-  long: number;
-  lat: number;
-  accessHash: string;
-  accuracyRadius?: number;
-}
-
-export interface ApiGeo {
-  mediaType: 'geo';
-  geo: ApiGeoPoint;
-}
-
-export interface ApiVenue {
-  mediaType: 'venue';
-  geo: ApiGeoPoint;
-  title: string;
-  address: string;
-  provider: string;
-  venueId: string;
-  venueType: string;
-}
-
-export interface ApiGeoLive {
-  mediaType: 'geoLive';
-  geo: ApiGeoPoint;
-  heading?: number;
-  period: number;
-}
-
-export type ApiLocation = ApiGeo | ApiVenue | ApiGeoLive;
-
 export type ApiDice = {
   mediaType: 'dice';
   value: number;
@@ -659,7 +628,6 @@ export type MediaContent = {
   webPage?: ApiMessageWebPage;
   audio?: ApiAudio;
   voice?: ApiVoice;
-  location?: ApiLocation;
   storyData?: ApiMessageStoryData;
   dice?: ApiDice;
   ttlSeconds?: number;

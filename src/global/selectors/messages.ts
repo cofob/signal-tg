@@ -668,8 +668,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     const isPinMessageRightBanned = isUserRightBanned(chat, 'pinMessages');
 
     if (isSuperGroup) {
-      const hasUsernameOrGeo = chat.hasUsername || chat.hasGeo;
-      return hasPinMessageRight || (!hasUsernameOrGeo && !isPinMessageRightBanned);
+      return hasPinMessageRight || (!chat.hasUsername && !isPinMessageRightBanned);
     }
 
     if (isBasicGroup) {
@@ -696,7 +695,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
       || getServerTime() - message.date < (global.config?.editTimeLimit || Infinity)
     ) && !(
       content.sticker || content.contact || content.pollId || content.action
-      || (content.video?.isRound) || content.location || isDocumentSticker || content.dice
+      || (content.video?.isRound) || isDocumentSticker || content.dice
     )
     && !isForwarded
     && !chat.isForbidden

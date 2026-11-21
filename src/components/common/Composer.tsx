@@ -544,7 +544,7 @@ const Composer = ({
   useEffect(() => {
     const isChannelWithProfiles = isChannel && chat?.areProfilesShown;
     const isChatWithSendAs = chat && isChatSuperGroup(chat)
-      && Boolean(isChatPublic(chat) || chat.isLinkedInDiscussion || chat.hasGeo);
+      && Boolean(isChatPublic(chat) || chat.isLinkedInDiscussion);
     if (!sendAsPeerIds && isReady && (isChatWithSendAs || isChannelWithProfiles)) {
       loadSendAs({ chatId });
     }

@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from '@teact'
 import { getActions } from '../../../../global';
 
 import type {
-  ApiLocation,
   ApiPeer,
   ApiPollAnswer,
   ApiPollResult,
@@ -22,7 +21,6 @@ import useLastCallback from '../../../../hooks/useLastCallback';
 
 import AnimatedCounter from '../../../common/AnimatedCounter';
 import AvatarList from '../../../common/AvatarList';
-import CompactMapPreview from '../../../common/CompactMapPreview';
 import CompactMediaPreview, { canRenderCompactMediaPreview } from '../../../common/CompactMediaPreview';
 import Icon from '../../../common/icons/Icon';
 import StickerView from '../../../common/StickerView';
@@ -53,7 +51,6 @@ type OwnProps = {
   observeIntersectionForPlaying?: ObserveFn;
   onSelect: (option: string) => void;
   onOpenMedia: (previewIndex: number) => void;
-  onOpenLocation: (location: ApiLocation) => void;
 };
 
 const OPTION_MEDIA_SIZE = 48;
@@ -81,7 +78,6 @@ const PollOption = ({
   observeIntersectionForPlaying,
   onSelect,
   onOpenMedia,
-  onOpenLocation,
 }: OwnProps) => {
   const { openUrl } = getActions();
   const lang = useLang();
@@ -180,15 +176,6 @@ const PollOption = ({
 
     e.stopPropagation();
     onOpenMedia(mediaPreviewIndex);
-  });
-
-  const handleOpenMap = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!media?.location) {
-      return;
-    }
-
-    e.stopPropagation();
-    onOpenLocation(media.location);
   });
 
   const handleOpenWebPage = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -301,18 +288,6 @@ const PollOption = ({
           observeIntersectionForLoading={observeIntersectionForLoading}
           observeIntersectionForPlaying={observeIntersectionForPlaying}
           onClick={handleOpenPreview}
-        />
-      );
-    }
-
-    if (media?.location) {
-      return (
-        <CompactMapPreview
-          className={styles.mediaPreview}
-          geo={media.location.geo}
-          width={OPTION_MEDIA_SIZE}
-          height={OPTION_MEDIA_SIZE}
-          onClick={handleOpenMap}
         />
       );
     }

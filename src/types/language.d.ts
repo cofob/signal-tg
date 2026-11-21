@@ -752,7 +752,6 @@ export interface LangPair {
   'RichMessageMore': undefined;
   'AriaComposerOpenRichInput': undefined;
   'RichTextMathPreview': undefined;
-  'RichTextMapPreview': undefined;
   'Loading': undefined;
   'NoMessages': undefined;
   'UnreadMessages': undefined;
@@ -1005,8 +1004,6 @@ export interface LangPair {
   'NoAudioFilesInfo': undefined;
   'AttachContact': undefined;
   'AttachStory': undefined;
-  'AttachLocation': undefined;
-  'AttachLiveLocation': undefined;
   'ServiceNotifications': undefined;
   'Bot': undefined;
   'ALongTimeAgo': undefined;
@@ -1066,7 +1063,6 @@ export interface LangPair {
   'ScheduleRepeatMonthly': undefined;
   'ScheduleRepeatYearly': undefined;
   'VoipIncoming': undefined;
-  'LiveLocationUpdatedJustNow': undefined;
   'RightNow': undefined;
   'JustNowAgo': undefined;
   'AudioPause': undefined;
@@ -1275,7 +1271,6 @@ export interface LangPair {
   'FormattedDateDayOfWeek': undefined;
   'FormattedDateDate': undefined;
   'FormattedDateTime': undefined;
-  'MediaLocaltionImageAlt': undefined;
   'MediaPollSolutionAria': undefined;
   'GeneralError': undefined;
   'ChatMemberListNoAccess': undefined;
@@ -1332,7 +1327,6 @@ export interface LangPair {
   'GiftInfoDate': undefined;
   'GiftInfoSavedHide': undefined;
   'GiftInfoSavedShow': undefined;
-  'OpenMapWith': undefined;
   'DeleteMyAccount': undefined;
   'DeleteAccountIfAwayFor': undefined;
   'SelfDestructTitle': undefined;
@@ -1415,7 +1409,6 @@ export interface LangPair {
   'ActionPinnedMediaFile': undefined;
   'ActionPinnedMediaGif': undefined;
   'ActionPinnedMediaContact': undefined;
-  'ActionPinnedMediaLocation': undefined;
   'ActionPinnedMediaSticker': undefined;
   'ActionPinnedMediaStory': undefined;
   'ActionPinnedMediaAlbum': undefined;
@@ -2713,9 +2706,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'MessageTimerShortDays': {
     'count': V;
   };
-  'LiveLocationUpdatedTodayAt': {
-    'time': V;
-  };
   'PasscodeForgotHelp': {
     'logOut': V;
   };
@@ -3424,12 +3414,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedSharedFoldersPremium': {
     'limit': V;
   };
-  'LiveLocationUpdatedAtDate': {
-    'date': V;
-  };
-  'LiveLocationUpdatedYesterdayAt': {
-    'time': V;
-  };
   'MessageContainsEmojiPack': {
     'pack': V;
   };
@@ -3706,9 +3690,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'Years': {
     'count': V;
   };
-  'LiveLocationUpdatedMinutesAgo': {
-    'count': V;
-  };
   'Seconds': {
     'count': V;
   };
@@ -3873,9 +3854,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'Languages': {
-    'count': V;
-  };
-  'LiveLocationUpdatedHoursAgo': {
     'count': V;
   };
   'Media': {
@@ -4085,11 +4063,9 @@ export interface LangKeyGroups {
       | 'InviteLinkExpiresIn'
       | 'LastSeenTodayAt'
       | 'LastSeenYesterdayAt'
-      | 'LiveLocationUpdatedTodayAt'
       | 'ButtonPublishAtTime'
       | 'UnlockTimerPublicPostsSearch'
-      | 'StealthModeOnHint'
-      | 'LiveLocationUpdatedYesterdayAt';
+      | 'StealthModeOnHint';
     variables: 'time';
   };
   'date,time': {
@@ -4253,7 +4229,6 @@ export interface LangKeyGroups {
       | 'ActionGroupCallScheduledChannel'
       | 'SettingsPasskeyUsedAt'
       | 'ChatPrivateMessageEditTimestampDate'
-      | 'LiveLocationUpdatedAtDate'
       | 'MessageReadAt';
     variables: 'date';
   };
@@ -4853,7 +4828,6 @@ export interface LangPluralKeyGroups {
       | 'ScheduleRepeatEveryMinutes'
       | 'ScheduleRepeatEveryMonths'
       | 'Years'
-      | 'LiveLocationUpdatedMinutesAgo'
       | 'Seconds'
       | 'Minutes'
       | 'PreviewForwardedMessage'
@@ -4896,7 +4870,6 @@ export interface LangPluralKeyGroups {
       | 'FolderLinkHeaderChatsJoin'
       | 'FolderLinkHeaderChatsQuit'
       | 'Languages'
-      | 'LiveLocationUpdatedHoursAgo'
       | 'Media'
       | 'MessageContainsEmojiPacks'
       | 'MuteForDays'

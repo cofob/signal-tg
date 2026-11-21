@@ -879,7 +879,6 @@
 "RichMessageMore" = "Show more";
 "AriaComposerOpenRichInput" = "Open full editor";
 "RichTextMathPreview" = "[formula]";
-"RichTextMapPreview" = "[map]";
 "Loading" = "Loading...";
 "NoMessages" = "No messages here yet…";
 "UnreadMessages" = "Unread Messages";
@@ -1196,8 +1195,6 @@
 "NoAudioFilesInfo" = "Your music library is empty.";
 "AttachContact" = "Contact";
 "AttachStory" = "Story";
-"AttachLocation" = "Location";
-"AttachLiveLocation" = "Live Location";
 "ServiceNotifications" = "service notifications";
 "Bot" = "bot";
 "ALongTimeAgo" = "last seen a long time ago";
@@ -1288,10 +1285,6 @@
 "Years_other" = "{count} years";
 "MessageTimerShortHours" = "{count}h";
 "MessageTimerShortDays" = "{count}d";
-"LiveLocationUpdatedJustNow" = "updated just now";
-"LiveLocationUpdatedMinutesAgo_one" = "updated 1 minute ago";
-"LiveLocationUpdatedMinutesAgo_other" = "updated {count} minutes ago";
-"LiveLocationUpdatedTodayAt" = "updated at {time}";
 "RightNow" = "Right now";
 "Seconds_one" = "{count} second";
 "Seconds_other" = "{count} seconds";
@@ -1516,7 +1509,6 @@
 "FormattedDateDayOfWeek" = "Day of week";
 "FormattedDateDate" = "Date";
 "FormattedDateTime" = "Time";
-"MediaLocaltionImageAlt" = "Location on a map";
 "MediaPollSolutionAria" = "Show solution";
 "GeneralError" = "An error occurred";
 "ChatMemberListNoAccess" = "You have no access to group members list";
@@ -1595,7 +1587,6 @@
 "StarsAmountIconLast" = "{amount}⭐️";
 "StarsAmountText_one" = "{amount} Star";
 "StarsAmountText_other" = "{amount} Stars";
-"OpenMapWith" = "Open Map in";
 "DeleteMyAccount" = "Delete my account";
 "DeleteAccountIfAwayFor" = "If away for";
 "SelfDestructTitle" = "Account self-destruction";
@@ -1700,7 +1691,6 @@
 "ActionPinnedMediaFile" = "a file";
 "ActionPinnedMediaGif" = "a GIF";
 "ActionPinnedMediaContact" = "a contact information";
-"ActionPinnedMediaLocation" = "a location mark";
 "ActionPinnedMediaSticker" = "a sticker";
 "ActionPinnedMediaStory" = "a story";
 "ActionPinnedMediaAlbum" = "an album";
@@ -2604,10 +2594,6 @@
 "LimitReachedFolderLinksPremium" = "You can only create {limit} invite links. Try deleting some folder invite links.";
 "LimitReachedPinnedTopics" = "Sorry, you can't pin more than {limit} topics to the top.";
 "LimitReachedSharedFoldersPremium" = "You can only have {limit} shareable folders. Try deleting some shareable folder.";
-"LiveLocationUpdatedAtDate" = "updated {date}";
-"LiveLocationUpdatedHoursAgo_one" = "updated {count} hour ago";
-"LiveLocationUpdatedHoursAgo_other" = "updated {count} hours ago";
-"LiveLocationUpdatedYesterdayAt" = "updated yesterday at {time}";
 "LocalizationInterfaceLanguage" = "Interface Language";
 "Map" = "Map";
 "March" = "March";

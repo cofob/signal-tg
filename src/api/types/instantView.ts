@@ -1,7 +1,6 @@
 import type {
   ApiAudio,
   ApiDocument,
-  ApiGeoPoint,
   ApiInlineButtonAction,
   ApiKeyboardButtonStyle,
   ApiPhoto,
@@ -210,15 +209,6 @@ export type ApiPageBlockRelatedArticles = {
   articles: ApiPageRelatedArticle[];
 };
 
-export type ApiPageBlockMap = {
-  type: 'map';
-  geo?: ApiGeoPoint;
-  zoom: number;
-  width: number;
-  height: number;
-  caption: ApiPageCaption;
-};
-
 export type ApiPageBlockSlideshow = {
   type: 'slideshow';
   items: ApiPageBlock[];
@@ -291,7 +281,6 @@ export type ApiPageBlock =
   | ApiPageBlockOrderedList
   | ApiPageBlockDetails
   | ApiPageBlockRelatedArticles
-  | ApiPageBlockMap
   | { type: 'heading1'; text: ApiRichText }
   | { type: 'heading2'; text: ApiRichText }
   | { type: 'heading3'; text: ApiRichText }

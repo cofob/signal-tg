@@ -123,7 +123,6 @@ function buildApiChatFieldsFromPeerEntity(
     maxStoryId,
     hasStories: Boolean(maxStoryId) && !storiesUnavailable,
     emojiStatus,
-    hasGeo: channel?.hasGeo,
     level: channel?.level,
     withForumTabs: channel?.forumTabs,
     withForumSidebar: channel?.forumSidebar,
@@ -416,9 +415,6 @@ export function buildChatTypingStatus(
   }
   if (action instanceof GramJs.SendMessageUploadDocumentAction) {
     return buildTypingStatus('uploadFile');
-  }
-  if (action instanceof GramJs.SendMessageGeoLocationAction) {
-    return buildTypingStatus('chooseLocation');
   }
   if (action instanceof GramJs.SendMessageChooseContactAction) {
     return buildTypingStatus('chooseContact');

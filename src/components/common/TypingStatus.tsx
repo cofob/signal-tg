@@ -144,7 +144,6 @@ function getPrivateTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStat
     case 'watchingAnimations':
       return lang('ActionWatchingAnimations', { emoji: typingStatus.emoji });
     case 'typing':
-    case 'chooseLocation':
     case 'chooseContact':
     default:
       return lang('Typing');
@@ -171,7 +170,6 @@ function getGroupTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStatus
       return lang('UserActionUploadRound', { user }, { withNodes: true });
     case 'chooseSticker':
       return lang('UserActionChooseSticker', { user, eyes: renderEyesIcon() }, { withNodes: true });
-    case 'chooseLocation':
     case 'chooseContact':
     case 'typing':
     default:
@@ -180,9 +178,7 @@ function getGroupTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStatus
 }
 
 function shouldRenderTypingIcon(typingStatus: ApiTypingStatus) {
-  return typingStatus.type === 'typing'
-    || typingStatus.type === 'chooseLocation'
-    || typingStatus.type === 'chooseContact';
+  return typingStatus.type === 'typing' || typingStatus.type === 'chooseContact';
 }
 
 function getTypingPeerName(lang: LangFn, peer: ReturnType<typeof selectPeer>, fallback: string) {

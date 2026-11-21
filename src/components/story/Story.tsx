@@ -975,7 +975,6 @@ export default memo(withGlobal<OwnProps>((global, {
     },
     forwardMessages: { storyId: forwardedStoryId },
     safeLinkModalUrl,
-    mapModal,
     reportModal,
     storyStealthModal,
   } = tabState;
@@ -984,7 +983,7 @@ export default memo(withGlobal<OwnProps>((global, {
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
     viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
-    || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen || mapModal,
+    || isDeleteModalOpen || safeLinkModalUrl || isStealthModalOpen,
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;

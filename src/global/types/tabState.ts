@@ -8,7 +8,6 @@ import type {
   ApiChatType,
   ApiDialog,
   ApiFormattedText,
-  ApiGeoPoint,
   ApiGlobalMessageSearchType,
   ApiInputAiComposeTone,
   ApiInputRichMessage,
@@ -433,10 +432,6 @@ export type TabState = {
   dialogs: ApiDialog[];
 
   safeLinkModalUrl?: string;
-  mapModal?: {
-    point: ApiGeoPoint;
-    zoom?: number;
-  };
   historyCalendarSelectedAt?: number;
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];

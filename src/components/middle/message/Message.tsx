@@ -66,7 +66,6 @@ import {
   isChatChannel,
   isChatGroup,
   isChatPublic,
-  isGeoLiveExpired,
   isMessageLocal,
   isMessageLocalOnly,
   isMessageTranslatable,
@@ -193,7 +192,6 @@ import ContextMenuContainer from './ContextMenuContainer.async';
 import DiceWrapper from './dice/DiceWrapper';
 import FactCheck from './FactCheck';
 import InlineButtons from './InlineButtons';
-import Location from './Location';
 import MessageAppendix from './MessageAppendix';
 import MessageMeta from './MessageMeta';
 import MessagePhoneCall from './MessagePhoneCall';
@@ -580,7 +578,6 @@ const Message = ({
   const {
     photo, video, audio,
     voice, document, sticker, contact,
-    location,
     action, storyData, todo, dice,
   } = getMessageContent(message);
 
@@ -889,7 +886,7 @@ const Message = ({
 
   const hasOutsideReactions = !withVoiceTranscription && hasReactions
     && (isCustomShape || (
-      (photo || video || storyData || (location?.mediaType === 'geo')) && (!hasText || isInvertedMedia))
+      (photo || video || storyData) && (!hasText || isInvertedMedia))
     );
 
   const { className: peerColorClass, style: peerColorStyle } = usePeerColor({
@@ -916,7 +913,6 @@ const Message = ({
     hasBottomCommentButton: withCommentButton && !isCustomShape,
     hasActionButton: canForward || canFocus || (withCommentButton && isCustomShape),
     hasReactions,
-    isGeoLiveActive: location?.mediaType === 'geoLive' && !isGeoLiveExpired(message),
     withVoiceTranscription,
     peerColorClass,
     hasOutsideReactions,
@@ -1467,16 +1463,6 @@ const Message = ({
             {renderWebPage()}
           </>
         )}
-
-        {location && (
-          <Location
-            message={message}
-            isInSelectMode={isInSelectMode}
-            isSelected={isSelected}
-            theme={theme}
-            peer={sender}
-          />
-        )}
       </div>
     );
   }
@@ -1608,7 +1594,7 @@ const Message = ({
   }
 
   function shouldRenderSenderName() {
-    const media = photo || video || location;
+    const media = photo || video;
     return !isCustomShape && (
       (withSenderName && !media) || asForwarded || forceSenderName
     ) && !isInDocumentGroupNotFirst && !(hasMessageReply && isCustomShape);

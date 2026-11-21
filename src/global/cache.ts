@@ -72,12 +72,14 @@ const APP_CONFIG_NANOTON_KEYS = [
   'tonSuggestedPostAmountMax', 'tonSuggestedPostAmountMin',
 ] as const;
 
-// `patternColor` values the cache migration recognizes as defaults and replaces with the
-// wallpaper-derived ones
-const BOT_MESSAGE_FIELDS = [
+// Message and message content fields of removed Telegram features
+const REMOVED_MESSAGE_FIELDS = [
   'inlineButtons', 'keyboardButtons', 'keyboardPlaceholder', 'isKeyboardSingleUse', 'isKeyboardSelective',
   'isKeyboardFullHeight', 'shouldHideKeyboardButtons', 'isHideKeyboardSelective', 'viaBotId', 'guestChatViaId',
 ];
+const REMOVED_MESSAGE_CONTENT_FIELDS = ['game', 'location'];
+// `patternColor` values the cache migration recognizes as defaults and replaces with the
+// wallpaper-derived ones
 const LEGACY_DEFAULT_PATTERN_COLOR = '#4A8E3A8C';
 const LEGACY_DARK_THEME_PATTERN_COLOR = '#48576166';
 
@@ -508,7 +510,7 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   }
 
   if (cached.cacheVersion < 10) {
-    stripBotMessageFields(cached);
+    stripRemovedMessageFields(cached);
     Object.values(cached.messages.webPageById).forEach((webPage) => {
       // Instant View pages
       delete (webPage as AnyLiteral).cachedPage;
@@ -1058,12 +1060,16 @@ function reduceAvailableReactions(
 }
 
 // Bot reply markup and inline bot attribution on cached messages
-function stripBotMessageFields(cached: GlobalState) {
+function stripRemovedMessageFields(cached: GlobalState) {
   Object.values(cached.messages.byChatId).forEach(({ byId, ephemeralById }) => {
     [...Object.values(byId), ...Object.values(ephemeralById)].forEach((message) => {
       const untypedMessage = message as AnyLiteral;
-      BOT_MESSAGE_FIELDS.forEach((field) => {
+      const untypedContent = message.content as AnyLiteral;
+      REMOVED_MESSAGE_FIELDS.forEach((field) => {
         delete untypedMessage[field];
+      });
+      REMOVED_MESSAGE_CONTENT_FIELDS.forEach((field) => {
+        delete untypedContent[field];
       });
     });
   });

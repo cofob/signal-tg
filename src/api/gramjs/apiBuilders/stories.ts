@@ -18,7 +18,7 @@ import { buildCollectionByCallback, omitUndefined } from '../../../util/iteratee
 import { addDocumentToLocalDb, addPhotoToLocalDb } from '../helpers/localDb';
 import { buildApiPhoto, buildPrivacyRules } from './common';
 import { buildApiAudioFromDocument } from './media';
-import { buildApiDocument, buildGeoPoint, buildMessageMediaContent, buildMessageTextContent } from './messageContent';
+import { buildApiDocument, buildMessageMediaContent, buildMessageTextContent } from './messageContent';
 import { buildApiMessage } from './messages';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 import { buildApiReaction, buildReactionCount } from './reactions';
@@ -171,33 +171,6 @@ function buildApiMediaAreaCoordinates(coordinates: GramJs.TypeMediaAreaCoordinat
 
 export function buildApiMediaArea(area: GramJs.TypeMediaArea): ApiMediaArea | undefined {
   const coordinates = buildApiMediaAreaCoordinates(area.coordinates);
-  if (area instanceof GramJs.MediaAreaVenue) {
-    const { geo, title } = area;
-    const point = buildGeoPoint(geo);
-
-    if (!point) return undefined;
-
-    return {
-      type: 'venue',
-      coordinates,
-      geo: point,
-      title,
-    };
-  }
-
-  if (area instanceof GramJs.MediaAreaGeoPoint) {
-    const { geo } = area;
-    const point = buildGeoPoint(geo);
-
-    if (!point) return undefined;
-
-    return {
-      type: 'geoPoint',
-      coordinates,
-      geo: point,
-    };
-  }
-
   if (area instanceof GramJs.MediaAreaSuggestedReaction) {
     const {
       reaction, dark, flipped,

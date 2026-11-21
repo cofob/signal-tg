@@ -33,7 +33,6 @@ export interface ApiChat {
   areSignaturesShown?: boolean;
   areProfilesShown?: boolean;
   isLinkedInDiscussion?: boolean;
-  hasGeo?: boolean;
   accessHash?: string;
   isMin?: boolean;
   hasVideoAvatar?: boolean;
@@ -102,7 +101,7 @@ type ApiTypingStatusBase = {
 type ApiTypingStatusSimple = ApiTypingStatusBase & {
   type: 'typing' | 'recordVideo' | 'uploadVideo' | 'recordAudio' | 'uploadAudio'
     | 'uploadPhoto' | 'uploadFile' | 'recordRound' | 'uploadRound'
-    | 'chooseSticker' | 'chooseLocation' | 'chooseContact';
+    | 'chooseSticker' | 'chooseContact';
 };
 
 type ApiTypingStatusWatchingAnimations = ApiTypingStatusBase & {

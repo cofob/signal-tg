@@ -150,7 +150,6 @@ function getSummaryDescription(
     document,
     sticker,
     contact,
-    location,
     storyData,
     todo,
     dice,
@@ -212,14 +211,6 @@ function getSummaryDescription(
     } else {
       summary = truncatedText as string;
     }
-  }
-
-  if (location?.mediaType === 'geo' || location?.mediaType === 'venue') {
-    summary = lang('AttachLocation');
-  }
-
-  if (location?.mediaType === 'geoLive') {
-    summary = lang('AttachLiveLocation');
   }
 
   if (storyData) {

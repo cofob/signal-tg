@@ -96,14 +96,14 @@ export function getMessageTranscription(message: ApiMessage) {
 export function hasMessageText(message: MediaContainer) {
   const {
     action, text, sticker, photo, video, audio, voice, document, pollId, todo, dice,
-    webPage, contact, location, storyData,
+    webPage, contact, storyData,
   } = message.content;
 
   if (pollId) return false;
 
   return Boolean(text) || !(
     sticker || photo || video || audio || voice || document || contact || pollId || todo || webPage
-    || location || storyData || dice
+    || storyData || dice
     || action?.type === 'phoneCall'
   );
 }
@@ -214,7 +214,7 @@ export function getMessageCustomShape(message: ApiMessage): boolean {
   const {
     text, sticker, photo, video, audio, voice,
     document, pollId, webPage, contact, action,
-    location, storyData, dice,
+    storyData, dice,
   } = message.content;
 
   if (sticker || (video?.isRound) || dice) {
@@ -222,7 +222,7 @@ export function getMessageCustomShape(message: ApiMessage): boolean {
   }
 
   if (!text || photo || video || audio || voice || document || pollId || webPage || contact || action
-    || location || storyData) {
+    || storyData) {
     return false;
   }
 
@@ -342,12 +342,6 @@ export function isMessageLocal(message: ApiMessage) {
 
 export function isMessageFailed(message: ApiMessage) {
   return message.sendingState === 'messageSendingStateFailed';
-}
-
-export function isGeoLiveExpired(message: ApiMessage) {
-  const { location } = message.content;
-  if (location?.mediaType !== 'geoLive') return false;
-  return getServerTime() - (message.date || 0) >= location.period;
 }
 
 export function isMessageTranslatable(message: ApiMessage, allowOutgoing?: boolean) {

@@ -15,7 +15,6 @@ import type {
   ApiEmojiStatusType,
   ApiExportedInvite,
   ApiFormattedText,
-  ApiGeoPoint,
   ApiGlobalMessageSearchType,
   ApiInlineButtonAction,
   ApiInputAiComposeTone,
@@ -2022,11 +2021,6 @@ export interface ActionPayloads {
     ignoreDeepLinks?: boolean;
     linkContext?: LinkContext;
   } & WithTabId;
-  openMapModal: {
-    geoPoint: ApiGeoPoint;
-    zoom?: number;
-  } & WithTabId;
-  closeMapModal: WithTabId | undefined;
   toggleSafeLinkModal: {
     url?: string;
   } & WithTabId;

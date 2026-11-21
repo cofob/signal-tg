@@ -15,7 +15,6 @@ import type {
   ApiInputPrivacyRules,
   ApiInputReplyInfo,
   ApiInputSuggestedPostInfo,
-  ApiLocation,
   ApiMessageEntity,
   ApiMessagePoll,
   ApiNewMediaTodo,
@@ -295,10 +294,6 @@ function buildInputMediaFromContent(content?: MediaContent) {
     return buildInputMediaDocument(content.document);
   }
 
-  if (content.location) {
-    return buildInputLocationMedia(content.location);
-  }
-
   if (content.sticker) {
     return buildInputMediaDocument(content.sticker);
   }
@@ -308,43 +303,6 @@ function buildInputMediaFromContent(content?: MediaContent) {
   }
 
   return undefined;
-}
-
-function buildInputLocationMedia(location: ApiLocation) {
-  const geoPoint = buildInputGeoPoint(location.geo);
-
-  if (!geoPoint) {
-    return undefined;
-  }
-
-  if (location.mediaType === 'venue') {
-    return new GramJs.InputMediaVenue({
-      geoPoint,
-      title: location.title,
-      address: location.address,
-      provider: location.provider,
-      venueId: location.venueId,
-      venueType: location.venueType,
-    });
-  }
-
-  if (location.mediaType === 'geoLive') {
-    return new GramJs.InputMediaGeoLive({
-      geoPoint,
-      heading: location.heading,
-      period: location.period,
-    });
-  }
-
-  return new GramJs.InputMediaGeoPoint({ geoPoint });
-}
-
-function buildInputGeoPoint(geo: ApiLocation['geo']) {
-  return new GramJs.InputGeoPoint({
-    lat: geo.lat,
-    long: geo.long,
-    accuracyRadius: geo.accuracyRadius,
-  });
 }
 
 export function buildInputTodo(todo: ApiNewMediaTodo) {

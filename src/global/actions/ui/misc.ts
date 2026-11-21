@@ -570,25 +570,6 @@ addActionHandler('updateArchiveSettings', (global, actions, payload): ActionRetu
   };
 });
 
-addActionHandler('openMapModal', (global, actions, payload): ActionReturnType => {
-  const { geoPoint, zoom, tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    mapModal: {
-      point: geoPoint,
-      zoom,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeMapModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    mapModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('checkAppVersion', (global): ActionReturnType => {
   fetch(`${APP_VERSION_URL}?${Date.now()}`)
     .then((response) => response.text())

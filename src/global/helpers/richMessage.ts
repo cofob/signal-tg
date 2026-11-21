@@ -6,7 +6,6 @@ import type {
   ApiPageBlockCollage,
   ApiPageBlockDetails,
   ApiPageBlockEmbedPost,
-  ApiPageBlockMap,
   ApiPageBlockPhoto,
   ApiPageBlockPullquote,
   ApiPageBlockSlideshow,
@@ -211,9 +210,6 @@ function appendPageBlockUsage(block: ApiPageBlock, depth: number, usage: RichMes
     case 'relatedArticles':
       appendRichTextUsage(block.title, depth + 1, usage);
       break;
-    case 'map':
-      appendPageCaptionUsage(block.caption, depth + 1, usage);
-      break;
     case 'math':
       usage.textLength += getUtf8Length(block.source);
       break;
@@ -335,8 +331,6 @@ function appendPageBlockPreviewText(block: ApiPageBlock, parts: string[], maxLen
     case 'collage':
     case 'slideshow':
       return appendPageMediaGroupPreviewText(block, parts, maxLength);
-    case 'map':
-      return appendPageMapPreviewText(block, parts, maxLength);
     case 'document':
       return appendBlockText(parts, getRichTextPlainText(block.caption.text) || block.document.fileName, maxLength);
     case 'unsupported':
@@ -458,16 +452,6 @@ function appendPageMediaGroupPreviewText(
   return appendPageCaptionPreviewText(block.caption, parts, remainingLength);
 }
 
-function appendPageMapPreviewText(
-  block: ApiPageBlockMap,
-  parts: string[],
-  maxLength?: number,
-) {
-  const remainingLength = appendBlockText(parts, getMapPreviewText(), maxLength);
-
-  return appendPageCaptionPreviewText(block.caption, parts, remainingLength);
-}
-
 function appendPageTablePreviewText(
   block: ApiPageBlockTable,
   parts: string[],
@@ -530,8 +514,4 @@ function appendTextPart(parts: string[], text: string, maxLength?: number) {
 
 function getMathPreviewText() {
   return getTranslationFn()('RichTextMathPreview');
-}
-
-function getMapPreviewText() {
-  return getTranslationFn()('RichTextMapPreview');
 }

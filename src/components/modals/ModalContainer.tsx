@@ -27,7 +27,6 @@ import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
 import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
 import LeaveGroupModal from './leaveGroup/LeaveGroupModal.async';
-import MapModal from './map/MapModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
 import PasskeyModal from './passkey/PasskeyModal.async';
@@ -50,7 +49,6 @@ type ModalKey = keyof Pick<TabState,
   'aiMessageEditorModal' |
   'chatlistModal' |
   'safeLinkModalUrl' |
-  'mapModal' |
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
   'reportModal' |
@@ -83,7 +81,7 @@ type ModalKey = keyof Pick<TabState,
   'settingsConfirmation' |
   'joinGroupCallModal'
 >;
-type WrappedModalKey = 'pollModal' | 'musicPicker' | 'mapModal' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
+type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
   | 'settingsConfirmation' | 'joinGroupCallModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
@@ -173,7 +171,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
 const WRAPPED_MODALS: WrappedModalRegistry = {
   pollModal: PollModal,
   musicPicker: MusicPickerModal,
-  mapModal: MapModal,
   safeLinkModalUrl: SafeLinkModal,
   autoDeleteTimerModal: AutoDeleteTimerModal,
   settingsConfirmation: SettingsConfirmationModal,

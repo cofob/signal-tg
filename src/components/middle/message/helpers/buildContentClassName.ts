@@ -20,7 +20,6 @@ export function buildContentClassName(
     hasBottomCommentButton,
     hasActionButton,
     hasReactions,
-    isGeoLiveActive,
     withVoiceTranscription,
     peerColorClass,
     hasOutsideReactions,
@@ -37,7 +36,6 @@ export function buildContentClassName(
     hasBottomCommentButton?: boolean;
     hasActionButton?: boolean;
     hasReactions?: boolean;
-    isGeoLiveActive?: boolean;
     withVoiceTranscription?: boolean;
     peerColorClass?: string;
     hasOutsideReactions?: boolean;
@@ -46,7 +44,7 @@ export function buildContentClassName(
   const content = getMessageContent(message);
   const {
     photo, video,
-    audio, voice, document, contact, location, storyData,
+    audio, voice, document, contact, storyData,
     richMessage,
   } = content;
   const hasRichMessageAudio = Boolean(richMessage && getRichMessageAudios(richMessage).ids.length);
@@ -59,9 +57,8 @@ export function buildContentClassName(
 
   const classNames = [MESSAGE_CONTENT_CLASS_NAME];
   const pollMedia = poll?.attachedMedia;
-  const isMedia = storyData || photo || video || location
-    || pollMedia?.photo || pollMedia?.video || pollMedia?.location;
-  const hasText = text || location?.mediaType === 'venue' || isGeoLiveActive || hasFactCheck || poll;
+  const isMedia = storyData || photo || video || pollMedia?.photo || pollMedia?.video;
+  const hasText = text || hasFactCheck || poll;
   const isMediaWithNoText = isMedia && !hasText;
 
   const hasFooter = (() => {

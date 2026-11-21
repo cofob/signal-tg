@@ -5,7 +5,6 @@ import type {
   ApiContact,
   ApiDice,
   ApiFormattedText,
-  ApiLocation,
   ApiMediaTodo,
   ApiMessagePoll,
   ApiMessageStoryData,
@@ -192,9 +191,6 @@ export function buildMessageMediaContent(
   const webPage = buildMessageWebPageFromMedia(media);
   if (webPage) return { webPage };
 
-  const location = buildLocationFromMedia(media);
-  if (location) return { location };
-
   const dice = buildDiceFromMedia(media);
   if (dice) return { dice };
 
@@ -364,67 +360,6 @@ function buildTodoFromMedia(media: GramJs.TypeMessageMedia): ApiMediaTodo | unde
   }
 
   return buildTodo(media.todo, media.completions);
-}
-
-function buildLocationFromMedia(media: GramJs.TypeMessageMedia): ApiLocation | undefined {
-  if (media instanceof GramJs.MessageMediaGeo) {
-    return buildGeo(media);
-  }
-
-  if (media instanceof GramJs.MessageMediaVenue) {
-    return buildVenue(media);
-  }
-
-  if (media instanceof GramJs.MessageMediaGeoLive) {
-    return buildGeoLive(media);
-  }
-
-  return undefined;
-}
-
-function buildGeo(media: GramJs.MessageMediaGeo): ApiLocation | undefined {
-  const point = buildGeoPoint(media.geo);
-  return point && { mediaType: 'geo', geo: point };
-}
-
-function buildVenue(media: GramJs.MessageMediaVenue): ApiLocation | undefined {
-  const {
-    geo, title, provider, address, venueId, venueType,
-  } = media;
-  const point = buildGeoPoint(geo);
-  return point && {
-    mediaType: 'venue',
-    geo: point,
-    title,
-    provider,
-    address,
-    venueId,
-    venueType,
-  };
-}
-
-function buildGeoLive(media: GramJs.MessageMediaGeoLive): ApiLocation | undefined {
-  const { geo, period, heading } = media;
-  const point = buildGeoPoint(geo);
-  return point && {
-    mediaType: 'geoLive',
-    geo: point,
-    period,
-    heading,
-  };
-}
-
-export function buildGeoPoint(geo: GramJs.TypeGeoPoint): ApiLocation['geo'] | undefined {
-  if (geo instanceof GramJs.GeoPointEmpty) return undefined;
-  const {
-    long, lat, accuracyRadius, accessHash,
-  } = geo;
-  return {
-    long,
-    lat,
-    accessHash: accessHash.toString(),
-    accuracyRadius,
-  };
 }
 
 function buildDiceFromMedia(media: GramJs.TypeMessageMedia): ApiDice | undefined {
