@@ -5,6 +5,9 @@ node_modules
 src/lib/gramjs/build/
 build-contest/
 tests/
+# Test data that builds and Rust tests read
+!rust/libsignal/rust/attest/tests/
+!rust/boring-shim/tests/
 .idea
 *.iml
 dev/perf/screenshot*
