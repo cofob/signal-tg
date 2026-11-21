@@ -35,6 +35,7 @@ import type {
 import {AppManager} from '@appManagers/manager';
 import {buildChat, buildDialog, buildMessage, buildPeer, buildPeerReaction, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
 import {DEFAULT_REACTION_EMOJIS, buildReaction, toSignalReaction} from '@lib/signal/reactions';
+import {SIGNAL_USERNAME_PATTERN} from '@lib/signal/usernames';
 import makeError from '@helpers/makeError';
 import {ConnectionStatus} from '@lib/mtproto/connectionStatus';
 import tsNow from '@helpers/tsNow';
@@ -68,6 +69,8 @@ export default class AppSignalManager extends AppManager {
   private isStarted: boolean;
   private isAuthorized: boolean;
   private pendingSends: Map<number, PendingSend> = new Map();
+  // * the `random_id` of each forwarded copy by its local id, until the engine stores the copy
+  private pendingForwardCopies: Map<number, string> = new Map();
   private localIdCounter = 0;
   private handlers: {[method in keyof MethodDeclMap]?: MethodHandler};
 
@@ -391,7 +394,7 @@ export default class AppSignalManager extends AppManager {
     const peerId = this.getInputPeerId(params.peer);
     const replyTo = params.reply_to?._ === 'inputReplyToMessage' ? params.reply_to.reply_to_msg_id : undefined;
     const lastMessageId = this.appMessagesManager.getHistoryStorage(peerId.toPeerId()).maxId || 0;
-    const localId = lastMessageId + LOCAL_ID_STEP * (++this.localIdCounter % (1 / LOCAL_ID_STEP));
+    const localId = this.nextLocalId(lastMessageId);
     const chatId = toSignalPeerId(peerId);
     const entities = (params.entities || []).map((entity) => buildSignalEntity(entity)).filter(Boolean);
     const localMessage: SignalMessage = {
@@ -482,8 +485,10 @@ export default class AppSignalManager extends AppManager {
   }
 
   /**
-   * Forwards each message as a new one, in order, so each gets the `random_id` of its pending copy. A message that
-   * is not sent fails the request, which marks every pending copy of it as failed.
+   * Forwards each message as a new one. Every copy has a local id that is registered with the `random_id` of its
+   * pending copy before the engine stores it, so the copy's `updateMessageID` goes out with its message, first: Web K
+   * finalizes a pending copy only when the id comes before the message. A copy that is not sent fails the request,
+   * which marks the pending copies of the request as failed.
    */
   private async forwardMessages(params: MethodDeclMap['messages.forwardMessages']['req']): Promise<Updates> {
     const fromChat = {id: toSignalPeerId(this.getInputPeerId(params.from_peer))};
@@ -494,25 +499,26 @@ export default class AppSignalManager extends AppManager {
       throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
     }
 
-    const storedIds: (number | undefined)[] = await this.call('forwardMessages', {
-      fromChat,
-      toChat,
-      messages,
-      noCaptions: params.drop_media_captions,
-      lastMessageId: this.appMessagesManager.getHistoryStorage(toPeer).maxId || 0
-    });
-    if(!storedIds?.every((id) => id !== undefined)) {
-      throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
-    }
+    const lastMessageId = this.appMessagesManager.getHistoryStorage(toPeer).maxId || 0;
+    const localIds = params.id.map(() => this.nextLocalId(lastMessageId));
+    localIds.forEach((localId, index) => this.pendingForwardCopies.set(localId, '' + params.random_id[index]));
+    try {
+      const storedIds: (number | undefined)[] = await this.call('forwardMessages', {
+        fromChat,
+        toChat,
+        messages,
+        noCaptions: params.drop_media_captions,
+        lastMessageId,
+        localIds
+      });
+      if(!storedIds?.every((id) => id !== undefined)) {
+        throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
+      }
 
-    return {
-      _: 'updates',
-      updates: storedIds.map((id, index) => ({_: 'updateMessageID', id, random_id: '' + params.random_id[index]})),
-      users: [],
-      chats: [],
-      date: tsNow(true),
-      seq: 0
-    } as Updates;
+      return {_: 'updates', updates: [], users: [], chats: [], date: tsNow(true), seq: 0} as Updates;
+    } finally {
+      localIds.forEach((localId) => this.pendingForwardCopies.delete(localId));
+    }
   }
 
   /** The text search of a chat, which the other filters (media, pinned messages) do not have yet */
@@ -631,6 +637,11 @@ export default class AppSignalManager extends AppManager {
 
   /** Finds the Signal user of a username; Web K asks for it on a click only, as Web A does */
   private async resolveUsername(params: MethodDeclMap['contacts.resolveUsername']['req']) {
+    // * Web K resolves other names too, such as a bot's or `gif`: those are no Signal user, so the server is not asked
+    if(!SIGNAL_USERNAME_PATTERN.test(params.username)) {
+      throw makeError('USERNAME_NOT_OCCUPIED' as ErrorType);
+    }
+
     const result: {chat: SignalChat, user: SignalUser} | {error: string} | undefined = await this.call('getChatByUsername', params.username);
     if(!result || 'error' in result) {
       throw makeError('USERNAME_NOT_OCCUPIED' as ErrorType);
@@ -819,9 +830,24 @@ export default class AppSignalManager extends AppManager {
     });
   }
 
+  /** A local id of this frontend's sends: each one is used once, and it is the id of the message until it is stored */
+  private nextLocalId(lastMessageId: number) {
+    return lastMessageId + LOCAL_ID_STEP * (++this.localIdCounter % (1 / LOCAL_ID_STEP));
+  }
+
   private onMessageSent(localId: number, message: SignalMessage) {
     const pending = this.pendingSends.get(localId);
     const built = this.buildMessage(message);
+    const forwardRandomId = this.pendingForwardCopies.get(localId);
+    if(!pending && forwardRandomId !== undefined) {
+      this.pendingForwardCopies.delete(localId);
+      this.pushUpdates([
+        {_: 'updateMessageID', id: message.id, random_id: forwardRandomId},
+        {_: 'updateNewMessage', message: built, pts: 0, pts_count: 0}
+      ]);
+      return;
+    }
+
     if(!pending) {
       // * sent from Web A's other tab before this one took over, or a resend: a message like any other
       this.pushUpdates([{_: 'updateNewMessage', message: built, pts: 0, pts_count: 0}]);
