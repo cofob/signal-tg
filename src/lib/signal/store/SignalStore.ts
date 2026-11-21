@@ -143,8 +143,6 @@ type Items = {
   storageChanges: StorageChanges;
   // A registration whose request went out; `resumePendingRegistration` finds out what became of it
   pendingRegistration: PendingRegistration;
-  // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
-  unlinkedAci: string;
   // Merges of stored storage records that this device has done after learning to read more of them
   // (`MessageProcessor`)
   storageMergedRecordTypes: string[];

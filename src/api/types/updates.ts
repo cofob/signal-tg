@@ -127,6 +127,13 @@ export type ApiUpdateUserAlreadyAuthorized = {
   userId: string;
 };
 
+// Signal: the server stopped accepting this device and the engine removed its data; the link screen says why
+export type ApiUpdateDeviceDeauthorized = {
+  '@type': 'updateDeviceDeauthorized';
+  // The phone or another device removed this device, or the number of the primary device was registered elsewhere
+  reason: 'unlinked' | 'deregistered';
+};
+
 export type ApiUpdateConnectionState = {
   '@type': 'updateConnectionState';
   connectionState: ApiUpdateConnectionStateType;
@@ -882,6 +889,7 @@ export type ApiUpdateWebPage = {
 export type ApiUpdate = (
   ApiUpdateReady | ApiUpdateSession | ApiUpdateWebAuthTokenFailed | ApiUpdateRequestUserUpdate |
   ApiUpdateAuthorizationState | ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateCurrentUser |
+  ApiUpdateDeviceDeauthorized |
   ApiUpdateChat | ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds |
   ApiUpdateChatMembers | ApiUpdateChatParticipantRank | ApiUpdateChatJoin | ApiUpdateChatLeave
   | ApiUpdateChatPinned | ApiUpdatePinnedMessageIds |

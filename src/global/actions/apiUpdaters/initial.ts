@@ -14,7 +14,7 @@ import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { retryLocalization } from '../../../util/localization';
 import { getAccountsInfo, getAccountSlotUrl } from '../../../util/multiaccount';
 import { setServerTimeOffset } from '../../../util/serverTime';
-import { updateSessionUserId } from '../../../util/sessions';
+import { hasStoredSession, updateSessionUserId } from '../../../util/sessions';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
@@ -49,6 +49,15 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateConnectionState':
       onUpdateConnectionState(global, actions, update);
+      break;
+
+    case 'updateDeviceDeauthorized':
+      Object.values(global.byTabId).forEach(({ id: tabId }) => {
+        actions.showNotification({
+          message: { key: update.reason === 'unlinked' ? 'SignalDeviceUnlinked' : 'SignalDeviceDeregistered' },
+          tabId,
+        });
+      });
       break;
 
     case 'updateSession':
@@ -147,6 +156,9 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
         historySync: update.historySync,
       });
       setGlobal(global);
+      // The engine has no account for a slot that the app still lists as logged in, such as a slot that an
+      // earlier version opened as a copy of the first account: log the slot out, which also removes it from the menu
+      if (hasStoredSession()) getActions().signOut({ forceInitApi: true });
       break;
     case 'authorizationStateReady': {
       getActions().loadChatThemes();

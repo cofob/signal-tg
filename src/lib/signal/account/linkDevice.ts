@@ -27,6 +27,7 @@ const PASSWORD_BYTES = 16;
 const SYNTHETIC_IV_LENGTH = 16;
 const AES_COUNTER_LENGTH = 16;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 
 /**
  * Registers this browser as a linked device with the keys from the primary device's provisioning message
@@ -126,8 +127,9 @@ export async function unlinkDevice(account: AccountRecord) {
 }
 
 /**
- * Whether the server still accepts the credentials of this device (`GET /v1/accounts/whoami`): `false` after a 401,
- * which is what an unlinked or deregistered device gets. Any other failure throws, as the answer is unknown then.
+ * Whether the server still accepts the credentials of this device (`GET /v1/accounts/whoami`): `false` after a 401
+ * or 403, which is what an unlinked or deregistered device gets. Any other failure throws, as the answer is unknown
+ * then.
  */
 export async function checkAccountAuthorized(account: AccountRecord) {
   try {
@@ -138,7 +140,7 @@ export async function checkAccountAuthorized(account: AccountRecord) {
     });
     return true;
   } catch (err) {
-    if (err instanceof HttpError && err.status === HTTP_UNAUTHORIZED) return false;
+    if (err instanceof HttpError && (err.status === HTTP_UNAUTHORIZED || err.status === HTTP_FORBIDDEN)) return false;
     throw err;
   }
 }
