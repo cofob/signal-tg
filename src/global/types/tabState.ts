@@ -799,6 +799,13 @@ export type TabState = {
     isUnavailable?: boolean;
   };
 
+  // Signal: a message that was not sent to `userIds` because their safety numbers changed
+  safetyNumberChangeModal?: {
+    chatId: string;
+    messageId: number;
+    userIds: string[];
+  };
+
   suggestedStatusModal?: {
     botId: string;
     webAppKey?: string;

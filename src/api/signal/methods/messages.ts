@@ -36,7 +36,7 @@ import {
 import { getCurrentAccount } from '../client';
 import { db, logError, processor } from '../engine';
 import { uploadMessageAttachment } from '../media';
-import { getConversationByPeerId, getUserPeerId } from '../peers';
+import { getConversationByPeerId, getPeerId, getUserPeerId } from '../peers';
 import { trackLocalMessage } from '../updaters/messages';
 import { sendApiUpdate } from '../updates';
 
@@ -375,13 +375,41 @@ export async function forwardMessages(params: ForwardMessagesParams) {
 async function sendWithLocalMessage(conversation: ConversationRecord, init: DataMessageInit, localMessage: ApiMessage) {
   let isStored = false;
   try {
-    await processor.sendDataMessage(conversation.id, init, (stored) => {
+    const sent = await processor.sendDataMessage(conversation.id, init, (stored) => {
       isStored = true;
       trackLocalMessage(stored.id, localMessage);
     });
+    await reportBlockedRecipients(conversation, sent.id);
   } catch (err) {
     if (!isStored) markLocalMessageFailed(localMessage, err);
     else logError(err);
+  }
+}
+
+/**
+ * Asks the user about recipients whose new safety number kept the message from being sent, who can then send it
+ * anyway (`sendMessageAnyway`) or check the safety number first
+ */
+async function reportBlockedRecipients(conversation: ConversationRecord, messageId: number) {
+  const acis = await processor.getUnverifiedRecipients(messageId);
+  if (!acis.length) return;
+
+  sendApiUpdate({
+    '@type': 'updateSafetyNumberBlock',
+    chatId: getPeerId(conversation),
+    messageId,
+    userIds: await Promise.all(acis.map(getUserPeerId)),
+  });
+}
+
+/** Accepts the new safety numbers of the recipients who did not get the message, and sends it to them again */
+export async function sendMessageAnyway({ messageId }: { messageId: number }) {
+  try {
+    await processor.sendMessageAnyway(messageId);
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
   }
 }
 

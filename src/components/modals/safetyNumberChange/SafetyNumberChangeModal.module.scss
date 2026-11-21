@@ -1,0 +1,22 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.users {
+  display: flex;
+  flex-direction: column;
+}
+
+.verify {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-links);
+}

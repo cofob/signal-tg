@@ -67,6 +67,7 @@ export {
   markMessagesRead,
   sendMessage,
   sendMessageAction,
+  sendMessageAnyway,
   sendMessageLocal,
   sendPollVote,
   sendReaction,

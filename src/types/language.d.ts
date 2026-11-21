@@ -172,6 +172,10 @@ export interface LangPair {
   'SafetyNumberMarkVerified': undefined;
   'SafetyNumberClearVerification': undefined;
   'SafetyNumberVerified': undefined;
+  'SafetyNumberChanges': undefined;
+  'SafetyNumberChangesText': undefined;
+  'SafetyNumberVerify': undefined;
+  'SendAnyway': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;

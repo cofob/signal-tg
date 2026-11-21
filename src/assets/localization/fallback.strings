@@ -195,6 +195,10 @@
 "SafetyNumberMarkVerified" = "Mark as verified";
 "SafetyNumberClearVerification" = "Clear verification";
 "SafetyNumberVerified" = "Verified";
+"SafetyNumberChanges" = "Safety number changes";
+"SafetyNumberChangesText" = "The following people may have reinstalled Signal or changed devices. Click a recipient to confirm their new safety number. This is optional.";
+"SafetyNumberVerify" = "Verify";
+"SendAnyway" = "Send anyway";
 "SafetyNumberUnavailable" = "A safety number with {user} is available after you exchange messages.";
 "ActionSafetyChanged" = "Your safety number with {user} has changed";
 "ActionSafetyVerified" = "You marked your safety number with {user} as verified";

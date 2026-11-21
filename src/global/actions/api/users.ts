@@ -673,3 +673,12 @@ addActionHandler('toggleSafetyNumberVerified', async (global, actions, payload):
   global = updateTabState(global, { safetyNumberModal: { ...current, isVerified } }, tabId);
   setGlobal(global);
 });
+
+addActionHandler('sendMessageAnyway', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const modal = selectTabState(global, tabId).safetyNumberChangeModal;
+  if (!modal) return;
+
+  actions.closeSafetyNumberChangeModal({ tabId });
+  await callApi('sendMessageAnyway', { messageId: modal.messageId });
+});

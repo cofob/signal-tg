@@ -390,6 +390,14 @@ export type ApiUpdateMessageSendFailed = {
   error: string;
 };
 
+// Signal: a message was not sent to some users because their safety numbers changed, until the user accepts them
+export type ApiUpdateSafetyNumberBlock = {
+  '@type': 'updateSafetyNumberBlock';
+  chatId: string;
+  messageId: number;
+  userIds: string[];
+};
+
 export type ApiUpdateScheduledMessageSendFailed = {
   '@type': 'updateScheduledMessageSendFailed';
   chatId: string;
@@ -984,6 +992,7 @@ export type ApiUpdate = (
   ApiUpdateMessagePoll | ApiUpdateMessagePollUnread | ApiUpdateMessagePollVote |
   ApiUpdateDeleteHistory |
   ApiDeleteParticipantHistory | ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed |
+  ApiUpdateSafetyNumberBlock |
   ApiUpdateServiceNotification | ApiDeleteContact | ApiUpdateUser | ApiUpdateUserStatus |
   ApiUpdateUserFullInfo | ApiUpdateVideoProcessingPending | ApiUpdatePeerSettings | ApiUpdatePeerHistoryTtl
   | ApiUpdatePeerTheme | ApiUpdatePeerWallpaper

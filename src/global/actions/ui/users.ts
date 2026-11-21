@@ -93,3 +93,9 @@ addActionHandler('openEditRankModal', (global, actions, payload): ActionReturnTy
 addTabStateResetterAction('closeEditRankModal', 'editRankModal');
 
 addTabStateResetterAction('closeSafetyNumberModal', 'safetyNumberModal');
+
+addActionHandler('openSafetyNumberChangeModal', (global, actions, payload): ActionReturnType => {
+  const { chatId, messageId, userIds, tabId = getCurrentTabId() } = payload;
+  return updateTabState(global, { safetyNumberChangeModal: { chatId, messageId, userIds } }, tabId);
+});
+addTabStateResetterAction('closeSafetyNumberChangeModal', 'safetyNumberChangeModal');

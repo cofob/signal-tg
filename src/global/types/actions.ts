@@ -1788,6 +1788,13 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  openSafetyNumberChangeModal: {
+    chatId: string;
+    messageId: number;
+    userIds: string[];
+  } & WithTabId;
+  closeSafetyNumberChangeModal: WithTabId | undefined;
+  sendMessageAnyway: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;
