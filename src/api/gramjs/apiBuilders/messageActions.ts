@@ -7,7 +7,6 @@ import { buildApiBotApp } from './bots';
 import { buildApiPhoto } from './common';
 import { buildPollAnswer } from './messageContent';
 import { buildApiWallpaper } from './misc';
-import { buildApiCurrencyAmount } from './payments';
 import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 import { buildApiBirthday } from './users';
 
@@ -322,36 +321,6 @@ export function buildApiMessageAction(action: GramJs.TypeMessageAction): ApiMess
       mediaType: 'action',
       type: 'suggestBirthday',
       birthday: buildApiBirthday(action.birthday),
-    };
-  }
-  if (action instanceof GramJs.MessageActionSuggestedPostApproval) {
-    const {
-      rejected, balanceTooLow, rejectComment, scheduleDate, price,
-    } = action;
-    return {
-      mediaType: 'action',
-      type: 'suggestedPostApproval',
-      isRejected: Boolean(rejected),
-      isBalanceTooLow: Boolean(balanceTooLow),
-      rejectComment,
-      scheduleDate,
-      amount: price ? buildApiCurrencyAmount(price) : undefined,
-    };
-  }
-  if (action instanceof GramJs.MessageActionSuggestedPostSuccess) {
-    const { price } = action;
-    return {
-      mediaType: 'action',
-      type: 'suggestedPostSuccess',
-      amount: buildApiCurrencyAmount(price),
-    };
-  }
-  if (action instanceof GramJs.MessageActionSuggestedPostRefund) {
-    const { payerInitiated } = action;
-    return {
-      mediaType: 'action',
-      type: 'suggestedPostRefund',
-      payerInitiated: Boolean(payerInitiated),
     };
   }
   if (action instanceof GramJs.MessageActionPollAppendAnswer) {

@@ -9,7 +9,6 @@ import type {
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputStoryReplyInfo,
-  ApiInputSuggestedPostInfo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessageReadMetric,
@@ -164,7 +163,6 @@ import {
   selectEditingId,
   selectEditingScheduledId,
   selectNoWebPage,
-  selectSavedDialogIdFromMessage,
   selectThreadIdFromMessage,
   selectThreadInfo,
   selectThreadLocalStateParam,
@@ -525,8 +523,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const isForwarding = selectTabState(global, tabId).forwardMessages?.messageIds?.length;
 
   const draftReplyInfo = !isForwarding && !isStoryReply ? draft?.replyInfo : undefined;
-  const draftSuggestedPostInfo = !isForwarding && !isStoryReply
-    ? draft?.suggestedPostInfo : undefined;
 
   const ephemeralCommand = draftReplyInfo?.type !== 'ephemeral' && payload.text
     ? resolveEphemeralCommand(global, { chat, commandText: payload.text }) : undefined;
@@ -597,13 +593,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const lastMessageId = threadId === MAIN_THREAD_ID
     ? selectChatLastMessageId(global, chatId!) : threadInfo?.lastMessageId;
 
-  const suggestedMessage = draftReplyInfo && draftSuggestedPostInfo
-    ? selectChatMessage(global, chatId!, draftReplyInfo.replyToMsgId) : undefined;
-  let suggestedMedia: MediaContent | undefined;
-  if (draftSuggestedPostInfo && suggestedMessage?.content) {
-    suggestedMedia = suggestedMessage.content;
-  }
-
   if (chat.isBotForum && threadId === MAIN_THREAD_ID && replyInfo?.type === 'message'
     && user?.canManageBotForumTopics) {
     const replyMessage = selectChatMessage(global, chatId!, replyInfo.replyToMsgId);
@@ -627,8 +616,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     ...payload,
     chat,
     replyInfo,
-    suggestedPostInfo: draftSuggestedPostInfo,
-    suggestedMedia,
     noWebPage: selectNoWebPage(global, chatId!, threadId!),
     sendAs: selectSendAs(global, chatId!),
     lastMessageId,
@@ -637,7 +624,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
     text: !dice && !payload.richMessage ? payload.text : undefined,
     entities: payload.richMessage ? undefined : payload.entities,
     richMessage: payload.richMessage,
-    ...suggestedMessage && { isInvertedMedia: suggestedMessage?.isInvertedMedia },
   };
 
   if (!isStoryReply) {
@@ -908,7 +894,7 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
 
   const currentDraft = selectDraft(global, chatId, threadId);
 
-  if (chat.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
+  if (chat.isMonoforum && !currentDraft?.replyInfo) {
     return; // Monoforum doesn't support drafts outside threads
   }
 
@@ -916,7 +902,6 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
     text: richMessage ? undefined : text,
     richMessage,
     replyInfo: currentDraft?.replyInfo,
-    suggestedPostInfo: currentDraft?.suggestedPostInfo,
   };
 
   saveDraft({
@@ -926,7 +911,7 @@ addActionHandler('saveDraft', (global, actions, payload): ActionReturnType => {
 
 addActionHandler('clearDraft', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, threadId = MAIN_THREAD_ID, isLocalOnly, shouldKeepReply, shouldKeepSuggestedPost,
+    chatId, threadId = MAIN_THREAD_ID, isLocalOnly, shouldKeepReply,
   } = payload;
   const currentDraft = selectDraft(global, chatId, threadId);
   if (!currentDraft) {
@@ -935,11 +920,9 @@ addActionHandler('clearDraft', (global, actions, payload): ActionReturnType => {
 
   const currentReplyInfo = currentDraft.replyInfo;
 
-  const newDraft: ApiDraft | undefined = (shouldKeepReply && currentReplyInfo)
-    || (shouldKeepSuggestedPost && currentDraft.suggestedPostInfo) ? {
-      replyInfo: shouldKeepReply ? currentReplyInfo : undefined,
-      suggestedPostInfo: shouldKeepSuggestedPost ? currentDraft.suggestedPostInfo : undefined,
-    } : undefined;
+  const newDraft: ApiDraft | undefined = shouldKeepReply && currentReplyInfo ? {
+    replyInfo: currentReplyInfo,
+  } : undefined;
 
   saveDraft({
     global,
@@ -988,7 +971,6 @@ addActionHandler('updateDraftReplyInfo', (global, actions, payload): ActionRetur
   const newDraft: ApiDraft = {
     ...currentDraft,
     replyInfo: updatedReplyInfo,
-    suggestedPostInfo: undefined,
   };
 
   saveDraft({
@@ -1001,7 +983,7 @@ addActionHandler('resetDraftReplyInfo', (global, actions, payload): ActionReturn
   const chat = selectChat(global, chatId);
 
   const currentDraft = selectDraft(global, chatId, threadId);
-  if (chat?.isMonoforum && !currentDraft?.replyInfo && !currentDraft?.suggestedPostInfo) {
+  if (chat?.isMonoforum && !currentDraft?.replyInfo) {
     return; // Monoforum doesn't support drafts outside threads
   }
   const newDraft: ApiDraft | undefined = !currentDraft?.text && !currentDraft?.richMessage ? undefined : {
@@ -1015,92 +997,6 @@ addActionHandler('resetDraftReplyInfo', (global, actions, payload): ActionReturn
     threadId,
     draft: newDraft,
     isLocalOnly: Boolean(newDraft) || currentDraft?.replyInfo?.type === 'ephemeral',
-  });
-});
-
-addActionHandler('updateDraftSuggestedPostInfo', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId(), ...update } = payload;
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-
-  const { chatId, threadId } = currentMessageList;
-
-  const currentDraft = selectDraft(global, chatId, threadId);
-
-  const updatedSuggestedPostInfo = {
-    ...currentDraft?.suggestedPostInfo,
-    ...update,
-  } satisfies ApiInputSuggestedPostInfo;
-
-  const newDraft: ApiDraft = {
-    ...currentDraft,
-    suggestedPostInfo: updatedSuggestedPostInfo,
-  };
-
-  saveDraft({
-    global, chatId, threadId, draft: newDraft, isLocalOnly: true, noLocalTimeUpdate: true,
-  });
-});
-
-addActionHandler('resetDraftSuggestedPostInfo', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-  const { chatId, threadId } = currentMessageList;
-
-  saveDraft({
-    global, chatId, threadId, draft: undefined, isLocalOnly: false,
-  });
-});
-
-addActionHandler('initDraftFromSuggestedMessage', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (!message) {
-    return;
-  }
-
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  if (!currentMessageList) {
-    return;
-  }
-
-  const { threadId } = currentMessageList;
-
-  actions.clearDraft({
-    chatId,
-    threadId,
-    isLocalOnly: true,
-  });
-
-  actions.updateDraftReplyInfo({
-    replyToMsgId: messageId,
-    monoforumPeerId: selectSavedDialogIdFromMessage(global, message),
-    tabId,
-  });
-
-  if (message.suggestedPostInfo) {
-    const { scheduleDate, ...messageSuggestedPost } = message.suggestedPostInfo;
-    const now = getServerTime();
-    const futureMin = global.appConfig.starsSuggestedPostFutureMin;
-
-    const validScheduleDate = scheduleDate && scheduleDate > now + futureMin ? scheduleDate : undefined;
-
-    actions.updateDraftSuggestedPostInfo({
-      ...messageSuggestedPost,
-      scheduleDate: validScheduleDate,
-      tabId,
-    });
-  }
-
-  actions.saveDraft({
-    chatId,
-    threadId,
-    text: message.content.text,
   });
 });
 
@@ -2700,46 +2596,6 @@ addActionHandler('loadUnreadPollVotes', async (global, actions, payload): Promis
   });
 
   setGlobal(global);
-});
-
-addActionHandler('approveSuggestedPost', async (global, actions, payload): Promise<void> => {
-  const { chatId, messageId, scheduleDate, tabId = getCurrentTabId() } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleSuggestedPostApproval', {
-    chat,
-    messageId,
-    reject: false,
-    scheduleDate,
-  });
-
-  if (!result) return;
-
-  actions.showNotification({
-    message: { key: 'SuggestedPostApproved' },
-    tabId,
-  });
-});
-
-addActionHandler('rejectSuggestedPost', async (global, actions, payload): Promise<void> => {
-  const { chatId, messageId, rejectComment, tabId = getCurrentTabId() } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const result = await callApi('toggleSuggestedPostApproval', {
-    chat,
-    messageId,
-    reject: true,
-    rejectComment,
-  });
-
-  if (!result) return;
-
-  actions.showNotification({
-    message: { key: 'SuggestedPostRejectedNotification' },
-    tabId,
-  });
 });
 
 addActionHandler('markMentionsRead', (global, actions, payload): ActionReturnType => {

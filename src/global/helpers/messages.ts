@@ -1,5 +1,3 @@
-import type { TeactNode } from '../../lib/teact/teact';
-
 import type {
   ApiAttachment,
   ApiMessage,
@@ -32,7 +30,6 @@ import {
   VIDEO_STICKER_MIME_TYPE,
   WEB_APP_PLATFORM,
 } from '../../config';
-import { areDeepEqual } from '../../util/areDeepEqual';
 import { getRawPeerId, isUserId } from '../../util/entities/ids';
 import { areSortedArraysIntersecting, unique } from '../../util/iteratees';
 import { isLocalMessageId } from '../../util/keys/messageKey';
@@ -46,7 +43,6 @@ import {
   selectWebPageFromMessage,
 } from '../selectors';
 import { selectThreadIdFromMessage } from '../selectors/threads';
-import { areCurrencyAmountsEqual } from './payments';
 import { getRichMessagePreviewText } from './richMessage';
 import { getMainUsername } from './users';
 
@@ -525,85 +521,6 @@ export function splitMessagesForForwarding(messages: ApiMessage[], limit: number
   }
 
   return result;
-}
-
-export interface SuggestedChangesInfo {
-  isNewText: boolean;
-  isNewPrice: boolean;
-  isNewTime: boolean;
-  isNewMedia: boolean;
-}
-
-export function getSuggestedChangesInfo(
-  message: ApiMessage,
-  originalMessage?: ApiMessage,
-): SuggestedChangesInfo | undefined {
-  if (!message.suggestedPostInfo || message.replyInfo?.type !== 'message'
-    || !message.replyInfo?.replyToMsgId || !originalMessage) {
-    return undefined;
-  }
-
-  if (!originalMessage.suggestedPostInfo) {
-    return undefined;
-  }
-
-  const original = originalMessage.suggestedPostInfo;
-  const suggested = message.suggestedPostInfo;
-
-  const originalContent = originalMessage.content;
-  const suggestedContent = message.content;
-  const { text: originalText, ...originalMediaContent } = originalContent;
-  const { text: suggestedText, ...suggestedMediaContent } = suggestedContent;
-
-  const isNewText = !areDeepEqual(originalText, suggestedText);
-  const isNewMedia = !areDeepEqual(originalMediaContent, suggestedMediaContent);
-
-  const isNewPrice = !areCurrencyAmountsEqual(original.price, suggested.price);
-
-  const originalTime = original.scheduleDate;
-  const suggestedTime = suggested.scheduleDate;
-  const isNewTime = originalTime !== suggestedTime;
-
-  if (!isNewText && !isNewPrice && !isNewTime && !isNewMedia) {
-    return undefined;
-  }
-
-  return {
-    isNewText,
-    isNewPrice,
-    isNewTime,
-    isNewMedia,
-  };
-}
-
-export function getSuggestedChangesActionText(
-  lang: LangFn,
-  message: ApiMessage,
-  originalMessage?: ApiMessage,
-  isOutgoing?: boolean,
-  senderLink?: TeactNode,
-): TeactNode | undefined {
-  const changesInfo = getSuggestedChangesInfo(message, originalMessage);
-  if (!changesInfo) {
-    return undefined;
-  }
-
-  const changesParts: string[] = [];
-  if (changesInfo.isNewPrice) changesParts.push(lang('ActionSuggestedChangesPrice'));
-  if (changesInfo.isNewTime) changesParts.push(lang('ActionSuggestedChangesTime'));
-  if (changesInfo.isNewText) changesParts.push(lang('ActionSuggestedChangesText'));
-  if (changesInfo.isNewMedia) changesParts.push(lang('ActionSuggestedChangesMedia'));
-
-  const changesText = lang.conjunction(changesParts);
-
-  const langKey = isOutgoing ? 'ActionSuggestedChangesOutgoing' : 'ActionSuggestedChangesIncoming';
-  return lang(langKey, {
-    changes: changesText,
-    user: senderLink,
-  }, {
-    withNodes: true,
-    withMarkdown: true,
-  });
 }
 
 export function createApiMessageFromTypingDraft({

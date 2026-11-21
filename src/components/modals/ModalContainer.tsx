@@ -48,9 +48,7 @@ import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
 import StealthModeModal from './storyStealthMode/StealthModeModal.async';
-import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
-import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 
@@ -66,8 +64,6 @@ type ModalKey = keyof Pick<TabState,
   'reportModal' |
   'pollModal' |
   'musicPicker' |
-  'suggestMessageModal' |
-  'suggestedPostApprovalModal' |
   'browser' |
   'chatInviteModal' |
   'isBrowserCloseConfirmationModalOpen' |
@@ -167,8 +163,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   reportModal: ReportModal,
   browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
-  suggestMessageModal: SuggestMessageModal,
-  suggestedPostApprovalModal: SuggestedPostApprovalModal,
   isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,
   suggestedStatusModal: SuggestedStatusModal,
   emojiStatusAccessModal: EmojiStatusAccessModal,

@@ -15,7 +15,6 @@ import type {
   ApiGlobalMessageSearchType,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessagePoll,
@@ -93,14 +92,12 @@ import {
   buildInputDocument,
   buildInputMediaDocument,
   buildInputPeer,
-  buildInputPhoto,
   buildInputPoll,
   buildInputPollFromExisting,
   buildInputReaction,
   buildInputReplyTo,
   buildInputRichMessage,
   buildInputStory,
-  buildInputSuggestedPost,
   buildInputTextWithEntities,
   buildInputUser,
   buildMessageFromUpdate,
@@ -115,7 +112,6 @@ import {
   deserializeBytes,
   resolveMessageApiChatId,
 } from '../helpers/misc';
-import localDb from '../localDb';
 import { sendApiUpdate } from '../updates/apiUpdateEmitter';
 import { processMessageAndUpdateThreadInfo } from '../updates/entityProcessor';
 import { processAffectedHistory, updateChannelState } from '../updates/updateManager';
@@ -348,7 +344,7 @@ export function sendMessageLocal(
   params: SendMessageParams,
 ) {
   const {
-    chat, lastMessageId, text, entities, richMessage, replyInfo, suggestedPostInfo,
+    chat, lastMessageId, text, entities, richMessage, replyInfo,
     attachment, sticker, story, gif, audio, poll,
     contact, scheduledAt, scheduleRepeatPeriod, groupedId, sendAs, wasDrafted, isInvertedMedia, isPending,
     dice,
@@ -366,7 +362,6 @@ export function sendMessageLocal(
     entities,
     richMessage,
     replyInfo,
-    suggestedPostInfo,
     attachment,
     sticker,
     gif,
@@ -401,7 +396,7 @@ export function sendApiMessage(
   onProgress?: ApiOnProgress,
 ) {
   const {
-    chat, text, entities, richMessage, replyInfo, suggestedPostInfo, suggestedMedia,
+    chat, text, entities, richMessage, replyInfo,
     attachment, sticker, story, gif, audio, poll, contact, dice,
 
     isSilent, scheduledAt, scheduleRepeatPeriod, groupedId, noWebPage, sendAs, shouldUpdateStickerSetOrder,
@@ -437,7 +432,6 @@ export function sendApiMessage(
       text,
       entities,
       replyInfo,
-      suggestedPostInfo,
       attachment: attachment!,
       groupedId,
       isSilent,
@@ -449,42 +443,7 @@ export function sendApiMessage(
   const messagePromise = (async () => {
     let media: GramJs.TypeInputMedia | undefined;
 
-    if (suggestedPostInfo && suggestedMedia && !attachment) {
-      if (suggestedMedia.photo) {
-        const inputPhoto = buildInputPhoto(suggestedMedia.photo);
-        if (inputPhoto) {
-          media = new GramJs.InputMediaPhoto({
-            id: inputPhoto,
-            spoiler: suggestedMedia.photo.isSpoiler || undefined,
-          });
-        }
-      } else if (suggestedMedia.video) {
-        const inputDocument = buildInputDocument(suggestedMedia.video);
-        if (inputDocument) {
-          media = new GramJs.InputMediaDocument({
-            id: inputDocument,
-            spoiler: suggestedMedia.video.isSpoiler || undefined,
-          });
-        }
-      } else if (suggestedMedia.document) {
-        const document = suggestedMedia.document;
-        if (document.id) {
-          const localDocument = localDb.documents[document.id];
-          if (localDocument) {
-            const inputDocument = new GramJs.InputDocument({
-              id: localDocument.id,
-              accessHash: localDocument.accessHash,
-              fileReference: localDocument.fileReference,
-            });
-            media = new GramJs.InputMediaDocument({
-              id: inputDocument,
-            });
-          }
-        }
-      }
-    }
-
-    if (!media && attachment?.gif) {
+    if (attachment?.gif) {
       media = buildInputMediaDocument(attachment.gif, attachment.shouldSendAsSpoiler);
     }
     if (!media && attachment) {
@@ -571,7 +530,6 @@ export function sendApiMessage(
       sendAs: sendAs && buildInputPeer(sendAs.id, sendAs.accessHash),
       updateStickersetsOrder: shouldUpdateStickerSetOrder || undefined,
       invertMedia: isInvertedMedia || undefined,
-      suggestedPost: suggestedPostInfo && buildInputSuggestedPost(suggestedPostInfo),
     };
 
     const sendMedia = (inputMedia: GramJs.TypeInputMedia) => invokeRequest(new GramJs.messages.SendMedia({
@@ -856,7 +814,6 @@ function sendGroupedMedia(
     text = DEFAULT_PRIMITIVES.STRING,
     entities,
     replyInfo,
-    suggestedPostInfo,
     attachment,
     groupedId,
     isSilent,
@@ -868,7 +825,6 @@ function sendGroupedMedia(
     text?: string;
     entities?: ApiMessageEntity[];
     replyInfo?: ApiInputReplyInfo;
-    suggestedPostInfo?: ApiInputSuggestedPostInfo;
     attachment: ApiAttachment;
     groupedId: string;
     isSilent?: boolean;
@@ -960,7 +916,6 @@ function sendGroupedMedia(
       ...(scheduledAt && { scheduleDate: scheduledAt }),
       ...(scheduleRepeatPeriod && { scheduleRepeatPeriod }),
       ...(sendAs && { sendAs: buildInputPeer(sendAs.id, sendAs.accessHash) }),
-      ...(suggestedPostInfo && { suggestedPost: buildInputSuggestedPost(suggestedPostInfo) }),
     }), {
       shouldIgnoreUpdates: true,
     });
@@ -1135,7 +1090,6 @@ function canSendRichMessage(params: SendMessageParams) {
     && !params.poll
     && !params.contact
     && !params.dice
-    && !(params.suggestedPostInfo && params.suggestedMedia)
     && !(params.webPageUrl && params.webPageMediaSize),
   );
 }
@@ -1514,30 +1468,6 @@ export async function deleteSavedHistory({
     '@type': 'deleteSavedHistory',
     chatId: chat.id,
   });
-}
-
-export async function toggleSuggestedPostApproval({
-  chat,
-  messageId,
-  reject,
-  scheduleDate,
-  rejectComment,
-}: {
-  chat: ApiChat;
-  messageId: number;
-  reject?: boolean;
-  scheduleDate?: number;
-  rejectComment?: string;
-}) {
-  const result = await invokeRequest(new GramJs.messages.ToggleSuggestedPostApproval({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    msgId: messageId,
-    reject: reject || undefined,
-    scheduleDate,
-    rejectComment,
-  }));
-
-  return result;
 }
 
 export async function reportMessages({

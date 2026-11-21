@@ -17,7 +17,6 @@ import type {
   ApiFormattedText,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
   ApiMediaFormat,
   ApiMessage,
   ApiMessageEntity,
@@ -38,7 +37,6 @@ import type {
   ApiTypingStatus,
   ApiVideo,
   ApiVoice,
-  MediaContent,
 } from '../api/types';
 import type { DC_IDS } from '../config';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
@@ -766,7 +764,6 @@ export type SendMessageParams = {
   entities?: ApiMessageEntity[];
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   attachment?: ApiAttachment;
   sticker?: ApiSticker;
   story?: ApiStory | ApiStorySkipped;
@@ -795,7 +792,6 @@ export type SendMessageParams = {
   forwardedLocalMessagesSlice?: ForwardedLocalMessagesSlice;
   forwardParams?: ForwardMessagesParams;
   isStoryReply?: boolean;
-  suggestedMedia?: MediaContent;
 };
 
 export type ForwardedLocalMessagesSlice = {

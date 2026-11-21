@@ -1,10 +1,8 @@
 import type { LangFn } from './types';
 
 import { STARS_ICON_PLACEHOLDER } from '../../config';
-import { convertTonFromNanos } from '../../util/formatCurrency';
 import buildClassName from '../buildClassName';
 
-import GramIcon from '../../components/common/icons/GramIcon';
 import Icon from '../../components/common/icons/Icon';
 import StarIcon from '../../components/common/icons/StarIcon';
 
@@ -17,55 +15,6 @@ export const PREVIOUS_ARROW_REPLACEMENT = {
 
 export function formatStarsAsText(lang: LangFn, amount: number) {
   return lang('StarsAmountText', { amount }, { pluralValue: amount });
-}
-
-export function formatTonAsText(lang: LangFn, nanos: bigint) {
-  const amount = convertTonFromNanos(nanos);
-  return lang('GramAmountText', { amount: lang.preciseNumber(amount) }, { pluralValue: amount });
-}
-
-export function formatTonAsIcon(
-  lang: LangFn,
-  // Nanotons, or an amount already formatted for display
-  amount: bigint | string,
-  options?: {
-    className?: string;
-    containerClassName?: string;
-    withWrapper?: boolean;
-    isMono?: boolean;
-    withIconLast?: boolean;
-  }) {
-  const {
-    className, containerClassName, withWrapper, isMono, withIconLast,
-  } = options || {};
-  const formattedAmount = typeof amount === 'bigint' ? convertTonFromNanos(amount) : amount;
-  const icon = (
-    <GramIcon
-      isMono={isMono}
-      className={buildClassName('in-text-icon', withIconLast && 'in-text-icon-last', className)}
-    />
-  );
-  const key = withIconLast ? 'GramAmountIconLast' : 'GramAmount';
-
-  if (containerClassName || withWrapper) {
-    return (
-      <span className={containerClassName}>
-        {lang(key, { amount: formattedAmount }, {
-          withNodes: true,
-          specialReplacement: {
-            '💎': icon,
-          },
-        })}
-      </span>
-    );
-  }
-
-  return lang(key, { amount: formattedAmount }, {
-    withNodes: true,
-    specialReplacement: {
-      '💎': icon,
-    },
-  });
 }
 
 export function formatStarsAsIcon(lang: LangFn, amount: number | string, options?: {

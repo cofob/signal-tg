@@ -1080,34 +1080,6 @@ addActionHandler('openPreviousReportModal', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openSuggestMessageModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    suggestMessageModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closeSuggestMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    suggestMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openSuggestedPostApprovalModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-  return updateTabState(global, {
-    suggestedPostApprovalModal: { chatId, messageId },
-  }, tabId);
-});
-
-addActionHandler('closeSuggestedPostApprovalModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    suggestedPostApprovalModal: undefined,
-  }, tabId);
-});
-
 function copyTextForMessages(
   payload: { request: MessageCopyRequest; shouldNotify?: boolean; textFormat?: ClipboardTextFormat },
   tabId: number,

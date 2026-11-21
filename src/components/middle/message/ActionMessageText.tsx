@@ -5,8 +5,6 @@ import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
 
 import {
   GENERAL_TOPIC_ID,
-  STARS_CURRENCY_CODE,
-  TON_CURRENCY_CODE,
   USERNAME_LINK_PREFIX,
 } from '../../../config';
 import {
@@ -21,7 +19,6 @@ import { getMessageReplyInfo } from '../../../global/helpers/replies';
 import {
   selectChat,
   selectChatMessage,
-  selectMonoforumChannel,
   selectPeer,
   selectSender,
   selectTopic,
@@ -29,11 +26,8 @@ import {
 import { selectThreadIdFromMessage } from '../../../global/selectors/threads';
 import { ensureProtocol } from '../../../util/browser/url';
 import { formatCountdown, formatShortDuration } from '../../../util/dates/duration';
-import { formatCalendarDate, formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
-import { formatStarsAsText, formatTonAsText,
-} from '../../../util/localization/format';
+import { formatDateTime, secondsToDate } from '../../../util/localization/dateFormat';
 import { conjuctionWithNodes } from '../../../util/localization/utils';
-import { getServerTime } from '../../../util/serverTime';
 import renderText from '../../common/helpers/renderText';
 import { renderTextWithEntities } from '../../common/helpers/renderTextWithEntities';
 import {
@@ -105,7 +99,6 @@ const ActionMessageText = ({
 
     const userFallbackText = lang('ActionFallbackUser');
     const chatFallbackText = lang('ActionFallbackChat');
-    const channelFallbackText = lang('ActionFallbackChannel');
 
     const senderLink = renderPeerLink(sender?.id, senderTitle || userFallbackText, asPreview);
     const chatLink = renderPeerLink(chat?.id, chatTitle || chatFallbackText, asPreview);
@@ -612,100 +605,6 @@ const ActionMessageText = ({
       case 'customAction':
         return action.message;
 
-      case 'suggestedPostSuccess': {
-        const { amount: price } = action;
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const formattedAmount = price?.currency === TON_CURRENCY_CODE
-          ? formatTonAsText(lang, price.amount)
-          : formatStarsAsText(lang, price?.amount || 0);
-
-        return lang('ActionSuggestedPostSuccess', {
-          channel: channelLink,
-          amount: formattedAmount,
-        }, { withNodes: true });
-      }
-      case 'suggestedPostRefund': {
-        const { payerInitiated } = action;
-
-        const postSender = replyMessage ? selectSender(global, replyMessage) : sender;
-        const postSenderTitle = postSender && getPeerTitle(lang, postSender);
-        const postSenderLink = renderPeerLink(postSender?.id, postSenderTitle || userFallbackText, asPreview);
-
-        const price = replyMessage?.suggestedPostInfo?.price;
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const formattedAmount = price?.currency === TON_CURRENCY_CODE
-          ? formatTonAsText(lang, price.amount)
-          : formatStarsAsText(lang, price?.amount || 0);
-
-        if (payerInitiated) {
-          return lang('SuggestedPostRefundedByUser', {
-            amount: formattedAmount,
-            user: postSenderLink,
-            channel: channelLink,
-          }, { withNodes: true, withMarkdown: true });
-        }
-
-        return lang('SuggestedPostRefundedByChannel', {
-          amount: formattedAmount,
-          peer: postSenderLink,
-          channel: channelLink,
-        }, { withNodes: true, withMarkdown: true });
-      }
-      case 'suggestedPostApproval': {
-        const { isRejected, isBalanceTooLow, rejectComment } = action;
-
-        if (isRejected) {
-          return translateWithYou(
-            lang,
-            rejectComment ? 'SuggestedPostRejectedWithReason' : 'SuggestedPostRejected',
-            isOutgoing,
-            { peer: senderLink },
-            { withMarkdown: true },
-          );
-        }
-
-        if (isBalanceTooLow) {
-          const replyMessageSender = replyMessage ? selectSender(global, replyMessage) : sender;
-          const replyPeerTitle = replyMessageSender && getPeerTitle(lang, replyMessageSender);
-          const userLink = renderPeerLink(replyMessageSender?.id, replyPeerTitle || userFallbackText, asPreview);
-
-          const currency = replyMessage?.suggestedPostInfo?.price?.currency || STARS_CURRENCY_CODE;
-          const currencyName = currency === TON_CURRENCY_CODE ? lang('CurrencyGram') : lang('CurrencyStars');
-
-          return lang('SuggestedPostBalanceTooLow', {
-            peer: userLink,
-            currency: currencyName,
-          }, { withNodes: true, withMarkdown: true });
-        }
-
-        const channel = chat?.isMonoforum ? selectMonoforumChannel(global, chatId) : chat;
-        const channelTitle = channel && getPeerTitle(lang, channel);
-        const channelLink = renderPeerLink(channel?.id, channelTitle || channelFallbackText, asPreview);
-
-        const { scheduleDate } = action;
-        if (scheduleDate) {
-          const publishDate = formatCalendarDate(lang, secondsToDate(scheduleDate), { isShort: true, withTime: true });
-          const isPostPublished = scheduleDate <= getServerTime();
-
-          return translateWithYou(
-            lang,
-            isPostPublished ? 'SuggestedPostPublished' : 'SuggestedPostPublishSchedule',
-            isOutgoing,
-            { peer: channelLink, date: publishDate },
-            { withMarkdown: true },
-          );
-        }
-
-        return lang(UNSUPPORTED_LANG_KEY);
-      }
       case 'pollAppendAnswer':
       case 'pollDeleteAnswer': {
         const optionLink = renderMessageLink(

@@ -9,7 +9,6 @@ import type { ApiInstantViewPage, ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
 import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
 import type { ApiRichMessage } from './richMessage';
-import type { ApiTypeCurrencyAmount } from './stars';
 import type {
   ApiMessageStoryData, ApiStory, ApiWebPageStickerData, ApiWebPageStoryData,
 } from './stories';
@@ -409,24 +408,10 @@ export interface ApiInputEphemeralReplyInfo {
   replyToMsgId: number;
 }
 
-export interface ApiSuggestedPost {
-  isAccepted?: true;
-  isRejected?: true;
-  price?: ApiTypeCurrencyAmount;
-  scheduleDate?: number;
-}
-
 export interface ApiInputStoryReplyInfo {
   type: 'story';
   peerId: string;
   storyId: number;
-}
-
-export interface ApiInputSuggestedPostInfo {
-  price?: ApiTypeCurrencyAmount;
-  scheduleDate?: number;
-  isAccepted?: true;
-  isRejected?: true;
 }
 
 export type ApiInputDraftReplyInfo = ApiInputMessageReplyInfo | ApiInputEphemeralReplyInfo;
@@ -636,7 +621,6 @@ export interface ApiMessage {
   ttlPeriod?: number;
   senderId?: string;
   replyInfo?: ApiReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   sendingState?: 'messageSendingStatePending' | 'messageSendingStateFailed';
   // Signal: a recipient's device received the message
   isDelivered?: true;
@@ -862,9 +846,8 @@ export type ApiInlineButtonAction =
   | { type: 'urlAuth'; url: string; buttonId: number; forwardText?: string }
   | { type: 'copy'; copyText: string };
 
-export type ApiLocalButtonAction =
-  { type: 'suggestedMessage'; buttonType: 'approve' | 'decline' | 'suggestChanges'; disabled?: boolean }
-  | { type: 'openThread' }
+type ApiLocalButtonAction =
+  { type: 'openThread' }
   | { type: 'noForwardsRequest'; buttonType: 'accept' | 'reject' };
 
 export type ApiKeyboardButton = {
@@ -873,9 +856,6 @@ export type ApiKeyboardButton = {
   action: ApiReplyButtonAction | ApiInlineButtonAction | ApiLocalButtonAction;
 };
 
-export type KeyboardButtonSuggestedMessage = ApiKeyboardButton & {
-  action: Extract<ApiLocalButtonAction, { type: 'suggestedMessage' }>;
-};
 export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
   action: Extract<ApiLocalButtonAction, { type: 'noForwardsRequest' }>;
 };

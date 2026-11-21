@@ -127,7 +127,6 @@ import buildClassName from '../../../util/buildClassName';
 import buildStyle from '../../../util/buildStyle';
 import { isUserId } from '../../../util/entities/ids';
 import { getMessageKey } from '../../../util/keys/messageKey';
-import { getServerTime } from '../../../util/serverTime';
 import stopEvent from '../../../util/stopEvent';
 import { getRichQuoteTexts } from '../../../util/text/richQuote';
 import { isElementInViewport } from '../../../util/visibility/isElementInViewport';
@@ -169,8 +168,6 @@ import RankBadge from '../../common/RankBadge';
 import ReactionStaticEmoji from '../../common/reactions/ReactionStaticEmoji';
 import UnsupportedPlate from '../../common/UnsupportedPlate';
 import Button from '../../ui/Button';
-import ConfirmDialog from '../../ui/ConfirmDialog';
-import InputText from '../../ui/InputText';
 import Album from './Album';
 import AnimatedCustomEmoji from './AnimatedCustomEmoji';
 import AnimatedEmoji from './AnimatedEmoji';
@@ -315,7 +312,6 @@ type StateProps = {
   lastPlaybackTimestamp?: number;
   isChatWithUser?: boolean;
   isAccountFrozen?: boolean;
-  minFutureTime?: number;
   isMediaNsfw?: boolean;
   isReplyMediaNsfw?: boolean;
   canSendStickers?: boolean;
@@ -335,7 +331,6 @@ type QuickReactionPosition =
 
 const NBSP = '\u00A0';
 const QUICK_REACTION_SIZE = 1.75 * REM;
-const MAX_REASON_LENGTH = 200;
 const MIN_MESSAGE_LENGTH_FOR_WIDE_MEDIA = 40;
 
 const Message = ({
@@ -440,7 +435,6 @@ const Message = ({
   isReplyMediaNsfw,
   isChatWithUser,
   isAccountFrozen,
-  minFutureTime,
   webPage,
   canSendStickers,
   observeIntersectionForBottom,
@@ -453,9 +447,6 @@ const Message = ({
   const {
     toggleMessageSelection,
     clickBotInlineButton,
-    clickSuggestedMessageButton,
-    rejectSuggestedPost,
-    openSuggestedPostApprovalModal,
     disableContextMenuHint,
     animateUnreadReaction,
     focusMessage,
@@ -482,8 +473,6 @@ const Message = ({
   const [isPlayingDeleteAnimation, setIsPlayingDeleteAnimation] = useState(false);
   const [shouldPlayEffect, requestEffect, hideEffect] = useFlag();
   const [shouldPlayDiceEffect, requestDiceEffect, hideDiceEffect] = useFlag();
-  const [isDeclineDialogOpen, openDeclineDialog, closeDeclineDialog] = useFlag();
-  const [declineReason, setDeclineReason] = useState('');
   const { isMobile, isTouchScreen } = useAppLayout();
 
   useOnIntersect(bottomMarkerRef, isTypingDraft || isLocalOnly ? undefined : observeIntersectionForBottom);
@@ -1573,42 +1562,6 @@ const Message = ({
       });
       return;
     }
-
-    if (button.action.type === 'suggestedMessage') {
-      if (button.action.buttonType === 'approve') {
-        openSuggestedPostApprovalModal({
-          chatId,
-          messageId: message.id,
-        });
-        return;
-      }
-
-      if (button.action.buttonType === 'decline') {
-        openDeclineDialog();
-        return;
-      }
-
-      clickSuggestedMessageButton({
-        chatId,
-        messageId: message.id,
-        button: { ...button, action: button.action },
-      });
-      return;
-    }
-  });
-
-  const handleDeclineReasonChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setDeclineReason(e.target.value);
-  });
-
-  const handleDeclineConfirm = useLastCallback(() => {
-    rejectSuggestedPost({
-      chatId,
-      messageId: message.id,
-      rejectComment: declineReason.trim() || undefined,
-    });
-    closeDeclineDialog();
-    setDeclineReason('');
   });
 
   function renderSenderName(
@@ -1718,37 +1671,6 @@ const Message = ({
   }
 
   const forwardAuthor = isGroup && asForwarded ? message.postAuthorTitle : undefined;
-  const shouldRenderSuggestedPostButtons = message.suggestedPostInfo
-    && !message.isOutgoing && !message.suggestedPostInfo.isAccepted && !message.suggestedPostInfo.isRejected;
-
-  const isSuggestedPostExpired = (() => {
-    if (!message.suggestedPostInfo?.scheduleDate || !minFutureTime) return false;
-    const now = getServerTime();
-    return message.suggestedPostInfo.scheduleDate <= now + minFutureTime;
-  })();
-
-  const suggestedPostButtons: ApiKeyboardButton[][] | undefined = useMemo(() => {
-    if (!shouldRenderSuggestedPostButtons) return undefined;
-    return [
-      [
-        {
-          action: { type: 'suggestedMessage', buttonType: 'decline' },
-          text: lang('SuggestedPostDecline'),
-        },
-        {
-          action: { type: 'suggestedMessage', buttonType: 'approve', disabled: isSuggestedPostExpired },
-          text: lang('SuggestedPostApprove'),
-        },
-      ],
-      [
-        {
-          action: { type: 'suggestedMessage', buttonType: 'suggestChanges' },
-          text: lang('SuggestedPostSuggestChanges'),
-        },
-      ],
-    ];
-  }, [isSuggestedPostExpired, lang, shouldRenderSuggestedPostButtons]);
-
   const openThreadButtons: ApiKeyboardButton[][] | undefined = useMemo(() => {
     if (!isBotForum || message.inlineButtons || !messageTopic || !isLastInList ||
       threadId !== MAIN_THREAD_ID
@@ -1762,7 +1684,7 @@ const Message = ({
     ];
   }, [isBotForum, lang, message.inlineButtons, messageTopic, isLastInList, threadId]);
 
-  const additionalInlineButtons = suggestedPostButtons || openThreadButtons;
+  const additionalInlineButtons = openThreadButtons;
 
   return (
     <div
@@ -1915,28 +1837,6 @@ const Message = ({
           noReplies={noReplies}
         />
       )}
-      {isDeclineDialogOpen && (
-        <ConfirmDialog
-          isOpen={isDeclineDialogOpen}
-          onClose={closeDeclineDialog}
-          title={lang('SuggestedPostDecline')}
-          confirmLabel={lang('SuggestedPostDecline')}
-          confirmHandler={handleDeclineConfirm}
-          confirmIsDestructive
-        >
-          <div className="decline-dialog-question">
-            {renderText(lang('DeclinePostDialogQuestion', {
-              sender: sender ? getPeerFullTitle(lang, sender) : '',
-            }, { withNodes: true, withMarkdown: true }))}
-          </div>
-          <InputText
-            placeholder={lang('DeclineReasonPlaceholder')}
-            value={declineReason}
-            onChange={handleDeclineReasonChange}
-            maxLength={MAX_REASON_LENGTH}
-          />
-        </ConfirmDialog>
-      )}
     </div>
   );
 };
@@ -2084,8 +1984,6 @@ export default memo(withGlobal<OwnProps>(
     const lastPlaybackTimestamp = selectMessageLastPlaybackTimestamp(global, chatId, message.id);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
-    const minFutureTime = global.appConfig.starsSuggestedPostFutureMin;
-
     const isMediaNsfw = selectIsMediaNsfw(global, message);
     const isReplyMediaNsfw = replyMessage && selectIsMediaNsfw(global, replyMessage);
 
@@ -2179,7 +2077,6 @@ export default memo(withGlobal<OwnProps>(
       scrollTargetPosition: isFocused ? scrollTargetPosition : undefined,
       tags: global.savedReactionTags?.byKey,
       canTranscribeVoice,
-      minFutureTime,
       poll,
       maxTimestamp,
       lastPlaybackTimestamp,

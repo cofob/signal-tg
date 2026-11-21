@@ -32,9 +32,6 @@ export { default as ReportModal } from '../components/modals/reportModal/ReportM
 export { default as PreparedMessageModal } from '../components/modals/preparedMessage/PreparedMessageModal';
 export { default as SharePreparedMessageModal }
   from '../components/modals/sharePreparedMessage/SharePreparedMessageModal';
-export { default as SuggestMessageModal } from '../components/modals/suggestMessage/SuggestMessageModal';
-export { default as SuggestedPostApprovalModal }
-  from '../components/modals/suggestedPostApproval/SuggestedPostApprovalModal';
 export { default as CalendarModal } from '../components/common/CalendarModal';
 export { default as DeleteMessageModal } from '../components/common/DeleteMessageModal';
 export { default as DeleteMemberModal } from '../components/modals/deleteMember/DeleteMemberModal';

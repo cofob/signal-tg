@@ -2,14 +2,12 @@ import { Fragment, useCallback, useMemo } from '../../../lib/teact/teact';
 
 import type {
   ApiChat,
-  ApiInputSuggestedPostInfo,
   ApiMessage, ApiPeer, ApiReplyInfo, MediaContainer,
 } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
 import type { IconName } from '../../../types/icons';
 
-import { TON_CURRENCY_CODE } from '../../../config';
 import {
   getMessageIsSpoiler,
   getMessageRoundVideo,
@@ -21,8 +19,6 @@ import { getPeerTitle } from '../../../global/helpers/peers';
 import { selectReplyOptionText } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { isUserId } from '../../../util/entities/ids';
-import { formatCalendarDate, secondsToDate } from '../../../util/localization/dateFormat';
-import { formatStarsAsIcon, formatTonAsIcon } from '../../../util/localization/format';
 import { normalizeRichQuote } from '../../../util/text/richQuote';
 import renderText from '../helpers/renderText';
 import { renderTextWithEntities } from '../helpers/renderTextWithEntities';
@@ -43,7 +39,6 @@ import './EmbeddedMessage.scss';
 type OwnProps = {
   className?: string;
   replyInfo?: ApiReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   message?: ApiMessage;
   sender?: ApiPeer;
   senderChat?: ApiChat;
@@ -71,7 +66,6 @@ const EmbeddedMessage = ({
   className,
   message,
   replyInfo,
-  suggestedPostInfo,
   sender,
   senderChat,
   forwardSender,
@@ -135,45 +129,6 @@ const EmbeddedMessage = ({
   const areSendersSame = sender && sender.id === forwardSender?.id;
 
   function renderTextContent() {
-    const isFree = !(suggestedPostInfo?.price?.amount);
-    if (suggestedPostInfo) {
-      if (isFree && !suggestedPostInfo.scheduleDate) {
-        return lang('ComposerEmbeddedMessageSuggestedPostDescription');
-      }
-      const priceText = suggestedPostInfo.price
-        ? (suggestedPostInfo.price.currency === TON_CURRENCY_CODE
-          ? formatTonAsIcon(lang, suggestedPostInfo.price.amount, {
-            className: 'suggested-price-ton-icon',
-          })
-          : formatStarsAsIcon(lang, suggestedPostInfo.price.amount, {
-            className: 'suggested-price-star-icon',
-          }))
-        : '';
-      const scheduleText = suggestedPostInfo.scheduleDate
-        ? formatCalendarDate(lang, secondsToDate(suggestedPostInfo.scheduleDate), { isShort: true, withTime: true })
-        : '';
-      if (priceText && !scheduleText) {
-        return (
-          <span className="suggested-post-price-wrapper">
-            {
-              lang('TitleSuggestedPostAmountForAnyTime',
-                { amount: priceText },
-                {
-                  withNodes: true,
-                  withMarkdown: true,
-                })
-            }
-          </span>
-        );
-      }
-      return (
-        <span className="suggested-post-price-wrapper">
-          {priceText}
-          {scheduleText ? ` • ${scheduleText}` : ''}
-        </span>
-      );
-    }
-
     if (replyOptionText) {
       return (
         <>
@@ -258,14 +213,6 @@ const EmbeddedMessage = ({
       return renderText(title);
     }
 
-    if (suggestedPostInfo && replyInfo) {
-      return lang('TitleSuggestedChanges');
-    }
-
-    if (suggestedPostInfo) {
-      return lang('ComposerEmbeddedMessageSuggestedPostTitle');
-    }
-
     if (!senderTitle && !forwardSendersTitle) {
       // Keep the sender subtree structure stable while the peer is still loading — replacing
       // a bare text node with an element subtree later makes WebKit shift `scrollTop`
@@ -339,7 +286,6 @@ const EmbeddedMessage = ({
         hasPictogram && 'with-thumb',
         'no-selection',
         composerForwardSenders && 'is-input-forward',
-        suggestedPostInfo && 'is-suggested-post',
       )}
       dir={lang.isRtl ? 'rtl' : undefined}
       onClick={onClick}

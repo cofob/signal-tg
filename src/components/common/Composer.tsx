@@ -49,7 +49,6 @@ import {
   ROUND_VIDEO_RECORDING_SIZE,
   SCHEDULED_WHEN_ONLINE,
   SEND_MESSAGE_ACTION_INTERVAL,
-  STARS_CURRENCY_CODE,
   VIDEO_RECORDING_FILENAME,
 } from '../../config';
 import { requestMeasure, requestNextMutation } from '../../lib/fasterdom/fasterdom';
@@ -264,8 +263,6 @@ type StateProps = {
   isSelectModeActive?: boolean;
   isReactionPickerOpen?: boolean;
   isForwarding?: boolean;
-  isReplying?: boolean;
-  hasSuggestedPost?: boolean;
   forwardedMessagesCount?: number;
   botKeyboardMessageId?: number;
   botKeyboardPlaceholder?: string;
@@ -383,8 +380,6 @@ const Composer = ({
   isSelectModeActive,
   isReactionPickerOpen,
   isForwarding,
-  isReplying,
-  hasSuggestedPost,
   forwardedMessagesCount,
   botKeyboardMessageId,
   botKeyboardPlaceholder,
@@ -473,7 +468,6 @@ const Composer = ({
     updateAttachmentSettings,
     updateChatSilentPosting,
     updateInsertingPeerIdMention,
-    updateDraftSuggestedPostInfo,
     updateShouldSaveAttachmentsCompression,
     applyDefaultAttachmentsCompression,
     setIsRichInputExpanded,
@@ -993,7 +987,7 @@ const Composer = ({
     richMessage,
     replaceRichMessage: updateRichMessage,
     editedMessage: editingMessage,
-    isDisabled: isInStoryViewer || Boolean(requestedDraft) || (!hasSuggestedPost && isMonoforum),
+    isDisabled: isInStoryViewer || Boolean(requestedDraft) || isMonoforum,
     hasUnresolvedMedia: hasRichMediaBlocking,
   });
 
@@ -1135,9 +1129,6 @@ const Composer = ({
       resetComposerRef.current(false, true);
     };
   }, [chatId, threadId, resetComposerRef, cancelRecordingVoiceRef]);
-
-  const shouldShowSuggestedPostButton = isMonoforum && !editingMessage
-    && !isForwarding && !isReplying && !draft?.suggestedPostInfo;
 
   const showCustomEmojiPremiumNotification = useLastCallback(() => {
     const notificationNumber = customEmojiNotificationNumberRef.current;
@@ -2089,12 +2080,6 @@ const Composer = ({
   const handleAutoDeleteClick = useLastCallback(() => {
     openAutoDeleteTimerModal({ chatId });
   });
-  const handleSuggestPostClick = useLastCallback(() => {
-    updateDraftSuggestedPostInfo({
-      price: { currency: STARS_CURRENCY_CODE, amount: 0, nanos: 0 },
-    });
-  });
-
   const handleToggleSilentPosting = useLastCallback(() => {
     const newValue = !isSilentPosting;
     updateChatSilentPosting({ chatId, isEnabled: newValue });
@@ -2217,10 +2202,6 @@ const Composer = ({
       if (isBotKeyboardOpen && botKeyboardPlaceholder) return botKeyboardPlaceholder;
       if (inputPlaceholder) return inputPlaceholder;
 
-      if (isReplying && hasSuggestedPost) {
-        return lang('ComposerPlaceholderCaption');
-      }
-
       if (stealthMode?.activeUntil && isInStoryViewer && stealthMode.activeUntil > getServerTime()) {
         return lang('StealthModeComposerPlaceholder', {
           timer: <TextTimer endsAt={stealthMode.activeUntil} onEnd={forceUpdate} />,
@@ -2251,8 +2232,8 @@ const Composer = ({
     return lang('ComposerPlaceholderNoText');
   }, [
     activeRecording, botKeyboardPlaceholder, chat, inputPlaceholder, isBotKeyboardOpen, isChannel, isComposerBlocked,
-    isInStoryViewer, isSilentPosting, lang, replyToTopic, isReplying, threadId, windowWidth,
-    hasSuggestedPost, slowModePlaceholder, stealthMode?.activeUntil, user?.canManageBotForumTopics,
+    isInStoryViewer, isSilentPosting, lang, replyToTopic, threadId, windowWidth,
+    slowModePlaceholder, stealthMode?.activeUntil, user?.canManageBotForumTopics,
   ]);
 
   useEffect(() => {
@@ -2843,15 +2824,6 @@ const Composer = ({
                         <AutoDeleteOutlinedIcon period={autoDeletePeriod} />
                       </Button>
                     )}
-                    {shouldShowSuggestedPostButton && (
-                      <Button
-                        round
-                        className="composer-action-button"
-                        color="translucent"
-                        onClick={handleSuggestPostClick}
-                        iconName="cash-circle"
-                      />
-                    )}
                     {canShowBotKeyboard && (
                       <Button
                         className={buildClassName('composer-action-button', isBotKeyboardOpen && 'activated')}
@@ -3132,8 +3104,6 @@ export default memo(withGlobal<OwnProps>(
     )?.isSilentPosting;
 
     const isForwarding = chatId === tabState.forwardMessages.toChatId;
-    const isReplying = Boolean(draft?.replyInfo);
-    const hasSuggestedPost = Boolean(draft?.suggestedPostInfo);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const isAppConfigLoaded = global.isAppConfigLoaded;
     const insertingPeerIdMention = tabState.insertingPeerIdMention;
@@ -3171,8 +3141,6 @@ export default memo(withGlobal<OwnProps>(
       hiddenBotKeyboardId: selectTabThreadParam(global, chatId, threadId, 'hiddenBotKeyboardId'),
       hasActiveMiddleSearch: Boolean(selectCurrentMiddleSearch(global)),
       isForwarding,
-      isReplying,
-      hasSuggestedPost,
       forwardedMessagesCount: isForwarding ? forwardMessageIds!.length : undefined,
       chatFullInfo,
       topInlineBotIds: global.topPeerCategories.botsInline?.peerIds,

@@ -58,9 +58,6 @@ import ChannelPhoto from './actions/ChannelPhoto';
 import NoForwardsRequest from './actions/NoForwardsRequest';
 import SuggestedBirthday from './actions/SuggestedBirthday';
 import SuggestedPhoto from './actions/SuggestedPhoto';
-import SuggestedPostApproval from './actions/SuggestedPostApproval';
-import SuggestedPostBalanceTooLow from './actions/SuggestedPostBalanceTooLow';
-import SuggestedPostRejected from './actions/SuggestedPostRejected';
 import WallpaperPreview from './actions/WallpaperPreview';
 import ContextMenuContainer from './ContextMenuContainer';
 import InlineButtons from './InlineButtons';
@@ -111,7 +108,7 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'viewOnce',
 ]);
 const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>([
-  'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest',
+  'suggestProfilePhoto', 'suggestBirthday', 'noForwardsRequest',
 ]);
 const WITH_LINK_BREAKS_ACTIONS = new Set<ApiMessageAction['type']>([
   'pollAppendAnswer',
@@ -154,7 +151,6 @@ const ActionMessage = ({
     animateUnreadReaction,
     markMentionsRead,
     markPollVotesRead,
-    focusMessage,
     toggleNoForwards,
   } = getActions();
 
@@ -169,7 +165,6 @@ const ActionMessage = ({
   const isSingleLine = SINGLE_LINE_ACTIONS.has(action.type);
   const withLinkBreaks = WITH_LINK_BREAKS_ACTIONS.has(action.type);
   const isFluidMultiline = IS_FLUID_BACKGROUND_SUPPORTED && !isSingleLine;
-  const isClickableText = action.type === 'suggestedPostSuccess';
 
   const messageReplyInfo = getMessageReplyInfo(message);
   const { replyToMsgId, replyToPeerId } = messageReplyInfo || {};
@@ -337,30 +332,6 @@ const ActionMessage = ({
         toggleChannelRecommendations({ chatId });
         break;
       }
-
-      case 'suggestedPostApproval': {
-        const replyInfo = getMessageReplyInfo(message);
-        if (replyInfo?.type === 'message' && replyInfo.replyToMsgId) {
-          focusMessage({
-            chatId: message.chatId,
-            threadId,
-            messageId: replyInfo.replyToMsgId,
-          });
-        }
-        break;
-      }
-
-      case 'suggestedPostSuccess': {
-        const replyInfo = getMessageReplyInfo(message);
-        if (replyInfo?.type === 'message' && replyInfo.replyToMsgId) {
-          focusMessage({
-            chatId: message.chatId,
-            threadId,
-            messageId: replyInfo.replyToMsgId,
-          });
-        }
-        break;
-      }
     }
   });
 
@@ -423,30 +394,6 @@ const ActionMessage = ({
           />
         );
 
-      case 'suggestedPostApproval':
-        if (action.isBalanceTooLow) {
-          return (
-            <SuggestedPostBalanceTooLow
-              message={message}
-              action={action}
-              onClick={handleClick}
-            />
-          );
-        }
-        return action.isRejected ? (
-          <SuggestedPostRejected
-            message={message}
-            action={action}
-            onClick={handleClick}
-          />
-        ) : (
-          <SuggestedPostApproval
-            message={message}
-            action={action}
-            onClick={handleClick}
-          />
-        );
-
       default:
         return undefined;
     }
@@ -485,21 +432,13 @@ const ActionMessage = ({
       {!isTextHidden && (
         <>
           {isFluidMultiline && (
-            <div className={buildClassName(
-              styles.inlineWrapper,
-              isClickableText && styles.hoverable,
-            )}
-            >
+            <div className={styles.inlineWrapper}>
               <span className={styles.fluidBackground} style={fluidBackgroundStyle}>
                 <ActionMessageText message={message} isInsideTopic={isInsideTopic} />
               </span>
             </div>
           )}
-          <div className={buildClassName(
-            styles.inlineWrapper,
-            isClickableText && styles.hoverable,
-          )}
-          >
+          <div className={styles.inlineWrapper}>
             <span
               className={styles.textContent}
               role="button"

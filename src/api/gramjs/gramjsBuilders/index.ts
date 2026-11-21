@@ -14,7 +14,6 @@ import type {
   ApiGroupCall,
   ApiInputPrivacyRules,
   ApiInputReplyInfo,
-  ApiInputSuggestedPostInfo,
   ApiLocation,
   ApiMessageEntity,
   ApiMessagePoll,
@@ -30,7 +29,6 @@ import type {
   ApiStory,
   ApiStorySkipped,
   ApiThemeParameters,
-  ApiTypeCurrencyAmount,
   ApiVideo,
   MediaContent,
 } from '../../types';
@@ -38,7 +36,7 @@ import {
   ApiMessageEntityTypes,
 } from '../../types';
 
-import { CHANNEL_ID_BASE, DEFAULT_STATUS_ICON_ID, STARS_CURRENCY_CODE } from '../../../config';
+import { CHANNEL_ID_BASE, DEFAULT_STATUS_ICON_ID } from '../../../config';
 import { getMtpEphemeralMessageId } from '../../../util/keys/messageKey';
 import { deserializeBytes } from '../helpers/misc';
 import localDb from '../localDb';
@@ -747,26 +745,6 @@ export function buildInputReplyTo(replyInfo: ApiInputReplyInfo) {
   }
 
   return undefined;
-}
-
-export function buildInputStarsAmount(amount: ApiTypeCurrencyAmount): GramJs.TypeStarsAmount {
-  if (amount.currency === STARS_CURRENCY_CODE) {
-    return new GramJs.StarsAmount({
-      amount: BigInt(amount.amount),
-      nanos: amount.nanos,
-    });
-  }
-
-  return new GramJs.StarsTonAmount({
-    amount: amount.amount,
-  });
-}
-
-export function buildInputSuggestedPost(suggestedPostInfo: ApiInputSuggestedPostInfo): GramJs.SuggestedPost {
-  return new GramJs.SuggestedPost({
-    price: suggestedPostInfo.price && buildInputStarsAmount(suggestedPostInfo.price),
-    scheduleDate: suggestedPostInfo.scheduleDate,
-  });
 }
 
 export function buildInputPrivacyRules(

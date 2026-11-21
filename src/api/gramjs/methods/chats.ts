@@ -78,7 +78,6 @@ import {
   buildInputProfileTab,
   buildInputReplyTo,
   buildInputRichMessage,
-  buildInputSuggestedPost,
   buildInputThemeParams,
   buildInputUser,
   buildMtpMessageEntity,
@@ -647,7 +646,6 @@ export function saveDraft({
     entities: draft?.richMessage ? undefined : draft?.text?.entities?.map(buildMtpMessageEntity),
     richMessage,
     replyTo: draft?.replyInfo && buildInputReplyTo(draft.replyInfo),
-    suggestedPost: draft?.suggestedPostInfo && buildInputSuggestedPost(draft.suggestedPostInfo),
   }));
 }
 

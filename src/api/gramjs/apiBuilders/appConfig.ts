@@ -63,16 +63,7 @@ export interface GramJsAppConfig {
   freeze_until_date?: number;
   freeze_appeal_url?: string;
   channel_autotranslation_level_min?: number;
-  stars_suggested_post_amount_max?: number;
-  stars_suggested_post_amount_min?: number;
-  stars_suggested_post_commission_permille?: number;
-  stars_suggested_post_age_min?: number;
-  stars_suggested_post_future_max?: number;
-  stars_suggested_post_future_min?: number;
   no_forwards_request_expire_period?: number;
-  ton_suggested_post_commission_permille?: number;
-  ton_suggested_post_amount_max?: number;
-  ton_suggested_post_amount_min?: number;
   ton_usd_rate?: number;
   ton_topup_url?: string;
   poll_answers_max?: number;
@@ -129,11 +120,6 @@ function buildDiceEmojiesSuccess(appConfig: GramJsAppConfig) {
   }, {} as ApiAppConfig['diceEmojiesSuccess']) : {};
 }
 
-// The config is JSON, so nanotons arrive as doubles and only whole values are taken
-function buildNanotons(value?: number) {
-  return value !== undefined && Number.isInteger(value) ? BigInt(value) : undefined;
-}
-
 export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiAppConfig {
   const appConfig = buildJson(json) as GramJsAppConfig;
 
@@ -178,16 +164,7 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     freezeSinceDate: appConfig.freeze_since_date,
     freezeUntilDate: appConfig.freeze_until_date,
     freezeAppealUrl: appConfig.freeze_appeal_url,
-    starsSuggestedPostAmountMax: appConfig.stars_suggested_post_amount_max,
-    starsSuggestedPostAmountMin: appConfig.stars_suggested_post_amount_min,
-    starsSuggestedPostCommissionPermille: appConfig.stars_suggested_post_commission_permille,
-    starsSuggestedPostAgeMin: appConfig.stars_suggested_post_age_min,
-    starsSuggestedPostFutureMax: appConfig.stars_suggested_post_future_max,
-    starsSuggestedPostFutureMin: appConfig.stars_suggested_post_future_min,
     noForwardsRequestExpirePeriod: appConfig.no_forwards_request_expire_period,
-    tonSuggestedPostCommissionPermille: appConfig.ton_suggested_post_commission_permille,
-    tonSuggestedPostAmountMax: buildNanotons(appConfig.ton_suggested_post_amount_max),
-    tonSuggestedPostAmountMin: buildNanotons(appConfig.ton_suggested_post_amount_min),
     tonUsdRate: appConfig.ton_usd_rate,
     tonTopupUrl: appConfig.ton_topup_url,
     pollMaxAnswers: appConfig.poll_answers_max,

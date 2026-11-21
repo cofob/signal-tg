@@ -353,16 +353,7 @@ export interface ApiAppConfig {
   freezeSinceDate?: number;
   freezeUntilDate?: number;
   freezeAppealUrl?: string;
-  starsSuggestedPostAmountMax: number;
-  starsSuggestedPostAmountMin: number;
-  starsSuggestedPostCommissionPermille: number;
-  starsSuggestedPostAgeMin: number;
-  starsSuggestedPostFutureMax: number;
-  starsSuggestedPostFutureMin: number;
   noForwardsRequestExpirePeriod: number;
-  tonSuggestedPostCommissionPermille: number;
-  tonSuggestedPostAmountMax: bigint;
-  tonSuggestedPostAmountMin: bigint;
   tonUsdRate?: number;
   tonTopupUrl?: string;
   pollMaxAnswers: number;

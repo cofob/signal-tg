@@ -98,8 +98,6 @@ export const TOPIC_LIST_SENSITIVE_AREA = 600;
 export const PUBLIC_POSTS_SEARCH_DEFAULT_STARS_AMOUNT = 10;
 export const PUBLIC_POSTS_SEARCH_DEFAULT_TOTAL_DAILY = 2;
 
-// Suggested Posts defaults
-export const TON_CURRENCY_CODE = 'TON';
 export const VERIFY_AGE_MIN_DEFAULT = 18;
 
 export const STORY_VIEWS_MIN_SEARCH = 15;
@@ -203,7 +201,6 @@ export const RESIZE_HANDLE_CLASS_NAME = 'resizeHandle';
 export const RESIZE_HANDLE_SELECTOR = `.${RESIZE_HANDLE_CLASS_NAME}`;
 
 export const STARS_ICON_PLACEHOLDER = '⭐';
-export const STARS_CURRENCY_CODE = 'XTR';
 
 export const MIN_SCREEN_WIDTH_FOR_STATIC_RIGHT_COLUMN = 1275; // px
 export const MIN_SCREEN_WIDTH_FOR_STATIC_LEFT_COLUMN = 925; // px

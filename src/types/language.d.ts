@@ -30,11 +30,6 @@ export interface LangPair {
   'CreateGroupError': undefined;
   'PasscodeControllerErrorCurrent': undefined;
   'LimitReachedPublicLinksPremium': undefined;
-  'PremiumPreviewReactionsDescription': undefined;
-  'PremiumPreviewStickersDescription': undefined;
-  'PremiumPreviewNoAdsDescription': undefined;
-  'PremiumPreviewAdvancedChatManagementDescription': undefined;
-  'PremiumPreviewAnimatedProfilesDescription': undefined;
   'SendMessage': undefined;
   'MessageUnsupported': undefined;
   'Widget': undefined;
@@ -227,8 +222,6 @@ export interface LangPair {
   'CreateBotUsernameSubscribe': undefined;
   'CreateBotUsernameHelp': undefined;
   'CreateBotLimitTitle': undefined;
-  'SponsoredMessageInfoDescription1': undefined;
-  'SponsoredMessageInfoDescription3': undefined;
   'Close': undefined;
   'Phone': undefined;
   'Username': undefined;
@@ -1392,7 +1385,6 @@ export interface LangPair {
   'ProfileBirthdayToday': undefined;
   'ProfileMenuSetMainTab': undefined;
   'ProfileItemSubscribers': undefined;
-  'MonetizationInfoGramTitle': undefined;
   'AriaSearchOlderResult': undefined;
   'AriaSearchNewerResult': undefined;
   'GiftInfoDate': undefined;
@@ -1492,7 +1484,6 @@ export interface LangPair {
   'PasswordFormSubmit': undefined;
   'ActionFallbackUser': undefined;
   'ActionFallbackChat': undefined;
-  'ActionFallbackChannel': undefined;
   'ActionUnsupported': undefined;
   'ActionPinnedNotFoundYou': undefined;
   'PinnedMessagesNotifications': undefined;
@@ -1615,41 +1606,6 @@ export interface LangPair {
   'MonoforumStatus': undefined;
   'MonoforumComposerPlaceholder': undefined;
   'ChannelSendMessage': undefined;
-  'ComposerEmbeddedMessageSuggestedPostTitle': undefined;
-  'ComposerEmbeddedMessageSuggestedPostDescription': undefined;
-  'ActionSuggestedPostOutgoing': undefined;
-  'ActionSuggestedChangesPrice': undefined;
-  'ActionSuggestedChangesText': undefined;
-  'ActionSuggestedChangesTime': undefined;
-  'ActionSuggestedChangesMedia': undefined;
-  'TitlePrice': undefined;
-  'TitleTime': undefined;
-  'TitleSuggestMessage': undefined;
-  'TitleSuggestedChanges': undefined;
-  'SuggestMessageNoPrice': undefined;
-  'SuggestMessagePriceDescriptionStars': undefined;
-  'SuggestMessagePriceDescriptionGram': undefined;
-  'SuggestMessageDateTimeHint': undefined;
-  'SuggestMessageAnytime': undefined;
-  'ButtonOfferFree': undefined;
-  'ButtonUpdateTerms': undefined;
-  'InputPlaceholderPrice': undefined;
-  'SuggestedPostApprove': undefined;
-  'SuggestedPostDecline': undefined;
-  'SuggestedPostSuggestChanges': undefined;
-  'InputTitleSuggestMessageTime': undefined;
-  'SuggestedPostApproved': undefined;
-  'SuggestedPostRejectedNotification': undefined;
-  'SuggestedPostAgreementReached': undefined;
-  'CurrencyStars': undefined;
-  'CurrencyGram': undefined;
-  'DeclineReasonPlaceholder': undefined;
-  'SuggestedPostRejectedYou': undefined;
-  'SuggestedPostRejectedWithReasonYou': undefined;
-  'ComposerPlaceholderCaption': undefined;
-  'SuggestedPostConfirmTitle': undefined;
-  'ButtonPublish': undefined;
-  'PublishNow': undefined;
   'InputTitle': undefined;
   'TitleTask': undefined;
   'NativeDownloadFailed': undefined;
@@ -1824,7 +1780,6 @@ export interface LangPair {
   'StealthModeButtonPremium': undefined;
   'StealthModeButton': undefined;
   'StealthModeButtonToStory': undefined;
-  'GiftAuctionFinished': undefined;
   'StarGift': undefined;
   'SettingsItemPrivacyPasskeys': undefined;
   'SettingsItemPrivacyOn': undefined;
@@ -1978,7 +1933,6 @@ export interface LangPair {
   'AllReactions': undefined;
   'AllViewers': undefined;
   'AnonymousForward': undefined;
-  'April': undefined;
   'ArchiveStory': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
@@ -3235,12 +3189,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'link': V;
     'topic': V;
   };
-  'GramAmount': {
-    'amount': V;
-  };
-  'GramAmountIconLast': {
-    'amount': V;
-  };
   'ActionMigratedFrom': {
     'chat': V;
   };
@@ -3264,124 +3212,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ComposerTitleForwardFrom': {
     'users': V;
-  };
-  'TitleSuggestedPostAmountForAnyTime': {
-    'amount': V;
-  };
-  'ActionSuggestedPostIncoming': {
-    'user': V;
-  };
-  'ActionSuggestedChangesOutgoing': {
-    'changes': V;
-  };
-  'ActionSuggestedChangesIncoming': {
-    'user': V;
-    'changes': V;
-  };
-  'SuggestMessageTimeDescription': {
-    'hint': V;
-    'duration': V;
-  };
-  'ButtonOfferAmount': {
-    'amount': V;
-  };
-  'SuggestedPostPublishSchedule': {
-    'peer': V;
-    'date': V;
-  };
-  'SuggestedPostPublishScheduleYou': {
-    'peer': V;
-    'date': V;
-  };
-  'SuggestedPostPublished': {
-    'peer': V;
-    'date': V;
-  };
-  'SuggestedPostPublishedYou': {
-    'peer': V;
-    'date': V;
-  };
-  'SuggestedPostCharged': {
-    'user': V;
-    'amount': V;
-  };
-  'SuggestedPostChargedYou': {
-    'amount': V;
-  };
-  'SuggestedPostReceiveAmount': {
-    'peer': V;
-    'duration': V;
-  };
-  'SuggestedPostReceiveAmountYou': {
-    'peer': V;
-    'duration': V;
-  };
-  'SuggestedPostRefund': {
-    'peer': V;
-    'duration': V;
-  };
-  'SuggestedPostRefundYou': {
-    'peer': V;
-    'duration': V;
-  };
-  'SuggestedPostBalanceTooLow': {
-    'peer': V;
-    'currency': V;
-  };
-  'SuggestedPostRefundedByUser': {
-    'channel': V;
-    'amount': V;
-    'user': V;
-  };
-  'SuggestedPostRefundedByChannel': {
-    'amount': V;
-    'peer': V;
-    'channel': V;
-  };
-  'DeclinePostDialogQuestion': {
-    'sender': V;
-  };
-  'SuggestedPostRejected': {
-    'peer': V;
-  };
-  'SuggestedPostRejectedWithReason': {
-    'peer': V;
-  };
-  'SuggestedPostRejectedComment': {
-    'comment': V;
-  };
-  'ActionSuggestedPostSuccess': {
-    'channel': V;
-    'amount': V;
-  };
-  'DescriptionSuggestedPostMinimumOffer': {
-    'amount': V;
-  };
-  'SuggestedPostConfirmMessage': {
-    'peer': V;
-  };
-  'SuggestedPostConfirmDetailsAdmin': {
-    'amount': V;
-    'commission': V;
-    'duration': V;
-  };
-  'SuggestedPostConfirmDetailsUser': {
-    'amount': V;
-    'duration': V;
-  };
-  'SuggestedPostConfirmDetailsWithTimeAdmin': {
-    'amount': V;
-    'commission': V;
-    'time': V;
-    'duration': V;
-  };
-  'SuggestedPostConfirmDetailsWithTimeUser': {
-    'amount': V;
-    'time': V;
-    'duration': V;
-  };
-  'ButtonPublishAtTime': {
-    'time': V;
   };
   'MessageActionPollAppendAnswer': {
     'peer': V;
@@ -3961,9 +3791,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ActionGameScoreNoGameYou': {
     'count': V;
   };
-  'GramAmountText': {
-    'amount': V;
-  };
   'CommunityChatsCount': {
     'count': V;
   };
@@ -4158,7 +3985,6 @@ export interface LangKeyGroups {
       | 'ActionSuggestedPhoto'
       | 'ActionSuggestedBirthdayYou'
       | 'ActionSuggestedBirthday'
-      | 'ActionSuggestedPostIncoming'
       | 'InviteRestrictedPremiumReasonSingle'
       | 'BirthdayTitleForPeer'
       | 'RankEditText'
@@ -4355,7 +4181,6 @@ export interface LangKeyGroups {
       | 'LastSeenTodayAt'
       | 'LastSeenYesterdayAt'
       | 'LiveLocationUpdatedTodayAt'
-      | 'ButtonPublishAtTime'
       | 'UnlockTimerPublicPostsSearch'
       | 'StealthModeOnHint'
       | 'LiveLocationUpdatedYesterdayAt';
@@ -4463,9 +4288,6 @@ export interface LangKeyGroups {
       | 'BotSharedToOne'
       | 'PlaylistTitle'
       | 'ActionChangedWallpaperBothYou'
-      | 'SuggestedPostRejected'
-      | 'SuggestedPostRejectedWithReason'
-      | 'SuggestedPostConfirmMessage'
       | 'UnofficialSecurityRisk'
       | 'MessageLockedPremium'
       | 'StoryMentionedTitle';
@@ -4628,13 +4450,7 @@ export interface LangKeyGroups {
       | 'StarsAmount'
       | 'StarsAmountIconLast'
       | 'ActionStarGiftConvertTextYou'
-      | 'ActionStarGiftConvertedTextYou'
-      | 'GramAmount'
-      | 'GramAmountIconLast'
-      | 'TitleSuggestedPostAmountForAnyTime'
-      | 'ButtonOfferAmount'
-      | 'SuggestedPostChargedYou'
-      | 'DescriptionSuggestedPostMinimumOffer';
+      | 'ActionStarGiftConvertedTextYou';
     variables: 'amount';
   };
   'bot,duration': {
@@ -4812,92 +4628,6 @@ export interface LangKeyGroups {
     keys:
       | 'FrozenAccountAppealSubtitle';
     variables: 'botLink' | 'date';
-  };
-  'changes': {
-    keys:
-      | 'ActionSuggestedChangesOutgoing';
-    variables: 'changes';
-  };
-  'changes,user': {
-    keys:
-      | 'ActionSuggestedChangesIncoming';
-    variables: 'changes' | 'user';
-  };
-  'duration,hint': {
-    keys:
-      | 'SuggestMessageTimeDescription';
-    variables: 'duration' | 'hint';
-  };
-  'date,peer': {
-    keys:
-      | 'SuggestedPostPublishSchedule'
-      | 'SuggestedPostPublishScheduleYou'
-      | 'SuggestedPostPublished'
-      | 'SuggestedPostPublishedYou';
-    variables: 'date' | 'peer';
-  };
-  'amount,user': {
-    keys:
-      | 'SuggestedPostCharged';
-    variables: 'amount' | 'user';
-  };
-  'duration,peer': {
-    keys:
-      | 'SuggestedPostReceiveAmount'
-      | 'SuggestedPostReceiveAmountYou'
-      | 'SuggestedPostRefund'
-      | 'SuggestedPostRefundYou';
-    variables: 'duration' | 'peer';
-  };
-  'currency,peer': {
-    keys:
-      | 'SuggestedPostBalanceTooLow';
-    variables: 'currency' | 'peer';
-  };
-  'amount,channel,user': {
-    keys:
-      | 'SuggestedPostRefundedByUser';
-    variables: 'amount' | 'channel' | 'user';
-  };
-  'amount,channel,peer': {
-    keys:
-      | 'SuggestedPostRefundedByChannel';
-    variables: 'amount' | 'channel' | 'peer';
-  };
-  'sender': {
-    keys:
-      | 'DeclinePostDialogQuestion';
-    variables: 'sender';
-  };
-  'comment': {
-    keys:
-      | 'SuggestedPostRejectedComment';
-    variables: 'comment';
-  };
-  'amount,channel': {
-    keys:
-      | 'ActionSuggestedPostSuccess';
-    variables: 'amount' | 'channel';
-  };
-  'amount,commission,duration': {
-    keys:
-      | 'SuggestedPostConfirmDetailsAdmin';
-    variables: 'amount' | 'commission' | 'duration';
-  };
-  'amount,duration': {
-    keys:
-      | 'SuggestedPostConfirmDetailsUser';
-    variables: 'amount' | 'duration';
-  };
-  'amount,commission,duration,time': {
-    keys:
-      | 'SuggestedPostConfirmDetailsWithTimeAdmin';
-    variables: 'amount' | 'commission' | 'duration' | 'time';
-  };
-  'amount,duration,time': {
-    keys:
-      | 'SuggestedPostConfirmDetailsWithTimeUser';
-    variables: 'amount' | 'duration' | 'time';
   };
   'option,peer': {
     keys:
@@ -5182,8 +4912,7 @@ export interface LangPluralKeyGroups {
   };
   'amount': {
     keys:
-      | 'StarsAmountText'
-      | 'GramAmountText';
+      | 'StarsAmountText';
     variables: 'amount';
   };
   'count,title': {

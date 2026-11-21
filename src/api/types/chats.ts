@@ -1,6 +1,6 @@
 import type { ApiBotCommand } from './bots';
 import type {
-  ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiInputSuggestedPostInfo, ApiPhoto, ApiStickerSet,
+  ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiPhoto, ApiStickerSet,
 } from './messages';
 import type { ApiChatInviteImporter, ApiPeerTheme, ApiRestrictionReason, ApiWallpaper } from './misc';
 import type {
@@ -305,7 +305,6 @@ export type ApiDraft = {
   text?: ApiFormattedText;
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputDraftReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   date?: number;
   isLocal?: boolean;
 };

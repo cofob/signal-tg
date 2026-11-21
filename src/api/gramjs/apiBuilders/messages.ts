@@ -13,7 +13,6 @@ import type {
   ApiInputMessageReplyInfo,
   ApiInputReplyInfo,
   ApiInputRichMessage,
-  ApiInputSuggestedPostInfo,
   ApiMessage,
   ApiMessageEntity,
   ApiMessageForwardInfo,
@@ -28,7 +27,6 @@ import type {
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
-  ApiSuggestedPost,
   ApiThreadInfo,
   ApiVideo,
 } from '../../types';
@@ -47,9 +45,6 @@ import { omitUndefined } from '../../../util/iteratees';
 import { getEphemeralMessageId } from '../../../util/keys/messageKey';
 import { toJSNumber } from '../../../util/numbers';
 import { getServerTime } from '../../../util/serverTime';
-import {
-  buildApiCurrencyAmount,
-} from '../apiBuilders/payments';
 import { buildPeer, getEntityTypeById } from '../gramjsBuilders';
 import {
   addDocumentToLocalDb,
@@ -252,7 +247,6 @@ export function buildApiMessageWithChatId(
     isPinned: mtpMessage.pinned,
     reactions: mtpMessage.reactions && buildMessageReactions(mtpMessage.reactions),
     ...(mtpMessage.replyTo && { replyInfo: buildApiReplyInfo(mtpMessage.replyTo, mtpMessage) }),
-    ...(mtpMessage.suggestedPost && { suggestedPostInfo: buildApiSuggestedPost(mtpMessage.suggestedPost) }),
     forwardInfo,
     isEdited,
     editDate: mtpMessage.editDate,
@@ -291,7 +285,7 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
   }
 
   const {
-    message, entities, replyTo, date, suggestedPost, richMessage,
+    message, entities, replyTo, date, richMessage,
   } = draft;
 
   const replyInfo = replyTo instanceof GramJs.InputReplyToMessage ? {
@@ -306,28 +300,11 @@ export function buildMessageDraft(draft: GramJs.TypeDraftMessage): ApiDraft | un
     pollOption: replyTo.pollOption && serializeBytes(replyTo.pollOption),
   } satisfies ApiInputMessageReplyInfo : undefined;
 
-  const suggestedPostInfo = suggestedPost instanceof GramJs.SuggestedPost ? {
-    isAccepted: suggestedPost.accepted,
-    isRejected: suggestedPost.rejected,
-    price: suggestedPost.price ? buildApiCurrencyAmount(suggestedPost.price) : undefined,
-    scheduleDate: suggestedPost.scheduleDate,
-  } satisfies ApiInputSuggestedPostInfo : undefined;
-
   return {
     text: richMessage ? undefined : message ? buildMessageTextContent(message, entities) : undefined,
     richMessage: richMessage ? buildApiRichMessage(richMessage) : undefined,
     replyInfo,
-    suggestedPostInfo,
     date,
-  };
-}
-
-function buildApiSuggestedPost(suggestedPost: GramJs.SuggestedPost): ApiSuggestedPost {
-  return {
-    isAccepted: suggestedPost.accepted,
-    isRejected: suggestedPost.rejected,
-    price: suggestedPost.price ? buildApiCurrencyAmount(suggestedPost.price) : undefined,
-    scheduleDate: suggestedPost.scheduleDate,
   };
 }
 
@@ -442,7 +419,6 @@ export function buildLocalMessage({
   entities,
   richMessage,
   replyInfo,
-  suggestedPostInfo,
   attachment,
   sticker,
   gif,
@@ -465,7 +441,6 @@ export function buildLocalMessage({
   entities?: ApiMessageEntity[];
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   attachment?: ApiAttachment;
   sticker?: ApiSticker;
   gif?: ApiVideo;
@@ -520,7 +495,6 @@ export function buildLocalMessage({
     isOutgoing: !isChannel,
     senderId: chat.type !== 'chatTypePrivate' ? (sendAs?.id || currentUserId) : undefined,
     replyInfo: resultReplyInfo,
-    suggestedPostInfo,
     ...(groupedId && {
       groupedId,
       ...(media && (media.photo || media.video) && { isInAlbum: true }),
