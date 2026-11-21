@@ -1695,12 +1695,13 @@ export default class MessageProcessor {
 
   /**
    * Stores a group state that this device led to: after our change, whose notices are ours, or of a group we
-   * created (`isCreated` adds its notice) or joined, whose conversation starts here
+   * created (`isCreated` adds its notice) or joined, whose conversation starts here. `isFetched` marks a state
+   * that was fetched after the change, rather than made from it.
    */
   applyGroupState(
     masterKey: Uint8Array,
     state: GroupState,
-    { change, isCreated }: { change?: DecryptedGroupChange; isCreated?: boolean },
+    { change, isCreated, isFetched }: { change?: DecryptedGroupChange; isCreated?: boolean; isFetched?: boolean },
   ) {
     return this.runSerial(async () => {
       const id = getGroupId(masterKey);
@@ -1717,7 +1718,9 @@ export default class MessageProcessor {
       const updated = await this.storeGroupState(
         isJoining ? { ...conversation, isAccepted: true } : conversation,
         state,
-        change && { change, isOutgoing: true, sentAt },
+        change && {
+          change, isOutgoing: true, sentAt, isFetched,
+        },
       );
       if (!isCreated) return updated;
 
@@ -1888,16 +1891,27 @@ export default class MessageProcessor {
     });
   }
 
-  /** Stores a group state and the profile keys it brings; a change adds its notices */
+  /**
+   * Stores a group state and the profile keys it brings; a change adds its notices. A fetched state, which is
+   * not made by applying `applied.change`, only fills in profile keys we lack, as Signal Desktop `applyGroupState`
+   * does: a key of a change is new, but one in the state may be older than what a member sent us directly.
+   */
   private async storeGroupState(
     conversation: ConversationRecord,
     state: GroupState,
-    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number },
+    applied?: { change: DecryptedGroupChange; isOutgoing: boolean; sentAt: number; isFetched?: boolean },
   ) {
     const { aci: selfAci } = await this.getAccount();
-    const profileKeys = applied ? getChangeProfileKeys(applied.change) : state.members;
-    for (const { aci, profileKey } of profileKeys) {
-      if (profileKey && aci !== selfAci) await saveProfileKey(this.client.store, aci, profileKey);
+    const { store } = this.client;
+    for (const { aci, profileKey } of applied ? getChangeProfileKeys(applied.change) : []) {
+      if (aci !== selfAci) await saveProfileKey(store, aci, profileKey);
+    }
+    if (!applied || applied.isFetched) {
+      for (const { aci, profileKey } of [...state.members, ...state.requestingMembers]) {
+        if (profileKey && aci !== selfAci && !(await store.getRecipient(aci))?.profileKey) {
+          await saveProfileKey(store, aci, profileKey);
+        }
+      }
     }
 
     let updated = await this.putConversation({

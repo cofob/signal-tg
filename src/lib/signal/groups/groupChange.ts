@@ -267,11 +267,14 @@ export function applyGroupChange(state: GroupState, change: DecryptedGroupChange
   };
 }
 
-/** The ACIs and profile keys that a change brings, which sealed sender to those members needs */
+/**
+ * The ACIs and profile keys that a change brings, which sealed sender to those members needs. Members change only
+ * their own key (Signal Desktop `applyGroupChange`).
+ */
 export function getChangeProfileKeys(change: DecryptedGroupChange) {
   return [
     ...change.addMembers,
-    ...change.modifyMemberProfileKeys,
+    ...change.modifyMemberProfileKeys.filter(({ aci }) => aci === change.sourceServiceId),
     ...change.promotePendingMembers,
     ...change.addRequestingMembers,
   ].filter((member): member is ProfileKeyMember & { profileKey: Uint8Array } => Boolean(member.profileKey));

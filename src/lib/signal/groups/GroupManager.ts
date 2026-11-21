@@ -203,7 +203,8 @@ export default class GroupManager {
       }
 
       const { state } = await fetchGroup(account, connection, masterKey);
-      const conversation = await this.processor.applyGroupState(masterKey, state, { change });
+      // The state brings the profile keys of the members, which we need to send to them
+      const conversation = await this.processor.applyGroupState(masterKey, state, { change, isFetched: true });
       await this.saveEndorsements(groupId, masterKey, state, sendEndorsementsResponse);
       await this.processor.sendGroupUpdate(groupId, toBinary(GroupChangeSchema, groupChange));
       return conversation;
