@@ -271,6 +271,14 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadPasskeys: undefined;
+  loadSignalPinSettings: undefined;
+  setSignalPin: {
+    pin: string;
+  } & WithTabId;
+  removeSignalPin: WithTabId | undefined;
+  setSignalRegistrationLock: {
+    isEnabled: boolean;
+  } & WithTabId;
   startPasskeyRegistration: WithTabId | undefined;
   deletePasskey: {
     id: string;

@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPrivacySettings } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalPinSettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
@@ -31,7 +31,7 @@ type OwnProps = {
 
 type StateProps = {
   isCurrentUserPremium?: boolean;
-  hasPassword?: boolean;
+  signalPin?: ApiSignalPinSettings;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
@@ -55,7 +55,7 @@ const DAYS_PER_MONTH = 30;
 const SettingsPrivacy = ({
   isActive,
   isCurrentUserPremium,
-  hasPassword,
+  signalPin,
   hasPasscode,
   blockedCount,
   webAuthCount,
@@ -89,6 +89,7 @@ const SettingsPrivacy = ({
     openAgeVerificationModal,
     loadPasskeys,
     openPasskeyModal,
+    loadSignalPinSettings,
   } = getActions();
 
   useEffect(() => {
@@ -97,6 +98,7 @@ const SettingsPrivacy = ({
       loadPrivacySettings({});
       loadWebAuthorizations();
       loadPasskeys();
+      loadSignalPinSettings();
     }
   }, [isCurrentUserFrozen]);
 
@@ -234,21 +236,21 @@ const SettingsPrivacy = ({
             </div>
           </ListItem>
         )}
-        <ListItem
-          icon="2fa-filled"
-          iconBg="green"
-          narrow
-          onClick={() => openSettingsScreen({
-            screen: hasPassword ? SettingsScreens.TwoFaEnabled : SettingsScreens.TwoFaDisabled,
-          })}
-        >
-          <div className="multiline-item">
-            <span className="title">{lang('TwoStepVerification')}</span>
-            <span className="subtitle" dir="auto">
-              {lang(hasPassword ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-            </span>
-          </div>
-        </ListItem>
+        {signalPin && (
+          <ListItem
+            icon="2fa-filled"
+            iconBg="green"
+            narrow
+            onClick={() => openSettingsScreen({ screen: SettingsScreens.SignalPin })}
+          >
+            <div className="multiline-item">
+              <span className="title">{lang('SignalPinSettings')}</span>
+              <span className="subtitle" dir="auto">
+                {lang(signalPin.hasPin ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
+              </span>
+            </div>
+          </ListItem>
+        )}
         {arePasskeysAvailable && (
           <ListItem
             icon="key-filled"
@@ -497,7 +499,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          hasPassword, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
+          signalPin, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
@@ -517,7 +519,7 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       isCurrentUserPremium,
-      hasPassword,
+      signalPin,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
       webAuthCount: global.activeWebSessions.orderedHashes.length,

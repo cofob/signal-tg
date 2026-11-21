@@ -187,12 +187,11 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     screenWhen: { flag: 'hasPasscode', screen: SettingsScreens.PasscodeEnabled },
   },
   {
-    screen: SettingsScreens.TwoFaDisabled,
+    screen: SettingsScreens.SignalPin,
     parent: SettingsScreens.Privacy,
-    titleKey: 'TwoStepVerification',
-    keywordsKey: 'SettingsKeywordsTwoStep',
-    requires: 'isPasswordStateKnown',
-    screenWhen: { flag: 'hasPassword', screen: SettingsScreens.TwoFaEnabled },
+    titleKey: 'SignalPinSettings',
+    keywordsKey: 'SettingsKeywordsSignalPin',
+    requires: 'hasSignalPinSettings',
   },
   {
     screen: SettingsScreens.Passkeys,

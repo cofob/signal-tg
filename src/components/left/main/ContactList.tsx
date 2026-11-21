@@ -11,6 +11,7 @@ import useAppLayout from '../../../hooks/useAppLayout';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 import useLang from '../../../hooks/useLang';
+import useLastCallback from '../../../hooks/useLastCallback';
 
 import PrivateChatInfo from '../../common/PrivateChatInfo';
 import FloatingActionButton from '../../ui/FloatingActionButton';
@@ -23,6 +24,11 @@ export type OwnProps = {
   isActive: boolean;
   onReset: () => void;
 };
+
+// Separators people type in phone numbers
+const PHONE_SEPARATORS = /[\s().-]/g;
+// An international number: an optional `+`, a country code and at most 15 digits in all
+const PHONE_PATTERN = /^\+?[1-9]\d{6,14}$/;
 
 type StateProps = {
   usersById: Record<string, ApiUser>;
@@ -40,6 +46,7 @@ const ContactList = ({
 }: OwnProps & StateProps) => {
   const {
     openChat,
+    openChatByPhoneNumber,
     openNewContactDialog,
   } = getActions();
 
@@ -67,8 +74,22 @@ const ContactList = ({
 
   const [viewportIds, getMore] = useInfiniteScroll(undefined, listIds, Boolean(filter));
 
+  // A number without a contact can belong to a Signal user, whom the contact discovery service finds on request
+  const phoneQuery = filter.replace(PHONE_SEPARATORS, '');
+  const searchPhoneNumber = listIds && !listIds.length && PHONE_PATTERN.test(phoneQuery)
+    ? phoneQuery.replace('+', '') : undefined;
+
+  const handlePhoneSearchClick = useLastCallback(() => {
+    openChatByPhoneNumber({ phoneNumber: searchPhoneNumber! });
+  });
+
   return (
     <InfiniteScroll items={viewportIds} onLoadMore={getMore} className="chat-list custom-scroll">
+      {searchPhoneNumber && (
+        <ListItem key="phone-search" icon="phone" className="chat-item-clickable" onClick={handlePhoneSearchClick}>
+          {lang('SignalPhoneSearch', { phone: `+${searchPhoneNumber}` })}
+        </ListItem>
+      )}
       {viewportIds?.length ? (
         viewportIds.map((id) => (
           <ListItem
@@ -87,9 +108,11 @@ const ContactList = ({
           </ListItem>
         ))
       ) : viewportIds && !viewportIds.length ? (
-        <p className="no-results" key="no-results" dir="auto">
-          {lang(filter.length ? 'NoContactsFound' : 'ContactListEmpty')}
-        </p>
+        !searchPhoneNumber && (
+          <p className="no-results" key="no-results" dir="auto">
+            {lang(filter.length ? 'NoContactsFound' : 'ContactListEmpty')}
+          </p>
+        )
       ) : (
         <Loading key="loading" />
       )}

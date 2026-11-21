@@ -176,10 +176,29 @@ export interface LangPair {
   'SignalCodeErrorNotRequested': undefined;
   'SignalProfileDescription': undefined;
   'SignalRegisterErrorSession': undefined;
-  'SignalRegisterErrorRegLock': undefined;
   'SignalRegisterErrorRejected': undefined;
   'SignalRegisterErrorChallenge': undefined;
   'SignalRegisterErrorNetwork': undefined;
+  'SignalPinTitle': undefined;
+  'SignalPinDescription': undefined;
+  'SignalPinPlaceholder': undefined;
+  'SignalPinErrorRateLimited': undefined;
+  'SignalPinErrorLockedNoTime': undefined;
+  'SignalPinSettings': undefined;
+  'SignalPinAbout': undefined;
+  'SignalPinCreate': undefined;
+  'SignalPinChange': undefined;
+  'SignalPinRemove': undefined;
+  'SignalPinRemoveText': undefined;
+  'SignalPinRegistrationLock': undefined;
+  'SignalPinRegistrationLockAbout': undefined;
+  'SignalPinNew': undefined;
+  'SignalPinNewDescription': undefined;
+  'SignalPinConfirm': undefined;
+  'SignalPinErrorShort': undefined;
+  'SignalPinErrorMismatch': undefined;
+  'SignalPinErrorSave': undefined;
+  'ErrorPhoneLookupRateLimited': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2553,6 +2572,7 @@ export interface LangPair {
   'SettingsKeywordsSessions': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSignalPin': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -2645,6 +2665,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalCodeCallIn': {
     'time': V;
+  };
+  'SignalPhoneSearch': {
+    'phone': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -3971,6 +3994,12 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'user': V;
     'count': V;
   };
+  'SignalPinErrorIncorrect': {
+    'count': V;
+  };
+  'SignalPinErrorLocked': {
+    'count': V;
+  };
   'Participants': {
     'count': V;
   };
@@ -4567,6 +4596,12 @@ export interface LangKeyGroups {
       | 'LiveLocationUpdatedYesterdayAt';
     variables: 'time';
   };
+  'phone': {
+    keys:
+      | 'SignalPhoneSearch'
+      | 'UsernameByPhoneNotFound';
+    variables: 'phone';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -4843,11 +4878,6 @@ export interface LangKeyGroups {
     keys:
       | 'GuardManagedByDescription';
     variables: 'approvalInfo' | 'managedBy';
-  };
-  'phone': {
-    keys:
-      | 'UsernameByPhoneNotFound';
-    variables: 'phone';
   };
   'query': {
     keys:
@@ -5408,6 +5438,8 @@ export interface LangPluralKeyGroups {
   };
   'count': {
     keys:
+      | 'SignalPinErrorIncorrect'
+      | 'SignalPinErrorLocked'
       | 'Participants'
       | 'RequestPeerSelectLimit'
       | 'CreateBotLimitText'

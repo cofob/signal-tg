@@ -1,4 +1,5 @@
 import type { VerificationSession } from '../../lib/signal/account/register';
+import type { Credentials } from '../../lib/signal/net/rest';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
 import type { RegularLangFnParameters } from '../../util/localization/types';
 import type { ApiAuthCodeTransport, ApiUpdateAuthorizationStateType } from '../types';
@@ -8,24 +9,40 @@ import {
   createVerificationSession,
   registerAccount,
   RegistrationError,
+  RegistrationLockError,
   requestVerificationCode,
   submitCaptcha,
   submitVerificationCode,
 } from '../../lib/signal/account/register';
+import { backupMasterKey, restoreMasterKey, SvrError } from '../../lib/signal/svr/svr2';
 import { formatMediaDuration } from '../../util/dates/duration';
 import { logError, store } from './engine';
 import { sendApiUpdate } from './updates';
+
+type RegistrationProfile = {
+  firstName: string;
+  lastName?: string;
+  isDiscoverableByPhoneNumber?: boolean;
+};
 
 type RegistrationState = {
   number?: string;
   session?: VerificationSession;
   codeTransport?: ApiAuthCodeTransport;
+  // The number has Registration Lock: the account is created once the PIN restores its master key
+  registrationLock?: {
+    profile: RegistrationProfile;
+    svr2Credentials: Credentials;
+    // `Date.now()` when the lock expires
+    expiresAt?: number;
+  };
   // Registered on the server, waiting for its profile
   account?: AccountRecord;
 };
 
 const CAPTCHA_PREFIX = 'signalcaptcha://';
 const MS_IN_SECOND = 1000;
+const MS_IN_DAY = 24 * 60 * 60 * MS_IN_SECOND;
 
 let state: RegistrationState = {};
 let languages: string[] = [];
@@ -103,28 +120,61 @@ export function submitRegistrationCode(code: string) {
 
 /**
  * Creates the account with the verified session, unless it exists already, and completes it with the profile.
- * Resolves with the account once it is ready to connect.
+ * Resolves with the account once it is ready to connect. A number with Registration Lock asks for the PIN first.
  */
-export async function submitRegistrationProfile({ firstName, lastName, isDiscoverableByPhoneNumber }: {
-  firstName: string;
-  lastName?: string;
-  isDiscoverableByPhoneNumber?: boolean;
-}) {
+export async function submitRegistrationProfile(profile: RegistrationProfile) {
   let completedAccount: AccountRecord | undefined;
   await runStep('authorizationStateWaitRegistration', async () => {
-    // A resumed registration keeps the discoverability it was created with
-    state.account ??= await registerAccount(store, {
-      number: state.number!,
-      sessionId: state.session!.id,
-      isDiscoverableByPhoneNumber: Boolean(isDiscoverableByPhoneNumber),
-    });
-    completedAccount = await completeRegistration(store, state.account, {
-      givenName: firstName.trim(),
-      familyName: lastName?.trim() || undefined,
-    });
+    try {
+      // A resumed registration keeps the discoverability it was created with
+      state.account ??= await registerAccount(store, {
+        number: state.number!,
+        sessionId: state.session!.id,
+        isDiscoverableByPhoneNumber: Boolean(profile.isDiscoverableByPhoneNumber),
+      });
+    } catch (err) {
+      if (!(err instanceof RegistrationLockError) || !err.svr2Credentials) throw err;
+      state.registrationLock = {
+        profile,
+        svr2Credentials: err.svr2Credentials,
+        expiresAt: err.timeRemaining !== undefined ? Date.now() + err.timeRemaining : undefined,
+      };
+      return () => sendAuthState('authorizationStateWaitPassword');
+    }
+    completedAccount = await completeProfile(state.account, profile);
     return () => resetRegistration();
   });
   return completedAccount;
+}
+
+/**
+ * Restores the master key of a locked number with its PIN and creates the account with the lock's token, as Signal
+ * Desktop `standaloneInstaller` `verifyPIN` and Signal Android `SvrRepository.restoreMasterKeyPreRegistration`.
+ * Storing the key again afterwards resets the guess count (Signal Android `ResetSvrGuessCountJob`).
+ */
+export async function submitRegistrationPin(pin: string) {
+  let completedAccount: AccountRecord | undefined;
+  await runStep('authorizationStateWaitPassword', async () => {
+    const { profile, svr2Credentials } = state.registrationLock!;
+    const { masterKey } = await restoreMasterKey(svr2Credentials, pin);
+    state.account = await registerAccount(store, {
+      number: state.number!,
+      sessionId: state.session!.id,
+      isDiscoverableByPhoneNumber: Boolean(profile.isDiscoverableByPhoneNumber),
+      masterKey,
+    });
+    backupMasterKey(svr2Credentials, pin, masterKey).catch(logError);
+    completedAccount = await completeProfile(state.account, profile);
+    return () => resetRegistration();
+  });
+  return completedAccount;
+}
+
+function completeProfile(account: AccountRecord, { firstName, lastName }: RegistrationProfile) {
+  return completeRegistration(store, account, {
+    givenName: firstName.trim(),
+    familyName: lastName?.trim() || undefined,
+  });
 }
 
 /** Moves to the step the session asks for; a session that allows a code request gets an SMS code right away */
@@ -163,6 +213,10 @@ async function runStep(screen: ApiUpdateAuthorizationStateType, step: () => Prom
 }
 
 function showError(screen: ApiUpdateAuthorizationStateType, err: unknown) {
+  if (err instanceof SvrError) {
+    showPinError(err);
+    return;
+  }
   if (!(err instanceof RegistrationError)) {
     logError(err);
     sendAuthState(screen);
@@ -212,9 +266,8 @@ function showError(screen: ApiUpdateAuthorizationStateType, err: unknown) {
       sendAuthError({ key: err.isPermanent ? 'SignalCodeErrorNoCode' : 'SignalCodeErrorUndeliverable' });
       break;
     case 'registrationLock':
-      resetRegistration();
-      sendAuthState('authorizationStateWaitPhoneNumber');
-      sendAuthError({ key: 'SignalRegisterErrorRegLock' });
+      // The lock has no SVR2 data, or the PIN did not unlock it: only its expiry helps
+      showLockedError(err instanceof RegistrationLockError ? err.timeRemaining : undefined);
       break;
     case 'rejected':
       sendScreen(screen);
@@ -225,6 +278,35 @@ function showError(screen: ApiUpdateAuthorizationStateType, err: unknown) {
       sendAuthError({ key: 'SignalRegisterErrorNetwork' });
       break;
   }
+}
+
+function showPinError(err: SvrError) {
+  if (err.reason === 'pinMismatch' && err.triesRemaining) {
+    sendAuthState('authorizationStateWaitPassword');
+    sendAuthError({
+      key: 'SignalPinErrorIncorrect',
+      variables: { count: err.triesRemaining },
+      options: { pluralValue: err.triesRemaining },
+    });
+    return;
+  }
+  if (err.reason === 'rateLimited' || err.reason === 'protocolError') {
+    sendAuthState('authorizationStateWaitPassword');
+    sendAuthError({ key: err.reason === 'rateLimited' ? 'SignalPinErrorRateLimited' : 'ErrorUnexpected' });
+    return;
+  }
+  // No guesses are left, so SVR2 deleted the data
+  const expiresAt = state.registrationLock?.expiresAt;
+  showLockedError(expiresAt !== undefined ? Math.max(0, expiresAt - Date.now()) : undefined);
+}
+
+function showLockedError(timeRemaining?: number) {
+  const days = Math.max(1, Math.ceil((timeRemaining ?? 0) / MS_IN_DAY));
+  resetRegistration();
+  sendAuthState('authorizationStateWaitPhoneNumber');
+  sendAuthError(timeRemaining !== undefined
+    ? { key: 'SignalPinErrorLocked', variables: { count: days }, options: { pluralValue: days } }
+    : { key: 'SignalPinErrorLockedNoTime' });
 }
 
 function sendScreen(screen: ApiUpdateAuthorizationStateType) {

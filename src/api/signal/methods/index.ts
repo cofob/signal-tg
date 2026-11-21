@@ -1,6 +1,7 @@
 export {
   provideAuthCaptcha,
   provideAuthCode,
+  provideAuthPassword,
   provideAuthPhoneNumber,
   provideAuthRegistration,
   requestAuthCode,
@@ -14,6 +15,7 @@ export {
   fetchChats,
   fetchFullChat,
   fetchPeerSettings,
+  getChatByPhoneNumber,
   hidePeerSettingsBar,
   requestChatUpdate,
   searchChats,
@@ -51,6 +53,9 @@ export {
   updateChatTitle,
 } from './groups';
 export { downloadMedia } from './media';
+export {
+  fetchSignalPinSettings, removeSignalPin, setSignalPin, setSignalRegistrationLock,
+} from './pin';
 export {
   closePoll,
   deleteMessages,

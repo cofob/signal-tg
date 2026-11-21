@@ -30,6 +30,7 @@ import type {
   ApiReaction,
   ApiRichMessage,
   ApiSessionData,
+  ApiSignalPinSettings,
   ApiSticker,
   ApiStickerSet,
   ApiStory,
@@ -174,6 +175,8 @@ export interface AccountSettings {
   shouldUpdateStickerSetOrder: boolean;
   lastRecordMessageMode?: 'voice' | 'video';
   hasPassword?: boolean;
+  // Registered primary devices only
+  signalPin?: ApiSignalPinSettings;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;
@@ -295,6 +298,9 @@ export enum SettingsScreens {
   Passkeys,
   KeyboardShortcuts,
   SignalProxy,
+  SignalPin,
+  SignalPinNew,
+  SignalPinConfirm,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (

@@ -92,6 +92,10 @@ const SettingsHeader = ({
         return <h3>{lang('DataSettings')}</h3>;
       case SettingsScreens.SignalProxy:
         return <h3>{lang('SignalProxyTitle')}</h3>;
+      case SettingsScreens.SignalPin:
+      case SettingsScreens.SignalPinNew:
+      case SettingsScreens.SignalPinConfirm:
+        return <h3>{lang('SignalPinSettings')}</h3>;
       case SettingsScreens.Privacy:
         return <h3>{lang('PrivacySettings')}</h3>;
       case SettingsScreens.AutoDeleteMessages:
