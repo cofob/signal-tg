@@ -18,6 +18,9 @@ import MTProtoMessagePort from '@lib/mainWorker/mainMessagePort';
 import DeferredIsUsingPasscode from '@lib/passcode/deferredIsUsingPasscode';
 
 
+// * the keys of Web A (`tt-` and the account slots that both frontends share), which Web K's `clear` leaves
+const SHARED_ORIGIN_KEY_RE = /^(tt-|account\d+$)/;
+
 export class LocalStorage<Storage extends Record<string, any>> {
   private prefix = '';
   private cache: Partial<Storage> = {};
@@ -124,7 +127,12 @@ export class LocalStorage<Storage extends Record<string, any>> {
         });
       }
 
-      localStorage.clear();
+      // * TeleSignal: the origin is Web A's too (`/a/`), whose keys stay
+      for(const key of Object.keys(localStorage)) {
+        if(!SHARED_ORIGIN_KEY_RE.test(key)) {
+          localStorage.removeItem(key);
+        }
+      }
 
       if(preserveKeys?.length) {
         this.set(obj);
