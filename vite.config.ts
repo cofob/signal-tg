@@ -255,19 +255,23 @@ export default defineConfig(({ command, mode }): UserConfig => {
   };
 });
 
-// The production root page (`dev/build.ts`) opens the default frontend, and so does the dev server
+// The production root page (`dev/build.ts`) and nginx open the default frontend, and so does the dev server
 function buildDevRootRedirectPlugin(): Plugin {
   return {
     name: 'dev-root-redirect',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url !== '/' && !req.url?.startsWith('/?')) {
+        const [pathname, query] = (req.url || '').split(/(?=\?)/);
+        // `/` opens the default frontend, and `/a` and `/k` their directories, with the query, as nginx does
+        const location = pathname === '/' ? `/${DEFAULT_FRONTEND_PATH}`
+          : (pathname === WEB_A_PATH.slice(0, -1) || pathname === WEB_K_PATH.slice(0, -1) ? `${pathname}/` : undefined);
+        if (!location) {
           next();
           return;
         }
 
         res.statusCode = 302;
-        res.setHeader('Location', `/${DEFAULT_FRONTEND_PATH}${req.url.slice(1)}`);
+        res.setHeader('Location', `${location}${query || ''}`);
         res.end();
       });
     },
