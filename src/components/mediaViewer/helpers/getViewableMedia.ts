@@ -169,7 +169,8 @@ export default function selectViewableMedia(
     }
   }
 
-  const media = video || photo;
+  const albumItem = params.message.content.album?.items[params.mediaIndex || 0];
+  const media = albumItem ? albumItem.video || albumItem.photo : video || photo;
 
   if (media) {
     return {

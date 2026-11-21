@@ -32,7 +32,7 @@ import type { StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
-import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
 import {
@@ -51,16 +51,20 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStickerPackSync,
   sendTyping,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
+import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
   ACCOUNT_KEY,
   buildStorageWrite,
   getAci,
   getMutedUntil,
+  getStickerPackStorageKey,
   getStorageChanges,
   mergeStorageChanges,
   omitChangedFields,
@@ -80,6 +84,7 @@ import {
   ReceiptMessage_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
+  SyncMessage_StickerPackOperation_Type,
   TypingMessage_Action,
 } from '../proto/generated/SignalService_pb';
 import { ManifestRecordSchema, StorageRecordSchema } from '../proto/generated/StorageService_pb';
@@ -121,7 +126,11 @@ type MessageProcessorEvents = {
   onChanges(changes: MessageChanges): void;
   onTyping(event: TypingEvent): void;
   onError(error: Error): void;
+  // Ids of sticker packs installed or removed here or on another device
+  onStickerPacksChange?(ids: string[]): void;
 };
+
+type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
 
 type MessageSource = {
   authorAci: string;
@@ -773,6 +782,7 @@ export default class MessageProcessor {
         records,
         changes,
         conversations: await this.db.getConversations(),
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
         profileKeys,
         selfAci: account.aci,
         deviceId: account.deviceId,
@@ -800,6 +810,20 @@ export default class MessageProcessor {
     return this.runSerial(async () => {
       const conversation = await this.db.getConversation(id);
       return conversation && this.putLocalConversation(conversation, { ...conversation, ...update });
+    });
+  }
+
+  /**
+   * Installs or removes a sticker pack on this device. Other devices learn it from a `stickerPackOperation` sync and
+   * the pack's storage service record (Signal Desktop `installStickerPack` in `ts/state/ducks/stickers.preload.ts`).
+   */
+  async setStickerPackInstalled(id: string, key: string, isInstalled: boolean) {
+    await this.runSerial(async () => {
+      await this.applyStickerPackState(id, key, isInstalled ? { isInstalled: true } : { uninstalledAt: Date.now() });
+      await this.markStorageChanges({ [getStickerPackStorageKey(id)]: ['stickerPack'] });
+    });
+    await this.sendWhenConnected(async (context) => {
+      await sendStickerPackSync(context, [{ id, key, isInstalled }]);
     });
   }
 
@@ -1008,6 +1032,16 @@ export default class MessageProcessor {
           isTypingIndicatorsEnabled: accountRecord.typingIndicators,
           isLinkPreviewsEnabled: accountRecord.linkPreviews,
         });
+      } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
+        // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
+        const { packId, packKey, position, deletedAtTimestamp } = record.value;
+        const id = bufferToHex(packId);
+        if (changes[getStickerPackStorageKey(id)]) continue;
+        await this.applyStickerPackState(
+          id,
+          packKey.length ? bufferToHex(packKey) : undefined,
+          deletedAtTimestamp ? { uninstalledAt: Number(deletedAtTimestamp) } : { isInstalled: true, position },
+        );
       }
     }
 
@@ -1018,6 +1052,34 @@ export default class MessageProcessor {
       const pinIndex = pinIndexById.get(conversation.id);
       if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
     }
+  }
+
+  /**
+   * Stores whether a sticker pack is installed. A pack installed without a position goes after the others; a removal
+   * of a pack this device never had needs no record.
+   */
+  private async applyStickerPackState(id: string, key: string | undefined, state: StickerPackState) {
+    const { store } = this.client;
+    const packs = await store.getItem('stickerPacks') ?? {};
+    const current = packs[id];
+    const packKey = key ?? current?.key;
+    if (!packKey || !getIsStickerPackValid(id, packKey)) return;
+
+    const wasInstalled = current?.installedAt !== undefined;
+    if ('isInstalled' in state) {
+      if (wasInstalled && (state.position === undefined || state.position === current.position)) return;
+      packs[id] = {
+        id,
+        key: packKey,
+        installedAt: current?.installedAt ?? Date.now(),
+        position: state.position ?? current?.position ?? getNextStickerPackPosition(Object.values(packs)),
+      };
+    } else {
+      if (!wasInstalled) return;
+      packs[id] = { id, key: packKey, uninstalledAt: state.uninstalledAt };
+    }
+    await store.setItem('stickerPacks', packs);
+    this.events.onStickerPacksChange?.([id]);
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1258,6 +1320,13 @@ export default class MessageProcessor {
         viewed.senderAci || uuidToString(viewed.senderAciBinary), Number(viewed.timestamp),
       );
       if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
+    }
+    for (const { packId, packKey, type } of sync.stickerPackOperation) {
+      await this.applyStickerPackState(
+        bufferToHex(packId),
+        bufferToHex(packKey),
+        type === SyncMessage_StickerPackOperation_Type.REMOVE ? { uninstalledAt: Date.now() } : { isInstalled: true },
+      );
     }
 
     const { content } = sync;

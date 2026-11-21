@@ -749,7 +749,6 @@ export interface LangPair {
   'SettingsPerformanceAutoplayGif': undefined;
   'SettingsPerformanceAutoplayVideo': undefined;
   'SettingsPerformanceGranularTitle': undefined;
-  'FavoriteStickers': undefined;
   'GroupStickers': undefined;
   'ErrorSendRestrictedStickersAll': undefined;
   'ErrorPhoneNumberInvalid': undefined;
@@ -1058,8 +1057,7 @@ export interface LangPair {
   'StickerSearchResult': undefined;
   'StickerSearchGlobalResult': undefined;
   'NoStickersFound': undefined;
-  'TrendingStickers': undefined;
-  'TrendingPremiumStickers': undefined;
+  'StickersArtistSeries': undefined;
   'AccDescrCloseTrendingStickers': undefined;
   'SearchGifsTitle': undefined;
   'SharedMedia': undefined;

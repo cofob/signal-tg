@@ -5,10 +5,17 @@ import type MessageDb from '../db/MessageDb';
 import type { ConversationRecord, NewMessageRecord } from '../db/MessageDb';
 import type SignalStore from '../store/SignalStore';
 
+import { bufferFromHex } from '../../../util/encoding/buffer';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
+import { fetchStickerImage, getKnownStickerPacks } from '../stickers/stickerPacks';
 
-import { AttachmentPointerSchema, BodyRange_Style, DataMessageSchema } from '../proto/generated/SignalService_pb';
+import {
+  AttachmentPointerSchema,
+  BodyRange_Style,
+  DataMessage_Contact_Phone_Type,
+  DataMessageSchema,
+} from '../proto/generated/SignalService_pb';
 
 const MINUTE = 60 * 1000;
 const PHOTO_WIDTH = 1280;
@@ -19,6 +26,10 @@ const TRAIL_WIDTH = 24;
 const TRAIL_POINTS = [[0.1, 0.85], [0.35, 0.45], [0.6, 0.7], [0.9, 0.15]];
 const SUN_RADIUS = 120;
 const SUN_CENTER_Y = 0.7 * PHOTO_HEIGHT;
+const LAKE_TOP = 0.55 * PHOTO_HEIGHT;
+// Zozo the French Bulldog, from Signal's artist series
+const DEMO_STICKER_PACK_INDEX = 2;
+const DEMO_STICKER_ID = 0;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -36,6 +47,13 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
 
   const trailPhoto = await createDemoPhoto('demo-photo', drawTrailMap);
   const viewOncePhoto = await createDemoPhoto('demo-view-once-photo', drawSunset);
+  const albumPhotos = [
+    await createDemoPhoto('demo-album-trail', drawTrailMap),
+    await createDemoPhoto('demo-album-sunset', drawSunset),
+    await createDemoPhoto('demo-album-lake', drawLake),
+  ];
+  const previewPhoto = await createDemoPhoto('demo-preview', drawLake);
+  const sticker = await createDemoSticker();
 
   const me = crypto.randomUUID();
   const alice = crypto.randomUUID();
@@ -196,9 +214,49 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       readAt: now - 44 * MINUTE,
       dataMessage: { isViewOnce: true, attachments: [viewOncePhoto] },
     }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 40 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 39 * MINUTE,
+      dataMessage: { body: 'Photos from our last trip', attachments: albumPhotos },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 38 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 37 * MINUTE,
+      ...sticker,
+    }],
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },
       dataMessage: { body: 'Found you by username 👋' },
+    }],
+    [bobChat, {
+      authorAci: bob,
+      sentAt: now - 295 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      dataMessage: {
+        contact: [{
+          name: { givenName: 'Alice', familyName: 'Johnson' },
+          number: [{ value: '+15550100001', type: DataMessage_Contact_Phone_Type.MOBILE }],
+        }],
+      },
+    }],
+    [bobChat, {
+      authorAci: bob,
+      sentAt: now - 294 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      dataMessage: {
+        contact: [{
+          name: { givenName: 'Grace', familyName: 'Hopper' },
+          number: [{ value: '+15550109999', type: DataMessage_Contact_Phone_Type.HOME }],
+          email: [{ value: 'grace@example.com' }],
+          organization: 'Navy',
+        }],
+      },
     }],
     [bobChat, {
       authorAci: bob,
@@ -219,7 +277,22 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       authorAci: carol, sentAt: now - 20 * MINUTE, isOutgoing: false, dataMessage: { body: 'Did you see the photos?' },
     }],
     [carolChat, {
-      authorAci: carol, sentAt: now - 19 * MINUTE, isOutgoing: false, dataMessage: { body: 'Call me when you can' },
+      authorAci: carol,
+      sentAt: now - 19 * MINUTE,
+      isOutgoing: false,
+      dataMessage: {
+        body: 'Trail guide: https://example.com/trails/lake',
+        preview: [{
+          url: 'https://example.com/trails/lake',
+          title: 'Lake loop trail',
+          description: 'A 6 km loop around the lake with a picnic area halfway',
+          image: previewPhoto,
+          date: BigInt(now - 3 * 24 * 60 * MINUTE),
+        }],
+      },
+    }],
+    [carolChat, {
+      authorAci: carol, sentAt: now - 18 * MINUTE, isOutgoing: false, dataMessage: { body: 'Call me when you can' },
     }],
     [daveChat, {
       authorAci: dave,
@@ -340,6 +413,31 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
   }
 }
 
+/**
+ * A sticker of Signal's artist series. Its image is downloaded from the sticker CDN now and cached as the attachment,
+ * so the message shows it without a connection; without the CDN it shows as unavailable.
+ */
+async function createDemoSticker(): Promise<Pick<DemoMessage, 'dataMessage' | 'isStickerUnavailable'>> {
+  const { id, key } = getKnownStickerPacks()[DEMO_STICKER_PACK_INDEX];
+  const blob = await fetchStickerImage(id, key, DEMO_STICKER_ID).catch(() => undefined);
+  const data = create(AttachmentPointerSchema, {
+    attachmentIdentifier: { case: 'cdnKey', value: 'demo-sticker' },
+    cdnNumber: 3,
+    contentType: blob?.type || 'image/webp',
+    key: getRandomBytes(64),
+    size: blob?.size ?? 0,
+  });
+  if (blob) await saveAttachmentBlob(data, blob);
+  return {
+    isStickerUnavailable: blob ? undefined : true,
+    dataMessage: {
+      sticker: {
+        packId: bufferFromHex(id), packKey: bufferFromHex(key), stickerId: DEMO_STICKER_ID, emoji: '✨', data,
+      },
+    },
+  };
+}
+
 /** A photo attachment whose bytes are cached, so it shows without a download */
 async function createDemoPhoto(cdnKey: string, draw: (context: OffscreenCanvasRenderingContext2D) => void) {
   const canvas = new OffscreenCanvas(PHOTO_WIDTH, PHOTO_HEIGHT);
@@ -371,6 +469,13 @@ function drawTrailMap(context: OffscreenCanvasRenderingContext2D) {
   context.beginPath();
   TRAIL_POINTS.forEach(([x, y]) => context.lineTo(x * PHOTO_WIDTH, y * PHOTO_HEIGHT));
   context.stroke();
+}
+
+function drawLake(context: OffscreenCanvasRenderingContext2D) {
+  context.fillStyle = '#9fd3f0';
+  context.fillRect(0, 0, PHOTO_WIDTH, LAKE_TOP);
+  context.fillStyle = '#2e7fb8';
+  context.fillRect(0, LAKE_TOP, PHOTO_WIDTH, PHOTO_HEIGHT - LAKE_TOP);
 }
 
 function drawSunset(context: OffscreenCanvasRenderingContext2D) {

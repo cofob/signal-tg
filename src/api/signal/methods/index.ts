@@ -81,5 +81,15 @@ export {
   updateNotificationSettings,
 } from './settings';
 export {
+  clearRecentStickers,
+  fetchFeaturedStickers,
+  fetchRecentStickers,
+  fetchStickers,
+  fetchStickerSets,
+  installStickerSet,
+  removeRecentSticker,
+  uninstallStickerSet,
+} from './stickers';
+export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
 } from './users';

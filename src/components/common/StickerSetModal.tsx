@@ -60,6 +60,7 @@ type StateProps = {
 };
 
 const INTERSECTION_THROTTLE = 200;
+const STICKER_PACK_LINK_PREFIX = 'https://signal.art/addstickers';
 
 const StickerSetModal = ({
   isOpen,
@@ -146,14 +147,13 @@ const StickerSetModal = ({
 
   const handleCopyLink = useCallback(() => {
     if (!renderingStickerSet) return;
-    const { shortName } = renderingStickerSet;
-    const suffix = isEmoji ? 'addemoji' : 'addstickers';
-    const url = `tg://${suffix}?set=${encodeURIComponent(shortName)}`;
-    copyTextToClipboard(url);
+    // Signal packs are shared by id and key (Signal Desktop `addStickersRoute` in `ts/util/signalRoutes.std.ts`)
+    const { id, accessHash } = renderingStickerSet;
+    copyTextToClipboard(`${STICKER_PACK_LINK_PREFIX}#pack_id=${id}&pack_key=${accessHash}`);
     showNotification({
       message: lang('LinkCopied'),
     });
-  }, [isEmoji, lang, renderingStickerSet, showNotification]);
+  }, [lang, renderingStickerSet, showNotification]);
 
   const renderButtonText = () => {
     if (!renderingStickerSet) return lang('Loading');

@@ -5,6 +5,7 @@ import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
+import { handleStickerPacksChange } from './updaters/stickers';
 
 /** The Signal engine of this worker: protocol store, message database, connections and processing */
 export const store = new SignalStore();
@@ -23,6 +24,7 @@ export const processor = new MessageProcessor(db, client, {
   },
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
+  onStickerPacksChange: (ids) => void handleStickerPacksChange(ids).catch(logError),
 });
 
 export const groups = new GroupManager(client, db, processor);

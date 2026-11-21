@@ -5,6 +5,7 @@ import type { ApiContact, ApiCountryCode, ApiUser } from '../../../api/types';
 import { getCanAddContact, getUserFullName } from '../../../global/helpers';
 import { selectUser } from '../../../global/selectors';
 import { copyTextToClipboard } from '../../../util/clipboard';
+import download from '../../../util/download';
 import { formatPhoneNumberWithCode } from '../../../util/phoneNumber';
 
 import useLang from '../../../hooks/useLang';
@@ -27,6 +28,9 @@ type StateProps = {
 };
 
 const UNREGISTERED_CONTACT_ID = '0';
+const VCARD_MIME_TYPE = 'text/vcard';
+// The download starts after a short delay, see `download`
+const VCARD_URL_LIFETIME_MS = 60 * 1000;
 
 const Contact = ({
   contact, user, phoneCodeList, noUserColors,
@@ -36,16 +40,24 @@ const Contact = ({
   } = getActions();
   const lang = useLang();
 
-  const { phoneNumber, userId } = contact;
+  const { phoneNumber, userId, vcard } = contact;
   const isRegistered = userId !== UNREGISTERED_CONTACT_ID;
-  const canAddContact = isRegistered && user && getCanAddContact(user);
+  // Signal has no contact list on the server: a shared contact is saved as a vCard instead
+  const canAddContact = Boolean(vcard) || (isRegistered && user && getCanAddContact(user));
 
   const handleOpenChat = useLastCallback(() => {
     openChat({ id: userId });
   });
 
   const handleAddContact = useLastCallback(() => {
-    openAddContactDialog({ userId: user?.id });
+    if (!vcard) {
+      openAddContactDialog({ userId: user?.id });
+      return;
+    }
+
+    const url = URL.createObjectURL(new Blob([vcard], { type: VCARD_MIME_TYPE }));
+    download(url, `${getContactName(contact) || phoneNumber}.vcf`);
+    setTimeout(() => URL.revokeObjectURL(url), VCARD_URL_LIFETIME_MS);
   });
 
   const handleClick = useLastCallback(() => {
@@ -80,20 +92,22 @@ const Contact = ({
           </div>
         </div>
       </div>
-      {isRegistered && (
+      {(isRegistered || canAddContact) && (
         <>
           <div className={styles.divider} />
           <div className={styles.buttons}>
-            <Button
-              isText
-              color="translucent"
-              ripple
-              size="tiny"
-              onClick={handleOpenChat}
-              className={styles.button}
-            >
-              {lang('Message')}
-            </Button>
+            {isRegistered && (
+              <Button
+                isText
+                color="translucent"
+                ripple
+                size="tiny"
+                onClick={handleOpenChat}
+                className={styles.button}
+              >
+                {lang('Message')}
+              </Button>
+            )}
             {canAddContact && (
               <Button
                 isText

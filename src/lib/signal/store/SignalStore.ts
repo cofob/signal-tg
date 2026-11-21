@@ -1,3 +1,4 @@
+import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 
 import { IdbStore } from '../../../util/browser/idb';
@@ -86,6 +87,10 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
+  stickerPacks: Record<string, StickerPackRecord>;
+  // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
+  recentStickers: string[];
 };
 
 export type NotificationDefaults = {
@@ -293,6 +298,15 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Decrypted manifests of sticker packs by hex pack id; they never change, so they are kept for any pack seen */
+  getStickerPackManifest(id: string) {
+    return this.db.get<StickerPackManifest>(`stickerPackManifest:${id}`);
+  }
+
+  setStickerPackManifest(id: string, manifest: StickerPackManifest) {
+    return this.db.set(`stickerPackManifest:${id}`, manifest);
   }
 
   /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */

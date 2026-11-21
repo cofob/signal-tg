@@ -2,20 +2,28 @@ import type { MessageRecord } from '../../../lib/signal/db/MessageDb';
 import type {
   AttachmentPointer, DataMessage, DataMessage_Contact, DataMessage_Sticker,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
-import type { ApiContact, ApiSticker, ApiThumbnail, MediaContent } from '../../types';
+import type {
+  ApiContact, ApiSticker, ApiThumbnail, ApiWebPageFull, MediaContent,
+} from '../../types';
 
 import {
   SUPPORTED_AUDIO_CONTENT_TYPES, SUPPORTED_PHOTO_CONTENT_TYPES, SUPPORTED_VIDEO_CONTENT_TYPES,
 } from '../../../config';
 import { LONG_TEXT_CONTENT_TYPE } from '../../../lib/signal/messages/MessageProcessor';
 import { AttachmentPointer_Flags } from '../../../lib/signal/proto/generated/SignalService_pb';
+import { getIsStickerPackValid } from '../../../lib/signal/stickers/stickerPackLinks';
+import { bufferToHex } from '../../../util/encoding/buffer';
 import { getBlurHashDataUri } from '../media/blurHash';
+import { STICKER_SIZE } from './stickers';
 
 export const STICKER_SLOT = 's';
+// The image of the message's link preview
+export const PREVIEW_SLOT = 'p';
 
-type AttachmentSlot = number | typeof STICKER_SLOT;
+type AttachmentSlot = number | typeof STICKER_SLOT | typeof PREVIEW_SLOT;
 
-const MEDIA_ID_REGEX = /^(\d+)_(\d+|s)$/;
+const MEDIA_ID_REGEX = /^(\d+)_(\d+|s|p)$/;
+const HTTPS_PREFIX = 'https://';
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 const PHOTO_CONTENT_TYPES = new Set([...SUPPORTED_PHOTO_CONTENT_TYPES, 'image/webp']);
 // Signal Desktop `getFileExtension` in `ts/util/Attachment.std.ts`
@@ -28,11 +36,15 @@ const MS_PER_SECOND = 1000;
 const DATE_PART_LENGTH = 2;
 const MILLISECONDS_LENGTH = 3;
 const FILE_INDEX_LENGTH = 3;
-// Signal stickers are 512 × 512 pixels
-const STICKER_SIZE = 512;
 // `Contact` offers no chat for this id
 const UNREGISTERED_CONTACT_ID = '0';
 const NON_DIGIT_REGEX = /\D/g;
+const VCARD_SPECIAL_CHARACTERS_REGEX = /[\\,;]/g;
+const NEW_LINE_REGEX = /\r?\n/g;
+// vCard `TYPE`s of `DataMessage.Contact.Phone.Type`, `Email.Type` and `PostalAddress.Type`; custom ones have none
+const VCARD_PHONE_TYPES: Record<number, string> = { 1: 'HOME', 2: 'CELL', 3: 'WORK' };
+const VCARD_EMAIL_TYPES: Record<number, string> = { 1: 'HOME', 3: 'WORK' };
+const VCARD_ADDRESS_TYPES: Record<number, string> = { 1: 'HOME', 2: 'WORK' };
 // Signal waveforms have a byte per bar; the app packs 5-bit bars
 const BITS_PER_BYTE = 8;
 const WAVEFORM_BAR_BITS = 5;
@@ -46,10 +58,19 @@ export function buildMessageMedia(message: MessageRecord, dataMessage: DataMessa
   const { sticker, attachments, contact } = dataMessage;
   if (sticker?.data) return { sticker: buildSticker(message, sticker, sticker.data) };
 
-  // An app message holds one media item, so the first attachment stands for the others.
-  // A long text attachment holds the body, not media.
-  const index = attachments.findIndex(({ contentType }) => getMimeType(contentType) !== LONG_TEXT_CONTENT_TYPE);
-  if (index !== -1) return buildAttachmentMedia(message, attachments[index], index);
+  // Several photos and videos show as an album. Otherwise an app message holds one media item, so the first
+  // attachment stands for the others. A long text attachment holds the body, not media.
+  const media = attachments.map((pointer, index) => (
+    getMimeType(pointer.contentType) !== LONG_TEXT_CONTENT_TYPE
+      ? buildAttachmentMedia(message, pointer, index)
+      : undefined
+  ));
+  const albumItems = media.filter((item): item is Pick<MediaContent, 'photo' | 'video'> => Boolean(
+    item && (item.photo || (item.video && !item.video.isGif)),
+  ));
+  if (albumItems.length > 1) return { ...albumItems[0], album: { mediaType: 'album', items: albumItems } };
+  const first = media.find(Boolean);
+  if (first) return first;
 
   return contact.length ? { contact: buildContact(contact[0]) } : {};
 }
@@ -59,7 +80,10 @@ export function parseAttachmentMediaId(mediaId: string): { messageId: number; sl
   const match = mediaId.match(MEDIA_ID_REGEX);
   if (!match) return undefined;
   const [, messageId, slot] = match;
-  return { messageId: Number(messageId), slot: slot === STICKER_SLOT ? STICKER_SLOT : Number(slot) };
+  return {
+    messageId: Number(messageId),
+    slot: slot === STICKER_SLOT || slot === PREVIEW_SLOT ? slot : Number(slot),
+  };
 }
 
 function buildAttachmentMediaId(messageId: number, slot: AttachmentSlot) {
@@ -137,32 +161,100 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
   };
 }
 
+/** A sticker shows from its attachment; its pack opens from the pack id and key it names */
 function buildSticker(message: MessageRecord, sticker: DataMessage_Sticker, data: AttachmentPointer): ApiSticker {
+  const packId = bufferToHex(sticker.packId);
+  const packKey = bufferToHex(sticker.packKey);
   return {
     mediaType: 'sticker',
     id: buildAttachmentMediaId(message.id, STICKER_SLOT),
-    // Sticker packs are not supported yet, so the sticker shows without its pack
-    stickerSetInfo: { isMissing: true },
+    stickerSetInfo: getIsStickerPackValid(packId, packKey) ? { id: packId, accessHash: packKey } : { isMissing: true },
     emoji: sticker.emoji || undefined,
     isLottie: false,
     isVideo: false,
     width: data.width || STICKER_SIZE,
     height: data.height || STICKER_SIZE,
+    isFree: true,
     isUnavailable: message.isStickerUnavailable,
   };
 }
 
-function buildContact({
-  name, number, email, organization,
-}: DataMessage_Contact): ApiContact {
+/**
+ * The link preview of a message as the app's web page. As Signal Desktop does (`ts/linkPreviews/`), a preview shows
+ * only for an `https:` link that the text contains.
+ */
+export function buildWebPage(message: MessageRecord, { body, preview }: DataMessage): ApiWebPageFull | undefined {
+  const [first] = preview;
+  if (!first?.url.startsWith(HTTPS_PREFIX) || !body.includes(first.url)) return undefined;
+
+  const {
+    url, title, description, image,
+  } = first;
+  const { hostname, pathname } = new URL(url);
+  return {
+    mediaType: 'webpage',
+    webpageType: 'full',
+    id: String(message.id),
+    url,
+    hash: 0,
+    displayUrl: `${hostname}${pathname === '/' ? '' : pathname}`,
+    siteName: hostname,
+    title: title || undefined,
+    description: description || undefined,
+    photo: image?.contentType.startsWith('image/') ? {
+      mediaType: 'photo',
+      id: buildAttachmentMediaId(message.id, PREVIEW_SLOT),
+      date: Math.floor(Number(first.date || message.sentAt) / MS_PER_SECOND),
+      thumbnail: buildThumbnail(image),
+      sizes: image.width && image.height ? [{ type: 'x', width: image.width, height: image.height }] : [],
+    } : undefined,
+  };
+}
+
+/** A shared contact; `buildApiMessageWithPoll` resolves its user, which needs the database */
+function buildContact(contact: DataMessage_Contact): ApiContact {
+  const {
+    name, number, email, organization,
+  } = contact;
   return {
     mediaType: 'contact',
     firstName: name?.givenName || name?.nickname || organization || email[0]?.value || '',
     lastName: name?.familyName ?? '',
     phoneNumber: number[0]?.value.replace(NON_DIGIT_REGEX, '') ?? '',
-    // Shared contacts carry an ACI only sometimes, and resolving it to a user needs the database
     userId: UNREGISTERED_CONTACT_ID,
+    vcard: buildVcard(contact),
   };
+}
+
+/**
+ * A vCard 3.0 of a shared contact with its names, numbers, emails, addresses and organization (Signal Android
+ * `VCardUtil`): the browser counterpart of adding it to the phone's contacts
+ */
+function buildVcard({
+  name, number, email, address, organization,
+}: DataMessage_Contact) {
+  const fullName = [name?.prefix, name?.givenName, name?.middleName, name?.familyName, name?.suffix]
+    .filter(Boolean).join(' ') || name?.nickname || organization || '';
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${escapeVcardValue(fullName)}`,
+    `N:${[name?.familyName, name?.givenName, name?.middleName, name?.prefix, name?.suffix]
+      .map((part) => escapeVcardValue(part ?? '')).join(';')}`,
+    name?.nickname && `NICKNAME:${escapeVcardValue(name.nickname)}`,
+    organization && `ORG:${escapeVcardValue(organization)}`,
+    ...number.map(({ value, type }) => `TEL;TYPE=${VCARD_PHONE_TYPES[type] ?? 'VOICE'}:${escapeVcardValue(value)}`),
+    ...email.map(({ value, type }) => `EMAIL;TYPE=${VCARD_EMAIL_TYPES[type] ?? 'INTERNET'}:${escapeVcardValue(value)}`),
+    ...address.map((item) => `ADR${VCARD_ADDRESS_TYPES[item.type] ? `;TYPE=${VCARD_ADDRESS_TYPES[item.type]}` : ''}:${[
+      item.pobox, '', item.street, item.city, item.region, item.postcode, item.country,
+    ].map((part) => escapeVcardValue(part ?? '')).join(';')}`),
+    'END:VCARD',
+  ];
+  return lines.filter(Boolean).join('\r\n');
+}
+
+function escapeVcardValue(value: string) {
+  return value.replace(VCARD_SPECIAL_CHARACTERS_REGEX, '\\$&').replace(NEW_LINE_REGEX, '\\n');
 }
 
 /** The BlurHash as a thumbnail; its size is the media size, which layouts read before the media loads */
