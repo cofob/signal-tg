@@ -82,3 +82,12 @@ each caller to find this out.
 ## The API connector drops `destroy` and `reconnectNow` while the engine is not started
 
 `NO_QUEUE_BEFORE_INIT` in `src/api/worker/connector.ts` makes `callApi` and `callApiLocal` resolve these two calls to `undefined` when the worker is not initialized, which is the case on the lock screen of a passcode and in the first seconds after a load. That suited GramJS, which had nothing at rest in the worker. The Signal engine keeps the account, keys and messages in IndexedDB and the Cache API, so a `destroy` that never arrives leaves them (reproduced in Chrome on the demo account; the logout actions now clear the stores from the page with `clearSignalLocalData()`, see S-01 in `docs/signal/SECURITY.md`). A new method that has to act on the stores without a started engine needs the same page-side route, and nothing in the connector says so; whether `destroy` should start the worker and run, or the stores' clearing should be reachable from the page only, is undecided.
+
+## Five npm dependencies come from GitHub, so every install needs `git` and GitHub access
+
+`package.json` pins `opus-recorder`, `emoji-data-ios`, `eslint-plugin-react-hooks-static-deps`, `eslint-plugin-tt-multitab`
+and `@mytonwallet/stylelint-whole-pixel` as `github:` references (`.npmrc` sets `allow-git=root` for them). Verified with
+the container build (`Dockerfile`): `npm ci` fails on a machine without GitHub access or, in a plain `node` Alpine image,
+without `git`, and fetching them took most of the two minutes that the install needs. A registry copy or a vendored
+tarball would make installs hermetic and let the image build run offline from a registry mirror. The two ESLint and one
+Stylelint plugins are needed by checks only, which the image build does not run, but `npm ci` installs them all.

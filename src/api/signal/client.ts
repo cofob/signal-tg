@@ -1,6 +1,6 @@
 import type { HistoryTransferProgress } from '../../lib/signal/backups/transferHistory';
 import type { AccountRecord } from '../../lib/signal/store/SignalStore';
-import type { ApiInitialArgs, ApiSessionData } from '../types';
+import type { ApiInitialArgs, ApiSessionData, ApiUpdateDeviceDeauthorized } from '../types';
 
 import { DEBUG } from '../../config';
 import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
@@ -29,10 +29,10 @@ const LINK_RETRY_DELAY_MS = 3000;
 const RECONNECT_MIN_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 60 * 1000;
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
-const PRIMARY_UNAUTHORIZED_ERROR = 'SIGNAL_PRIMARY_UNAUTHORIZED';
 const SIGNAL_SESSION_DATA: ApiSessionData = { isLinked: true };
 
 let currentAccount: AccountRecord | undefined;
@@ -50,6 +50,8 @@ let isReconnectPending = false;
 // Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
 let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
+// Why the server stopped accepting this device, until the link screen of the next start tells the user
+let pendingDeauthorization: ApiUpdateDeviceDeauthorized['reason'] | undefined;
 
 /**
  * Connects the stored account, or shows the link QR code until the phone scans it; registration with a phone
@@ -73,6 +75,12 @@ export async function startClient(args: ApiInitialArgs) {
   if (account) {
     await startSession(account);
     return;
+  }
+  // A registration that cannot be resumed yet keeps its keys, and with them the slot's data
+  if (!await store.getItem('pendingRegistration')) {
+    await discardOrphanedData();
+    // Only here the engine knows that the storage was read and holds no account
+    sendApiUpdate({ '@type': 'updateStaleSession' });
   }
   void runDeviceLink(args.platform).catch(logError);
 }
@@ -163,11 +171,17 @@ async function runDeviceLink(platform?: string) {
     }
     linkSession = session;
 
+    // The app resets its state while it logs out, which can happen after the first update of this loop
+    sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
     sendApiUpdate({
       '@type': 'updateAuthorizationState',
       authorizationState: 'authorizationStateWaitQrCode',
       qrCode: { token: linkSession.url, expires: Math.floor(Date.now() / 1000) + LINK_QR_LIFETIME_S },
     });
+    if (pendingDeauthorization) {
+      sendApiUpdate({ '@type': 'updateDeviceDeauthorized', reason: pendingDeauthorization });
+      pendingDeauthorization = undefined;
+    }
 
     let message;
     try {
@@ -186,8 +200,6 @@ async function runDeviceLink(platform?: string) {
 
 /** Shows the account's chats and connects it; registration calls it once the new account is complete */
 export async function startSession(storedAccount: AccountRecord) {
-  await discardMessagesOfOtherAccount(storedAccount);
-
   let account = storedAccount;
   currentAccount = account;
   let hasHistoryTransferFailed = false;
@@ -228,16 +240,15 @@ export async function startSession(storedAccount: AccountRecord) {
   await connect();
 }
 
-/** Messages of an account that unlinked this browser stay only for the next link of that same account */
-async function discardMessagesOfOtherAccount({ aci }: AccountRecord) {
-  const unlinkedAci = await store.getItem('unlinkedAci');
-  if (!unlinkedAci) return;
-
-  if (unlinkedAci !== aci) {
+/** Messages and attachments exist only together with an account, so any that remain without one belong to none */
+async function discardOrphanedData() {
+  try {
     await db.clear();
     await clearAttachmentCache();
+    await store.removeItem('unlinkedAci');
+  } catch (err) {
+    logError(err);
   }
-  await store.removeItem('unlinkedAci');
 }
 
 /**
@@ -339,7 +350,7 @@ async function attemptConnection() {
       onError: logError,
     });
   } catch (err) {
-    if (err instanceof WebSocketConnectError && err.status === HTTP_UNAUTHORIZED) {
+    if (err instanceof WebSocketConnectError && (err.status === HTTP_UNAUTHORIZED || err.status === HTTP_FORBIDDEN)) {
       await handleUnauthorized();
       return;
     }
@@ -411,32 +422,23 @@ async function handleUnauthorized() {
     return;
   }
 
-  if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) {
-    handlePrimaryDeregistered();
-    return;
+  // The engine stopped, or started another account, while the server was asked
+  if (isDestroyed || currentAccount !== account) return;
+  await handleDeauthorized(account);
+}
+
+/**
+ * The server no longer accepts this device: the phone unlinked it, another device removed it, or the number was
+ * registered elsewhere. The account, keys, messages and attachments go at once, and the app logs out like the user's
+ * logout does, which clears its own state and starts a new link; the link screen tells why.
+ */
+async function handleDeauthorized(account: AccountRecord) {
+  pendingDeauthorization = account.deviceId === SIGNAL_PRIMARY_DEVICE_ID ? 'deregistered' : 'unlinked';
+  try {
+    await stopClient(true);
+  } catch (err) {
+    // The logout of the app wipes the data again
+    logError(err);
   }
-  await handleUnlinked(account);
-}
-
-/**
- * Our number was registered on another device. Nothing is deleted here: the user decides what happens with the
- * messages, and logging out removes them.
- */
-function handlePrimaryDeregistered() {
-  processor.stop();
-  client.close();
-  sendApiUpdate({ '@type': 'error', error: { message: PRIMARY_UNAUTHORIZED_ERROR, hasErrorKey: true } });
-}
-
-/**
- * The phone unlinked this device. The account and its keys go and a new link starts; the conversations and messages
- * stay (Signal Desktop `unlinkAndDisconnect`), until another account links (see `startSession`).
- */
-async function handleUnlinked(account: AccountRecord) {
-  await stopClient(false);
-  await store.clear();
-  await store.setItem('unlinkedAci', account.aci);
-  isDestroyed = false;
-  sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateLoggingOut' });
-  void runDeviceLink().catch(logError);
+  sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateBroken' });
 }

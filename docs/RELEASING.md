@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `ci.yml` | Pushes to branches, pull requests, manual runs | Web app: `npm run check:ts` (types and ESLint), `npm run check:css`, `npm run check:hosts`, `npm test`, generated localization types and protobuf code match the sources, `npm run build:production` (uploads `dist` as the `telesignal-web` artifact). Rust: `proxy/` (rustfmt, Clippy with and without the server feature, tests), `tauri/` (rustfmt, Clippy, tests), `rust/signal-wasm` (rebuilds the WebAssembly module and compares the bindings). `CI success` is the one check to require on the default branch |
 | `changelog.yml` | Pull requests | Fails a pull request that changes the shipped app (`src/`, `public/`, `proxy/`, `tauri/`, `rust/`) without a `CHANGELOG.md` entry. Waive it with the label `skip changelog`; titles starting with `[CI]`, `[Dev]` or `Docs` and Dependabot need no entry |
+| `image.yml` | Pushes to the default branch, pull requests that change more than documentation, manual runs, `release.yml` | Builds the all-in-one image (`Dockerfile`) for `linux/amd64` and `linux/arm64` and starts each with `docker/smoke-test.sh`; nothing is pushed. With a tag, called by `release.yml`, it publishes the image, see below |
 | `security.yml` | Weekly, manual runs, lockfile changes | `npm audit` for the packages in the bundle and `cargo audit` for `proxy/`, `tauri/` and `rust/signal-wasm` |
 | `release.yml` | Tags `v*`, manual runs | Builds and publishes a release, see below |
 | `desktop.yml` | Called by `release.yml`, manual runs | Builds the desktop packages for macOS, Windows and Linux; see `tauri/README.md` |
@@ -54,6 +55,10 @@ file, the changelog has entries for the version, and, for a stable version, the 
 - publishes the container image `ghcr.io/<owner>/telesignal-tunnel` for `linux/amd64` and `linux/arm64`, tagged
   `<version>`, `<major>.<minor>` and `<major>` and, for a stable version, `latest`; the release tags appear only after
   both platforms answered `/health`;
+- publishes the all-in-one container image `ghcr.io/<owner>/telesignal` (the app, nginx and the tunnel, see
+  [DEPLOY.md](DEPLOY.md)) for `linux/amd64` and `linux/arm64` through `image.yml`, with provenance and an SBOM, tagged
+  `<version>`, `<major>.<minor>`, `<major>`, `latest` (stable versions) and `sha-<commit>`. Like the tunnel image it goes
+  to a staging tag first, and the release tags appear only after `docker/smoke-test.sh` passed on both platforms;
 - builds the desktop packages (`.dmg`, `.app.tar.gz`, NSIS `.exe`, `.deb`, `.AppImage`) through `desktop.yml` and
   attaches them to the draft;
 - writes `SHA256SUMS` over every asset, attests their build provenance and publishes the release.
@@ -79,5 +84,5 @@ Signing, notarization and the updater are optional and turn on when the secrets 
 
 ### Container image visibility
 
-GitHub creates a package private on its first push. Make `telesignal-tunnel` public in the package settings once, and
-link it to the repository, so that anyone can pull it.
+GitHub creates a package private on its first push. Make `telesignal` and `telesignal-tunnel` public in the package
+settings once, and link them to the repository, so that anyone can pull them.

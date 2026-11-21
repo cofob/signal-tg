@@ -7,6 +7,7 @@ import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
 
 import { IdbStore } from '../../../util/browser/idb';
+import { getEngineStoreName } from '../engineStoreName';
 
 export type KeyPairBytes = {
   privateKey: Uint8Array;
@@ -142,7 +143,7 @@ type Items = {
   storageChanges: StorageChanges;
   // A registration whose request went out; `resumePendingRegistration` finds out what became of it
   pendingRegistration: PendingRegistration;
-  // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
+  // Not written any more; removed when the link screen starts
   unlinkedAci: string;
   // Merges of stored storage records that this device has done after learning to read more of them
   // (`MessageProcessor`)
@@ -282,12 +283,17 @@ const DB_NAME = 'ts-signal';
  * Keys are namespaced inside one IndexedDB object store.
  */
 export default class SignalStore {
-  private db = new IdbStore(DB_NAME);
+  private db: IdbStore;
 
   private exclusive = Promise.resolve();
 
   // Called when the identity key of another user replaces the stored one, see `saveIdentity`
   onIdentityChange?: (serviceId: string) => void;
+
+  /** Opens the store of an account slot, by default the slot of this page or worker */
+  constructor(slot?: number) {
+    this.db = new IdbStore(getEngineStoreName(DB_NAME, slot));
+  }
 
   /**
    * Runs protocol operations one at a time. Session, sender key and prekey records are read and written

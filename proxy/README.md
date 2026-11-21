@@ -202,6 +202,10 @@ set at build time.
 
 ### Container image
 
+The image `ghcr.io/<owner>/telesignal` holds the app, nginx and this tunnel together, configured with environment
+variables: see [docs/DEPLOY.md](../docs/DEPLOY.md). It is the simplest way to deploy TeleSignal; the tunnel-only image
+below is for a setup with its own web server.
+
 Releases publish `ghcr.io/<owner>/telesignal-tunnel` (`linux/amd64` and `linux/arm64`): the static binary on an
 empty image that runs as an unprivileged user. It listens on `0.0.0.0:8787` inside the container, so publish the
 port only to the reverse proxy and set the origin:
