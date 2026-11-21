@@ -1,7 +1,7 @@
 import { unlinkDevice } from '../../../lib/signal/account/linkDevice';
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
 import {
-  disableEncryptionAtRest, enableEncryptionAtRest, forgetStorageKey,
+  disableEncryptionAtRest, enableEncryptionAtRest, eraseUnreadableRecords, forgetStorageKey,
 } from '../../../lib/signal/store/atRestMigration';
 import { reconnectClient, stopClient } from '../client';
 import { db, logError, store } from '../engine';
@@ -15,7 +15,7 @@ export async function destroy(noLogOut = false) {
   const unlinking = noLogOut ? undefined : unlinkLinkedDevice();
   await stopClient(!noLogOut);
   // The engine stops when the screen locks, and every start brings the key again
-  await forgetStorageKey();
+  forgetStorageKey();
   await unlinking;
 }
 
@@ -30,14 +30,25 @@ async function unlinkLinkedDevice() {
   }
 }
 
-/** Encrypts the engine's stores with `key`, which the page keeps in the passcode vault; used when a passcode is set */
+/**
+ * Encrypts the engine's stores with `key`, which the page keeps in the passcode vault; used when a passcode is set.
+ * Resolves with `true` only when a count found nothing in the clear; the page treats anything else as a failure.
+ */
 export function enableStorageEncryption(key: ArrayBuffer) {
   return enableEncryptionAtRest(key, store, db);
 }
 
-/** Decrypts the stores in place; the page calls it before it drops the passcode and with it the key */
+/**
+ * Decrypts the stores of every account slot in place; the page calls it before it drops the passcode and with it the
+ * key. Resolves with `true` only when a count found no encrypted record left.
+ */
 export function disableStorageEncryption() {
   return disableEncryptionAtRest(store, db);
+}
+
+/** Deletes the records that the key does not open, when the user asks for it; resolves with their number */
+export function eraseUnreadableStorageRecords() {
+  return eraseUnreadableRecords(store, db);
 }
 
 export function disconnect() {

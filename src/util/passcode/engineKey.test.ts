@@ -2,6 +2,9 @@ import 'fake-indexeddb/auto';
 
 import { beforeAll, describe, expect, test } from 'vitest';
 
+import MessageDb from '../../lib/signal/db/MessageDb';
+import { enableEncryptionAtRest } from '../../lib/signal/store/atRestMigration';
+import SignalStore from '../../lib/signal/store/SignalStore';
 import { PASSCODE_IDB_STORE } from '../browser/idb';
 import {
   changePasscode, clearPasscodeStore, createPasscode, forgetDek, getEngineKey, loadPasscodeMeta,
@@ -78,6 +81,24 @@ describe('Engine key', () => {
     expect(toHex(replacement)).not.toBe(toHex(key));
     expect(await PASSCODE_IDB_STORE.keys()).not.toContain(`engineKeyVault_${generation}`);
     expect(changed.generation).not.toBe(generation);
+  });
+
+  test('keeps the old key when it is corrupted and the stores are encrypted', async () => {
+    await clearPasscodeStore();
+    const { generation } = await createPasscode('passcode', SNAPSHOT);
+    const key = await getEngineKey();
+    const store = new SignalStore();
+    await store.clear();
+    await store.setItem('account', {
+      aci: 'a', deviceId: 2, password: 'p', registrationId: 1, pniRegistrationId: 2,
+    });
+    expect(await enableEncryptionAtRest(key, store, new MessageDb())).toBe(true);
+    await PASSCODE_IDB_STORE.set(`engineKeyVault_${generation}`, new Uint8Array(64).buffer);
+
+    // A new key would orphan the encrypted records, so the change fails and the passcode stays as it was
+    await expect(changePasscode('another passcode')).rejects.toThrow();
+    expect((await loadPasscodeMeta())?.generation).toBe(generation);
+    await store.clear();
   });
 
   test('is removed with the passcode store', async () => {

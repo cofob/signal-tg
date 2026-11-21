@@ -71,16 +71,42 @@ Now, while a passcode exists, the engine encrypts:
   (authenticated data) names the record's place, and for `ts-signal-messages` includes the fields left in the clear, so
   a record moved to another conversation, or with such a field changed, no longer decrypts;
 - every cached attachment and sticker (`blobEncryption.ts`): chunks of 1 MiB in authenticated frames, the media type
-  inside, so a cut, reordered or damaged file does not decrypt. Existing files are encrypted in place, none is dropped.
+  inside, each frame bound to the file's cache key, a random file id, its number and whether it is the last, so a cut,
+  reordered, spliced or moved file does not decrypt. A file counts as encrypted only when its first frame decrypts, not
+  by its first bytes, so a file in the clear that begins with the magic is encrypted like any other. Existing files are
+  encrypted in place, none is dropped; a damaged cached file is only a cache entry and is deleted.
 
 The key is `getEngineKey()` (random, in the passcode vault under the data key, wrapped again when the passcode
-changes). The page gives it to the engine at every start and when the passcode is turned on; the engine holds it as a
-non-extractable `CryptoKey` and forgets it when the screen locks (the API closes), when the account is forgotten and
-when the connection is closed. Turning the passcode on encrypts what is stored in place (new records are encrypted from
-the first moment, an interrupted run resumes at the next start); turning it off decrypts everything before the key is
-dropped and rolls back if that fails. A start without the key, while the stores are marked encrypted, stops with an
-error instead of showing the link screen. Design and lifecycle: `docs/signal/PLAN.md`, stage 6. Users without a passcode
-see no change: the same code paths store records as before.
+changes; one per vault generation, so every account slot has the same). The page gives it to the engine at every start
+and when the passcode is turned on; the engine holds it as a non-extractable `CryptoKey` and forgets it when the screen
+locks (the API closes), when the account is forgotten and when the connection is closed.
+
+Lifecycle, as built after the review of the first version:
+
+- **Turning on** encrypts this slot's stores and those of the other slots whose engine is not running, then counts: the
+  call answers `true` only when a count finds nothing in the clear, and the page requires `=== true` (an answer of
+  `undefined`, which a reset of the API produces for pending calls, fails the setup, which locks the passcode and the
+  next start finishes it). A running engine of another slot encrypts its own stores when it next starts with the key
+  (until then it works without one, as it did before the passcode existed); the same holds for a slot opened later.
+- **Turning off** decrypts the stores of every slot that has data, the cached files of every slot, repeats until a count
+  finds no encrypted record, and only then drops the key. It answers `true` only then. If another slot's engine is
+  running (each engine holds the Web Lock `ts-signal-engine-<slot>`), it refuses and the page says to close the other
+  accounts. If a record cannot be decrypted, it keeps the key, goes back to writing encrypted records, and the page keeps
+  the passcode and says so. The records that the key does not open are erased only by the explicit engine call
+  `eraseUnreadableStorageRecords`, which has no screen yet. It decrypts even when the marker is missing.
+- **Writes never fail open.** Once a key was set, a write without it throws `StorageLockedError` and stores nothing; the
+  requirement ends only when the stores are plain or wiped. `stopClient(true)` re-applies the key after the wipe, so an
+  account linked in the same session is encrypted.
+- **Start.** With a key, a count of the clear records (all of the small `ts-signal`, the newest 100 of each message,
+  story and call store and every conversation) runs on the fast path and finds a record that a write left. Only a
+  missing key stops the engine with `SignalStorageLocked`; any other failure of the encryption is logged, the engine
+  starts, and the next start retries. Without a key: if the page has no passcode but the stores are marked encrypted (or
+  an encrypted record is read), nothing can open them, so that slot is wiped and the link screen follows. The page clears
+  the passcode store only when no engine store holds an encrypted record, so a failed wipe can be tried again, and a
+  failure of `getEngineKey` shows `SignalStorageLocked`. A corrupted key blob fails a passcode change when any slot's
+  stores are encrypted, instead of replacing the key.
+- **Reads skip damage.** A message, story, call or conversation that cannot be decrypted is logged (first five only) and
+  left out of the result, so one damaged record does not fail a chat.
 
 What stays in the clear (everything else above is encrypted):
 
@@ -118,10 +144,17 @@ Proof in the browser (demo account, `proof.mjs` steps below), counting records w
 | passcode off | 0 of 7 encrypted, readable again | readable again | 9 readable images |
 
 Tests: `src/lib/signal/store/atRest.test.ts` (value encoding, key and context binding, `SignalStore`, every `MessageDb`
-query before and after encryption, a moved record, interrupted migration, encrypted files),
-`src/util/passcode/engineKey.test.ts`. Not done: a second tab turning the passcode on or off was reasoned about
-(`callApi` forwards to the master tab's engine, the key travels over the `BroadcastChannel` that already carries the data
-key) but not run; a crash between the key being set and the marker leaves at most one batch to the next start.
+query before and after encryption, a moved record, interrupted migration, encrypted files) and
+`atRestSafety.test.ts` (a full round trip of every record type, including `sendRetry`, which an earlier version
+overwrote with its index copy; writes without the key; a start that fails for another reason, one without a passcode, one
+that finds a record in the clear; turning off with two slots, with another slot running, with a damaged record and
+without a marker; a deleted key not coming back; forged, moved and spliced files), `src/util/passcode/engineKey.test.ts`.
+
+Not done: `getUnreadMessages` still reads and decrypts every message of the conversation, as it read every one before
+(555 ms for 10,000 messages); a second tab turning the passcode on or off was reasoned about (`callApi` forwards to the
+master tab's engine, the key travels over the `BroadcastChannel` that carries the data key) but only the slot case was
+run; the engines of two slots in two tabs were run in the browser by `proof` step 7 below only where noted; there is no
+screen for erasing unreadable records.
 
 ### S-03 The CSP does not cover the engine's worker (Medium, fixed for the desktop app)
 

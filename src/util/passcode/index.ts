@@ -2,6 +2,7 @@ import {
   SESSION_ACCOUNT_PREFIX,
   SHOULD_DELETE_LEGACY_PASSCODE_DATA,
 } from '../../config';
+import { hasEncryptedEngineData } from '../../lib/signal/store/atRestMigration';
 import { PASSCODE_IDB_STORE } from '../browser/idb';
 import {
   loadPasscodeMeta,
@@ -208,8 +209,10 @@ async function changePasscodeNow(passcode: string) {
   const sessionSnapshot = await decryptSessionsVault();
   const globalSnapshots = await readGlobalSnapshots(currentContext);
   const wallpaperBlobs = await readWallpaperBlobs(currentContext);
-  const engineKey = await readEngineKey(currentContext).catch((err) => {
-    // A key that cannot be read must not block changing the passcode; the next use creates a new one
+  const engineKey = await readEngineKey(currentContext).catch(async (err) => {
+    // With encrypted stores, a new key would orphan their records, so the change fails and the old key stays
+    if (await hasEncryptedEngineData()) throw err;
+    // Otherwise nothing needs the key: the next use creates a new one
     // eslint-disable-next-line no-console
     console.warn('[passcode] Engine key is corrupted and will be replaced', err);
     return undefined;

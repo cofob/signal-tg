@@ -146,7 +146,7 @@ links open in the system browser through `open_external_url`, which takes only `
 URLs (a `file:` or app-scheme link would run something else). The capability holds the app's own commands and the
 event, window, notification, process and updater permissions that the page uses: `process` only for `restart`,
 and no `shell`, `fs`, `opener` or `dialog` permissions. The app also sets `app.security.csp` to the production policy of `plugins/csp.ts` (a test keeps them equal), so Tauri sends it as a header with every file, workers included, with `dangerousDisableAssetCspModification` for `style-src` so that Tauri's nonce does not turn off `'unsafe-inline'`. The updater runs only when the build sets an endpoint
-and a public key, and it verifies the signature of every update. The CSP (`buildCsp` in `vite.config.ts`) allows
+and a public key, and it verifies the signature of every update. The CSP (`buildCsp` in `plugins/csp.ts`) allows
 `ipc:` and `http://ipc.localhost` for Tauri's IPC.
 
 A tunnel named in the Proxy server setting sees the app's page as the origin `tauri://localhost`

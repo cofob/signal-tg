@@ -196,25 +196,52 @@ async function removeFromCache(resolvedCacheName: string, key: string) {
   }
 }
 
+/** What `transform` of `rewriteBlobs` returns: the entry's new body, `undefined` to keep it, or `false` to delete it */
+type RewrittenBlob = Blob | undefined | false;
+
 /**
- * Rewrites the entries of a cache one at a time: `transform` gets an entry's body and returns the new body, or
- * `undefined` to keep the entry. An entry keeps its other headers, so its access time stays.
+ * The part of an entry's URL that `key` makes, which is stable across contexts: the origin of the request differs
+ * between a page, a worker and an app that serves its files from another scheme.
  */
-export async function rewriteBlobs(cacheName: string, transform: (blob: Blob) => Promise<Blob | undefined>) {
+export function getCacheKeyPath(key: string) {
+  return new URL(buildCacheRequest(key).url).pathname;
+}
+
+/**
+ * Rewrites the entries of a cache one at a time: `transform` gets an entry's body and the path of its key, and
+ * returns the new body, `undefined` to keep the entry, or `false` to delete it. An entry keeps its other headers, so
+ * its access time stays. With `shouldIncludeAllAccounts` the caches of every account slot are rewritten too.
+ */
+export async function rewriteBlobs(
+  cacheName: string,
+  transform: (blob: Blob, keyPath: string) => Promise<RewrittenBlob>,
+  shouldIncludeAllAccounts?: boolean,
+) {
   if (!cacheApi) return;
 
-  const cache = await cacheApi.open(getAccountScopedCacheName(cacheName));
-  for (const request of await cache.keys()) {
-    const response = await cache.match(request);
-    if (!response) continue;
+  const names = shouldIncludeAllAccounts
+    ? [...new Set([getAccountScopedCacheName(cacheName), cacheName, ...await getAccountScopedCacheNames(cacheName)])]
+    : [getAccountScopedCacheName(cacheName)];
+  for (const name of names) {
+    if (!await cacheApi.has(name)) continue;
 
-    const body = await transform(await response.blob());
-    if (!body) continue;
+    const cache = await cacheApi.open(name);
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request);
+      if (!response) continue;
 
-    const headers = new Headers(response.headers);
-    headers.set('Content-Type', body.type);
-    headers.delete('Content-Length');
-    await cache.put(request, new Response(body, { headers }));
+      const body = await transform(await response.blob(), new URL(request.url).pathname);
+      if (body === undefined) continue;
+      if (body === false) {
+        await cache.delete(request);
+        continue;
+      }
+
+      const headers = new Headers(response.headers);
+      headers.set('Content-Type', body.type);
+      headers.delete('Content-Length');
+      await cache.put(request, new Response(body, { headers }));
+    }
   }
 }
 

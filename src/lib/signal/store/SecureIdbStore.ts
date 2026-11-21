@@ -1,10 +1,15 @@
 import { IdbStore } from '../../../util/browser/idb';
 import {
-  decryptValue, type EncryptedValue, encryptValue, isEncryptedValue, isEncryptingWrites,
+  decryptValue, type EncryptedValue, encryptValue, isEncryptedValue, isEncryptingWrites, StorageLockedError,
 } from './atRest';
 
 /** Which way `SecureIdbStore.convertAll` rewrites the records */
 export type ConversionDirection = 'encrypt' | 'decrypt';
+
+export type RecordCounts = {
+  encrypted: number;
+  plain: number;
+};
 
 const BATCH_SIZE = 100;
 
@@ -74,31 +79,91 @@ export default class SecureIdbStore {
   }
 
   /**
-   * Rewrites every record whose key is not in `skippedKeys` in the direction, in batches. A record that changed
-   * since it was read stays as the change left it: it is written in the current mode already.
+   * Rewrites every record whose key is not in `skippedKeys` in the direction. A record that changed since it was read
+   * stays as the change left it: it is written in the current mode already. Returns the number of records that could
+   * not be decrypted, which stay as they are.
    */
   async convertAll(direction: ConversionDirection, skippedKeys: string[] = []) {
-    const keys = (await this.store.keys()).filter((key): key is string => typeof key === 'string'
-      && !skippedKeys.includes(key));
+    const keys = await this.getKeys(skippedKeys);
+    let failedCount = 0;
     for (let index = 0; index < keys.length; index += BATCH_SIZE) {
       for (const key of keys.slice(index, index + BATCH_SIZE)) {
-        await this.convert(key, direction);
+        if (!await this.convert(key, direction)) failedCount++;
       }
     }
+    return failedCount;
   }
 
+  /** How many records are encrypted and how many are not, without the records in `skippedKeys` */
+  async countRecords(skippedKeys: string[] = []): Promise<RecordCounts> {
+    const keys = await this.getKeys(skippedKeys);
+    const counts = { encrypted: 0, plain: 0 };
+    for (let index = 0; index < keys.length; index += BATCH_SIZE) {
+      const values = await this.store.getMany<unknown>(keys.slice(index, index + BATCH_SIZE));
+      for (const value of values) {
+        if (value === undefined) continue;
+        counts[isEncryptedValue(value) ? 'encrypted' : 'plain']++;
+      }
+    }
+    return counts;
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  async deleteUnreadable(skippedKeys: string[] = []) {
+    const keys = await this.getKeys(skippedKeys);
+    const unreadable: string[] = [];
+    for (const key of keys) {
+      const stored = await this.store.get<unknown>(key);
+      if (!isEncryptedValue(stored)) continue;
+
+      try {
+        await decryptValue(this.getContext(key), stored);
+      } catch (err) {
+        if (err instanceof StorageLockedError) throw err;
+        unreadable.push(key);
+      }
+    }
+    await this.store.delMany(unreadable);
+    return unreadable.length;
+  }
+
+  private async getKeys(skippedKeys: string[]) {
+    return (await this.store.keys()).filter((key): key is string => typeof key === 'string'
+      && !skippedKeys.includes(key));
+  }
+
+  /** Returns `false` for a record that cannot be decrypted */
   private async convert(key: string, direction: ConversionDirection) {
     const stored = await this.store.get<unknown>(key);
-    if (stored === undefined || isEncryptedValue(stored) === (direction === 'encrypt')) return;
+    if (stored === undefined || isEncryptedValue(stored) === (direction === 'encrypt')) return true;
 
-    const converted = direction === 'encrypt'
-      ? await encryptValue(this.getContext(key), stored)
-      : await decryptValue(this.getContext(key), stored as EncryptedValue);
-    await this.store.update<unknown>(key, (current) => {
-      // `update` runs in one transaction: keep a record that was written or deleted since the read
-      if (current === undefined || isEncryptedValue(current) !== (direction === 'decrypt')) return current;
-      return direction === 'encrypt' || isSameEnvelope(current, stored) ? converted : current;
-    });
+    let converted: unknown;
+    try {
+      converted = direction === 'encrypt'
+        ? await encryptValue(this.getContext(key), stored)
+        : await decryptValue(this.getContext(key), stored as EncryptedValue);
+    } catch (err) {
+      if (err instanceof StorageLockedError) throw err;
+      return false;
+    }
+
+    // One transaction reads the record again and writes only a record that is still there as it was read, so a
+    // record that was deleted or written meanwhile is not brought back or overwritten
+    await this.store.store('readwrite', (objectStore) => new Promise<void>((resolve, reject) => {
+      const request = objectStore.get(key);
+      request.onsuccess = () => {
+        const current: unknown = request.result;
+        if (current === undefined) return;
+        const isUnchanged = direction === 'encrypt'
+          ? !isEncryptedValue(current)
+          : isSameEnvelope(current, stored);
+        if (isUnchanged) objectStore.put(converted, key);
+      };
+      objectStore.transaction.oncomplete = () => resolve();
+      objectStore.transaction.onerror = () => reject(objectStore.transaction.error);
+      objectStore.transaction.onabort = () => reject(objectStore.transaction.error);
+    }));
+    return true;
   }
 
   private read(key: string, stored: unknown) {

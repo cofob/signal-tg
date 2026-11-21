@@ -8,6 +8,7 @@ import type { UsernameLink } from '../usernames/manageUsername';
 import type { ConversionDirection } from './SecureIdbStore';
 
 import { getEngineStoreName } from '../engineStoreName';
+
 import SecureIdbStore from './SecureIdbStore';
 
 export type KeyPairBytes = {
@@ -508,9 +509,22 @@ export default class SignalStore {
     return this.db.del(ENCRYPTION_STATE_KEY);
   }
 
-  /** Rewrites every record encrypted or decrypted; records written meanwhile are already in the current mode */
+  /**
+   * Rewrites every record encrypted or decrypted; records written meanwhile are already in the current mode. Returns
+   * the number of records that cannot be decrypted.
+   */
   convertRecords(direction: ConversionDirection) {
     return this.db.convertAll(direction, [ENCRYPTION_STATE_KEY]);
+  }
+
+  /** How many records are encrypted and how many are not, the marker excepted */
+  countRecords() {
+    return this.db.countRecords([ENCRYPTION_STATE_KEY]);
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  deleteUnreadableRecords() {
+    return this.db.deleteUnreadable([ENCRYPTION_STATE_KEY]);
   }
 
   clear() {

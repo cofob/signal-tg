@@ -13,8 +13,13 @@ import {
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
-import { applyStorageKey, forgetStorageKey } from '../../lib/signal/store/atRestMigration';
+import { StorageLockedError } from '../../lib/signal/store/atRest';
+import {
+  applyStorageKey, enableEncryptionAtRest, forgetStorageKey, wipeStores,
+} from '../../lib/signal/store/atRestMigration';
+import { holdEngineLock, releaseEngineLock } from '../../lib/signal/store/engineLock';
 import { initSignalWasm } from '../../lib/signal/wasm';
+import { ACCOUNT_SLOT } from '../../util/multiaccount';
 import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
@@ -65,18 +70,22 @@ export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
   applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
+  holdEngineLock(ACCOUNT_SLOT || 1);
   try {
-    await applyStorageKey(args.storageKey, store, db);
+    await applyStorageKey(args.storageKey, store, db, logError);
   } catch (err) {
-    // Stopping keeps the link screen from replacing local data that the key can still read
     logError(err);
-    sendApiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
-    return;
+    // Only a missing key stops the start, which keeps the link screen from replacing data that the key can still
+    // read; any other failure of the encryption is tried again at the next start
+    if (err instanceof StorageLockedError) {
+      sendApiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
+      return;
+    }
   }
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
-  const account = await store.getItem('account') ?? await resumeInterruptedRegistration();
+  const account = await readStoredAccount();
   if (account?.isRegistrationPending) {
     sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
     resumeRegistration(account);
@@ -93,6 +102,19 @@ export async function startClient(args: ApiInitialArgs) {
     sendApiUpdate({ '@type': 'updateStaleSession' });
   }
   void runDeviceLink(args.platform).catch(logError);
+}
+
+/** The stored account, or one that a registration created. Records that the engine cannot open are wiped. */
+async function readStoredAccount() {
+  try {
+    return await store.getItem('account') ?? await resumeInterruptedRegistration();
+  } catch (err) {
+    if (!(err instanceof StorageLockedError)) throw err;
+    // Encrypted data without a key, and no passcode that has one: nothing can read it, and the link screen follows
+    logError(err);
+    await wipeStores(store, db);
+    return undefined;
+  }
 }
 
 /** The account that a registration created before the app stopped, when the server has it */
@@ -136,6 +158,7 @@ export async function stopClient(shouldForget: boolean) {
   linkSession?.cancel();
   resetRegistration();
   historyTransferController?.abort();
+  releaseEngineLock();
   processor.stop();
   keyTransparency.stop();
   client.close();
@@ -145,7 +168,12 @@ export async function stopClient(shouldForget: boolean) {
     await store.clear();
     await db.clear();
     await clearAttachmentCache();
-    await forgetStorageKey();
+    // A link that follows in this session stores its account encrypted too; a logout drops the key with the engine
+    if (initialArgs?.storageKey) {
+      await enableEncryptionAtRest(initialArgs.storageKey, store, db).catch(logError);
+    } else {
+      forgetStorageKey();
+    }
   }
 }
 

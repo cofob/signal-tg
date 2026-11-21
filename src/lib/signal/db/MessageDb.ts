@@ -5,11 +5,16 @@ import type { GroupUpdate } from '../groups/groupUpdates';
 import type { ConversionDirection } from '../store/SecureIdbStore';
 import type { StoreName } from './recordCrypto';
 
+import { getEngineStoreName } from '../engineStoreName';
+import { StorageLockedError } from '../store/atRest';
 import {
-  decodeRecord, decodeRecords, encodeRecord, isEncryptedRecord, isSameEncryption,
+  decodeOptionalRecord, decodeRecord, decodeRecords, encodeRecord, getIsRecordUnreadable, isEncryptedRecord,
+  isSameEncryption,
 } from './recordCrypto';
 
-import { getEngineStoreName } from '../engineStoreName';
+export type StoreRecordCounts = Record<StoreName, { encrypted: number; plain: number }>;
+
+const STORE_NAMES = ['conversations', 'messages', 'stories', 'calls'] as const;
 
 export type ConversationType = 'private' | 'group';
 
@@ -538,19 +543,25 @@ export default class MessageDb {
 
   /** Calls that were not deleted, newest first */
   async getCallLog(limit: number) {
-    const stored: unknown[] = [];
-    const openCursor = (store: IDBObjectStore) => store.index(BY_TIMESTAMP).openCursor(undefined, 'prev');
-    await this.iterate(CALLS, 'readonly', openCursor, (cursor) => {
-      stored.push(cursor.value);
-      return true;
-    });
-    // Decrypted a batch at a time, so a long log is read only as far as `limit` needs
     const calls: CallRecord[] = [];
-    for (let index = 0; index < stored.length && calls.length < limit; index += FIND_BATCH_SIZE) {
-      const batch = await decodeRecords<CallRecord>(CALLS, stored.slice(index, index + FIND_BATCH_SIZE));
-      for (const call of batch) {
+    let after: { key: IDBValidKey; primaryKey: IDBValidKey } | undefined;
+    // A batch at a time, so a long log is read and decrypted only as far as `limit` needs
+    while (calls.length < limit) {
+      const batch: { key: IDBValidKey; primaryKey: IDBValidKey; stored: unknown }[] = [];
+      const range = after ? IDBKeyRange.upperBound(after.key) : undefined;
+      const openCursor = (store: IDBObjectStore) => store.index(BY_TIMESTAMP).openCursor(range, 'prev');
+      await this.iterate(CALLS, 'readonly', openCursor, (cursor) => {
+        // Records of the timestamp that the last batch ended at, which it already holds
+        const isSeen = after && indexedDB.cmp(cursor.key, after.key) === 0
+          && indexedDB.cmp(cursor.primaryKey, after.primaryKey) >= 0;
+        if (!isSeen) batch.push({ key: cursor.key, primaryKey: cursor.primaryKey, stored: cursor.value });
+        return batch.length < FIND_BATCH_SIZE;
+      });
+      for (const call of await decodeRecords<CallRecord>(CALLS, batch.map(({ stored }) => stored))) {
         if (call.status !== 'deleted' && calls.length < limit) calls.push(call);
       }
+      if (batch.length < FIND_BATCH_SIZE) break;
+      after = batch[batch.length - 1];
     }
     return calls;
   }
@@ -564,10 +575,12 @@ export default class MessageDb {
 
   /**
    * Rewrites every record encrypted or decrypted, in batches that each commit in one transaction. A record that
-   * changed since it was read stays as the change left it, because writes already use the current mode.
+   * changed since it was read stays as the change left it, because writes already use the current mode. Returns the
+   * number of records that cannot be decrypted, which stay as they are.
    */
   async convertRecords(direction: ConversionDirection) {
-    for (const storeName of [CONVERSATIONS, MESSAGES, STORIES, CALLS] as const) {
+    let failedCount = 0;
+    for (const storeName of STORE_NAMES) {
       let lastKey: IDBValidKey | undefined;
       for (;;) {
         const batch = await this.readBatch(storeName, lastKey);
@@ -578,13 +591,82 @@ export default class MessageDb {
         for (const { key, stored } of batch) {
           if (isEncryptedRecord(stored) === (direction === 'encrypt')) continue;
 
-          const record = await decodeRecord<object>(storeName, stored);
-          const after = direction === 'encrypt' ? await encodeRecord(storeName, record, true) : record;
-          converted.push({ key, before: stored, after });
+          try {
+            const record = await decodeRecord<object>(storeName, stored);
+            const after = direction === 'encrypt' ? await encodeRecord(storeName, record, true) : record;
+            converted.push({ key, before: stored, after });
+          } catch (err) {
+            if (err instanceof StorageLockedError) throw err;
+            failedCount++;
+          }
         }
         await this.swapRecords(storeName, direction, converted);
       }
     }
+    return failedCount;
+  }
+
+  /** How many records of each store are encrypted and how many are not */
+  async countRecords(): Promise<StoreRecordCounts> {
+    const counts = {} as StoreRecordCounts;
+    for (const storeName of STORE_NAMES) {
+      counts[storeName] = { encrypted: 0, plain: 0 };
+      let lastKey: IDBValidKey | undefined;
+      for (;;) {
+        const batch = await this.readBatch(storeName, lastKey);
+        if (!batch.length) break;
+        lastKey = batch[batch.length - 1].key;
+        for (const { stored } of batch) counts[storeName][isEncryptedRecord(stored) ? 'encrypted' : 'plain']++;
+      }
+    }
+    return counts;
+  }
+
+  /**
+   * Whether a record in the clear is among the conversations and the newest records of the other stores: a cheap
+   * check at start for a write that missed the key, which the full count does not need to repeat
+   */
+  async hasRecentPlainRecords(sampleSize: number) {
+    for (const storeName of STORE_NAMES) {
+      const sample: unknown[] = [];
+      // Conversations are few, the others are checked from the newest
+      const limit = storeName === CONVERSATIONS ? Number.MAX_SAFE_INTEGER : sampleSize;
+      await this.iterate(storeName, 'readonly', (store) => store.openCursor(undefined, 'prev'), (cursor) => {
+        sample.push(cursor.value);
+        return sample.length < limit;
+      });
+      if (sample.some((stored) => !isEncryptedRecord(stored))) return true;
+    }
+    return false;
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  async deleteUnreadableRecords() {
+    let deletedCount = 0;
+    for (const storeName of STORE_NAMES) {
+      let lastKey: IDBValidKey | undefined;
+      const unreadable: IDBValidKey[] = [];
+      for (;;) {
+        const batch = await this.readBatch(storeName, lastKey);
+        if (!batch.length) break;
+        lastKey = batch[batch.length - 1].key;
+        for (const { key, stored } of batch) {
+          if (await getIsRecordUnreadable(storeName, stored)) unreadable.push(key);
+        }
+      }
+      if (!unreadable.length) continue;
+
+      const db = await this.open();
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        for (const key of unreadable) transaction.objectStore(storeName).delete(key);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      deletedCount += unreadable.length;
+    }
+    return deletedCount;
   }
 
   private readBatch(storeName: StoreName, afterKey?: IDBValidKey) {
@@ -625,7 +707,7 @@ export default class MessageDb {
 
   private async readRecord<T>(storeName: StoreName, build: (store: IDBObjectStore) => IDBRequest) {
     const stored = await this.request<unknown>(storeName, 'readonly', build);
-    return stored === undefined ? undefined : decodeRecord<T>(storeName, stored);
+    return stored === undefined ? undefined : decodeOptionalRecord<T>(storeName, stored);
   }
 
   private async readRecords<T>(storeName: StoreName, build: (store: IDBObjectStore) => IDBRequest) {

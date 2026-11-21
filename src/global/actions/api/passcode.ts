@@ -1,3 +1,4 @@
+import type { RegularLangKey } from '../../../types/language';
 import type { RegularLangFnParameters } from '../../../util/localization';
 import type { ActionReturnType, GlobalState } from '../../types';
 import { SettingsScreens } from '../../../types';
@@ -5,6 +6,7 @@ import { SettingsScreens } from '../../../types';
 import {
   IS_SCREEN_LOCKED_CACHE_KEY, LOCK_SCREEN_ANIMATION_DURATION_MS,
 } from '../../../config';
+import { getRunningEngineSlots } from '../../../lib/signal/store/engineLock';
 import { updateAppBadge } from '../../../util/appBadge';
 import { purgePasscodeCaches } from '../../../util/cacheApi';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
@@ -174,6 +176,7 @@ addActionHandler('setPasscode', async (global, actions, payload): Promise<void> 
 
 addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
   let passkeyCredentialId: number[] | undefined;
+  let disableFailureKey: RegularLangKey = 'PasscodeDataCorrupted';
   const isDisabled = await requestPasscodeStateLock(async () => {
     const generation = getDekGeneration();
     if (!generation) return false;
@@ -186,7 +189,11 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
 
     try {
       // The key goes with the passcode, so the engine's stores are readable again before that
-      await callApi('disableStorageEncryption');
+      const failureKey = await decryptEngineStorage();
+      if (failureKey) {
+        disableFailureKey = failureKey;
+        throw new Error(`[passcode] The engine's stores were not decrypted: ${failureKey}`);
+      }
       passkeyCredentialId = (await loadPasscodeMeta())?.passkey?.credentialId;
       global = getGlobal();
       await restoreGlobalCaches(global);
@@ -214,7 +221,7 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
         window.location.reload();
       }
       actions.showNotification({
-        message: { key: 'PasscodeDataCorrupted' },
+        message: { key: disableFailureKey },
         tabId: getCurrentTabId(),
       });
       return false;
@@ -775,7 +782,21 @@ async function finishPasscodeSetup({
 
 /** Gives the engine the key of its stores, which it encrypts with it; it also encrypts them again after a failed disable */
 async function encryptEngineStorage() {
-  await callApi('enableStorageEncryption', await getEngineKey());
+  // Anything but `true` is a failure: a call that never reached the engine resolves with `undefined`
+  if (await callApi('enableStorageEncryption', await getEngineKey()) !== true) {
+    throw new Error('[passcode] The engine\'s stores were not encrypted');
+  }
+}
+
+/**
+ * Decrypts the stores of every account slot before the key goes. Returns the message to show when that did not
+ * happen, which keeps the passcode on: another slot's engine is running, or a record cannot be decrypted.
+ */
+async function decryptEngineStorage(): Promise<RegularLangKey | undefined> {
+  const ownSlot = ACCOUNT_SLOT || 1;
+  if ((await getRunningEngineSlots()).some((slot) => slot !== ownSlot)) return 'PasscodeCloseOtherAccounts';
+  // Anything but `true` is a failure: a call that never reached the engine resolves with `undefined`
+  return await callApi('disableStorageEncryption') === true ? undefined : 'PasscodeStorageNotDecrypted';
 }
 
 async function protectPasscodeStorage() {

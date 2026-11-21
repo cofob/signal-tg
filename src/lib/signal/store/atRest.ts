@@ -37,21 +37,37 @@ export class StorageLockedError extends Error {
 let cryptoKey: CryptoKey | undefined;
 // Whether new records are encrypted; it is off while the stores are decrypted again, when the key is still needed
 let isWriting = false;
+// Set once a key was given and until the stores are plain again or wiped. While it is set and the key is gone, writes
+// fail instead of storing records in the clear.
+let isRequired = false;
 
 /**
- * Sets the key for reading, and with `shouldEncryptWrites` for writing. Without a key, encrypted records cannot be
- * read.
+ * Sets the key for reading, and with `shouldEncryptWrites` for writing; `undefined` forgets everything, which only a
+ * wipe or a finished decryption does. Without a key, encrypted records cannot be read.
  */
 export async function setAtRestKey(rawKey: ArrayBuffer | undefined, shouldEncryptWrites = true) {
   if (!rawKey) {
     cryptoKey = undefined;
     isWriting = false;
+    isRequired = false;
     return;
   }
   if (rawKey.byteLength !== KEY_LENGTH_BYTES) throw new Error('The storage key must have 32 bytes');
 
   cryptoKey = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['encrypt', 'decrypt']);
   isWriting = shouldEncryptWrites;
+  isRequired = true;
+}
+
+/** Drops the key from memory, such as when the screen locks; later writes fail until a key is set again */
+export function forgetAtRestKey() {
+  cryptoKey = undefined;
+  isWriting = false;
+}
+
+/** The stores are plain, or empty: nothing needs the key, and writes may store records in the clear */
+export function clearAtRestRequirement() {
+  isRequired = false;
 }
 
 export function setAtRestWriting(shouldEncryptWrites: boolean) {
@@ -62,9 +78,11 @@ export function hasAtRestKey() {
   return Boolean(cryptoKey);
 }
 
-/** Whether new records are encrypted */
+/** Whether new records are encrypted; throws while they have to be but the key is not there */
 export function isEncryptingWrites() {
-  return isWriting;
+  if (isWriting) return true;
+  if (isRequired && !cryptoKey) throw new StorageLockedError();
+  return false;
 }
 
 export function isEncryptedValue(value: unknown): value is EncryptedValue {

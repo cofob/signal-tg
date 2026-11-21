@@ -19,6 +19,8 @@ const OTHER_ACI = '8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
 const SECRET_PASSWORD = 'correct-horse-battery-staple';
 const SECRET_TEXT = 'meet me behind the station at midnight';
 const KEY = new Uint8Array(32).fill(7).buffer;
+const CACHE_KEY = '/attachment/abc';
+const ignore = () => undefined;
 const OTHER_KEY = new Uint8Array(32).fill(9).buffer;
 
 function toText(value: unknown) {
@@ -153,7 +155,8 @@ describe('SignalStore', () => {
     await setAtRestKey(undefined);
 
     await expect(store.getItem('account')).rejects.toBeInstanceOf(StorageLockedError);
-    await expect(applyStorageKey(undefined, store, new MessageDb())).rejects.toBeInstanceOf(StorageLockedError);
+    // Without a passcode there is no key to wait for: the records nothing can read are wiped, which shows the link screen
+    await expect(applyStorageKey(undefined, store, new MessageDb(), ignore)).resolves.toBe('wiped');
   });
 
   test('encrypts records stored in the clear and decrypts them again', async () => {
@@ -161,7 +164,7 @@ describe('SignalStore', () => {
     const db = new MessageDb();
     await fillStore(store);
     await db.addMessage(buildMessage(1));
-    await applyStorageKey(undefined, store, db);
+    await applyStorageKey(undefined, store, db, ignore);
 
     await enableEncryptionAtRest(KEY, store, db);
     expect((await readAll('ts-signal', 'store')).filter((value) => !isEncryptedValue(value))).toEqual([
@@ -192,7 +195,7 @@ describe('SignalStore', () => {
     await store.setSession(`${ACI}.1`, new Uint8Array([4, 5, 6]));
     await setAtRestKey(undefined);
 
-    await applyStorageKey(KEY, store, db);
+    await applyStorageKey(KEY, store, db, ignore);
     expect((await readAll('ts-signal', 'store')).filter((value) => !isEncryptedValue(value))).toHaveLength(1);
     expect((await store.getEncryptionState())?.isMigrated).toBe(true);
     expect(hasText(await readAll('ts-signal-messages', 'messages'), SECRET_TEXT)).toBe(false);
@@ -308,7 +311,7 @@ describe('MessageDb', () => {
     expect(await db.getCalls()).toHaveLength(130);
   });
 
-  test('rejects a record that was moved to another conversation', async () => {
+  test('skips a record that was moved to another conversation', async () => {
     const db = new MessageDb();
     await setAtRestKey(KEY);
     await db.addMessage(buildMessage(1));
@@ -324,7 +327,7 @@ describe('MessageDb', () => {
         };
       };
     });
-    await expect(db.getMessages(OTHER_ACI, 5)).rejects.toThrow();
+    expect(await db.getMessages(OTHER_ACI, 5)).toEqual([]);
   });
 });
 
@@ -332,31 +335,32 @@ describe('Encrypted files', () => {
   test('round trip in chunks, with the type inside', async () => {
     await setAtRestKey(KEY);
     const data = new Uint8Array((1 << 20) + 123).map((_, index) => index % 251);
-    const encrypted = await encryptBlob(new Blob([data], { type: 'image/png' }));
+    const encrypted = await encryptBlob(new Blob([data], { type: 'image/png' }), CACHE_KEY);
 
     expect(encrypted.type).toBe('application/octet-stream');
-    expect(await isEncryptedBlob(encrypted)).toBe(true);
-    expect(await isEncryptedBlob(new Blob(['plain']))).toBe(false);
-    const decrypted = await decryptBlob(encrypted, (type) => type);
+    expect(await isEncryptedBlob(encrypted, CACHE_KEY)).toBe(true);
+    expect(await isEncryptedBlob(new Blob(['plain']), CACHE_KEY)).toBe(false);
+    const decrypted = await decryptBlob(encrypted, CACHE_KEY, (type) => type);
     expect(decrypted.type).toBe('image/png');
     expect(new Uint8Array(await decrypted.arrayBuffer())).toEqual(data);
 
-    const empty = await decryptBlob(await encryptBlob(new Blob([], { type: 'audio/ogg' })), (type) => type);
+    const emptyBlob = await encryptBlob(new Blob([], { type: 'audio/ogg' }), CACHE_KEY);
+    const empty = await decryptBlob(emptyBlob, CACHE_KEY, (type) => type);
     expect(empty.size).toBe(0);
     expect(empty.type).toBe('audio/ogg');
   }, 30000);
 
   test('refuses a cut, damaged or reordered file and another key', async () => {
     await setAtRestKey(KEY);
-    const encrypted = await encryptBlob(new Blob([new Uint8Array((1 << 20) + 5)], { type: 'image/png' }));
+    const encrypted = await encryptBlob(new Blob([new Uint8Array((1 << 20) + 5)], { type: 'image/png' }), CACHE_KEY);
     const bytes = new Uint8Array(await encrypted.arrayBuffer());
 
-    await expect(decryptBlob(encrypted.slice(0, encrypted.size - 20), (type) => type)).rejects.toThrow();
+    await expect(decryptBlob(encrypted.slice(0, encrypted.size - 20), CACHE_KEY, (type) => type)).rejects.toThrow();
     const damaged = bytes.slice();
     damaged[damaged.length - 30] ^= 1;
-    await expect(decryptBlob(new Blob([damaged]), (type) => type)).rejects.toThrow();
+    await expect(decryptBlob(new Blob([damaged]), CACHE_KEY, (type) => type)).rejects.toThrow();
     await setAtRestKey(OTHER_KEY);
-    await expect(decryptBlob(encrypted, (type) => type)).rejects.toThrow();
+    await expect(decryptBlob(encrypted, CACHE_KEY, (type) => type)).rejects.toThrow();
   });
 });
 

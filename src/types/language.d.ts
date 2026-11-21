@@ -1018,6 +1018,8 @@ export interface LangPair {
   'PasscodeAutoLock5Min': undefined;
   'PasscodeAutoLock30Min': undefined;
   'PasscodeAutoLock1Hour': undefined;
+  'PasscodeCloseOtherAccounts': undefined;
+  'PasscodeStorageNotDecrypted': undefined;
   'PasscodeDataCorrupted': undefined;
   'PasscodeLogOutAllAccounts': undefined;
   'PasscodeLogOutAllConfirm': undefined;

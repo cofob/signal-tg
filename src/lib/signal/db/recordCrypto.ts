@@ -1,5 +1,5 @@
 import {
-  decryptValue, type EncryptedValue, encryptValue, isEncryptedValue, isEncryptingWrites,
+  decryptValue, type EncryptedValue, encryptValue, isEncryptedValue, isEncryptingWrites, StorageLockedError,
 } from '../store/atRest';
 
 export type StoreName = 'conversations' | 'messages' | 'stories' | 'calls';
@@ -14,6 +14,9 @@ type PlainFields = Record<string, unknown>;
 export type StoredRecord = PlainFields & { enc?: EncryptedValue };
 
 const ENCRYPTED_FIELD = 'enc';
+const MAX_LOGGED_FAILURES = 5;
+
+let loggedFailureCount = 0;
 
 /** Encrypts a record for storing when the engine encrypts writes, or `force` says so; otherwise returns it as it is */
 export async function encodeRecord<T extends object>(store: StoreName, record: T, force?: boolean): Promise<T> {
@@ -32,15 +35,62 @@ export async function decodeRecord<T>(store: StoreName, stored: unknown): Promis
 
   const { enc, ...plain } = stored as StoredRecord;
   const rest = await decryptValue(getContext(store, plain), enc!) as PlainFields;
-  return { ...rest, ...plain } as T;
+  const record = { ...rest, ...plain };
+  // The clear copy of `sendRetry` holds only the field that the index needs; the whole record is in the encrypted part
+  if (rest.sendRetry) {
+    const plainAt = (plain.sendRetry as { at: number } | undefined)?.at;
+    if (plainAt !== (rest.sendRetry as { at: number }).at) {
+      throw new Error('The resend time of a record does not match');
+    }
+    record.sendRetry = rest.sendRetry;
+  }
+  return record as T;
 }
 
+/**
+ * Decodes records for a read: one that cannot be decrypted is skipped and logged, so that a damaged record does not
+ * fail a whole chat. Without the key nothing is skipped, since every record would be.
+ */
 export async function decodeRecords<T>(store: StoreName, stored: unknown[]): Promise<T[]> {
-  return Promise.all(stored.map((record) => decodeRecord<T>(store, record)));
+  const results = await Promise.allSettled(stored.map((record) => decodeRecord<T>(store, record)));
+  const records: T[] = [];
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      records.push(result.value);
+    } else {
+      reportUnreadableRecord(store, result.reason);
+    }
+  }
+  return records;
+}
+
+/** Like `decodeRecords` for one record: `undefined` when it cannot be decrypted */
+export async function decodeOptionalRecord<T>(store: StoreName, stored: unknown): Promise<T | undefined> {
+  return (await decodeRecords<T>(store, [stored]))[0];
+}
+
+/** Whether a stored record is encrypted but the key does not open it */
+export async function getIsRecordUnreadable(store: StoreName, stored: unknown) {
+  if (!isEncryptedRecord(stored)) return false;
+  try {
+    await decodeRecord(store, stored);
+    return false;
+  } catch (err) {
+    if (err instanceof StorageLockedError) throw err;
+    return true;
+  }
 }
 
 export function isEncryptedRecord(stored: unknown) {
   return Boolean(stored) && typeof stored === 'object' && isEncryptedValue((stored as StoredRecord)[ENCRYPTED_FIELD]);
+}
+
+function reportUnreadableRecord(store: StoreName, error: unknown) {
+  if (error instanceof StorageLockedError) throw error;
+  if (loggedFailureCount++ >= MAX_LOGGED_FAILURES) return;
+
+  // eslint-disable-next-line no-console
+  console.error(`[signal] A record of ${store} cannot be decrypted and is skipped`, String(error));
 }
 
 export function isSameEncryption(a: unknown, b: unknown) {

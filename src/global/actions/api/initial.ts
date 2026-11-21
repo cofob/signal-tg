@@ -8,6 +8,7 @@ import {
   MEDIA_PROGRESSIVE_CACHE_NAME,
 } from '../../../config';
 import clearSignalLocalData, { clearAllSignalLocalData } from '../../../lib/signal/clearLocalData';
+import { hasEncryptedEngineData } from '../../../lib/signal/store/atRestMigration';
 import { updateAppBadge } from '../../../util/appBadge';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
@@ -52,6 +53,8 @@ import { destroySharedStatePort, resetSharedStatePort } from '../../shared/share
 let resetStoragePromise: Promise<boolean> | undefined;
 
 const API_DESTROY_TIMEOUT_MS = 3000;
+// The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
+const STORAGE_LOCKED_ERROR = 'SIGNAL_STORAGE_LOCKED';
 
 addActionHandler('initApi', (global, actions): ActionReturnType => {
   if (global.passcode.isScreenLocked || checkSessionLocked()
@@ -72,6 +75,8 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
   })).catch((err) => {
     // eslint-disable-next-line no-console
     console.error('Failed to start the API', getLoggableError(err));
+    // Without the key the engine does not start: the data is encrypted, and the app says so instead of waiting
+    actions.apiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
   });
 
   void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
@@ -270,7 +275,8 @@ addActionHandler('reset', async (global, actions): Promise<void> => {
   }
 
   if (!hasAccounts) {
-    await clearPasscodeStore();
+    // The key stays while stores that it opens are left, so that a failed wipe can be tried again
+    if (!await hasEncryptedEngineData()) await clearPasscodeStore();
     localStorage.removeItem(IS_SCREEN_LOCKED_CACHE_KEY);
     await clearWallpaperBlobs();
     if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
@@ -343,7 +349,8 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
   await clearAllSignalLocalData().catch(() => undefined);
 
   clearAllStoredSessions();
-  await clearPasscodeStore().catch(() => undefined);
+  // Only after the engine's stores are gone: the key is what opens them, and a failed wipe has to be tried again
+  if (!await hasEncryptedEngineData().catch(() => true)) await clearPasscodeStore().catch(() => undefined);
 
   try {
     localStorage.clear();

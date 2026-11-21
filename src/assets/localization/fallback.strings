@@ -1218,6 +1218,8 @@
 "PasscodeAutoLock5Min" = "If away for 5 minutes";
 "PasscodeAutoLock30Min" = "If away for 30 minutes";
 "PasscodeAutoLock1Hour" = "If away for 1 hour";
+"PasscodeCloseOtherAccounts" = "Close the other accounts of this app before turning the passcode off, so that their data can be decrypted.";
+"PasscodeStorageNotDecrypted" = "Some local data could not be decrypted, so the passcode stays on.";
 "PasscodeDataCorrupted" = "Your encrypted data could not be restored. To continue using Telegram, log out of all accounts and log in again.";
 "PasscodeLogOutAllAccounts" = "Log Out All Accounts";
 "PasscodeLogOutAllConfirm" = "Remove all accounts and local data from this browser? These sessions will remain active until you terminate them in Settings > Devices.";

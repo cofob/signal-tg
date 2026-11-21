@@ -26,7 +26,7 @@ export {
 } from './chats';
 export { clearCallLog, fetchCallLog, markCallLogSeen } from './calls';
 export {
-  destroy, disableStorageEncryption, disconnect, enableStorageEncryption, reconnectNow,
+  destroy, disableStorageEncryption, disconnect, enableStorageEncryption, eraseUnreadableStorageRecords, reconnectNow,
 } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
