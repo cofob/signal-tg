@@ -9,6 +9,7 @@ import {
   type ApiChatBannedRights,
   type ApiChatFolder,
   type ApiChatFullInfo,
+  type ApiChatInviteJoinRequested,
   type ApiChatInviteJoinWebView,
   type ApiChatReactions,
   type ApiDraft,
@@ -1875,7 +1876,7 @@ function preparePeers(
 
 export async function importChatInvite(
   { hash, theme }: { hash: string; theme?: ApiThemeParameters },
-): Promise<ApiChatInviteJoinWebView | { type: 'ok'; chat: ApiChat } | undefined> {
+): Promise<ApiChatInviteJoinWebView | ApiChatInviteJoinRequested | { type: 'ok'; chat: ApiChat } | undefined> {
   const result = await invokeRequest(new GramJs.messages.ImportChatInvite({ hash }));
   if (!result) {
     return undefined;

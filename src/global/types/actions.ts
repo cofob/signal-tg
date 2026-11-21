@@ -197,7 +197,7 @@ export interface ActionPayloads {
   checkChatInvite: {
     hash: string;
   } & WithTabId;
-  acceptChatInvite: { hash: string; isRequestNeeded?: boolean; isBroadcast?: boolean } & WithTabId;
+  acceptChatInvite: { hash: string; isBroadcast?: boolean } & WithTabId;
   closeChatInviteModal: WithTabId | undefined;
 
   // settings

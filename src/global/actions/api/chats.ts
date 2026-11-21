@@ -1715,7 +1715,7 @@ addActionHandler('openChatByUsernameLink', async (global, actions, payload): Pro
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
-    hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),
+    hash, isBroadcast, tabId = getCurrentTabId(),
   } = payload;
   const theme = extractCurrentThemeParams();
   const result = await callApi('importChatInvite', { hash, theme });
@@ -1738,7 +1738,7 @@ addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<v
     return;
   }
 
-  if (isRequestNeeded) {
+  if (result?.type === 'requested') {
     actions.showNotification({
       message: { key: isBroadcast ? 'RequestToJoinChannelSentDescription' : 'RequestToJoinGroupSentDescription' },
       tabId,

@@ -307,15 +307,22 @@ export async function checkChatInvite(hash: string) {
   }
 }
 
-/** Joins through a group link; a link that needs admin approval sends a join request and returns no chat yet */
+/**
+ * Joins through a group link; a link that needs admin approval sends a join request, which the result tells apart
+ * from a failure, and returns no chat yet
+ */
 export async function importChatInvite({ hash }: { hash: string; theme?: unknown }) {
   const selfAci = getCurrentAccount()?.aci;
   if (!selfAci) return undefined;
 
   try {
     const conversation = await groups.joinGroupByLink(hash);
-    if (!conversation?.memberAcis?.includes(selfAci)) return undefined;
-    return { type: 'ok' as const, chat: buildApiChat(conversation, selfAci) };
+    if (conversation.memberAcis?.includes(selfAci)) {
+      return { type: 'ok' as const, chat: buildApiChat(conversation, selfAci) };
+    }
+    return conversation.groupState?.requestingMembers.some((member) => member.aci === selfAci)
+      ? { type: 'requested' as const }
+      : undefined;
   } catch (err) {
     reportError(err, INVITE_LINK_ERROR);
     return undefined;
