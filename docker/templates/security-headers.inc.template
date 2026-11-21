@@ -1,0 +1,14 @@
+# Response headers of the app, rendered by the entrypoint to `/tmp/telesignal/nginx/security-headers.inc`. A server of
+# your own config can include that file. `add_header` is inherited only by blocks that set no header themselves, so
+# include it again in every `location` that adds one.
+#
+# The policy is the one in the page's `<meta>` tag (`buildCsp` in `vite.config.ts`), plus what a `<meta>` tag cannot
+# carry: `frame-ancestors`. As a header it also covers the Web Worker that runs the Signal engine.
+add_header Content-Security-Policy "${TELESIGNAL_CSP}; frame-ancestors 'none'" always;
+add_header X-Content-Type-Options nosniff always;
+# The app's multi-account back navigation needs the referrer of its own origin
+add_header Referrer-Policy same-origin always;
+add_header X-Frame-Options DENY always;
+# The app uses the camera, microphone, clipboard, fullscreen and passkeys; everything else it never asks for is off
+add_header Permissions-Policy "accelerometer=(), browsing-topics=(), geolocation=(), gyroscope=(), hid=(), interest-cohort=(), magnetometer=(), midi=(), payment=(), serial=(), usb=(), xr-spatial-tracking=()" always;
+${TELESIGNAL_HSTS}
