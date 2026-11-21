@@ -46,6 +46,7 @@ import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
+import RecoveryKeyModal from './recoveryKey/RecoveryKeyModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
@@ -92,6 +93,7 @@ type ModalKey = keyof Pick<TabState,
   'qrCodeModal' |
   'safetyNumberModal' |
   'safetyNumberChangeModal' |
+  'recoveryKeyModal' |
   'quickPreview' |
   'storyStealthModal' |
   'isAudioPlaylistModalOpen' |
@@ -196,6 +198,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   qrCodeModal: QrCodeModal,
   safetyNumberModal: SafetyNumberModal,
   safetyNumberChangeModal: SafetyNumberChangeModal,
+  recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
   storyStealthModal: StealthModeModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,

@@ -1795,6 +1795,9 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberChangeModal: WithTabId | undefined;
   sendMessageAnyway: WithTabId | undefined;
+  openRecoveryKeyModal: WithTabId | undefined;
+  closeRecoveryKeyModal: WithTabId | undefined;
+  confirmRecoveryKeySaved: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;

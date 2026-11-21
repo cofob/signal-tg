@@ -99,3 +99,5 @@ addActionHandler('openSafetyNumberChangeModal', (global, actions, payload): Acti
   return updateTabState(global, { safetyNumberChangeModal: { chatId, messageId, userIds } }, tabId);
 });
 addTabStateResetterAction('closeSafetyNumberChangeModal', 'safetyNumberChangeModal');
+
+addTabStateResetterAction('closeRecoveryKeyModal', 'recoveryKeyModal');

@@ -289,6 +289,7 @@ async function saveRegisteredAccount(
     // A primary device has no other device to ask for contacts, groups and keys
     isInitialSyncDone: true,
     isRegistrationPending: true,
+    isRecoveryKeyUnconfirmed: true,
   };
   await store.setItem('account', account);
   await store.removeItem('pendingRegistration');

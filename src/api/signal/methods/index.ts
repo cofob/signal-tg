@@ -73,9 +73,11 @@ export {
   sendReaction,
 } from './messages';
 export {
+  confirmRecoveryKeySaved,
   confirmUsername,
   deleteUsername,
   fetchPhoneNumberPrivacy,
+  fetchRecoveryKey,
   fetchSafetyNumber,
   fetchUsernameLink,
   getChatByPhoneNumber,

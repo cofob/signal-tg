@@ -2,7 +2,9 @@ import type { UsernameErrorReason, UsernameReservation } from '../../../lib/sign
 import type { ApiPrivacySettings, ApiUser, PrivacyVisibility } from '../../types';
 
 import { setPhoneNumberDiscoverability } from '../../../lib/signal/account/phoneNumberDiscoverability';
+import { formatRecoveryKey } from '../../../lib/signal/account/recoveryKey';
 import { generateSafetyNumber } from '../../../lib/signal/account/safetyNumber';
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
 import { writeProfile } from '../../../lib/signal/profiles/writeProfile';
 import { Verified_State } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { lookupUsername, resolveUsernameLink as resolveLink } from '../../../lib/signal/usernames/lookupUsername';
@@ -259,6 +261,27 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
       await processor.updateOwnAccount({ isPhoneNumberShared: isShared });
     }
     return fetchPhoneNumberPrivacy();
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
+
+/**
+ * The recovery key of the account, which is its account entropy pool, as Signal shows it; only a primary device
+ * has one to show, as in Signal Android
+ */
+export async function fetchRecoveryKey() {
+  const account = await store.getItem('account');
+  if (account?.deviceId !== SIGNAL_PRIMARY_DEVICE_ID || !account.accountEntropyPool) return undefined;
+  return { key: formatRecoveryKey(account.accountEntropyPool), isUnconfirmed: account.isRecoveryKeyUnconfirmed };
+}
+
+/** The user saved the recovery key of a new account, so it is not shown again at the next start */
+export async function confirmRecoveryKeySaved() {
+  try {
+    await client.updateAccount({ isRecoveryKeyUnconfirmed: undefined });
+    return true;
   } catch (err) {
     logError(err);
     return undefined;

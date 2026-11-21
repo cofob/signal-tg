@@ -806,6 +806,12 @@ export type TabState = {
     userIds: string[];
   };
 
+  // Signal: the recovery key of the account, shown in the format of Signal; `isUnconfirmed` for a new account
+  recoveryKeyModal?: {
+    key: string;
+    isUnconfirmed?: boolean;
+  };
+
   suggestedStatusModal?: {
     botId: string;
     webAppKey?: string;

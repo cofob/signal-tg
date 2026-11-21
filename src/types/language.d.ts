@@ -176,6 +176,14 @@ export interface LangPair {
   'SafetyNumberChangesText': undefined;
   'SafetyNumberVerify': undefined;
   'SendAnyway': undefined;
+  'RecoveryKey': undefined;
+  'RecoveryKeyRecord': undefined;
+  'RecoveryKeyText': undefined;
+  'RecoveryKeyWarning': undefined;
+  'RecoveryKeyCopy': undefined;
+  'RecoveryKeyCopied': undefined;
+  'RecoveryKeySaved': undefined;
+  'RecoveryKeyPrimaryOnly': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;

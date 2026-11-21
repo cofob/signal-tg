@@ -196,6 +196,7 @@ export async function startSession(storedAccount: AccountRecord) {
     currentUserFullInfo: buildApiUserFullInfo(self, account.aci),
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
+  if (account.isRecoveryKeyUnconfirmed) sendApiUpdate({ '@type': 'updateRecoveryKeyUnconfirmed' });
   if (hasHistoryTransferFailed) {
     sendApiUpdate({ '@type': 'error', error: { message: HISTORY_TRANSFER_FAILED_ERROR, hasErrorKey: true } });
   }

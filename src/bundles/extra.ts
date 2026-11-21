@@ -103,6 +103,7 @@ export { default as BrowserCloseConfirmationModal } from '../components/main/Bro
 export { default as FrozenAccountModal } from '../components/modals/frozenAccount/FrozenAccountModal';
 export { default as ProfileRatingModal } from '../components/modals/profileRating/ProfileRatingModal';
 export { default as DisableSharingAboutModal } from '../components/modals/disableSharing/DisableSharingAboutModal';
+export { default as RecoveryKeyModal } from '../components/modals/recoveryKey/RecoveryKeyModal';
 export { default as SafetyNumberModal } from '../components/modals/safetyNumber/SafetyNumberModal';
 export {
   default as SafetyNumberChangeModal,

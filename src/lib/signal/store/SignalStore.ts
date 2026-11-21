@@ -39,6 +39,8 @@ export type AccountRecord = {
   usernameLink?: UsernameLink;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
+  // Set at registration until the user confirms to have saved the recovery key, which is the account entropy pool
+  isRecoveryKeyUnconfirmed?: boolean;
   // The sync requests to the primary device after linking went out
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
