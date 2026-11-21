@@ -14,11 +14,9 @@ type WorkerAction = {
   payload: Record<string, any>;
 };
 
-const IGNORE_WORKER_PATH = '/k/';
 const CONTROLLER_TIMEOUT_MS = 3000;
-const SERVICE_WORKER_OPTIONS: RegistrationOptions = import.meta.env.DEV
-  ? { scope: './', type: 'module' }
-  : { type: 'module' };
+// The worker of Web A's directory (`/a/`); Web K at `/k/` has its own
+const SERVICE_WORKER_OPTIONS: RegistrationOptions = { scope: './', type: 'module' };
 
 function handleWorkerMessage(e: MessageEvent) {
   const action: WorkerAction = e.data;
@@ -61,18 +59,12 @@ if (IS_SERVICE_WORKER_SUPPORTED) {
 
   window.addEventListener('load', async () => {
     try {
-      const controller = navigator.serviceWorker.controller;
-      if (controller?.scriptURL.includes(IGNORE_WORKER_PATH)) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        const ourRegistrations = registrations.filter((r) => !r.scope.includes(IGNORE_WORKER_PATH));
-        if (ourRegistrations.length) {
-          if (DEBUG) {
-            // eslint-disable-next-line no-console
-            console.log('[SW] Hard reload detected, re-enabling Service Worker');
-          }
-          await Promise.all(ourRegistrations.map((r) => r.unregister()));
-        }
-      }
+      // Versions served from the root of the origin registered their worker there, where it would control Web K's
+      // pages at `/k/` too; each frontend now has a worker of its own directory
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations
+        .filter(({ scope }) => scope === `${window.location.origin}/`)
+        .map((registration) => registration.unregister()));
 
       await navigator.serviceWorker.register(serviceWorkerUrl, SERVICE_WORKER_OPTIONS);
 

@@ -143,9 +143,13 @@ export class AppManagersManager {
         return urls;
       }
 
+      // * TeleSignal: a copy of the worker under another address is a SharedWorker of its own. Upstream makes the
+      // * copies from blob: URLs, which the app's policy (`worker-src 'self'`) does not allow; a query keeps them on
+      // * the origin
       const newURLs = new Array(maxLength - length).fill(undefined).map((_, index) => {
-        const owner = makeObjectUrlOwner('threaded-worker', type, length + index);
-        return objectUrlRegistry.createShared(blob, owner);
+        const url = new URL(originalUrl);
+        url.searchParams.set('thread', '' + (length + index));
+        return url.toString();
       });
       urls.push(...newURLs);
       return urls;
