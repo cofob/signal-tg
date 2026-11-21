@@ -76,9 +76,11 @@ export default class SignalClient {
     this.unauthenticatedChat.close();
   }
 
+  /** Changes the stored account; the client has loaded it at its first connection, or does here */
   async updateAccount(update: Partial<AccountRecord>) {
-    if (!this.account) throw new Error('Signal client is not connected');
-    this.account = { ...this.account, ...update };
+    const account = this.account ?? await this.store.getItem('account');
+    if (!account) throw new Error('This browser is not linked to a Signal account');
+    this.account = { ...account, ...update };
     await this.store.setItem('account', this.account);
     return this.account;
   }

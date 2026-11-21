@@ -1707,6 +1707,17 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  openSafetyNumberChangeModal: {
+    chatId: string;
+    messageId: number;
+    userIds: string[];
+  } & WithTabId;
+  closeSafetyNumberChangeModal: WithTabId | undefined;
+  sendMessageAnyway: WithTabId | undefined;
+  // Settings open it always; the main screen opens it for a recovery key that the user did not confirm yet
+  openRecoveryKeyModal: ({ shouldSkipConfirmed?: boolean } & WithTabId) | undefined;
+  closeRecoveryKeyModal: WithTabId | undefined;
+  confirmRecoveryKeySaved: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;

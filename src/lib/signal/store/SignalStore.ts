@@ -1,3 +1,4 @@
+import type { LastResortPreKeys } from '../account/preKeys';
 import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
@@ -34,14 +35,12 @@ export type AccountRecord = {
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;
-  // Phone number privacy from the storage service account record: who sees the number on our profile, and whether
-  // people can find us by it
+  // Phone number privacy, as in the storage service account record: who sees the number on our profile, and whether
+  // people can find us by it. A primary device registered here sets the latter with the account attribute.
   isPhoneNumberShared?: boolean;
   isPhoneNumberUnlisted?: boolean;
   // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
   usernameLink?: UsernameLink;
-  // Registered primary devices only: the account attribute that lets people find us by phone number
-  isDiscoverableByPhoneNumber?: boolean;
   // Registered primary devices only: SVR2 stores the master key under a PIN
   hasSvrPin?: boolean;
   // Registered primary devices only: registering the number again needs the PIN
@@ -50,12 +49,35 @@ export type AccountRecord = {
   isContactDiscoveryEnabled?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
+  // Set at registration until the user confirms to have saved the recovery key, which is the account entropy pool
+  isRecoveryKeyUnconfirmed?: boolean;
   // The sync requests to the primary device after linking went out
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
   isDemo?: boolean;
   // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
   historyTransfer?: HistoryTransferState;
+};
+
+/**
+ * Everything a registration generates, stored before its request goes out: when the answer is lost, the account may
+ * exist on the server, and only these keys can use it
+ */
+export type PendingRegistration = {
+  number: string;
+  password: string;
+  isPhoneNumberUnlisted: boolean;
+  registrationId: number;
+  pniRegistrationId: number;
+  profileKey: Uint8Array;
+  // An account that a PIN restored from SVR2 has a master key and no account entropy pool
+  accountEntropyPool?: string;
+  masterKey?: Uint8Array;
+  mediaRootBackupKey: Uint8Array;
+  aciIdentityKeyPair: KeyPairBytes;
+  pniIdentityKeyPair: KeyPairBytes;
+  aciLastResortPreKeys: LastResortPreKeys;
+  pniLastResortPreKeys: LastResortPreKeys;
 };
 
 /** Where the primary device uploaded the message history archive */
@@ -104,6 +126,10 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // A registration whose request went out; `resumePendingRegistration` finds out what became of it
+  pendingRegistration: PendingRegistration;
+  // The account that unlinked this browser, which keeps its conversations and messages for a new link of that account
+  unlinkedAci: string;
   // Merges of stored storage records that this device has done after learning to read more of them
   // (`MessageProcessor`)
   storageMergedRecordTypes: string[];
@@ -239,6 +265,10 @@ export default class SignalStore {
 
   setItem<K extends keyof Items>(key: K, value: Items[K]) {
     return this.db.set(`item:${key}`, value);
+  }
+
+  removeItem(key: keyof Items) {
+    return this.db.del(`item:${key}`);
   }
 
   getRecipient(aci: string) {

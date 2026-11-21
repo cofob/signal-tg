@@ -188,6 +188,18 @@
 "SafetyNumberMarkVerified" = "Mark as verified";
 "SafetyNumberClearVerification" = "Clear verification";
 "SafetyNumberVerified" = "Verified";
+"SafetyNumberChanges" = "Safety number changes";
+"SafetyNumberChangesText" = "The following people may have reinstalled Signal or changed devices. Click a recipient to confirm their new safety number. This is optional.";
+"SafetyNumberVerify" = "Verify";
+"SendAnyway" = "Send anyway";
+"RecoveryKey" = "Recovery key";
+"RecoveryKeyRecord" = "Record your recovery key";
+"RecoveryKeyText" = "This key is required to recover your account and data. Store this key somewhere safe. If you lose it, you won't be able to recover your account.";
+"RecoveryKeyWarning" = "Signal will not be able to help you if you lose your key. Store it somewhere safe and secure, and do not share it with others.";
+"RecoveryKeyCopy" = "Copy to clipboard";
+"RecoveryKeyCopied" = "Recovery key copied to clipboard.";
+"RecoveryKeySaved" = "I have saved my recovery key";
+"RecoveryKeyUnavailable" = "This device has no recovery key to show. It is shown on the primary device of the account.";
 "SafetyNumberUnavailable" = "A safety number with {user} is available after you exchange messages.";
 "ActionSafetyChanged" = "Your safety number with {user} has changed";
 "ActionSafetyVerified" = "You marked your safety number with {user} as verified";
@@ -212,6 +224,8 @@
 "SignalHistorySyncImporting" = "Finalizing message transfer {percent}...";
 "SignalHistorySyncNote" = "This may take a few minutes";
 "SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
+"SignalPinnedLimit" = "You have reached the limit of pinned chats. Unpin a chat to pin another one.";
+"SignalPrimaryUnauthorized" = "Signal no longer accepts this device, for example because your number is registered on another device. Your messages stay here until you log out.";
 "SignalRegisterLink" = "Register with a phone number";
 "SignalLinkExisting" = "Link to an existing account";
 "SignalRegisterTitle" = "New Signal account";

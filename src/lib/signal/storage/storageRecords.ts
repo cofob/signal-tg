@@ -8,6 +8,7 @@ import type {
   GroupV2Record,
   InstalledStickerPackRecord,
   ManifestRecord,
+  ManifestRecord_Identifier,
   StorageRecord,
   StoryDistributionListRecord,
 } from '../proto/generated/StorageService_pb';
@@ -24,6 +25,7 @@ import {
   AccountRecord_PhoneNumberSharingMode,
   AccountRecord_PinnedConversationSchema,
   AccountRecord_UsernameLinkSchema,
+  AccountRecordSchema,
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
@@ -31,10 +33,13 @@ import {
   StorageRecordSchema,
 } from '../proto/generated/StorageService_pb';
 
-type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted'
+type ConversationRecordField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted'
   | 'hideStory';
+// The profile key is not a conversation field: contact records get the one of the recipient
+type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
-  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'storiesDisabled' | 'storyViewReceiptsEnabled';
+  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath'
+  | 'storiesDisabled' | 'storyViewReceiptsEnabled';
 // Sticker pack and story distribution list records are written whole
 type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList';
 
@@ -57,7 +62,7 @@ type StorageWriteSource = {
   changes: StorageChanges;
   conversations: ConversationRecord[];
   stickerPacks: Record<string, StickerPackRecord>;
-  // Profile keys of private conversations that get their first record
+  // Profile keys of the private conversations with changes
   profileKeys: Map<string, Uint8Array>;
   selfAci: string;
   deviceId: number;
@@ -74,13 +79,14 @@ const ACI_BINARY_LENGTH = 16;
 // PNIs have a prefix byte in binary service id fields and a `PNI:` prefix in strings
 const PNI_BINARY_PREFIX = 1;
 const PNI_STRING_PREFIX_LENGTH = 4;
-// Signal Desktop `generateStorageID` in `ts/services/storage.preload.ts`
+// Signal Desktop `generateStorageID` and `RECORD_IKM_LENGTH` in `ts/services/storage.preload.ts`
 const STORAGE_ID_LENGTH = 16;
+const RECORD_IKM_LENGTH = 32;
 // Signal Desktop `MuteExpiration` (`packages/types/src/service/MuteExpiration.std.ts`): "muted forever" is
 // `Number.MAX_SAFE_INTEGER` locally and the largest signed 64-bit number in records
 const MAX_SAFE_DATE = 8_640_000_000_000_000;
 const MUTED_FOREVER_PROTO = 2n ** 63n - 1n;
-const CONVERSATION_FIELDS: Record<ConversationStorageField, keyof ConversationRecord> = {
+const CONVERSATION_FIELDS: Record<ConversationRecordField, keyof ConversationRecord> = {
   archived: 'isArchived',
   markedUnread: 'isMarkedUnread',
   mutedUntilTimestamp: 'mutedUntil',
@@ -88,7 +94,11 @@ const CONVERSATION_FIELDS: Record<ConversationStorageField, keyof ConversationRe
   whitelisted: 'isAccepted',
   hideStory: 'isStoryHidden',
 };
-const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationStorageField[];
+const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationRecordField[];
+const ACCOUNT_FIELD_NAMES: AccountStorageField[] = [
+  'pinnedConversations', 'noteToSelfArchived', 'noteToSelfMarkedUnread', 'username', 'usernameLink',
+  'phoneNumberSharingMode', 'unlistedPhoneNumber', 'givenName', 'familyName', 'avatarUrlPath',
+];
 
 /**
  * The record fields that a local change of a conversation touches. Note to Self keeps its state and every pin
@@ -131,7 +141,7 @@ export function mergeStorageChanges(changes: StorageChanges, added: StorageChang
 export function omitChangedFields(patch: Partial<ConversationRecord>, fields?: StorageField[]) {
   const result = { ...patch };
   for (const field of fields ?? []) {
-    if (field in CONVERSATION_FIELDS) delete result[CONVERSATION_FIELDS[field as ConversationStorageField]];
+    if (field in CONVERSATION_FIELDS) delete result[CONVERSATION_FIELDS[field as ConversationRecordField]];
   }
   return result;
 }
@@ -196,17 +206,19 @@ export function getMutedUntil(timestamp: bigint) {
  * `ts/services/storage.preload.ts`): each record with local changes is written again under a new random storage id
  * and its old id is deleted. Fields without local changes keep their remote values, unknown fields stay, and
  * records of other types keep their ids. A conversation without a record gets one; the account record is left to
- * the primary device until it exists. Returns `undefined` when nothing changed.
+ * the primary device until it exists. Returns `undefined` when nothing changed, else the write and the keys of
+ * `changes` it carries: changes of records that cannot be written yet stay marked.
  */
 export function buildStorageWrite({
   manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount, storyLists,
-}: StorageWriteSource): StorageWrite | undefined {
+}: StorageWriteSource): { write: StorageWrite; writtenKeys: string[] } | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storyListsByKey = new Map(storyLists.map((list) => [getStoryListKey(list.id), list]));
   const storedRecords = indexRecords(records);
   const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
   const insertTypes = new Map<string, ItemType>();
   const deleteIds: string[] = [];
+  const writtenKeys: string[] = [];
 
   for (const [key, fields] of Object.entries(changes)) {
     const conversation = conversationsById.get(key);
@@ -232,7 +244,9 @@ export function buildStorageWrite({
     } else if (conversation) {
       record = stored?.record ?? createConversationRecord(conversation, profileKeys.get(conversation.id));
       const { value } = record.record as { value: ContactRecord | GroupV2Record };
-      setConversationFields(value, conversation, stored ? fields : CONVERSATION_FIELD_NAMES);
+      setConversationFields(
+        value, conversation, stored ? fields : CONVERSATION_FIELD_NAMES, profileKeys.get(conversation.id),
+      );
     } else {
       continue;
     }
@@ -240,6 +254,7 @@ export function buildStorageWrite({
     const id = bufferToBase64(getRandomBytes(STORAGE_ID_LENGTH));
     inserts.set(id, toBinary(StorageRecordSchema, record));
     insertTypes.set(id, getItemType(record));
+    writtenKeys.push(key);
     if (stored) deleteIds.push(stored.id);
   }
   if (!inserts.size) return undefined;
@@ -252,7 +267,76 @@ export function buildStorageWrite({
   for (const [id, type] of insertTypes) {
     next.identifiers.push(create(ManifestRecord_IdentifierSchema, { raw: bufferFromBase64(id), type }));
   }
-  return { manifest: next, inserts, deleteIds };
+  return { write: { manifest: next, inserts, deleteIds }, writtenKeys };
+}
+
+/**
+ * The number of pinned conversations: the local ones and the pins of the account record that this device has no
+ * conversation for, such as the release notes chat. `records` are the stored records of the manifest.
+ */
+export function countPinnedConversations(records: Map<string, Uint8Array>, conversations: ConversationRecord[]) {
+  const { record } = indexRecords(records).get(ACCOUNT_KEY)?.record ?? {};
+  return buildPinnedConversations(record?.case === 'account' ? record.value.pinnedConversations : [], conversations)
+    .length;
+}
+
+/**
+ * A manifest with a record for the account, for each conversation that has a message request answer and for each
+ * sticker pack that was installed or removed here, all under new storage ids and a new `recordIkm` (Signal Desktop `createNewManifest` and `resetWithNewKey` in
+ * `ts/services/storage.preload.ts`). A primary device writes it as its first manifest, and with `shouldClearAll`
+ * in place of one that its storage key cannot open. Returns the write and the keys of `changes` it carries.
+ */
+export function buildNewStorageWrite({
+  version, shouldClearAll, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount,
+}: {
+  version: bigint;
+  shouldClearAll: boolean;
+  conversations: ConversationRecord[];
+  stickerPacks: Record<string, StickerPackRecord>;
+  profileKeys: Map<string, Uint8Array>;
+  selfAci: string;
+  deviceId: number;
+  localAccount: LocalAccount;
+}) {
+  const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
+  const identifiers: ManifestRecord_Identifier[] = [];
+  const writtenKeys = [ACCOUNT_KEY];
+  const addRecord = (record: StorageRecord) => {
+    const id = bufferToBase64(getRandomBytes(STORAGE_ID_LENGTH));
+    inserts.set(id, toBinary(StorageRecordSchema, record));
+    identifiers.push(create(ManifestRecord_IdentifierSchema, { raw: bufferFromBase64(id), type: getItemType(record) }));
+  };
+
+  const account = create(AccountRecordSchema, {
+    profileKey: localAccount.profileKey,
+    readReceipts: localAccount.isReadReceiptsEnabled ?? false,
+    typingIndicators: localAccount.isTypingIndicatorsEnabled ?? true,
+    linkPreviews: localAccount.isLinkPreviewsEnabled ?? true,
+  });
+  setAccountFields(account, ACCOUNT_FIELD_NAMES, conversations, selfAci, localAccount);
+  addRecord(create(StorageRecordSchema, { record: { case: 'account', value: account } }));
+
+  for (const conversation of conversations) {
+    // Conversations that are still message requests are not part of our contacts and groups
+    if (conversation.id === selfAci || !getRecordKey(conversation)) continue;
+    if (!conversation.isAccepted && !conversation.isBlocked) continue;
+
+    const record = createConversationRecord(conversation, profileKeys.get(conversation.id));
+    setConversationFields(
+      (record.record as { value: ContactRecord | GroupV2Record }).value, conversation, CONVERSATION_FIELD_NAMES,
+    );
+    addRecord(record);
+    writtenKeys.push(conversation.id);
+  }
+  for (const pack of Object.values(stickerPacks)) {
+    addRecord(buildStickerPackRecord(pack));
+    writtenKeys.push(getStickerPackStorageKey(pack.id));
+  }
+
+  const manifest = create(ManifestRecordSchema, {
+    version, sourceDevice: deviceId, identifiers, recordIkm: getRandomBytes(RECORD_IKM_LENGTH),
+  });
+  return { write: { manifest, inserts, deleteIds: [], shouldClearAll } satisfies StorageWrite, writtenKeys };
 }
 
 /** Stored records by what they belong to: a contact's ACI, `group:` and a group's master key, or the account */
@@ -347,7 +431,10 @@ function buildStickerPackRecord(pack: StickerPackRecord, stored?: StorageRecord)
 }
 
 function setConversationFields(
-  record: ContactRecord | GroupV2Record, conversation: ConversationRecord, fields: StorageField[],
+  record: ContactRecord | GroupV2Record,
+  conversation: ConversationRecord,
+  fields: StorageField[],
+  profileKey?: Uint8Array,
 ) {
   for (const field of fields) {
     switch (field) {
@@ -371,6 +458,9 @@ function setConversationFields(
         break;
       case 'hideStory':
         record.hideStory = Boolean(conversation.isStoryHidden);
+        break;
+      case 'profileKey':
+        if (profileKey && 'profileKey' in record) record.profileKey = profileKey;
         break;
       default:
         break;
@@ -413,6 +503,16 @@ function setAccountFields(
         break;
       case 'username':
         record.username = self?.username ?? '';
+        break;
+      // Signal Desktop `toAccountRecord` in `ts/services/storageRecordOps.preload.ts`
+      case 'givenName':
+        record.givenName = self?.profileName ?? '';
+        break;
+      case 'familyName':
+        record.familyName = self?.profileFamilyName ?? '';
+        break;
+      case 'avatarUrlPath':
+        record.avatarUrlPath = self?.avatarPath ?? '';
         break;
       case 'usernameLink':
         if (!usernameLink) {

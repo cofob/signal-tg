@@ -695,6 +695,19 @@ export type TabState = {
     isUnavailable?: boolean;
   };
 
+  // Signal: a message that was not sent to `userIds` because their safety numbers changed
+  safetyNumberChangeModal?: {
+    chatId: string;
+    messageId: number;
+    userIds: string[];
+  };
+
+  // Signal: the recovery key of the account, shown in the format of Signal; `isUnconfirmed` for a new account
+  recoveryKeyModal?: {
+    key: string;
+    isUnconfirmed?: boolean;
+  };
+
   suggestedStatusModal?: {
     botId: string;
     webAppKey?: string;

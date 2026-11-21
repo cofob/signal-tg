@@ -1,4 +1,5 @@
 import type { SenderContext } from '../sender/sendContent';
+import type { SignalProfile } from './fetchProfile';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
 import { bufferToBase64 } from '../../../util/encoding/buffer';
@@ -10,12 +11,7 @@ import { fetchProfile } from './fetchProfile';
 
 import { SyncMessage_FetchLatest_Type } from '../proto/generated/SignalService_pb';
 
-export type ProfileFields = {
-  givenName: string;
-  familyName?: string;
-  about?: string;
-  aboutEmoji?: string;
-};
+type ProfileFields = Pick<SignalProfile, 'givenName' | 'familyName' | 'about' | 'aboutEmoji'>;
 
 export type AvatarChange = { type: 'unchanged' } | { type: 'clear' } | { type: 'update'; avatar: Uint8Array };
 
@@ -42,9 +38,11 @@ const textDecoder = new TextDecoder();
 /**
  * Writes our profile: encrypts the fields with our profile key, sends them with `PUT /v1/profile` under the
  * version and commitment of that key, uploads a new avatar to the form the server returns, and asks our other
- * devices to fetch the profile (Signal Desktop `ts/services/writeProfile.preload.ts`). Fields this device does
- * not edit, the payment address and, unless `isPhoneNumberShared` is given, phone number sharing, keep their
- * current values. Returns the CDN path of the avatar.
+ * devices to fetch the profile (Signal Desktop `ts/services/writeProfile.preload.ts`). `fields` are merged over
+ * the current profile on the server, so a field that is present replaces it, even as `undefined`, and the others
+ * keep their values. The payment address, the visible badges and, unless `isPhoneNumberShared` is given, phone
+ * number sharing keep their current values as well. The write fails without a given name. Returns the CDN path of
+ * the avatar.
  */
 export async function writeProfile(
   context: SenderContext,
@@ -57,7 +55,13 @@ export async function writeProfile(
   const serviceId = wasm.ServiceId_ParseFromServiceIdString(account.aci);
   const current = await fetchProfile(connection, account.aci, profileKey);
 
-  const name = [fields.givenName, fields.familyName].filter(Boolean).join('\0');
+  const {
+    givenName, familyName, about, aboutEmoji,
+  } = { ...current, ...fields };
+  // Signal Desktop asserts this: without a given name, the family name would take its place
+  if (!givenName?.trim()) throw new Error('Cannot set an empty profile name');
+
+  const name = familyName ? `${givenName}\0${familyName}` : givenName;
   const phoneNumberSharing = isPhoneNumberShared !== undefined
     ? bufferToBase64(await encryptAesGcmWithNonce(profileKey, new Uint8Array([isPhoneNumberShared ? 1 : 0])))
     : current.phoneNumberSharing;
@@ -65,10 +69,9 @@ export async function writeProfile(
     version: textDecoder.decode(wasm.ProfileKey_GetProfileKeyVersion(profileKey, serviceId)),
     commitment: bufferToBase64(wasm.ProfileKey_GetCommitment(profileKey, serviceId)),
     name: await encryptProfileText(name, profileKey, NAME_PADDED_LENGTHS),
-    about: fields.about ? await encryptProfileText(fields.about, profileKey, ABOUT_PADDED_LENGTHS) : undefined,
-    aboutEmoji: fields.aboutEmoji
-      ? await encryptProfileText(fields.aboutEmoji, profileKey, ABOUT_EMOJI_PADDED_LENGTHS)
-      : undefined,
+    about: about ? await encryptProfileText(about, profileKey, ABOUT_PADDED_LENGTHS) : undefined,
+    aboutEmoji: aboutEmoji ? await encryptProfileText(aboutEmoji, profileKey, ABOUT_EMOJI_PADDED_LENGTHS) : undefined,
+    badgeIds: current.visibleBadgeIds,
     paymentAddress: current.paymentAddress,
     phoneNumberSharing,
     avatar: avatarChange.type !== 'clear',

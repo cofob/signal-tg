@@ -367,6 +367,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
   ...buildEntries(SettingsScreens.Privacy, ['SettingsItemPrivacyPasskeys'], {
     requires: 'arePasskeysAvailable', keywordsKey: 'SettingsKeywordsPasskeys',
   }),

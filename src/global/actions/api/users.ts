@@ -654,3 +654,35 @@ addActionHandler('toggleSafetyNumberVerified', async (global, actions, payload):
   global = updateTabState(global, { safetyNumberModal: { ...current, isVerified } }, tabId);
   setGlobal(global);
 });
+
+addActionHandler('sendMessageAnyway', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const modal = selectTabState(global, tabId).safetyNumberChangeModal;
+  if (!modal) return;
+
+  actions.closeSafetyNumberChangeModal({ tabId });
+  await callApi('sendMessageAnyway', { messageId: modal.messageId });
+});
+
+addActionHandler('openRecoveryKeyModal', async (global, actions, payload): Promise<void> => {
+  const { shouldSkipConfirmed, tabId = getCurrentTabId() } = payload || {};
+
+  const result = await callApi('fetchRecoveryKey');
+  if (shouldSkipConfirmed && !result?.isUnconfirmed) return;
+  if (!result) {
+    // Linked devices and accounts that a PIN restored have no key to show
+    actions.showNotification({ message: { key: 'RecoveryKeyUnavailable' }, tabId });
+    return;
+  }
+
+  global = getGlobal();
+  global = updateTabState(global, { recoveryKeyModal: result }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('confirmRecoveryKeySaved', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  if (!selectTabState(global, tabId).recoveryKeyModal?.isUnconfirmed) return;
+
+  await callApi('confirmRecoveryKeySaved');
+});

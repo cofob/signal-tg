@@ -15,6 +15,8 @@ export type SignalProfile = {
   avatarPath?: string;
   // Whether anyone may send sealed sender messages to this user without their profile key
   hasUnrestrictedUnidentifiedAccess?: boolean;
+  // The badges shown on the profile; a profile write sends their ids back, or the server hides them
+  visibleBadgeIds: string[];
   // Encrypted fields, base64, that a profile write sends back unchanged
   paymentAddress?: string;
   phoneNumberSharing?: string;
@@ -29,6 +31,7 @@ type ProfileResponse = {
   paymentAddress?: string;
   phoneNumberSharing?: string;
   unrestrictedUnidentifiedAccess?: boolean;
+  badges?: { id: string; visible?: boolean; expiration?: number }[];
 };
 
 const HTTP_OK = 200;
@@ -69,6 +72,10 @@ export async function fetchProfile(
     aboutEmoji: json.aboutEmoji ? await decryptProfileText(json.aboutEmoji, key) : undefined,
     avatarPath: json.avatar,
     hasUnrestrictedUnidentifiedAccess: json.unrestrictedUnidentifiedAccess,
+    // Signal Desktop `parseBadgeFromServer` and `encryptProfileData`: only badges with an expiration have a state
+    visibleBadgeIds: json.badges
+      ?.filter(({ visible, expiration }) => visible === true && typeof expiration === 'number')
+      .map(({ id }) => id) ?? [],
     paymentAddress: json.paymentAddress,
     phoneNumberSharing: json.phoneNumberSharing,
   };

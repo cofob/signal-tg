@@ -72,7 +72,9 @@ import { getIsStickerPackValid } from '../stickers/stickerPackLinks';
 import { getNextStickerPackPosition } from '../stickers/stickerPacks';
 import {
   ACCOUNT_KEY,
+  buildNewStorageWrite,
   buildStorageWrite,
+  countPinnedConversations,
   getAci,
   getMutedUntil,
   getOptionalBool,
@@ -192,6 +194,8 @@ type MessageRequestResponseType = SyncMessage_MessageRequestResponse_Type;
 /** A storage service write with what `commitStorageWrite` needs to know about the changes it carries */
 type PendingStorageWrite = {
   write: StorageWrite;
+  // The keys of `storageChanges` that the write carries
+  writtenKeys: string[];
   changeCount: number;
   // The write carries a new username, which our other devices learn through a `usernameChange` sync
   hasUsernameChange: boolean;
@@ -200,6 +204,8 @@ type PendingStorageWrite = {
 /** Account record fields that this device changes; each one present is written to the storage service */
 export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
 
+// The account record fields that our profile fills, see `updateOwnConversation`
+const PROFILE_STORAGE_FIELDS: AccountStorageField[] = ['givenName', 'familyName', 'avatarUrlPath'];
 const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
   username: 'username',
   usernameLink: 'usernameLink',
@@ -274,6 +280,9 @@ export default class MessageProcessor {
 
   private deliveryReceiptTimer?: ReturnType<typeof setTimeout>;
 
+  // Changes on every `stop`, so work queued for the previous account does not run for the next one
+  private generation = 0;
+
   private expirationTimer?: ReturnType<typeof setTimeout>;
 
   private groupRefreshes = new Map<string, Promise<ConversationRecord | undefined>>();
@@ -314,10 +323,19 @@ export default class MessageProcessor {
     void this.flushPendingSends();
   }
 
+  /** Stops the timers and drops the queued sends, storage syncs and profile fetches of the current account */
   stop() {
+    this.generation++;
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
     clearTimeout(this.storageSyncTimer);
+    this.deliveryReceiptTimer = undefined;
+    this.storageSyncTimer = undefined;
+    this.isStorageSyncQueued = false;
+    this.deliveryReceipts.clear();
+    this.pendingSends = [];
+    this.profileQueue = Promise.resolve();
+    this.storageSync = Promise.resolve();
   }
 
   /**
@@ -1052,7 +1070,10 @@ export default class MessageProcessor {
    * (see `syncStorageService`)
    */
   syncStorage() {
-    const sync = this.storageSync.then(() => syncStorageService(this.client.getSenderContext(), this));
+    const { generation } = this;
+    const sync = this.storageSync.then(() => (
+      generation === this.generation ? syncStorageService(this.client.getSenderContext(), this) : undefined
+    ));
     this.storageSync = sync.catch(() => undefined);
     return sync;
   }
@@ -1077,7 +1098,7 @@ export default class MessageProcessor {
           .filter(Boolean)
           .map((record) => fromBinary(StorageRecordSchema, record))
           .filter(({ record }) => record.case && types.has(record.case));
-        if (records.length) await this.mergeStorageRecords(records);
+        if (records.length) await this.mergeStorageRecords(records, false);
       }
       await store.setItem('storageMergedRecordTypes', [...merged, ...passes.map(({ id }) => id)]);
     });
@@ -1094,7 +1115,9 @@ export default class MessageProcessor {
       const previousIds = new Set(stored && getManifestIds(fromBinary(ManifestRecordSchema, stored)));
       const ids = new Set(getManifestIds(manifest));
 
-      await this.mergeStorageRecords([...records.values()].map((record) => fromBinary(StorageRecordSchema, record)));
+      await this.mergeStorageRecords(
+        [...records.values()].map((record) => fromBinary(StorageRecordSchema, record)), !stored,
+      );
       await store.setStorageRecords(records);
       await store.removeStorageRecords([...previousIds].filter((id) => !ids.has(id)));
       // Ids the server has no record for are left out, so the next write drops them
@@ -1118,19 +1141,14 @@ export default class MessageProcessor {
 
       const account = await this.getAccount();
       const manifest = fromBinary(ManifestRecordSchema, stored);
-      const ids = getManifestIds(manifest);
-      const serialized = await store.getStorageRecords(ids);
-      const records = new Map<string, Uint8Array>();
-      ids.forEach((id, index) => {
-        if (serialized[index]) records.set(id, serialized[index]);
-      });
+      const records = await this.getStoredRecords(manifest);
       const profileKeys = new Map<string, Uint8Array>();
       for (const id of Object.keys(changes)) {
         const profileKey = id !== ACCOUNT_KEY ? (await store.getRecipient(id))?.profileKey : undefined;
         if (profileKey) profileKeys.set(id, profileKey);
       }
 
-      const write = buildStorageWrite({
+      const built = buildStorageWrite({
         manifest,
         records,
         changes,
@@ -1142,23 +1160,76 @@ export default class MessageProcessor {
         localAccount: account,
         storyLists: await store.getItem('storyDistributionLists') ?? [],
       });
-      return write && {
-        write,
+      if (!built) return undefined;
+
+      const accountFields = built.writtenKeys.includes(ACCOUNT_KEY) ? changes[ACCOUNT_KEY] : undefined;
+      return {
+        ...built,
         changeCount: this.storageChangeCount,
-        hasUsernameChange: Boolean(changes[ACCOUNT_KEY]?.includes('username')),
+        // The username counts once the account record, which carries it, is written
+        hasUsernameChange: Boolean(accountFields?.includes('username')),
       };
     });
   }
 
+  /**
+   * How many conversations are pinned, in the chat list and in the account record of the storage service, where
+   * other devices may pin conversations that this one does not have
+   */
+  async countPinnedConversations() {
+    const stored = await this.client.store.getItem('storageManifest');
+    const records = stored ? await this.getStoredRecords(fromBinary(ManifestRecordSchema, stored)) : new Map();
+    return countPinnedConversations(records, await this.db.getConversations());
+  }
+
+  /**
+   * A write of a whole new manifest at `version` (see `buildNewStorageWrite`). With `shouldClearAll`, the records of
+   * the manifest that it replaces are dropped from this device when the write is committed.
+   */
+  buildNewStorageWrite(version: bigint, shouldClearAll: boolean) {
+    return this.runSerial(async (): Promise<PendingStorageWrite> => {
+      const { store } = this.client;
+      const account = await this.getAccount();
+      const conversations = await this.db.getConversations();
+      const profileKeys = new Map<string, Uint8Array>();
+      for (const { id, type } of conversations) {
+        const profileKey = type === 'private' ? (await store.getRecipient(id))?.profileKey : undefined;
+        if (profileKey) profileKeys.set(id, profileKey);
+      }
+
+      const built = buildNewStorageWrite({
+        version,
+        shouldClearAll,
+        conversations,
+        stickerPacks: await store.getItem('stickerPacks') ?? {},
+        profileKeys,
+        selfAci: account.aci,
+        deviceId: account.deviceId,
+        localAccount: account,
+      });
+      return { ...built, changeCount: this.storageChangeCount, hasUsernameChange: false };
+    });
+  }
+
   /** Stores the records of an accepted write and clears the changes it carried */
-  commitStorageWrite({ write, changeCount }: PendingStorageWrite) {
+  commitStorageWrite({ write, writtenKeys, changeCount }: PendingStorageWrite) {
     return this.runSerial(async () => {
       const { store } = this.client;
+      const stored = await store.getItem('storageManifest');
+      if (write.shouldClearAll && stored) {
+        await store.removeStorageRecords(getManifestIds(fromBinary(ManifestRecordSchema, stored)));
+      }
       await store.setStorageRecords(write.inserts);
       await store.removeStorageRecords(write.deleteIds);
       await store.setItem('storageManifest', toBinary(ManifestRecordSchema, write.manifest));
       // Changes made while the write was on its way go out again with the next one
-      if (changeCount === this.storageChangeCount) await store.setItem('storageChanges', {});
+      if (changeCount !== this.storageChangeCount) return;
+      const written = new Set(writtenKeys);
+      const changes = await store.getItem('storageChanges') ?? {};
+      await store.setItem(
+        'storageChanges',
+        Object.fromEntries(Object.entries(changes).filter(([key]) => !written.has(key))),
+      );
     });
   }
 
@@ -1172,14 +1243,19 @@ export default class MessageProcessor {
     });
   }
 
-  /** Stores what this device changed in our profile, which the profile itself carries to other devices */
+  /**
+   * Stores what this device changed in our profile. The profile itself carries it to other devices, and the
+   * account record of the storage service gets our names and the avatar path (Signal Desktop `toAccountRecord`).
+   */
   updateOwnConversation(update: Partial<Pick<
     ConversationRecord, 'profileName' | 'profileFamilyName' | 'about' | 'aboutEmoji' | 'avatarPath'
   >>) {
     return this.runSerial(async () => {
       const account = await this.getAccount();
       const conversation = await this.ensurePrivateConversation(account.aci);
-      return this.putConversation({ ...conversation, ...update });
+      const updated = await this.putConversation({ ...conversation, ...update });
+      await this.markStorageChanges({ [ACCOUNT_KEY]: PROFILE_STORAGE_FIELDS });
+      return updated;
     });
   }
 
@@ -1290,7 +1366,7 @@ export default class MessageProcessor {
       // Profiles without a known profile key cannot be decrypted
       if (!(await store.getRecipient(id))?.profileKey) continue;
       count++;
-      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(id)).catch(this.events.onError);
+      this.queueProfileRefresh(id);
     }
     await this.profileQueue;
   }
@@ -1317,7 +1393,7 @@ export default class MessageProcessor {
     const identity = await store.runExclusive(async () => {
       const current = await store.getIdentity(aci);
       if (!current) throw new Error(`No identity key of ${aci}`);
-      if ((current.verified === Verified_State.VERIFIED) === isVerified) return undefined;
+      if ((current.verified ?? Verified_State.DEFAULT) === state) return undefined;
       await store.setIdentity(aci, { ...current, verified: state });
       return current;
     });
@@ -1327,6 +1403,46 @@ export default class MessageProcessor {
     await this.sendWhenConnected(async (context) => {
       await sendVerifiedSync(context, { destinationAci: aci, identityKey: identity.publicKey, state });
     });
+  }
+
+  /**
+   * The recipients that a failed message did not reach because their safety number changed: sends to them fail
+   * until their identity is verified or set to default again (see `isTrustedIdentity`)
+   */
+  async getUnverifiedRecipients(messageId: number) {
+    const message = await this.db.getMessage(messageId);
+    const unverified: string[] = [];
+    for (const [aci, status] of Object.entries(message?.recipientStatus ?? {})) {
+      if (status === 'failed' && (await this.client.store.getIdentity(aci))?.verified === Verified_State.UNVERIFIED) {
+        unverified.push(aci);
+      }
+    }
+    return unverified;
+  }
+
+  /**
+   * Accepts the new safety numbers of the recipients a message failed to reach and sends it to the failed ones again
+   * (Signal Desktop `verifyConversationsStoppingSend`): an unverified identity becomes default, which our other
+   * devices learn, and a verified one stays verified.
+   */
+  async sendMessageAnyway(messageId: number) {
+    for (const aci of await this.getUnverifiedRecipients(messageId)) await this.setVerified(aci, false);
+
+    const message = await this.db.getMessage(messageId);
+    const conversation = message && await this.db.getConversation(message.conversationId);
+    if (!message?.isOutgoing || !message.dataMessage || !conversation) {
+      throw new Error('The message cannot be sent again');
+    }
+
+    const failed = Object.entries(message.recipientStatus ?? {})
+      .filter(([, status]) => status === 'failed')
+      .map(([aci]) => aci);
+    return this.sendStoredMessage(conversation, message, {
+      case: 'dataMessage', value: fromBinary(DataMessageSchema, message.dataMessage),
+    }, {
+      timestamp: message.sentAt,
+      expirationStartTimestamp: message.expireTimer ? message.sentAt : undefined,
+    }, failed);
   }
 
   /**
@@ -1379,6 +1495,7 @@ export default class MessageProcessor {
    * A send that fails because the connection closed meanwhile waits for the next one as well.
    */
   private async sendWhenConnected(send: (context: SenderContext) => Promise<void>) {
+    const { generation } = this;
     if (!this.client.isConnected) {
       this.pendingSends.push(send);
       return;
@@ -1387,14 +1504,34 @@ export default class MessageProcessor {
       await send(this.client.getSenderContext());
     } catch (err) {
       if (this.client.isConnected) throw err;
-      this.pendingSends.push(send);
+      if (generation === this.generation) this.pendingSends.push(send);
     }
   }
 
   private async flushPendingSends() {
+    const { generation } = this;
     for (const send of this.pendingSends.splice(0)) {
+      if (generation !== this.generation) return;
       await this.sendWhenConnected(send).catch(this.events.onError);
     }
+  }
+
+  private queueProfileRefresh(aci: string) {
+    const { generation } = this;
+    this.profileQueue = this.profileQueue
+      .then(() => (generation === this.generation ? this.refreshProfile(aci) : undefined))
+      .catch(this.events.onError);
+  }
+
+  /** The stored records of a manifest, serialized, by base64 storage id */
+  private async getStoredRecords(manifest: ManifestRecord) {
+    const ids = getManifestIds(manifest);
+    const serialized = await this.client.store.getStorageRecords(ids);
+    const records = new Map<string, Uint8Array>();
+    ids.forEach((id, index) => {
+      if (serialized[index]) records.set(id, serialized[index]);
+    });
+    return records;
   }
 
   /** Runs a storage service sync after `STORAGE_SYNC_DELAY_MS`, or after the next connection while there is none */
@@ -1430,9 +1567,10 @@ export default class MessageProcessor {
   /**
    * Merges storage service records: contacts and groups with their archive, mute, block and message request state,
    * and the account record with Note to Self, the order of pinned conversations and settings. Fields in
-   * `storageChanges` keep their local values.
+   * `storageChanges` keep their local values. Profile keys of contacts replace the local ones only in the first sync
+   * of this device, or when there is none; else the local key is marked to be written to the contact record.
    */
-  private async mergeStorageRecords(records: StorageRecord[]) {
+  private async mergeStorageRecords(records: StorageRecord[], isFirstSync: boolean) {
     const { store } = this.client;
     const account = await this.getAccount();
     const changes = await store.getItem('storageChanges') ?? {};
@@ -1443,6 +1581,8 @@ export default class MessageProcessor {
     const remoteStoryLists: StoryDistributionList[] = [];
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
+    let isProfileKeyChanged = false;
+    const profileKeyChanges: StorageChanges = {};
 
     for (const { record } of records) {
       if (record.case === 'contact') {
@@ -1451,7 +1591,15 @@ export default class MessageProcessor {
         // Numbers without an ACI have no conversation, but their block goes into the blocked list we sync
         if (!aci && contact.blocked && contact.e164) blockedE164s.add(contact.e164);
         if (!aci || aci === account.aci) continue;
-        if (contact.profileKey.length) await saveProfileKey(store, aci, contact.profileKey);
+        if (contact.profileKey.length) {
+          // Signal Desktop `mergeContactRecord` in `ts/services/storageRecordOps.preload.ts`
+          const localProfileKey = (await store.getRecipient(aci))?.profileKey;
+          if (isFirstSync || !localProfileKey) {
+            await saveProfileKey(store, aci, contact.profileKey);
+          } else if (!buffersEqual(localProfileKey, contact.profileKey)) {
+            profileKeyChanges[aci] = ['profileKey'];
+          }
+        }
 
         const conversation = await this.ensurePrivateConversation(aci);
         await this.putConversation({
@@ -1499,12 +1647,23 @@ export default class MessageProcessor {
           });
         }
         const self = await this.ensurePrivateConversation(account.aci);
+        // Signal Android `AccountRecordProcessor`: the names and the avatar of the record win unless they are empty
+        const hasRemoteName = Boolean(accountRecord.givenName || accountRecord.familyName);
         await this.putConversation({
           ...self,
           isArchived: accountChanges.has('noteToSelfArchived') ? self.isArchived : accountRecord.noteToSelfArchived,
           isMarkedUnread: accountChanges.has('noteToSelfMarkedUnread')
             ? self.isMarkedUnread
             : accountRecord.noteToSelfMarkedUnread,
+          profileName: hasRemoteName && !accountChanges.has('givenName')
+            ? accountRecord.givenName || undefined
+            : self.profileName,
+          profileFamilyName: hasRemoteName && !accountChanges.has('familyName')
+            ? accountRecord.familyName || undefined
+            : self.profileFamilyName,
+          avatarPath: accountRecord.avatarUrlPath && !accountChanges.has('avatarUrlPath')
+            ? accountRecord.avatarUrlPath
+            : self.avatarPath,
         });
         const { usernameLink } = accountRecord;
         await this.client.updateAccount({
@@ -1527,6 +1686,15 @@ export default class MessageProcessor {
         const username = accountRecord.username || undefined;
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+        }
+        // Signal Desktop `mergeAccountRecord`: the primary device rotates the profile key, linked devices follow it
+        const { profileKey } = accountRecord;
+        if (
+          account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID && profileKey.length
+          && !(account.profileKey && buffersEqual(account.profileKey, profileKey))
+        ) {
+          await this.client.updateAccount({ profileKey });
+          isProfileKeyChanged = true;
         }
       } else if (record.case === 'storyDistributionList') {
         const list = parseStoryDistributionList(record.value);
@@ -1556,6 +1724,9 @@ export default class MessageProcessor {
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    await this.markStorageChanges(profileKeyChanges);
+    // The profile under the new key has our current name and avatar; the queue runs it after this merge
+    if (isProfileKeyChanged) this.queueProfileRefresh(account.aci);
     if (getIsContactDiscoveryEnabled(account)) {
       const numberOnlyContacts = getNumberOnlyContacts(records);
       if (numberOnlyContacts.length) this.resolveContactNumbers(numberOnlyContacts).catch(this.events.onError);
@@ -1670,8 +1841,8 @@ export default class MessageProcessor {
     message: MessageRecord,
     content: OutgoingMessage,
     options: { timestamp: number; expirationStartTimestamp?: number },
+    recipients = Object.keys(message.recipientStatus ?? {}),
   ) {
-    const recipients = Object.keys(message.recipientStatus ?? {});
     const results = await this.sendContentTo(conversation, recipients, content, options);
     return this.runSerial(async () => {
       const current = await this.db.getMessage(message.id);
@@ -1973,14 +2144,16 @@ export default class MessageProcessor {
   }
 
   /**
-   * Applies a verification change from another device; a new key of a verified contact is saved as verified
-   * (Signal Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`)
+   * Applies a verification change from another device (Signal Android `IdentityUtil.processVerifiedMessage`, Signal
+   * Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`): a verified key is saved, and the
+   * verification is cleared only for the key we have. Syncs about ourselves and unverified syncs change nothing.
    */
   private async applyVerifiedSync(verified: Verified) {
     const aci = verified.destinationAci
       || (verified.destinationAciBinary.length ? uuidToString(verified.destinationAciBinary) : undefined);
     const { identityKey, state } = verified;
-    if (!aci || !identityKey.length) return;
+    if (!aci || !identityKey.length || state === Verified_State.UNVERIFIED) return;
+    if (aci === (await this.getAccount()).aci) return;
 
     const { store } = this.client;
     const wasVerified = await store.runExclusive(async () => {
@@ -1989,7 +2162,7 @@ export default class MessageProcessor {
       if (state === Verified_State.DEFAULT && !isSameKey) return undefined;
       if (!isSameKey) await saveIdentity(store, aci, identityKey);
       const current = (await store.getIdentity(aci))!;
-      if (current.verified === state) return undefined;
+      if ((current.verified ?? Verified_State.DEFAULT) === state) return undefined;
       await store.setIdentity(aci, { ...current, verified: state });
       return current.verified === Verified_State.VERIFIED;
     });
@@ -2407,9 +2580,7 @@ export default class MessageProcessor {
       id: aci, localId: await this.db.allocateLocalId(), type: 'private', unreadCount: 0,
     });
     // Profiles need the connection; our own conversation is created before it, and its profile is fetched after
-    if (this.client.isConnected) {
-      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
-    }
+    if (this.client.isConnected) this.queueProfileRefresh(aci);
     return created;
   }
 

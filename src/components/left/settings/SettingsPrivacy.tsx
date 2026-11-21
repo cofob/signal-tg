@@ -88,6 +88,7 @@ const SettingsPrivacy = ({
     openAgeVerificationModal,
     loadPasskeys,
     openPasskeyModal,
+    openRecoveryKeyModal,
     loadSignalPinSettings,
     loadSignalContactDiscovery,
     setSignalContactDiscovery,
@@ -162,6 +163,10 @@ const SettingsPrivacy = ({
     }
 
     openSettingsScreen({ screen: SettingsScreens.Passkeys });
+  });
+
+  const handleOpenRecoveryKey = useLastCallback(() => {
+    openRecoveryKeyModal();
   });
 
   const handleOpenAutoDeleteMessages = useLastCallback(() => {
@@ -278,6 +283,14 @@ const SettingsPrivacy = ({
             </div>
           </ListItem>
         )}
+        <ListItem
+          icon="key-filled"
+          iconBg="orange"
+          narrow
+          onClick={handleOpenRecoveryKey}
+        >
+          {lang('RecoveryKey')}
+        </ListItem>
         {webAuthCount > 0 && (
           <ListItem
             icon="web-filled"

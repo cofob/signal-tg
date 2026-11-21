@@ -2,7 +2,9 @@ import type { UsernameErrorReason, UsernameReservation } from '../../../lib/sign
 import type { ApiPrivacySettings, ApiUser, PrivacyVisibility } from '../../types';
 
 import { setPhoneNumberDiscoverability } from '../../../lib/signal/account/phoneNumberDiscoverability';
+import { formatRecoveryKey } from '../../../lib/signal/account/recoveryKey';
 import { generateSafetyNumber } from '../../../lib/signal/account/safetyNumber';
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
 import { writeProfile } from '../../../lib/signal/profiles/writeProfile';
 import { Verified_State } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { lookupUsername, resolveUsernameLink as resolveLink } from '../../../lib/signal/usernames/lookupUsername';
@@ -40,6 +42,8 @@ const ERROR_KEY_BY_LIBSIGNAL_NAME: Record<string, UsernameErrorKey> = {
   BadDiscriminatorCharacter: 'discriminatorInvalid',
   DiscriminatorTooLarge: 'discriminatorInvalid',
 };
+// Signal Desktop `processImageFile` in `ts/util/processImageFile.dom.ts`: profile avatars are square, at most this big
+const AVATAR_MAX_SIZE = 512;
 // The about emoji is the emoji that starts the bio, as `buildApiUserFullInfo` shows it
 const LEADING_EMOJI_REGEX = new RegExp(`^(${EMOJI_REGEX.source})(?:\\s+|$)`);
 
@@ -64,7 +68,7 @@ export async function updateOwnProfile({
     const avatarPath = await writeProfile(client.getSenderContext(), {
       givenName: firstName, familyName: lastName || undefined, about, aboutEmoji,
     }, photo
-      ? { type: 'update', avatar: new Uint8Array(await photo.arrayBuffer()) }
+      ? { type: 'update', avatar: await buildProfileAvatar(photo) }
       : { type: shouldRemovePhoto ? 'clear' : 'unchanged' });
     await processor.updateOwnConversation({
       profileName: firstName, profileFamilyName: lastName || undefined, about, aboutEmoji, avatarPath,
@@ -220,10 +224,7 @@ export async function fetchPhoneNumberPrivacy() {
   if (!account) return undefined;
   return {
     phoneNumber: buildPrivacySettings(account.isPhoneNumberShared ? 'everybody' : 'nobody'),
-    // A primary device registered here knows its choice before the storage service has an account record
-    addByPhone: buildPrivacySettings(
-      account.isPhoneNumberUnlisted ?? account.isDiscoverableByPhoneNumber === false ? 'nobody' : 'everybody',
-    ),
+    addByPhone: buildPrivacySettings(account.isPhoneNumberUnlisted ? 'nobody' : 'everybody'),
   };
 }
 
@@ -236,9 +237,6 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
   isShared?: boolean;
   isDiscoverable?: boolean;
 }) {
-  const self = await getSelf();
-  if (!self) return undefined;
-
   try {
     const context = client.getSenderContext();
     const shouldBeDiscoverable = isShared ? true : isDiscoverable;
@@ -247,12 +245,7 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
       await processor.updateOwnAccount({ isPhoneNumberUnlisted: !shouldBeDiscoverable });
     }
     if (isShared !== undefined && isShared !== Boolean(context.account.isPhoneNumberShared)) {
-      await writeProfile(context, {
-        givenName: self.profileName ?? '',
-        familyName: self.profileFamilyName,
-        about: self.about,
-        aboutEmoji: self.aboutEmoji,
-      }, { type: 'unchanged' }, isShared);
+      await writeProfile(context, {}, { type: 'unchanged' }, isShared);
       await processor.updateOwnAccount({ isPhoneNumberShared: isShared });
     }
     return fetchPhoneNumberPrivacy();
@@ -262,9 +255,43 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
   }
 }
 
+/**
+ * The recovery key of the account, which is its account entropy pool, as Signal shows it; only a primary device
+ * has one to show, as in Signal Android
+ */
+export async function fetchRecoveryKey() {
+  const account = await store.getItem('account');
+  if (account?.deviceId !== SIGNAL_PRIMARY_DEVICE_ID || !account.accountEntropyPool) return undefined;
+  return { key: formatRecoveryKey(account.accountEntropyPool), isUnconfirmed: account.isRecoveryKeyUnconfirmed };
+}
+
+/** The user saved the recovery key of a new account, so it is not shown again at the next start */
+export async function confirmRecoveryKeySaved() {
+  try {
+    await client.updateAccount({ isRecoveryKeyUnconfirmed: undefined });
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
+
 async function getSelf() {
   const selfAci = getCurrentAccount()?.aci;
   return selfAci ? db.getConversation(selfAci) : undefined;
+}
+
+/** Crops the picture to a centered square, scales it down to `AVATAR_MAX_SIZE` and encodes it as JPEG */
+async function buildProfileAvatar(photo: Blob) {
+  const bitmap = await createImageBitmap(photo, { imageOrientation: 'from-image' });
+  const side = Math.min(bitmap.width, bitmap.height);
+  const size = Math.min(side, AVATAR_MAX_SIZE);
+  const canvas = new OffscreenCanvas(size, size);
+  canvas.getContext('2d')!.drawImage(
+    bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size,
+  );
+  bitmap.close();
+  return new Uint8Array(await (await canvas.convertToBlob({ type: 'image/jpeg' })).arrayBuffer());
 }
 
 function splitBio(bio: string) {

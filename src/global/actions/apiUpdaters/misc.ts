@@ -1,5 +1,6 @@
 import type { ActionReturnType } from '../../types';
 
+import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { isChatChannel, selectTabBrowserState } from '../../helpers';
 import { addActionHandler, setGlobal } from '../../index';
 import {
@@ -76,6 +77,14 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateConfig':
       actions.loadConfig();
       break;
+
+    case 'updateSafetyNumberBlock': {
+      const { chatId, messageId, userIds } = update;
+      actions.openSafetyNumberChangeModal({
+        chatId, messageId, userIds, tabId: getCurrentTabId(),
+      });
+      break;
+    }
 
     case 'updateNewAuthorization': {
       // Load more info about this session

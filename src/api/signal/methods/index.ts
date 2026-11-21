@@ -75,14 +75,17 @@ export {
   markMessagesRead,
   sendMessage,
   sendMessageAction,
+  sendMessageAnyway,
   sendMessageLocal,
   sendPollVote,
   sendReaction,
 } from './messages';
 export {
+  confirmRecoveryKeySaved,
   confirmUsername,
   deleteUsername,
   fetchPhoneNumberPrivacy,
+  fetchRecoveryKey,
   fetchSafetyNumber,
   fetchUsernameLink,
   getChatByUsername,

@@ -4,9 +4,10 @@ import type { AccountRecord, HistoryTransferState } from '../store/SignalStore';
 import type { BackupImportResult } from './importBackup';
 
 import { pause } from '../../../util/schedulers';
+import { HttpError } from '../net/rest';
 import { deriveMessageBackupKeys, readBackupFrames } from './backupStream';
 import { importBackupFrames } from './importBackup';
-import { downloadTransferArchive, waitForTransferArchive } from './transferArchive';
+import { downloadTransferArchive, TransferArchiveTimeoutError, waitForTransferArchive } from './transferArchive';
 
 export type HistoryTransferProgress = {
   step: 'waiting' | 'downloading' | 'importing';
@@ -23,13 +24,16 @@ export type HistoryTransferOutcome =
 
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 5000;
+const HTTP_SERVER_ERROR = 500;
 
 /**
  * Link and sync (Signal Desktop `BackupsService.downloadAndImport` in `ts/services/backups/index.preload.ts`): waits
  * for the primary device to upload the message history, downloads, decrypts and imports it. It runs once after
  * linking, before the chat socket connects, so messages sent meanwhile wait on the server and arrive after the
  * history. The archive location and import progress live in the account, so a closed tab resumes the transfer
- * without importing anything twice. The transfer state goes once the transfer ends, failed or not; an abort keeps it.
+ * without importing anything twice. The transfer state goes once the transfer ends. It stays after an abort and
+ * after a failure of the network or the servers, so the next start tries again; it goes after an archive that fails
+ * to decrypt or import and after a wait that timed out.
  */
 export async function transferHistory(
   store: SignalStore,
@@ -37,27 +41,32 @@ export async function transferHistory(
   onProgress: (progress: HistoryTransferProgress) => void,
   signal: AbortSignal,
 ): Promise<HistoryTransferOutcome> {
+  const failure = { isTransient: false };
+  let outcome;
   try {
-    return await runTransfer(store, processor, onProgress, signal);
-  } finally {
-    if (!signal.aborted) {
-      await updateStoredAccount(store, { historyTransfer: undefined, ephemeralBackupKey: undefined });
-    }
+    outcome = await runTransfer(store, processor, onProgress, signal, failure);
+  } catch (err) {
+    if (!signal.aborted && !failure.isTransient) await clearTransferState(store);
+    throw err;
   }
+  await clearTransferState(store);
+  return outcome;
 }
 
+/** `failure.isTransient` tells `transferHistory` whether a thrown error may pass on a later start */
 async function runTransfer(
   store: SignalStore,
   processor: MessageProcessor,
   onProgress: (progress: HistoryTransferProgress) => void,
   signal: AbortSignal,
+  failure: { isTransient: boolean },
 ): Promise<HistoryTransferOutcome> {
   let account = (await store.getItem('account'))!;
   let state: HistoryTransferState = account.historyTransfer ?? {};
 
   if (!state.archive) {
     onProgress({ step: 'waiting' });
-    const response = await retry(() => waitForTransferArchive(account, signal), signal);
+    const response = await retry(() => waitForTransferArchive(account, signal), signal).catch(noteTransient(failure));
     if ('error' in response) {
       return response.error === 'RELINK_REQUESTED' ? { type: 'relink' } : { type: 'skipped' };
     }
@@ -68,7 +77,7 @@ async function runTransfer(
   onProgress({ step: 'downloading', progress: 0 });
   const archive = await retry(() => downloadTransferArchive(state.archive!, (receivedLength, totalLength) => {
     onProgress({ step: 'downloading', progress: receivedLength / totalLength });
-  }, signal), signal);
+  }, signal), signal).catch(noteTransient(failure));
   if (!archive) return { type: 'skipped' };
 
   onProgress({ step: 'importing', progress: 0 });
@@ -127,6 +136,19 @@ async function retry<T>(callback: () => Promise<T>, signal: AbortSignal) {
       await pause(RETRY_DELAY_MS);
     }
   }
+}
+
+/** Notes on `failure` whether the error of a network step may pass; the step's error is thrown on */
+function noteTransient(failure: { isTransient: boolean }) {
+  return (err: unknown): never => {
+    failure.isTransient = !(err instanceof TransferArchiveTimeoutError)
+      && !(err instanceof HttpError && err.status < HTTP_SERVER_ERROR);
+    throw err;
+  };
+}
+
+function clearTransferState(store: SignalStore) {
+  return updateStoredAccount(store, { historyTransfer: undefined, ephemeralBackupKey: undefined });
 }
 
 /** The transfer runs before the client connects, so it writes the stored account directly */
