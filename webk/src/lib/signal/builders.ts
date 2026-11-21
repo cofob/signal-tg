@@ -1,8 +1,9 @@
 /*
  * TeleSignal: the Web K shapes (`@layer`) of what the Signal provider returns (`@signal-app/provider`).
- * Peer ids are the provider's: a private conversation is the user `localId`, a group is the basic group
- * `localId` (peer id `-localId`). Message ids are the ids of the engine's message database, unique across chats,
- * as Telegram's ids of private chats and basic groups are.
+ * The provider's peer ids are small: a private conversation is the user `localId`, a group the basic group
+ * `localId` (peer id `-localId`). Web K reads small ids as its own (folder ids, the service and reply peers), so its
+ * ids are the provider's moved by `PEER_ID_OFFSET`. Message ids are the ids of the engine's message database, unique
+ * across chats, as Telegram's ids of private chats and basic groups are.
  */
 
 import type {
@@ -28,13 +29,26 @@ import type {
 
 // * Web A's `ARCHIVED_FOLDER_ID`, which Web K's folder of archived chats has too
 const ARCHIVED_FOLDER_ID = 1;
+const PEER_ID_OFFSET = 1e10;
+
+/** Web K's peer id of a provider peer id */
+export function toPeerId(signalPeerId: string | number): PeerId {
+  const id = +signalPeerId;
+  return (id < 0 ? id - PEER_ID_OFFSET : id + PEER_ID_OFFSET) as PeerId;
+}
+
+/** The provider's peer id of a Web K peer id */
+export function toSignalPeerId(peerId: PeerId | string | number) {
+  const id = +peerId;
+  return '' + (id < 0 ? id + PEER_ID_OFFSET : id - PEER_ID_OFFSET);
+}
 
 export function isGroupPeerId(peerId: string | number) {
   return +peerId < 0;
 }
 
-export function buildPeer(peerId: string | number): Peer {
-  const id = +peerId;
+export function buildPeer(signalPeerId: string | number): Peer {
+  const id = toPeerId(signalPeerId);
   return id < 0 ? {_: 'peerChat', chat_id: -id} : {_: 'peerUser', user_id: id};
 }
 
@@ -46,7 +60,7 @@ export function buildUser(user: SignalUser): User.user {
       self: user.isSelf,
       contact: user.isContact
     },
-    id: +user.id,
+    id: toPeerId(user.id),
     access_hash: '0',
     first_name: user.firstName,
     last_name: user.lastName,
@@ -66,7 +80,7 @@ export function buildChat(chat: SignalChat): Chat.chat {
       creator: chat.isOwner || undefined,
       left: chat.isForbidden || undefined
     },
-    id: -Number(chat.id),
+    id: -toPeerId(chat.id),
     title: chat.title,
     photo: buildChatPhoto(chat.avatarPhotoId),
     participants_count: chat.membersCount || 0,
@@ -165,7 +179,7 @@ function buildEntity(entity: SignalEntity): MessageEntity {
     case 'messageEntityTextUrl':
       return {_: name, offset, length, url: entity.url};
     case 'messageEntityMentionName':
-      return {_: name, offset, length, user_id: +entity.userId};
+      return {_: name, offset, length, user_id: toPeerId(entity.userId)};
     case 'messageEntityPre':
       return {_: name, offset, length, language: entity.language || ''};
     case 'messageEntityBold':

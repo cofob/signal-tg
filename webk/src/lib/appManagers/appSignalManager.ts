@@ -32,7 +32,7 @@ import type {
   SignalUser
 } from '@lib/signal/signalApi';
 import {AppManager} from '@appManagers/manager';
-import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId} from '@lib/signal/builders';
+import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
 import makeError from '@helpers/makeError';
 import tsNow from '@helpers/tsNow';
 import deferredPromise, {CancellablePromise} from '@helpers/cancellablePromise';
@@ -211,12 +211,12 @@ export default class AppSignalManager extends AppManager {
   }
 
   private async getDialogs(params: MethodDeclMap['messages.getDialogs']['req']): Promise<MessagesDialogs> {
-    const offsetPeerId = getInputPeerId(params.offset_peer);
+    const offsetPeerId = this.getInputPeerId(params.offset_peer);
     const isFirstPage = !params.offset_date && !offsetPeerId;
     const result: SignalChats = await this.call('fetchChats', {
       limit: params.limit || DIALOGS_PAGE_LIMIT,
       offsetDate: isFirstPage ? undefined : params.offset_date,
-      offsetPeer: isFirstPage || !offsetPeerId ? undefined : {id: '' + offsetPeerId},
+      offsetPeer: isFirstPage || !offsetPeerId ? undefined : {id: toSignalPeerId(offsetPeerId)},
       archived: params.folder_id === 1,
       withPinned: isFirstPage
     });
@@ -251,7 +251,7 @@ export default class AppSignalManager extends AppManager {
 
   private async getPeerDialogs(params: MethodDeclMap['messages.getPeerDialogs']['req']) {
     const peerIds = new Set(params.peers.map((peer: InputDialogPeer) => {
-      return peer._ === 'inputDialogPeer' ? '' + getInputPeerId(peer.peer) : undefined;
+      return peer._ === 'inputDialogPeer' ? this.getInputPeerId(peer.peer) : undefined;
     }));
     const [main, archived]: SignalChats[] = await Promise.all([
       this.call('fetchChats', {limit: Number.MAX_SAFE_INTEGER, withPinned: true}),
@@ -265,7 +265,7 @@ export default class AppSignalManager extends AppManager {
     [main, archived].filter(Boolean).forEach((result) => {
       const built = this.buildChats(result);
       built.dialogs.forEach((dialog) => {
-        if(peerIds.has('' + getPeerIdOfPeer(dialog.peer))) {
+        if(peerIds.has(getPeerIdOfPeer(dialog.peer))) {
           dialogs.push(dialog);
         }
       });
@@ -304,9 +304,9 @@ export default class AppSignalManager extends AppManager {
   }
 
   private async getHistory(params: MethodDeclMap['messages.getHistory']['req']): Promise<MessagesMessages> {
-    const peerId = getInputPeerId(params.peer);
+    const peerId = this.getInputPeerId(params.peer);
     const result: {messages: SignalMessage[], users: SignalUser[], count: number} = await this.call('fetchMessages', {
-      chat: {id: '' + peerId},
+      chat: {id: toSignalPeerId(peerId)},
       offsetId: params.offset_id || undefined,
       addOffset: params.add_offset || 0,
       limit: params.limit
@@ -338,11 +338,11 @@ export default class AppSignalManager extends AppManager {
   }
 
   private sendMessage(params: MethodDeclMap['messages.sendMessage']['req']): Promise<Updates> {
-    const peerId = getInputPeerId(params.peer);
+    const peerId = this.getInputPeerId(params.peer);
     const replyTo = params.reply_to?._ === 'inputReplyToMessage' ? params.reply_to.reply_to_msg_id : undefined;
     const lastMessageId = this.appMessagesManager.getHistoryStorage(peerId.toPeerId()).maxId || 0;
     const localId = lastMessageId + LOCAL_ID_STEP * (++this.localIdCounter % (1 / LOCAL_ID_STEP));
-    const chatId = '' + peerId;
+    const chatId = toSignalPeerId(peerId);
     const entities = (params.entities || []).map((entity) => buildSignalEntity(entity)).filter(Boolean);
     const localMessage: SignalMessage = {
       id: localId,
@@ -377,14 +377,14 @@ export default class AppSignalManager extends AppManager {
   }
 
   private async readHistory(params: MethodDeclMap['messages.readHistory']['req']) {
-    await this.call('markMessageListRead', {chat: {id: '' + getInputPeerId(params.peer)}, threadId: -1, maxId: params.max_id});
+    await this.call('markMessageListRead', {chat: {id: toSignalPeerId(this.getInputPeerId(params.peer))}, threadId: -1, maxId: params.max_id});
     return {_: 'messages.affectedMessages', pts: 0, pts_count: 0};
   }
 
   private async setTyping(params: MethodDeclMap['messages.setTyping']['req']) {
     const type = params.action._ === 'sendMessageTypingAction' ? 'typing' : (params.action._ === 'sendMessageCancelAction' ? 'cancel' : undefined);
     if(type) {
-      await this.call('sendMessageAction', {peer: {id: '' + getInputPeerId(params.peer)}, action: {type}});
+      await this.call('sendMessageAction', {peer: {id: toSignalPeerId(this.getInputPeerId(params.peer))}, action: {type}});
     }
 
     return true;
@@ -396,10 +396,10 @@ export default class AppSignalManager extends AppManager {
   }
 
   private async editMessage(params: MethodDeclMap['messages.editMessage']['req']) {
-    const peerId = getInputPeerId(params.peer);
+    const peerId = this.getInputPeerId(params.peer);
     await this.call('editMessage', {
-      chat: {id: '' + peerId},
-      message: {id: params.id, chatId: '' + peerId},
+      chat: {id: toSignalPeerId(peerId)},
+      message: {id: params.id, chatId: toSignalPeerId(peerId)},
       text: params.message,
       entities: (params.entities || []).map((entity) => buildSignalEntity(entity)).filter(Boolean)
     });
@@ -409,7 +409,7 @@ export default class AppSignalManager extends AppManager {
 
   private async getFullChat(params: MethodDeclMap['messages.getFullChat']['req']) {
     const chat = this.appChatsManager.getChat(params.chat_id);
-    const result: {fullInfo: {about?: string, members?: {userId: string}[]}, users: SignalUser[]} = await this.call('fetchFullChat', {id: '-' + params.chat_id});
+    const result: {fullInfo: {about?: string, members?: {userId: string}[]}, users: SignalUser[]} = await this.call('fetchFullChat', {id: toSignalPeerId(-params.chat_id)});
     const users = (result?.users || []).map(buildUser);
     return {
       _: 'messages.chatFull',
@@ -423,7 +423,7 @@ export default class AppSignalManager extends AppManager {
           chat_id: params.chat_id,
           participants: (result?.fullInfo.members || []).map(({userId}) => ({
             _: 'chatParticipant',
-            user_id: +userId,
+            user_id: toPeerId(userId),
             inviter_id: 0,
             date: 0
           })),
@@ -446,7 +446,7 @@ export default class AppSignalManager extends AppManager {
 
   private async getFullUser(params: MethodDeclMap['users.getFullUser']['req']) {
     const userId = getInputUserId(params.id);
-    const result: {user: SignalUser, fullInfo: {bio?: string, isBlocked?: boolean, ttlPeriod?: number}} = await this.call('fetchFullUser', {id: '' + userId});
+    const result: {user: SignalUser, fullInfo: {bio?: string, isBlocked?: boolean, ttlPeriod?: number}} = await this.call('fetchFullUser', {id: toSignalPeerId(userId)});
     if(!result) {
       throw makeError('USER_ID_INVALID' as ErrorType);
     }
@@ -472,7 +472,7 @@ export default class AppSignalManager extends AppManager {
 
   private async getUsers(params: MethodDeclMap['users.getUsers']['req']) {
     const result: {users: SignalUser[]} = await this.call('fetchUsers', {
-      users: params.id.map((inputUser) => ({id: '' + getInputUserId(inputUser)}))
+      users: params.id.map((inputUser) => ({id: toSignalPeerId(getInputUserId(inputUser))}))
     });
     return (result?.users || []).map(buildUser);
   }
@@ -486,6 +486,19 @@ export default class AppSignalManager extends AppManager {
       saved_count: 0,
       users
     } as MethodDeclMap['contacts.getContacts']['res'];
+  }
+
+  private getInputPeerId(inputPeer: InputPeer): PeerId {
+    switch(inputPeer?._) {
+      case 'inputPeerSelf':
+        return this.appPeersManager.peerId;
+      case 'inputPeerUser':
+        return (+inputPeer.user_id) as PeerId;
+      case 'inputPeerChat':
+        return (-inputPeer.chat_id) as PeerId;
+      default:
+        return undefined;
+    }
   }
 
   /* ---------- updates ---------- */
@@ -594,7 +607,7 @@ export default class AppSignalManager extends AppManager {
   }
 
   private getCachedUser(userId: string): Partial<SignalUser> {
-    const user = this.appUsersManager.getUser(+userId);
+    const user = this.appUsersManager.getUser(toPeerId(userId));
     return user ? {
       firstName: user.first_name,
       lastName: user.last_name,
@@ -679,29 +692,18 @@ export default class AppSignalManager extends AppManager {
     if(isGroupPeerId(chatId)) {
       this.pushUpdates([{
         _: 'updateChatUserTyping',
-        chat_id: -Number(chatId),
+        chat_id: -toPeerId(chatId),
         from_id: buildPeer(userId),
         action
       }]);
     } else {
-      this.pushUpdates([{_: 'updateUserTyping', user_id: +userId, action}]);
+      this.pushUpdates([{_: 'updateUserTyping', user_id: toPeerId(userId), action}]);
     }
   }
 }
 
 function getProvider() {
   return provider ??= import('@signal-app/provider');
-}
-
-function getInputPeerId(inputPeer: InputPeer): PeerId {
-  switch(inputPeer?._) {
-    case 'inputPeerUser':
-      return (+inputPeer.user_id) as PeerId;
-    case 'inputPeerChat':
-      return (-inputPeer.chat_id) as PeerId;
-    default:
-      return undefined;
-  }
 }
 
 function getInputUserId(inputUser: InputUser): UserId {
@@ -727,7 +729,7 @@ function buildSignalEntity(entity: MethodDeclMap['messages.sendMessage']['req'][
     offset: entity.offset,
     length: entity.length,
     url: (entity as {url?: string}).url,
-    userId: (entity as {user_id?: UserId}).user_id ? '' + (entity as {user_id?: UserId}).user_id : undefined,
+    userId: (entity as {user_id?: UserId}).user_id ? toSignalPeerId((entity as {user_id?: UserId}).user_id) : undefined,
     language: (entity as {language?: string}).language
   };
 }

@@ -14,6 +14,7 @@ import {DC_IDS, MAX_ACCOUNTS} from '@lib/accounts/constants';
 import bytesToHex from '@helpers/bytes/bytesToHex';
 import randomize from '@helpers/array/randomize';
 import noop from '@helpers/noop';
+import {toPeerId, toSignalPeerId} from '@lib/signal/builders';
 
 const ACCOUNT_NUMBERS: ActiveAccountNumber[] = [1, 2, 3, 4];
 // * the first account's keys, by DC, as they are kept for Web A beside its slot as well, without a passcode only
@@ -126,8 +127,9 @@ export class AccountController extends StaticUtilityClass {
   static async get(accountNumber: ActiveAccountNumber, updating?: boolean) {
     const stored: StoredAccountSessionData = await sessionStorage.get(`account${accountNumber}`);
     const data = {...stored} as AccountSessionData;
+    // * TeleSignal: the slot keeps Web A's id of the user, which Web K moves past its own small ids
     if(stored?.userId !== undefined) {
-      data.userId = +stored.userId;
+      data.userId = toPeerId(stored.userId);
     }
 
     if(!updating && !this.isForeign(data) && this.fillMissingData(data)) {
@@ -208,7 +210,7 @@ export class AccountController extends StaticUtilityClass {
     // * as Web A writes and compares it
     const stored: StoredAccountSessionData = {...updatedData};
     if(updatedData.userId !== undefined) {
-      stored.userId = '' + updatedData.userId;
+      stored.userId = toSignalPeerId(updatedData.userId);
     }
 
     await sessionStorage.set({
