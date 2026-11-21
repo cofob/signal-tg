@@ -8,7 +8,6 @@ import type { CustomPeer, StoryViewerOrigin } from '../../types';
 import type { IconName } from '../../types/icons';
 import { MediaViewerOrigin } from '../../types';
 
-import { REPLIES_USER_ID } from '../../config';
 import {
   getMainUsername, getUserStatus, isUserOnline,
 } from '../../global/helpers';
@@ -193,10 +192,6 @@ const PrivateChatInfo = ({
 
     if (typingStatusByPeerId) {
       return <TypingStatus typingStatusByPeerId={typingStatusByPeerId} isPrivate />;
-    }
-
-    if (user.id === REPLIES_USER_ID) {
-      return undefined;
     }
 
     const translatedStatus = noUserStatus ? undefined : getUserStatus(lang, user, userStatus);

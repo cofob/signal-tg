@@ -441,11 +441,6 @@ export type ApiUpdateMessagePollVote = {
   options: string[];
 };
 
-export type ApiUpdateServiceNotification = {
-  '@type': 'updateServiceNotification';
-  message: ApiMessage;
-};
-
 export type ApiUpdateDeleteMessages = {
   '@type': 'deleteMessages';
   ids: number[];
@@ -884,7 +879,7 @@ export type ApiUpdate = (
   ApiUpdateDeleteHistory |
   ApiDeleteParticipantHistory | ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed |
   ApiUpdateSafetyNumberBlock |
-  ApiUpdateServiceNotification | ApiDeleteContact | ApiUpdateUser | ApiUpdateUserStatus |
+  ApiDeleteContact | ApiUpdateUser | ApiUpdateUserStatus |
   ApiUpdateUserFullInfo | ApiUpdateVideoProcessingPending | ApiUpdatePeerSettings | ApiUpdatePeerHistoryTtl
   | ApiUpdatePeerTheme | ApiUpdatePeerWallpaper
   | ApiUpdateUserAlreadyAuthorized |

@@ -570,6 +570,7 @@ function removeTelegramOnlyFields(untypedCached: any) {
   }
   delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
   delete untypedCached.chatFolders?.areTagsEnabled;
+  delete untypedCached.serviceNotifications;
 
   Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
     delete messageStore.summaryById;
@@ -660,7 +661,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'recentEmojis',
       'recentCustomEmojis',
       'emojiGroups',
-      'serviceNotifications',
       'attachmentSettings',
       'mediaEditorSettings',
       'leftColumnWidth',

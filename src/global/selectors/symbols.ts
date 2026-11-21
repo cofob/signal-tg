@@ -1,7 +1,6 @@
 import type { ApiSticker, ApiStickerSet, ApiStickerSetInfo } from '../../api/types';
 import type { GlobalState } from '../types';
 
-import { RESTRICTED_EMOJI_SET_ID } from '../../config';
 import { hasMixedEmojiSkinTones, removeEmojiSkinTone } from '../../util/emoji/skinTone';
 
 const NORMALIZED_ANIMATED_EMOJI_BY_STICKERS = new WeakMap<ApiSticker[], Map<string, ApiSticker>>();
@@ -152,8 +151,7 @@ export function selectIsAlwaysHighPriorityEmoji<T extends GlobalState>(
   global: T, stickerSet: ApiStickerSetInfo | ApiStickerSet,
 ) {
   if (!('id' in stickerSet)) return false;
-  return stickerSet.id === global.appConfig.defaultEmojiStatusesStickerSetId
-    || stickerSet.id === RESTRICTED_EMOJI_SET_ID;
+  return stickerSet.id === global.appConfig.defaultEmojiStatusesStickerSetId;
 }
 
 export function selectCustomEmoji<T extends GlobalState>(global: T, documentId: string) {

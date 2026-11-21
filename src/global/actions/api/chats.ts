@@ -25,7 +25,6 @@ import {
   DEBUG,
   GLOBAL_SUGGESTED_CHANNELS_ID,
   SAVED_FOLDER_ID,
-  SERVICE_NOTIFICATIONS_USER_ID,
   TMP_CHAT_ID,
   TOP_CHAT_MESSAGES_PRELOAD_LIMIT,
   TOPICS_SLICE,
@@ -118,7 +117,6 @@ import {
   selectIsChatPinned,
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
-  selectLastServiceNotification,
   selectPeer,
   selectPeerFullInfo,
   selectSimilarChannelIds,
@@ -681,12 +679,7 @@ addActionHandler('requestChatUpdate', (global, actions, payload): ActionReturnTy
     return;
   }
 
-  void callApi('requestChatUpdate', {
-    chat,
-    ...(chatId === SERVICE_NOTIFICATIONS_USER_ID && {
-      lastLocalMessage: selectLastServiceNotification(global)?.message,
-    }),
-  });
+  void callApi('requestChatUpdate', { chat });
 });
 
 addActionHandler('requestSavedDialogUpdate', async (global, actions, payload): Promise<void> => {
@@ -2794,7 +2787,6 @@ async function loadChats(
 ) {
   let global = getGlobal();
   const globalBeforeLoad = global;
-  const lastLocalServiceMessageId = selectLastServiceNotification(global)?.id;
 
   const params = !shouldIgnorePagination ? selectChatListLoadingParameters(global, listType) : {};
   const offsetPeer = params.nextOffsetPeerId ? selectPeer(global, params.nextOffsetPeerId) : undefined;
@@ -2813,7 +2805,6 @@ async function loadChats(
     offsetPeer,
     archived: listType === 'archived',
     withPinned: isFirstBatch && !isAccountFreeze,
-    lastLocalServiceMessageId,
   });
 
   if (!result) {

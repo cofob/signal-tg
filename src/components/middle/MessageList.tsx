@@ -13,12 +13,9 @@ import {
 
 import {
   ANIMATION_END_DELAY,
-  ANONYMOUS_USER_ID,
   IS_PERF,
   MESSAGE_LIST_SLICE,
-  REPLIES_USER_ID,
   SCROLL_MAX_DURATION,
-  SERVICE_NOTIFICATIONS_USER_ID,
 } from '../../config';
 import { forceMeasure, forceMutation, requestMeasure, requestMutation } from '../../lib/fasterdom/fasterdom';
 import {
@@ -26,7 +23,6 @@ import {
   getIsSavedDialog,
   getMessageHtmlId,
   getMessageOriginalId,
-  isAnonymousForwardsChat,
   isChatChannel,
   isChatGroup,
   isChatMonoforum,
@@ -132,8 +128,6 @@ type StateProps = {
   isGroupChat?: boolean;
   isChatMonoforum?: boolean;
   isChatWithSelf?: boolean;
-  isRepliesChat?: boolean;
-  isAnonymousForwards?: boolean;
   isOwner?: boolean;
   isChannelWithAvatars?: boolean;
   isNonContact?: boolean;
@@ -154,7 +148,6 @@ type StateProps = {
   hasLinkedChat?: boolean;
   topic?: ApiTopic;
   noMessageSendingAnimation?: boolean;
-  isServiceNotificationsChat?: boolean;
   isEmptyThread?: boolean;
   isForum?: boolean;
   withTopicSeparators?: boolean;
@@ -245,8 +238,6 @@ const MessageList = ({
   isChatMonoforum,
   isReady,
   isChatWithSelf,
-  isRepliesChat,
-  isAnonymousForwards,
   isOwner,
   isNonContact,
   nameChangeDate,
@@ -269,7 +260,6 @@ const MessageList = ({
   withDefaultBg,
   topic,
   noMessageSendingAnimation,
-  isServiceNotificationsChat,
   currentUserId,
   channelJoinInfo,
   isChatProtected,
@@ -338,9 +328,7 @@ const MessageList = ({
   const [releasedLiveTailStartOriginalId, setReleasedLiveTailStartOriginalId] = useState<number>();
 
   const isSavedDialog = getIsSavedDialog(chatId, threadId, currentUserId);
-  const hasOpenChatButton = isSavedDialog
-    && threadId !== ANONYMOUS_USER_ID
-    && threadId !== currentUserId;
+  const hasOpenChatButton = isSavedDialog && threadId !== currentUserId;
 
   const areMessagesLoaded = Boolean(messageIds);
 
@@ -399,7 +387,7 @@ const MessageList = ({
 
   const isPrivate = isUserId(chatId);
   const withUsers = Boolean((!isPrivate && !isChannelChat)
-    || isChatWithSelf || isRepliesChat || isAnonymousForwards || isChannelWithAvatars);
+    || isChatWithSelf || isChannelWithAvatars);
 
   const liveTailStartOriginalId = useMemo(() => {
     if (!messageIds?.length || !messagesById) {
@@ -1311,7 +1299,7 @@ const MessageList = ({
   }, [isSelectModeActive]);
 
   const noAvatars = Boolean(!withUsers || (isChannelChat && !isChannelWithAvatars));
-  const shouldRenderGreeting = isUserId(chatId) && !isChatWithSelf && !isAnonymousForwards
+  const shouldRenderGreeting = isUserId(chatId) && !isChatWithSelf
     && type === 'thread'
     && (
       (
@@ -1523,8 +1511,6 @@ export default memo(withGlobal<OwnProps>(
       isChannelWithAvatars: chat.areProfilesShown,
       isOwner: chat.isOwner,
       isChatWithSelf: selectIsChatWithSelf(global, chatId),
-      isRepliesChat: chatId === REPLIES_USER_ID,
-      isAnonymousForwards: isAnonymousForwardsChat(chatId),
       isNonContact,
       nameChangeDate,
       photoChangeDate,
@@ -1541,7 +1527,6 @@ export default memo(withGlobal<OwnProps>(
       channelJoinInfo: chatFullInfo?.joinInfo,
       topic,
       noMessageSendingAnimation: !selectPerformanceSettingsValue(global, 'messageSendingAnimations'),
-      isServiceNotificationsChat: chatId === SERVICE_NOTIFICATIONS_USER_ID,
       isForum: chat.isForum,
       withTopicSeparators: chat.isForum && threadId === MAIN_THREAD_ID,
       isEmptyThread,

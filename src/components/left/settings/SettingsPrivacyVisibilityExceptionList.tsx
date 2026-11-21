@@ -7,7 +7,7 @@ import type { ApiPrivacySettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
-import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
+import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID } from '../../../config';
 import {
   isChatChannel, isDeletedUser,
 } from '../../../global/helpers';
@@ -85,7 +85,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
         const isChannel = chat && isChatChannel(chat);
         return (!usersOnly || user)
           && chatId !== currentUserId
-          && chatId !== SERVICE_NOTIFICATIONS_USER_ID
           && !isChannel && !isDeleted;
       });
 

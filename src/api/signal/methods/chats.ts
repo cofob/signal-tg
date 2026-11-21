@@ -61,7 +61,6 @@ export async function fetchChats({
   limit: number;
   offsetDate?: number;
   offsetId?: number;
-  lastLocalServiceMessageId?: number;
   offsetPeer?: ApiPeer;
   archived?: boolean;
   withPinned?: boolean;

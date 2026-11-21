@@ -35,7 +35,6 @@ interface OwnProps {
   observeIntersectionForPlaying?: ObserveFn;
   withTranslucentThumbs?: boolean;
   shouldRenderAsHtml?: boolean;
-  inChatList?: boolean;
   forcePlayback?: boolean;
   isInSelectMode?: boolean;
   canBeEmpty?: boolean;
@@ -59,7 +58,6 @@ function MessageText({
   observeIntersectionForPlaying,
   withTranslucentThumbs,
   shouldRenderAsHtml,
-  inChatList,
   forcePlayback,
   isInSelectMode,
   canBeEmpty,
@@ -74,7 +72,7 @@ function MessageText({
 
   const lang = useLang();
 
-  const formattedText = forcedText || extractMessageText(messageOrStory, inChatList);
+  const formattedText = forcedText || extractMessageText(messageOrStory);
   const { text, entities } = formattedText || {};
 
   const containerId = useUniqueId();

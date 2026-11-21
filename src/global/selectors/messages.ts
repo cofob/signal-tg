@@ -21,7 +21,6 @@ import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
   GENERAL_TOPIC_ID,
-  SERVICE_NOTIFICATIONS_USER_ID,
   TMP_CHAT_ID,
 } from '../../config';
 import { isUserId } from '../../util/entities/ids';
@@ -59,7 +58,6 @@ import {
   isMessageFailed,
   isMessageLocal,
   isOwnMessage,
-  isServiceNotificationMessage,
   isUserRightBanned,
   prepareMessageReplyInfo,
 } from '../helpers';
@@ -545,9 +543,8 @@ export function selectCanReplyToMessage<T extends GlobalState>(global: T, messag
   if (!chat || isRestricted || chat.isForbidden) return false;
 
   const isLocal = isMessageLocal(message);
-  const isServiceNotification = isServiceNotificationMessage(message);
 
-  if (isLocal || isServiceNotification) return false;
+  if (isLocal) return false;
 
   const threadInfo = selectThreadInfo(global, message.chatId, threadId);
   const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
@@ -600,7 +597,6 @@ export function selectCanForwardMessage<T extends GlobalState>(global: T, messag
   if (message.anchorMsgId) return false;
 
   const isLocal = isMessageLocal(message);
-  const isServiceNotification = isServiceNotificationMessage(message);
   const isAction = isActionMessage(message);
   const hasTtl = hasMessageTtl(message);
   const { content } = message;
@@ -617,7 +613,7 @@ export function selectCanForwardMessage<T extends GlobalState>(global: T, messag
   const isStoryForwardForbidden = story && ('isDeleted' in story || ('noForwards' in story && story.noForwards));
   const canForward = (
     !isLocal && !isAction && !isChatProtected && !isStoryForwardForbidden
-    && (message.isForwardingAllowed || isServiceNotification) && !hasTtl
+    && message.isForwardingAllowed && !hasTtl
   );
 
   return canForward;
@@ -640,7 +636,6 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const isChannel = isChatChannel(chat);
   const isLocal = isMessageLocal(message);
   const isFailed = isMessageFailed(message);
-  const isServiceNotification = isServiceNotificationMessage(message);
   const isOwn = isOwnMessage(message);
   const isForwarded = isForwardedMessage(message);
   const isAction = isActionMessage(message);
@@ -696,10 +691,10 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const isSavedDialog = getIsSavedDialog(chat.id, threadId, global.currentUserId);
 
   const canReply = selectCanReplyToMessage(global, message, threadId);
-  const canReplyGlobally = canReply || (!isSavedDialog && !isLocal && !isServiceNotification
+  const canReplyGlobally = canReply || (!isSavedDialog && !isLocal
     && (isSuperGroup || isBasicGroup || isChatChannel(chat)));
 
-  let canPin = !isLocal && !isServiceNotification && !isAction && canPinMessage && !isSavedDialog;
+  let canPin = !isLocal && !isAction && canPinMessage && !isSavedDialog;
   let canUnpin = false;
 
   const pinnedMessageIds = selectPinnedIds(global, chat.id, threadId);
@@ -709,7 +704,7 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canPin = !canUnpin;
   }
 
-  const canDelete = (!isLocal || isFailed) && !isServiceNotification && (
+  const canDelete = (!isLocal || isFailed) && (
     isPrivate
     || isOwn
     || isBasicGroup
@@ -960,12 +955,6 @@ export function selectFirstUnreadId<T extends GlobalState>(
     return undefined;
   }
 
-  const lastReadServiceNotificationId = chatId === SERVICE_NOTIFICATIONS_USER_ID
-    ? global.serviceNotifications.reduce((max, notification) => {
-      return !notification.isUnread && notification.id > max ? notification.id : max;
-    }, -1)
-    : -1;
-
   function findAfterLastReadId(listIds: number[]) {
     return listIds.find((id) => {
       return (
@@ -973,7 +962,6 @@ export function selectFirstUnreadId<T extends GlobalState>(
         && byId[id]
         && !byId[id].isTypingDraft
         && (!byId[id].isOutgoing || byId[id].isFromScheduled)
-        && id > lastReadServiceNotificationId
       );
     });
   }
@@ -1191,13 +1179,6 @@ function canAutoLoadMedia<T extends GlobalState>({
   );
 }
 
-export function selectLastServiceNotification<T extends GlobalState>(global: T) {
-  const { serviceNotifications } = global;
-  const maxId = Math.max(...serviceNotifications.map(({ id }) => id));
-
-  return serviceNotifications.find(({ id, isDeleted }) => !isDeleted && id === maxId);
-}
-
 export function selectIsMessageProtected<T extends GlobalState>(global: T, message?: ApiMessage) {
   return Boolean(message && (
     message.isProtected || selectIsChatProtected(global, message.chatId) || hasMessageTtl(message)
@@ -1263,8 +1244,6 @@ export function selectHasIpRevealingMedia<T extends GlobalState>(global: T, chat
 }
 
 export function selectDefaultReaction<T extends GlobalState>(global: T, chatId: string) {
-  if (chatId === SERVICE_NOTIFICATIONS_USER_ID) return undefined;
-
   const isPrivate = isUserId(chatId);
   const defaultReaction = global.config?.defaultReaction;
   if (!defaultReaction) {

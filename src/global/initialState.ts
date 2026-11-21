@@ -297,8 +297,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
     accountDaysTtl: 365,
   },
 
-  serviceNotifications: [],
-
   byTabId: {},
   sharedState: INITIAL_SHARED_STATE,
 

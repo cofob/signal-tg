@@ -13,8 +13,6 @@ import {
   getProfilePhotoMediaHash,
   getUserFullName,
   getVideoProfilePhotoMediaHash,
-  isAnonymousForwardsChat,
-  isChatWithRepliesBot,
   isDeletedUser,
 } from '../../../global/helpers';
 import { IS_CANVAS_FILTER_SUPPORTED } from '../../../util/browser/windowEnvironment';
@@ -69,10 +67,8 @@ const ProfilePhoto = ({
   const { isMobile } = useAppLayout();
 
   const isDeleted = user && isDeletedUser(user);
-  const isRepliesChat = chat && isChatWithRepliesBot(chat.id);
-  const isAnonymousForwards = chat && isAnonymousForwardsChat(chat.id);
   const peer = (user || chat)!;
-  const canHaveMedia = peer && !isSavedMessages && !isDeleted && !isRepliesChat && !isAnonymousForwards;
+  const canHaveMedia = peer && !isSavedMessages && !isDeleted;
   const { isVideo } = photo || {};
 
   const avatarHash = (!photo || photo.id === peer.avatarPhotoId) && getChatAvatarHash(peer, 'normal');
@@ -113,16 +109,8 @@ const ProfilePhoto = ({
       return 'avatar-deleted-account';
     }
 
-    if (isRepliesChat) {
-      return 'reply-filled';
-    }
-
-    if (isAnonymousForwards) {
-      return 'author-hidden';
-    }
-
     return undefined;
-  }, [isAnonymousForwards, isDeleted, isSavedDialog, isRepliesChat, isSavedMessages]);
+  }, [isDeleted, isSavedDialog, isSavedMessages]);
 
   let content: TeactNode | undefined;
 
@@ -178,9 +166,7 @@ const ProfilePhoto = ({
     'ProfilePhoto',
     peerColorClass,
     isSavedMessages && 'saved-messages',
-    isAnonymousForwards && 'anonymous-forwards',
     isDeleted && 'deleted-account',
-    isRepliesChat && 'replies-bot-account',
     (!isSavedMessages && !hasMedia) && 'no-photo',
     className,
   );

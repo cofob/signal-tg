@@ -293,9 +293,6 @@ export interface ActionPayloads {
   uploadWallpaper: File;
   loadChatThemes: undefined;
   applyChatTheme: { emoticon?: string; isSignalTheme?: boolean } & WithTabId;
-  createServiceNotification: {
-    message: ApiMessage;
-  };
   saveCloseFriends: {
     userIds: string[];
   };

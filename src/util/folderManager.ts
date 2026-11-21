@@ -10,7 +10,7 @@ import {
 } from '../api/types';
 
 import {
-  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, DEBUG, SAVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID,
+  ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, DEBUG, SAVED_FOLDER_ID,
 } from '../config';
 import { isChatCommunity } from '../global/helpers';
 import { getIsChatMuted, mergeNotifySettings } from '../global/helpers/notifications';
@@ -630,9 +630,6 @@ function buildChatSummary<T extends GlobalState>(
 
   const userInfo = type === 'chatTypePrivate' && user;
   const lastMessage = selectChatLastMessage(global, chat.id);
-  const shouldHideServiceChat = chat.id === SERVICE_NOTIFICATIONS_USER_ID && (
-    !lastMessage || lastMessage.content.action?.type === 'historyClear'
-  );
 
   const orderInAll = isCommunity && communityOrder
     ? communityOrder
@@ -645,7 +642,7 @@ function buildChatSummary<T extends GlobalState>(
     id,
     type,
     isListedInAll: Boolean(
-      !isRestricted && !isNotJoined && !migratedTo && !shouldHideServiceChat && !isRemovedFromAll
+      !isRestricted && !isNotJoined && !migratedTo && !isRemovedFromAll
       && !(isCommunity && !isCollapsedInDialogs),
     ),
     isListedInSaved: !isRemovedFromSaved,

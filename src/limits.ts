@@ -59,7 +59,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   readDateExpiresAt: 604800,
   maxUniqueReactions: 11,
   starsUsdWithdrawRateX1000: 1300,
-  storyChangelogUserId: '777000',
   maxPinnedStoriesCount: 3,
   pollMaxAnswers: 12,
   pollClosePeriodMax: 2628000,

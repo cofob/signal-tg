@@ -221,8 +221,6 @@
 .Avatar, .ProfilePhoto {
   --color-user: var(--accent-color);
 
-  &.replies-bot-account,
-  &.anonymous-forwards,
   &.saved-messages {
     --color-user: var(--color-primary);
   }

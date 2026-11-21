@@ -25,7 +25,6 @@ export default function useInnerHandlers({
   senderPeer,
   story,
   isReplyPrivate,
-  isRepliesChat,
   isSavedMessages,
   lastPlaybackTimestamp,
 }: {
@@ -42,7 +41,6 @@ export default function useInnerHandlers({
   senderPeer?: ApiPeer;
   story?: ApiStory;
   isReplyPrivate?: boolean;
-  isRepliesChat?: boolean;
   isSavedMessages?: boolean;
   lastPlaybackTimestamp?: number;
 }) {
@@ -90,20 +88,9 @@ export default function useInnerHandlers({
       return;
     }
 
-    if (isRepliesChat && replyToPeerId && replyToTopId) {
-      openThread({
-        isComments: true,
-        originChannelId: replyToPeerId,
-        originMessageId: replyToTopId,
-        focusMessageId: replyToMsgId,
-        pollOption,
-      });
-      return;
-    }
-
     focusMessage({
       chatId: replyToPeerId || chatId,
-      threadId: isRepliesChat ? replyToTopId : threadId, // Open comments from Replies bot, otherwise, keep current thread
+      threadId,
       messageId: replyToMsgId,
       replyMessageId: replyToPeerId ? undefined : messageId,
       noForumTopicPanel: !replyToPeerId, // Open topic panel for cross-chat replies
@@ -224,20 +211,11 @@ export default function useInnerHandlers({
     }
 
     if (replyToPeerId && replyToTopId) {
-      if (isRepliesChat) {
-        openThread({
-          isComments: true,
-          originChannelId: replyToPeerId,
-          originMessageId: replyToTopId,
-          focusMessageId: forwardInfo!.fromMessageId!,
-        });
-      } else {
-        focusMessage({
-          chatId: replyToPeerId,
-          threadId: replyToTopId,
-          messageId: forwardInfo!.fromMessageId!,
-        });
-      }
+      focusMessage({
+        chatId: replyToPeerId,
+        threadId: replyToTopId,
+        messageId: forwardInfo!.fromMessageId!,
+      });
     } else {
       focusMessage({
         chatId: originalChatId, messageId: forwardInfo!.fromMessageId!,
