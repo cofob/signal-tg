@@ -1707,6 +1707,9 @@ export default class MessageProcessor {
       const id = getGroupId(masterKey);
       const { aci: selfAci } = await this.getAccount();
       const existing = await this.db.getConversation(id);
+      // A newer state comes from the group log, which added the notices of the change as well
+      const storedRevision = existing?.groupState?.revision ?? -1;
+      if (storedRevision > state.revision || (change && storedRevision === state.revision)) return existing!;
       // Groups we create, join or ask to join are past the message request (`messageRequests.ts`)
       const isJoining = !existing || isCreated || [
         ...change?.addMembers ?? [], ...change?.promotePendingMembers ?? [], ...change?.addRequestingMembers ?? [],
