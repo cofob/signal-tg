@@ -61,7 +61,7 @@ export type FetchedGroup = {
   sendEndorsementsResponse?: Uint8Array;
 };
 
-type GroupRequest = Pick<HttpRequest, 'method' | 'path' | 'body'> & { contentType?: string };
+type GroupRequest = Pick<HttpRequest, 'method' | 'path' | 'body' | 'headers'> & { contentType?: string };
 
 type GroupCredentialsResponse = {
   pni?: string;
@@ -92,7 +92,7 @@ export async function fetchGroup(
   account: AccountRecord, connection: ChatConnection, masterKey: Uint8Array,
 ): Promise<FetchedGroup> {
   const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
-  const body = await sendGroupRequest(account, connection, secretParams, { method: 'GET', path: '/v2/groups/' });
+  const { body } = await sendGroupRequest(account, connection, secretParams, { method: 'GET', path: '/v2/groups/' });
   const { group, groupSendEndorsementsResponse } = fromBinary(GroupResponseSchema, body);
   if (!group) throw new Error('Group response has no group');
   return {
@@ -102,16 +102,19 @@ export async function fetchGroup(
 }
 
 /**
- * Sends a request to the storage service group API with the group authorization of `secretParams`
- * and returns the response body; throws `GroupRequestError` on other statuses than 2xx
+ * Sends a request to the storage service group API with the group authorization of `secretParams`;
+ * throws `GroupRequestError` on other statuses than 2xx
  */
 export async function sendGroupRequest(
   account: AccountRecord,
   connection: ChatConnection,
   secretParams: Uint8Array,
-  { method, path, body, contentType }: GroupRequest,
+  {
+    method, path, body, contentType, headers: extraHeaders,
+  }: GroupRequest,
 ) {
   const headers: Record<string, string> = {
+    ...extraHeaders,
     Authorization: `Basic ${await getGroupAuthorization(account, connection, secretParams)}`,
   };
   if (body) headers['Content-Type'] = contentType ?? PROTOBUF_CONTENT_TYPE;
@@ -121,7 +124,7 @@ export async function sendGroupRequest(
   if (response.status < HTTP_OK || response.status >= HTTP_MULTIPLE_CHOICES) {
     throw new GroupRequestError(response.status, path);
   }
-  return response.body;
+  return response;
 }
 
 /** Decrypts a group's state with its secret params (`GroupSecretParams_DeriveFromMasterKey`) */

@@ -20,10 +20,11 @@ import type { AccountRecord } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
-import { fetchGroup } from '../groups/fetchGroup';
+import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
 import {
   applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
 } from '../groups/groupChange';
+import { fetchGroupLog } from '../groups/groupLog';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile } from '../profiles/fetchProfile';
@@ -35,7 +36,7 @@ import { uuidToBytes, uuidToString } from '../serviceId';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 
-import { GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
+import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
   BodyRangeSchema,
@@ -1003,34 +1004,86 @@ export default class MessageProcessor {
   }
 
   /**
-   * Fetches the group state outside the envelope queue, with its send endorsements, for revisions that one
-   * change does not reach. Concurrent refreshes of a group share one fetch.
+   * Brings a group to its current revision outside the envelope queue, with its send endorsements, when one
+   * change does not reach it. Members apply each change of the group log with its notices; others, and members
+   * whose log cannot be applied, fetch the state. Concurrent refreshes of a group share one request.
    */
   refreshGroup(id: string, masterKey: Uint8Array) {
     const running = this.groupRefreshes.get(id);
     if (running) return running;
 
     const refresh = (async () => {
-      const { account, connection, store } = this.client.getSenderContext();
-      const { state, sendEndorsementsResponse } = await fetchGroup(account, connection, masterKey);
-      const updated = await this.runSerial(async () => {
-        const conversation = await this.db.getConversation(id);
-        return conversation && this.storeGroupState(conversation, state);
-      });
-      await saveGroupSendEndorsements(
-        store,
-        account.aci,
-        id,
-        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-        state.members.map(({ aci }) => aci),
-        sendEndorsementsResponse,
-      );
-      return updated;
+      const { account, store } = this.client.getSenderContext();
+      const secretParams = wasm.GroupSecretParams_DeriveFromMasterKey(masterKey);
+      const known = (await this.db.getConversation(id))?.groupState;
+      const isMember = known?.members.some(({ aci }) => aci === account.aci);
+      const caughtUp = isMember
+        ? await this.applyGroupLog(id, secretParams, known!.revision).catch(this.events.onError)
+        : undefined;
+      const result = caughtUp ?? await this.storeFetchedGroup(id, masterKey);
+      const { conversation, members, sendEndorsementsResponse } = result;
+      if (members) {
+        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse);
+      }
+      return conversation;
     })();
 
     this.groupRefreshes.set(id, refresh);
     refresh.catch(this.events.onError).finally(() => this.groupRefreshes.delete(id));
     return refresh;
+  }
+
+  /** Stores the fetched group state unless a change applied meanwhile is newer; returns the members it stored */
+  private async storeFetchedGroup(id: string, masterKey: Uint8Array) {
+    const { account, connection } = this.client.getSenderContext();
+    const { state, sendEndorsementsResponse } = await fetchGroup(account, connection, masterKey);
+    return this.runSerial(async () => {
+      const conversation = await this.db.getConversation(id);
+      if (!conversation || (conversation.groupState?.revision ?? -1) > state.revision) return { conversation };
+      return {
+        conversation: await this.storeGroupState(conversation, state),
+        members: state.members.map(({ aci }) => aci),
+        sendEndorsementsResponse,
+      };
+    });
+  }
+
+  /**
+   * Applies the changes after `fromRevision` from the group log, each with its notices; the state of the last
+   * revision then replaces what the changes made (Signal Desktop `integrateGroupChanges`)
+   */
+  private async applyGroupLog(id: string, secretParams: Uint8Array, fromRevision: number) {
+    const { account, connection } = this.client.getSenderContext();
+    const { entries, sendEndorsementsResponse } = await fetchGroupLog(account, connection, secretParams, fromRevision);
+    return this.runSerial(async () => {
+      let conversation = (await this.db.getConversation(id))!;
+      let state = conversation.groupState!;
+      for (const { change, state: revisionState } of entries) {
+        const actions = change?.actions.length ? fromBinary(GroupChange_ActionsSchema, change.actions) : undefined;
+        const revision = actions?.version ?? revisionState?.version ?? -1;
+        if (revision <= state.revision) continue;
+
+        if (actions && revision === state.revision + 1) {
+          const decrypted = decryptGroupChange(secretParams, actions);
+          state = applyGroupChange(state, decrypted);
+          conversation = await this.storeGroupState(conversation, state, {
+            change: decrypted, isOutgoing: decrypted.sourceServiceId === account.aci, sentAt: Date.now(),
+          });
+        } else if (revisionState) {
+          state = decryptGroupState(secretParams, revisionState);
+          conversation = await this.storeGroupState(conversation, state);
+        } else {
+          throw new Error(`Group log of ${id} misses revision ${state.revision + 1}`);
+        }
+      }
+
+      const last = entries[entries.length - 1]?.state;
+      if (last?.version === state.revision) {
+        state = decryptGroupState(secretParams, last);
+        conversation = await this.storeGroupState(conversation, state);
+      }
+      return { conversation, members: state.members.map(({ aci }) => aci), sendEndorsementsResponse };
+    });
   }
 
   /** Stores a group state and the profile keys it brings; a change adds its notices */

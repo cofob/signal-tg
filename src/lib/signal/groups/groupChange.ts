@@ -51,7 +51,7 @@ export type DecryptedGroupChange = {
 };
 
 // Signal Desktop `ts/groups.preload.ts`: changes of later epochs carry actions this client cannot apply
-const SUPPORTED_CHANGE_EPOCH = 7;
+export const SUPPORTED_CHANGE_EPOCH = 7;
 
 /**
  * Returns the actions of a group change that another member sent, after checking the server's signature and

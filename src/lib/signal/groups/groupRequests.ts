@@ -67,7 +67,7 @@ export async function submitGroupChange(
   inviteLinkPassword?: Uint8Array,
 ) {
   const query = inviteLinkPassword ? `?inviteLinkPassword=${bufferToBase64Url(inviteLinkPassword)}` : '';
-  const body = await sendGroupRequest(account, connection, secretParams, {
+  const { body } = await sendGroupRequest(account, connection, secretParams, {
     method: 'PATCH',
     path: `/v2/groups/${query}`,
     body: toBinary(GroupChange_ActionsSchema, create(GroupChange_ActionsSchema, actions)),
@@ -93,7 +93,7 @@ export async function createGroupOnServer(
     role, presentation: createProfileKeyCredentialPresentation(secretParams, credential),
   });
 
-  const body = await sendGroupRequest(account, connection, secretParams, {
+  const { body } = await sendGroupRequest(account, connection, secretParams, {
     method: 'PUT',
     path: '/v2/groups/',
     body: toBinary(GroupSchema, create(GroupSchema, {
@@ -138,10 +138,11 @@ export async function createGroupOnServer(
 export async function uploadGroupAvatar(
   account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, avatar: Uint8Array,
 ) {
-  const form = fromBinary(AvatarUploadAttributesSchema, await sendGroupRequest(account, connection, secretParams, {
+  const { body } = await sendGroupRequest(account, connection, secretParams, {
     method: 'GET',
     path: '/v2/groups/avatar/form',
-  }));
+  });
+  const form = fromBinary(AvatarUploadAttributesSchema, body);
   const encrypted = encryptGroupAttribute(secretParams, { case: 'avatar', value: avatar });
 
   const boundary = `----------------${bufferToHex(getRandomBytes(BOUNDARY_RANDOM_LENGTH))}`;
@@ -182,10 +183,11 @@ export async function uploadGroupAvatar(
 export async function fetchGroupJoinInfo(
   account: AccountRecord, connection: ChatConnection, secretParams: Uint8Array, inviteLinkPassword: Uint8Array,
 ): Promise<GroupJoinInfo> {
-  const info = fromBinary(GroupJoinInfoSchema, await sendGroupRequest(account, connection, secretParams, {
+  const { body } = await sendGroupRequest(account, connection, secretParams, {
     method: 'GET',
     path: `/v2/groups/join/${bufferToBase64Url(inviteLinkPassword)}`,
-  }));
+  });
+  const info = fromBinary(GroupJoinInfoSchema, body);
   const title = decryptGroupAttribute(secretParams, info.title);
   const description = decryptGroupAttribute(secretParams, info.description);
   return {
