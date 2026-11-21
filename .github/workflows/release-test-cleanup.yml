@@ -1,0 +1,53 @@
+# TEMPORARY, not for the default branch: deletes the test releases and tags `v0.0.0-ci.*` that `release-test.yml`
+# created, and the container image versions it published.
+
+name: Release test cleanup
+
+on:
+  push:
+    branches: [ccr-f1d74b45-mht1c2-ci]
+    paths: ['.github/workflows/release-test-cleanup.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete the test releases, tags and images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Delete releases and tags
+        run: |
+          set -euo pipefail
+          for tag in $(gh api "repos/$GH_REPO/git/matching-refs/tags/v0.0.0-ci." --jq '.[].ref | sub("refs/tags/"; "")'); do
+            echo "Deleting $tag"
+            gh release delete "$tag" --yes --cleanup-tag || echo "No release for $tag"
+            gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$tag" || echo "No tag $tag"
+          done
+          gh api "repos/$GH_REPO/releases" --jq '.[] | "release left: \(.tag_name) draft=\(.draft)"'
+          gh api "repos/$GH_REPO/git/matching-refs/tags/" --jq '.[] | "tag left: \(.ref)"'
+
+      # The package exists only because of the test; it goes away unless it holds another tag
+      - name: Delete the image package
+        run: |
+          set -euo pipefail
+          package="users/${GITHUB_REPOSITORY_OWNER}/packages/container/telesignal-tunnel"
+          if ! gh api "$package" > /dev/null 2>&1; then
+            echo "No image package"
+            exit 0
+          fi
+          tags=$(gh api "$package/versions" --paginate --jq '.[].metadata.container.tags[]')
+          echo "Tags: $tags"
+          if grep -qvE '^(0\.0\.0-ci\.|staging-)' <<< "$tags"; then
+            echo "The package holds tags that are not from tests; leaving it"
+          else
+            gh api -X DELETE "$package"
+            echo "Deleted the package"
+          fi
