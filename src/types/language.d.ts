@@ -1845,6 +1845,8 @@ export interface LangPair {
   'StorySent': undefined;
   'StorySendFailed': undefined;
   'StoryGroupStory': undefined;
+  'StoryDeleteFailed': undefined;
+  'StoryDeletePartial': undefined;
   'StoryMyStoryAllConnections': undefined;
   'StoryListName': undefined;
   'StoriesSettingTitle': undefined;

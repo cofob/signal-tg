@@ -411,6 +411,13 @@ export default class MessageDb {
   private open() {
     this.db ??= new Promise((resolve, reject) => {
       const openRequest = indexedDB.open(DB_NAME, DB_VERSION);
+      let isFailed = false;
+      // A failed open is not kept, so that the next request opens the database again
+      const fail = (err: unknown) => {
+        isFailed = true;
+        this.db = undefined;
+        reject(err);
+      };
       openRequest.onupgradeneeded = ({ oldVersion }) => {
         const db = openRequest.result;
         if (oldVersion < 1) {
@@ -438,8 +445,15 @@ export default class MessageDb {
           stories.createIndex(BY_EXPIRES_AT, 'expiresAt');
         }
       };
+      // An older version of the app in another tab keeps the upgrade waiting until that tab closes
+      openRequest.onblocked = () => fail(new Error('Close the other tabs of the app to update its database'));
       openRequest.onsuccess = () => {
         const db = openRequest.result;
+        // A request that failed meanwhile opens its own connection
+        if (isFailed) {
+          db.close();
+          return;
+        }
         // A newer version of the app in another tab upgrades the database once this connection is closed
         db.onversionchange = () => {
           db.close();
@@ -447,7 +461,7 @@ export default class MessageDb {
         };
         resolve(db);
       };
-      openRequest.onerror = () => reject(openRequest.error);
+      openRequest.onerror = () => fail(openRequest.error);
     });
     return this.db;
   }

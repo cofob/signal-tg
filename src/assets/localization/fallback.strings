@@ -2327,6 +2327,8 @@
 "StorySent" = "Story sent";
 "StorySendFailed" = "The story could not be sent";
 "StoryGroupStory" = "Group story";
+"StoryDeleteFailed" = "The story could not be deleted";
+"StoryDeletePartial" = "Some people may still see the story";
 "StoryMyStoryAllConnections" = "All Signal connections";
 "StoryMyStoryExcept_one" = "All except {count} person";
 "StoryMyStoryExcept_other" = "All except {count} people";

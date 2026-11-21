@@ -1,25 +1,18 @@
 import type { ConversationRecord } from '../db/MessageDb';
 import type { AccountRecord, StoryDistributionList } from '../store/SignalStore';
 
-import { getServerTimeOffset } from '../../../util/serverTime';
-
 // Signal Desktop `MY_STORY_ID` in `ts/types/Stories.std.ts`: the identifier of My Story is the nil UUID
 export const MY_STORY_ID = '00000000-0000-0000-0000-000000000000';
 // Stories expire a day after they are sent (Signal Desktop `handleStoryMessage`)
 export const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
-const MS_PER_SECOND = 1000;
-
-/** The time on the server's clock in milliseconds, which story expiry follows; `getServerTime` has seconds only */
-export function getStoryTime() {
-  return Date.now() + getServerTimeOffset() * MS_PER_SECOND;
-}
 
 /**
- * When a story expires: a day after the earliest of its send time, the time the server received it and now, so that
- * a sender whose clock is ahead cannot keep it longer
+ * When a story expires: a day after it was sent, but at most a day from now, so that a sender whose clock is ahead
+ * cannot keep it longer (Signal Desktop `MessageReceiver.#handleStoryMessage`). Stories follow the device clock there
+ * too, as the engine has no source of server time.
  */
-export function getStoryExpiresAt(sentAt: number, serverTimestamp?: number) {
-  return Math.min(sentAt, serverTimestamp ?? sentAt, getStoryTime()) + STORY_LIFETIME_MS;
+export function getStoryExpiresAt(sentAt: number) {
+  return Math.min(sentAt, Date.now()) + STORY_LIFETIME_MS;
 }
 
 /**
@@ -34,7 +27,10 @@ export function getIsSignalConnection(conversation: ConversationRecord, selfAci:
 /**
  * The people a list story goes to: for My Story as a block list, every connection the list does not name (Signal
  * Desktop `sendStoryMessage` in `ts/util/sendStoryMessage.preload.ts`); otherwise the members that are connections.
- * Stories carry our profile key, so they never go to blocked contacts or to people who have not been accepted.
+ * Stories carry our profile key, so they never go to blocked contacts or to people who have not been accepted. A
+ * member that the list names by PNI only (`otherMemberIds`) cannot be matched with a conversation, which has no PNI:
+ * the primary device writes a member by ACI as soon as it knows it, so this device sends to such a person until the
+ * list is rewritten.
  */
 export function getStoryListRecipientAcis(
   list: StoryDistributionList, conversations: ConversationRecord[], selfAci: string,

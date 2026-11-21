@@ -187,7 +187,7 @@ addActionHandler('viewStory', async (global, actions, payload): Promise<void> =>
 });
 
 addActionHandler('deleteStory', async (global, actions, payload): Promise<void> => {
-  const { peerId, storyId } = payload;
+  const { peerId, storyId, tabId = getCurrentTabId() } = payload;
 
   const peer = selectPeer(global, peerId);
   if (!peer) {
@@ -197,12 +197,16 @@ addActionHandler('deleteStory', async (global, actions, payload): Promise<void> 
   const result = await callApi('deleteStory', { peer, storyId });
 
   if (!result) {
+    actions.showNotification({ message: { key: 'StoryDeleteFailed' }, tabId });
     return;
   }
 
   global = getGlobal();
   global = removePeerStory(global, peerId, storyId);
   setGlobal(global);
+  if (result.isPartial) {
+    actions.showNotification({ message: { key: 'StoryDeletePartial' }, tabId });
+  }
 });
 
 addActionHandler('toggleStoryInProfile', async (global, actions, payload): Promise<void> => {

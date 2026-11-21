@@ -99,10 +99,11 @@ export async function markStoryRead({ storyId }: { peer: ApiPeer; storyId: numbe
   return true;
 }
 
+/** `isPartial` tells that the delete did not reach everyone who had the story */
 export async function deleteStory({ storyId }: { peer: ApiPeer; storyId: number }) {
   try {
-    await processor.deleteStoryForEveryone(storyId);
-    return true;
+    const { isPartial } = await processor.deleteStoryForEveryone(storyId);
+    return { isPartial: isPartial || undefined };
   } catch (err) {
     logError(err);
     return undefined;

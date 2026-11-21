@@ -88,7 +88,7 @@ import {
 import { syncStorageService } from '../storage/syncStorage';
 import { saveIdentity } from '../store/protocolStores';
 import {
-  getAreStoryViewReceiptsEnabled, getStoryExpiresAt, getStoryListRecipientAcis, getStoryTime, MY_STORY_ID,
+  getAreStoryViewReceiptsEnabled, getStoryExpiresAt, getStoryListRecipientAcis, MY_STORY_ID,
 } from '../stories/storyLists';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
@@ -850,7 +850,7 @@ export default class MessageProcessor {
 
   /** Stories whose day has not run out, oldest first */
   async getStories() {
-    const now = getStoryTime();
+    const now = Date.now();
     return (await this.db.getStories()).filter(({ expiresAt }) => expiresAt > now);
   }
 
@@ -920,19 +920,22 @@ export default class MessageProcessor {
     const isDelivered = ({ recipients }: StoryRecord) => (
       Object.values(recipients ?? {}).some(({ status }) => status !== 'failed')
     );
-    if (!sent.some(isDelivered)) {
-      for (const failed of sent) await this.runSerial(() => this.removeStory(failed));
+    const delivered = sent.filter(isDelivered);
+    for (const failed of sent.filter((sentStory) => !delivered.includes(sentStory))) {
+      await this.runSerial(() => this.removeStory(failed));
+    }
+    if (!delivered.length) {
       throw new Error(sent.length ? 'The story reached nobody' : 'There is nobody to send the story to');
     }
-    return sent;
+    return delivered;
   }
 
   /**
    * Deletes our story for everyone: a group story with a delete to the group, a list story with a delete to each
    * recipient and a recipient update that tells our other devices nobody has it (Signal Desktop
-   * `ts/util/deleteStoryForEveryone.preload.ts`)
+   * `ts/util/deleteStoryForEveryone.preload.ts`). Resolves with `isPartial` when the delete did not reach everyone.
    */
-  async deleteStoryForEveryone(storyId: number) {
+  async deleteStoryForEveryone(storyId: number): Promise<{ isPartial: boolean }> {
     const story = await this.db.getStory(storyId);
     if (!story?.isOutgoing) throw new Error('Only our own stories can be deleted for everyone');
     const conversation = await this.db.getConversation(story.conversationId);
@@ -945,13 +948,15 @@ export default class MessageProcessor {
       }, this.allocateTimestamp(), false);
       if (!isSent) throw new Error('The delete did not reach the group');
       await this.runSerial(() => this.removeStory(story));
-      return;
+      return { isPartial: false };
     }
 
     const recipients = Object.entries(story.recipients ?? {});
+    let isPartial = false;
     await this.sendWhenConnected(async (context) => {
       const results = await sendStoryDelete(context, recipients.map(([aci]) => aci), story.sentAt);
       if (results.length && results.every(({ error }) => error)) throw results[0].error!;
+      isPartial = results.some(({ error }) => error);
       await sendStorySync(context, {
         timestamp: story.sentAt,
         storyMessageRecipients: recipients.map(([aci, { isAllowedToReply }]) => ({
@@ -961,6 +966,7 @@ export default class MessageProcessor {
       });
     });
     await this.runSerial(() => this.removeStory(story));
+    return { isPartial };
   }
 
   /**
@@ -998,11 +1004,19 @@ export default class MessageProcessor {
       return;
     }
 
+    // The reply stays with the story once the group got it
     const sentAt = this.allocateTimestamp();
-    await this.runSerial(() => this.addStoryReply(story, {
-      authorAci: account.aci, sentAt, body: reply.body, emoji: reply.emoji,
-    }));
-    await this.sendToConversation(conversation, init, sentAt, true, true);
+    if (!await this.sendToConversation(conversation, init, sentAt, true, true)) {
+      throw new Error('The reply did not reach the group');
+    }
+    await this.runSerial(async () => {
+      const current = await this.db.getStory(story.id);
+      if (current) {
+        await this.addStoryReply(current, {
+          authorAci: account.aci, sentAt, body: reply.body, emoji: reply.emoji,
+        });
+      }
+    });
   }
 
   /** Hides or shows the stories of a contact or a group; other devices learn it through the storage service */
@@ -1033,11 +1047,7 @@ export default class MessageProcessor {
         fields.push('storyViewReceiptsEnabled');
         changes.isStoryViewReceiptsEnabled = isStoryViewReceiptsEnabled;
       }
-      // Without a connection the stored account changes, and the client reads it when it connects
-      const account = this.client.isConnected
-        ? await this.client.updateAccount(changes)
-        : { ...await this.getAccount(), ...changes };
-      if (!this.client.isConnected) await this.client.store.setItem('account', account);
+      const account = await this.client.updateAccount(changes);
       await this.markStorageChanges({ [ACCOUNT_KEY]: fields });
       if (isStoriesDisabled) await this.removeAllStories();
       return account;
@@ -1052,7 +1062,12 @@ export default class MessageProcessor {
       const previous = lists.find(({ id }) => id === list.id);
       // My Story is written only from the record of the storage service, never from defaults
       if (list.id === MY_STORY_ID && !previous) throw new Error('My Story has not been synced yet');
-      const saved = { ...list, otherMemberIds: list.otherMemberIds ?? previous?.otherMemberIds };
+      // Members known by PNI only are not shown in the app, so they stay while the audience keeps its meaning;
+      // switching between excluding and including people, or to all connections, starts without them
+      const isAllConnections = list.isBlockList && !list.memberAcis.length;
+      const isSameAudience = previous?.isBlockList === list.isBlockList;
+      const keptMemberIds = isSameAudience && !isAllConnections ? previous?.otherMemberIds : undefined;
+      const saved = { ...list, otherMemberIds: list.otherMemberIds ?? keptMemberIds };
       await store.setItem('storyDistributionLists', [...lists.filter(({ id }) => id !== list.id), saved]);
       await this.markStorageChanges({ [getStoryListKey(list.id)]: ['storyDistributionList'] });
       return saved;
@@ -2229,8 +2244,8 @@ export default class MessageProcessor {
    */
   private async handleStoryMessage(source: MessageSource, story: StoryMessage) {
     const account = await this.getAccount();
-    const expiresAt = getStoryExpiresAt(source.sentAt, source.serverTimestamp);
-    if (account.isStoriesDisabled || expiresAt <= getStoryTime()) return;
+    const expiresAt = getStoryExpiresAt(source.sentAt);
+    if (account.isStoriesDisabled || expiresAt <= Date.now()) return;
     if (await this.db.findStory(source.authorAci, source.sentAt)) return;
 
     const conversation = story.group?.masterKey.length
@@ -2239,7 +2254,11 @@ export default class MessageProcessor {
     if (!conversation || conversation.isBlocked) return;
     // Signal Desktop drops stories of contacts we do not share our profile with
     if (conversation.type === 'private' && !conversation.isAccepted) return;
-    if (conversation.type === 'group' && await this.getIsGroupMessageDropped(conversation, source)) return;
+    // The members come from the group state, which `loadMessageGroup` fetched before; without it the sender is unknown
+    if (conversation.type === 'group'
+      && (!conversation.groupState || await this.getIsGroupMessageDropped(conversation, source))) {
+      return;
+    }
 
     await this.addStory({
       conversationId: conversation.id,
@@ -2260,7 +2279,8 @@ export default class MessageProcessor {
    */
   private async handleSentStory(source: MessageSource, sent: SyncMessage_Sent) {
     const story = sent.storyMessage!;
-    const { aci: selfAci } = await this.getAccount();
+    const account = await this.getAccount();
+    const { aci: selfAci } = account;
     const sentAt = Number(sent.timestamp) || source.sentAt;
     const recipients = buildStoryRecipients(sent.storyMessageRecipients, 'sent');
     const existing = await this.db.findStory(selfAci, sentAt);
@@ -2268,6 +2288,9 @@ export default class MessageProcessor {
       await this.putStory({ ...existing, recipients: { ...existing.recipients, ...recipients } });
       return;
     }
+    // As for stories of others, nothing is kept while stories are off or after the day ran out
+    const expiresAt = getStoryExpiresAt(sentAt);
+    if (account.isStoriesDisabled || expiresAt <= Date.now()) return;
 
     const groupId = story.group?.masterKey.length ? getGroupId(story.group.masterKey) : undefined;
     if (groupId && !await this.db.getConversation(groupId)) return;
@@ -2278,7 +2301,7 @@ export default class MessageProcessor {
       sentAt,
       receivedAt: Date.now(),
       serverTimestamp: source.serverTimestamp,
-      expiresAt: getStoryExpiresAt(sentAt, source.serverTimestamp),
+      expiresAt,
       isOutgoing: true,
       storyMessage: toBinary(StoryMessageSchema, story),
       viewedAt: sentAt,
@@ -2602,17 +2625,19 @@ export default class MessageProcessor {
   }
 
   /**
-   * Brings the group of a data message to the revision of the message before the message is handled, as
+   * Brings the group of a data or story message to the revision of the message before the message is handled, as
    * `maybeUpdateGroup` of Signal Desktop does (`ts/messages/handleDataMessage.preload.ts`): the membership checks
    * of `getIsGroupMessageDropped` need the state the message was sent with. A group we are not part of leaves no
    * conversation. A change of the next revision in the message is applied by `getGroupConversationForMessage`
    * instead. This runs outside the serial queue, which refreshes use.
    */
   private async loadMessageGroup({ content: { content: body } }: DecryptedEnvelope) {
-    const sentMessage = body.case === 'syncMessage' && body.value.content.case === 'sent'
-      ? body.value.content.value.message
+    const sent = body.case === 'syncMessage' && body.value.content.case === 'sent'
+      ? body.value.content.value
       : undefined;
-    const context = (body.case === 'dataMessage' ? body.value : sentMessage)?.groupV2;
+    const context = body.case === 'dataMessage' ? body.value.groupV2
+      : body.case === 'storyMessage' ? body.value.group
+        : sent?.message?.groupV2 ?? sent?.storyMessage?.group;
     if (!context?.masterKey.length) return;
 
     const { masterKey, revision, groupChange } = context;
@@ -3385,25 +3410,23 @@ export default class MessageProcessor {
   /** One timer covers disappearing messages and stories */
   private scheduleExpiration() {
     clearTimeout(this.expirationTimer);
-    void Promise.all([this.db.getNextExpiresAt(), this.db.getNextStoryExpiresAt()]).then(([messageAt, storyAt]) => {
-      // Messages expire on the local clock, stories on the server's
-      const delays = [
-        messageAt === undefined ? undefined : messageAt - Date.now(),
-        storyAt === undefined ? undefined : storyAt - getStoryTime(),
-      ].filter((delay) => delay !== undefined);
-      if (!delays.length) return;
+    void Promise.all([this.db.getNextExpiresAt(), this.db.getNextStoryExpiresAt()]).then((times) => {
+      const defined = times.filter((time) => time !== undefined);
+      if (!defined.length) return;
+      const expiresAt = Math.min(...defined);
       this.expirationTimer = setTimeout(() => {
         void this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
-      }, Math.min(Math.max(Math.min(...delays), 0), MAX_TIMEOUT_MS));
+      }, Math.min(Math.max(expiresAt - Date.now(), 0), MAX_TIMEOUT_MS));
     });
   }
 
   private async deleteExpiredMessages() {
-    for (const message of await this.db.getExpiredMessages(Date.now())) {
+    const now = Date.now();
+    for (const message of await this.db.getExpiredMessages(now)) {
       await this.db.deleteMessage(message.id);
       this.changes.deletedMessages.push({ conversationId: message.conversationId, id: message.id });
     }
-    for (const story of await this.db.getExpiredStories(getStoryTime())) await this.removeStory(story);
+    for (const story of await this.db.getExpiredStories(now)) await this.removeStory(story);
     this.flush();
     this.scheduleExpiration();
   }
