@@ -29,10 +29,12 @@ import type {
   SignalChats,
   SignalInitialArgs,
   SignalMessage,
+  SignalReactions,
   SignalUser
 } from '@lib/signal/signalApi';
 import {AppManager} from '@appManagers/manager';
-import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
+import {buildChat, buildDialog, buildMessage, buildPeer, buildPeerReaction, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
+import {DEFAULT_REACTION_EMOJIS, buildReaction, toSignalReaction} from '@lib/signal/reactions';
 import makeError from '@helpers/makeError';
 import {ConnectionStatus} from '@lib/mtproto/connectionStatus';
 import tsNow from '@helpers/tsNow';
@@ -150,6 +152,10 @@ export default class AppSignalManager extends AppManager {
       'messages.readHistory': (params) => this.readHistory(params),
       'messages.setTyping': (params) => this.setTyping(params),
       'messages.deleteMessages': (params) => this.deleteMessages(params),
+      'messages.sendReaction': (params) => this.sendReaction(params),
+      'messages.getMessagesReactions': () => ({_: 'updates', updates: [], users: [], chats: [], date: now(), seq: 0}),
+      'messages.getMessageReactionsList': (params) => this.getMessageReactionsList(params),
+      'messages.forwardMessages': (params) => this.forwardMessages(params),
       'messages.editMessage': (params) => this.editMessage(params),
       'messages.getFullChat': (params) => this.getFullChat(params),
       'messages.getChats': (params) => this.getChats(params),
@@ -175,7 +181,7 @@ export default class AppSignalManager extends AppManager {
       'messages.getRecentStickers': () => ({_: 'messages.recentStickers', hash: 0, packs: [], stickers: [], dates: []}),
       'messages.getSavedGifs': () => ({_: 'messages.savedGifs', hash: 0, gifs: []}),
       'messages.getAvailableReactions': () => ({_: 'messages.availableReactions', hash: 0, reactions: []}),
-      'messages.getTopReactions': () => ({_: 'messages.reactions', hash: 0, reactions: []}),
+      'messages.getTopReactions': () => ({_: 'messages.reactions', hash: 0, reactions: DEFAULT_REACTION_EMOJIS.map((emoticon) => buildReaction({type: 'emoji', emoticon}))}),
       'messages.getRecentReactions': () => ({_: 'messages.reactions', hash: 0, reactions: []}),
       'contacts.getBirthdays': () => ({_: 'contacts.contactBirthdays', contacts: [], users: []}),
       'account.getAuthorizations': () => ({_: 'account.authorizations', authorization_ttl_days: 0, authorizations: []}),
@@ -443,6 +449,64 @@ export default class AppSignalManager extends AppManager {
     });
     // * the edit comes back as an update once the engine stored it
     return {_: 'updates', updates: [], users: [], chats: [], date: tsNow(true), seq: 0} as Updates;
+  }
+
+  /** Signal keeps one reaction per person: the last of `reaction` is ours, none takes ours back */
+  private async sendReaction(params: MethodDeclMap['messages.sendReaction']['req']) {
+    const reactions = (params.reaction || []).map(toSignalReaction).filter((reaction) => reaction !== undefined);
+    await this.call('sendReaction', {chat: {id: toSignalPeerId(this.getInputPeerId(params.peer))}, messageId: params.msg_id, reactions});
+    return {_: 'updates', updates: [], users: [], chats: [], date: tsNow(true), seq: 0} as Updates;
+  }
+
+  private async getMessageReactionsList(params: MethodDeclMap['messages.getMessageReactionsList']['req']) {
+    const result: {reactions: NonNullable<SignalReactions['recentReactions']>, count: number} = await this.call('fetchMessageReactionsList', {
+      chat: {id: toSignalPeerId(this.getInputPeerId(params.peer))},
+      messageId: params.id,
+      reaction: params.reaction ? toSignalReaction(params.reaction) : undefined
+    });
+    if(!result) return undefined;
+
+    return {
+      _: 'messages.messageReactionsList',
+      count: result.count,
+      reactions: result.reactions.map(buildPeerReaction),
+      chats: [],
+      users: result.reactions.map(({peerId}) => this.appUsersManager.getUser(toPeerId(peerId))).filter(Boolean)
+    } as MethodDeclMap['messages.getMessageReactionsList']['res'];
+  }
+
+  /**
+   * Forwards each message as a new one, in order, so each gets the `random_id` of its pending copy. A message that
+   * is not sent fails the request, which marks every pending copy of it as failed.
+   */
+  private async forwardMessages(params: MethodDeclMap['messages.forwardMessages']['req']): Promise<Updates> {
+    const fromChat = {id: toSignalPeerId(this.getInputPeerId(params.from_peer))};
+    const toPeer = this.getInputPeerId(params.to_peer);
+    const toChat = {id: toSignalPeerId(toPeer)};
+    const messages: SignalMessage[] = await this.call('fetchMessagesById', {chat: fromChat, messageIds: params.id});
+    if(messages?.length !== params.id.length) {
+      throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
+    }
+
+    const storedIds: (number | undefined)[] = await this.call('forwardMessages', {
+      fromChat,
+      toChat,
+      messages,
+      noCaptions: params.drop_media_captions,
+      lastMessageId: this.appMessagesManager.getHistoryStorage(toPeer).maxId || 0
+    });
+    if(!storedIds?.every((id) => id !== undefined)) {
+      throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
+    }
+
+    return {
+      _: 'updates',
+      updates: storedIds.map((id, index) => ({_: 'updateMessageID', id, random_id: '' + params.random_id[index]})),
+      users: [],
+      chats: [],
+      date: tsNow(true),
+      seq: 0
+    } as Updates;
   }
 
   private async getFullChat(params: MethodDeclMap['messages.getFullChat']['req']) {

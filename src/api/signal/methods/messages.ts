@@ -367,6 +367,8 @@ export async function forwardMessages(params: ForwardMessagesParams) {
   }
 
   const conversation = await getConversationByPeerId(toChat.id);
+  // The id of each forwarded message as stored, or `undefined` when it was not sent
+  const storedIds: (number | undefined)[] = localMessages.map(() => undefined);
   for (const [index, localMessage] of localMessages.entries()) {
     const record = await db.getMessage(messages[index].id);
     if (!conversation || !record?.dataMessage) {
@@ -383,7 +385,7 @@ export async function forwardMessages(params: ForwardMessagesParams) {
       continue;
     }
 
-    await sendWithLocalMessage(conversation, {
+    storedIds[index] = await sendWithLocalMessage(conversation, {
       body,
       bodyRanges: isCaptionDropped ? [] : original.bodyRanges,
       attachments: original.attachments,
@@ -391,6 +393,7 @@ export async function forwardMessages(params: ForwardMessagesParams) {
       sticker: original.sticker,
     }, localMessage);
   }
+  return storedIds;
 }
 
 function getIsAlbumItem({ groupedId, attachment }: SendMessageParams) {
@@ -480,7 +483,10 @@ async function sendAlbum(items: AlbumItem[]) {
  * Stores and sends a message in place of a local one; the message updater swaps them once the message is
  * stored, and recipient statuses follow as message updates
  */
-async function sendWithLocalMessage(conversation: ConversationRecord, init: DataMessageInit, localMessage: ApiMessage) {
+/** Sends a stored message; resolves to its id, or to `undefined` when it was not sent */
+async function sendWithLocalMessage(
+  conversation: ConversationRecord, init: DataMessageInit, localMessage: ApiMessage,
+): Promise<number | undefined> {
   let isStored = false;
   try {
     const sent = await processor.sendDataMessage(conversation.id, init, (stored) => {
@@ -488,10 +494,12 @@ async function sendWithLocalMessage(conversation: ConversationRecord, init: Data
       trackLocalMessage(stored.id, localMessage);
     });
     await reportBlockedRecipients(conversation, sent.id);
+    return sent.id;
   } catch (err) {
     if (!isStored) markLocalMessageFailed(localMessage, err);
     else logSendFailure('A message was stored but sending it failed', err);
   }
+  return undefined;
 }
 
 /**
