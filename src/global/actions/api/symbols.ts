@@ -8,7 +8,7 @@ import { BIRTHDAY_NUMBERS_SET, RESTRICTED_EMOJI_SET } from '../../../config';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { buildCollectionByKey } from '../../../util/iteratees';
 import { pause, throttle } from '../../../util/schedulers';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { LIMITS } from '../../../limits';
 import { getIsStickerSetInstalled } from '../../helpers';
 import {
@@ -123,7 +123,7 @@ addActionHandler('loadGreetingStickers', async (global): Promise<void> => {
       ...global.stickers,
       greeting: {
         hash: greeting.hash,
-        stickers: greeting.stickers.filter((sticker) => sticker.emoji === '👋'),
+        stickers: greeting.stickers.filter((sticker: ApiSticker) => sticker.emoji === '👋'),
       },
     },
   };
@@ -562,7 +562,7 @@ addActionHandler('loadEmojiSearchGroups', async (global, actions): Promise<void>
   };
   setGlobal(global);
 
-  const iconIds = result.groups.map(({ iconEmojiId }) => iconEmojiId);
+  const iconIds = result.groups.map(({ iconEmojiId }: { iconEmojiId: string }) => iconEmojiId);
   if (iconIds.length) {
     actions.loadCustomEmojis({ ids: iconIds });
   }
@@ -585,7 +585,7 @@ addActionHandler('loadEmojiStickerGroups', async (global, actions): Promise<void
   };
   setGlobal(global);
 
-  const iconIds = result.groups.map(({ iconEmojiId }) => iconEmojiId);
+  const iconIds = result.groups.map(({ iconEmojiId }: { iconEmojiId: string }) => iconEmojiId);
   if (iconIds.length) {
     actions.loadCustomEmojis({ ids: iconIds });
   }
@@ -730,10 +730,10 @@ addActionHandler('loadFeaturedEmojiStickers', async (global): Promise<void> => {
     ...global,
     customEmojis: {
       ...global.customEmojis,
-      featuredIds: featuredStickers.sets.map(({ id }) => id),
+      featuredIds: featuredStickers.sets.map(({ id }: ApiStickerSet) => id),
       byId: {
         ...global.customEmojis.byId,
-        ...buildCollectionByKey(featuredStickers.sets.flatMap((set) => set.stickers || []), 'id'),
+        ...buildCollectionByKey(featuredStickers.sets.flatMap((set: ApiStickerSet) => set.stickers || []), 'id'),
       },
     },
     stickers: {
@@ -772,6 +772,6 @@ addActionHandler('loadRecentEmojiStatuses', async (global): Promise<void> => {
   }
 
   global = getGlobal();
-  global = updateRecentStatusCustomEmojis(global, result.hash, result.emojiStatuses!);
+  global = updateRecentStatusCustomEmojis(global, result.hash, result.emojiStatuses);
   setGlobal(global);
 });

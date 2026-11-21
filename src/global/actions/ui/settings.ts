@@ -14,7 +14,7 @@ import { applyPerformanceSettings } from '../../../util/perfomanceSettings';
 import switchTheme, { hasActiveThemeTransition } from '../../../util/switchTheme';
 import { buildThemePalette, isThemePaletteTransitionSafe, updatePeerColors } from '../../../util/theme';
 import { removeWallpaperBlobIfUnused, updateSelectedWallpaperBlobs } from '../../../util/wallpaper/storage';
-import { callApi, setShouldEnableDebugLog } from '../../../api/gramjs';
+import { callApi, setShouldEnableDebugLog } from '../../../api';
 import { addTabStateResetterAction } from '../../helpers/meta';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,

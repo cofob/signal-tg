@@ -1,7 +1,7 @@
 import type {
   ApiChat, ApiChatFullInfo,
   ApiChatMember, ApiDraft, ApiError, ApiMissingInvitedUser,
-  ApiTopic,
+  ApiTopic, ApiTopicWithState,
   LinkContext,
 } from '../../../api/types';
 import type { RequiredGlobalActions } from '../../index';
@@ -41,7 +41,7 @@ import {
 import { isLocalMessageId } from '../../../util/keys/messageKey';
 import { notifyAboutMessage } from '../../../util/notifications';
 import { debounce, pause, throttle } from '../../../util/schedulers';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { LIMITS, MAX_FOLDERS } from '../../../limits';
 import {
   getIsSavedDialog,
@@ -94,7 +94,6 @@ import {
   updateUser,
   updateUsers,
 } from '../../reducers';
-import { updateGroupCall } from '../../reducers/calls';
 import { updateTabState } from '../../reducers/tabs';
 import {
   replaceThreadLocalStateParam,
@@ -131,7 +130,6 @@ import {
   selectUser,
   selectUserByPhoneNumber,
 } from '../../selectors';
-import { selectGroupCall } from '../../selectors/calls';
 import {
   selectDraft,
   selectThread,
@@ -456,7 +454,7 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
   global = updateThreadInfo(global, result.threadInfo);
   global = updateThreadReadState(global, chatId, result.threadId, result.threadReadState);
   global = updateThreadInfoLastMessageId(global, chatId, result.threadId, result.lastMessageId);
-  global = replaceThreadLocalStateParam(global, chatId, threadId, 'firstMessageId', result.firstMessageId);
+  global = replaceThreadLocalStateParam(global, chatId, threadId!, 'firstMessageId', result.firstMessageId);
   setGlobal(global);
 
   if (focusMessageId) {
@@ -503,7 +501,7 @@ addActionHandler('openThread', async (global, actions, payload): Promise<void> =
       actions.processOpenChatOrThread({
         chatId,
         type,
-        threadId,
+        threadId: threadId!,
         tabId,
         isComments,
         noForumTopicPanel,
@@ -1390,7 +1388,7 @@ addActionHandler('markChatMessagesRead', async (global, actions, payload): Promi
 
     global = getGlobal();
     const topicIdsToMarkRead: number[] = [];
-    result.topics.forEach((topicWithState) => {
+    result.topics.forEach((topicWithState: ApiTopicWithState) => {
       global = updateTopicWithState(global, id, topicWithState);
 
       const { readState } = topicWithState;
@@ -1989,13 +1987,13 @@ addActionHandler('loadGroupsForDiscussion', async (global): Promise<void> => {
     return;
   }
 
-  const addedById = groups.reduce((result, group) => {
+  const addedById = groups.reduce((result: Record<string, ApiChat>, group: ApiChat) => {
     if (group && !group.isForum) {
       result[group.id] = group;
     }
 
     return result;
-  }, {} as Record<string, ApiChat>);
+  }, {});
 
   global = getGlobal();
   global = {
@@ -2364,15 +2362,17 @@ addActionHandler('loadTopics', async (global, actions, payload): Promise<void> =
   }
 
   global = addMessages(global, result.messages);
-  result.topics.forEach((topic) => {
+  result.topics.forEach((topic: ApiTopicWithState) => {
     global = updateTopicWithState(global, chatId, topic);
   });
   global = updateTopicsInfo(global, chatId, {
     totalCount: result.count,
     isCache: undefined,
   });
-  global = updateListedTopicIds(global, chatId, result.topics.map((topicState) => topicState.topic.id));
-  Object.entries(result.draftsById || {}).forEach(([threadId, draft]) => {
+  global = updateListedTopicIds(
+    global, chatId, result.topics.map((topicState: ApiTopicWithState) => topicState.topic.id),
+  );
+  Object.entries<ApiDraft>(result.draftsById || {}).forEach(([threadId, draft]) => {
     global = replaceThreadLocalStateParam(global, chatId, Number(threadId), 'draft', draft);
   });
 
@@ -2640,7 +2640,7 @@ addActionHandler('loadCommunities', async (global): Promise<void> => {
     return;
   }
 
-  const communityIds = result.communities.map((community) => community.id);
+  const communityIds = result.communities.map((community: ApiChat) => community.id);
 
   global = getGlobal();
   // Not `addChats`: an already known community must still receive a fresh `isCollapsedInDialogs`
@@ -2665,7 +2665,7 @@ addActionHandler('loadFullCommunity', async (global, actions, payload): Promise<
     return;
   }
 
-  const { fullInfo, chats } = result;
+  const { fullInfo, chats }: { fullInfo: ApiChatFullInfo; chats: ApiChat[] } = result;
   const linkedPeerIds = new Set(fullInfo.linkedPeers?.map((peer) => peer.peerId));
   const joinedChatIds = chats
     .filter((chat) => linkedPeerIds.has(chat.id) && !chat.isNotJoined)
@@ -2805,18 +2805,8 @@ async function loadChats(
   const shouldReplaceStaleState = listType === 'active' && isFirstBatch;
   const isAccountFreeze = selectIsCurrentUserFrozen(global);
 
-  // Right after a reload the current user may not be in the global yet
-  const currentUser = selectUser(global, global.currentUserId!);
-  if (listType === 'saved' && !currentUser) return;
-
-  const result = listType === 'saved' ? await callApi('fetchSavedChats', {
-    parentPeer: currentUser!,
-    limit: CHAT_LIST_LOAD_SLICE,
-    offsetDate,
-    offsetId,
-    offsetPeer,
-    withPinned: isFirstBatch && !isAccountFreeze,
-  }) : await callApi('fetchChats', {
+  // Signal has no saved dialogs
+  const result = listType === 'saved' ? undefined : await callApi('fetchChats', {
     limit: CHAT_LIST_LOAD_SLICE,
     offsetDate,
     offsetId,
@@ -2877,7 +2867,7 @@ async function loadChats(
 
         chunkGlobal = updateThreadInfo(chunkGlobal, threadInfo);
         chunkGlobal = updateThreadReadState(
-          chunkGlobal, chatId, MAIN_THREAD_ID, result.threadReadStatesById![chatId],
+          chunkGlobal, chatId, MAIN_THREAD_ID, result.threadReadStatesById[chatId],
         );
       });
     }
@@ -2948,7 +2938,7 @@ export async function loadFullChat<T extends GlobalState>(
   }
 
   const {
-    chats, userStatusesById, fullInfo, groupCall, membersCount, isForumAsMessages,
+    chats, userStatusesById, fullInfo, membersCount,
   } = result;
 
   global = getGlobal();
@@ -2958,22 +2948,8 @@ export async function loadFullChat<T extends GlobalState>(
     global = addUserStatuses(global, userStatusesById);
   }
 
-  if (groupCall) {
-    const existingGroupCall = selectGroupCall(global, groupCall.id!);
-    global = updateGroupCall(
-      global,
-      groupCall.id!,
-      omit(groupCall, ['connectionState', 'isLoaded']),
-      undefined,
-      existingGroupCall ? undefined : groupCall.participantsCount,
-    );
-  }
-
   if (membersCount !== undefined) {
     global = updateChat(global, chat.id, { membersCount });
-  }
-  if (chat.isForum) {
-    global = updateChat(global, chat.id, { isForumAsMessages });
   }
   global = replaceChatFullInfo(global, chat.id, fullInfo);
   setGlobal(global);

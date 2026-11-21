@@ -22,7 +22,7 @@ import { buildSearchResultKey } from '../../../util/keys/searchResultKey';
 import { notifyAboutMessage } from '../../../util/notifications';
 import { onTickEnd } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import {
   checkIfHasUnreadReactions,
   createApiMessageFromTypingDraft,

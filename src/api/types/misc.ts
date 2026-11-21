@@ -366,14 +366,6 @@ export interface ApiPendingSuggestion {
   url: string;
 }
 
-export interface GramJsEmojiInteraction {
-  v: number;
-  a: {
-    i: number;
-    t: number;
-  }[];
-}
-
 export interface ApiEmojiInteraction {
   timestamps: number[];
 }

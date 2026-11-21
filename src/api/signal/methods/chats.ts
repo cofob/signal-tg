@@ -2,6 +2,7 @@ import type { ConversationRecord } from '../../../lib/signal/db/MessageDb';
 import type { ThreadReadState } from '../../../types';
 import type {
   ApiChat,
+  ApiDraft,
   ApiMessage,
   ApiPeer,
   ApiPeerNotifySettings,
@@ -59,6 +60,8 @@ export async function fetchChats({
 }: {
   limit: number;
   offsetDate?: number;
+  offsetId?: number;
+  lastLocalServiceMessageId?: number;
   offsetPeer?: ApiPeer;
   archived?: boolean;
   withPinned?: boolean;
@@ -91,7 +94,7 @@ export async function fetchChats({
     chats: summaries.map(({ chat }) => chat),
     users: [...users, ...senderUsers],
     userStatusesById: {},
-    draftsById: {},
+    draftsById: {} as Record<string, ApiDraft>,
     threadReadStatesById: Object.fromEntries(summaries.map(({ chat, readState }) => [chat.id, readState])),
     threadInfos: summaries.map(({ threadInfo }) => threadInfo),
     orderedPinnedIds: withPinned ? pinned.map(getPeerId) : undefined,

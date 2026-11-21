@@ -896,7 +896,6 @@ export interface ActionPayloads {
   onTabFocusChange: {
     isBlurred: boolean;
   } & WithTabId;
-  onSomeTabSwitchedMultitabRole: undefined;
   afterHangUp: undefined;
   requestMasterAndCallAction: CallbackAction & WithTabId;
   clearMultitabNextAction: WithTabId | undefined;

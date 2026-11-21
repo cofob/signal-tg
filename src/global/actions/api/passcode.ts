@@ -73,7 +73,7 @@ import {
   restoreWallpaperBlobsFromPasscode,
   syncLockScreenWallpaperBlobs,
 } from '../../../util/wallpaper/storage';
-import { closeApi } from '../../../api/gramjs';
+import { closeApi } from '../../../api';
 import {
   cacheGlobalForSlot,
   cacheSharedState,
@@ -986,7 +986,7 @@ function preparePasscodeForLock(generation?: string) {
 }
 
 async function teardownApi() {
-  await closeApi(true);
+  await closeApi();
 }
 
 async function waitForApiTeardown() {

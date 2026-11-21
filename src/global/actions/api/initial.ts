@@ -35,7 +35,7 @@ import {
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
 import {
   callApi, callApiLocal, initApi, reconnectApi, setShouldEnableDebugLog,
-} from '../../../api/gramjs';
+} from '../../../api';
 import { forceUpdateSharedStateCache, removeGlobalFromCache, removeSharedStateFromCache } from '../../cache';
 import {
   addActionHandler, getGlobal, setGlobal,
@@ -316,7 +316,7 @@ addActionHandler('disconnect', (): ActionReturnType => {
 });
 
 addActionHandler('destroyConnection', (): ActionReturnType => {
-  void callApiLocal('destroy', true, true);
+  void callApiLocal('destroy', true);
 });
 
 addActionHandler('loadNearestCountry', async (global): Promise<void> => {

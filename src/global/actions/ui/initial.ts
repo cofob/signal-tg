@@ -18,7 +18,6 @@ import { hasStoredSession } from '../../../util/sessions';
 import switchTheme from '../../../util/switchTheme';
 import { getSystemTheme, setSystemThemeChangeCallback } from '../../../util/systemTheme';
 import { buildThemeColorOverrides } from '../../../util/theme';
-import { callApi } from '../../../api/gramjs';
 import { clearCaching, setupCaching } from '../../cache';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { updateSharedSettings } from '../../reducers';
@@ -49,7 +48,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
   const { isMasterTab, tabId = getCurrentTabId() } = payload;
 
   if (isMasterTab === selectTabState(global, tabId).isMasterTab) {
-    callApi('broadcastLocalDbUpdateFull');
     return;
   }
 
@@ -62,7 +60,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
     actions.destroyConnection();
     destroySharedStatePort();
     clearCaching();
-    actions.onSomeTabSwitchedMultitabRole();
   } else {
     if (hasStoredSession()) {
       setupCaching();
@@ -84,10 +81,6 @@ addActionHandler('switchMultitabRole', (global, actions, payload): ActionReturnT
       initSharedState(global.sharedState);
     }
   }
-});
-
-addActionHandler('onSomeTabSwitchedMultitabRole', (): ActionReturnType => {
-  callApi('broadcastLocalDbUpdateFull');
 });
 
 addActionHandler('initMain', (global, actions): ActionReturnType => {

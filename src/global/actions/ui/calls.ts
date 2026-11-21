@@ -12,7 +12,7 @@ import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { omit } from '../../../util/iteratees';
 import safePlay from '../../../util/safePlay';
-import { callApi } from '../../../api/gramjs';
+import { callApi } from '../../../api';
 import { getMainUsername } from '../../helpers';
 import {
   addActionHandler, getGlobal,
@@ -198,7 +198,7 @@ addActionHandler('createGroupCallInviteLink', async (global, actions, payload): 
 });
 
 addActionHandler('joinVoiceChatByLink', async (global, actions, payload): Promise<void> => {
-  const { username, inviteHash, tabId = getCurrentTabId() } = payload;
+  const { username, tabId = getCurrentTabId() } = payload;
 
   const chat = await fetchChatByUsername(global, username);
 
@@ -217,37 +217,8 @@ addActionHandler('joinVoiceChatByLink', async (global, actions, payload): Promis
   const full = await loadFullChat(global, actions, chat);
   if (!full) return;
 
-  const { groupCall } = full;
-  if (!groupCall) {
-    actions.showNotification({ message: { key: 'GroupInviteBadLink' }, tabId });
-    return;
-  }
-
-  global = getGlobal();
-  if (groupCall.id === global.groupCalls.activeGroupCallId || global.phoneCall) {
-    actions.requestMasterAndJoinGroupCall({
-      id: groupCall.id,
-      accessHash: groupCall.accessHash,
-      inviteHash,
-      tabId,
-    });
-    return;
-  }
-
-  if (!ARE_CALLS_SUPPORTED) {
-    actions.showNotification({ message: { key: 'GroupCallsUnsupported' }, tabId });
-    return;
-  }
-
-  global = updateTabState(global, {
-    joinGroupCallModal: {
-      chatId: chat.id,
-      id: groupCall.id!,
-      accessHash: groupCall.accessHash!,
-      inviteHash,
-    },
-  }, tabId);
-  setGlobal(global);
+  // Signal has no group calls to join by a link
+  actions.showNotification({ message: { key: 'GroupInviteBadLink' }, tabId });
 });
 
 addActionHandler('closeJoinGroupCallModal', (global, actions, payload): ActionReturnType => {

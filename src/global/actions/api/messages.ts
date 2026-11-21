@@ -3,6 +3,7 @@ import type {
   ApiChat,
   ApiDraft,
   ApiError,
+  ApiFactCheck,
   ApiInputDraftReplyInfo,
   ApiInputMessageReplyInfo,
   ApiInputReplyInfo,
@@ -14,6 +15,7 @@ import type {
   ApiOnProgress,
   ApiSticker,
   ApiStory,
+  ApiThreadInfo,
   ApiUser,
   ApiVideo,
   MediaContent,
@@ -64,7 +66,7 @@ import { debounce, onTickEnd, rafPromise } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
 import { parseSignalLink } from '../../../util/signalLinks';
 import { cancelVideoAttachmentProcessing, processVideoAttachment } from '../../../util/videoProcessingQueue';
-import { callApi, cancelApiProgress } from '../../../api/gramjs';
+import { callApi, cancelApiProgress } from '../../../api';
 import {
   getIsSavedDialog,
   getUserFullName,
@@ -1592,7 +1594,7 @@ addActionHandler('loadScheduledHistory', async (global, actions, payload): Promi
     return;
   }
 
-  const { messages } = result;
+  const { messages }: { messages: ApiMessage[] } = result;
 
   const byId = buildCollectionByKey(messages, 'id');
   const ids = Object.keys(byId).map(Number).sort((a, b) => b - a);
@@ -2376,7 +2378,7 @@ addActionHandler('loadPinnedMessages', async (global, actions, payload): Promise
     return;
   }
 
-  const { messages } = result;
+  const { messages }: { messages: ApiMessage[] } = result;
 
   const byId = buildCollectionByKey(messages, 'id');
   const ids = Object.keys(byId).map(Number).sort((a, b) => b - a);
@@ -3129,7 +3131,9 @@ addActionHandler('loadMessageViews', async (global, actions, payload): Promise<v
   if (!result) return;
 
   global = getGlobal();
-  result.viewsInfo.forEach((update) => {
+  result.viewsInfo.forEach((update: {
+    id: number; views?: number; forwards?: number; threadInfo?: ApiThreadInfo;
+  }) => {
     global = updateChatMessage(global, chatId, update.id, {
       viewsCount: update.views,
       forwardsCount: update.forwards,
@@ -3201,7 +3205,7 @@ addActionHandler('loadFactChecks', async (global, actions, payload): Promise<voi
   if (!result) return;
 
   global = getGlobal();
-  result.forEach((factCheck, i) => {
+  result.forEach((factCheck: ApiFactCheck, i: number) => {
     global = updateChatMessage(global, chatId, ids[i], {
       factCheck,
     });
