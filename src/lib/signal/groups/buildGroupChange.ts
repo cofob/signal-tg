@@ -3,6 +3,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import type { GroupChange_ActionsSchema } from '../proto/generated/Groups_pb';
 import type { GroupState } from './fetchGroup';
 
+import { bufferToHex } from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
 import { encryptGroupAttribute, encryptGroupServiceId } from './groupCipher';
 import { createProfileKeyCredentialPresentation } from './profileKeyCredentials';
@@ -83,7 +84,8 @@ export function buildExpireTimerChange(seconds: number): GroupChangeBuilder {
 
 /**
  * Adds users as full members with their profile key credentials; users without one are invited and join once
- * they accept. Banned users are unbanned (Signal Desktop `buildAddMembersChange`).
+ * they accept. Banned users are unbanned (Signal Desktop `buildAddMembersChange`). Users who asked to join are
+ * approved instead, as in Signal Android `createApproveGroupJoinRequest`.
  */
 export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
   return async (state, { secretParams, selfAci, getCredential }) => {
@@ -91,17 +93,19 @@ export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
       ...state.members.map(({ aci }) => aci),
       ...state.pendingMembers.map(({ serviceId }) => serviceId),
     ]);
+    const requesting = new Set(state.requestingMembers.map(({ aci }) => aci));
     const added = [...new Set(acis)].filter((aci) => !known.has(aci));
+    const approved = added.filter((aci) => requesting.has(aci));
+    const newUsers = added.filter((aci) => !requesting.has(aci));
     if (!added.length) return undefined;
 
     const revision = state.revision + 1;
-    const users = await Promise.all(added.map(async (aci) => ({
+    const users = await Promise.all(newUsers.map(async (aci) => ({
       aci,
       userId: encryptGroupServiceId(secretParams, aci),
       credential: await getCredential(aci),
     })));
     const banned = new Set(state.bannedMembers.map(({ serviceId }) => serviceId));
-    const requesting = new Set(state.requestingMembers.map(({ aci }) => aci));
     return {
       addMembers: users.filter(({ credential }) => credential).map(({ userId, credential }) => ({
         added: {
@@ -119,10 +123,9 @@ export function buildAddMembersChange(acis: string[]): GroupChangeBuilder {
         },
       })),
       deleteMembersBanned: users.filter(({ aci }) => banned.has(aci)).map(({ userId }) => ({ deletedUserId: userId })),
-      // Adding someone who asked to join answers the request
-      deleteMembersPendingAdminApproval: users
-        .filter(({ aci }) => requesting.has(aci))
-        .map(({ userId }) => ({ deletedUserId: userId })),
+      promoteMembersPendingAdminApproval: approved.map((aci) => ({
+        userId: encryptGroupServiceId(secretParams, aci), role: Member_Role.DEFAULT,
+      })),
     };
   };
 }
@@ -269,7 +272,10 @@ export function buildUnbanChange(serviceId: string): GroupChangeBuilder {
     : undefined);
 }
 
-/** Builds one change from several, such as access levels with announcements-only; lists of actions add up */
+/**
+ * Builds one change from several, such as access levels with announcements-only; lists of actions add up. Each
+ * ban of a user that goes over the limit drops the same oldest bans, which the change lists once.
+ */
 export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupChangeBuilder {
   return async (state, context) => {
     const parts: GroupActions[] = [];
@@ -279,12 +285,17 @@ export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupCha
     }
     if (!parts.length) return undefined;
 
-    const combined: Record<string, unknown> = {};
+    const combined: GroupActions & Record<string, unknown> = {};
     for (const part of parts) {
       for (const [key, value] of Object.entries(part)) {
         const previous = combined[key];
         combined[key] = Array.isArray(previous) && Array.isArray(value) ? [...previous, ...value] : value ?? previous;
       }
+    }
+    if (combined.deleteMembersBanned) {
+      combined.deleteMembersBanned = [...new Map(
+        combined.deleteMembersBanned.map((ban) => [bufferToHex(ban.deletedUserId!), ban]),
+      ).values()];
     }
     return combined;
   };
