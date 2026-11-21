@@ -1511,14 +1511,16 @@ export default class MessageProcessor {
   }
 
   /**
-   * Applies a verification change from another device; a new key of a verified contact is saved as verified
-   * (Signal Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`)
+   * Applies a verification change from another device (Signal Android `IdentityUtil.processVerifiedMessage`, Signal
+   * Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`): a verified key is saved, and the
+   * verification is cleared only for the key we have. Syncs about ourselves and unverified syncs change nothing.
    */
   private async applyVerifiedSync(verified: Verified) {
     const aci = verified.destinationAci
       || (verified.destinationAciBinary.length ? uuidToString(verified.destinationAciBinary) : undefined);
     const { identityKey, state } = verified;
-    if (!aci || !identityKey.length) return;
+    if (!aci || !identityKey.length || state === Verified_State.UNVERIFIED) return;
+    if (aci === (await this.getAccount()).aci) return;
 
     const { store } = this.client;
     const wasVerified = await store.runExclusive(async () => {
@@ -1527,7 +1529,7 @@ export default class MessageProcessor {
       if (state === Verified_State.DEFAULT && !isSameKey) return undefined;
       if (!isSameKey) await saveIdentity(store, aci, identityKey);
       const current = (await store.getIdentity(aci))!;
-      if (current.verified === state) return undefined;
+      if ((current.verified ?? Verified_State.DEFAULT) === state) return undefined;
       await store.setIdentity(aci, { ...current, verified: state });
       return current.verified === Verified_State.VERIFIED;
     });
