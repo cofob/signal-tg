@@ -15,6 +15,9 @@ type NotificationClick = {
   messageId?: number;
 };
 
+// The inputs that hold text, unlike checkboxes, ranges and buttons
+const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email', 'password', 'number']);
+
 let isSetup = false;
 export default function setupTauriListeners() {
   if (isSetup) return;
@@ -75,8 +78,12 @@ export default function setupTauriListeners() {
 }
 
 function getIsEditableTarget(target: EventTarget | null) {
-  return target instanceof HTMLElement
-    && (target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.has(target.type) && !target.readOnly && !target.disabled;
+  }
+  if (target instanceof HTMLTextAreaElement) return !target.readOnly && !target.disabled;
+  return target.isContentEditable;
 }
 
 async function listenToNativeEvents() {
