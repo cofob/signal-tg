@@ -35,6 +35,11 @@ export type ApiChatInviteJoinWebView = {
   isSameOrigin?: true;
 };
 
+// Signal: the join request of a group link that needs admin approval was sent
+export type ApiChatInviteJoinRequested = {
+  type: 'requested';
+};
+
 export interface ApiChat {
   id: string;
   folderId?: number;

@@ -925,26 +925,6 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
   }
 });
 
-addActionHandler('deleteChatUser', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, userId, shouldRevokeHistory, tabId = getCurrentTabId(),
-  } = payload;
-  const chat = selectChat(global, chatId);
-  const user = selectUser(global, userId);
-  if (!chat || !user) {
-    return;
-  }
-
-  global = leaveChat(global, chatId);
-  setGlobal(global);
-
-  if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
-    actions.openChat({ id: undefined, tabId });
-  }
-
-  void callApi('deleteChatUser', { chat, user, shouldRevokeHistory });
-});
-
 // Signal groups cannot be deleted for everyone; deleting one leaves it, which the last admin cannot do
 addActionHandler('deleteChat', async (global, actions, payload): Promise<void> => {
   const { chatId, tabId = getCurrentTabId() } = payload;
@@ -1730,7 +1710,7 @@ addActionHandler('openChatByAci', async (global, actions, payload): Promise<void
 
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
-    hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),
+    hash, isBroadcast, tabId = getCurrentTabId(),
   } = payload;
   const theme = extractCurrentThemeParams();
   const result = await callApi('importChatInvite', { hash, theme });
@@ -1753,7 +1733,7 @@ addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<v
     return;
   }
 
-  if (isRequestNeeded) {
+  if (result?.type === 'requested') {
     actions.showNotification({
       message: { key: isBroadcast ? 'RequestToJoinChannelSentDescription' : 'RequestToJoinGroupSentDescription' },
       tabId,
@@ -2514,7 +2494,7 @@ addActionHandler('toggleJoinRequest', async (global, actions, payload): Promise<
   } = payload;
 
   const chat = await ensureIsSuperGroup(global, actions, chatId, tabId);
-  if (!chat || (!isChatSuperGroup(chat) && !isChatChannel(chat))) return;
+  if (!chat) return;
 
   global = getGlobal();
   const guardBot = guardBotId ? selectUser(global, guardBotId) : undefined;

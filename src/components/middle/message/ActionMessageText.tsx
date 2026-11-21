@@ -69,7 +69,9 @@ const UNSUPPORTED_LANG_KEY = 'ActionUnsupported';
 const GROUP_UPDATE_LANG_KEYS = {
   description: 'ActionGroupDescription',
   descriptionRemoved: 'ActionGroupDescriptionRemoved',
+  inviteDeclined: 'ActionGroupInviteDeclined',
   joinRequested: 'ActionGroupJoinRequested',
+  joinCanceled: 'ActionGroupJoinCanceled',
   linkOn: 'ActionGroupLinkOn',
   linkOnWithApproval: 'ActionGroupLinkOnWithApproval',
   linkOff: 'ActionGroupLinkOff',
@@ -202,6 +204,12 @@ const ActionMessageText = ({
             return translateWithYou(lang, 'ActionGroupInvited', isSenderSelf, {
               from: senderLink, count: action.count ?? 0,
             }, { pluralValue: action.count ?? 0 });
+          case 'inviteRevoked':
+            return translateWithYou(lang, 'ActionGroupInviteRevoked', isSenderSelf, {
+              from: senderLink, count: action.count ?? 0,
+            }, { pluralValue: action.count ?? 0 });
+          case 'joinDenied':
+            return translateWithYou(lang, 'ActionGroupJoinDenied', isSenderSelf, { from: senderLink, user: userLink });
           case 'infoAccess':
             return translateWithYou(lang, 'ActionGroupInfoAccess', isSenderSelf, { from: senderLink, access });
           case 'membersAccess':

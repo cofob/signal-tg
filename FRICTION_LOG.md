@@ -24,3 +24,13 @@ release workflow publishes a bundle built from the tag instead and does not use 
 `web:release:production` (commits `dist/` and pushes) and `telegraph:update_changelog` (posts to telegra.ph) belong to
 the upstream release flow and do not fit TeleSignal's releases (`docs/RELEASING.md`). The second one also contradicts
 the rule that the app talks only to its own origin and the tunnel, although it is a maintainer script.
+
+## A join request cannot be canceled after the group changed
+
+A user whose join request waits for admin approval keeps the state that `buildRequestedState` in
+`src/lib/signal/groups/GroupManager.ts` made from the join response: its revision, no group link password, and no read
+access to the group (`GET /v2/groups/` answers 403). Verified against the fake storage service of the groups test
+harness: when anyone changes the group after the request, canceling it through `buildLeaveChange` conflicts (409) at
+every attempt, since `MessageProcessor.refreshGroup` cannot learn the new revision, and fails with "The group change
+conflicted with other changes too many times". Whether the real server behaves the same is not verified. The revision
+is available from `fetchGroupJoinInfo`, which needs the group link password that the requested state does not keep.

@@ -192,8 +192,8 @@ export async function fetchGroupJoinInfo(
   const description = decryptGroupAttribute(secretParams, info.description);
   return {
     revision: info.version,
-    title: title?.case === 'title' ? title.value : undefined,
-    description: description?.case === 'descriptionText' ? description.value : undefined,
+    title: title?.case === 'title' ? title.value.trim() : undefined,
+    description: description?.case === 'descriptionText' ? description.value.trim() : undefined,
     avatarUrl: info.avatar || undefined,
     memberCount: info.memberCount,
     isApprovalRequired: info.addFromInviteLink === AccessControl_AccessRequired.ADMINISTRATOR,

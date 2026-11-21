@@ -36,6 +36,8 @@ type MessageOptions = {
   expirationStartTimestamp?: number;
   // Group story replies go as stories (Signal Desktop `sendNormalMessage`)
   isStory?: boolean;
+  // Messages that need no push notification, such as group updates, are not urgent
+  isUrgent?: boolean;
 };
 
 export type StoryMessageRecipient = MessageInitShape<typeof SyncMessage_Sent_StoryMessageRecipientSchema>;
@@ -58,7 +60,11 @@ export async function sendMessage(
   const content = { content: message };
   const groupId = options.group?.id;
   const results = await sendToRecipients(context, others, content, {
-    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId, isStory: options.isStory,
+    timestamp: options.timestamp,
+    contentHint: ContentHint.Resendable,
+    groupId,
+    isStory: options.isStory,
+    isUrgent: options.isUrgent,
   }, options.group);
 
   await store.addSentProto({
@@ -67,7 +73,7 @@ export async function sendMessage(
     contentHint: ContentHint.Resendable,
     recipients: others,
     groupId,
-    isUrgent: true,
+    isUrgent: options.isUrgent ?? true,
     savedAt: Date.now(),
   });
 
@@ -89,7 +95,7 @@ export async function sendMessage(
           })),
         },
       },
-    }, options.timestamp);
+    }, options.timestamp, options.isUrgent);
   }
 
   if (Date.now() - lastSentProtoPruneAt > SENT_PROTO_PRUNE_INTERVAL_MS) {
@@ -291,7 +297,7 @@ async function sendToRecipients(
 }
 
 async function syncToOtherDevices(
-  context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number,
+  context: SenderContext, init: MessageInitShape<typeof SyncMessageSchema>, timestamp: number, isUrgent?: boolean,
 ): Promise<SendResult> {
   // A primary device without linked devices has nobody to sync with (Signal Android
   // `SignalServiceMessageSender.sendSyncMessage`); linked devices become known from their sessions with us
@@ -305,5 +311,5 @@ async function syncToOtherDevices(
   syncMessage.padding = getRandomPadding();
   return sendContent(context, context.account.aci, {
     content: { case: 'syncMessage', value: syncMessage },
-  }, { timestamp, contentHint: ContentHint.Resendable });
+  }, { timestamp, contentHint: ContentHint.Resendable, isUrgent });
 }

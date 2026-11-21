@@ -41,7 +41,7 @@ const ChatInviteModal = ({ modal }: OwnProps) => {
   });
 
   const handleAccept = useLastCallback(() => {
-    acceptChatInvite({ hash: hash!, isRequestNeeded, isBroadcast });
+    acceptChatInvite({ hash: hash!, isBroadcast });
     handleClose();
   });
 
