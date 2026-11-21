@@ -5,10 +5,12 @@
 #
 # The web app and the tunnel are built on the build machine (`$BUILDPLATFORM`) for every target platform, so that no
 # compiler runs under emulation: the bundle is the same for every architecture, and the tunnel is cross-compiled. Only
-# the last stage, which installs packages and copies files, is built for the target platform.
+# the last stage, which installs packages and copies files, is built for the target platform. The base images are
+# pinned by digest, which Dependabot keeps current together with the tags.
 
-FROM --platform=$BUILDPLATFORM node:26-alpine AS web
-# `npm ci` fetches a few development tools from GitHub
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS web
+# `npm ci` fetches five packages from GitHub, two of which (`opus-recorder` and `emoji-data-ios`) the app uses at run
+# time, so the stage needs `git`
 # hadolint ignore=DL3018
 RUN apk add --no-cache git brotli
 WORKDIR /app
@@ -22,12 +24,13 @@ COPY public ./public
 COPY src ./src
 # The page's own policy comes from `buildCsp` in `vite.config.ts`. nginx sends it as a header too (a worker takes its
 # policy from its own response headers, and `frame-ancestors` cannot be in a `<meta>` tag), so the policy is read back
-# from the built page and cannot drift from the source.
+# from the built page and cannot drift from the source. The image ships no source maps.
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build:production \
   && mkdir -p /out \
   && sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/index.html > /out/csp.txt \
   && test -s /out/csp.txt \
-  && grep -q "connect-src 'self'" /out/csp.txt
+  && grep -q "connect-src 'self'" /out/csp.txt \
+  && find dist -name '*.map' -delete
 # Precompressed copies for `gzip_static` and `brotli_static`. `index.html` stays plain because nginx edits it on the fly
 # when `PUBLIC_URL` or `CSP_CONNECT_SRC` is set.
 # hadolint ignore=DL4006,SC2016
@@ -36,7 +39,7 @@ RUN find dist -type f -size +512c ! -name index.html \
        -o -name '*.html' -o -name '*.ico' \) -print0 \
   | xargs -0 -r -P "$(nproc)" -n 1 sh -c 'gzip -9 -k -f "$1" && brotli -q 11 -k -f "$1"' sh
 
-FROM --platform=$BUILDPLATFORM rust:1.98.1-alpine AS tunnel
+FROM --platform=$BUILDPLATFORM rust:1.98.1-alpine@sha256:7cc1c22d77d9432f7fe012a70e6d3e555af54c2a6832700ed7d553f1769ae89f AS tunnel
 ARG TARGETARCH
 # The tunnel has no C dependencies, so `rust-lld` links the arm64 binary on an amd64 build machine without a cross
 # compiler. The amd64 build uses the system linker, which the build scripts and procedural macros of both need.
@@ -56,7 +59,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --locked --target "$(cat /target)" \
   && install -D "target/$(cat /target)/release/telesignal-tunnel" /out/telesignal-tunnel
 
-FROM alpine:3.23 AS runtime
+FROM alpine:3.23@sha256:469c9ea410b9215eaee7976ba6c0639039b444be8e5d638f7abbada189971eb2 AS runtime
 ARG VERSION
 ARG REVISION
 LABEL org.opencontainers.image.title="TeleSignal" \

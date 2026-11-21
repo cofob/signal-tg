@@ -4,7 +4,7 @@
 #
 # The policy is the one in the page's `<meta>` tag (`buildCsp` in `vite.config.ts`), plus what a `<meta>` tag cannot
 # carry: `frame-ancestors`. As a header it also covers the Web Worker that runs the Signal engine.
-add_header Content-Security-Policy "${TELESIGNAL_CSP}; frame-ancestors 'none'" always;
+add_header Content-Security-Policy "${TELESIGNAL_HEADER_CSP}; frame-ancestors 'none'" always;
 add_header X-Content-Type-Options nosniff always;
 # The app's multi-account back navigation needs the referrer of its own origin
 add_header Referrer-Policy same-origin always;

@@ -124,7 +124,8 @@ check_page() {
   expect_contains 'CSP forbids framing' "$csp" "frame-ancestors 'none'"
   policy=$(get_meta_policy page)
   # The header is the page's own policy plus `frame-ancestors`
-  expect_equal 'CSP header extends the page policy' "$csp" "${policy}; frame-ancestors 'none'"
+  expect_equal 'CSP header extends the page policy' "$csp" "${policy%;}; frame-ancestors 'none'"
+  expect_empty 'CSP header has no empty directive' "$(grep -F ';;' <<< "$csp" || true)"
   expect_equal 'X-Content-Type-Options' "$(get_header x-content-type-options page)" nosniff
   expect_equal 'Referrer-Policy' "$(get_header referrer-policy page)" same-origin
   expect_equal 'X-Frame-Options' "$(get_header x-frame-options page)" DENY
@@ -167,18 +168,27 @@ check_assets() {
   expect_contains 'manifest content type' "$(get_header content-type manifest)" 'application/manifest+json'
   expect_contains 'manifest is revalidated' "$(get_header cache-control manifest)" 'no-cache'
 
-  # The service worker must be revalidated on every load, wherever the build puts it
-  worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- *.js assets/*service*.js 2> /dev/null | grep -i -m1 service' || true)
+  # Hashed worker bundles at the top level are immutable; the service worker, which has a hashed name too, is not
+  worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- *worker-*.js 2> /dev/null | grep -v service | head -1')
   if [[ -n "$worker" ]]; then
     fetch worker "/${worker}" > /dev/null
-    if [[ "$(get_header cache-control worker)" == *immutable* ]]; then
-      expect_contains "service worker (${worker}) cache" "$(get_header cache-control worker)" 'no-cache'
-    else
-      pass "service worker (${worker}) is not immutable"
-    fi
+    expect_contains "worker bundle (${worker}) cache" "$(get_header cache-control worker)" 'immutable'
   else
-    echo 'skip service worker: none found'
+    fail 'no worker bundle at the top level of the app'
   fi
+  service_worker=$(docker exec "$NAME" sh -c 'cd /srv/telesignal && ls -- *service.worker-*.js assets/*service.worker-*.js 2> /dev/null | head -1')
+  if [[ -n "$service_worker" ]]; then
+    fetch service_worker "/${service_worker}" > /dev/null
+    expect_equal "service worker (${service_worker}) cache" "$(get_header cache-control service_worker)" no-cache
+  else
+    fail 'the service worker is not in the image'
+  fi
+
+  # Fixed names that the app regenerates must never be cached for long
+  for snapshot in skeleton-snapshot.css wallpaper-snapshot.css; do
+    expect_equal "${snapshot} is served" "$(fetch snapshot "/${snapshot}")" 200
+    expect_equal "${snapshot} cache" "$(get_header cache-control snapshot)" no-cache
+  done
 
   local etag
   etag=$(get_header etag page)
@@ -244,7 +254,7 @@ check_supervision() {
 
 check_settings() {
   local policy status
-  start_container -e PUBLIC_URL=https://signal.example.test -e ENABLE_HSTS=1 \
+  start_container -e PUBLIC_URL=HTTPS://Signal.Example.Test:443/ -e ENABLE_HSTS=1 \
     -e CSP_CONNECT_SRC='wss://tunnel.example.test' -e NGINX_ACCESS_LOG=on
   wait_until_healthy || { fail 'settings: not healthy'; return; }
   status=$(fetch page / -H 'Accept-Encoding: identity')
@@ -253,7 +263,7 @@ check_settings() {
   expect_contains 'CSP header has the extra source' "$(get_header content-security-policy page)" "connect-src 'self' wss://tunnel.example.test"
   policy=$(get_meta_policy page)
   expect_contains 'the page policy has the extra source too' "$policy" "connect-src 'self' wss://tunnel.example.test"
-  expect_equal 'CSP header extends the page policy' "$(get_header content-security-policy page)" "${policy}; frame-ancestors 'none'"
+  expect_equal 'CSP header extends the page policy' "$(get_header content-security-policy page)" "${policy%;}; frame-ancestors 'none'"
   grep -q 'rel="canonical" href="https://signal.example.test/"' "$WORK_DIR/page.body" \
     && pass 'the page names its public address' || fail 'the page keeps the default public address'
   expect_empty 'the default address is gone' "$(grep -c 'http://localhost:1234/' "$WORK_DIR/page.body" | grep -v '^0$' || true)"
@@ -267,11 +277,16 @@ check_settings() {
 
 check_bad_settings() {
   local code
-  for setting in NGINX_PORT=70000 'PUBLIC_URL=signal.example.test' 'CSP_CONNECT_SRC=a;b' 'NGINX_LOG_LEVEL=loud' 'TRUSTED_PROXIES=nope'; do
+  local settings=(NGINX_PORT=70000 'PUBLIC_URL=signal.example.test' 'PUBLIC_URL=https://signal.example.test:99999'
+    'PUBLIC_URL=https://signal.example.test/path' 'CSP_CONNECT_SRC=a;b' 'NGINX_LOG_LEVEL=loud' 'TRUSTED_PROXIES=nope'
+    $'PUBLIC_URL=https://signal.example.test\nhttps://evil.example'
+    $'CSP_CONNECT_SRC=wss://tunnel.example.test\nscript-src *'
+    $'TRUSTED_PROXIES=10.0.0.0/8\n0.0.0.0/0')
+  for setting in "${settings[@]}"; do
     docker rm -f "$NAME" > /dev/null 2>&1 || true
     code=0
     docker run --name "$NAME" ${PLATFORM:+--platform "$PLATFORM"} --read-only --tmpfs /tmp -e "$setting" "$IMAGE" > /dev/null 2>&1 || code=$?
-    expect_equal "bad ${setting%%=*} stops the container" "$code" 64
+    expect_equal "bad ${setting%%=*} (${setting//$'\n'/\\n}) stops the container" "$code" 64
   done
 }
 

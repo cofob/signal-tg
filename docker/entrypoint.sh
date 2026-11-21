@@ -12,7 +12,7 @@ CSP_FILE=/usr/share/telesignal/csp.txt
 HSTS_VALUE='max-age=63072000; includeSubDomains'
 # Names that the templates may use; other `$` expressions in them belong to nginx
 # shellcheck disable=SC2016
-TEMPLATE_VARIABLES='${NGINX_PORT} ${TUNNEL_PORT} ${TELESIGNAL_CSP} ${TELESIGNAL_HSTS} ${TELESIGNAL_LISTEN_IPV6} ${TELESIGNAL_ACCESS_LOG} ${TELESIGNAL_REAL_IP} ${TELESIGNAL_PAGE_FILTERS}'
+TEMPLATE_VARIABLES='${NGINX_PORT} ${TUNNEL_PORT} ${TELESIGNAL_HEADER_CSP} ${TELESIGNAL_HSTS} ${TELESIGNAL_LISTEN_IPV6} ${TELESIGNAL_ACCESS_LOG} ${TELESIGNAL_REAL_IP} ${TELESIGNAL_PAGE_FILTERS}'
 
 log() {
     echo "telesignal: $*" >&2
@@ -61,14 +61,59 @@ check_settings() {
     export NGINX_PORT TUNNEL_PORT
 }
 
+# A newline or another control character would end a line of the nginx configuration that the value goes into
+has_control_character() {
+    case "$1" in
+        *[[:cntrl:]]*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # `PUBLIC_URL` is the address that users open. It fills the page's canonical and social metadata, and it is the origin
-# that the tunnel accepts unless `ALLOWED_ORIGINS` says otherwise.
+# that the tunnel accepts unless `ALLOWED_ORIGINS` says otherwise. The origin is lower-cased and loses its default
+# port, as in the `Origin` header that browsers send.
 check_public_url() {
     PUBLIC_ORIGIN=
     [ -n "$PUBLIC_URL" ] || return 0
-    printf '%s' "$PUBLIC_URL" | grep -Eq '^https?://([A-Za-z0-9.-]+|\[[0-9A-Fa-f:]+\])(:[0-9]{1,5})?/?$' \
-        || fail "PUBLIC_URL must be an origin such as https://signal.example.com, got '$PUBLIC_URL'"
-    PUBLIC_ORIGIN=${PUBLIC_URL%/}
+    if has_control_character "$PUBLIC_URL"; then
+        fail 'PUBLIC_URL must not contain control characters or line breaks'
+    fi
+    url=$(printf '%s' "$PUBLIC_URL" | tr '[:upper:]' '[:lower:]')
+    case "$url" in
+        http://*) scheme=http default_port=80 ;;
+        https://*) scheme=https default_port=443 ;;
+        *) fail "PUBLIC_URL must be an origin such as https://signal.example.com, got '$PUBLIC_URL'" ;;
+    esac
+    authority=${url#*://}
+    authority=${authority%/}
+    case "$authority" in
+        '' | */* | *[!]a-z0-9.:[-]*) fail "PUBLIC_URL must be an origin such as https://signal.example.com, got '$PUBLIC_URL'" ;;
+    esac
+    case "$authority" in
+        \[*\]:*) host=${authority%%\]*}] port=${authority##*\]:} ;;
+        \[*\]) host=$authority port= ;;
+        \[*) fail "PUBLIC_URL has an invalid address: '$PUBLIC_URL'" ;;
+        *:*) host=${authority%%:*} port=${authority#*:} ;;
+        *) host=$authority port= ;;
+    esac
+    case "$host" in
+        \[*\]) inner=${host#\[} inner=${inner%\]} ;;
+        *) inner= ;;
+    esac
+    if [ -n "$inner" ]; then
+        case "$inner" in
+            *[!0-9a-f:]*) fail "PUBLIC_URL has an invalid address: '$PUBLIC_URL'" ;;
+        esac
+    else
+        case "$host" in
+            '' | .* | *[!a-z0-9.-]*) fail "PUBLIC_URL has an invalid host name: '$PUBLIC_URL'" ;;
+        esac
+    fi
+    if [ -n "$port" ]; then
+        is_port "$port" || fail "PUBLIC_URL has an invalid port: '$PUBLIC_URL'"
+        [ "$port" != "$default_port" ] || port=
+    fi
+    PUBLIC_ORIGIN=$scheme://$host${port:+:$port}
 }
 
 # Sources for `connect-src`, for a tunnel on another origin than the app. The page's own `<meta>` tag carries the same
@@ -77,11 +122,18 @@ build_csp() {
     base_csp=$(cat "$CSP_FILE")
     TELESIGNAL_CSP=$base_csp
     if [ -n "$CSP_CONNECT_SRC" ]; then
-        printf '%s' "$CSP_CONNECT_SRC" | grep -Eq "^[A-Za-z0-9:/._*@ -]+\$" \
-            || fail 'CSP_CONNECT_SRC takes space-separated sources, such as "wss://tunnel.example.com", without quotes'
+        if has_control_character "$CSP_CONNECT_SRC"; then
+            fail 'CSP_CONNECT_SRC must not contain control characters or line breaks'
+        fi
+        case "$CSP_CONNECT_SRC" in
+            *[!A-Za-z0-9:/._*@' '-]*)
+                fail 'CSP_CONNECT_SRC takes space-separated sources, such as "wss://tunnel.example.com", without quotes or semicolons' ;;
+        esac
         TELESIGNAL_CSP=$(printf '%s' "$base_csp" | sed "s|connect-src 'self'|connect-src 'self' $CSP_CONNECT_SRC|")
         [ "$TELESIGNAL_CSP" != "$base_csp" ] || fail "$CSP_FILE has no connect-src 'self'"
     fi
+    # The header appends `frame-ancestors`, so the policy must not end with a semicolon
+    TELESIGNAL_HEADER_CSP=${TELESIGNAL_CSP%;}
 }
 
 # Replaces the page's policy and its default address in `index.html` on the fly; the file itself stays untouched
@@ -105,12 +157,19 @@ build_page_filters() {
 build_real_ip() {
     TELESIGNAL_REAL_IP=
     [ -n "$TRUSTED_PROXIES" ] || return 0
+    if has_control_character "$TRUSTED_PROXIES"; then
+        fail 'TRUSTED_PROXIES must not contain control characters or line breaks'
+    fi
+    # No file name expansion of the list
+    set -f
     for proxy in $(printf '%s' "$TRUSTED_PROXIES" | tr ',' ' '); do
-        printf '%s' "$proxy" | grep -Eq '^[0-9A-Fa-f:.]+(/[0-9]{1,3})?$' \
-            || fail "TRUSTED_PROXIES takes comma-separated addresses or CIDR ranges, got '$proxy'"
+        case "$proxy" in
+            *[!0-9A-Fa-f:./]*) fail "TRUSTED_PROXIES takes comma-separated addresses or CIDR ranges, got '$proxy'" ;;
+        esac
         TELESIGNAL_REAL_IP="$TELESIGNAL_REAL_IP
     set_real_ip_from $proxy;"
     done
+    set +f
     TELESIGNAL_REAL_IP="$TELESIGNAL_REAL_IP
     real_ip_header X-Forwarded-For;
     real_ip_recursive on;"
@@ -133,7 +192,7 @@ build_snippets() {
     if [ "$NGINX_ACCESS_LOG" = on ]; then
         TELESIGNAL_ACCESS_LOG=/dev/stdout
     fi
-    export TELESIGNAL_CSP TELESIGNAL_HSTS TELESIGNAL_LISTEN_IPV6 TELESIGNAL_ACCESS_LOG TELESIGNAL_REAL_IP \
+    export TELESIGNAL_HEADER_CSP TELESIGNAL_HSTS TELESIGNAL_LISTEN_IPV6 TELESIGNAL_ACCESS_LOG TELESIGNAL_REAL_IP \
         TELESIGNAL_PAGE_FILTERS
 }
 

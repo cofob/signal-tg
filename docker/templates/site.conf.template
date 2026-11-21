@@ -2,14 +2,16 @@
 # holds a config of your own. Copy this file as a starting point; the `${...}` names are environment variables of the
 # image, and the entrypoint fills the `TELESIGNAL_` ones in (docs/DEPLOY.md).
 
-# Files with a content hash in their name never change, so they are cached for a year. The rest, including `index.html`
-# and the service worker, is revalidated on every use with its `ETag`, which keeps an update from being missed. The
-# emoji images are the one set of unhashed files that rarely change.
+# Files with a content hash in their name never change, so they are cached for a year: everything in `/assets` and the
+# worker bundles at the top level. The rest, including `index.html`, the service worker, the web manifest and the
+# snapshot stylesheets (`skeleton-snapshot.css`, `wallpaper-snapshot.css`: fixed names that the app regenerates), is
+# revalidated on every use with its `ETag`, so that an update is never missed. The emoji images are the one set of
+# unhashed files that rarely change.
 map $uri $telesignal_cache_control {
     default "no-cache";
-    "~^/service\.worker-" "no-cache";
+    "~/service\.worker-" "no-cache";
     "~^/assets/.+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9.]+$" "public, max-age=31536000, immutable";
-    "~^/[^/]+-[A-Za-z0-9_-]{8}\.(js|css)$" "public, max-age=31536000, immutable";
+    "~^/([A-Za-z]+\.)?worker-[A-Za-z0-9_-]{8}\.js$" "public, max-age=31536000, immutable";
     "~^/img-apple-(64|160)/" "public, max-age=604800";
 }
 
