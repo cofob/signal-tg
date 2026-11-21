@@ -2214,6 +2214,21 @@ export interface LangPair {
   'SettingsKeywordsLogOut': undefined;
   'SettingsKeywordsShortcuts': undefined;
   'SettingsSearchEmpty': undefined;
+  'SettingsDesktopApp': undefined;
+  'SettingsDesktopTray': undefined;
+  'SettingsDesktopTrayDescription': undefined;
+  'SettingsDesktopAutostart': undefined;
+  'SettingsDesktopAutostartDescription': undefined;
+  'SettingsDesktopProtect': undefined;
+  'SettingsDesktopProtectDescription': undefined;
+  'ShortcutQuitApp': undefined;
+  'DesktopMenuUndo': undefined;
+  'DesktopMenuRedo': undefined;
+  'DesktopMenuCut': undefined;
+  'DesktopMenuPaste': undefined;
+  'DesktopMenuSelectAll': undefined;
+  'DesktopMenuWindow': undefined;
+  'DesktopMenuMinimize': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -3163,6 +3178,15 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'VoiceChatJoinConfirmChannel': {
     'chat': V;
+  };
+  'DesktopMenuOpen': {
+    'app': V;
+  };
+  'DesktopMenuQuit': {
+    'app': V;
+  };
+  'DesktopMenuHide': {
+    'app': V;
   };
 }
 
@@ -4183,6 +4207,13 @@ export interface LangKeyGroups {
     keys:
       | 'PeerPickerUnknownPeer';
     variables: 'id';
+  };
+  'app': {
+    keys:
+      | 'DesktopMenuOpen'
+      | 'DesktopMenuQuit'
+      | 'DesktopMenuHide';
+    variables: 'app';
   };
 }
 

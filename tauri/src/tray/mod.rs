@@ -41,7 +41,7 @@ pub fn set_menu_translations(new_labels: HashMap<String, String>) {
   }
 }
 
-fn translated_label(id: &str, default: &str) -> String {
+pub(crate) fn translated_label(id: &str, default: &str) -> String {
   if let Ok(labels) = MENU_TRANSLATIONS.lock() {
     labels
       .get(id)
@@ -55,15 +55,38 @@ fn translated_label(id: &str, default: &str) -> String {
 #[derive(Default)]
 pub struct TrayManager;
 
+/// The tray menu with the labels that the page sent
+fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+  let quit_label = translated_label(MENU_ITEM_QUIT_ID, MENU_ITEM_QUIT_LABEL);
+  let quit_i = MenuItem::with_id(app, MENU_ITEM_QUIT_ID, &quit_label, true, None::<&str>)?;
+
+  let open_label = translated_label(MENU_ITEM_OPEN_ID, MENU_ITEM_OPEN_LABEL);
+  let open_i = MenuItem::with_id(app, MENU_ITEM_OPEN_ID, &open_label, true, None::<&str>)?;
+
+  Menu::with_items(app, &[&open_i, &quit_i])
+}
+
+/// Builds the tray menu again with the current labels
+pub fn refresh_menu(app: &AppHandle) {
+  let Ok(tray_opt) = TRAY_HANDLE.lock() else {
+    return;
+  };
+  let Some(tray) = tray_opt.as_ref() else {
+    return;
+  };
+  match build_menu(app) {
+    Ok(menu) => {
+      if let Err(err) = tray.set_menu(Some(menu)) {
+        log::warn!("Failed to set the tray menu: {err}");
+      }
+    }
+    Err(err) => log::warn!("Failed to build the tray menu: {err}"),
+  }
+}
+
 impl TrayManager {
   pub fn init(app: AppHandle) -> Result<Self, tauri::Error> {
-    let quit_label = translated_label(MENU_ITEM_QUIT_ID, MENU_ITEM_QUIT_LABEL);
-    let quit_i = MenuItem::with_id(&app, MENU_ITEM_QUIT_ID, &quit_label, true, None::<&str>)?;
-
-    let open_label = translated_label(MENU_ITEM_OPEN_ID, MENU_ITEM_OPEN_LABEL);
-    let open_i = MenuItem::with_id(&app, MENU_ITEM_OPEN_ID, &open_label, true, None::<&str>)?;
-
-    let menu = Menu::with_items(&app, &[&open_i, &quit_i])?;
+    let menu = build_menu(&app)?;
 
     let icon = TRAY_BASE_ICON.clone();
 
@@ -162,11 +185,8 @@ fn handle_icon_click(app: &AppHandle, only_open: bool) {
     return;
   }
 
-  // If there's a visible window, close it and remember its URL.
-  crate::save_window_url(app, visible_window.label());
-  if let Err(err) = visible_window.close() {
-    log::error!("Failed to close visible window: {:?}", err);
-  }
+  // If there's a visible window, hide it (closing the last one would quit the app with "Close to tray" off)
+  crate::hide_or_close_window(visible_window);
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -436,7 +436,7 @@ impl SavedFiles {
   }
 }
 
-fn write_json_atomically(path: &Path, data: &SavedFilesData) -> io::Result<()> {
+pub(crate) fn write_json_atomically(path: &Path, data: &impl Serialize) -> io::Result<()> {
   if let Some(parent) = path.parent() {
     fs::create_dir_all(parent)?;
   }

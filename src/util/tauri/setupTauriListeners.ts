@@ -1,9 +1,19 @@
 import { getActions } from '../../global';
 
+import { SettingsScreens } from '../../types';
+
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
 import { isSgnlLink, parseSignalLink } from '../signalLinks';
+
+const NOTIFICATION_CLICKED_EVENT = 'notification-clicked';
+const OPEN_SETTINGS_EVENT = 'open-settings';
+
+type NotificationClick = {
+  chatId: string;
+  messageId?: number;
+};
 
 let isSetup = false;
 export default function setupTauriListeners() {
@@ -17,6 +27,8 @@ export default function setupTauriListeners() {
       if (!getIsEditableTarget(event.target)) event.preventDefault();
     });
   }
+
+  void listenToNativeEvents();
 
   // Disable Backspace handling as back navigation
   document.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -65,6 +77,29 @@ export default function setupTauriListeners() {
 function getIsEditableTarget(target: EventTarget | null) {
   return target instanceof HTMLElement
     && (target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement);
+}
+
+async function listenToNativeEvents() {
+  try {
+    const { listen } = await import('@tauri-apps/api/event');
+
+    // The app brought the window forward after a click on a notification (`tauri/src/notifications.rs`)
+    await listen<NotificationClick>(NOTIFICATION_CLICKED_EVENT, ({ payload: { chatId, messageId } }) => {
+      if (messageId === undefined) {
+        getActions().openChat({ id: chatId, shouldReplaceHistory: true });
+        return;
+      }
+      getActions().focusMessage({ chatId, messageId, shouldReplaceHistory: true });
+    });
+
+    // Cmd+, in the macOS menu bar
+    await listen(OPEN_SETTINGS_EVENT, () => {
+      getActions().openSettingsScreen({ screen: SettingsScreens.Main });
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to listen to native events:', err);
+  }
 }
 
 async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
