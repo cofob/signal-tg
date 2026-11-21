@@ -64,14 +64,17 @@ emulation except for installing the packages of the last stage.
 
 ## Settings
 
-Environment variables. The image sets them to the defaults below.
+Environment variables. The image itself sets `NGINX_PORT` and `TUNNEL_PORT`; the entrypoint applies the other defaults
+below to every variable that is unset or empty. Values are checked before anything starts: a value with a line break
+or another control character is refused.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NGINX_PORT` | `8080` | Port of nginx inside the container |
-| `PUBLIC_URL` | none | The origin that users open, such as `https://signal.example.com` (no path). Fills the canonical and social metadata of the page, and is the origin that the tunnel accepts unless `ALLOWED_ORIGINS` is set. Without it the tunnel accepts only the loopback origins `http://localhost`, `http://127.0.0.1` and `http://[::1]` on any port |
+| `PUBLIC_URL` | none | The origin that users open, such as `https://signal.example.com` (no path; lower-cased, and a default port such as `:443` for `https` is dropped, as browsers do in the `Origin` header).
+Fills the canonical and social metadata of the page, and is the origin that the tunnel accepts unless `ALLOWED_ORIGINS` is set. Without it the tunnel accepts only the loopback origins `http://localhost`, `http://127.0.0.1` and `http://[::1]` on any port |
 | `ALLOWED_ORIGINS` | `PUBLIC_URL` | The tunnel's comma-separated list of exact origins. Set it for several addresses, such as `https://signal.example.com,https://signal.example.net` |
-| `TRUSTED_PROXIES` | none | Comma-separated addresses or CIDR ranges of the proxies in front of the container, such as `172.16.0.0/12`. nginx then takes the client address from their `X-Forwarded-For`. Without it, the tunnel sees every client at the proxy's address, so its per-client limits and bans apply to all clients together |
+| `TRUSTED_PROXIES` | none | Comma-separated addresses or CIDR ranges of the proxies in front of the container, such as `172.16.0.0/12`. nginx then takes the client address from their `X-Forwarded-For`. Without it, the tunnel sees every client at the proxy's address, so its per-client limits and bans apply to all clients together. Keep the range as narrow as the proxy's own address: whoever can connect to nginx from a trusted address chooses the client address by sending `X-Forwarded-For`, and so escapes the per-client limits and bans, and the log of `LOG_CLIENT_IPS` shows what they send |
 | `ENABLE_HSTS` | `0` | `1` sends `Strict-Transport-Security: max-age=63072000; includeSubDomains`. Turn it on only when the site is served over HTTPS for good |
 | `CSP_CONNECT_SRC` | none | Extra space-separated `connect-src` sources, such as `wss://tunnel.example.com`, for a tunnel on another origin than the app. `connect-src` allows every `wss:` origin already; this is for a `ws://` tunnel. nginx adds them to the header and to the page's own `<meta>` policy |
 | `NGINX_LOG_LEVEL` | `warn` | nginx `error_log` level: `debug`, `info`, `notice`, `warn`, `error`, `crit`, `alert` or `emerg` |
@@ -92,6 +95,11 @@ credentials (see [proxy/README.md](../proxy/README.md#separate-tunnel-for-sealed
 the tunnel-only image `ghcr.io/cofob/telesignal-tunnel` with its own `UPSTREAM_PROXY` and `ALLOWED_ORIGINS` set to the
 app's origin, behind its own TLS proxy; the image of the app needs no change for it, because `connect-src` allows every
 `wss:` origin.
+
+nginx keeps a `/tunnel` connection for up to an hour without data in either direction (`proxy_read_timeout` and
+`proxy_send_timeout` in `site.conf.template`), and the tunnel closes an idle connection after `IDLE_TIMEOUT_SECS`
+(120 by default), so the tunnel decides. If you raise `IDLE_TIMEOUT_SECS` above 3600, raise the two nginx timeouts
+with a `site.conf.template` of your own; a proxy in front of the container needs timeouts above `IDLE_TIMEOUT_SECS` too.
 
 The app finds its tunnel at `/tunnel` on its own origin. The image is built with that default, and the Proxy server
 setting of the app (Data and Storage, or the link screen) still selects another tunnel at run time.
@@ -142,7 +150,9 @@ services:
 ```
 
 `TRUSTED_PROXIES` must contain the address that nginx sees the proxy at: for Compose, the subnet of the network that
-they share (`docker network inspect <network>`). Use a narrower range than `172.16.0.0/12` when you know it.
+they share (`docker network inspect <network>`). `172.16.0.0/12` is every Docker bridge network of the host, which is
+wide: use the address of the proxy container or the subnet of the shared network when you know it, and never a range
+that other clients can reach the container from (`0.0.0.0/0`, or a published port that is open to the internet).
 
 ## Headers
 
@@ -159,7 +169,7 @@ holds them):
 | `Strict-Transport-Security` | With `ENABLE_HSTS=1` only |
 | `Cache-Control` | `public, max-age=31536000, immutable` for files with a content hash in their name (`/assets/*-<hash>.*` and the hashed workers at the top level), a week for the emoji images, `no-cache` for everything else: `index.html`, the service worker (`service.worker-<hash>.js`), the web manifest and the other fixed names are revalidated on every use with their `ETag` |
 
-Files are served with their types, including `application/wasm`. The build ships `.gz` and `.br` copies of the large
+Files are served with their types, including `application/wasm`. The image carries no source maps. The build ships `.gz` and `.br` copies of the large
 files, which nginx sends to clients that ask (`gzip_static`, `brotli_static`); `index.html` and small files are
 compressed on the fly. A policy delivered both as a header and as a `<meta>` tag applies as the intersection of the two.
 
@@ -180,7 +190,7 @@ includes by name.
   Reach the tunnel with the `/tunnel` block of the template, at `http://127.0.0.1:8787` (`TUNNEL_PORT`).
 - **Change the generated server.** Copy `docker/templates/site.conf.template` from the repository, edit it, and mount it
   at `/etc/nginx/templates/site.conf.template`. The variables the entrypoint substitutes are the settings above and the
-  computed `TELESIGNAL_CSP`, `TELESIGNAL_HSTS`, `TELESIGNAL_LISTEN_IPV6`, `TELESIGNAL_ACCESS_LOG`, `TELESIGNAL_REAL_IP` and
+  computed `TELESIGNAL_HEADER_CSP`, `TELESIGNAL_HSTS`, `TELESIGNAL_LISTEN_IPV6`, `TELESIGNAL_ACCESS_LOG`, `TELESIGNAL_REAL_IP` and
   `TELESIGNAL_PAGE_FILTERS`; other `$` expressions stay nginx's.
 - **Replace everything.** Mount a complete `/etc/nginx/nginx.conf`. The entrypoint still renders the templates, validates
   the settings, starts the tunnel and passes `error_log` and `daemon off` on the command line; the config must keep its
