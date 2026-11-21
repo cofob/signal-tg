@@ -97,10 +97,18 @@ names a tunnel. The commands in `src/transport.rs` open the connections:
 
 | Command | Purpose |
 | --- | --- |
-| `signal_connect(host, onEvent)` | Opens a TCP connection to `host:443` and returns its ID. `onEvent`, a Tauri `Channel`, receives the upstream bytes as `ArrayBuffer`s and then `{ closed: reason }` once |
+| `signal_connect(host, trafficClass, onEvent)` | Opens a TCP connection to `host:443` and returns its ID. `trafficClass` is `authenticated` or `unauthenticated`. `onEvent`, a Tauri `Channel`, receives the upstream bytes as `ArrayBuffer`s and then `{ closed: reason }` once |
 | `signal_send` | Sends the raw request body (at most 64 KiB) on the connection named by the `signal-connection` header. Resolves once the bytes are queued |
 | `signal_ack(id, byteLength)` | Acknowledges received bytes, so the app delivers more |
 | `signal_close(id)` | Closes the connection |
+
+The engine opens each connection for one traffic class: `authenticated` for what carries the account's credentials,
+`unauthenticated` for sealed sender sends, profile and prekey fetches, group requests, CDSI, SVR2 and downloads
+(`TrafficClass` in `src/lib/signal/config.ts`). The Sealed sender proxy setting names a tunnel for the second class, and
+that class then leaves the native transport for a WebSocket tunnel. Without it, the native transport carries both
+classes straight to Signal from the same address, unless `UPSTREAM_PROXY` and `SEALED_SENDER_UPSTREAM_PROXY`, two
+`http://[user:password@]host:port` HTTP `CONNECT` proxies, give each class its own upstream. `SEALED_SENDER_UPSTREAM_PROXY`
+defaults to `UPSTREAM_PROXY`; `proxy/src/lib.rs` (`ClassProxies`) holds that policy.
 
 The engine runs in a web worker, where Tauri's `invoke` and `Channel` do not exist: Tauri injects them
 into the page only. The page therefore serves the transport to the worker
