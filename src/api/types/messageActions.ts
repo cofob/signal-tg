@@ -1,9 +1,8 @@
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
-  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiTodoItem, ApiVideo,
+  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiVideo,
 } from './messages';
 import type { ApiWallpaper } from './misc';
-import type { ApiTypeCurrencyAmount } from './stars';
 import type { ApiBirthday } from './users';
 
 interface ActionMediaType {
@@ -206,36 +205,6 @@ export interface ApiMessageActionExpiredContent extends ActionMediaType {
   isRoundVideo?: true;
 }
 
-export interface ApiMessageActionSuggestedPostApproval extends ActionMediaType {
-  type: 'suggestedPostApproval';
-  isRejected?: boolean;
-  isBalanceTooLow?: boolean;
-  rejectComment?: string;
-  scheduleDate?: number;
-  amount?: ApiTypeCurrencyAmount;
-}
-
-export interface ApiMessageActionSuggestedPostSuccess extends ActionMediaType {
-  type: 'suggestedPostSuccess';
-  amount?: ApiTypeCurrencyAmount;
-}
-
-export interface ApiMessageActionSuggestedPostRefund extends ActionMediaType {
-  type: 'suggestedPostRefund';
-  payerInitiated: boolean;
-}
-
-export interface ApiMessageActionTodoCompletions extends ActionMediaType {
-  type: 'todoCompletions';
-  completedIds: number[];
-  incompletedIds: number[];
-}
-
-export interface ApiMessageActionTodoAppendTasks extends ActionMediaType {
-  type: 'todoAppendTasks';
-  items: ApiTodoItem[];
-}
-
 export interface ApiMessageActionPollAppendAnswer extends ActionMediaType {
   type: 'pollAppendAnswer';
   answer: ApiPollAnswer;
@@ -329,9 +298,7 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined
-  | ApiMessageActionSuggestedPostApproval
-  | ApiMessageActionSuggestedPostSuccess | ApiMessageActionSuggestedPostRefund | ApiMessageActionTodoCompletions
-  | ApiMessageActionTodoAppendTasks | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer
+  | ApiMessageActionPollAppendAnswer | ApiMessageActionPollDeleteAnswer
 
   | ApiMessageActionNewCreatorPending
   | ApiMessageActionChangeCreator | ApiMessageActionNoForwardsToggle | ApiMessageActionNoForwardsRequest

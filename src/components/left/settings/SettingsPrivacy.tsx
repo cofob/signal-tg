@@ -8,7 +8,6 @@ import { SettingsScreens } from '../../../types';
 import { ACCOUNT_TTL_OPTIONS } from '../../../config';
 import {
   selectCanSetPasscode, selectIsCurrentUserFrozen,
-  selectIsCurrentUserPremium,
 } from '../../../global/selectors';
 import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { formatCountdown } from '../../../util/dates/duration';
@@ -18,7 +17,6 @@ import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import StarIcon from '../../common/icons/StarIcon';
 import Island, { IslandTitle } from '../../gili/layout/Island';
 import Button from '../../ui/Button';
 import Checkbox from '../../ui/Checkbox';
@@ -30,7 +28,6 @@ type OwnProps = {
 };
 
 type StateProps = {
-  isCurrentUserPremium?: boolean;
   signalPin?: ApiSignalPinSettings;
   isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
@@ -55,7 +52,6 @@ const DAYS_PER_MONTH = 30;
 
 const SettingsPrivacy = ({
   isActive,
-  isCurrentUserPremium,
   signalPin,
   isContactDiscoveryEnabled,
   hasPasscode,
@@ -182,7 +178,7 @@ const SettingsPrivacy = ({
   function getVisibilityValue(setting?: ApiPrivacySettings) {
     if (!setting) return lang('Loading');
 
-    const { visibility, shouldAllowPremium, botsPrivacy } = setting;
+    const { visibility, botsPrivacy } = setting;
 
     const isAllowBots = botsPrivacy === 'allow';
     const isVisibilityEverybody = visibility === 'everybody';
@@ -199,10 +195,6 @@ const SettingsPrivacy = ({
 
     const exceptionString = [botPrivacyString, totalString].filter(Boolean).join(' ');
     if (shouldShowBotsString && !isVisibilityEverybody) return exceptionString;
-
-    if (shouldAllowPremium) {
-      return lang(exceptionString ? 'ContactsAndPremium' : 'PrivacyPremium');
-    }
 
     switch (visibility) {
       case 'everybody':
@@ -425,7 +417,6 @@ const SettingsPrivacy = ({
         <ListItem
           narrow
           allowDisabledClick
-          rightElement={isCurrentUserPremium && <StarIcon size="big" type="premium" />}
           className="no-icon"
           onClick={() => openSettingsScreen({ screen: SettingsScreens.PrivacyVoiceMessages })}
         >
@@ -546,17 +537,15 @@ export default memo(withGlobal<OwnProps>(
 
     const { canDisplayChatInTitle } = selectSharedSettings(global);
     const isCurrentUserFrozen = selectIsCurrentUserFrozen(global);
-    const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
     return {
-      isCurrentUserPremium,
       signalPin,
       isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
       webAuthCount: global.activeWebSessions.orderedHashes.length,
       isSensitiveEnabled,
-      canDisplayAutoarchiveSetting: appConfig.canDisplayAutoarchiveSetting || isCurrentUserPremium,
+      canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting),
       shouldArchiveAndMuteNewNonContact,
       canChangeSensitive,
       needAgeVideoVerification: Boolean(appConfig.needAgeVideoVerification),

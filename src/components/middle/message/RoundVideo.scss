@@ -8,11 +8,6 @@
     pointer-events: none;
   }
 
-  // Stays mounted under the transcription, so collapsing it shows the loaded video without a reload
-  &.under-transcription {
-    display: none;
-  }
-
   .video-wrapper {
     position: absolute;
     top: 0;
@@ -124,21 +119,6 @@
     vertical-align: -0.1875rem;
   }
 
-  .loading-svg {
-    position: absolute;
-    top: 0;
-    left: 0;
-
-    width: 1.875rem;
-    height: 1.3125rem;
-    border-radius: 0.5rem;
-  }
-
-  .loading-rect {
-    animation: 1s linear loader-rectangle infinite;
-  }
-
-  .transcribe-button,
   .upscale-button {
     position: absolute;
     top: 1.6875rem;

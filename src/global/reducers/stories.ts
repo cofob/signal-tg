@@ -1,7 +1,6 @@
 import type {
   ApiPeerStories,
   ApiReaction,
-  ApiStealthMode,
   ApiStory,
   ApiStoryDeleted,
   ApiStorySkipped,
@@ -511,9 +510,6 @@ function updateOrderedStoriesPeerIds<T extends GlobalState>(global: T, updatePee
   }, { active: [], archived: [] });
 
   function compare(peerIdA: string, peerIdB: string) {
-    const peerA = selectPeer(global, peerIdA)!;
-    const peerB = selectPeer(global, peerIdB)!;
-
     const diffCurrentUser = compareFields(currentUserId === peerIdA, currentUserId === peerIdB);
     if (diffCurrentUser) return diffCurrentUser;
 
@@ -524,9 +520,6 @@ function updateOrderedStoriesPeerIds<T extends GlobalState>(global: T, updatePee
 
     const diffUnread = compareFields(hasUnreadA, hasUnreadB);
     if (diffUnread) return diffUnread;
-
-    const diffPremium = compareFields('isPremium' in peerA, 'isPremium' in peerB);
-    if (diffPremium) return diffPremium;
 
     const diffType = compareFields(isUserId(peerIdA), isUserId(peerIdB));
     if (diffType) return diffType;
@@ -586,19 +579,6 @@ export function updateStoriesState<T extends GlobalState>(
     stories: {
       ...global.stories,
       ...update,
-    },
-  };
-}
-
-export function updateStealthMode<T extends GlobalState>(
-  global: T,
-  stealthMode: ApiStealthMode,
-): T {
-  return {
-    ...global,
-    stories: {
-      ...global.stories,
-      stealthMode,
     },
   };
 }

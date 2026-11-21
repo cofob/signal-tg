@@ -4,7 +4,6 @@ import { DEBUG } from '../config';
 // so they are never converted on restore, and no property name in the state contains a null character.
 const BIGINT_JSON_KEY = '\u0000bigint';
 const BIGINT_DIGITS_REGEX = /^-?\d+$/;
-const PERMILLE_DIVISOR = 1000n;
 
 export function toJSNumber(value: undefined): undefined;
 export function toJSNumber(value: bigint): number;
@@ -18,15 +17,6 @@ export function toJSNumber(value?: bigint): number | undefined {
   }
 
   return Number(value);
-}
-
-export function getBigIntAbs(value: bigint) {
-  return value < 0n ? -value : value;
-}
-
-// Integer math keeps every nanoton, unlike multiplying a float share
-export function multiplyBigIntByPermille(value: bigint, permille: number) {
-  return (value * BigInt(Math.round(permille))) / PERMILLE_DIVISOR;
 }
 
 export function tryParseBigInt(value: string): bigint | undefined {

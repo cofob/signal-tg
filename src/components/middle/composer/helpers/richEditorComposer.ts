@@ -1,10 +1,9 @@
 import type { Editor, JSONContent as TiptapJsonContent } from '@tiptap/core';
 import type { Mark } from '@tiptap/pm/model';
 
-import type { ApiFormattedText, ApiInputRichMessage, ApiSticker } from '../../../../api/types';
+import type { ApiFormattedText, ApiSticker } from '../../../../api/types';
 import type { RichEditorInsertContent } from '../richEditorTypes';
 
-import { getRichMessagePreviewText } from '../../../../global/helpers/richMessage';
 import buildClassName from '../../../../util/buildClassName';
 import { buildRichMessageFromFormatted, buildTiptapJsonFromRichMessage } from '../../../ui/textInput/richText';
 
@@ -14,10 +13,6 @@ const EMPTY_TEXT = '';
 const GRAPHEME_SEGMENTER = typeof Intl.Segmenter === 'function'
   ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
   : undefined;
-
-export function getRichMessageText(value?: ApiInputRichMessage) {
-  return value?.blocks.length ? getRichMessagePreviewText(value) : EMPTY_TEXT;
-}
 
 export function hasEditorCollapsedSelection(editor?: Editor) {
   return Boolean(editor?.state.selection.empty);

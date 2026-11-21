@@ -30,7 +30,6 @@ type OwnProps = {
   isOutside?: boolean;
   metaChildren?: React.ReactNode;
   tags?: Record<ApiReactionKey, ApiSavedReactionTag>;
-  isCurrentUserPremium?: boolean;
   observeIntersection?: ObserveFn;
   noRecentReactors?: boolean;
   isAccountFrozen?: boolean;
@@ -45,7 +44,6 @@ const Reactions = ({
   metaChildren,
   observeIntersection,
   noRecentReactors,
-  isCurrentUserPremium,
   tags,
   isAccountFrozen,
 }: OwnProps) => {
@@ -106,8 +104,6 @@ const Reactions = ({
       return;
     }
     if (areTags) {
-      if (!isCurrentUserPremium) return;
-
       updateMiddleSearch({ chatId: message.chatId, threadId, update: { savedTag: reaction } });
       performMiddleSearch({ chatId: message.chatId, threadId });
       return;
@@ -155,7 +151,7 @@ const Reactions = ({
             isChosen={isChosen}
             reaction={reaction.reaction}
             tag={tag}
-            withContextMenu={isCurrentUserPremium}
+            withContextMenu
             onClick={handleClick}
             onRemove={handleRemoveReaction}
             observeIntersection={observeIntersection}

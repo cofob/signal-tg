@@ -37,7 +37,6 @@ type OwnProps = {
   answer: ApiPollAnswer;
   result?: ApiPollResult;
   isSelected?: boolean;
-  isQuiz?: boolean;
   totalVotersCount?: number;
   isMultipleChoice?: boolean;
   hasResults?: boolean;
@@ -65,7 +64,6 @@ const PollOption = ({
   answer,
   result,
   isSelected,
-  isQuiz,
   totalVotersCount,
   isMultipleChoice,
   hasResults,
@@ -245,15 +243,11 @@ const PollOption = ({
       return undefined;
     }
 
-    if (hasMaskedResults) {
-      if (!result.isChosen) return undefined;
-    } else if (!result.isChosen) {
-      if (!isQuiz || !result.isCorrect) return undefined;
-    }
+    if (!result.isChosen) return undefined;
 
     return (
       <div className={buildClassName(styles.chosenMarkerIcon, isMultipleChoice && styles.square)}>
-        <Icon name={!hasMaskedResults && isQuiz && !result.isCorrect ? 'close' : 'check'} />
+        <Icon name="check" />
       </div>
     );
   }
@@ -369,7 +363,6 @@ const PollOption = ({
         styles.root,
         hasResults && !hasMaskedResults && styles.hasResults,
         shouldReserveMediaEndColumn && styles.hasMediaColumn,
-        hasResults && !hasMaskedResults && isQuiz && !result?.isCorrect && styles.incorrect,
         canHandleClick && styles.clickable,
       )}
       onClick={canHandleClick ? handleClick : undefined}

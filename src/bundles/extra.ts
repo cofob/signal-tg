@@ -17,7 +17,6 @@ export { default as BotTrustModal } from '../components/main/BotTrustModal';
 export { default as AttachBotInstallModal } from '../components/modals/attachBotInstall/AttachBotInstallModal';
 export { default as DeleteFolderDialog } from '../components/main/DeleteFolderDialog';
 export { default as LimitReachedModal } from '../components/main/LimitReachedModal';
-export { default as StatusPickerMenu } from '../components/left/main/StatusPickerMenu';
 export { default as SuggestedStatusModal } from '../components/modals/suggestedStatus/SuggestedStatusModal';
 export { default as DeleteAccountModal } from '../components/modals/deleteAccount/DeleteAccountModal';
 export { default as AgeVerificationModal } from '../components/modals/ageVerification/AgeVerificationModal';
@@ -33,9 +32,6 @@ export { default as ReportModal } from '../components/modals/reportModal/ReportM
 export { default as PreparedMessageModal } from '../components/modals/preparedMessage/PreparedMessageModal';
 export { default as SharePreparedMessageModal }
   from '../components/modals/sharePreparedMessage/SharePreparedMessageModal';
-export { default as SuggestMessageModal } from '../components/modals/suggestMessage/SuggestMessageModal';
-export { default as SuggestedPostApprovalModal }
-  from '../components/modals/suggestedPostApproval/SuggestedPostApprovalModal';
 export { default as CalendarModal } from '../components/common/CalendarModal';
 export { default as DeleteMessageModal } from '../components/common/DeleteMessageModal';
 export { default as DeleteMemberModal } from '../components/modals/deleteMember/DeleteMemberModal';
@@ -47,7 +43,6 @@ export { default as PrivacySettingsNoticeModal } from '../components/common/Priv
 export { default as CountryPickerModal } from '../components/common/CountryPickerModal';
 export { default as ReactorListModal } from '../components/middle/ReactorListModal';
 export { default as EmojiInteractionAnimation } from '../components/middle/EmojiInteractionAnimation';
-export { default as ChatLanguageModal } from '../components/middle/ChatLanguageModal';
 export { default as QrCodeModal } from '../components/modals/qrCode/QrCodeModal';
 
 export { default as LeftSearch } from '../components/left/search/LeftSearch';
@@ -65,12 +60,6 @@ export { default as HeaderMenuContainer } from '../components/middle/HeaderMenuC
 export { default as MiddleSearch } from '../components/middle/search/MiddleSearch';
 export { default as ReactionPicker } from '../components/middle/message/reactions/ReactionPicker';
 
-export { default as AiMessageEditorModal }
-  from '../components/middle/composer/AiMessageEditorModal/AiMessageEditorModal';
-export { default as AiToneEmojiPickerModal }
-  from '../components/middle/composer/AiMessageEditorModal/AiToneEmojiPickerModal';
-export { default as AiTonePreviewModal }
-  from '../components/modals/aiTonePreview/AiTonePreviewModal';
 export { default as LanguageModal } from '../components/modals/language/LanguageModal';
 
 export { default as AttachmentModal } from '../components/middle/composer/AttachmentModal';
@@ -78,7 +67,6 @@ export { default as MediaEditor } from '../components/ui/mediaEditor/MediaEditor
 export { default as EditedVideoPreview } from '../components/ui/mediaEditor/EditedVideoPreview';
 export { default as PollModal } from '../components/modals/poll/PollModal';
 export { default as MusicPickerModal } from '../components/modals/musicPicker/MusicPickerModal';
-export { default as ToDoListModal } from '../components/middle/composer/ToDoListModal';
 export { default as SymbolMenu } from '../components/middle/composer/SymbolMenu';
 export { default as ChatCommandTooltip } from '../components/common/tooltips/ChatCommandTooltip';
 export { default as BotCommandMenu } from '../components/middle/composer/BotCommandMenu';
@@ -102,7 +90,6 @@ export { default as AudioPlaylistModal } from '../components/modals/audioPlaylis
 export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/OneTimeMediaModal';
 export { default as BrowserCloseConfirmationModal } from '../components/main/BrowserCloseConfirmationModal';
 export { default as FrozenAccountModal } from '../components/modals/frozenAccount/FrozenAccountModal';
-export { default as ProfileRatingModal } from '../components/modals/profileRating/ProfileRatingModal';
 export { default as DisableSharingAboutModal } from '../components/modals/disableSharing/DisableSharingAboutModal';
 export { default as SafetyNumberModal } from '../components/modals/safetyNumber/SafetyNumberModal';
 export { default as AutoDeleteTimerModal } from '../components/modals/autoDeleteTimer/AutoDeleteTimerModal';
@@ -116,4 +103,3 @@ export { default as TwoFaCheckModal } from '../components/modals/twoFaCheck/TwoF
 export { default as QuickChatPickerModal } from '../components/modals/quickChatPicker/QuickChatPickerModal';
 export { default as RequestPeerModal } from '../components/modals/requestPeer/RequestPeerModal';
 export { default as BotCreationModal } from '../components/modals/botCreation/BotCreationModal';
-export { default as CocoonModal } from '../components/modals/cocoon/CocoonModal';

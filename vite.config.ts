@@ -33,7 +33,6 @@ const DEV_BUNDLE_WARMUP_CLIENT_FILES = [
   'src/bundles/main.ts',
   'src/bundles/extra.ts',
   'src/bundles/calls.ts',
-  'src/bundles/stars.ts',
 ];
 const IMAGE_ASSET_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 const WATCHED_STATIC_COPY_TARGETS: Target[] = [

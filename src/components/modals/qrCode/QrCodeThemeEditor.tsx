@@ -1,6 +1,5 @@
 import type { ElementRef } from '../../../lib/teact/teact';
 import { memo, useMemo } from '../../../lib/teact/teact';
-import { getActions } from '../../../global';
 
 import type {
   ApiAvailableReaction,
@@ -11,7 +10,7 @@ import type {
 import type { IconName } from '../../../types/icons';
 import type { ShareThemeBackdropOption, ShareThemeDraft } from './helpers/shareTheme';
 
-import { getReactionKey, isSameReaction } from '../../../global/helpers';
+import { getReactionKey } from '../../../global/helpers';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import {
@@ -40,7 +39,6 @@ type OwnProps = {
   backdrops?: ApiShareThemeBackdrop[];
   availableReactions?: ApiAvailableReaction[];
   emojiPresets?: ApiSticker[];
-  isCurrentUserPremium?: boolean;
   onPanelChange: (panel?: QrThemePanel) => void;
   onThemeChange: (theme: ShareThemeDraft) => void;
 };
@@ -60,31 +58,21 @@ const QrCodeThemeEditor = ({
   backdrops,
   availableReactions,
   emojiPresets,
-  isCurrentUserPremium,
   onPanelChange,
   onThemeChange,
 }: OwnProps) => {
-  const { showNotification } = getActions();
-
   const lang = useLang();
 
   const backdropOptions = useMemo(() => buildBackdropOptions(backdrops), [backdrops]);
   const emojis = theme?.type === 'emojiBackdrop' ? theme.emojis : NO_EMOJIS;
   const selectedBackdrop = getShareThemeBackdrop(theme, backdrops);
   const selectedReactionIds = useMemo(() => emojis.map(getReactionKey), [emojis]);
-  const presetIds = useMemo(() => new Set(emojiPresets?.map(({ id }) => id)), [emojiPresets]);
 
   const handleBackdropClick = useLastCallback((option: ShareThemeBackdropOption) => {
     onThemeChange(buildEmojiBackdropTheme(option.backdropId, emojis));
   });
 
   const handleReactionSelect = useLastCallback((reaction: ApiReaction) => {
-    const isPicked = emojis.some((emoji) => isSameReaction(emoji, reaction));
-    if (!isPicked && !isCurrentUserPremium && getIsPremiumReaction(reaction, presetIds, availableReactions)) {
-      showNotification({ message: { key: 'PremiumUnlockEmoji' } });
-      return;
-    }
-
     const backdropId = theme?.type === 'emojiBackdrop' ? theme.backdropId : undefined;
     onThemeChange(buildEmojiBackdropTheme(backdropId, toggleEmojiPick(emojis, reaction)));
   });
@@ -178,11 +166,3 @@ const QrCodeThemeEditor = ({
 };
 
 export default memo(QrCodeThemeEditor);
-
-function getIsPremiumReaction(
-  reaction: ApiReaction, presetIds: Set<string>, availableReactions?: ApiAvailableReaction[],
-) {
-  if (reaction.type === 'custom') return !presetIds.has(reaction.documentId);
-
-  return Boolean(availableReactions?.find((available) => isSameReaction(available.reaction, reaction))?.isPremium);
-}

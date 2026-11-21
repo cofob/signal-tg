@@ -2,7 +2,7 @@ import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
   ApiBotVerification,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiPeerColors,
   ApiPeerNotifySettings,
   ApiPeerProfileColorSet,
@@ -104,27 +104,11 @@ export function buildApiPeerProfileColors(wrapper: GramJs.help.TypePeerColors): 
 }
 
 export function buildApiEmojiStatus(mtpEmojiStatus: GramJs.TypeEmojiStatus):
-ApiEmojiStatusType | undefined {
+ApiEmojiStatus | undefined {
   if (mtpEmojiStatus instanceof GramJs.EmojiStatus) {
     return {
       type: 'regular',
       documentId: mtpEmojiStatus.documentId.toString(),
-      until: mtpEmojiStatus.until,
-    };
-  }
-
-  if (mtpEmojiStatus instanceof GramJs.EmojiStatusCollectible) {
-    return {
-      type: 'collectible',
-      collectibleId: mtpEmojiStatus.collectibleId.toString(),
-      documentId: mtpEmojiStatus.documentId.toString(),
-      title: mtpEmojiStatus.title,
-      slug: mtpEmojiStatus.slug,
-      patternDocumentId: mtpEmojiStatus.patternDocumentId.toString(),
-      centerColor: int2hex(mtpEmojiStatus.centerColor),
-      edgeColor: int2hex(mtpEmojiStatus.edgeColor),
-      patternColor: int2hex(mtpEmojiStatus.patternColor),
-      textColor: int2hex(mtpEmojiStatus.textColor),
       until: mtpEmojiStatus.until,
     };
   }

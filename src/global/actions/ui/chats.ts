@@ -9,8 +9,6 @@ import {
   closeMiddleSearch,
   exitMessageSelectMode,
   updateCurrentMessageList,
-  updateMessageTranslationTone,
-  updateRequestedChatTranslation,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import { replaceTabThreadParam } from '../../reducers/threads';
@@ -247,19 +245,6 @@ addActionHandler('closeChatlistModal', (global, actions, payload): ActionReturnT
   return updateTabState(global, {
     chatlistModal: undefined,
   }, tabId);
-});
-
-addActionHandler('requestChatTranslation', (global, actions, payload): ActionReturnType => {
-  const { chatId, toLanguageCode, tabId = getCurrentTabId() } = payload;
-  const tabState = selectTabState(global, tabId);
-  const existingTone = tabState.requestedTranslations.byChatId[chatId]?.tone;
-  const tone = existingTone || global.settings.byKey.translationTone;
-  return updateRequestedChatTranslation(global, chatId, toLanguageCode, tone, tabId);
-});
-
-addActionHandler('setMessageTranslationTone', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tone, tabId = getCurrentTabId() } = payload;
-  return updateMessageTranslationTone(global, chatId, messageId, tone, tabId);
 });
 
 addActionHandler('closeChatInviteModal', (global, actions, payload): ActionReturnType => {

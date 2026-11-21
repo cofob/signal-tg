@@ -183,11 +183,6 @@ export type ApiStoryViewReply = {
 
 export type ApiTypeStoryView = ApiStoryView | ApiStoryViewPublicForward | ApiStoryViewPublicRepost | ApiStoryViewReply;
 
-export type ApiStealthMode = {
-  activeUntil?: number;
-  cooldownUntil?: number;
-};
-
 export type ApiMediaAreaCoordinates = {
   x: number;
   y: number;

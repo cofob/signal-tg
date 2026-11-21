@@ -14,7 +14,7 @@ addActionHandler('setGlobalSearchQuery', (global, actions, payload): ActionRetur
   const { chatId, currentContent } = selectTabState(global, tabId).globalSearch;
 
   const fetchingStatus = query
-    && currentContent !== GlobalSearchContent.BotApps && currentContent !== GlobalSearchContent.PublicPosts
+    && currentContent !== GlobalSearchContent.BotApps
     ? { chats: !chatId, messages: true } : undefined;
 
   const resultsByType = query ? undefined : keepPlayingSearchResults(global, tabId);

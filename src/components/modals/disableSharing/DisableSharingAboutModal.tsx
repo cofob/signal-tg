@@ -1,9 +1,8 @@
 import { memo, useMemo } from '../../../lib/teact/teact';
-import { getActions, withGlobal } from '../../../global';
+import { getActions } from '../../../global';
 
 import type { TabState } from '../../../global/types';
 
-import { selectIsCurrentUserPremium } from '../../../global/selectors';
 import { LOCAL_TGS_PREVIEW_URLS, LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
 
 import useCurrentOrPrev from '../../../hooks/useCurrentOrPrev';
@@ -22,14 +21,9 @@ export type OwnProps = {
   modal: TabState['disableSharingAboutModal'];
 };
 
-type StateProps = {
-  isCurrentUserPremium?: boolean;
-};
-
 const DisableSharingAboutModal = ({
   modal,
-  isCurrentUserPremium,
-}: OwnProps & StateProps) => {
+}: OwnProps) => {
   const {
     closeDisableSharingAboutModal,
     toggleNoForwards,
@@ -73,20 +67,16 @@ const DisableSharingAboutModal = ({
     ] satisfies TableAboutData;
   }, [lang]);
 
-  const footer = useMemo(() => {
-    if (!isCurrentUserPremium) return undefined;
-
-    return (
-      <div className={styles.footer}>
-        <Button
-          onClick={handleDisableSharing}
-          noForcedUpperCase
-        >
-          {lang('DisableSharing')}
-        </Button>
-      </div>
-    );
-  }, [isCurrentUserPremium, lang, handleDisableSharing]);
+  const footer = useMemo(() => (
+    <div className={styles.footer}>
+      <Button
+        onClick={handleDisableSharing}
+        noForcedUpperCase
+      >
+        {lang('DisableSharing')}
+      </Button>
+    </div>
+  ), [lang, handleDisableSharing]);
 
   return (
     <TableAboutModal
@@ -99,10 +89,4 @@ const DisableSharingAboutModal = ({
   );
 };
 
-export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    return {
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
-    };
-  },
-)(DisableSharingAboutModal));
+export default memo(DisableSharingAboutModal);

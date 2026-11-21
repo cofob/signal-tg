@@ -1,5 +1,4 @@
 import type {
-  ApiAiComposeToneType,
   ApiAppConfig,
   ApiAttachBot,
   ApiAudio,
@@ -15,7 +14,6 @@ import type {
   ApiCountry,
   ApiCountryCode,
   ApiEmojiGroup,
-  ApiEmojiStatusType,
   ApiGroupCall,
   ApiHistorySyncProgress,
   ApiMessage,
@@ -36,14 +34,12 @@ import type {
   ApiSavedReactionTag,
   ApiSession,
   ApiShareThemeBackdrop,
-  ApiStealthMode,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
   ApiStoryDistributionList,
   ApiStorySettings,
   ApiTopPeerCategory,
-  ApiTranscription,
   ApiUpdateAuthorizationStateType,
   ApiUpdateConnectionStateType,
   ApiUser,
@@ -61,13 +57,11 @@ import type {
   AttachmentCompression,
   BotAppPermissions,
   ChatListType,
-  ChatTranslatedMessages,
   EmojiKeywords,
   OrderMode,
   RepeatMode,
   ServiceNotification,
   SimilarBotsInfo,
-  TextSummary,
   Thread,
   ThreadId,
   TopicsInfo,
@@ -88,10 +82,6 @@ export type GlobalState = {
   shareThemeBackdrops?: {
     list: ApiShareThemeBackdrop[];
     hash: number;
-  };
-  aiComposeTones?: {
-    tones: ApiAiComposeToneType[];
-    hash: string;
   };
   isCacheApiSupported?: boolean;
   connectionState?: ApiUpdateConnectionStateType;
@@ -278,7 +268,6 @@ export type GlobalState = {
       byId: Record<number, ApiMessage>;
       ephemeralById: Record<number, ApiMessage>;
       anchoredById: Record<number, ApiMessage>;
-      summaryById: Record<number, TextSummary>;
       threadsById: Record<ThreadId, Thread>;
     }>;
     playbackByChatId: Record<string, {
@@ -298,7 +287,6 @@ export type GlobalState = {
       active: string[];
       archived: string[];
     };
-    stealthMode: ApiStealthMode;
     albumsByPeerId: Record<string, ApiStoryAlbum[]>;
     // Signal: My Story and custom distribution lists, and the stories settings of the account
     distributionLists?: ApiStoryDistributionList[];
@@ -321,7 +309,6 @@ export type GlobalState = {
     byId: Record<number, ApiChatFolder>;
     invites: Record<number, ApiChatlistExportedInvite[]>;
     recommended?: ApiChatFolder[];
-    areTagsEnabled?: boolean;
   };
 
   phoneCall?: ApiPhoneCall;
@@ -365,14 +352,9 @@ export type GlobalState = {
       hash?: string;
       stickers: ApiSticker[];
     };
-    premium: {
-      hash?: string;
-      stickers: ApiSticker[];
-    };
     featured: {
       hash?: string;
       setIds?: string[];
-      isPremium?: boolean;
       hiddenSetId?: string;
     };
     forEmoji: {
@@ -417,11 +399,6 @@ export type GlobalState = {
     stickerGroups?: ApiEmojiGroup[];
   };
 
-  collectibleEmojiStatuses?: {
-    statuses: ApiEmojiStatusType[];
-    hash?: string;
-  };
-
   gifs: {
     saved: {
       hash?: string;
@@ -457,13 +434,11 @@ export type GlobalState = {
     chatThemes?: ApiChatTheme[];
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
-    lastPremiumBandwithNotificationDate?: number;
     botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
     passkeys?: ApiPasskey[];
   };
 
-  transcriptions: Record<string, ApiTranscription>;
   trustedBotIds: string[];
 
   serviceNotifications: ServiceNotification[];
@@ -474,10 +449,6 @@ export type GlobalState = {
   archiveSettings: {
     isMinimized: boolean;
     isHidden: boolean;
-  };
-
-  translations: {
-    byChatId: Record<string, ChatTranslatedMessages>;
   };
 
   savedReactionTags?: {

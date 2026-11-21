@@ -24,7 +24,6 @@ import {
   selectCanAnimateInterface,
   selectCanPlayAnimatedEmojis,
   selectChat,
-  selectIsCurrentUserPremium,
   selectPeer,
   selectPeerFullInfo,
 } from '../../../global/selectors';
@@ -75,7 +74,6 @@ type StateProps = {
   backdrops?: ApiShareThemeBackdrop[];
   availableReactions?: ApiAvailableReaction[];
   restrictedEmoji?: ApiStickerSet;
-  isCurrentUserPremium?: boolean;
   isSelf?: boolean;
   canEditTheme?: boolean;
   canAnimate?: boolean;
@@ -99,7 +97,6 @@ const QrCodeModal = ({
   backdrops,
   availableReactions,
   restrictedEmoji,
-  isCurrentUserPremium,
   isSelf,
   canEditTheme,
   canAnimate,
@@ -462,7 +459,6 @@ const QrCodeModal = ({
             backdrops={backdrops}
             availableReactions={availableReactions}
             emojiPresets={emojiPresets}
-            isCurrentUserPremium={isCurrentUserPremium}
             onPanelChange={handlePanelChange}
             onThemeChange={handleThemeChange}
           />
@@ -497,7 +493,6 @@ export default memo(withGlobal<OwnProps>(
       backdrops: global.shareThemeBackdrops?.list,
       availableReactions: global.reactions.availableReactions,
       restrictedEmoji: global.restrictedEmoji,
-      isCurrentUserPremium: selectIsCurrentUserPremium(global),
       isSelf,
       canEditTheme: isSelf || canEditChatTheme,
       canAnimate: selectCanAnimateInterface(global),

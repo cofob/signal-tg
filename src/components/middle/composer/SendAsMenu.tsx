@@ -17,7 +17,6 @@ import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 
 import Avatar from '../../common/Avatar';
 import FullNameTitle from '../../common/FullNameTitle';
-import Icon from '../../common/icons/Icon';
 import ListItem from '../../ui/ListItem';
 import Menu from '../../ui/Menu';
 
@@ -28,7 +27,6 @@ export type OwnProps = {
   chatId?: string;
   selectedSendAsId?: string;
   sendAsPeerIds?: ApiSendAsPeerId[];
-  isCurrentUserPremium?: boolean;
   onClose: () => void;
 };
 
@@ -37,10 +35,9 @@ const SendAsMenu = ({
   chatId,
   selectedSendAsId,
   sendAsPeerIds,
-  isCurrentUserPremium,
   onClose,
 }: OwnProps) => {
-  const { saveDefaultSendAs, showNotification, loadSendAs } = getActions();
+  const { saveDefaultSendAs, loadSendAs } = getActions();
 
   const peersSelector = useMemo(() => (global: GlobalState) => (
     sendAsPeerIds?.map(({ id }) => selectPeer(global, id))
@@ -105,21 +102,12 @@ const SendAsMenu = ({
       noCompact
     >
       <div className="send-as-title" dir="auto">{lang('SendMessageAsTitle')}</div>
-      {sendAsPeerIds?.map(({ id, isPremium }, index) => {
+      {sendAsPeerIds?.map(({ id }, index) => {
         const peer = peers?.[index];
         if (!peer) return undefined;
 
         const handleClick = () => {
-          if (!isPremium || isCurrentUserPremium) {
-            handleUserSelect(id);
-          } else {
-            showNotification({
-              message: {
-                key: 'SelectSendAsPeerPremiumHint',
-                options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-              },
-            });
-          }
+          handleUserSelect(id);
         };
 
         const avatarClassName = buildClassName(selectedSendAsId === id && 'selected');
@@ -131,8 +119,6 @@ const SendAsMenu = ({
 
             onClick={handleClick}
             focus={selectedSendAsIndex === index}
-            rightElement={!isCurrentUserPremium && isPremium
-              && <Icon name="lock-filled" className="send-as-icon-locked" />}
           >
             <Avatar
               size="small"

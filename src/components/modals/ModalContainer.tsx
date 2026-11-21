@@ -11,10 +11,8 @@ import useShowTransition from '../../hooks/useShowTransition';
 
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
-import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
 import StoryComposerModal from '../story/StoryComposerModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
-import AiTonePreviewModal from './aiTonePreview/AiTonePreviewModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
@@ -23,7 +21,6 @@ import BotCreationModal from './botCreation/BotCreationModal.async';
 import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
 import ChatlistModal from './chatlist/ChatlistModal.async';
-import CocoonModal from './cocoon/CocoonModal.async';
 import DeleteAccountModal from './deleteAccount/DeleteAccountModal.async';
 import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
@@ -42,7 +39,6 @@ import PasskeyModal from './passkey/PasskeyModal.async';
 import PhoneNumberLookupModal from './phoneNumberLookup/PhoneNumberLookupModal';
 import PollModal from './poll/PollModal.async';
 import PreparedMessageModal from './preparedMessage/PreparedMessageModal.async';
-import ProfileRatingModal from './profileRating/ProfileRatingModal.async';
 import QrCodeModal from './qrCode/QrCodeModal.async';
 import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
@@ -53,15 +49,12 @@ import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
-import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
-import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
-  'aiMessageEditorModal' |
   'chatlistModal' |
   'urlAuth' |
   'safeLinkModalUrl' |
@@ -72,8 +65,6 @@ type ModalKey = keyof Pick<TabState,
   'reportModal' |
   'pollModal' |
   'musicPicker' |
-  'suggestMessageModal' |
-  'suggestedPostApprovalModal' |
   'browser' |
   'chatInviteModal' |
   'isBrowserCloseConfirmationModalOpen' |
@@ -88,7 +79,6 @@ type ModalKey = keyof Pick<TabState,
   'deleteAccountModal' |
   'deleteMemberModal' |
   'isAgeVerificationModalOpen' |
-  'profileRatingModal' |
   'qrCodeModal' |
   'safetyNumberModal' |
   'quickPreview' |
@@ -99,10 +89,8 @@ type ModalKey = keyof Pick<TabState,
   'leaveGroupModal' |
   'isTwoFaCheckModalOpen' |
   'isQuickChatPickerOpen' |
-  'isCocoonModalOpen' |
   'editRankModal' |
   'rankModal' |
-  'aiTonePreviewModal' |
   'languageModal' |
   'autoDeleteTimerModal' |
   'botCreationModal' |
@@ -170,7 +158,6 @@ const WrappedModalBoundary = <T,>({
 };
 
 const LEGACY_MODALS: LegacyModalRegistry = {
-  aiMessageEditorModal: AiMessageEditorModal,
   chatlistModal: ChatlistModal,
   urlAuth: UrlAuthModal,
   oneTimeMediaModal: OneTimeMediaModal,
@@ -179,8 +166,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   reportModal: ReportModal,
   browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
-  suggestMessageModal: SuggestMessageModal,
-  suggestedPostApprovalModal: SuggestedPostApprovalModal,
   isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,
   suggestedStatusModal: SuggestedStatusModal,
   emojiStatusAccessModal: EmojiStatusAccessModal,
@@ -193,7 +178,6 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   deleteAccountModal: DeleteAccountModal,
   deleteMemberModal: DeleteMemberModal,
   isAgeVerificationModalOpen: AgeVerificationModal,
-  profileRatingModal: ProfileRatingModal,
   qrCodeModal: QrCodeModal,
   safetyNumberModal: SafetyNumberModal,
   quickPreview: QuickPreviewModal,
@@ -204,10 +188,8 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   leaveGroupModal: LeaveGroupModal,
   isTwoFaCheckModalOpen: TwoFaCheckModal,
   isQuickChatPickerOpen: QuickChatPickerModal,
-  isCocoonModalOpen: CocoonModal,
   editRankModal: EditRankModal,
   rankModal: RankModal,
-  aiTonePreviewModal: AiTonePreviewModal,
   languageModal: LanguageModal,
 };
 const WRAPPED_MODALS: WrappedModalRegistry = {

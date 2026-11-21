@@ -1,11 +1,11 @@
 import type { ApiBotCommand } from './bots';
 import type {
-  ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiInputSuggestedPostInfo, ApiPhoto, ApiStickerSet,
+  ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiPhoto, ApiStickerSet,
 } from './messages';
 import type { ApiChatInviteImporter, ApiPeerTheme, ApiRestrictionReason, ApiWallpaper } from './misc';
 import type {
   ApiBotVerification,
-  ApiEmojiStatusType,
+  ApiEmojiStatus,
   ApiFakeType,
   ApiPeerSettings,
   ApiProfileTab,
@@ -58,7 +58,7 @@ export interface ApiChat {
   fakeType?: ApiFakeType;
   color?: ApiTypePeerColor;
   profileColor?: ApiTypePeerColor;
-  emojiStatus?: ApiEmojiStatusType;
+  emojiStatus?: ApiEmojiStatus;
   isForum?: boolean;
   isForumAsMessages?: true;
   isMonoforum?: boolean;
@@ -261,7 +261,6 @@ export interface ApiChatFolder {
   groups?: true;
   channels?: true;
   bots?: true;
-  color?: number;
   excludeMuted?: true;
   excludeRead?: true;
   excludeArchived?: true;
@@ -297,15 +296,12 @@ export interface ApiChatlistExportedInvite {
 
 export interface ApiMissingInvitedUser {
   id: string;
-  isRequiringPremiumToInvite?: boolean;
-  isRequiringPremiumToMessage?: boolean;
 }
 
 export type ApiDraft = {
   text?: ApiFormattedText;
   richMessage?: ApiInputRichMessage;
   replyInfo?: ApiInputDraftReplyInfo;
-  suggestedPostInfo?: ApiInputSuggestedPostInfo;
   date?: number;
   isLocal?: boolean;
 };

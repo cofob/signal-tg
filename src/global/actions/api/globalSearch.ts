@@ -1,5 +1,5 @@
 import type {
-  ApiChat, ApiGlobalMessageSearchType, ApiMessage, ApiMessageSearchContext, ApiPeer, ApiSearchPostsFlood,
+  ApiChat, ApiGlobalMessageSearchType, ApiMessage, ApiMessageSearchContext, ApiPeer,
   ApiTopicWithState,
   ApiUserStatus,
 } from '../../../api/types';
@@ -9,8 +9,6 @@ import { GLOBAL_SEARCH_SLICE, GLOBAL_TOPIC_SEARCH_SLICE } from '../../../config'
 import { timestampPlusDay } from '../../../util/dates/dateMath';
 import { isDeepLink, tryParseDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import { getTranslationFn } from '../../../util/localization';
-import { formatStarsAsText } from '../../../util/localization/format';
 import { throttle } from '../../../util/schedulers';
 import { callApi } from '../../../api/gramjs';
 import { addActionHandler, getActions, getGlobal, setGlobal } from '../..';
@@ -157,23 +155,6 @@ addActionHandler('searchPopularBotApps', async (global, actions, payload): Promi
   setGlobal(global);
 });
 
-addActionHandler('checkSearchPostsFlood', async (global, actions, payload): Promise<void> => {
-  const { query, tabId = getCurrentTabId() } = payload;
-
-  const result = await callApi('checkSearchPostsFlood', query);
-
-  global = getGlobal();
-  if (!result) {
-    return;
-  }
-
-  global = updateGlobalSearch(global, {
-    searchFlood: result,
-  }, tabId);
-
-  setGlobal(global);
-});
-
 async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
   query?: string;
   type: ApiGlobalMessageSearchType;
@@ -192,11 +173,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     peer, maxDate, minDate, shouldResetResultsByType, tabId = getCurrentTabId(),
   } = params;
 
-  if (type === 'publicPosts') {
-    global = updateGlobalSearchFetchingStatus(global, { publicPosts: true }, tabId);
-    setGlobal(global);
-  }
-
   let result: {
     messages: ApiMessage[];
     userStatusesById?: Record<number, ApiUserStatus>;
@@ -206,12 +182,9 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     nextOffsetRate?: number;
     nextOffsetId?: number;
     nextOffsetPeerId?: string;
-    searchFlood?: ApiSearchPostsFlood;
   } | undefined;
 
   let messageLink: ApiMessage | undefined;
-
-  const previousSearchFlood = selectTabState(global, tabId).globalSearch.searchFlood;
 
   if (peer) {
     const inChatResultRequest = callApi('searchMessagesInChat', {
@@ -286,7 +259,7 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
   }
   const currentSearchQuery = selectCurrentGlobalSearchQuery(global, tabId);
   if (!result || (query !== '' && query !== currentSearchQuery)) {
-    global = updateGlobalSearchFetchingStatus(global, { messages: false, publicPosts: false }, tabId);
+    global = updateGlobalSearchFetchingStatus(global, { messages: false }, tabId);
     setGlobal(global);
     settlePlayerStepForGlobalSearch(type, tabId, false);
     return;
@@ -299,8 +272,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
   const {
     messages, userStatusesById, totalCount, nextOffsetRate, nextOffsetId, nextOffsetPeerId,
   } = result;
-
-  const searchFlood = result.searchFlood || previousSearchFlood;
 
   if (userStatusesById) {
     global = addUserStatuses(global, userStatusesById);
@@ -318,7 +289,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     nextOffsetRate,
     nextOffsetId,
     nextOffsetPeerId,
-    searchFlood,
     tabId,
   );
 
@@ -342,20 +312,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     getActions().loadShufflePlaylist({ tabId });
   }
   settlePlayerStepForGlobalSearch(type, tabId, true);
-
-  if (type === 'publicPosts' && searchFlood && !searchFlood.queryIsFree && !offsetId
-    && previousSearchFlood?.remains === 0) {
-    const lang = getTranslationFn();
-    getActions().showNotification({
-      icon: 'star',
-      message: {
-        key: 'NotificationPaidExtraSearch',
-        variables: {
-          stars: formatStarsAsText(lang, searchFlood.starsAmount),
-        },
-      },
-    });
-  }
 }
 
 async function getMessageByPublicLink(global: GlobalState, link: { username: string; messageId: number }) {

@@ -278,24 +278,6 @@ export function selectCanShareFolder<T extends GlobalState>(global: T, folderId:
     });
 }
 
-export function selectRequestedChatTranslationLanguage<T extends GlobalState>(
-  global: T, chatId: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const { requestedTranslations } = selectTabState(global, tabId);
-
-  return requestedTranslations.byChatId[chatId]?.toLanguage;
-}
-
-export function selectRequestedChatTranslationTone<T extends GlobalState>(
-  global: T, chatId: string,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const { requestedTranslations } = selectTabState(global, tabId);
-
-  return requestedTranslations.byChatId[chatId]?.tone || global.settings.byKey.translationTone || 'neutral';
-}
-
 export function selectSimilarChannelIds<T extends GlobalState>(
   global: T,
   chatId: string,

@@ -58,13 +58,6 @@
     --color-icon-backdrop: #7e57c2;
   }
 
-  /* Telegram Premium keeps the purple accent as its base and paints the brand gradient over it */
-  .premium {
-    --color-icon-backdrop: #7e57c2;
-
-    background-image: linear-gradient(45deg, #6b93ff 0%, #976fff 43.906%, #e46ace 100%);
-  }
-
   .red {
     --color-icon-backdrop: #f44336;
   }

@@ -216,7 +216,6 @@ const ChatFolders = ({
         archiveSettings={archiveSettings}
         isFoldersSidebarShown={isFoldersSidebarShown}
         isStoryRibbonShown={isStoryRibbonShown}
-        withTags
         onScroll={handleScroll}
       />
     );

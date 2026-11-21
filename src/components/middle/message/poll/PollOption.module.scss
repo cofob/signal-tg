@@ -242,16 +242,6 @@
   border-radius: 0.25rem;
 }
 
-.incorrect {
-  .chosenMarkerIcon {
-    color: var(--color-error-foreground);
-  }
-
-  .chosenMarkerIcon, .progressFill {
-    background-color: var(--color-error-background);
-  }
-}
-
 .progress {
   grid-column: 2 / 4;
   grid-row: 2;

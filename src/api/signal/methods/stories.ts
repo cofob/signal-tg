@@ -8,7 +8,6 @@ import type {
   ApiPeer,
   ApiPeerStories,
   ApiReaction,
-  ApiStealthMode,
   ApiStoryDistributionList,
   ApiStorySettings,
   ApiTextStoryStyle,
@@ -50,7 +49,7 @@ export async function fetchAllStories({ isHidden }: {
   stateHash?: string;
   isHidden?: boolean;
 }): Promise<{
-  peerStories: Record<string, ApiPeerStories>; hasMore?: true; state: string; stealthMode: ApiStealthMode;
+  peerStories: Record<string, ApiPeerStories>; hasMore?: true; state: string;
 } | undefined> {
   const selfAci = getCurrentAccount()?.aci;
   if (!selfAci) return undefined;
@@ -72,7 +71,7 @@ export async function fetchAllStories({ isHidden }: {
   for (const peer of Object.values(peerStories)) peer.lastReadId ??= peer.orderedIds[peer.orderedIds.length - 1];
 
   await sendUsers(users);
-  return { peerStories, state: STORIES_STATE, stealthMode: {} };
+  return { peerStories, state: STORIES_STATE };
 }
 
 export async function fetchPeerStories({ peer }: { peer: ApiPeer }) {

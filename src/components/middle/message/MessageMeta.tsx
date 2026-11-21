@@ -11,7 +11,6 @@ import buildClassName from '../../../util/buildClassName';
 import {
   formatCalendarDate, formatCompactTimestamp, formatDateTime, isSameLocalDay, secondsToDate,
 } from '../../../util/localization/dateFormat';
-import { getRepeatPeriodText } from '../../../util/scheduledMessages';
 import { formatIntegerCompact } from '../../../util/text/textFormat';
 import renderText from '../../common/helpers/renderText';
 
@@ -32,12 +31,10 @@ type OwnProps = {
   availableReactions?: ApiAvailableReaction[];
   noReplies?: boolean;
   repliesThreadInfo?: ApiThreadInfo;
-  isTranslated?: boolean;
   isPinned?: boolean;
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onTranslationClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
 };
@@ -50,11 +47,9 @@ const MessageMeta = ({
   repliesThreadInfo,
   renderQuickReactionButton,
   noReplies,
-  isTranslated,
   isPinned,
   withFullDate,
   onClick,
-  onTranslationClick,
   onOpenThread,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
@@ -78,10 +73,6 @@ const MessageMeta = ({
     e.stopPropagation();
     onOpenThread();
   }
-
-  const repeatPeriodText = useMemo(() => {
-    return getRepeatPeriodText(message.scheduleRepeatPeriod, lang);
-  }, [message.scheduleRepeatPeriod, lang]);
 
   const dateTitle = useMemo(() => {
     if (!isActivated) return undefined;
@@ -137,18 +128,12 @@ const MessageMeta = ({
     }
 
     const time = formatDateTime(lang, secondsToDate(message.date), { time: 'short' });
-    const baseDate = !withFullDate
+    return !withFullDate
       ? time
       : formatCompactTimestamp(lang, secondsToDate(message.forwardInfo?.date || message.date), { withTime: true });
-
-    if (repeatPeriodText) {
-      return lang('FormatDateAtTime', { date: repeatPeriodText, time: baseDate });
-    }
-
-    return baseDate;
   }, [
     lang, message.date, message.editDate, message.forwardInfo?.date, message.isVideoProcessingPending,
-    repeatPeriodText, shouldShowPrimaryEditedDate, withFullDate,
+    shouldShowPrimaryEditedDate, withFullDate,
   ]);
 
   const fullClassName = buildClassName(
@@ -164,9 +149,6 @@ const MessageMeta = ({
       onClick={onClick}
       data-ignore-on-paste
     >
-      {isTranslated && (
-        <Icon name="language" className="message-translated" onClick={onTranslationClick} />
-      )}
       {Boolean(message.viewsCount) && (
         <>
           <span className="message-views" title={viewsTitle}>

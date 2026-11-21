@@ -3,14 +3,12 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type {
   ApiBirthday,
   ApiPeerSettings,
-  ApiStarsRating,
   ApiUser,
   ApiUserFullInfo,
   ApiUserStatus,
   ApiUserType,
 } from '../../types';
 
-import { toJSNumber } from '../../../util/numbers';
 import { addDocumentToLocalDb, addSavedMusicRepairInfo } from '../helpers/localDb';
 import { buildApiBotInfo } from './bots';
 import {
@@ -34,10 +32,9 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       about, commonChatsCount, pinnedMsgId, botInfo, blocked,
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, storiesPinnedAvailable,
-      contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, botVerification,
       botCanManageEmojiStatus, settings,
-      starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
+      mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
       ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
     },
@@ -60,16 +57,12 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     fallbackPhoto: fallbackPhoto instanceof GramJs.Photo ? buildApiPhoto(fallbackPhoto) : undefined,
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,
     botInfo: botInfo && buildApiBotInfo(botInfo, userId),
-    isContactRequirePremium: contactRequirePremium,
     birthday: birthday && buildApiBirthday(birthday),
     personalChannelId: personalChannelId !== undefined
       ? buildApiPeerId(personalChannelId, 'channel') : undefined,
     personalChannelMessageId: personalChannelMessage,
     privateForwardName,
     botVerification: botVerification && buildApiBotVerification(botVerification),
-    starsRating: starsRating && buildApiStarsRating(starsRating),
-    starsMyPendingRating: starsMyPendingRating && buildApiStarsRating(starsMyPendingRating),
-    starsMyPendingRatingDate,
     isBotCanManageEmojiStatus: botCanManageEmojiStatus,
     hasScheduledMessages: hasScheduled,
     settings: buildApiPeerSettings(settings),
@@ -130,7 +123,6 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     isMin: Boolean(mtpUser.min),
     fakeType: scam ? 'scam' : (fake ? 'fake' : undefined),
     isSelf: mtpUser.self || undefined,
-    isPremium: Boolean(mtpUser.premium),
     isVerified: mtpUser.verified || undefined,
     isCloseFriend: closeFriend || undefined,
     isSupport: support || undefined,
@@ -207,15 +199,6 @@ export function buildApiUserStatuses(mtpUsers: GramJs.TypeUser[]) {
 
 export function buildApiBirthday(birthday: GramJs.TypeBirthday): ApiBirthday {
   return omitVirtualClassFields(birthday);
-}
-
-export function buildApiStarsRating(starsRating: GramJs.StarsRating): ApiStarsRating {
-  return {
-    level: starsRating.level,
-    currentLevelStars: toJSNumber(starsRating.currentLevelStars),
-    stars: toJSNumber(starsRating.stars),
-    nextLevelStars: toJSNumber(starsRating.nextLevelStars),
-  };
 }
 
 function buildApiSavedMusic(document: GramJs.TypeDocument, peerId: string) {

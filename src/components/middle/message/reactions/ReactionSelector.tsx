@@ -35,7 +35,6 @@ type OwnProps = {
   currentReactions?: ApiReactionCount[];
   reactionsLimit?: number;
   isReady?: boolean;
-  isCurrentUserPremium?: boolean;
   canPlayAnimatedEmojis?: boolean;
   className?: string;
   isInSavedMessages?: boolean;
@@ -64,7 +63,6 @@ const ReactionSelector = ({
   isReady,
   canPlayAnimatedEmojis,
   className,
-  isCurrentUserPremium,
   isInSavedMessages,
   isInStoryViewer,
   onToggleReaction,
@@ -73,7 +71,7 @@ const ReactionSelector = ({
   const ref = useRef<HTMLDivElement>();
   const lang = useLang();
 
-  const areReactionsLocked = isInSavedMessages && !isCurrentUserPremium && !isInStoryViewer;
+  const areReactionsLocked = false;
 
   const shouldUseCurrentReactions = Boolean(reactionsLimit
     && currentReactions && currentReactions.length >= reactionsLimit);
@@ -136,10 +134,6 @@ const ReactionSelector = ({
 
   const hintText = useMemo(() => {
     if (isInSavedMessages) {
-      if (!isCurrentUserPremium) {
-        return lang('SubscribeTagAbout', { link: lang('SubscribeTagLink') });
-      }
-
       return lang('SavedTagReactionsHint2');
     }
 
@@ -148,7 +142,7 @@ const ReactionSelector = ({
     }
 
     return undefined;
-  }, [isCurrentUserPremium, isInSavedMessages, isInStoryViewer, lang]);
+  }, [isInSavedMessages, isInStoryViewer, lang]);
 
   if (!reactionsToRender.length) return undefined;
 

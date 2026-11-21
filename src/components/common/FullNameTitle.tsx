@@ -29,7 +29,6 @@ import Marquee from '../ui/Marquee';
 import Transition from '../ui/Transition';
 import CustomEmoji from './CustomEmoji';
 import FakeIcon from './FakeIcon';
-import StarIcon from './icons/StarIcon';
 import VerifiedIcon from './VerifiedIcon';
 
 import styles from './FullNameTitle.module.scss';
@@ -85,7 +84,6 @@ const FullNameTitle = ({
   const customPeer = 'isCustomPeer' in peer ? peer : undefined;
   const isUser = realPeer && isApiPeerUser(realPeer);
   const title = realPeer && (isUser ? getUserFullName(lang, realPeer) : getChatTitle(lang, realPeer));
-  const isPremium = (isUser && realPeer.isPremium) || customPeer?.isPremium;
   const canShowEmojiStatus = withEmojiStatus && !isSavedMessages;
   const emojiStatus = realPeer?.emojiStatus
     || (customPeer?.emojiStatusId ? { type: 'regular', documentId: customPeer.emojiStatusId } : undefined);
@@ -174,7 +172,6 @@ const FullNameTitle = ({
               />
             </Transition>
           )}
-          {canShowEmojiStatus && !emojiStatus && isPremium && <StarIcon />}
           {isMonoforum && (
             <div className={buildClassName(styles.monoforumBadge, monoforumBadgeClassName)}>
               {lang('MonoforumBadge')}

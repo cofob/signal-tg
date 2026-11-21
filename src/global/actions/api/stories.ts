@@ -20,7 +20,6 @@ import {
   updatePeerStoryViews,
   updatePeersWithStories,
   updateSentStoryReaction,
-  updateStealthMode,
   updateStoriesState,
   updateStoryViews,
   updateStoryViewsLoading,
@@ -69,7 +68,6 @@ addActionHandler('loadAllStories', async (global): Promise<void> => {
     if ('peerStories' in result) {
       global = addStories(global, result.peerStories);
       global = updatePeersWithStories(global, result.peerStories);
-      global = updateStealthMode(global, result.stealthMode);
       global.stories.hasNext = result.hasMore;
     }
 
@@ -112,7 +110,6 @@ addActionHandler('loadAllHiddenStories', async (global): Promise<void> => {
     if ('peerStories' in result) {
       global = addStories(global, result.peerStories);
       global = updatePeersWithStories(global, result.peerStories);
-      global = updateStealthMode(global, result.stealthMode);
       global.stories.hasNextInArchive = result.hasMore;
     }
 

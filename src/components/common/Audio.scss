@@ -191,51 +191,6 @@
 
   .waveform-wrapper {
     display: flex;
-
-    @keyframes loader-rectangle {
-      from {
-        stroke-dashoffset: 100;
-      }
-
-      to {
-        stroke-dashoffset: 0;
-      }
-    }
-
-    .transcribe-icon {
-      transition: 0.25s ease-in-out transform;
-    }
-
-    .transcribe-shown {
-      transform: rotateZ(180deg);
-    }
-
-    .loading-svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    .loading-rect {
-      animation: 1s linear loader-rectangle infinite;
-    }
-
-    .Button {
-      width: auto;
-      height: 1.5rem;
-      margin-inline-start: 0.25rem;
-      padding: 0.375rem;
-      border-radius: var(--border-radius-default-tiny);
-
-      font-size: 1.25rem;
-      color: var(--accent-color);
-
-      background: var(--color-voice-transcribe);
-
-      &:hover {
-        background: var(--accent-background-active-color) !important;
-      }
-    }
   }
 
   .waveform {

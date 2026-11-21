@@ -42,7 +42,6 @@ type OwnProps = {
   archiveSettings?: GlobalState['archiveSettings'];
   isForumPanelOpen?: boolean;
   isMainList?: boolean;
-  withTags?: boolean;
   isFoldersSidebarShown?: boolean;
   isStoryRibbonShown?: boolean;
   foldersDispatch?: FolderEditDispatch;
@@ -65,7 +64,6 @@ const ChatList = ({
   canDisplayArchive,
   archiveSettings,
   isMainList,
-  withTags,
   isFoldersSidebarShown,
   isStoryRibbonShown,
   foldersDispatch,
@@ -191,8 +189,6 @@ const ChatList = ({
           onReorderAnimationEnd={onReorderAnimationEnd}
           offsetTop={offsetTop}
           observeIntersection={observe}
-          withTags={withTags}
-          isFoldersSidebarShown={isFoldersSidebarShown}
         />
       );
     });

@@ -72,7 +72,7 @@ import {
   buildApiReaction,
   buildMessageReactions,
 } from '../apiBuilders/reactions';
-import { buildApiStealthMode, buildApiStory } from '../apiBuilders/stories';
+import { buildApiStory } from '../apiBuilders/stories';
 import { buildApiEmojiInteraction, buildStickerSet } from '../apiBuilders/symbols';
 import {
   buildApiPeerSettings,
@@ -97,7 +97,6 @@ import { scheduleMutedChatUpdate, scheduleMutedTopicUpdate } from '../scheduleUn
 import { sendApiUpdate } from './apiUpdateEmitter';
 import { processMessageAndUpdateThreadInfo } from './entityProcessor';
 
-import LocalUpdatePremiumFloodWait from './UpdatePremiumFloodWait';
 import { LocalUpdateChannelPts, LocalUpdatePts } from './UpdatePts';
 
 export function updater(update: Update) {
@@ -1086,17 +1085,8 @@ export function updater(update: Update) {
       botId: id,
       commands: commandsArray.length ? commandsArray : undefined,
     });
-  } else if (update instanceof GramJs.UpdateTranscribedAudio) {
-    sendApiUpdate({
-      '@type': 'updateTranscribedAudio',
-      transcriptionId: update.transcriptionId.toString(),
-      text: update.text,
-      isPending: update.pending,
-    });
   } else if (update instanceof GramJs.UpdateConfig) {
     sendApiUpdate({ '@type': 'updateConfig' });
-  } else if (update instanceof GramJs.UpdateAiComposeTones) {
-    sendApiUpdate({ '@type': 'updateAiComposeTones' });
   } else if (update instanceof GramJs.UpdatePinnedForumTopic) {
     sendApiUpdate({
       '@type': 'updatePinnedTopic',
@@ -1152,11 +1142,6 @@ export function updater(update: Update) {
       storyId: update.storyId,
       reaction,
     });
-  } else if (update instanceof GramJs.UpdateStoriesStealthMode) {
-    sendApiUpdate({
-      '@type': 'updateStealthMode',
-      stealthMode: buildApiStealthMode(update.stealthMode),
-    });
   } else if (update instanceof GramJs.UpdateAttachMenuBots) {
     sendApiUpdate({
       '@type': 'updateAttachMenuBots',
@@ -1190,11 +1175,6 @@ export function updater(update: Update) {
       version: update.difference.version,
       strings,
       keysToRemove,
-    });
-  } else if (update instanceof LocalUpdatePremiumFloodWait) { // Local updates
-    sendApiUpdate({
-      '@type': 'updatePremiumFloodWait',
-      isUpload: update.isUpload,
     });
   } else if (update instanceof LocalUpdatePts || update instanceof LocalUpdateChannelPts) {
     // Do nothing, handled on the manager side

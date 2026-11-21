@@ -56,7 +56,7 @@ import {
 import { selectSharedSettings } from '../../global/selectors/sharedState';
 import { selectDraft, selectThreadInfo } from '../../global/selectors/threads';
 import {
-  IS_ANDROID, IS_IOS, IS_SAFARI, IS_TRANSLATION_SUPPORTED, MASK_IMAGE_DISABLED,
+  IS_ANDROID, IS_IOS, IS_SAFARI, MASK_IMAGE_DISABLED,
 } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
 import captureEscKeyListener from '../../util/captureEscKeyListener';
@@ -85,7 +85,6 @@ import PrivacySettingsNoticeModal from '../common/PrivacySettingsNoticeModal.asy
 import SeenByModal from '../common/SeenByModal.async';
 import UnpinAllMessagesModal from '../common/UnpinAllMessagesModal.async';
 import Transition from '../ui/Transition';
-import ChatLanguageModal from './ChatLanguageModal.async';
 import { DropAreaState } from './composer/DropArea';
 import EmojiInteractionAnimation from './EmojiInteractionAnimation.async';
 import FloatingActionButtons from './FloatingActionButtons';
@@ -96,7 +95,6 @@ import MessageSelectToolbar from './MessageSelectToolbar';
 import MiddleHeader from './MiddleHeader';
 import MiddleHeaderPanesIsland from './MiddleHeaderPanesIsland';
 import AudioPlayer from './panes/AudioPlayer';
-import PremiumRequiredPlaceholder from './PremiumRequiredPlaceholder';
 import ReactorListModal from './ReactorListModal.async';
 import MiddleSearch from './search/MiddleSearch.async';
 
@@ -137,7 +135,6 @@ type StateProps = {
   isSeenByModalOpen: boolean;
   isPrivacySettingsNoticeModalOpen: boolean;
   isReactorListModalOpen: boolean;
-  isChatLanguageModalOpen?: boolean;
   animationLevel: AnimationLevel;
   withInterfaceAnimations?: boolean;
   withRightColumnAnimation?: boolean;
@@ -161,7 +158,6 @@ type StateProps = {
   linkedMonoforumId?: string;
   isSavedDialog?: boolean;
   canShowOpenChatButton?: boolean;
-  isContactRequirePremium?: boolean;
   topics?: Record<number, ApiTopic>;
   isAccountFrozen?: boolean;
   freezeAppealChat?: ApiChat;
@@ -213,7 +209,6 @@ function MiddleColumn({
   isSeenByModalOpen,
   isPrivacySettingsNoticeModalOpen,
   isReactorListModalOpen,
-  isChatLanguageModalOpen,
   animationLevel,
   withInterfaceAnimations,
   withRightColumnAnimation,
@@ -237,7 +232,6 @@ function MiddleColumn({
   linkedMonoforumId,
   isSavedDialog,
   canShowOpenChatButton,
-  isContactRequirePremium,
   topics,
   isAccountFrozen,
   freezeAppealChat,
@@ -512,7 +506,6 @@ function MiddleColumn({
   const composerRestrictionMessage = messageSendingRestrictionReason
     || forumComposerPlaceholder
     || (shouldBlockSendInMonoforum ? lang('MonoforumComposerPlaceholder') : undefined)
-    || (isContactRequirePremium ? <PremiumRequiredPlaceholder userId={chatId!} /> : undefined)
     || (isAccountFrozen && freezeAppealChat?.id !== chatId ? <FrozenAccountPlaceholder /> : undefined);
 
   useHistoryBack({
@@ -638,7 +631,6 @@ function MiddleColumn({
                 hasFooter={hasFooter}
                 onScrollDownToggle={setIsScrollDownNeeded}
                 isReady={isReady}
-                isContactRequirePremium={isContactRequirePremium}
                 withBottomShift={withMessageListBottomShift}
                 withDefaultBg={Boolean(!customBackground && !backgroundColor)}
                 onIntersectPinnedMessage={renderingHandleIntersectPinnedMessage}
@@ -701,7 +693,6 @@ function MiddleColumn({
                 <SeenByModal isOpen={isSeenByModalOpen} />
                 <PrivacySettingsNoticeModal isOpen={isPrivacySettingsNoticeModalOpen} />
                 <ReactorListModal isOpen={isReactorListModalOpen} />
-                {IS_TRANSLATION_SUPPORTED && <ChatLanguageModal isOpen={isChatLanguageModalOpen} />}
               </div>
             </Transition>
           </div>
@@ -740,7 +731,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       messageLists, isLeftColumnShown, activeEmojiInteractions,
       seenByModal, reactorModal, shouldSkipHistoryAnimations,
-      chatLanguageModal, privacySettingsNoticeModal,
+      privacySettingsNoticeModal,
       uiReadyState, isRichInputExpanded, pendingBotStart,
     } = selectTabState(global);
     const currentMessageList = selectCurrentMessageList(global);
@@ -762,7 +753,6 @@ export default memo(withGlobal<OwnProps>(
       isSeenByModalOpen: Boolean(seenByModal),
       isPrivacySettingsNoticeModalOpen: Boolean(privacySettingsNoticeModal),
       isReactorListModalOpen: Boolean(reactorModal),
-      isChatLanguageModalOpen: Boolean(chatLanguageModal),
       animationLevel: selectSharedSettings(global).animationLevel,
       withInterfaceAnimations: selectCanAnimateInterface(global),
       withRightColumnAnimation: selectCanAnimateRightColumn(global),
@@ -820,9 +810,6 @@ export default memo(withGlobal<OwnProps>(
       )
     );
 
-    const userFull = selectUserFullInfo(global, chatId);
-
-    const isContactRequirePremium = userFull?.isContactRequirePremium;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const botFreezeAppealId = global.botFreezeAppealId;
     const freezeAppealChat = botFreezeAppealId
@@ -867,7 +854,6 @@ export default memo(withGlobal<OwnProps>(
       linkedMonoforumId,
       isSavedDialog,
       canShowOpenChatButton,
-      isContactRequirePremium,
       topics,
       isAccountFrozen,
       freezeAppealChat,

@@ -9,7 +9,7 @@ import { omitVirtualClassFields } from './helpers';
 export function buildApiReplyButtonAction(type: GramJs.TypeButtonType): ApiReplyButtonAction {
   if (type instanceof GramJs.ButtonTypeDefault) return { type: 'command' };
   if (type instanceof GramJs.ButtonTypeRequestPhone) return { type: 'requestPhone' };
-  if (type instanceof GramJs.ButtonTypeRequestPoll) return { type: 'requestPoll', isQuiz: type.quiz };
+  if (type instanceof GramJs.ButtonTypeRequestPoll) return { type: 'requestPoll' };
   if (type instanceof GramJs.ButtonTypeSimpleWebView) return { type: 'simpleWebView', url: type.url };
   if (type instanceof GramJs.ButtonTypeRequestPeer) {
     const peerType = buildApiRequestPeerType(type.peerType);
