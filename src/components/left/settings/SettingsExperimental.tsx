@@ -1,4 +1,4 @@
-import { memo, useMemo } from '../../../lib/teact/teact';
+import { memo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import { DEBUG_LOG_FILENAME } from '../../../config';
@@ -6,13 +6,11 @@ import { selectSharedSettings } from '../../../global/selectors/sharedState';
 import { IS_WAVE_TRANSFORM_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import { getDebugLogs } from '../../../util/debugConsole';
 import download from '../../../util/download';
-import { getAccountSlotUrl } from '../../../util/multiaccount';
 import { LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
-import useMultiaccountInfo from '../../../hooks/useMultiaccountInfo';
 
 import AnimatedIconWithPreview from '../../common/AnimatedIconWithPreview';
 import Island from '../../gili/layout/Island';
@@ -37,8 +35,6 @@ const SettingsExperimental = ({
 
   const lang = useLang();
 
-  const accounts = useMultiaccountInfo();
-
   useHistoryBack({
     isActive,
     onBack: onReset,
@@ -58,19 +54,6 @@ const SettingsExperimental = ({
     requestConfetti({ withStars: true });
   });
 
-  const newAccountUrl = useMemo(() => {
-    if (!Object.values(accounts).length) {
-      return undefined;
-    }
-
-    let freeIndex = 1;
-    while (accounts[freeIndex]) {
-      freeIndex += 1;
-    }
-
-    return getAccountSlotUrl(freeIndex, true, true);
-  }, [accounts]);
-
   return (
     <div className="settings-content custom-scroll">
       <div className="settings-content-header no-border">
@@ -83,14 +66,6 @@ const SettingsExperimental = ({
         />
         <p className="settings-item-description pt-3" dir="auto">{lang('SettingsExperimentalAbout')}</p>
       </div>
-      <Island>
-        <ListItem
-          href={newAccountUrl}
-          icon="add-user"
-        >
-          <div className="title">{lang('SettingsTestServerLogin')}</div>
-        </ListItem>
-      </Island>
       <Island>
         <ListItem
           onClick={handleRequestConfetti}

@@ -70,7 +70,6 @@ export interface LangPair {
   'UserRestrictionsInviteUsers': undefined;
   'UserRestrictionsPinMessages': undefined;
   'UserRestrictionsEditRank': undefined;
-  'ChatPermissionNotAvailable': undefined;
   'StatsMessagePublicShares': undefined;
   'WrongNumber': undefined;
   'SentAppCode': undefined;
@@ -1819,11 +1818,9 @@ export interface LangPair {
   'ContactFirstNameRequired': undefined;
   'UserNameCopied': undefined;
   'ChatNameCopied': undefined;
-  'SettingsTestServerLogin': undefined;
   'SettingsStartWave': undefined;
   'SettingsVaporizeButton': undefined;
   'DebugDownloadLog': undefined;
-  'TestServer': undefined;
   'CodeLanguagePlainText': undefined;
   'ErrorChatRestricted': undefined;
   'ErrorChatSendPollForbidden': undefined;

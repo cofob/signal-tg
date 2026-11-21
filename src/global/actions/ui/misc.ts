@@ -581,15 +581,13 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
   const { tabId = getCurrentTabId() } = payload || {};
   const { canDisplayChatInTitle } = selectSharedSettings(global);
   const currentUserId = global.currentUserId;
-  const isTestServer = global.config?.isTestServer;
-  const prefix = isTestServer ? '[T] ' : '';
 
   const defaultTitle = IS_TAURI ? PAGE_TITLE_TAURI : PAGE_TITLE;
 
   const lang = getTranslationFn();
   if (selectTabState(global, tabId).inactiveReason) {
     updateIcon(false);
-    setPageTitleInstant(`${prefix}${defaultTitle} ${lang('PageTitleInactive')}`);
+    setPageTitleInstant(`${defaultTitle} ${lang('PageTitleInactive')}`);
     return;
   }
 
@@ -601,7 +599,7 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
 
     if (newUnread > 0) {
       const notificationsTitle = lang('PageTitleNotifications', { count: newUnread }, { pluralValue: newUnread });
-      setPageTitleInstant(`${prefix}${notificationsTitle}`);
+      setPageTitleInstant(notificationsTitle);
       updateIcon(true);
       return;
     }
@@ -616,12 +614,12 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
     const currentChat = selectChat(global, chatId);
     if (currentChat) {
       const title = getChatTitle(getTranslationFn(), currentChat, chatId === currentUserId);
-      setPageTitle(`${prefix}${title}`);
+      setPageTitle(title);
       return;
     }
   }
 
-  setPageTitleInstant(`${prefix}${defaultTitle}`);
+  setPageTitleInstant(defaultTitle);
 });
 
 addActionHandler('closeInviteViaLinkModal', (global, actions, payload): ActionReturnType => {

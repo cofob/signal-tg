@@ -302,7 +302,6 @@ export interface ApiConfig {
   gifSearchUsername?: string;
   maxGroupSize: number;
   autologinToken?: string;
-  isTestServer?: boolean;
   maxMessageLength: number;
   editTimeLimit: number;
   maxForwardedCount: number;

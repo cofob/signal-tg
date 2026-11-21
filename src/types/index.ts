@@ -56,12 +56,9 @@ export type SessionUserInfo = {
 export type SharedSessionData = {
   pushKey?: string;
   date?: number;
-  isTest?: true;
 } & ApiSessionData & SessionUserInfo;
 
-export type AccountInfo = {
-  isTest?: true;
-} & SessionUserInfo;
+export type AccountInfo = SessionUserInfo;
 
 export enum LoadMoreDirection {
   Backwards,

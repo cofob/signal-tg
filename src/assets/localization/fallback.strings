@@ -89,7 +89,6 @@
 "UserRestrictionsInviteUsers" = "Add Users";
 "UserRestrictionsPinMessages" = "Pin Messages";
 "UserRestrictionsEditRank" = "Edit Own Label";
-"ChatPermissionNotAvailable" = "This permission is not available in public groups.";
 "StatsMessagePublicShares" = "Public Shares";
 "WrongNumber" = "Wrong number?";
 "SentAppCode" = "We've sent the code to the **Telegram** app on your other device.";
@@ -2263,11 +2262,9 @@
 "UserNameCopied" = "User name was copied";
 "ChatNameCopied" = "Chat name was copied";
 "PeerPickerUnknownPeer" = "No peer or category with ID {id}";
-"SettingsTestServerLogin" = "Login on Test Server";
 "SettingsStartWave" = "Start wave";
 "SettingsVaporizeButton" = "Vaporize this button";
 "DebugDownloadLog" = "Download log";
-"TestServer" = "Test server";
 "CodeLanguagePlainText" = "Plain text";
 "ErrorChatRestricted" = "You can't send messages in this chat, you were restricted";
 "ErrorChatSendPollForbidden" = "You can't create polls in this chat";

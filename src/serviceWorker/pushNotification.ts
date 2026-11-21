@@ -129,7 +129,6 @@ async function openNotification(data: PushNotification) {
   }
   const url = new URL(self.registration.scope);
   if (account.slot !== 1) url.searchParams.set(ACCOUNT_QUERY, String(account.slot));
-  if (account.isTest) url.searchParams.set('test', 'true');
   await self.clients.openWindow(url.href);
 }
 

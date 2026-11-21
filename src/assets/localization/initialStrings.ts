@@ -5,7 +5,6 @@ import type { LangPackStringValue } from '../../api/types';
 import type { LangKey } from '../../types/language';
 
 export default {
-  "TestServer": "Test server",
   "PageTitleInactive": "[Inactive]",
   "AuthTitle": "Telegram",
   "AuthKeepSignedIn": "Keep me signed in",
