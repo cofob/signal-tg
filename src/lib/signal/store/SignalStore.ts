@@ -60,6 +60,38 @@ export type AccountRecord = {
   isDemo?: boolean;
   // Set at linking when the primary device offers to transfer message history; removed once the transfer ends
   historyTransfer?: HistoryTransferState;
+  // Signal Secure Backups of this account, see `backups/BackupService.ts`
+  backups?: BackupSettings;
+};
+
+export type BackupFrequency = 'daily' | 'weekly' | 'monthly' | 'manual';
+
+export type BackupSettings = {
+  // Backups run on the schedule and the backup service holds the latest one
+  isEnabled?: boolean;
+  frequency?: BackupFrequency;
+  // Milliseconds since the epoch on the server clock
+  lastBackupAt?: number;
+  lastRefreshAt?: number;
+  // The size of the encrypted file of the last backup that went up
+  lastBackupSize?: number;
+  // The size of the frames before compression, which the next backup takes as its estimate
+  uncompressedLength?: number;
+  // The level of the backup credential: 200 is the free tier, 201 the paid one
+  tier?: number;
+  // The service refused the file as too large, so the backups hold the messages of this many last days only
+  messageDays?: number;
+  // Why the last backup failed; `BackupService` clears it with the next success
+  lastError?: string;
+};
+
+/** The credentials of the backup service for the coming days and the public keys it knows, see `archiveApi.ts` */
+export type ArchiveCredentialsRecord = {
+  // The backup id of the key they were issued for: a new recovery key voids them
+  backupId: Uint8Array;
+  // `redemptionTime` is in seconds
+  credentials: { type: 'messages' | 'media'; redemptionTime: number; credential: Uint8Array }[];
+  publicKeysSet: Partial<Record<'messages' | 'media', boolean>>;
 };
 
 /**
@@ -155,6 +187,7 @@ type Items = {
   keyTransparencyDistinguished: Uint8Array<ArrayBuffer>;
   keyTransparencySelfHealth: KeyTransparencySelfHealth;
   keyTransparencyLastSelfCheck: number;
+  archiveCredentials: ArchiveCredentialsRecord;
 };
 
 /** `intermittent` is a first failed verification, which the self check repeats a day later before it reports `fail` */

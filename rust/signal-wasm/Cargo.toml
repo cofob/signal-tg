@@ -8,6 +8,10 @@ publish = false
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+# Exports of the server side of the backup credentials, which the tests of the client against a fake server use
+test-server = []
+
 [dependencies]
 libsignal-core = { path = "../libsignal/rust/core" }
 libsignal-protocol = { path = "../libsignal/rust/protocol" }

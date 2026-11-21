@@ -95,6 +95,8 @@ type ExportOptions = {
   appVersion: string;
   // The backup tier of the account, which the account data reports
   backupTier?: number;
+  // Milliseconds since the epoch: messages sent earlier are left out, which shrinks a backup that the service refuses
+  messageCutoffMs?: number;
 };
 
 type ChatItemInit = MessageInitShape<typeof ChatItemSchema>;
@@ -589,6 +591,10 @@ class BackupExporter {
       return undefined;
     }
 
+    if (this.options.messageCutoffMs !== undefined && message.sentAt < this.options.messageCutoffMs) {
+      this.skip('olderThanCutoff');
+      return undefined;
+    }
     const expireTimerMs = message.expireTimer ? message.expireTimer * MS_PER_SECOND : undefined;
     if (!getCanExport(expireTimerMs, message.expiresAt, this.now)) {
       this.skip('shortLived');

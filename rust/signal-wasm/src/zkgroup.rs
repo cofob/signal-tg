@@ -474,6 +474,53 @@ pub fn BackupAuthCredential_PresentDeterministic(
     Ok(encode(&credential.present(&server_params, randomness(randomness_bytes, operation)?)))
 }
 
+/// The server side of the backup credentials, for tests of the client against a fake server
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn GenericServerSecretParams_GenerateDeterministic(randomness_bytes: &[u8]) -> JsResult<Vec<u8>> {
+    let secret: zkgroup::generic_server_params::GenericServerSecretParams =
+        zkgroup::generic_server_params::GenericServerSecretParamsLegacy::generate(randomness(
+            randomness_bytes,
+            "GenericServerSecretParams_GenerateDeterministic",
+        )?)
+        .into();
+    Ok(encode(&secret))
+}
+
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn GenericServerSecretParams_GetPublicParams(params_bytes: &[u8]) -> JsResult<Vec<u8>> {
+    let operation = "GenericServerSecretParams_GetPublicParams";
+    let secret = zkgroup::generic_server_params::GenericServerSecretParams::try_from(params_bytes)
+        .map_err(|_| generic_error("invalid generic server secret params", operation))?;
+    Ok(encode(&secret.get_public_params()))
+}
+
+#[cfg(feature = "test-server")]
+#[wasm_bindgen]
+pub fn BackupAuthCredentialRequest_IssueDeterministic(
+    request_bytes: &[u8],
+    redemption_time: f64,
+    backup_level: u8,
+    credential_type: u8,
+    params_bytes: &[u8],
+    randomness_bytes: &[u8],
+) -> JsResult<Vec<u8>> {
+    let operation = "BackupAuthCredentialRequest_IssueDeterministic";
+    let request: zkgroup::backups::BackupAuthCredentialRequest = decode(request_bytes, operation)?;
+    let params = zkgroup::generic_server_params::GenericServerSecretParams::try_from(params_bytes)
+        .map_err(|_| generic_error("invalid generic server secret params", operation))?;
+    let response = request.issue(
+        Timestamp::from_epoch_seconds(redemption_time as u64),
+        zkgroup::backups::BackupLevel::try_from(backup_level).map_err(|_| generic_error("invalid backup level", operation))?,
+        zkgroup::backups::BackupCredentialType::try_from(credential_type)
+            .map_err(|_| generic_error("invalid credential type", operation))?,
+        &params,
+        randomness(randomness_bytes, operation)?,
+    );
+    Ok(encode(&response))
+}
+
 #[cfg(test)]
 mod backup_credential_tests {
     use zkgroup::backups::{BackupAuthCredentialPresentation, BackupAuthCredentialRequest, BackupCredentialType, BackupLevel};
