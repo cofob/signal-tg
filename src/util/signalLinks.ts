@@ -50,7 +50,8 @@ type LinkParts = {
 };
 
 // Routes of Signal Desktop `ts/util/signalRoutes.std.ts` and Signal Android `AndroidManifest.xml`, with the proxy links
-// of `SignalProxyUtil`. A host is exact: ports, user names, trailing dots and look-alike letters never match.
+// of `SignalProxyUtil`. A host is exact ASCII: ports, user names, trailing dots and look-alike letters, including the
+// ones that lowercase to ASCII such as the Kelvin sign, never match.
 const SIGNAL_ME_HOST = 'signal.me';
 const SIGNAL_GROUP_HOST = 'signal.group';
 const SIGNAL_ART_HOST = 'signal.art';
@@ -87,6 +88,8 @@ const PROXY_PATTERN = /^((?:[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?\.)+[a-z\d](?:[a-z\
 const MAX_HOST_LENGTH = 253;
 
 const SGNL_PREFIX_PATTERN = /^sgnl:/i;
+const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
+const SGNL_SCHEME_PREFIX = 'sgnl://';
 
 const INVALID_LINK = { type: 'invalid' } as const;
 
@@ -110,6 +113,22 @@ export function isSgnlLink(text: string) {
   return SGNL_PREFIX_PATTERN.test(text.trim());
 }
 
+/** Whether a text is a Signal link that the app can open, and not an `invalid` one */
+export function isSignalRoute(text: string) {
+  const link = parseSignalLink(text);
+  return Boolean(link && link.type !== 'invalid');
+}
+
+/**
+ * Where the link that the text has at `offset` starts. The pattern that finds links in a text leaves out the `sgnl://`
+ * before a Signal link, so the start moves back over it when it makes `link` a Signal link.
+ */
+export function getSgnlLinkStart(text: string, offset: number, link: string) {
+  const start = offset - SGNL_SCHEME_PREFIX.length;
+  if (start < 0 || text.slice(start, offset).toLowerCase() !== SGNL_SCHEME_PREFIX) return offset;
+  return isSignalRoute(`${SGNL_SCHEME_PREFIX}${link}`) ? start : offset;
+}
+
 /** The link of a sticker pack, as `signal.art` shares it */
 export function buildStickerPackLink(packId: string, packKey: string) {
   return `https://${SIGNAL_ART_HOST}${ADD_STICKERS_PATH}/#pack_id=${packId}&pack_key=${packKey}`;
@@ -124,6 +143,9 @@ function splitLink(link: string): LinkParts | undefined {
   if (!match) return undefined;
 
   const [, rawScheme, host, path = '', query = '', fragment = ''] = match;
+  // `toLowerCase` maps some non-ASCII letters, such as the Kelvin sign, to ASCII ones
+  if (NON_ASCII_PATTERN.test(host)) return undefined;
+
   const scheme = rawScheme?.toLowerCase() ?? 'https';
   if (scheme !== 'https' && scheme !== 'sgnl') return undefined;
 

@@ -3,7 +3,7 @@ import { getActions } from '../../global';
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
-import { isSgnlLink } from '../signalLinks';
+import { isSgnlLink, parseSignalLink } from '../signalLinks';
 
 type DownloadFinishedEvent = {
   success: boolean;
@@ -47,8 +47,9 @@ export default function setupTauriListeners() {
     }
   }, true);
 
+  // A window that the page asks for is meant for the browser, even when the address is one of Signal's links
   window.open = (url: string | URL | undefined, target?: string, features?: string) => {
-    if (url) openLink(url);
+    if (url) openLink(url, true);
     // eslint-disable-next-line no-null/no-null
     return null;
   };
@@ -61,15 +62,13 @@ export default function setupTauriListeners() {
 
     if (!anchor) return;
 
-    if (anchor.target === '_blank'
-      || event.ctrlKey
-      || event.metaKey
-      || event.button === MouseButton.Auxiliary
-    ) {
+    const isModifiedClick = event.ctrlKey || event.metaKey || event.button === MouseButton.Auxiliary;
+    if (anchor.target === '_blank' || isModifiedClick) {
       event.preventDefault();
 
       const href = anchor.getAttribute('href')!;
-      openLink(href);
+      // A click with a modifier asks for the browser, so a Signal link on the web stays there
+      openLink(href, isModifiedClick);
     }
   }
 
@@ -78,11 +77,12 @@ export default function setupTauriListeners() {
   window.addEventListener('auxclick', handleClick);
 }
 
-async function openLink(url: string | URL) {
+async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
   // Links that only the app handles stay in it: a `tg:` link would leave for another app, and an `sgnl:` link is
-  // the app's own scheme
+  // the app's own scheme. The addresses of Signal's websites that are routes open in the app too, unless the browser
+  // is asked for.
   const href = url.toString();
-  if (isDeepLink(href) || isSgnlLink(href)) {
+  if (isDeepLink(href) || isSgnlLink(href) || (!shouldOpenInBrowser && parseSignalLink(href))) {
     getActions().openTelegramLink({ url: href });
     return;
   }

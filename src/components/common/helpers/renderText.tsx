@@ -12,7 +12,8 @@ import {
 } from '../../../util/emoji/emoji';
 import splitEmoji from '../../../util/emoji/splitEmoji';
 import { compact } from '../../../util/iteratees';
-import { parseSignalLink } from '../../../util/signalLinks';
+import { getSgnlLinkStart, isSignalRoute } from '../../../util/signalLinks';
+import { trimLinkEnd } from '../../../util/trimLinkEnd';
 
 import MentionLink from '../../middle/message/MentionLink';
 import SafeLink from '../SafeLink';
@@ -208,27 +209,30 @@ function addLinks(
     let lastIndex = 0;
     while (nextLink) {
       const index = part.indexOf(nextLink, lastIndex);
-      content.push(postProcess(part.substring(lastIndex, index)));
       if (nextLink.startsWith('@')) {
+        content.push(postProcess(part.substring(lastIndex, index)));
         content.push(
           <MentionLink username={nextLink}>
             {postProcess(nextLink)}
           </MentionLink>,
         );
+        lastIndex = index + nextLink.length;
       } else {
-        if (nextLink.endsWith('?')) {
-          nextLink = nextLink.slice(0, nextLink.length - 1);
-        }
+        const linkEnd = index + trimLinkEnd(nextLink).length;
+        // The pattern leaves out the `sgnl://` before a Signal link
+        const linkStart = Math.max(getSgnlLinkStart(part, index, part.substring(index, linkEnd)), lastIndex);
+        const link = part.substring(linkStart, linkEnd);
 
-        if (!allowOnlyAppLinks || isDeepLink(nextLink) || parseSignalLink(nextLink)) {
+        content.push(postProcess(part.substring(lastIndex, linkStart)));
+        if (!allowOnlyAppLinks || isDeepLink(link) || isSignalRoute(link)) {
           content.push(
-            <SafeLink text={nextLink} url={nextLink} />,
+            <SafeLink text={link} url={link} />,
           );
         } else {
-          content.push(postProcess(nextLink));
+          content.push(postProcess(link));
         }
+        lastIndex = linkEnd;
       }
-      lastIndex = index + nextLink.length;
       nextLink = links.shift();
     }
     content.push(postProcess(part.substring(lastIndex)));

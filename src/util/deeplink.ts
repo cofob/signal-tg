@@ -14,6 +14,8 @@ import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { tryParseDeepLink } from './deepLinkParser';
 import { parseSignalLink } from './signalLinks';
 
+const RE_NON_DIGIT = /\D/g;
+
 /**
  * Opens a link inside the app: a Signal link (`signal.me`, `signal.group`, `signal.art`, `signal.link`, `signal.tube`
  * or `sgnl:`) or one of the app's own `tg:` links. Returns `false` for any other link.
@@ -132,7 +134,7 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
   const {
     checkChatInvite,
     openChatByUsername,
-    openChatByPhoneNumber,
+    openPhoneNumberLookupModal,
     openStickerSet,
     openChatWithDraft,
     checkChatlistInvite,
@@ -158,12 +160,8 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
             text,
           });
         } else if (phone) {
-          openChatByPhoneNumber({
-            phoneNumber: phone,
-            startAttach: startattach,
-            attach,
-            text,
-          });
+          // The lookup tells the contact discovery service about the number, so the user confirms it first
+          openPhoneNumberLookupModal({ phoneNumber: phone.replace(RE_NON_DIGIT, '') });
         } else if (story) {
           openStoryViewerByUsername({ username: domain, storyId: Number(story) });
         } else {

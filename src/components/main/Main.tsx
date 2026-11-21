@@ -34,9 +34,10 @@ import { IS_TAURI } from '../../util/browser/globalEnvironment';
 import { IS_ANDROID, IS_IOS, IS_MAC_OS, IS_WAVE_TRANSFORM_SUPPORTED } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
 import { waitForTransitionEnd } from '../../util/cssAnimationEndListeners';
-import { processDeepLink } from '../../util/deeplink';
+import { openSignalLink, processDeepLink } from '../../util/deeplink';
 import { Bundles, loadBundle } from '../../util/moduleLoader';
 import { parseInitialLocationHash, parseLocationHash } from '../../util/routing';
+import { parseSignalLink } from '../../util/signalLinks';
 import updateIcon from '../../util/updateIcon';
 import { REM } from '../common/helpers/mediaDimensions';
 import { updateTopReserveWithScrollCompensation } from '../middle/helpers/messageListReserves';
@@ -389,16 +390,20 @@ const Main = ({
 
     const parsedInitialLocationHash = parseInitialLocationHash();
     // The link is deleted after the first use. `isSynced` turns true again after every reconnect and unlock, and the
-    // same link would open again each time, for example putting its amount into a transfer the user is filling in.
+    // same link would open again each time. A page of the web can put a link into the address, so only Signal's links
+    // open from it.
     if (parsedInitialLocationHash?.tgaddr) {
-      const link = parsedInitialLocationHash.tgaddr;
+      const signalLink = parseSignalLink(parsedInitialLocationHash.tgaddr);
       delete parsedInitialLocationHash.tgaddr;
-      processDeepLink(link, { type: 'inner' });
+      if (signalLink) openSignalLink(signalLink);
     }
   }, [isSynced]);
 
-  // The links that launched the app, or reached it before this page could listen, wait in the native app
+  // The links that launched the app, or reached it before this page could listen, wait in the native app until the
+  // chats are loaded, as an opened chat would be reset by the sync and an action would fail before the account is ready
   const handleDeepLinks = useLastCallback(async () => {
+    if (!isSynced) return;
+
     try {
       const urls = await window.tauri.takeDeepLinks();
       urls.forEach((url) => processDeepLink(url, { type: 'inner' }));
@@ -411,6 +416,10 @@ const Main = ({
   });
 
   useTauriEvent<void>('deeplink', handleDeepLinks, handleDeepLinks);
+
+  useEffect(() => {
+    if (IS_TAURI && isSynced) handleDeepLinks();
+  }, [isSynced]);
 
   useEffect(() => {
     const parsedLocationHash = parseLocationHash(currentUserId);
