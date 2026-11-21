@@ -337,7 +337,7 @@ function onInstanceDeactivated(reason: InstanceDeactivateReason) {
 
     if(reason === 'otherClient') {
       singleInstance.onMyClient();
-      // * the other frontend took the engine over (`src/lib/signal/engineLock.ts`): this one takes it back
+      // * the other frontend took the engine over (`src/lib/signal/engineOwnership.ts`): this one takes it back
       rootScope.managers.appSignalManager.start({
         platform: navigator.platform,
         langCode: I18n.getLastRequestedLangCode()

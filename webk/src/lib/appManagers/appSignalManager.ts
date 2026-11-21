@@ -74,7 +74,7 @@ export default class AppSignalManager extends AppManager {
 
   /**
    * Starts the engine of this account slot, or takes it over from the other frontend's tab that runs it (the
-   * engine lock in `src/lib/signal/engineLock.ts`). Called by every tab that opens, after its passcode check.
+   * engine lock in `src/lib/signal/engineOwnership.ts`). Called by every tab that opens, after its passcode check.
    */
   public async start(args: Omit<SignalInitialArgs, 'userAgent'>) {
     // * one engine per worker: the slots of the other accounts are not supported yet
