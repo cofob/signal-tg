@@ -1,0 +1,121 @@
+.root :global(.modal-dialog) {
+  max-width: 26rem;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+// The story frame at Signal's 9:16, as small as it fits next to the audience list
+.preview {
+  position: relative;
+
+  container-type: size;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  justify-content: center;
+
+  aspect-ratio: 9 / 16;
+  height: 45vh;
+  border-radius: var(--border-radius-default-small);
+}
+
+.textInput {
+  resize: none;
+
+  field-sizing: content;
+  width: 100%;
+  max-height: 100%;
+  padding: 8cqw;
+  border: none;
+
+  color: #fff;
+  text-align: center;
+
+  background: transparent;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.swatches,
+.fonts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.swatch {
+  cursor: pointer;
+
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0.125rem solid transparent;
+  border-radius: 50%;
+}
+
+.font {
+  cursor: pointer;
+
+  min-width: 2.5rem;
+  height: 2rem;
+  border: 0.125rem solid transparent;
+  border-radius: var(--border-radius-default-small);
+
+  font-size: 1rem;
+  color: var(--color-text);
+
+  background: var(--color-background-secondary);
+}
+
+.selected {
+  border-color: var(--color-primary);
+}
+
+.mediaPreview {
+  cursor: pointer;
+  background: var(--color-background-secondary);
+}
+
+.mediaHint {
+  padding: 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.caption {
+  margin-bottom: 0;
+}
+
+.fileInput {
+  display: none;
+}
+
+.audienceTitle {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  font-weight: var(--font-weight-medium);
+}
+
+.send {
+  margin-top: 0.5rem;
+}

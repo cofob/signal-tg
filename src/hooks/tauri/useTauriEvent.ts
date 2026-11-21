@@ -3,7 +3,12 @@ import { useEffect } from '../../lib/teact/teact';
 
 import { IS_TAURI } from '../../util/browser/globalEnvironment';
 
-export default function useTauriEvent<T>(name: string, callback: (event: Event<T>) => void) {
+/** Listens to a native event; `onListen` runs once the listener is set up, for what happened before it was */
+export default function useTauriEvent<T>(
+  name: string,
+  callback: (event: Event<T>) => void,
+  onListen?: NoneToVoidFunction,
+) {
   return useEffect(() => {
     if (!IS_TAURI) {
       return undefined;
@@ -16,6 +21,7 @@ export default function useTauriEvent<T>(name: string, callback: (event: Event<T
       removeListener = await listen<T>(name, (event) => {
         callback(event);
       });
+      onListen?.();
     };
 
     setUpListener().catch((error) => {
@@ -26,5 +32,5 @@ export default function useTauriEvent<T>(name: string, callback: (event: Event<T
     return () => {
       removeListener?.();
     };
-  }, [name, callback]);
+  }, [name, callback, onListen]);
 }

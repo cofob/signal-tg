@@ -227,6 +227,14 @@ const SettingsPrivacy = ({
           {lang('BlockedUsers')}
           <span className="settings-item__current-value">{blockedCount || ''}</span>
         </ListItem>
+        <ListItem
+          icon="play-story"
+          iconBg="purple"
+          narrow
+          onClick={() => openSettingsScreen({ screen: SettingsScreens.Stories })}
+        >
+          {lang('StoriesSettingTitle')}
+        </ListItem>
         {canSetPasscode && (
           <ListItem
             icon="lock-filled"

@@ -24,6 +24,9 @@ export const PREVIEW_SLOT = 'p';
 type AttachmentSlot = number | typeof STICKER_SLOT | typeof PREVIEW_SLOT;
 
 const MEDIA_ID_REGEX = /^(\d+)_(\d+|s|p)$/;
+// The media of story `id` has the id `<id>_story`
+const STORY_MEDIA_SUFFIX = '_story';
+const STORY_MEDIA_ID_REGEX = /^(\d+)_story$/;
 const DEFAULT_CONTENT_TYPE = 'application/octet-stream';
 const PHOTO_CONTENT_TYPES = new Set([...SUPPORTED_PHOTO_CONTENT_TYPES, 'image/webp']);
 // Signal Desktop `getFileExtension` in `ts/util/Attachment.std.ts`
@@ -65,7 +68,12 @@ export function buildMessageMedia(message: MessageRecord, dataMessage: DataMessa
   // attachment stands for the others. A long text attachment holds the body, not media.
   const media = attachments.map((pointer, index) => (
     getMimeType(pointer.contentType) !== LONG_TEXT_CONTENT_TYPE
-      ? buildAttachmentMedia(message, pointer, index)
+      ? buildAttachmentMedia(pointer, {
+        id: buildAttachmentMediaId(message.id, index),
+        sentAt: message.sentAt,
+        index,
+        isUnavailable: message.unavailableAttachmentIndexes?.includes(index) || undefined,
+      })
       : undefined
   ));
   const albumItems = media.filter((item): item is Pick<MediaContent, 'photo' | 'video'> => Boolean(
@@ -79,6 +87,17 @@ export function buildMessageMedia(message: MessageRecord, dataMessage: DataMessa
   if (first) return first;
 
   return contact.length ? { contact: buildContact(contact[0]) } : {};
+}
+
+/** The photo or video of a media story; `downloadMedia` finds its pointer by the story id */
+export function buildStoryMedia(storyId: number, sentAt: number, pointer: AttachmentPointer): MediaContent {
+  return buildAttachmentMedia(pointer, { id: `${storyId}${STORY_MEDIA_SUFFIX}`, sentAt, index: 0 });
+}
+
+/** The story id of a story media id from `buildStoryMedia` */
+export function parseStoryMediaId(mediaId: string) {
+  const match = mediaId.match(STORY_MEDIA_ID_REGEX);
+  return match ? Number(match[1]) : undefined;
 }
 
 /** The message id and attachment slot of a media id: an index in `DataMessage.attachments`, or the sticker */
@@ -96,13 +115,13 @@ function buildAttachmentMediaId(messageId: number, slot: AttachmentSlot) {
   return `${messageId}_${slot}`;
 }
 
-function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer, index: number): MediaContent {
-  const id = buildAttachmentMediaId(message.id, index);
+function buildAttachmentMedia(pointer: AttachmentPointer, {
+  id, sentAt, index, isUnavailable,
+}: { id: string; sentAt: number; index: number; isUnavailable?: true }): MediaContent {
   const mimeType = getMimeType(pointer.contentType);
   const { size, width, height } = pointer;
-  const fileName = pointer.fileName || getSuggestedFileName(mimeType, message.sentAt, index);
+  const fileName = pointer.fileName || getSuggestedFileName(mimeType, sentAt, index);
   const duration = Math.round(pointer.audioDurationSeconds);
-  const isUnavailable = message.unavailableAttachmentIndexes?.includes(index) || undefined;
 
   // Legacy Android voice notes have no flag, only an audio type and no file name
   // (Signal Desktop `isVoiceMessage` in `ts/util/Attachment.std.ts`)
@@ -119,7 +138,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
       photo: {
         mediaType: 'photo',
         id,
-        date: Math.floor(message.sentAt / MS_PER_SECOND),
+        date: Math.floor(sentAt / MS_PER_SECOND),
         thumbnail: buildThumbnail(pointer),
         sizes: width && height ? [{ type: 'x', width, height }] : [],
         isUnavailable,
@@ -160,7 +179,7 @@ function buildAttachmentMedia(message: MessageRecord, pointer: AttachmentPointer
       id,
       fileName,
       size,
-      timestamp: Math.floor(message.sentAt / MS_PER_SECOND),
+      timestamp: Math.floor(sentAt / MS_PER_SECOND),
       mimeType,
       isUnavailable,
     },

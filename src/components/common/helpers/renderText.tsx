@@ -12,13 +12,15 @@ import {
 } from '../../../util/emoji/emoji';
 import splitEmoji from '../../../util/emoji/splitEmoji';
 import { compact } from '../../../util/iteratees';
+import { getSgnlLinkStart, isSignalRoute } from '../../../util/signalLinks';
+import { trimLinkEnd } from '../../../util/trimLinkEnd';
 
 import MentionLink from '../../middle/message/MentionLink';
 import SafeLink from '../SafeLink';
 
 export type TextFilter = (
   'escape_html' | 'hq_emoji' | 'emoji' | 'emoji_html' | 'br' | 'br_html' | 'links' |
-  'simple_markdown' | 'simple_markdown_html' | 'tg_links'
+  'simple_markdown' | 'simple_markdown_html' | 'app_links'
 );
 
 const SIMPLE_MARKDOWN_REGEX = /(\*\*|__).+?\1/g;
@@ -58,7 +60,8 @@ export default function renderText(
       case 'links':
         return addLinks(text, undefined, params?.markdownPostProcessor);
 
-      case 'tg_links':
+      // Only the links that the app opens itself: its `tg:` links and Signal's links
+      case 'app_links':
         return addLinks(text, true, params?.markdownPostProcessor);
 
       case 'simple_markdown':
@@ -184,7 +187,7 @@ function addLineBreaks(
 const RE_LINK = new RegExp(`${RE_LINK_TEMPLATE}|${RE_MENTION_TEMPLATE}`, 'ig');
 
 function addLinks(
-  textParts: TextPart[], allowOnlyTgLinks?: boolean, postProcessor?: (part: string) => TeactNode,
+  textParts: TextPart[], allowOnlyAppLinks?: boolean, postProcessor?: (part: string) => TeactNode,
 ): TextPart[] {
   const postProcess = postProcessor || ((part: string) => part);
 
@@ -206,27 +209,30 @@ function addLinks(
     let lastIndex = 0;
     while (nextLink) {
       const index = part.indexOf(nextLink, lastIndex);
-      content.push(postProcess(part.substring(lastIndex, index)));
       if (nextLink.startsWith('@')) {
+        content.push(postProcess(part.substring(lastIndex, index)));
         content.push(
           <MentionLink username={nextLink}>
             {postProcess(nextLink)}
           </MentionLink>,
         );
+        lastIndex = index + nextLink.length;
       } else {
-        if (nextLink.endsWith('?')) {
-          nextLink = nextLink.slice(0, nextLink.length - 1);
-        }
+        const linkEnd = index + trimLinkEnd(nextLink).length;
+        // The pattern leaves out the `sgnl://` before a Signal link
+        const linkStart = Math.max(getSgnlLinkStart(part, index, part.substring(index, linkEnd)), lastIndex);
+        const link = part.substring(linkStart, linkEnd);
 
-        if (!allowOnlyTgLinks || isDeepLink(nextLink)) {
+        content.push(postProcess(part.substring(lastIndex, linkStart)));
+        if (!allowOnlyAppLinks || isDeepLink(link) || isSignalRoute(link)) {
           content.push(
-            <SafeLink text={nextLink} url={nextLink} />,
+            <SafeLink text={link} url={link} />,
           );
         } else {
-          content.push(postProcess(nextLink));
+          content.push(postProcess(link));
         }
+        lastIndex = linkEnd;
       }
-      lastIndex = index + nextLink.length;
       nextLink = links.shift();
     }
     content.push(postProcess(part.substring(lastIndex)));

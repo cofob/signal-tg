@@ -5,14 +5,16 @@ import type {
   DataMessageSchema,
   EditMessageSchema,
   ReceiptMessage_Type,
+  StoryMessageSchema,
   SyncMessage_BlockedSchema,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
+  SyncMessage_Sent_StoryMessageRecipientSchema,
   VerifiedSchema,
 } from '../proto/generated/SignalService_pb';
 import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
-import type { GroupTarget } from './sendToGroup';
+import type { GroupTarget, SenderKeyTarget } from './sendToGroup';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromHex } from '../../../util/encoding/buffer';
@@ -32,9 +34,13 @@ type MessageOptions = {
   timestamp: number;
   group?: GroupTarget;
   expirationStartTimestamp?: number;
+  // Group story replies go as stories (Signal Desktop `sendNormalMessage`)
+  isStory?: boolean;
   // Messages that need no push notification, such as group updates, are not urgent
   isUrgent?: boolean;
 };
+
+export type StoryMessageRecipient = MessageInitShape<typeof SyncMessage_Sent_StoryMessageRecipientSchema>;
 
 const SENT_PROTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SENT_PROTO_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
@@ -54,7 +60,11 @@ export async function sendMessage(
   const content = { content: message };
   const groupId = options.group?.id;
   const results = await sendToRecipients(context, others, content, {
-    timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId, isUrgent: options.isUrgent,
+    timestamp: options.timestamp,
+    contentHint: ContentHint.Resendable,
+    groupId,
+    isStory: options.isStory,
+    isUrgent: options.isUrgent,
   }, options.group);
 
   await store.addSentProto({
@@ -94,6 +104,68 @@ export async function sendMessage(
     await store.removeSentProtosBefore(Date.now() - SENT_PROTO_MAX_AGE_MS);
   }
   return results;
+}
+
+/**
+ * Sends a story to its recipients with the sender key of a distribution list or a group, and one by one where that
+ * does not work (Signal Desktop `ts/jobs/helpers/sendStory.preload.ts`). Stories are not urgent and are not resent
+ * after decryption errors, so they stay out of the sent log; the sync with every list goes separately
+ * (`sendStorySync`).
+ */
+export async function sendStory(
+  context: SenderContext,
+  recipients: string[],
+  storyMessage: MessageInitShape<typeof StoryMessageSchema>,
+  { timestamp, target }: { timestamp: number; target: SenderKeyTarget },
+): Promise<RecipientResult[]> {
+  const others = recipients.filter((serviceId) => serviceId !== context.account.aci);
+  const content = { content: { case: 'storyMessage' as const, value: storyMessage } };
+  const options = {
+    timestamp, contentHint: ContentHint.Implicit, isUrgent: false, isStory: true,
+  };
+  const { results, remaining } = await sendWithSenderKey(context, target, others, content, options);
+  return [...results, ...await sendToEach(context, remaining, content, {
+    ...options, groupId: target.type === 'group' ? target.group.id : undefined,
+  })];
+}
+
+/**
+ * Tells our other devices about a story we sent, with each recipient's distribution lists and whether they may
+ * reply. `isRecipientUpdate` without a story changes who has an earlier story; a story nobody has any more is
+ * deleted (Signal Desktop `onStoryRecipientUpdate`).
+ */
+export function sendStorySync(context: SenderContext, {
+  timestamp, storyMessage, storyMessageRecipients, isRecipientUpdate,
+}: {
+  timestamp: number;
+  storyMessage?: MessageInitShape<typeof StoryMessageSchema>;
+  storyMessageRecipients: StoryMessageRecipient[];
+  isRecipientUpdate?: boolean;
+}) {
+  return syncToOtherDevices(context, {
+    content: {
+      case: 'sent',
+      value: {
+        // Distribution list stories name our own conversation, group stories none (Signal Desktop `sendStory`)
+        destinationServiceId: storyMessage?.group ? undefined : context.account.aci,
+        timestamp: BigInt(timestamp),
+        storyMessage,
+        storyMessageRecipients,
+        isRecipientUpdate,
+      },
+    },
+  }, timestamp);
+}
+
+/** Deletes a distribution list story for its recipients (Signal Desktop `sendDeleteStoryForEveryone`) */
+export function sendStoryDelete(context: SenderContext, recipients: string[], targetSentAt: number) {
+  const timestamp = Date.now();
+  return sendToEach(context, recipients, {
+    content: {
+      case: 'dataMessage',
+      value: { delete: { targetSentTimestamp: BigInt(targetSentAt) }, timestamp: BigInt(timestamp) },
+    },
+  }, { timestamp, contentHint: ContentHint.Resendable, isStory: true });
 }
 
 /** Sends delivery, read or viewed receipts for messages of one sender */
@@ -219,7 +291,9 @@ async function sendToRecipients(
 ): Promise<RecipientResult[]> {
   if (!group) return sendToEach(context, recipients, content, options);
 
-  const { results, remaining } = await sendWithSenderKey(context, group, recipients, content, options);
+  const { results, remaining } = await sendWithSenderKey(
+    context, { type: 'group', group }, recipients, content, options,
+  );
   return [...results, ...await sendToEach(context, remaining, content, options)];
 }
 

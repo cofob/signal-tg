@@ -9,7 +9,7 @@ use url::Url;
 use uuid::Uuid;
 
 mod deeplink;
-use deeplink::Deeplink;
+use deeplink::{Deeplink, PendingLinks};
 
 mod files;
 use files::Files;
@@ -189,6 +189,7 @@ pub fn run() {
     // Manage app state
     app.manage(AppState::new(AppStateStruct::default()));
     app.manage(Arc::new(Transport::from_env()));
+    app.manage(PendingLinks::default());
     app.manage(Files::new(app.path().app_data_dir().ok()));
 
     let app_url = resolve_base_app_url(app.handle());
@@ -224,6 +225,7 @@ pub fn run() {
     open_new_window_cmd,
     save_current_url,
     set_menu_translations,
+    deeplink::take_deep_links,
     transport::signal_connect,
     transport::signal_send,
     transport::signal_ack,

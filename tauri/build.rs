@@ -7,6 +7,7 @@ fn main() {
       "open_new_window_cmd",
       "save_current_url",
       "set_menu_translations",
+      "take_deep_links",
       "signal_connect",
       "signal_send",
       "signal_ack",

@@ -14,6 +14,11 @@ export async function saveAttachmentBlob(pointer: AttachmentLocation, blob: Blob
   await cacheApi.save(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer), blob);
 }
 
+/** Drops a cached attachment, such as the media of an expired story */
+export async function removeAttachmentBlob(pointer: AttachmentLocation) {
+  await cacheApi.remove(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer));
+}
+
 /** Attachments are cached by their digest, which changes with every upload, or by their CDN location */
 export function getAttachmentCacheKey({ attachmentIdentifier, cdnNumber, digest }: AttachmentLocation) {
   return digest.length

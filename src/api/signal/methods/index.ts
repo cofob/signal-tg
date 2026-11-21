@@ -116,5 +116,22 @@ export {
   uninstallStickerSet,
 } from './stickers';
 export {
+  deleteStory,
+  deleteStoryDistributionList,
+  fetchAllStories,
+  fetchPeerStories,
+  fetchPeerStoriesByIds,
+  fetchStoriesViews,
+  fetchStoryDistributionLists,
+  fetchStorySettings,
+  fetchStoryViewList,
+  markStoryRead,
+  saveStoryDistributionList,
+  sendStory,
+  sendStoryReaction,
+  toggleStoriesHidden,
+  updateStorySettings,
+} from './stories';
+export {
   fetchCommonChats, fetchContactList, fetchFullUser, fetchProfilePhotos, fetchUsers, getChatByAci, reportSpam,
 } from './users';

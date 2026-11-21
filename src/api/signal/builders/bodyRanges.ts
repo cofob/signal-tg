@@ -4,8 +4,11 @@ import type { BodyRange, BodyRangeSchema } from '../../../lib/signal/proto/gener
 import type { ApiFormattedText, ApiMessageEntity, ApiMessageEntityDefault } from '../../types';
 import { ApiMessageEntityTypes } from '../../types';
 
+import { RE_LINK_TEMPLATE } from '../../../config';
 import { BodyRange_Style } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { uuidToString } from '../../../lib/signal/serviceId';
+import { getSgnlLinkStart, isSignalRoute } from '../../../util/signalLinks';
+import { trimLinkEnd } from '../../../util/trimLinkEnd';
 
 type Replacement = { start: number; length: number; text: string };
 
@@ -13,6 +16,25 @@ export type MentionedUser = { userId: string; name: string };
 
 // A mention takes one object replacement character in the body (Signal Desktop `ts/types/BodyRange.std.ts`)
 const MENTION_PLACEHOLDER = '￼';
+
+// Text that links are not made of: a spoiler hides its link until it is revealed, so the link stays plain
+const NO_LINK_ENTITY_TYPES = new Set<ApiMessageEntity['type']>([
+  ApiMessageEntityTypes.Code,
+  ApiMessageEntityTypes.Pre,
+  ApiMessageEntityTypes.MentionName,
+  ApiMessageEntityTypes.Spoiler,
+]);
+const RE_LINK = new RegExp(RE_LINK_TEMPLATE, 'gi');
+// Links with a scheme or `www.`, and Signal's links, which have no `www.`; plain `name.ext` is no link
+const RE_EXPLICIT_LINK = /^(?:(?:https?|ftp):\/\/|www\.)/i;
+const RE_ADDRESS_WITH_USER = /^[^/?#]*@/;
+// Signal Desktop `shouldLinkifyMessage`: a text that changes its direction has no links
+const RE_DIRECTIONAL_OVERRIDE = /[\u202c-\u202e]/;
+// Bounds on the work that a text can cause: the pattern of links takes time in proportion to the text, and each link
+// becomes an element
+const MAX_LINKIFIED_TEXT_LENGTH = 2 ** 16;
+const MAX_LINK_LENGTH = 4096;
+const MAX_LINKS = 100;
 
 const ENTITY_TYPE_BY_STYLE: Partial<Record<BodyRange_Style, ApiMessageEntityDefault['type']>> = {
   [BodyRange_Style.BOLD]: ApiMessageEntityTypes.Bold,
@@ -74,7 +96,49 @@ export function buildApiFormattedText(
     });
   }
 
-  return { text, entities: entities.length ? entities.sort((a, b) => a.offset - b.offset) : undefined };
+  entities.push(...buildLinkEntities(text, entities));
+
+  // An entity that contains another starts first, as the nesting of the rendered text needs
+  entities.sort((a, b) => a.offset - b.offset || b.length - a.length);
+  return { text, entities: entities.length ? entities : undefined };
+}
+
+/**
+ * Entities of the links in a text, which Signal does not send: apps find them in the text. A link is none inside
+ * code, a mention or a spoiler, or when it overlaps a style without one containing the other, which the rendered
+ * text could not nest.
+ */
+function buildLinkEntities(text: string, entities: ApiMessageEntity[]): ApiMessageEntity[] {
+  if (text.length > MAX_LINKIFIED_TEXT_LENGTH || RE_DIRECTIONAL_OVERRIDE.test(text)) return [];
+
+  const links: ApiMessageEntity[] = [];
+  for (const { 0: match, index: offset } of text.matchAll(RE_LINK)) {
+    if (links.length >= MAX_LINKS) break;
+    // The checks that take no time in proportion to the match come before the trim
+    if (match.length > MAX_LINK_LENGTH || RE_ADDRESS_WITH_USER.test(match)) continue;
+
+    const link = trimLinkEnd(match);
+    if (!RE_EXPLICIT_LINK.test(link) && !isSignalRoute(link)) continue;
+
+    const start = getSgnlLinkStart(text, offset, link);
+    const end = offset + link.length;
+    if (getCanLink(start, end, entities)) {
+      links.push({ type: ApiMessageEntityTypes.Url, offset: start, length: end - start });
+    }
+  }
+  return links;
+}
+
+function getCanLink(start: number, end: number, entities: ApiMessageEntity[]) {
+  return entities.every((entity) => {
+    const entityEnd = entity.offset + entity.length;
+    if (entity.offset >= end || entityEnd <= start) return true;
+    if (NO_LINK_ENTITY_TYPES.has(entity.type)) return false;
+
+    const isInside = entity.offset <= start && end <= entityEnd;
+    const isAround = start <= entity.offset && entityEnd <= end;
+    return isInside || isAround;
+  });
 }
 
 /**

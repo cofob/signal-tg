@@ -8,7 +8,9 @@ import { downloadGroupAvatar } from '../../../lib/signal/groups/fetchGroup';
 import { downloadProfileAvatar } from '../../../lib/signal/profiles/fetchProfile';
 import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import * as cacheApi from '../../../util/cacheApi';
-import { parseAttachmentMediaId, PREVIEW_SLOT, STICKER_SLOT } from '../builders/media';
+import {
+  parseAttachmentMediaId, parseStoryMediaId, PREVIEW_SLOT, STICKER_SLOT,
+} from '../builders/media';
 import { parsePackStickerId } from '../builders/stickers';
 import { getAvatarPhotoId } from '../builders/users';
 import { getCurrentAccount } from '../client';
@@ -64,7 +66,7 @@ async function fetchMedia(
     ? await fetchStickerImage(packSticker.packId, packSticker.packKey, packSticker.stickerId)
     : type === 'avatar' || type === 'profile'
       ? await fetchAvatar(url, await getConversationByPeerId(id))
-      : parseAttachmentMediaId(id)
+      : parseAttachmentMediaId(id) || parseStoryMediaId(id) !== undefined
         ? await fetchMessageMedia(id, new URLSearchParams(query).has('size'), onProgress)
         // The media viewer shows avatars as photos with the avatar photo id (`buildAvatarPhoto`)
         : await fetchAvatar(url, await getConversationByAvatarPhotoId(id));
@@ -89,10 +91,11 @@ async function fetchMessageMedia(mediaId: string, isThumbnail: boolean, onProgre
   if (!pointer) throw new Error(`Attachment ${mediaId} is not found`);
   if (!isThumbnail || pointer.contentType.startsWith('image/')) {
     return fetchAttachmentBlob(pointer, onProgress).catch(async (err: unknown) => {
-      // The message then shows the media as unavailable and stops asking for it
-      const { messageId, slot } = parseAttachmentMediaId(mediaId)!;
-      // A link preview without its image still shows
-      if (err instanceof AttachmentUnavailableError && slot !== PREVIEW_SLOT) {
+      // The message then shows the media as unavailable and stops asking for it; stories expire anyway, and a link
+      // preview without its image still shows
+      const parsed = parseAttachmentMediaId(mediaId);
+      if (parsed && err instanceof AttachmentUnavailableError && parsed.slot !== PREVIEW_SLOT) {
+        const { messageId, slot } = parsed;
         await processor.markAttachmentUnavailable(messageId, slot === STICKER_SLOT ? 'sticker' : slot);
       }
       throw err;

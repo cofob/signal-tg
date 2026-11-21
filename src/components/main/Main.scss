@@ -266,6 +266,10 @@
     }
 
     #Main.left-column-open & {
+      transform: translate3d(28.5rem, 0, 0);
+    }
+
+    #Main.left-column-open.folders-sidebar-visible & {
       transform: translate3d(calc(var(--folders-sidebar-width) + 28.5rem), 0, 0);
     }
 

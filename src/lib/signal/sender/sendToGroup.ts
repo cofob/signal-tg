@@ -29,7 +29,16 @@ type GroupSendOptions = {
   contentHint: ContentHint;
   isOnline?: boolean;
   isUrgent?: boolean;
+  isStory?: boolean;
 };
+
+/**
+ * Who a sender key send goes to (Signal Desktop `SenderKeyTargetType`): the members of a group, or a story
+ * distribution list, whose id is the distribution id of its sender key
+ */
+export type SenderKeyTarget =
+  | { type: 'group'; group: GroupTarget }
+  | { type: 'storyList'; listId: string };
 
 type GroupSendResult = {
   results: RecipientResult[];
@@ -51,6 +60,8 @@ const HTTP_GONE = 410;
 // The send fails instead of falling back to sends to each member, which would fail the same way
 // (Signal Desktop `_shouldFailSend`)
 const FATAL_STATUSES = new Set([400, 413, 428, 429, 500, 508]);
+// Sender key infos of story distribution lists are stored next to those of groups, whose keys are base64 group ids
+const STORY_LIST_INFO_PREFIX = 'storyList:';
 
 // Sends to one group run one at a time, since each reads and updates its sender key info
 const queues = new Map<string, Promise<unknown>>();
@@ -65,22 +76,23 @@ class MultiRecipientSendError extends Error {
  * Sends `content` to the group members that have send endorsements with one sealed sender multi-recipient
  * message encrypted with our sender key, after giving the key to the devices that lack it (Signal Desktop
  * `ts/util/sendToGroup.preload.ts`, `sendToGroupViaSenderKey`). Members without endorsements, and every
- * member when the sender key send cannot be used, are left for sends one by one.
+ * member when the sender key send cannot be used, are left for sends one by one. Stories need no endorsements:
+ * the server takes them without authorization (`story` auth of libsignal-net).
  */
 export function sendWithSenderKey(
   context: SenderContext,
-  group: GroupTarget,
+  target: SenderKeyTarget,
   recipients: string[],
   content: MessageInitShape<typeof ContentSchema>,
   options: GroupSendOptions,
 ) {
-  const groupId = bufferToBase64(group.id);
+  const infoKey = getSenderKeyInfoKey(target);
   // `sendQueued` does not reject
-  const result = (queues.get(groupId) ?? Promise.resolve())
-    .then(() => sendQueued(context, group, groupId, recipients, content, options));
-  queues.set(groupId, result);
+  const result = (queues.get(infoKey) ?? Promise.resolve())
+    .then(() => sendQueued(context, target, infoKey, recipients, content, options));
+  queues.set(infoKey, result);
   void result.then(() => {
-    if (queues.get(groupId) === result) queues.delete(groupId);
+    if (queues.get(infoKey) === result) queues.delete(infoKey);
   });
   return result;
 }
@@ -103,15 +115,15 @@ export async function getSenderKeyDistributionMessage(
 
 async function sendQueued(
   context: SenderContext,
-  group: GroupTarget,
-  groupId: string,
+  target: SenderKeyTarget,
+  infoKey: string,
   recipients: string[],
   content: MessageInitShape<typeof ContentSchema>,
   options: GroupSendOptions,
 ): Promise<GroupSendResult> {
   const failed: RecipientResult[] = [];
   try {
-    return await sendWithRetries(context, group, groupId, recipients, content, options, failed);
+    return await sendWithRetries(context, target, infoKey, recipients, content, options, failed);
   } catch (err) {
     const remaining = recipients.filter((serviceId) => !failed.some((result) => result.serviceId === serviceId));
     if (err instanceof MultiRecipientSendError && FATAL_STATUSES.has(err.status)) {
@@ -127,8 +139,8 @@ async function sendQueued(
  */
 async function sendWithRetries(
   context: SenderContext,
-  group: GroupTarget,
-  groupId: string,
+  target: SenderKeyTarget,
+  infoKey: string,
   recipients: string[],
   content: MessageInitShape<typeof ContentSchema>,
   options: GroupSendOptions,
@@ -136,25 +148,30 @@ async function sendWithRetries(
 ): Promise<GroupSendResult> {
   const { store, account } = context;
   const plaintext = toBinary(ContentSchema, create(ContentSchema, content));
+  const group = target.type === 'group' ? target.group : undefined;
+  const isStory = Boolean(options.isStory);
   let didRefreshGroup = false;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const info = await getSenderKeyInfo(context, groupId);
+    const info = await getSenderKeyInfo(context, infoKey, target.type === 'storyList' ? target.listId : undefined);
     const candidates = recipients.filter((serviceId) => !failed.some((result) => result.serviceId === serviceId));
 
     // Endorsements that expire soon or miss members are renewed once with the group state; a failed refresh
-    // keeps what we have (Signal Desktop `maybeCreateGroupSendEndorsementState`)
-    const endorsements = await store.getGroupSendEndorsements(groupId);
+    // keeps what we have (Signal Desktop `maybeCreateGroupSendEndorsementState`). Stories go without them.
+    const endorsements = group && !isStory ? await store.getGroupSendEndorsements(infoKey) : undefined;
     const isCurrent = endorsements && getAreGroupSendEndorsementsCurrent(endorsements);
-    if ((!isCurrent || candidates.some((serviceId) => !endorsements.members[serviceId])) && !didRefreshGroup) {
+    if (group && !isStory && !didRefreshGroup
+      && (!isCurrent || candidates.some((serviceId) => !endorsements.members[serviceId]))) {
       didRefreshGroup = true;
       await group.refresh().catch(() => undefined);
       continue;
     }
 
-    const endorsed = candidates.filter((serviceId) => endorsements?.members[serviceId]);
+    const endorsed = isStory ? candidates : candidates.filter((serviceId) => endorsements?.members[serviceId]);
     const others = candidates.filter((serviceId) => !endorsed.includes(serviceId));
-    if (!isCurrent || endorsed.length < MIN_SENDER_KEY_RECIPIENTS) return { results: failed, remaining: candidates };
+    if ((!isStory && !isCurrent) || endorsed.length < MIN_SENDER_KEY_RECIPIENTS) {
+      return { results: failed, remaining: candidates };
+    }
 
     const devices = await getMemberDevices(context, endorsed, failed);
     if (!devices) continue;
@@ -162,10 +179,11 @@ async function sendWithRetries(
     const added = devices.filter((device) => !info.memberDevices.some((member) => isSameDevice(member, device)));
     const removed = info.memberDevices.filter((member) => !devices.some((device) => isSameDevice(member, device)));
 
-    // A member left the group: they must not read later messages. A group update also goes to removed members,
-    // whom the endorsements of the new revision leave out.
-    if (removed.some(({ serviceId }) => !recipients.includes(serviceId) || !endorsements.members[serviceId])) {
-      await resetSenderKey(context, groupId, info);
+    // A member left the group or the list: they must not read later messages. A group update also goes to removed
+    // members, whom the endorsements of the new revision leave out.
+    if (removed.some(({ serviceId }) => !recipients.includes(serviceId)
+      || (endorsements && !endorsements.members[serviceId]))) {
+      await resetSenderKey(context, infoKey, info);
       continue;
     }
 
@@ -175,32 +193,38 @@ async function sendWithRetries(
       }, {
         timestamp: Date.now(),
         contentHint: options.contentHint,
-        groupId: group.id,
+        groupId: group?.id,
         isUrgent: options.isUrgent,
+        // Only the keys of distribution lists go as stories (Signal Desktop `sendContentMessageToGroup`)
+        isStory: isStory && !group,
       });
       failed.push(...results.filter(({ error }) => error));
       const reached = added.filter((device) => results.some(({ serviceId, error }) => (
         serviceId === device.serviceId && !error
       )));
-      await store.setSenderKeyInfo(groupId, { ...info, memberDevices: [...info.memberDevices, ...reached] });
+      await store.setSenderKeyInfo(infoKey, { ...info, memberDevices: [...info.memberDevices, ...reached] });
       continue;
     }
 
     if (removed.length) {
-      await store.setSenderKeyInfo(groupId, { ...info, memberDevices: info.memberDevices.filter((member) => (
+      await store.setSenderKeyInfo(infoKey, { ...info, memberDevices: info.memberDevices.filter((member) => (
         !removed.includes(member)
       )) });
     }
 
-    const token = buildGroupSendToken(endorsements, account.aci, group.secretParams, endorsed);
+    const headers: Record<string, string> = { 'Content-Type': MULTI_RECIPIENT_CONTENT_TYPE };
+    if (endorsements) {
+      const token = buildGroupSendToken(endorsements, account.aci, group!.secretParams, endorsed);
+      headers['Group-Send-Token'] = bufferToBase64(token);
+    }
     const body = await encryptForSenderKey(
-      context, info.distributionId, devices, plaintext, options.contentHint, group.id,
+      context, info.distributionId, devices, plaintext, options.contentHint, group?.id,
     );
     const response = await context.unauthenticatedChat.sendRequest({
       verb: 'PUT',
       path: `/v1/messages/multi_recipient?ts=${options.timestamp}&online=${Boolean(options.isOnline)}`
-        + `&urgent=${options.isUrgent ?? true}&story=false`,
-      headers: { 'Content-Type': MULTI_RECIPIENT_CONTENT_TYPE, 'Group-Send-Token': bufferToBase64(token) },
+        + `&urgent=${options.isUrgent ?? true}&story=${isStory}`,
+      headers,
       body,
     });
 
@@ -222,7 +246,7 @@ async function sendWithRetries(
     for (const { uuid, devices: mismatch } of mismatches) {
       await updateDevices(context, uuid, mismatch);
     }
-    if (response.status === HTTP_GONE) await forgetStaleDevices(context, groupId, mismatches);
+    if (response.status === HTTP_GONE) await forgetStaleDevices(context, infoKey, mismatches);
   }
 
   throw new Error('The sender key send kept changing');
@@ -247,16 +271,24 @@ async function getMemberDevices(context: SenderContext, serviceIds: string[], fa
   return isComplete ? devices : undefined;
 }
 
-/** Creates the sender key info of a group, or resets it when it is too old */
-async function getSenderKeyInfo(context: SenderContext, groupId: string) {
+/** The key of a target's sender key info: the base64 group id, or the prefixed id of a distribution list */
+function getSenderKeyInfoKey(target: SenderKeyTarget) {
+  return target.type === 'group' ? bufferToBase64(target.group.id) : `${STORY_LIST_INFO_PREFIX}${target.listId}`;
+}
+
+/**
+ * Creates the sender key info of a target, or resets it when it is too old. Groups get a random distribution id,
+ * distribution lists use their own id (Signal Desktop `distributionListToSendTarget`).
+ */
+async function getSenderKeyInfo(context: SenderContext, infoKey: string, distributionId?: string) {
   const { store } = context;
-  const info = await store.getSenderKeyInfo(groupId);
+  const info = await store.getSenderKeyInfo(infoKey);
   if (!info) {
-    const created = { distributionId: crypto.randomUUID(), createdAt: Date.now(), memberDevices: [] };
-    await store.setSenderKeyInfo(groupId, created);
+    const created = { distributionId: distributionId ?? crypto.randomUUID(), createdAt: Date.now(), memberDevices: [] };
+    await store.setSenderKeyInfo(infoKey, created);
     return created;
   }
-  if (Date.now() - info.createdAt > SENDER_KEY_MAX_AGE_MS) return resetSenderKey(context, groupId, info);
+  if (Date.now() - info.createdAt > SENDER_KEY_MAX_AGE_MS) return resetSenderKey(context, infoKey, info);
   return info;
 }
 
@@ -264,9 +296,9 @@ async function getSenderKeyInfo(context: SenderContext, groupId: string) {
  * Drops our sender key, so the next distribution message carries a new one. The distribution id stays,
  * which keeps one sender key record per group on recipients (Signal Desktop `resetSenderKey`).
  */
-async function resetSenderKey({ store, account }: SenderContext, groupId: string, info: SenderKeyInfoRecord) {
+async function resetSenderKey({ store, account }: SenderContext, infoKey: string, info: SenderKeyInfoRecord) {
   const reset = { distributionId: info.distributionId, createdAt: Date.now(), memberDevices: [] };
-  await store.setSenderKeyInfo(groupId, reset);
+  await store.setSenderKeyInfo(infoKey, reset);
   await store.runExclusive(() => store.removeSenderKey(
     getSenderKeyId(account.aci, account.deviceId, uuidToBytes(info.distributionId)),
   ));
@@ -274,9 +306,9 @@ async function resetSenderKey({ store, account }: SenderContext, groupId: string
 }
 
 /** Re-registered or re-linked devices need our sender key again (Signal Desktop `handle410Response`) */
-async function forgetStaleDevices(context: SenderContext, groupId: string, mismatches: MultiRecipientMismatch) {
-  const info = (await context.store.getSenderKeyInfo(groupId))!;
-  await context.store.setSenderKeyInfo(groupId, {
+async function forgetStaleDevices(context: SenderContext, infoKey: string, mismatches: MultiRecipientMismatch) {
+  const info = (await context.store.getSenderKeyInfo(infoKey))!;
+  await context.store.setSenderKeyInfo(infoKey, {
     ...info,
     memberDevices: info.memberDevices.filter((member) => !mismatches.some(({ uuid, devices }) => (
       uuid === member.serviceId && devices.staleDevices?.includes(member.deviceId)
@@ -305,7 +337,7 @@ async function encryptForSenderKey(
   devices: SenderKeyDevice[],
   plaintext: Uint8Array,
   contentHint: ContentHint,
-  groupId: Uint8Array,
+  groupId?: Uint8Array,
 ) {
   const { store, account, connection } = context;
   const certificate = await getSenderCertificate(store, connection);
