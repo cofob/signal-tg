@@ -7,6 +7,14 @@ TeleSignal is based, is in [docs/TELEGRAM_WEB_A_CHANGELOG.md](docs/TELEGRAM_WEB_
 
 ## [Unreleased]
 
+### Added
+
+- Container image `ghcr.io/<owner>/telesignal` for `linux/amd64` and `linux/arm64` with the web app, nginx and the
+  tunnel in one container: correct caching and file types, precompressed files, security headers (the app's
+  Content-Security-Policy, `frame-ancestors`, `Referrer-Policy`, optional HSTS), `/tunnel` on the app's origin,
+  configuration through environment variables or your own nginx config, a non-root user and a read-only root file
+  system. Published with every release; deployment guide in [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ### Security
 
 - Desktop app: the TLS libraries and the ZIP reader of the updater are updated to versions that fix published security
