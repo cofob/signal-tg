@@ -248,9 +248,6 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
   isShared?: boolean;
   isDiscoverable?: boolean;
 }) {
-  const self = await getSelf();
-  if (!self) return undefined;
-
   try {
     const context = client.getSenderContext();
     const shouldBeDiscoverable = isShared ? true : isDiscoverable;
@@ -259,12 +256,7 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
       await processor.updateOwnAccount({ isPhoneNumberUnlisted: !shouldBeDiscoverable });
     }
     if (isShared !== undefined && isShared !== Boolean(context.account.isPhoneNumberShared)) {
-      await writeProfile(context, {
-        givenName: self.profileName ?? '',
-        familyName: self.profileFamilyName,
-        about: self.about,
-        aboutEmoji: self.aboutEmoji,
-      }, { type: 'unchanged' }, isShared);
+      await writeProfile(context, {}, { type: 'unchanged' }, isShared);
       await processor.updateOwnAccount({ isPhoneNumberShared: isShared });
     }
     return fetchPhoneNumberPrivacy();
