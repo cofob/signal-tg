@@ -265,8 +265,8 @@ export const webPage: WebPage.webPage = {
   _: 'webPage',
   pFlags: {},
   id: '9201',
-  url: 'https://telegram.org/',
-  display_url: 'telegram.org',
+  url: 'https://telegram-org.invalid/',
+  display_url: 'telegram-org.invalid',
   hash: 0,
   type: 'telegram_channel',
   site_name: 'Telegram',
@@ -473,7 +473,7 @@ export const boostsStatus: PremiumBoostsStatus.premiumBoostsStatus = {
   boosts: 14,
   next_level_boosts: 25,
   gift_boosts: 3,
-  boost_url: 'https://t.me/sandbox_channel?boost'
+  boost_url: 'https://t-me.invalid/sandbox_channel?boost'
 };
 
 export const paymentForm: PaymentsPaymentForm.paymentsPaymentForm = {
@@ -495,7 +495,7 @@ export const paymentForm: PaymentsPaymentForm.paymentsPaymentForm = {
     suggested_tip_amounts: [100, 200, 500]
   },
   provider_id: '1',
-  url: 'https://telegram.org/',
+  url: 'https://telegram-org.invalid/',
   // A native provider keeps the card popup on its own form. Any other value swaps it for an iframe
   // pointing at `url` — an external request, which the sandbox has no business making.
   native_provider: 'stripe',
@@ -847,20 +847,20 @@ export const walletSandboxNfts: WalletNftItem[] = [
   {
     collection_address: walletSandboxOtherAddress,
     name: 'Plush Pepe #12',
-    content_url: walletNftUrl('https://nft.fragment.com/gift/plushpepe-12.json'),
+    content_url: walletNftUrl('https://nft.fragment-com.invalid/gift/plushpepe-12.json'),
     attributes: [walletNftTrait('Model', 'Frog'), walletNftTrait('Backdrop', 'Emerald'), walletNftTrait('Symbol', 'Star')],
     // * the collection line under the name: a link, its page is on Fragment
-    extra: walletNftExtra({collection_name: 'Plush Pepes', collection_url: 'https://fragment.com/gifts/plushpepe'})
+    extra: walletNftExtra({collection_name: 'Plush Pepes', collection_url: 'https://fragment-com.invalid/gifts/plushpepe'})
   },
   {
     collection_address: FRAGMENT_USERNAMES,
     name: '@sandbox',
-    content_url: walletNftUrl('https://nft.fragment.com/username/sandbox.json')
+    content_url: walletNftUrl('https://nft.fragment-com.invalid/username/sandbox.json')
   },
   {
     collection_address: FRAGMENT_NUMBERS,
     name: '+888 0000 0007',
-    content_url: walletNftUrl('https://nft.fragment.com/number/88800000007.json')
+    content_url: walletNftUrl('https://nft.fragment-com.invalid/number/88800000007.json')
   },
   {
     collection_address: walletSandboxOtherAddress,
@@ -899,7 +899,7 @@ export const walletSandboxAddress = WALLET_ADDRESS;
  * being disconnected by the server
  */
 export const walletSandboxTonConnectSessions = [
-  {name: 'Fragment', url: 'https://fragment.com', closing: false},
+  {name: 'Fragment', url: 'https://fragment-com.invalid', closing: false},
   {name: 'TON Stakers', url: 'https://app.tonstakers.com', closing: false},
   {name: 'Getgems', url: 'https://getgems.io', closing: true}
 ].map(({name, url, closing}, index) => ({

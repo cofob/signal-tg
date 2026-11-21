@@ -1,7 +1,7 @@
 import {i18n} from '@lib/langPack';
 import setBlankToAnchor from '@lib/richTextProcessor/setBlankToAnchor';
 
-const FRAGMENT_USERNAME_URL = 'https://fragment.com/username/';
+const FRAGMENT_USERNAME_URL = 'https://fragment-com.invalid/username/';
 
 export function purchaseUsernameCaption() {
   const p = document.createElement('div');

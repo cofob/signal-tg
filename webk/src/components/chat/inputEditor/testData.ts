@@ -185,7 +185,7 @@ export function createChatInputEditorTestData({
           text('2', [{type: 'subscript'}]),
           text('O x'),
           text('2', [{type: 'superscript'}]),
-          text(' link', [{type: 'link', attrs: {href: 'https://telegram.org'}}]),
+          text(' link', [{type: 'link', attrs: {href: 'https://telegram-org.invalid'}}]),
           text(' mention', [{type: 'mentionName', attrs: {userId: 1}}]),
           text(' date', [{
             type: 'formattedDate',
@@ -305,31 +305,31 @@ export function createChatInputEditorTestData({
         type: 'paragraph',
         content: [
           text('Buttons: '),
-          inlineButton({action: 'url', url: 'https://telegram.org', color: 'primary'}, 'Open'),
+          inlineButton({action: 'url', url: 'https://telegram-org.invalid', color: 'primary'}, 'Open'),
           text(' '),
           inlineButton({action: 'copy', copyText: 'Telegram'}, 'Copy'),
           text(' '),
-          inlineButton({action: 'url', url: 'https://telegram.org/blog', color: 'success'}, 'Blog'),
+          inlineButton({action: 'url', url: 'https://telegram-org.invalid/blog', color: 'success'}, 'Blog'),
           text(' '),
           inlineButton({action: 'disabled', color: 'danger'}, 'Soon'),
           text(' and a '),
-          inlineButton({action: 'url', url: 'https://core.telegram.org', link: true}, 'link button'),
+          inlineButton({action: 'url', url: 'https://core.telegram-org.invalid', link: true}, 'link button'),
           text(' in the text.')
         ]
       },
       buttonRow(null, [
-        [{action: 'url', url: 'https://telegram.org'}, 'Open link'],
+        [{action: 'url', url: 'https://telegram-org.invalid'}, 'Open link'],
         [{action: 'copy', copyText: 'Telegram'}, 'Copy text']
       ]),
       buttonRow(null, [
-        [{action: 'url', url: 'https://telegram.org/apps', color: 'primary'}, 'Primary'],
+        [{action: 'url', url: 'https://telegram-org.invalid/apps', color: 'primary'}, 'Primary'],
         [{action: 'copy', copyText: 'Success', color: 'success'}, 'Success'],
         [{action: 'disabled', color: 'danger'}, 'Danger']
       ]),
       buttonRow(null, [
-        [{action: 'url', url: 'https://telegram.org/faq'}, 'A label much too long to fit its button, even in the widest composer, so its end is cut off with an ellipsis']
+        [{action: 'url', url: 'https://telegram-org.invalid/faq'}, 'A label much too long to fit its button, even in the widest composer, so its end is cut off with an ellipsis']
       ]),
-      buttonRow('left', [[{action: 'url', url: 'https://telegram.org'}, 'Left']]),
+      buttonRow('left', [[{action: 'url', url: 'https://telegram-org.invalid'}, 'Left']]),
       buttonRow('center', [
         [{action: 'copy', copyText: 'Telegram'}, 'Copy'],
         [{action: 'disabled', color: 'danger'}, 'Soon']

@@ -1,9 +1,14 @@
-// Fails when a Telegram host name appears in the shipped app: TeleSignal sends no requests to Telegram
-import { readdirSync, readFileSync, statSync } from 'fs';
+// Fails when a Telegram host name appears in the shipped app: TeleSignal sends no requests to Telegram. Web A is checked
+// in its sources; Web K (`webk/`), whose vendored sources keep Telegram's code that the build leaves out, is checked in
+// its built bundle, so run `npm run build:production` first to cover it.
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, sep } from 'path';
 
 const ROOT = process.cwd();
 const SCANNED_PATHS = ['src', 'public', 'index.html', 'vite.config.ts'];
+const WEB_K_BUNDLE_PATH = join(process.env.BUILD_OUT_DIR || 'dist', 'k');
+// Source maps carry the vendored sources, comments included; what runs is the code next to them
+const RE_SKIPPED_FILE = /\.map$/;
 
 // Telegram's domains, including those of its web apps, CDN, blog and Fragment
 const TELEGRAM_DOMAINS = [
@@ -25,7 +30,18 @@ type Finding = { path: string; line: number; host: string };
 main();
 
 function main() {
-  const findings = SCANNED_PATHS.flatMap((path) => listFiles(join(ROOT, path))).flatMap(checkFile);
+  const scannedPaths = [...SCANNED_PATHS];
+  if (existsSync(join(ROOT, WEB_K_BUNDLE_PATH))) {
+    scannedPaths.push(WEB_K_BUNDLE_PATH);
+  } else {
+    // eslint-disable-next-line no-console
+    console.warn(`${WEB_K_BUNDLE_PATH} is not built: Web K is not checked`);
+  }
+
+  const findings = scannedPaths
+    .flatMap((path) => listFiles(join(ROOT, path)))
+    .filter((path) => !RE_SKIPPED_FILE.test(path))
+    .flatMap(checkFile);
 
   if (!findings.length) return;
 

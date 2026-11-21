@@ -330,7 +330,7 @@ function validTextUrl(url: string) {
   if(/[\u0000-\u0020\u007F]/.test(url)) return false;
   if(url.startsWith('#') || url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) return true;
   try {
-    return ['http:', 'https:', 'tg:', 'tonsite:'].includes(new URL(url, 'https://t.me').protocol);
+    return ['http:', 'https:', 'tg:', 'tonsite:'].includes(new URL(url, 'https://t-me.invalid').protocol);
   } catch{
     return false;
   }

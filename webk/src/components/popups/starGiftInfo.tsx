@@ -933,7 +933,7 @@ export default function showStarGiftInfoPopup(options: {
     const handleShare = () => {
       const managers = bindManagersToSession(rootScope.managers);
       showSharingPicker2Popup().then(({peerId, threadId, monoforumThreadId}) => {
-        managers.appMessagesManager.sendText({peerId, threadId, replyToMonoforumPeerId: monoforumThreadId, text: 'https://t.me/nft/' + (gift as StarGift.starGiftUnique).slug});
+        managers.appMessagesManager.sendText({peerId, threadId, replyToMonoforumPeerId: monoforumThreadId, text: 'https://t-me.invalid/nft/' + (gift as StarGift.starGiftUnique).slug});
         hotReloadGuard.appImManager.setInnerPeer({peerId, threadId, monoforumThreadId});
         context.hide();
       });
@@ -1132,7 +1132,7 @@ export default function showStarGiftInfoPopup(options: {
                   icon: 'link',
                   text: 'CopyLink',
                   onClick: () => {
-                    copyTextToClipboard('https://t.me/nft/' + gift.slug);
+                    copyTextToClipboard('https://t-me.invalid/nft/' + gift.slug);
                     toastNew({langPackKey: 'LinkCopied'});
                   }
                 }
@@ -1162,7 +1162,7 @@ export default function showStarGiftInfoPopup(options: {
               <MediaHeader.Subtitle>
                 {i18n('StarGiftReceivedSubtitle', [saved.convert_stars])}
                 {' '}
-                <a href="https://telegram.org/blog/telegram-stars" target="_blank">
+                <a href="https://telegram-org.invalid/blog/telegram-stars" target="_blank">
                   {i18n('StarGiftReceivedSubtitleLink')}
                 </a>
               </MediaHeader.Subtitle>

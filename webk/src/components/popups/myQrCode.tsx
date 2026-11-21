@@ -188,7 +188,7 @@ function MyQrCodePopup(props: {
     if(own.enabled) return own.url();
     if(username()) return buildTelegramUserQrUrl(username());
     if(peerId.isUser()) return buildPhoneUrl(peer.phone ?? '');
-    return `https://t.me/c/${peerId.toChatId()}`;
+    return `https://t-me.invalid/c/${peerId.toChatId()}`;
   });
 
   const caption = createMemo<Caption | undefined>(() => {

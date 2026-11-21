@@ -68,7 +68,7 @@ function StarGiftGridItem(props: {
           onClick: () => {
             const managers = bindManagersToSession(rootScope.managers);
             showSharingPicker2Popup().then(({peerId, threadId, monoforumThreadId}) => {
-              managers.appMessagesManager.sendText({peerId, threadId, replyToMonoforumPeerId: monoforumThreadId, text: 'https://t.me/nft/' + (raw as StarGift.starGiftUnique).slug});
+              managers.appMessagesManager.sendText({peerId, threadId, replyToMonoforumPeerId: monoforumThreadId, text: 'https://t-me.invalid/nft/' + (raw as StarGift.starGiftUnique).slug});
               hotReloadGuard.appImManager.setInnerPeer({peerId, threadId, monoforumThreadId});
             });
           }
@@ -86,7 +86,7 @@ function StarGiftGridItem(props: {
           text: 'CopyLink',
           verify: () => raw._ === 'starGiftUnique',
           onClick: () => {
-            copyTextToClipboard('https://t.me/nft/' + (raw as StarGift.starGiftUnique).slug);
+            copyTextToClipboard('https://t-me.invalid/nft/' + (raw as StarGift.starGiftUnique).slug);
             toastNew({langPackKey: 'LinkCopied'});
           }
         },

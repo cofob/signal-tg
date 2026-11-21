@@ -279,7 +279,7 @@ function PremiumContent(props: {
         // * a period with no link of its own goes through the Premium bot, told where the user came from
         hotReloadGuard.appImManager.openUsername({userName: premium_bot_username, startParam: props.source});
       } else if(premium_invoice_slug) {
-        hotReloadGuard.appImManager.openUrl('https://t.me/$' + premium_invoice_slug);
+        hotReloadGuard.appImManager.openUrl('https://t-me.invalid/$' + premium_invoice_slug);
       }
     });
   };

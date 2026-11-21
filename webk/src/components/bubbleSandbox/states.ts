@@ -133,7 +133,7 @@ const getTextOptions = (): StateOption[] => [
   {
     id: 'formatted',
     label: 'Formatted',
-    apply: (message) => setMarkdown(message, '**Bold**, __italic__, ~~struck~~, `code`, ||a spoiler|| and telegram.org')
+    apply: (message) => setMarkdown(message, '**Bold**, __italic__, ~~struck~~, `code`, ||a spoiler|| and telegram-org.invalid')
   },
   {
     id: 'quote',

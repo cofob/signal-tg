@@ -480,8 +480,8 @@ function link(method: 'openLink' | 'openTelegramLink', url: unknown) {
   const checked = checkLink(method, url);
   if (checked === null) {
     throw new TypeError(method === 'openLink'
-      ? 'openLink: expected an absolute https: URL of at most 256 characters, without a user name, not on t.me (use openTelegramLink)'
-      : 'openTelegramLink: expected https://t.me/… (or telegram.me, telegram.dog) of at most 256 characters');
+      ? 'openLink: expected an absolute https: URL of at most 256 characters, without a user name, not on t-me.invalid (use openTelegramLink)'
+      : 'openTelegramLink: expected https://t-me.invalid/… (or telegram-me.invalid, telegram-dog.invalid) of at most 256 characters');
   }
   bridge(method, checked);
 }

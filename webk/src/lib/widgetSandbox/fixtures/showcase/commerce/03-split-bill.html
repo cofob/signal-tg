@@ -98,7 +98,7 @@
     // The amounts as they will be once the tweens land, not as they are drawn this frame.
     const per = [0, 0, 0, 0]; DISHES.forEach((d, i) => { for (const p of share[i]) per[p] += d.p / share[i].size; });
     const text = 'Barbarestan, tip ' + tip + '%: ' + PEOPLE.slice(1).map((p, i) => p.n + ' ' + (per[i + 1] * (1 + tip / 100)).toFixed(2)).join(', ') + ' GEL';
-    tw?.openTelegramLink?.('https://t.me/share/url?url=' + encodeURIComponent('https://pay.example.com/split/b7q2') + '&text=' + encodeURIComponent(text));
+    tw?.openTelegramLink?.('https://t-me.invalid/share/url?url=' + encodeURIComponent('https://pay.example.com/split/b7q2') + '&text=' + encodeURIComponent(text));
     saved.requested = true; save(); requested(false);
   });
   calc();

@@ -39,8 +39,8 @@ export class TelegramMeWebManager {
 
       const path = `_websync_?authed=${canRedirect ? '1' : '0'}&version=${encodeURIComponent(App.version + ' ' + App.suffix)}`;
       const urls = [
-        '//telegram.me/' + path,
-        '//t.me/' + path
+        '//telegram-me.invalid/' + path,
+        '//t-me.invalid/' + path
       ];
 
       const promises = urls.map((url) => {

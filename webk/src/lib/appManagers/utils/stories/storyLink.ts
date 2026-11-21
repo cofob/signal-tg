@@ -2,7 +2,7 @@ import type {Chat, StoryItem, User} from '@layer';
 import getPeerActiveUsernames from '@appManagers/utils/peers/getPeerActiveUsernames';
 
 export function makeStoryLink(username: string, storyId: number) {
-  return `https://t.me/${username}/s/${storyId}`;
+  return `https://t-me.invalid/${username}/s/${storyId}`;
 }
 
 /**

@@ -769,7 +769,7 @@ PeerProfile.Phone = () => {
               return a;
             })()],
             onClick: () => {
-              safeWindowOpen('https://fragment.com/numbers');
+              safeWindowOpen('https://fragment-com.invalid/numbers');
             },
             separator: true,
             secondary: true,
@@ -1119,7 +1119,7 @@ PeerProfile.Link = () => {
 
     const usernames = getPeerActiveUsernames(context.peer as Chat.channel);
     if(context.isTopic) {
-      let url = 't.me/';
+      let url = 't-me.invalid/';
       const threadId = getServerMessageId(context.threadId);
       const username = usernames[0];
       if(username) {
@@ -1133,7 +1133,7 @@ PeerProfile.Link = () => {
 
     if(usernames.length) {
       return {
-        url: 't.me/' + usernames[0],
+        url: 't-me.invalid/' + usernames[0],
         username: usernames[0],
         also: getUsernamesAlso(context.peerId, context.peer as Chat.channel, usernames)
       };
@@ -1142,7 +1142,7 @@ PeerProfile.Link = () => {
     const exportedInvite = (context.fullPeer as ChatFull.channelFull)?.exported_invite;
     if(exportedInvite?._ === 'chatInviteExported') {
       return {
-        url: exportedInvite.link.slice(exportedInvite.link.indexOf('t.me/'))
+        url: exportedInvite.link.slice(exportedInvite.link.indexOf('t-me.invalid/'))
       };
     }
   });

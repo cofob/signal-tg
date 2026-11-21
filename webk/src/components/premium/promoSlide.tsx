@@ -241,7 +241,7 @@ function Heading(props: {
         return;
       }
 
-      const url = 'https://t.me/giftcode/' + gift.slug;
+      const url = 'https://t-me.invalid/giftcode/' + gift.slug;
       const inviteLink = new InviteLink({
         button: false,
         listenerSetter: props.data.listenerSetter,

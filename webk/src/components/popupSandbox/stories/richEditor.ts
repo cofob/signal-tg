@@ -7,7 +7,7 @@ defineStories('Rich editor', [
     title: 'Create a link',
     open: async() => {
       const {default: showCreateLinkPopup} = await import('@components/popups/createLink');
-      void showCreateLinkPopup({text: 'Telegram', url: 'https://telegram.org'}).catch(noop);
+      void showCreateLinkPopup({text: 'Telegram', url: 'https://telegram-org.invalid'}).catch(noop);
     }
   },
   {

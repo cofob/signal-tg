@@ -1,20 +1,10 @@
 {
-    "name": "Telegram Web",
-    "short_name": "Telegram Web",
+    "name": "TeleSignal",
+    "short_name": "TeleSignal",
     "id": "/k/",
     "start_url": "./",
     "scope": "./",
-    "scope_extensions": [
-        {
-            "type": "origin",
-            "origin": "https://t.me"
-        },
-        {
-            "type": "origin",
-            "origin": "https://telegram.me"
-        }
-    ],
-    "description": "Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.",
+    "description": "A web client for Signal",
     "icons": [
         {
             "src": "assets/img/android-chrome-36x36.png?v=jw3mK7G9Ry",
@@ -62,11 +52,13 @@
             "type": "image/png"
         }
     ],
-    "screenshots" : [{
-        "src": "assets/img/screenshot.jpg",
-        "sizes": "1280x910",
-        "type": "image/jpeg"
-    }],
+    "screenshots": [
+        {
+            "src": "assets/img/screenshot.jpg",
+            "sizes": "1280x910",
+            "type": "image/jpeg"
+        }
+    ],
     "share_target": {
         "action": "./share/",
         "method": "POST",
@@ -75,10 +67,12 @@
             "title": "title",
             "text": "text",
             "url": "url",
-            "files": [{
-                "name": "files",
-                "accept": "*/*"
-            }]
+            "files": [
+                {
+                    "name": "files",
+                    "accept": "*/*"
+                }
+            ]
         }
     },
     "theme_color": "#fffffe",

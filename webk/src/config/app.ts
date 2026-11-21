@@ -8,7 +8,7 @@
 import type {TrueDcId} from '@types';
 import {BASE_DC_ID} from '@lib/accounts/authKeyFingerprint';
 
-export const MAIN_DOMAINS = ['web.telegram.org', 'webk.telegram.org'];
+export const MAIN_DOMAINS = ['web.telegram-org.invalid', 'webk.telegram-org.invalid'];
 export const DEFAULT_BACKGROUND_SLUG = 'pattern';
 
 const threads = Math.min(4, navigator.hardwareConcurrency ?? 4);

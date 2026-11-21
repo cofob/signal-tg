@@ -1008,7 +1008,7 @@ export class AppSidebarLeft extends SidebarSlider {
       onClick: () => {
         const a = document.createElement('a');
         setBlankToAnchor(a);
-        a.href = 'https://bugs.telegram.org/?tag_ids=40&sort=time';
+        a.href = 'https://github.com/cofob/signal-tg/issues';
         document.body.append(a);
         a.click();
         setTimeout(() => {

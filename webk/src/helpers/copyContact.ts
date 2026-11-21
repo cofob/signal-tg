@@ -6,7 +6,7 @@ import {copyTextToClipboard} from '@helpers/clipboard';
  * toast that says what went to the clipboard.
  */
 
-export const T_ME = 'https://t.me/';
+export const T_ME = 'https://t-me.invalid/';
 
 /** As `@username`. */
 export function copyUsername(username: string) {

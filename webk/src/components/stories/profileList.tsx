@@ -365,7 +365,7 @@ function StoriesAlbums(props: {
               text: 'CopyLink',
               onClick: async() => {
                 const username = await rootScope.managers.appPeersManager.getPeerUsername(props.peerId);
-                copyTextToClipboard(`https://t.me/${username}/a/${id}`);
+                copyTextToClipboard(`https://t-me.invalid/${username}/a/${id}`);
                 toastNew({langPackKey: 'LinkCopied'});
               },
               verify: async() => {

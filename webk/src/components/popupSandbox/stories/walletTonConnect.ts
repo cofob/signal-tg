@@ -24,7 +24,7 @@ import {formatTonAddress} from '@lib/wallet/tonAddress';
 import bytesToHex from '@helpers/bytes/bytesToHex';
 import bytesFromHex from '@helpers/bytes/bytesFromHex';
 
-const INFO: TonConnectManifestInfo = {name: 'Fragment', domain: 'fragment.com', url: 'https://fragment.com'};
+const INFO: TonConnectManifestInfo = {name: 'Fragment', domain: 'fragment-com.invalid', url: 'https://fragment-com.invalid'};
 /** a contract the app pays: a bounceable address */
 const CONTRACT = formatTonAddress({workchain: 0, hash: new Uint8Array(32).fill(0x5a), bounceable: true});
 
@@ -323,7 +323,7 @@ defineStories('Wallet', [
     managers: (ctx: PopupStoryContext) => withTonConnect(walletSandboxManagers()(ctx)),
     open: async() => {
       const {openTonConnectLink} = await import('@components/wallet/tonConnect');
-      const request = JSON.stringify({manifestUrl: 'https://fragment.com/tonconnect-manifest.json', items: [{name: 'ton_addr'}]});
+      const request = JSON.stringify({manifestUrl: 'https://fragment-com.invalid/tonconnect-manifest.json', items: [{name: 'ton_addr'}]});
       openTonConnectLink('tc://?v=2&id=' + 'ab'.repeat(32) + '&r=' + encodeURIComponent(request) + '&ret=none');
     }
   },
@@ -340,7 +340,7 @@ defineStories('Wallet', [
         ...base,
         appWalletManager: {
           ...base.appWalletManager,
-          getTonConnectOwnershipDomain: () => 'wallet.telegram.org',
+          getTonConnectOwnershipDomain: () => 'wallet.telegram-org.invalid',
           tonConnectCreateSession: () => session,
           tonConnectGetPending: () => ({_: 'wallet.tonConnectPending', session: walletSandboxTonConnectSessions[0] && {...session, manifest: walletSandboxTonConnectSessions[0].manifest}, requests: [] as any[]})
         }
@@ -354,8 +354,8 @@ defineStories('Wallet', [
       const session = WalletSession.get();
       const getDeviceMode = session.getDeviceMode;
       session.getDeviceMode = async() => 'full';
-      const request = JSON.stringify({manifestUrl: 'https://fragment.com/tonconnect-manifest.json', items: [{name: 'ton_addr'}, {name: 'ton_proof', payload: 'p'}]});
-      await openTonConnectLink('https://t.me/sendgrams?startapp=tonconnect-v__2-id__' + 'ab'.repeat(32) + '-r__' + encodeURIComponent(request).replace(/[-._~!'()*]/g, (char) => '%' + char.charCodeAt(0).toString(16).toUpperCase()).replace(/%/g, '--'));
+      const request = JSON.stringify({manifestUrl: 'https://fragment-com.invalid/tonconnect-manifest.json', items: [{name: 'ton_addr'}, {name: 'ton_proof', payload: 'p'}]});
+      await openTonConnectLink('https://t-me.invalid/sendgrams?startapp=tonconnect-v__2-id__' + 'ab'.repeat(32) + '-r__' + encodeURIComponent(request).replace(/[-._~!'()*]/g, (char) => '%' + char.charCodeAt(0).toString(16).toUpperCase()).replace(/%/g, '--'));
       return () => session.getDeviceMode = getDeviceMode;
     }
   },

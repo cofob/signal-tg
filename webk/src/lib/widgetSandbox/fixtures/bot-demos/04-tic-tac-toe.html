@@ -100,7 +100,7 @@ if(!g.m&&g.X&&g.O)return fl(E.Full);
 if(g.X&&g.t!=m)return fl('Not your turn');
 req('ttt:'+i,i,m)});
 $('rm').addEventListener('click',()=>V&&req('ttt:new',-1));
-$('pb').addEventListener('click',()=>{try{T.openTelegramLink('https://t.me/'+B)}catch(e){}});
+$('pb').addEventListener('click',()=>{try{T.openTelegramLink('https://t-me.invalid/'+B)}catch(e){}});
 if(T){T.onEvent('chatDataChanged',()=>{gh=-1;draw()});T.onEvent('publicDataChanged',draw)}
 draw();
 T.ready&&T.ready();

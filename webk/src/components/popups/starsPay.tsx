@@ -348,7 +348,7 @@ export default function showStarsPayPopup(options: StarsPayOptions): StarsPayHan
         const mid = transaction.giveaway_post_id || transaction.msg_id;
         if(!peerId || !mid) return;
         const serverMsgId = getServerMessageId(mid);
-        return peerId.isUser() ? undefined : `https://t.me/c/${peerId.toChatId()}/${serverMsgId}`;
+        return peerId.isUser() ? undefined : `https://t-me.invalid/c/${peerId.toChatId()}/${serverMsgId}`;
       })()
     ]);
 
@@ -585,7 +585,7 @@ export default function showStarsPayPopup(options: StarsPayOptions): StarsPayHan
           if(gift) {
             const giftTitle = gift._ === 'starGiftUnique' ? `${gift.title} #${gift.num}` : gift.title || i18n('StarGiftTitle');
             const giftAnchor = gift._ === 'starGiftUnique' && anchorCallback(() => {
-              hidePopupsWithCallback(() => hotReloadGuard.appImManager.openUrl(`https://t.me/nft/${gift.slug}`));
+              hidePopupsWithCallback(() => hotReloadGuard.appImManager.openUrl(`https://t-me.invalid/nft/${gift.slug}`));
             });
             if(giftAnchor) giftAnchor.append(giftTitle);
             tableContent.push(['StarGiftTitle', giftAnchor || giftTitle]);

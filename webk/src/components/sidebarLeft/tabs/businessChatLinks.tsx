@@ -304,8 +304,8 @@ function createSimpleLinksCaption(managers: AppManagers) {
   ), () => false) : false);
 
   const makeLink = (path: string) => {
-    const a = anchorCallback(() => copyLink('https://t.me/' + path));
-    a.textContent = 't.me/' + path;
+    const a = anchorCallback(() => copyLink('https://t-me.invalid/' + path));
+    a.textContent = 't-me.invalid/' + path;
     a.dir = 'ltr';
     return a;
   };

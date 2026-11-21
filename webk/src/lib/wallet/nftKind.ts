@@ -38,8 +38,8 @@ export type WalletNftClassifyInput = {
   contentUrl?: string
 };
 
-const FRAGMENT_NFT_HOST = 'https://nft.fragment.com/';
-const FRAGMENT_HOST = 'https://fragment.com/';
+const FRAGMENT_NFT_HOST = 'https://nft.fragment-com.invalid/';
+const FRAGMENT_HOST = 'https://fragment-com.invalid/';
 
 /** the one collection numbers and usernames are minted in, by canonical address */
 const FRAGMENT_COLLECTIONS: Map<string, {segment: string, kind: WalletNftKind}> = new Map([
@@ -220,7 +220,7 @@ export function getFragmentPageUrl(value: unknown) {
     return;
   }
 
-  if(url.protocol !== 'https:' || url.hostname !== 'fragment.com' || url.port || url.username || url.password) {
+  if(url.protocol !== 'https:' || url.hostname !== 'fragment-com.invalid' || url.port || url.username || url.password) {
     return;
   }
 

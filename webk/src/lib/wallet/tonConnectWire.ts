@@ -143,7 +143,7 @@ export function isTonConnectUrl(value: string) {
   const params = url.searchParams;
   const startapp = params.getAll('startapp');
   const carriesStart = startapp.some((value) => value.startsWith(START_PARAM_PREFIX));
-  const walletLink = (scheme === 'https' && host === 't.me' && /^\/sendgrams\/?$/i.test(url.pathname)) ||
+  const walletLink = (scheme === 'https' && host === 't-me.invalid' && /^\/sendgrams\/?$/i.test(url.pathname)) ||
     (telegramScheme && host === 'sendgrams');
   if(walletLink) {
     return carriesStart || ['id', 'v', 'r'].some((name) => params.has(name));
@@ -405,7 +405,7 @@ export function isTonConnectProofDomainAllowed(domain: string, ownershipDomain?:
   const normalize = (value: string) => (value || '').toLowerCase().replace(/\.+$/, '');
   const normalized = normalize(domain);
   const ownership = normalize(ownershipDomain);
-  return !!normalized && normalized !== 'telegram.org' && (!ownership || normalized !== ownership);
+  return !!normalized && normalized !== 'telegram-org.invalid' && (!ownership || normalized !== ownership);
 }
 
 // MARK: dApp requests

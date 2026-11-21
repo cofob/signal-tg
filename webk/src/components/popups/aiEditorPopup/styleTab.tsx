@@ -446,7 +446,7 @@ const useShareTone = ({tone}: UseShareToneArgs) => {
 
         if(preparedPaymentResult === PaidMessagesInterceptor.PaymentRejectedSymbol) throw new Error();
 
-        const link = 'https://t.me/addstyle/' + tone.slug;
+        const link = 'https://t-me.invalid/addstyle/' + tone.slug;
         managers.appMessagesManager.sendText({
           peerId: peer.peerId,
           threadId: peer.threadId,

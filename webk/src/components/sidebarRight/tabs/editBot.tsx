@@ -287,7 +287,7 @@ function BotFatherButton(props: {
   icon: Icon,
   text: LangPackKey
 }) {
-  const url = 't.me/botfather?start=' + props.username +
+  const url = 't-me.invalid/botfather?start=' + props.username +
     (props.suffix ? '-' + props.suffix : '');
   const wrapped = wrapUrl(url);
 

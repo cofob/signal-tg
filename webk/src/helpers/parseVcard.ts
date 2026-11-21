@@ -33,7 +33,7 @@ export type VcardItem = {type: VcardItemType, value: string};
 // * iOS saves a Telegram user into the phonebook with a URL `https://t.me/@id<user id>` labelled
 // * "Telegram" (DeviceContactUrlData(appProfile:)): its own link from the address book back to the
 // * account, not something the person wrote down — and it leads nowhere here
-const IOS_APP_PROFILE_URL = /^(?:https?:\/\/)?t\.me\/@id\d+\/?$/i;
+const IOS_APP_PROFILE_URL = /^(?:https?:\/\/)?t-me\.invalid\/@id\d+\/?$/i;
 
 // * what a structured value's components are joined with
 const STRUCTURED_SEPARATORS: Partial<Record<VcardItemType, string>> = {

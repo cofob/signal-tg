@@ -1,7 +1,7 @@
 import {T_ME_PREFIXES} from '@appManagers/constants';
 
-const TELEGRAM_LINK_HOSTS = ['t.me', 'telegram.me'];
-export const TELESCOPE_LINK_HOST = 'telesco.pe';
+const TELEGRAM_LINK_HOSTS = ['t-me.invalid', 'telegram-me.invalid'];
+export const TELESCOPE_LINK_HOST = 'telesco-pe.invalid';
 
 /**
  * Tells whether a url sits on one of `hosts` (or a subdomain of one).

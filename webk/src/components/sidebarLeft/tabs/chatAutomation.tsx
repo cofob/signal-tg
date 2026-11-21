@@ -763,7 +763,7 @@ export default function ChatAutomationTab() {
   };
 
   const learnMoreAnchor = document.createElement('a');
-  learnMoreAnchor.href = 'https://telegram.org';
+  learnMoreAnchor.href = 'https://telegram-org.invalid';
   learnMoreAnchor.target = '_blank';
   learnMoreAnchor.rel = 'noopener noreferrer';
 

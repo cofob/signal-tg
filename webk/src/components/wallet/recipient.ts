@@ -21,7 +21,7 @@ export type WalletRecipientInput =
   | {kind: 'search', value: string};
 
 // * `_` as Android and iOS take it: a `.t.me` name is a Telegram username
-const DOMAIN_RE = /^(?:[a-z0-9_-]+\.)+(?:ton|t\.me)$/i;
+const DOMAIN_RE = /^(?:[a-z0-9_-]+\.)+(?:ton|t-me\.invalid)$/i;
 const MAX_DOMAIN_LENGTH = 126;
 // * raw `0:hex` or 48 chars of (url-safe) base64
 const ADDRESS_RE = /^(?:-?\d+:[0-9a-f]{64}|[A-Za-z0-9_\-+/]{48})$/i;

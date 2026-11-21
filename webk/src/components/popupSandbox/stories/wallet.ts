@@ -672,7 +672,7 @@ defineStories('Wallet', [
   // * its address alone, no Send toward the account; a top-up through Telegram's own provider: bought for crypto
   ...([
     ['/domain', 'transfer to a user by name', (userId: UserId) => ({
-      peer: {_: 'walletTransactionPeerUser', user_id: userId, address: walletSandboxOtherAddress, domain: 'alice.t.me'},
+      peer: {_: 'walletTransactionPeerUser', user_id: userId, address: walletSandboxOtherAddress, domain: 'alice.t-me.invalid'},
       amount: '-15460000000'
     })],
     ['/serviceUser', 'transfer through the service account', () => ({
@@ -1293,7 +1293,7 @@ defineStories('Wallet', [
     }),
     open: async() => {
       const {default: showWalletPopup} = await import('@components/wallet');
-      const url = (path: string) => ({_: 'webDocument' as const, url: 'https://nft.fragment.com/gift/' + path, access_hash: 0, size: 0, attributes: [] as any[]});
+      const url = (path: string) => ({_: 'webDocument' as const, url: 'https://nft.fragment-com.invalid/gift/' + path, access_hash: 0, size: 0, attributes: [] as any[]});
       showWalletPopup({screen: 'collectible', params: {item: {
         ...walletSandboxNfts[0],
         image: url('plushpepe-12.webp'),

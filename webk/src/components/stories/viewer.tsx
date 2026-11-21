@@ -784,7 +784,7 @@ const StoryMediaArea = (props: {
     showNotCenteredTooltip({
       callback: () => {
         props.close(() => {
-          hotReloadGuard.appImManager.openUrl(`https://t.me/nft/${slug}`);
+          hotReloadGuard.appImManager.openUrl(`https://t-me.invalid/nft/${slug}`);
         });
       },
       text: i18n('Story.ViewGift')

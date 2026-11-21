@@ -207,7 +207,7 @@ export function walletError(type: string) {
 
 const PREVIEW_RECORD_ID = 'public-key-only';
 /** the domain of the challenge a wallet's ownership is proven with (iOS: WalletOperations) */
-const OWNERSHIP_PROOF_DOMAIN = 'telegram.org';
+const OWNERSHIP_PROOF_DOMAIN = 'telegram-org.invalid';
 const SEND_VALIDITY_SECONDS = 300;
 /** the emulation's refusal of an external message whose seqno is stale: exit code 133, however the engine words it */
 const PREVIEW_SEQNO_LAG_REGEXP = /(?:not accepted|NotAccepted)[^]*\b133\b(?!\.\d)/i;
@@ -767,7 +767,7 @@ export default class WalletSession {
   private async getSigningKey(lifecycle: WalletLifecycle, descriptor: WalletDescriptor) {
     const signature = await lifecycle.signTonConnectProof({
       descriptor,
-      domain: 'web.telegram.org',
+      domain: 'web.telegram-org.invalid',
       timestamp: Math.floor(Date.now() / 1000),
       payload: 'wallet-key-check'
     });

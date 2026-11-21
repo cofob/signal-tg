@@ -217,7 +217,7 @@ defineStories('Composer & bots', [
         cachedPage: {
           _: 'page',
           pFlags: {},
-          url: 'https://telegram.org/sandbox',
+          url: 'https://telegram-org.invalid/sandbox',
           photos: [],
           documents: [],
           views: 0,
@@ -225,7 +225,7 @@ defineStories('Composer & bots', [
             {_: 'pageBlockTitle', text: text('Buttons in a page')},
             {_: 'pageBlockParagraph', text: {_: 'textConcat', texts: [
               text('Read '),
-              {_: 'textButton', text: text('the docs'), type: {_: 'inlineButtonTypeUrl', url: 'https://core.telegram.org'}},
+              {_: 'textButton', text: text('the docs'), type: {_: 'inlineButtonTypeUrl', url: 'https://core.telegram-org.invalid'}},
               text(' or '),
               {
                 _: 'textButton',
@@ -239,7 +239,7 @@ defineStories('Composer & bots', [
               {
                 _: 'pageButton',
                 text: text('Open site'),
-                type: {_: 'inlineButtonTypeUrl', url: 'https://telegram.org'},
+                type: {_: 'inlineButtonTypeUrl', url: 'https://telegram-org.invalid'},
                 style: {_: 'richButtonStyle', pFlags: {bg_primary: true}}
               },
               {_: 'pageButton', text: text('Copy'), type: {_: 'inlineButtonTypeCopy', copy_text: 'TELEGRAM'}},
@@ -539,7 +539,7 @@ defineStories('Profile', (['username', 'phone'] as const).map((type) => ({
         amount: 1290000,
         crypto_currency: 'TON',
         crypto_amount: '5000000000000',
-        url: 'https://fragment.com'
+        url: 'https://fragment-com.invalid'
       })
     }
   },

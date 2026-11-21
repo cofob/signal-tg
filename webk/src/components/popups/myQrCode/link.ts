@@ -43,7 +43,7 @@ export function chooseOwnLink(options: {
 }
 
 export function buildPhoneUrl(phone: string) {
-  return `https://t.me/+${phone}`;
+  return `https://t-me.invalid/+${phone}`;
 }
 
 /** What is written under the code of a username or a phone link, in the card's capitals */

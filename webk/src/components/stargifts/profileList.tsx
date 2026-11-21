@@ -370,7 +370,7 @@ export function StarGiftsProfileTab(props: {
                 text: 'CopyLink',
                 onClick: async() => {
                   const username = await rootScope.managers.appPeersManager.getPeerUsername(props.peerId)
-                  copyTextToClipboard(`https://t.me/${username}/c/${id}`)
+                  copyTextToClipboard(`https://t-me.invalid/${username}/c/${id}`)
                   toastNew({langPackKey: 'LinkCopied'})
                 },
                 verify: async() => {

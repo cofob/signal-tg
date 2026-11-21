@@ -211,7 +211,7 @@ export default async function showForwardPopup(
     const mid = peerIdMids[fromPeerIdStr as any as number][0];
     username ??= await managers.appPeersManager.getPeerUsername(fromPeerId);
     const msgId = getServerMessageId(mid);
-    let url = 'https://t.me/';
+    let url = 'https://t-me.invalid/';
     if(username) {
       url += username + '/' + msgId;
       if(videoTimestamp !== undefined) {

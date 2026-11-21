@@ -800,7 +800,7 @@ export default function wrapRichText(text: string, options: WrapRichTextOptions 
         if(!options.noLinks && !hasUndrawnText(entities, nasty.i, endOffset)) {
           const username = fullEntityText.slice(1);
 
-          element = wrapTelegramUrlToAnchor('t.me/' + username);
+          element = wrapTelegramUrlToAnchor('t-me.invalid/' + username);
           element.className = 'mention';
 
           // insertPart(entity, `<a class="mention" href="${contextUrl.replace('{1}', encodeURIComponent(username))}"${contextExternal ? ' target="_blank" rel="noopener noreferrer"' : ''}>`, '</a>');

@@ -107,5 +107,5 @@ export async function paintQrCode(options: PaintQrOptions) {
  * place for the link shape.
  */
 export function buildTelegramUserQrUrl(username: string) {
-  return `https://t.me/${username}`;
+  return `https://t-me.invalid/${username}`;
 }

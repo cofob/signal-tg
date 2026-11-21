@@ -120,7 +120,7 @@
 "ChatAutomation.ConnectionReview.Rejected" = "Bot access revoked.";
 "EditBot.Title" = "Edit Bot";
 "EditBot.Username.Caption" = "This username cannot be edited.";
-"EditBot.Buttons.Caption" = "Use [@BotFather](https://t.me/botfather) to manage this bot.";
+"EditBot.Buttons.Caption" = "Use [@BotFather](https://t-me.invalid/botfather) to manage this bot.";
 "EditBot.Buttons.Intro" = "Edit Intro";
 "EditBot.Buttons.Commands" = "Edit Commands";
 "EditBot.Buttons.Settings" = "Change Bot Settings";
@@ -334,7 +334,7 @@
 "ChatsNew_other" = "%d new chats";
 "ChatList.Main.EmptyPlaceholder.Title" = "Your chats will appear here";
 "ChatList.Main.EmptyPlaceholder.Subtitle" = "You have %s on Telegram";
-"ChatList.Main.EmptyPlaceholder.SubtitleNoContacts" = "Use Telegram app on your [Android](https://telegram.org/android) or [iOS](https://telegram.org/dl/ios) device to sync your contacts";
+"ChatList.Main.EmptyPlaceholder.SubtitleNoContacts" = "Use Telegram app on your [Android](https://telegram-org.invalid/android) or [iOS](https://telegram-org.invalid/dl/ios) device to sync your contacts";
 "ChatList.ShowUnreadOnly" = "Show Unread Only";
 "ChatList.ShowAllChats" = "Show All Chats";
 "ChatList.UnreadOnly.Title" = "Unread chats only";
@@ -479,8 +479,8 @@
 "Message.Context.Selection.Forward" = "Forward selected";
 "Message.Context.Selection.Download" = "Download selected";
 "Message.Context.Selection.SendNow" = "Send selected now";
-"Message.Unsupported.Desktop" = "__This message is currently not supported on Telegram Web. Try [getdesktop.telegram.org](https://getdesktop.telegram.org/)__";
-"Message.Unsupported.Mobile" = "__This message is currently not supported on Telegram Web. Try [telegram.org/dl](https://telegram.org/dl/)__";
+"Message.Unsupported.Desktop" = "__This message is currently not supported on Telegram Web. Try [getdesktop.telegram-org.invalid](https://getdesktop.telegram-org.invalid/)__";
+"Message.Unsupported.Mobile" = "__This message is currently not supported on Telegram Web. Try [telegram-org.invalid/dl](https://telegram-org.invalid/dl/)__";
 "UnsupportedMessageTitle" = "Unsupported Message";
 "UnsupportedMessageMessage" = "Update Telegram to view this message";
 "RichMessage.Error.TooLong" = "This rich text message is too long (%1$d of %2$d characters).";
@@ -590,8 +590,8 @@
 "PaymentCard.Error.Incomplete" = "Incomplete card number";
 "LimitReached.Ok" = "OK, GOT IT";
 "Username.Purchase" = "**This username is already taken.** However, it is currently available for purchase. [Learn more…]()";
-"Video.Unsupported.Desktop" = "__Unfortunately, this video can't be played on Telegram Web. Try opening it with our [desktop app](https://getdesktop.telegram.org/) instead.__";
-"Video.Unsupported.Mobile" = "__Unfortunately, this video can't be played on Telegram Web. Try opening it with our [mobile app](https://telegram.org/dl/) instead.__";
+"Video.Unsupported.Desktop" = "__Unfortunately, this video can't be played on Telegram Web. Try opening it with our [desktop app](https://getdesktop.telegram-org.invalid/) instead.__";
+"Video.Unsupported.Mobile" = "__Unfortunately, this video can't be played on Telegram Web. Try opening it with our [mobile app](https://telegram-org.invalid/dl/) instead.__";
 "Story.Unsupported" = "This story is not supported on Telegram Web yet. Try opening it in another Telegram app.";
 "Error.RequestPeer.NoRights.Channel" = "Sorry, you can't add bots to this channel.";
 "Error.RequestPeer.NoRights.Group" = "Sorry, you are not allowed to add bots to this group.";
@@ -728,7 +728,7 @@
 "BoostsViaGifts.PrepaidSubtitle_one" = "%d subscription for %s";
 "BoostsViaGifts.PrepaidSubtitle_other" = "%d subscriptions for %s";
 "BoostsViaGifts.Quantity" = "Quantity of prizes";
-"BoostsViaGifts.QuantitySubtitle" = "Choose how many Premium subscriptions to give away and boosts to receive. For larger volumes, use [fragment.com](https://fragment.com).";
+"BoostsViaGifts.QuantitySubtitle" = "Choose how many Premium subscriptions to give away and boosts to receive. For larger volumes, use [fragment-com.invalid](https://fragment-com.invalid).";
 "BoostsViaGifts.Channels" = "Channels included in the giveaway";
 "BoostsViaGifts.ChannelSubscription_one" = "this channel will receive %d boost";
 "BoostsViaGifts.ChannelSubscription_other" = "this channel will receive %d boosts";
@@ -1128,12 +1128,12 @@
 "SearchGIFs" = "Search GIFs";
 "RemovedGIFFromFavorites" = "GIF was removed from Favorites.";
 "WebPage.OpenLink" = "OPEN LINK";
-"Ads.Reported" = "We will review this ad to ensure it matches our **[Ad Policies and Guidelines](https://ads.telegram.org/guidelines)**.";
-"RevenueSharingAdsInfo4SubtitleLearnMore1" = "**[Learn More >](https://ads.telegram.org/)**";
-"Stars.TOS" = "By proceeding and purchasing Stars, you agree with the [Terms and Conditions](https://telegram.org/tos).";
+"Ads.Reported" = "We will review this ad to ensure it matches our **[Ad Policies and Guidelines](https://ads.telegram-org.invalid/guidelines)**.";
+"RevenueSharingAdsInfo4SubtitleLearnMore1" = "**[Learn More >](https://ads.telegram-org.invalid/)**";
+"Stars.TOS" = "By proceeding and purchasing Stars, you agree with the [Terms and Conditions](https://telegram-org.invalid/tos).";
 "ShowMoreOptions" = "Show More Options";
 "Stars.ConfirmPurchaseButton" = "Confirm and Pay %d";
-"Stars.TransactionTOS" = "Review the **[Terms of Service](https://telegram.org/tos)** for Stars.";
+"Stars.TransactionTOS" = "Review the **[Terms of Service](https://telegram-org.invalid/tos)** for Stars.";
 "Stars.TopUp" = "Stars Top-Up";
 "Stars.Via.Bot" = "Stars Bot";
 "Stars.Via.Fragment" = "Purchase from Fragment";
@@ -1161,7 +1161,7 @@
 "Stars.Unlock.Videos_one" = "**%d video**";
 "Stars.Unlock.Videos_other" = "**%d videos**";
 "InviteLink.Subscription.Title" = "Require Monthly Fee";
-"InviteLink.Subscription.Caption" = "Charge a subscription fee from people joining your channel via this link. [Learn More >](https://telegram.org/)";
+"InviteLink.Subscription.Caption" = "Charge a subscription fee from people joining your channel via this link. [Learn More >](https://telegram-org.invalid/)";
 "InviteLink.Subscription.Placeholder" = "Stars Amount per month";
 "InviteLink.Subscription.Price" = "~%s / month";
 "InviteLink.Subscription.Edit" = "If you need to change the subscription fee, create a new invite link with a different price.";
@@ -1172,7 +1172,7 @@
 "InviteLinks.Description" = "You can create additional invite links that are limited by time, number of users, or require a paid subscription.";
 "Stars.Subscribe.Title" = "Subscribe to the Channel";
 "Stars.Subscribe.Description" = "Do you want to subscribe for **%s** for **%s** per month?";
-"Stars.Subscribe.Terms" = "By subscribing you agree to the [Terms of Service](https://telegram.org).";
+"Stars.Subscribe.Terms" = "By subscribing you agree to the [Terms of Service](https://telegram-org.invalid).";
 "Stars.Subscribe.Button" = "Subscribe";
 "Stars.Subscription" = "Subscription";
 "Stars.Subscription.Title" = "Monthly subscription fee";
@@ -1731,7 +1731,7 @@
 "PinChatsLimitTitle" = "Pinned Chats";
 "PinChatsLimitSubtitle" = "Pin up to %d chats in your main chat list";
 "PublicLinksLimitTitle" = "Public Links";
-"PublicLinksLimitSubtitle" = "Reserve up to %d t.me/username links";
+"PublicLinksLimitSubtitle" = "Reserve up to %d t-me.invalid/username links";
 "SavedGifsLimitTitle" = "Saved GIFs";
 "SavedGifsLimitSubtitle" = "Save up to %d GIFs in your Favorite GIFs";
 "FavoriteStickersLimitTitle" = "Favorite Stickers";
@@ -2237,7 +2237,7 @@
 "GroupEmptyTitle2" = "Groups can have:";
 "GroupDescription1" = "Up to 200,000 members";
 "GroupDescription2" = "Persistent chat history";
-"GroupDescription3" = "Public links such as t.me/title";
+"GroupDescription3" = "Public links such as t-me.invalid/title";
 "GroupDescription4" = "Admins with different rights";
 "ChatYourSelfDescription1" = "Forward messages here to save them";
 "ChatYourSelfDescription2" = "Send media and files to store them";
@@ -2422,7 +2422,7 @@
 "AvailableReactions" = "Available reactions";
 "ReactionAddReactionsHint" = "Add Reactions...";
 "ReactionAddEmojiFromAnyPack" = "You can add emoji from any emoji pack as a reaction.";
-"ReactionCreateOwnEmojiPacks" = "You can also [create your own](https://t.me/stickers) emoji packs and use them.";
+"ReactionCreateOwnEmojiPacks" = "You can also [create your own](https://t-me.invalid/stickers) emoji packs and use them.";
 "ReactionReachLvlForReactionShort_one" = "Your channel needs to reach Level **%2$d** to add **%1$d** custom emoji as reactions.";
 "ReactionReachLvlForReactionShort_other" = "Your channel needs to reach Level **%2$d** to add **%1$d** custom emoji as reactions.";
 "ReactionCustomReactions" = "Custom Reactions";
@@ -2432,7 +2432,7 @@
 "MaximumReactionsHeader" = "Maximum reactions per post";
 "MaximumReactionsInfo" = "Limit the number of different reactions that can be added to a post, including already published posts.";
 "ChannelEnablePaidReactions" = "Enable Paid Reactions";
-"ChannelEnablePaidReactionsInfo" = "Switch this on to let your subscribers set paid reactions with Telegram Stars, which you will be able to withdraw later as GRAM. [Learn More >](https://telegram.org/tos/stars)";
+"ChannelEnablePaidReactionsInfo" = "Switch this on to let your subscribers set paid reactions with Telegram Stars, which you will be able to withdraw later as GRAM. [Learn More >](https://telegram-org.invalid/tos/stars)";
 "NobodyViewed" = "Nobody viewed";
 "MessageSeen_one" = "Seen";
 "MessageSeen_other" = "%1$d Seen";
@@ -2489,10 +2489,10 @@
 "ReportChatIllegalDrugs" = "Illegal Drugs";
 "ReportChatPersonalDetails" = "Personal Details";
 "VoipPeerIncompatible" = "**%1$s**'s app is using an incompatible protocol. They need to update their app before you can call them.";
-"TelegramFeaturesUrl" = "https://t.me/TelegramTips";
+"TelegramFeaturesUrl" = "https://support.signal.org/";
 "TelegramFaq" = "Telegram FAQ";
-"TelegramFaqUrl" = "https://telegram.org/faq#general-questions";
-"AskAQuestionInfo" = "Please note that Telegram Support is done by volunteers. We try to respond as quickly as possible, but it may take a while.\n\nPlease take a look at the [Telegram FAQ](https://telegram.org/faq#general-questions): it has answers to most questions and important tips for [troubleshooting](https://telegram.org/faq#troubleshooting).";
+"TelegramFaqUrl" = "https://support.signal.org/";
+"AskAQuestionInfo" = "Please note that Telegram Support is done by volunteers. We try to respond as quickly as possible, but it may take a while.\n\nPlease take a look at the [Telegram FAQ](https://telegram-org.invalid/faq#general-questions): it has answers to most questions and important tips for [troubleshooting](https://telegram-org.invalid/faq#troubleshooting).";
 "AskButton" = "Ask a volunteer";
 "ScamMessage" = "SCAM";
 "FakeMessage" = "FAKE";
@@ -3052,7 +3052,7 @@
 "StoryViewLocation" = "View Location";
 "BotWebAppDisclaimerSubtitle" = "You are about to use a mini app operated by an independent party **not affiliated with Telegram**. You must agree to the Terms of Use for mini apps to continue.";
 "TermsOfUse" = "Terms of Use";
-"WebAppDisclaimerUrl" = "https://telegram.org/tos/mini-apps";
+"WebAppDisclaimerUrl" = "https://telegram-org.invalid/tos/mini-apps";
 "BotWebViewStartPermission" = "To launch this web app, you will connect to its website.";
 "BotWebAppInstantViewOpen" = "Launch";
 "BotAttachMenuShortcatAddedAttachAndSide" = "**%s** shortcuts added in attachment menu and side menu.";
@@ -3676,7 +3676,7 @@
 "BusinessIntroUnsavedChanges" = "You have changed your intro message. Apply changes?";
 "ShowAdsTitle" = "Ads in Channels";
 "ShowAds" = "Do Not Hide Ads";
-"ShowAdsInfo" = "As a Premium subscriber, you don’t see any ads on Telegram, but you can turn them on, for example, to view your own ads that you launched on the [Telegram Ad Platform >](https://ads.telegram.org)";
+"ShowAdsInfo" = "As a Premium subscriber, you don’t see any ads on Telegram, but you can turn them on, for example, to view your own ads that you launched on the [Telegram Ad Platform >](https://ads.telegram-org.invalid)";
 "TelegramBusiness" = "Telegram Business";
 "TelegramBusiness.SearchKeywords" = "business, shop, company, work";
 "TelegramBusinessSubtitle" = "Subscribe to **Telegram Premium** to unlock these additional business features.";
@@ -3724,7 +3724,7 @@
 "RemoveAds" = "Remove Ads";
 "AboutRevenueSharingAds" = "About These Ads";
 "ReportAd" = "Report Ad";
-"ReportAdLearnMore" = "Learn more about our [Ad Policies and Guidelines](https://ads.telegram.org/guidelines).";
+"ReportAdLearnMore" = "Learn more about our [Ad Policies and Guidelines](https://ads.telegram-org.invalid/guidelines).";
 "AdHidden" = "You will no longer see ads from Telegram.";
 "SponsoredMessageAdWhatIsThis" = "what's this?";
 "RevenueSharingAdsAlertSubtitle" = "Telegram Ads are very different from ads on other platforms. Ads such as this one:";
@@ -3842,7 +3842,7 @@
 "Stars.Transaction.Messages" = "Messages";
 "Stars.Transaction.BoughtFrom" = "Bought from";
 "Stars.Transaction.SoldTo" = "Sold to";
-"Stars.Transaction.GramTOS" = "Review the **[Terms of Service](https://telegram.org/tos)** for Grams.";
+"Stars.Transaction.GramTOS" = "Review the **[Terms of Service](https://telegram-org.invalid/tos)** for Grams.";
 "Stars.Transaction.History" = "Transaction history";
 "StarsTransactionID" = "Transaction ID";
 "StarsTransactionIDCopied" = "Transaction ID copied to clipboard";
@@ -4312,7 +4312,7 @@
 "WalletOldWalletsBalance" = "You also have %1$s in old wallets";
 "WalletHiddenTransactions" = "Transactions under %1$s are hidden.";
 "WalletBlockchainVerifiedInfo" = "All transactions are recorded and verifiable on a public ledger.";
-"WalletTermsOfService" = "By using Wallet you agree to [Terms of Service](https://telegram.org/tos).";
+"WalletTermsOfService" = "By using Wallet you agree to [Terms of Service](https://telegram-org.invalid/tos).";
 "WalletNetworkFee" = "Network fee";
 "WalletAddressCopiedBulletin" = "Address copied.";
 "WalletOptionalComment" = "Optional comment";
@@ -4643,7 +4643,7 @@
 "Chat.Message.ViewGroup" = "VIEW GROUP";
 "Chat.Message.SendMessage" = "SEND MESSAGE";
 "Chat.Message.Sponsored.What" = "What are sponsored messages?";
-"Chat.Message.Sponsored.Link" = "https://ads.telegram.org";
+"Chat.Message.Sponsored.Link" = "https://ads.telegram-org.invalid";
 "Chat.Voice.Transribe.Error" = "No speech detected";
 "Chat.VoiceChat.JoinLink.Participants_ZeroValueHolder" = "no one joined yet";
 "Checkout.2FA.Text" = "Saving payment details is only available with 2-Step Verification.";
@@ -5398,8 +5398,8 @@
 "BotLocationAccessText" = "**%s** requests access to your location. You can revoke this access anytime on the profile page of **%s**.";
 "BotPrivacyPolicy" = "Bot Privacy Policy";
 "BotProfileOpenApp" = "Open App";
-"PeerInfo.AppFooter" = "By launching this mini app, you agree to the [Terms of Service for Mini Apps](https://telegram.org/privacy).";
-"PeerInfo.AppFooterAdmin" = "By publishing this mini app, you agree to the [Telegram Terms of Service for Developers](https://telegram.org/privacy).";
+"PeerInfo.AppFooter" = "By launching this mini app, you agree to the [Terms of Service for Mini Apps](https://telegram-org.invalid/privacy).";
+"PeerInfo.AppFooterAdmin" = "By publishing this mini app, you agree to the [Telegram Terms of Service for Developers](https://telegram-org.invalid/privacy).";
 "BotAllowAccessTo" = "Allow access to";
 "BotAllowAccessToEmojiStatus" = "Emoji status";
 "BotAllowAccessToLocation" = "Geolocation";

@@ -36,8 +36,8 @@ T.step(function () {
   T.ok('js.crypto-random', 'Math.random in [0, 1)', (function () { for (var i = 0; i < 100; i++) { var r = Math.random(); if (!(r >= 0 && r < 1)) return false; } return true; })(), '');
   T.eq('js.builtins', 'TextEncoder', Array.prototype.join.call(new TextEncoder().encode('é'), ','), '195,169');
   T.eq('js.builtins', 'TextDecoder', new TextDecoder().decode(new Uint8Array([0xd0, 0xaf])), 'Я');
-  var u = new URL('https://t.me/path?a=1&b=two#h');
-  T.ok('js.builtins', 'URL and URLSearchParams', u.hostname === 't.me' && u.searchParams.get('b') === 'two' && u.hash === '#h' && new URLSearchParams('x=1&y=2').toString() === 'x=1&y=2', u.hostname);
+  var u = new URL('https://t-me.invalid/path?a=1&b=two#h');
+  T.ok('js.builtins', 'URL and URLSearchParams', u.hostname === 't-me.invalid' && u.searchParams.get('b') === 'two' && u.hash === '#h' && new URLSearchParams('x=1&y=2').toString() === 'x=1&y=2', u.hostname);
   var src = { a: { b: [1, 2] } }, cl = structuredClone(src);
   T.ok('js.builtins', 'structuredClone', cl.a.b[1] === 2 && cl.a !== src.a, '');
   var ac = new AbortController(); ac.abort();

@@ -141,7 +141,7 @@ const ChatType: Component = () => {
     const inputWrapper = document.createElement('div');
     inputWrapper.classList.add('input-wrapper');
 
-    const placeholder = 't.me/';
+    const placeholder = 't-me.invalid/';
 
     let changedPrivacy: boolean, changedJoinToSend: boolean, changedJoinRequest: boolean;
     onChange = () => {

@@ -35,7 +35,7 @@ export type ThemeParams = Record<ThemeKey, string>;
 
 export const HAPTIC_IMPACT_STYLES = ['light', 'medium', 'heavy', 'rigid', 'soft'];
 export const HAPTIC_NOTIFICATION_TYPES = ['error', 'success', 'warning'];
-export const TELEGRAM_HOSTS = ['t.me', 'telegram.me', 'telegram.dog'];
+export const TELEGRAM_HOSTS = ['t-me.invalid', 'telegram-me.invalid', 'telegram-dog.invalid'];
 
 /** The edge of the bubble that stays put on screen when the widget's height changes (`setResizeAnchor`, docs/sdk-v1.md §2.12). */
 export type ResizeAnchor = 'top' | 'bottom';

@@ -294,7 +294,7 @@ function groupCallStory(id: string, title: string, options: GroupCallStoryOption
           getGroupCall: () => sandboxGroupCall,
           getGroupCallFull: () => sandboxGroupCall,
           // what "Share Link" and the invite picker hand out
-          exportGroupCallInvite: () => 'https://t.me/call/sandbox-video-chat'
+          exportGroupCallInvite: () => 'https://t-me.invalid/call/sandbox-video-chat'
         }
       };
     },
@@ -555,7 +555,7 @@ defineStories('Calls', [
     title: 'Call link — just created',
     open: async() => {
       const {default: showCallLinkPopup} = await import('@components/call/callLinkPopup');
-      showCallLinkPopup({link: 'https://t.me/call/sandbox-call-link', initial: true});
+      showCallLinkPopup({link: 'https://t-me.invalid/call/sandbox-call-link', initial: true});
     }
   },
   {
@@ -564,7 +564,7 @@ defineStories('Calls', [
     title: 'Call link — can be revoked',
     open: async() => {
       const {default: showCallLinkPopup} = await import('@components/call/callLinkPopup');
-      showCallLinkPopup({link: 'https://t.me/call/sandbox-call-link', callId: '1', canManage: true});
+      showCallLinkPopup({link: 'https://t-me.invalid/call/sandbox-call-link', callId: '1', canManage: true});
     }
   },
   groupCallStory('call/groupCall', 'Video chat'),

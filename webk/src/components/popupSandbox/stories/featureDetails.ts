@@ -61,7 +61,7 @@ defineStories('Feature details', [
       if(!appState.appConfig.freeze_appeal_url) {
         setAppStateSilent('appConfig', {
           ...appState.appConfig,
-          freeze_appeal_url: 'https://t.me/spambot',
+          freeze_appeal_url: 'https://t-me.invalid/spambot',
           freeze_until_date: 1719792000
         });
       }

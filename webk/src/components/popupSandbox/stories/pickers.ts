@@ -204,7 +204,7 @@ defineStories('Pickers', [
         import('@lib/solidjs/hotReloadGuardProvider')
       ]);
 
-      openPollLinkEditorPopup({initialUrl: 'https://telegram.org/', onSubmit: noop}, HotReloadGuard);
+      openPollLinkEditorPopup({initialUrl: 'https://telegram-org.invalid/', onSubmit: noop}, HotReloadGuard);
     }
   },
   {
@@ -219,7 +219,7 @@ defineStories('Pickers', [
     id: 'forward/story',
     title: 'Share a story',
     managers: {
-      appStoriesManager: {getStoryLink: () => 'https://t.me/telegram/s/1'}
+      appStoriesManager: {getStoryLink: () => 'https://t-me.invalid/telegram/s/1'}
     },
     open: async(ctx) => {
       const {default: showForwardPopup} = await import('@components/popups/forward');
@@ -236,7 +236,7 @@ defineStories('Pickers', [
     title: 'Share a link',
     open: async(ctx) => {
       const {default: shareUrlToPeers} = await import('@components/popups/shareUrl');
-      shareUrlToPeers({url: 'https://telegram.org/', multiSelect: true});
+      shareUrlToPeers({url: 'https://telegram-org.invalid/', multiSelect: true});
     }
   },
   {

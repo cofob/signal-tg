@@ -2337,7 +2337,7 @@ export default class ChatContextMenu {
     const isDiscussionFromChannel = !!(threadMessage?.fwd_from?.channel_post && threadMessage.fwd_from.saved_from_msg_id);
     const username = await this.managers.appPeersManager.getPeerUsername(isDiscussionFromChannel ? threadMessage.fromId : peerId);
     const msgId = getServerMessageId(mid);
-    let url = 'https://t.me/';
+    let url = 'https://t-me.invalid/';
     if(username) {
       url += username;
       if(isDiscussionFromChannel) url += `/${getServerMessageId(threadMessage.fwd_from.channel_post)}?comment=${msgId}`;

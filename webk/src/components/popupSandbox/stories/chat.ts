@@ -271,7 +271,7 @@ defineStories('Chat & moderation', [
         exportNoPaidMessagesToken: (params: {temporary?: boolean}) => ({
           _: 'exportedNoPaidMessagesToken',
           token: 'free123',
-          url: 'https://t.me/durov?free=free123',
+          url: 'https://t-me.invalid/durov?free=free123',
           expires: params?.temporary ? Math.floor(Date.now() / 1000) + 60 : undefined
         })
       }
@@ -314,7 +314,7 @@ defineStories('Chat & moderation', [
     open: async() => {
       const {default: showLinkQrCodePopup} = await import('@components/popups/linkQrCode');
       showLinkQrCodePopup({
-        url: 'https://t.me/call/AbCdEfGhIjKlMnOpQr',
+        url: 'https://t-me.invalid/call/AbCdEfGhIjKlMnOpQr',
         aboutLangKey: 'InviteLink.QRCode.InfoGroupCall'
       });
     }

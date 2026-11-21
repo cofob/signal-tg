@@ -58,7 +58,7 @@ export async function applyGiftCode(slug: string, button: HTMLElement, hide: () 
           anchorCallback(() => {
             simulateClickEvent(button.element);
             hide();
-            shareGiftLink('https://t.me/giftcode/' + slug);
+            shareGiftLink('https://t-me.invalid/giftcode/' + slug);
           })
         ],
         button
@@ -112,7 +112,7 @@ export default async function showGiftLinkPopup(
 
   const isUsed = !!giftCode.used_date;
   const titleLangKey: LangPackKey = isUsed ? 'BoostingUsedGiftLink' : 'BoostingGiftLink';
-  const url = isInChat && !isUsed ? '' : 'https://t.me/giftcode/' + slug;
+  const url = isInChat && !isUsed ? '' : 'https://t-me.invalid/giftcode/' + slug;
   const canUseLink = !isInChat && !isUsed;
 
   createPopup(() => {

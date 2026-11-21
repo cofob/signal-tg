@@ -73,7 +73,7 @@ export const mockAppConfig = {
   ton_stargift_resale_amount_max: 10000000000,
   ton_stargift_resale_commission_permille: 800,
   ton_usd_rate: 3,
-  ton_topup_url: 'https://fragment.com/',
+  ton_topup_url: 'https://fragment-com.invalid/',
   stars_spend_topup_invoice_disabled: false,
   aicompose_tone_examples_num: 3,
   aicompose_tone_prompt_length_max: 256,
@@ -83,7 +83,7 @@ export const mockAppConfig = {
   premium_promo_order: ['stories', 'double_limits', 'more_upload', 'faster_download', 'wallpapers'],
   verify_age_bot_username: 'sandbox_bot',
   verify_age_country: 'GB',
-  freeze_appeal_url: 'https://t.me/spambot',
+  freeze_appeal_url: 'https://t-me.invalid/spambot',
   freeze_since_date: 0,
   freeze_until_date: 1719792000 // 2024-07-01, so the frozen popup renders a real date
 } as any as MTAppConfig;

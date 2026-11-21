@@ -32,10 +32,10 @@
 <body>
 <div class="h">SDK 02 · Telegram link</div>
 <div class="i">Each one opens inside Telegram, never in a browser.</div>
-<div class="r"><button id="a">t.me/telegram</button><button id="b">t.me/durov/1 (a post)</button><button id="c">telegram.me/durov</button><a id="d" href="https://t.me/telegram">a link (&lt;a href&gt;)</a></div>
+<div class="r"><button id="a">t-me.invalid/telegram</button><button id="b">t-me.invalid/durov/1 (a post)</button><button id="c">telegram-me.invalid/durov</button><a id="d" href="https://t-me.invalid/telegram">a link (&lt;a href&gt;)</a></div>
 <div id="log"></div>
 <script>
-var U = { a: 'https://t.me/telegram', b: 'https://t.me/durov/1', c: 'https://telegram.me/durov' };
+var U = { a: 'https://t-me.invalid/telegram', b: 'https://t-me.invalid/durov/1', c: 'https://telegram-me.invalid/durov' };
 ['a', 'b', 'c', 'd'].forEach(function (k) { S.target(k, k); });
 Object.keys(U).forEach(function (k) {
   document.getElementById(k).onclick = function () {

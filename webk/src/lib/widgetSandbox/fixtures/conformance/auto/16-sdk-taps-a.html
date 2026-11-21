@@ -51,7 +51,7 @@ T.step(function () {
   var throwsType = function (fn) { try { fn(); return false; } catch (e) { return !!e && e.name === 'TypeError'; } };
   var noThrow = function (fn) { try { fn(); return true; } catch (e) { return false; } };
   var pad = function (n) { var b = 'https://example.org/'; return b + new Array(n - b.length + 1).join('a'); };
-  T.ok('tw.open-link', 'openLink rejects non-https, user info, javascript: and t.me hosts with TypeError', !!TW && ['http://example.org/', 'javascript:alert(1)', 'https://user:pw@example.org/', 'https://t.me/telegram', 'example.org', 'tg://resolve?domain=telegram'].every(function (u) { return throwsType(function () { TW.openLink(u); }); }), '', S);
+  T.ok('tw.open-link', 'openLink rejects non-https, user info, javascript: and t-me.invalid hosts with TypeError', !!TW && ['http://example.org/', 'javascript:alert(1)', 'https://user:pw@example.org/', 'https://t-me.invalid/telegram', 'example.org', 'tg://resolve?domain=telegram'].every(function (u) { return throwsType(function () { TW.openLink(u); }); }), '', S);
   T.ok('limit.url-length', 'a 257-character URL throws TypeError', !!TW && throwsType(function () { TW.openLink(pad(257)); }), '', S);
   T.ok('limit.url-length', 'a 256-character URL is accepted (dropped later without a press)', !!TW && noThrow(function () { TW.openLink(pad(256)); }), '', S);
 });

@@ -36,7 +36,7 @@
 <div id="log"></div>
 <script>
 var pad = function (n) { var b = 'https://example.org/'; return b + new Array(n - b.length + 1).join('a'); };
-var BAD = [['http://example.org/', 'openLink'], ['https://user:pw@example.org/', 'openLink'], ['javascript:alert(1)', 'openLink'], ['tg://resolve?domain=telegram', 'openLink'], ['https://t.me/telegram', 'openLink'], ['https://example.org/', 'openTelegramLink'], [pad(257), 'openLink']];
+var BAD = [['http://example.org/', 'openLink'], ['https://user:pw@example.org/', 'openLink'], ['javascript:alert(1)', 'openLink'], ['tg://resolve?domain=telegram', 'openLink'], ['https://t-me.invalid/telegram', 'openLink'], ['https://example.org/', 'openTelegramLink'], [pad(257), 'openLink']];
 S.target('all', 'all'); S.target('ok', 'ok');
 document.getElementById('all').onclick = function () {
   BAD.forEach(function (b) {

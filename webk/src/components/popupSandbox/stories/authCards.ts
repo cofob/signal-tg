@@ -207,7 +207,7 @@ defineStories('SIGN IN', [
     surface,
     fixtureOnly: true,
     managers,
-    open: code({_: 'auth.sentCodeTypeFragmentSms', url: 'https://fragment.com', length: 8})
+    open: code({_: 'auth.sentCodeTypeFragmentSms', url: 'https://fragment-com.invalid', length: 8})
   },
   {
     id: 'auth/codeEmail',

@@ -16,8 +16,8 @@ export function getRtmpShareUrl(chat: Chat) {
 
   if(chat.username || chat.usernames?.length) {
     const username = chat.username || chat.usernames[0];
-    return `https://t.me/${username}?livestream`;
+    return `https://t-me.invalid/${username}?livestream`;
   }
 
-  return `https://t.me/c/${chat.id}?livestream`;
+  return `https://t-me.invalid/c/${chat.id}?livestream`;
 }
