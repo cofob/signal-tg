@@ -57,6 +57,7 @@ export default class GroupManager {
     private client: SignalClient,
     private db: MessageDb,
     private processor: MessageProcessor,
+    private onError: (error: Error) => void,
   ) {}
 
   /** Applies a change to the group of conversation `id`; resolves without a change when `build` finds none */
@@ -287,16 +288,24 @@ export default class GroupManager {
     return conversation;
   }
 
-  private saveEndorsements(id: string, masterKey: Uint8Array, state: GroupState, response?: Uint8Array) {
-    const { store, account } = this.client.getSenderContext();
-    return saveGroupSendEndorsements(
-      store,
-      account.aci,
-      id,
-      wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
-      state.members.map(({ aci }) => aci),
-      response,
-    );
+  /**
+   * Endorsements only let sends to the group go as one message, so failing to save them must not keep us from
+   * telling the members about a change the server accepted
+   */
+  private async saveEndorsements(id: string, masterKey: Uint8Array, state: GroupState, response?: Uint8Array) {
+    try {
+      const { store, account } = this.client.getSenderContext();
+      await saveGroupSendEndorsements(
+        store,
+        account.aci,
+        id,
+        wasm.GroupSecretParams_DeriveFromMasterKey(masterKey),
+        state.members.map(({ aci }) => aci),
+        response,
+      );
+    } catch (err) {
+      this.onError(err as Error);
+    }
   }
 
   private async getGroupConversation(id: string) {

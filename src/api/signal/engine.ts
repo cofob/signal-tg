@@ -26,7 +26,7 @@ export const processor = new MessageProcessor(db, client, {
   onError: logError,
 });
 
-export const groups = new GroupManager(client, db, processor);
+export const groups = new GroupManager(client, db, processor, logError);
 
 // Safety number change notices; PNI identities belong to phone numbers, which have no conversation of their own
 store.onIdentityChange = (serviceId) => {

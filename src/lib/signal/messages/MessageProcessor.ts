@@ -45,6 +45,7 @@ import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
+import { UnregisteredUserError } from '../sender/sendContent';
 import {
   sendBlockedSync,
   sendDeleteForMeSync,
@@ -1227,7 +1228,7 @@ export default class MessageProcessor {
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
-    options: { timestamp: number; expirationStartTimestamp?: number },
+    options: { timestamp: number; expirationStartTimestamp?: number; isUrgent?: boolean },
   ): Promise<RecipientResult[]> {
     try {
       return await sendMessage(this.client.getSenderContext(), recipients, content, {
@@ -1744,7 +1745,8 @@ export default class MessageProcessor {
 
   /**
    * Tells the members, and invited users with an ACI, about a new revision. `groupChange` is the signed change
-   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group
+   * that led to it; `extraRecipients` are people the change concerns who are no longer in the group. The update is
+   * not urgent, and recipients it does not reach get it again after the next connection
    * (Signal Desktop `ts/jobs/helpers/sendGroupUpdate.preload.ts`).
    */
   async sendGroupUpdate(id: string, groupChange?: Uint8Array, extraRecipients: string[] = []) {
@@ -1762,7 +1764,18 @@ export default class MessageProcessor {
     const timestamp = this.allocateTimestamp();
     const message = createOutgoingDataMessage(account, conversation, {}, timestamp, false);
     if (groupChange) message.groupV2!.groupChange = groupChange;
-    return this.sendContentTo(conversation, [...recipients], { case: 'dataMessage', value: message }, { timestamp });
+
+    const content = { case: 'dataMessage', value: message } satisfies OutgoingMessage;
+    const results = await this.sendContentTo(conversation, [...recipients], content, { timestamp, isUrgent: false });
+    // Users that left the registry do not come back
+    const failed = results.filter(({ error }) => error && !(error instanceof UnregisteredUserError))
+      .map(({ serviceId }) => serviceId);
+    if (failed.length) {
+      this.pendingSends.push(async () => {
+        await this.sendContentTo(conversation, failed, content, { timestamp, isUrgent: false });
+      });
+    }
+    return results;
   }
 
   /**
@@ -1797,7 +1810,9 @@ export default class MessageProcessor {
 
       const { conversation, members, sendEndorsementsResponse } = result;
       if (members) {
-        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse);
+        // Without endorsements, group sends go to each member, so the refresh still counts
+        await saveGroupSendEndorsements(store, account.aci, id, secretParams, members, sendEndorsementsResponse)
+          .catch(this.events.onError);
       }
       return conversation;
     })();
