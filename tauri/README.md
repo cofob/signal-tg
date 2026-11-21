@@ -103,7 +103,7 @@ names a tunnel. The commands in `src/transport.rs` open the connections:
 | `signal_close(id)` | Closes the connection |
 
 The engine opens each connection for one traffic class: `authenticated` for what carries the account's credentials,
-`unauthenticated` for sealed sender sends, profile and prekey fetches, group requests, CDSI, SVR2 and downloads
+`unauthenticated` for sealed sender sends, profile and prekey fetches, group requests and downloads
 (`TrafficClass` in `src/lib/signal/config.ts`). The Sealed sender proxy setting names a tunnel for the second class, and
 that class then leaves the native transport for a WebSocket tunnel. Without it, the native transport carries both
 classes straight to Signal from the same address, unless `UPSTREAM_PROXY` and `SEALED_SENDER_UPSTREAM_PROXY`, two

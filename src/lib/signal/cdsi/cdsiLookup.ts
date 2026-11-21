@@ -150,7 +150,8 @@ async function requestLookup(
   const connection = await AttestedConnection.connect(
     SIGNAL_CDSI_HOST,
     `/v1/${SIGNAL_CDSI_MRENCLAVE}/discovery`,
-    'unauthenticated',
+    // The directory token is issued to the account, so through the sealed sender proxy Signal could tie its address to it
+    'authenticated',
     credentials,
     (attestation, now) => wasm.Cds2ClientState_New(mrenclave, attestation, now),
   );

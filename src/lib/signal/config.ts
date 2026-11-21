@@ -21,7 +21,7 @@ export const SIGNAL_PRIMARY_DEVICE_ID = 1;
 /**
  * Whether a connection carries credentials of the account. Every connection is opened for one class, and the two
  * classes never share pools, sockets or TLS sessions, so a separate tunnel can keep requests without credentials
- * (sealed sender sends, profile and prekey fetches, group requests, CDSI, SVR2, CDN downloads) from being linked to the
+ * (sealed sender sends, profile and prekey fetches, group requests, CDN downloads) from being linked to the
  * account by that tunnel's operator or by network observers.
  */
 export type TrafficClass = 'authenticated' | 'unauthenticated';
