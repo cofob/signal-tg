@@ -6,8 +6,9 @@ import type { ConversationRecord, NewMessageRecord } from '../db/MessageDb';
 import type SignalStore from '../store/SignalStore';
 
 import { getRandomBytes } from '../crypto';
+import { wasm } from '../wasm';
 
-import { BodyRange_Style, DataMessageSchema } from '../proto/generated/SignalService_pb';
+import { BodyRange_Style, DataMessageSchema, Verified_State } from '../proto/generated/SignalService_pb';
 
 const MINUTE = 60 * 1000;
 const PHOTO_WIDTH = 1280;
@@ -44,12 +45,25 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     pniRegistrationId: 1,
     profileKey: getRandomBytes(32),
     isReadReceiptsEnabled: true,
+    usernameLink: { entropy: getRandomBytes(32), serverId: crypto.randomUUID() },
     isDemo: true,
   });
+  // Identity keys give safety numbers; Alice's is verified
+  await store.setItem('aciIdentityKeyPair', generateKeyPair());
+  await store.setIdentity(alice, { publicKey: generateKeyPair().publicKey, verified: Verified_State.VERIFIED });
+  await store.setIdentity(bob, { publicKey: generateKeyPair().publicKey });
 
   const conversations: ConversationRecord[] = [
     {
-      id: me, localId: 1, type: 'private', profileName: 'Demo', profileFamilyName: 'User', unreadCount: 0,
+      id: me,
+      localId: 1,
+      type: 'private',
+      profileName: 'Demo',
+      profileFamilyName: 'User',
+      username: 'demo.01',
+      about: 'Testing TeleSignal',
+      aboutEmoji: '🧪',
+      unreadCount: 0,
     },
     {
       id: alice,
@@ -161,6 +175,10 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       deletedAt: now - 72 * MINUTE,
     }],
     [aliceChat, {
+      kind: 'verifiedChange', authorAci: '', actorAci: alice, sentAt: now - 65 * MINUTE, isOutgoing: false, readAt: now,
+      isVerified: true,
+    }],
+    [aliceChat, {
       kind: 'timerUpdate', authorAci: '', actorAci: me, sentAt: now - 60 * MINUTE, isOutgoing: true, readAt: now,
       expireTimer: 7 * 24 * 60 * 60,
     }],
@@ -190,6 +208,14 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },
       dataMessage: { body: 'Found you by username 👋' },
+    }],
+    [bobChat, {
+      kind: 'safetyNumberChange',
+      authorAci: '',
+      actorAci: bob,
+      sentAt: now - 295 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
     }],
     [bobChat, {
       authorAci: bob, sentAt: now - 290 * MINUTE, isOutgoing: false, readAt: now,
@@ -275,4 +301,12 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     const last = lastByConversation.get(conversation.id);
     await db.putConversation({ ...conversation, lastMessageId: last?.id, lastMessageAt: last?.sentAt });
   }
+}
+
+function generateKeyPair() {
+  const privateKey = wasm.PrivateKey_Generate();
+  return {
+    privateKey: wasm.PrivateKey_Serialize(privateKey),
+    publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(privateKey)),
+  };
 }

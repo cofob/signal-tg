@@ -93,6 +93,17 @@ export async function decryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, data:
   return new Uint8Array(plaintext);
 }
 
+/** AES-GCM with a random nonce in front of the ciphertext, the format that `decryptAesGcmWithNonce` reads */
+export async function encryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>) {
+  const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['encrypt']);
+  const iv = getRandomBytes(AES_GCM_NONCE_LENGTH);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, plaintext);
+  const result = new Uint8Array(AES_GCM_NONCE_LENGTH + ciphertext.byteLength);
+  result.set(iv);
+  result.set(new Uint8Array(ciphertext), AES_GCM_NONCE_LENGTH);
+  return result;
+}
+
 /**
  * SHA-256 for code that cannot wait for `crypto.subtle.digest`, such as building avatar colors.
  * Inputs are short, so the message length fits in 32 bits.

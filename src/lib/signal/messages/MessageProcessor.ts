@@ -18,6 +18,7 @@ import type {
   SyncMessage_DeleteForMeSchema,
   SyncMessage_Sent,
   TypingMessage,
+  Verified,
 } from '../proto/generated/SignalService_pb';
 import type { StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
@@ -42,10 +43,12 @@ import {
   sendReadSync,
   sendReceipts,
   sendTyping,
+  sendVerifiedSync,
   sendViewedSync,
   sendViewOnceOpenSync,
 } from '../sender/sendMessage';
 import { uuidToBytes, uuidToString } from '../serviceId';
+import { saveIdentity } from '../store/protocolStores';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
@@ -58,9 +61,12 @@ import {
   DataMessageSchema,
   GroupContextV2Schema,
   ReceiptMessage_Type,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
   TypingMessage_Action,
+  Verified_State,
 } from '../proto/generated/SignalService_pb';
+import { AccountRecord_PhoneNumberSharingMode } from '../proto/generated/StorageService_pb';
 
 export type MessageChanges = {
   conversations: ConversationRecord[];
@@ -714,11 +720,22 @@ export default class MessageProcessor {
               pinIndexById!.set(getGroupId(identifier.value), index);
             }
           });
+          const { usernameLink } = accountRecord;
           await this.client.updateAccount({
             isReadReceiptsEnabled: accountRecord.readReceipts,
             isTypingIndicatorsEnabled: accountRecord.typingIndicators,
             isLinkPreviewsEnabled: accountRecord.linkPreviews,
+            // Signal Desktop `mergeAccountRecord`: an unknown sharing mode means nobody
+            isPhoneNumberShared: accountRecord.phoneNumberSharingMode
+              === AccountRecord_PhoneNumberSharingMode.EVERYBODY,
+            isPhoneNumberUnlisted: accountRecord.unlistedPhoneNumber,
+            usernameLink: usernameLink?.entropy.length && usernameLink.serverId.length
+              ? { entropy: usernameLink.entropy, serverId: uuidToString(usernameLink.serverId) }
+              : undefined,
           });
+          const self = await this.ensurePrivateConversation(account.aci);
+          const username = accountRecord.username || undefined;
+          if (self.username !== username) await this.putConversation({ ...self, username });
         }
       }
 
@@ -742,6 +759,25 @@ export default class MessageProcessor {
     });
   }
 
+  /** Stores what this device changed in our profile or username */
+  updateOwnConversation(update: Partial<Pick<
+    ConversationRecord, 'profileName' | 'profileFamilyName' | 'about' | 'aboutEmoji' | 'avatarPath' | 'username'
+  >>) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      const conversation = await this.ensurePrivateConversation(account.aci);
+      return this.putConversation({ ...conversation, ...update });
+    });
+  }
+
+  /** Stores the username of a contact that a username lookup found */
+  setConversationUsername(aci: string, username: string) {
+    return this.runSerial(async () => {
+      const conversation = await this.ensurePrivateConversation(aci);
+      return this.putConversation({ ...conversation, username });
+    });
+  }
+
   /**
    * Fetches the profile behind a private conversation and stores its decrypted fields. Our own profile key
    * is in the account, other profile keys are in their recipients.
@@ -755,6 +791,10 @@ export default class MessageProcessor {
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
+    // Signal Desktop `updateIdentityKey` in `ts/services/profiles.preload.ts`: the profile shows a changed key
+    // before a message does, and gives the safety number of users we have no session with
+    const { identityKey } = profile;
+    if (identityKey && aci !== account.aci) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
     await this.runSerial(async () => {
       const conversation = await this.ensurePrivateConversation(aci);
       await this.putConversation({
@@ -767,6 +807,40 @@ export default class MessageProcessor {
       });
     });
     this.flush();
+  }
+
+  /**
+   * Adds a safety number change notice to the private conversation with `aci` and to the groups we share
+   * (Signal Desktop `addKeyChange` in `ts/models/conversations.preload.ts`). `SignalStore.onIdentityChange` calls it.
+   */
+  addSafetyNumberChange(aci: string) {
+    return this.runSerial(async () => {
+      const account = await this.getAccount();
+      if (aci === account.aci) return;
+      await this.addIdentityNotices(aci, { kind: 'safetyNumberChange' });
+    });
+  }
+
+  /**
+   * Marks the safety number with `aci` as verified, or clears the verification, and tells our other devices
+   * (Signal Desktop `toggleVerified` and `getVerificationSync`)
+   */
+  async setVerified(aci: string, isVerified: boolean) {
+    const { store } = this.client;
+    const state = isVerified ? Verified_State.VERIFIED : Verified_State.DEFAULT;
+    const identity = await store.runExclusive(async () => {
+      const current = await store.getIdentity(aci);
+      if (!current) throw new Error(`No identity key of ${aci}`);
+      if ((current.verified === Verified_State.VERIFIED) === isVerified) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current;
+    });
+    if (!identity) return;
+
+    await this.runSerial(() => this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified }));
+    await this.sendWhenConnected(async (context) => {
+      await sendVerifiedSync(context, { destinationAci: aci, identityKey: identity.publicKey, state });
+    });
   }
 
   /**
@@ -1103,8 +1177,65 @@ export default class MessageProcessor {
       case 'deleteForMe':
         await this.applyDeleteForMeSync(content.value);
         break;
+      case 'verified':
+        await this.applyVerifiedSync(content.value);
+        break;
+      case 'fetchLatest':
+        // Outside the serial queue, which this handler runs in
+        if (content.value.type === SyncMessage_FetchLatest_Type.LOCAL_PROFILE) {
+          void this.refreshProfile(source.authorAci).catch(this.events.onError);
+        }
+        break;
       default:
         break;
+    }
+  }
+
+  /**
+   * Applies a verification change from another device; a new key of a verified contact is saved as verified
+   * (Signal Desktop `processVerifiedMessage` in `ts/SignalProtocolStore.preload.ts`)
+   */
+  private async applyVerifiedSync(verified: Verified) {
+    const aci = verified.destinationAci
+      || (verified.destinationAciBinary.length ? uuidToString(verified.destinationAciBinary) : undefined);
+    const { identityKey, state } = verified;
+    if (!aci || !identityKey.length) return;
+
+    const { store } = this.client;
+    const wasVerified = await store.runExclusive(async () => {
+      const existing = await store.getIdentity(aci);
+      const isSameKey = Boolean(existing && buffersEqual(existing.publicKey, identityKey));
+      if (state === Verified_State.DEFAULT && !isSameKey) return undefined;
+      if (!isSameKey) await saveIdentity(store, aci, identityKey);
+      const current = (await store.getIdentity(aci))!;
+      if (current.verified === state) return undefined;
+      await store.setIdentity(aci, { ...current, verified: state });
+      return current.verified === Verified_State.VERIFIED;
+    });
+
+    const isVerified = state === Verified_State.VERIFIED;
+    if (wasVerified === undefined || wasVerified === isVerified) return;
+    await this.addIdentityNotices(aci, { kind: 'verifiedChange', isVerified, isFromOtherDevice: true });
+  }
+
+  /** Adds an identity notice about `aci` to their private conversation and to the groups we share with them */
+  private async addIdentityNotices(
+    aci: string, notice: Pick<NewMessageRecord, 'kind' | 'isVerified' | 'isFromOtherDevice'>,
+  ) {
+    const now = Date.now();
+    const groups = (await this.db.getConversations())
+      .filter(({ type, memberAcis }) => type === 'group' && memberAcis?.includes(aci));
+    for (const conversation of [await this.ensurePrivateConversation(aci), ...groups]) {
+      await this.addMessage(conversation, {
+        ...notice,
+        conversationId: conversation.id,
+        authorAci: '',
+        actorAci: aci,
+        sentAt: now,
+        receivedAt: now,
+        isOutgoing: false,
+        readAt: now,
+      });
     }
   }
 

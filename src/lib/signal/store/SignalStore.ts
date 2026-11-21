@@ -1,3 +1,6 @@
+import type { Verified_State } from '../proto/generated/SignalService_pb';
+import type { UsernameLink } from '../usernames/manageUsername';
+
 import { IdbStore } from '../../../util/browser/idb';
 
 export type KeyPairBytes = {
@@ -25,6 +28,12 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Phone number privacy from the storage service account record: who sees the number on our profile, and whether
+  // people can find us by it
+  isPhoneNumberShared?: boolean;
+  isPhoneNumberUnlisted?: boolean;
+  // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
+  usernameLink?: UsernameLink;
   // The sync requests to the primary device after linking went out
   isInitialSyncDone?: boolean;
   // Seeded by `signalDev.seedDemo()` to check the UI without a phone: the client never connects
@@ -83,7 +92,8 @@ export type NotificationDefaults = {
 
 export type IdentityRecord = {
   publicKey: Uint8Array;
-  isVerified?: boolean;
+  // Whether we compared the safety number (`Verified.State`); a changed key of a verified contact is `UNVERIFIED`
+  verified?: Verified_State;
 };
 
 export type KyberPreKeyEntry = {
@@ -158,6 +168,9 @@ export default class SignalStore {
   private db = new IdbStore(DB_NAME);
 
   private exclusive = Promise.resolve();
+
+  // Called when the identity key of another user replaces the stored one, see `saveIdentity`
+  onIdentityChange?: (serviceId: string) => void;
 
   /**
    * Runs protocol operations one at a time. Session, sender key and prekey records are read and written

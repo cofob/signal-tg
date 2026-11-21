@@ -7,7 +7,9 @@ import type {
   ReceiptMessage_Type,
   SyncMessage_BlockedSchema,
   SyncMessage_DeleteForMeSchema,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
+  VerifiedSchema,
 } from '../proto/generated/SignalService_pb';
 import type { RecipientResult, SenderContext, SendOptions } from './sendContent';
 import type { GroupTarget } from './sendToGroup';
@@ -158,6 +160,18 @@ export function sendDeleteForMeSync(
   context: SenderContext, deleteForMe: MessageInitShape<typeof SyncMessage_DeleteForMeSchema>,
 ) {
   return syncToOtherDevices(context, { content: { case: 'deleteForMe', value: deleteForMe } }, Date.now());
+}
+
+/** Asks our other devices to fetch what changed here, such as our profile (Signal Desktop `getFetchLocalProfileSyncMessage`) */
+export function sendFetchLatestSync(context: SenderContext, type: SyncMessage_FetchLatest_Type) {
+  return syncToOtherDevices(context, { content: { case: 'fetchLatest', value: { type } } }, Date.now());
+}
+
+/** Tells our other devices that we verified a contact's safety number or cleared it (Signal Desktop `getVerificationSync`) */
+export function sendVerifiedSync(context: SenderContext, verified: MessageInitShape<typeof VerifiedSchema>) {
+  return syncToOtherDevices(context, {
+    content: { case: 'verified', value: { ...verified, nullMessage: getRandomPadding() } },
+  }, Date.now());
 }
 
 /** A null message starts a new session after the old one was archived */
