@@ -360,6 +360,10 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.preflight.outputs.tag }}
             type=semver,pattern={{major}},value=${{ needs.preflight.outputs.tag }}
           flavor: latest=auto
+          labels: |
+            org.opencontainers.image.title=TeleSignal tunnel
+            org.opencontainers.image.description=WebSocket-to-TCP tunnel from the TeleSignal web app to Signal servers
+            org.opencontainers.image.licenses=GPL-3.0-or-later
 
       # The image gets its release tags only after the smoke test below
       - name: Build and push to a staging tag
@@ -390,6 +394,8 @@ jobs:
             done
             docker logs tunnel || true
             docker stop tunnel > /dev/null
+            # The image store refuses a second platform of the same digest while the first is present
+            docker image rm "$IMAGE" > /dev/null
             if [[ "$ok" != true ]]; then
               echo "::error::The $platform image did not answer /health"
               exit 1
