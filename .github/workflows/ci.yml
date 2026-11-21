@@ -6,8 +6,8 @@ name: CI
 
 on:
   push:
-    tags-ignore:
-      - '**'
+    # Tags start the release workflow instead
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 
