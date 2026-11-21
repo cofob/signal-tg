@@ -56,12 +56,9 @@ noscript {
   width: 100%;
   height: 100%;
 
-  .nojs-video {
-    pointer-events: none;
-
-    &::-webkit-media-controls {
-      display: none;
-    }
+  .nojs-logo {
+    width: 8rem;
+    height: 8rem;
   }
 }
 

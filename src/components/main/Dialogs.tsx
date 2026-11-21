@@ -10,6 +10,7 @@ import type {
 } from '../../api/types';
 import type { LangFn } from '../../util/localization';
 
+import { APP_NAME } from '../../config';
 import { selectTabState } from '../../global/selectors';
 import getReadableErrorText from '../../util/getReadableErrorText';
 import { renderTextWithEntities } from '../common/helpers/renderTextWithEntities';
@@ -47,7 +48,7 @@ const Dialogs = ({ dialogs }: StateProps) => {
     return undefined;
   }
 
-  const renderTextDialog = (renderedText: TeactNode, title = 'Telegram') => {
+  const renderTextDialog = (renderedText: TeactNode, title = APP_NAME) => {
     return (
       <Modal
         isOpen={isModalOpen}
@@ -128,7 +129,7 @@ function getErrorHeader(lang: LangFn, error: ApiDialogError) {
   }
 
   if (!error.hasErrorKey) {
-    return 'Telegram';
+    return APP_NAME;
   }
 
   return lang('SomethingWentWrong');

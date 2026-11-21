@@ -195,7 +195,7 @@ const BirthdaySetupModal = ({ modal, suggestForUser }: OwnProps & StateProps) =>
     >
       <div className={styles.header}>
         <AnimatedIconWithPreview
-          tgsUrl={LOCAL_TGS_URLS.DuckCake}
+          tgsUrl={LOCAL_TGS_URLS.PartyPopper}
           size={STICKER_SIZE}
           className="section-icon"
         />

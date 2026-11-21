@@ -60,7 +60,7 @@ const SuggestedBirthday = ({ message, action, peer }: OwnProps & StateProps) => 
   return (
     <div className={styles.contentBox}>
       <AnimatedIconWithPreview
-        tgsUrl={LOCAL_TGS_URLS.DuckCake}
+        tgsUrl={LOCAL_TGS_URLS.PartyPopper}
         size={STICKER_SIZE}
       />
       <div className={styles.suggestedText}>

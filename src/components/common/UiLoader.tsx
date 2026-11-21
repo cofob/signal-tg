@@ -28,9 +28,7 @@ import useShowTransitionDeprecated from '../../hooks/useShowTransitionDeprecated
 import appStyles from '../App.module.scss';
 import styles from './UiLoader.module.scss';
 
-import starIconPath from '../../assets/icons/star/star.webp';
-import monkeyPath from '../../assets/monkey.svg';
-import telegramLogoPath from '../../assets/telegram-logo.svg';
+import telesignalLogoPath from '../../assets/telesignal-logo.svg';
 import pausePreviewPath from '../../assets/tgs-previews/Pause.svg';
 import playPreviewPath from '../../assets/tgs-previews/Play.svg';
 import lockPreviewPath from '../../assets/tgs-previews/settings/Lock.avif';
@@ -101,17 +99,16 @@ function preloadAvatars() {
 const preloadTasks = {
   main: () => Promise.all([
     preloadFonts(),
-    preloadImage(starIconPath),
     preloadImage(playPreviewPath),
     preloadImage(pausePreviewPath),
     localizationReadyPromise,
   ]),
   authPhoneNumber: () => Promise.all([
     preloadFonts(),
-    preloadImage(telegramLogoPath),
+    preloadImage(telesignalLogoPath),
   ]),
-  authCode: () => preloadImage(monkeyPath),
-  authPassword: () => preloadImage(monkeyPath),
+  authCode: () => preloadImage(telesignalLogoPath),
+  authPassword: () => preloadImage(telesignalLogoPath),
   authQrCode: preloadFonts,
   lock: () => Promise.all([
     preloadFonts(),

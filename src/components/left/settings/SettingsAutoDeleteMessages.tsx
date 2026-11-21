@@ -121,7 +121,7 @@ const SettingsAutoDeleteMessages = ({
     <div className="settings-content custom-scroll">
       <div className="settings-content-header no-border">
         <AnimatedIconWithPreview
-          tgsUrl={LOCAL_TGS_URLS.UtyanDisappear}
+          tgsUrl={LOCAL_TGS_URLS.Flame}
           size={TOP_STICKER_SIZE}
           className="settings-content-icon"
         />

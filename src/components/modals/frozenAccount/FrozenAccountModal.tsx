@@ -56,7 +56,7 @@ const FrozenAccountModal = ({
       <div className={styles.header}>
         <AnimatedIconWithPreview
           size={ICON_SIZE}
-          tgsUrl={LOCAL_TGS_URLS.BannedDuck}
+          tgsUrl={LOCAL_TGS_URLS.HandStop}
           noLoop
         />
         <div className={styles.title}>

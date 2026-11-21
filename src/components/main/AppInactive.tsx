@@ -8,7 +8,7 @@ import Button from '../ui/Button';
 
 import './AppInactive.scss';
 
-import appInactivePath from '../../assets/app-inactive.avif';
+import logoPath from '../../assets/telesignal-logo.svg';
 
 type OwnProps = {
   inactiveReason: 'auth' | 'otherClient';
@@ -30,7 +30,7 @@ const AppInactive = ({ inactiveReason }: OwnProps) => {
   return (
     <div id="AppInactive">
       <div className="content">
-        <img src={appInactivePath} alt="" />
+        <img src={logoPath} alt="" />
         <h3 className="title">
           {inactiveReason === 'auth' ? lang('AppInactiveAuthTitle') : lang('AppInactiveOtherClientTitle')}
         </h3>

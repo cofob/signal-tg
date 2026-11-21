@@ -77,7 +77,7 @@ const ChatThemesPicker = ({
       />
       <ThemePresetTile
         theme={theme}
-        label={lang('Telegram')}
+        label={lang('ThemeClassic')}
         isSelected={!selectedEmoticon && !isSignalTheme}
         onSelect={handlePresetSelect}
       />
