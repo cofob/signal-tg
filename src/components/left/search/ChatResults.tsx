@@ -18,6 +18,7 @@ import { parseSearchResultKey, type SearchResultKey } from '../../../util/keys/s
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { throttle } from '../../../util/schedulers';
 import { parseSignalLink } from '../../../util/signalLinks';
+import { parseUsernameSearch } from '../../../util/signalUsername';
 import { renderMessageSummary } from '../../common/helpers/renderMessageText';
 import sortChatIds from '../../common/helpers/sortChatIds';
 
@@ -42,6 +43,7 @@ import DateSuggest from './DateSuggest';
 import LeftSearchResultChat from './LeftSearchResultChat';
 import RecentContacts from './RecentContacts';
 import SignalLinkResult from './SignalLinkResult';
+import UsernameSearchResult from './UsernameSearchResult';
 
 import './ChatResults.scss';
 
@@ -267,6 +269,9 @@ const ChatResults: FC<OwnProps & StateProps> = ({
     return link?.type === 'invalid' ? undefined : link;
   }, [searchQuery]);
 
+  // A username can be looked up on the server from the results; a link never looks like one
+  const searchUsername = searchQuery && !signalLink ? parseUsernameSearch(searchQuery) : undefined;
+
   const handleClickShowMoreLocal = useCallback(() => {
     setShouldShowMoreLocal(!shouldShowMoreLocal);
   }, [shouldShowMoreLocal]);
@@ -297,7 +302,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
   const actualFoundIds = foundMessages;
 
   const nothingFound = searchContext === 'all' && fetchingStatus && !fetchingStatus.chats && !fetchingStatus.messages
-    && !signalLink && !localResults.length && !globalResults.length && !actualFoundIds.length;
+    && !signalLink && !searchUsername && !localResults.length && !globalResults.length && !actualFoundIds.length;
   const isMessagesFetching = fetchingStatus?.messages;
 
   const shouldRenderTopPeers = !searchQuery && !searchDate;
@@ -327,6 +332,11 @@ const ChatResults: FC<OwnProps & StateProps> = ({
         </div>
       )}
       {signalLink && <SignalLinkResult link={signalLink} query={searchQuery!} />}
+      {searchUsername && (
+        <Island className="search-island">
+          <UsernameSearchResult username={searchUsername} />
+        </Island>
+      )}
       {nothingFound && (
         <NothingFound
           withSticker

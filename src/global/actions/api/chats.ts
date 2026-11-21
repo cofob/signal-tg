@@ -886,6 +886,31 @@ addActionHandler('openChatByUsernameLink', async (global, actions, payload): Pro
   actions.openChatByUsername({ username, tabId });
 });
 
+/**
+ * Opens the chat of a username that the user chose from the search results, as a click on "Find by username". The
+ * lookup status goes to the tab state, where the result row shows it.
+ */
+addActionHandler('findChatByUsername', async (global, actions, payload): Promise<void> => {
+  const { username, tabId = getCurrentTabId() } = payload;
+  if (selectTabState(global, tabId).usernameLookup?.status === 'loading') return;
+
+  global = updateTabState(global, { usernameLookup: { username, status: 'loading' } }, tabId);
+  setGlobal(global);
+
+  const result = await lookUpChatByUsername(global, username);
+
+  global = getGlobal();
+  if ('error' in result) {
+    global = updateTabState(global, { usernameLookup: { username, status: result.error } }, tabId);
+    setGlobal(global);
+    return;
+  }
+
+  global = updateTabState(global, { usernameLookup: undefined }, tabId);
+  setGlobal(global);
+  actions.openChat({ id: result.id, shouldReplaceHistory: true, tabId });
+});
+
 /** Opens the chat with a Signal user by ACI, such as a shared contact that has no chat yet */
 addActionHandler('openChatByAci', async (global, actions, payload): Promise<void> => {
   const { aci, tabId = getCurrentTabId() } = payload;
@@ -1474,23 +1499,28 @@ export async function fetchChatByUsername<T extends GlobalState>(
   global: T,
   username: string,
 ) {
+  const result = await lookUpChatByUsername(global, username);
+  return 'error' in result ? undefined : result;
+}
+
+async function lookUpChatByUsername<T extends GlobalState>(
+  global: T,
+  username: string,
+) {
   global = getGlobal();
   const localChat = selectChatByUsername(global, username);
   if (localChat && !localChat.isMin) {
     return localChat;
   }
 
-  const { chat, user } = await callApi('getChatByUsername', username) || {};
-  if (!chat) {
-    return undefined;
-  }
+  // Signal: the server finds the user, or tells why it did not
+  const result = await callApi('getChatByUsername', username) || { error: 'unavailable' as const };
+  if ('error' in result) return result;
+  const { chat, user } = result;
 
   global = getGlobal();
   global = updateChat(global, chat.id, chat);
-  if (user) {
-    global = updateUser(global, user.id, user);
-  }
-
+  global = updateUser(global, user.id, user);
   setGlobal(global);
 
   return chat;

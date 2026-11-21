@@ -479,6 +479,12 @@ export type TabState = {
     phoneNumber: string;
   };
 
+  // Signal: the server lookup of a username that the user chose from the search results
+  usernameLookup?: {
+    username: string;
+    status: 'loading' | 'notFound' | 'unavailable';
+  };
+
   // Signal: a link to something that this app does not do, which the dialog explains; `host` is the proxy's
   linkDeviceModal?: {
     // The link of the device to link, when it came from a `sgnl://linkdevice` link
