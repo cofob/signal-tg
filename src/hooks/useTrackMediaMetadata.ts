@@ -7,7 +7,7 @@ import { buildMediaMetadata } from '../util/mediaSession';
 import useMedia from './useMedia';
 import useMessageMediaMetadata from './useMessageMediaMetadata';
 
-import telegramLogoPath from '../assets/telegram-logo-filled.svg';
+import telesignalLogoPath from '../assets/telesignal-logo.svg';
 
 type OwnArgs = {
   audio?: ApiAudio;
@@ -25,7 +25,7 @@ export default function useTrackMediaMetadata({
 
   const coverHash = audio && getAudioHasCover(audio) ? getMediaHash(audio, 'pictogram') : undefined;
   const coverUrl = useMedia(shouldUseTrackMetadata ? coverHash : undefined);
-  const artworkUrl = coverUrl || telegramLogoPath;
+  const artworkUrl = coverUrl || telesignalLogoPath;
 
   const trackMetadata = useMemo(() => {
     if (!audio) return undefined;
