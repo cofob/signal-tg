@@ -95,6 +95,7 @@ import {
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
+import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './sendRetry';
 import { getFailedRecipients } from './sendState';
 
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
@@ -242,6 +243,7 @@ const DELETE_FOR_EVERYONE_MAX_AGE_MS = DAY_MS;
 export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+const MIN_SEND_RETRY_TIMER_MS = 1000;
 // Signal Desktop `ts/util/isConversationUnregistered.std.ts`: group sends skip a member for this long after a send
 // found their account gone
 const UNREGISTERED_SKIP_MS = 6 * 60 * 60 * 1000;
@@ -301,6 +303,14 @@ export default class MessageProcessor {
   // Receipts and syncs for local changes made without a connection, sent after the next one
   private pendingSends: ((context: SenderContext) => Promise<void>)[] = [];
 
+  // Messages whose send is running, which a retry pass leaves alone
+  private sendsInFlight = new Set<number>();
+
+  // Retry passes run one at a time
+  private retryPass = Promise.resolve();
+
+  private retryTimer?: ReturnType<typeof setTimeout>;
+
   // Storage service syncs run one at a time
   private storageSync = Promise.resolve();
 
@@ -323,10 +333,14 @@ export default class MessageProcessor {
     await this.runSerial(() => this.handleContent(decrypted));
   }
 
-  /** Starts the disappearing messages timer for messages stored earlier */
+  /**
+   * Starts the disappearing messages timer for messages stored earlier and sends the messages again that earlier
+   * sends left undelivered, which runs after each connection
+   */
   start() {
     void this.runSerial(() => this.deleteExpiredMessages());
     void this.flushPendingSends();
+    this.retryUnsentMessages(true);
   }
 
   /** Stops the timers and drops the queued sends, storage syncs and profile fetches of the current account */
@@ -335,6 +349,10 @@ export default class MessageProcessor {
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
     clearTimeout(this.storageSyncTimer);
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.sendsInFlight.clear();
+    this.retryPass = Promise.resolve();
     this.deliveryReceiptTimer = undefined;
     this.storageSyncTimer = undefined;
     this.isStorageSyncQueued = false;
@@ -381,7 +399,9 @@ export default class MessageProcessor {
         expiresAt: accepted.expireTimer ? sentAt + accepted.expireTimer * 1000 : undefined,
         readAt: sentAt,
         recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
+        sendRetry: { startedAt: sentAt, attempt: 0, at: sentAt },
       });
+      this.sendsInFlight.add(added.id);
       onStored?.(added);
       return { conversation: accepted, message: added, dataMessage: outgoing };
     });
@@ -470,7 +490,10 @@ export default class MessageProcessor {
         editedAt,
         // Like Signal Desktop, the message shows the send state of its latest edit
         recipientStatus: buildPendingStatus(getRecipientAcis(found, account.aci)),
+        recipientErrors: undefined,
+        sendRetry: { startedAt: editedAt, attempt: 0, at: editedAt },
       });
+      this.sendsInFlight.add(updated.id);
       return {
         conversation: found,
         message: updated,
@@ -1460,7 +1483,7 @@ export default class MessageProcessor {
   /**
    * Sends an outgoing message again to the recipients it failed for, as pending until the send ends (Signal Desktop
    * `retryMessageSend`). Members of a group whose accounts are gone are not tried again. Returns `undefined` when no
-   * recipient is left to try.
+   * recipient is left to try, or the message is being sent.
    */
   async resendMessage(messageId: number) {
     const prepared = await this.runSerial(async () => {
@@ -1469,24 +1492,96 @@ export default class MessageProcessor {
       if (!message?.isOutgoing || !message.dataMessage || !conversation) {
         throw new Error('The message cannot be sent again');
       }
+      if (this.sendsInFlight.has(messageId)) return undefined;
 
       const failed = getFailedRecipients(message, conversation);
-      if (!failed.length) return undefined;
-      const recipientStatus = { ...message.recipientStatus };
-      const recipientErrors = { ...message.recipientErrors };
-      for (const aci of failed) {
-        recipientStatus[aci] = 'pending';
-        delete recipientErrors[aci];
-      }
-      const pending = await this.putMessage({
-        ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
-      });
-      return { conversation, message: pending, dataMessage: message.dataMessage, failed };
+      return failed.length ? this.prepareResend(message, conversation, failed) : undefined;
     });
-    if (!prepared) return undefined;
+    return prepared && this.sendPrepared(prepared);
+  }
 
-    const { conversation, message, failed } = prepared;
-    const dataMessage = fromBinary(DataMessageSchema, prepared.dataMessage);
+  /**
+   * Sends the messages again that earlier sends left undelivered: recipients that are still pending after a reload or
+   * a crash, and those that failed for lack of a connection (Signal Desktop `sendNormalMessage` runs in a job that
+   * `ts/jobs/conversationJobQueue.preload.ts` retries with a growing pause for a day). The messages keep their
+   * timestamps, so recipients that got one already ignore it. After the day, pending recipients fail. A pass with
+   * `isForced` ignores the pauses, as after a connection; the others run when the pause of the first message ends.
+   */
+  private retryUnsentMessages(isForced?: boolean) {
+    const { generation } = this;
+    this.retryPass = this.retryPass
+      .then(() => this.runRetryPass(generation, isForced))
+      .catch(this.events.onError);
+  }
+
+  private async runRetryPass(generation: number, isForced?: boolean) {
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+
+    for (const { id, sendRetry } of await this.db.getMessagesToRetry()) {
+      if (generation !== this.generation) return;
+      // The send of a message in flight sets its next retry; a message waits for the connection otherwise
+      if (this.sendsInFlight.has(id)) continue;
+      if (!isForced && sendRetry!.at > Date.now()) continue;
+      if (!this.client.isConnected) return;
+      await this.retryMessage(id).catch(this.events.onError);
+    }
+    if (generation === this.generation) await this.scheduleSendRetry();
+  }
+
+  private async retryMessage(messageId: number) {
+    const prepared = await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      if (!message?.sendRetry) return undefined;
+
+      const conversation = await this.db.getConversation(message.conversationId);
+      const recipients = conversation && message.isOutgoing && message.dataMessage && !message.deletedAt
+        ? getRetryRecipients(message, conversation)
+        : [];
+      if (!conversation || !recipients.length || Date.now() - message.sendRetry.startedAt > SEND_RETRY_MAX_AGE_MS) {
+        await this.finishSendRetry(message);
+        return undefined;
+      }
+      return this.prepareResend(message, conversation, recipients);
+    });
+    if (prepared) await this.sendPrepared(prepared);
+  }
+
+  /** Gives up on a message: the recipients it is still pending for failed for lack of a connection */
+  private async finishSendRetry(message: MessageRecord) {
+    const recipientStatus = { ...message.recipientStatus };
+    const recipientErrors = { ...message.recipientErrors };
+    for (const [aci, status] of Object.entries(recipientStatus)) {
+      if (status !== 'pending') continue;
+      recipientStatus[aci] = 'failed';
+      recipientErrors[aci] = 'network';
+    }
+    await this.putMessage({
+      ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+      sendRetry: undefined,
+    });
+  }
+
+  /** Marks `recipients` pending and the message as being sent; `sendPrepared` sends it */
+  private async prepareResend(message: MessageRecord, conversation: ConversationRecord, recipients: string[]) {
+    const recipientStatus = { ...message.recipientStatus };
+    const recipientErrors = { ...message.recipientErrors };
+    for (const aci of recipients) {
+      recipientStatus[aci] = 'pending';
+      delete recipientErrors[aci];
+    }
+    const pending = await this.putMessage({
+      ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+    });
+    this.sendsInFlight.add(message.id);
+    return { conversation, message: pending, recipients };
+  }
+
+  private sendPrepared(
+    { conversation, message, recipients }:
+    { conversation: ConversationRecord; message: MessageRecord; recipients: string[] },
+  ) {
+    const dataMessage = fromBinary(DataMessageSchema, message.dataMessage!);
     // An edited message shows the send state of its latest edit, so that edit goes again
     const content: OutgoingMessage = message.editedAt
       ? { case: 'editMessage', value: { targetSentTimestamp: BigInt(message.sentAt), dataMessage } }
@@ -1494,7 +1589,18 @@ export default class MessageProcessor {
     return this.sendStoredMessage(conversation, message, content, {
       timestamp: message.editedAt ?? message.sentAt,
       expirationStartTimestamp: message.expireTimer ? message.sentAt : undefined,
-    }, failed);
+    }, recipients);
+  }
+
+  /** Runs the next retry pass when the earliest pause of a message ends */
+  private async scheduleSendRetry() {
+    const [next] = (await this.db.getMessagesToRetry()).filter(({ id }) => !this.sendsInFlight.has(id));
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    if (!next) return;
+    // The minimum keeps a pass that cannot change a message from running over and over
+    const delay = Math.max(next.sendRetry!.at - Date.now(), MIN_SEND_RETRY_TIMER_MS);
+    this.retryTimer = setTimeout(() => this.retryUnsentMessages(), Math.min(delay, MAX_TIMEOUT_MS));
   }
 
   /**
@@ -1898,26 +2004,42 @@ export default class MessageProcessor {
     options: { timestamp: number; expirationStartTimestamp?: number },
     recipients = Object.keys(message.recipientStatus ?? {}),
   ) {
-    const results = await this.sendContentTo(conversation, recipients, content, options);
-    return this.runSerial(async () => {
-      const current = await this.db.getMessage(message.id);
-      if (!current) return message;
-      const recipientStatus = { ...current.recipientStatus };
-      const recipientErrors = { ...current.recipientErrors };
-      for (const serviceId of recipients) {
-        const error = getResultError(results, serviceId);
-        if (error) {
-          recipientStatus[serviceId] = 'failed';
-          recipientErrors[serviceId] = getSendErrorKind(error);
-        } else {
-          recipientStatus[serviceId] = maxStatus(recipientStatus[serviceId], 'sent');
-          delete recipientErrors[serviceId];
-        }
+    let sent: MessageRecord;
+    try {
+      const results = await this.sendContentTo(conversation, recipients, content, options);
+      sent = await this.runSerial(() => this.storeSendResults(conversation, message, recipients, results));
+    } finally {
+      this.sendsInFlight.delete(message.id);
+    }
+    if (sent.sendRetry) await this.scheduleSendRetry().catch(this.events.onError);
+    return sent;
+  }
+
+  private async storeSendResults(
+    conversation: ConversationRecord, message: MessageRecord, recipients: string[], results: RecipientResult[],
+  ) {
+    const current = await this.db.getMessage(message.id);
+    if (!current) return message;
+
+    const recipientStatus = { ...current.recipientStatus };
+    const recipientErrors = { ...current.recipientErrors };
+    for (const serviceId of recipients) {
+      const error = getResultError(results, serviceId);
+      if (error) {
+        recipientStatus[serviceId] = 'failed';
+        recipientErrors[serviceId] = getSendErrorKind(error);
+      } else {
+        recipientStatus[serviceId] = maxStatus(recipientStatus[serviceId], 'sent');
+        delete recipientErrors[serviceId];
       }
-      this.logFailedSends(message.id, conversation, recipients, results);
-      return this.putMessage({
-        ...current, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
-      });
+    }
+    this.logFailedSends(message.id, conversation, recipients, results);
+    const nextErrors = Object.keys(recipientErrors).length ? recipientErrors : undefined;
+    return this.putMessage({
+      ...current,
+      recipientStatus,
+      recipientErrors: nextErrors,
+      sendRetry: getNextSendRetry(current.sendRetry, { recipientStatus, recipientErrors: nextErrors }, conversation),
     });
   }
 

@@ -63,6 +63,18 @@ export type SendStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'viewed' | 
 // user has to accept; `unregistered` is an account that no longer exists.
 export type SendErrorKind = 'unregistered' | 'identityChanged' | 'network' | 'rateLimited' | 'other';
 
+/**
+ * The state of the automatic resends of an outgoing message: recipients who are still pending after a restart, or
+ * failed for lack of a connection, get the message again until a day passed since `startedAt`
+ */
+export type SendRetry = {
+  startedAt: number;
+  // The sends so far, which set the pause before the next one
+  attempt: number;
+  // The earliest time of the next send while connected
+  at: number;
+};
+
 export type MessageRecord = {
   id: number;
   conversationId: string;
@@ -104,6 +116,8 @@ export type MessageRecord = {
   recipientStatus?: Record<string, SendStatus>;
   // The reason for each recipient whose status is `failed`; messages stored earlier have none
   recipientErrors?: Record<string, SendErrorKind>;
+  // Set while some recipient still has to get the message again, see `getMessagesToRetry`
+  sendRetry?: SendRetry;
   isSealedSender?: boolean;
   // The server's id of the envelope, which spam reports name
   serverGuid?: string;
@@ -154,7 +168,7 @@ export type StoryRecord = {
 export type NewStoryRecord = Omit<StoryRecord, 'id'>;
 
 const DB_NAME = 'ts-signal-messages';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
 const STORIES = 'stories';
@@ -162,6 +176,7 @@ const BY_CONVERSATION = 'byConversation';
 const BY_AUTHOR_SENT_AT = 'byAuthorSentAt';
 const BY_EXPIRES_AT = 'byExpiresAt';
 const BY_LOCAL_ID = 'byLocalId';
+const BY_SEND_RETRY_AT = 'bySendRetryAt';
 
 /**
  * Conversations, messages and stories of the linked device in IndexedDB. Message ids grow in arrival order,
@@ -348,6 +363,11 @@ export default class MessageDb {
     return messages;
   }
 
+  /** Outgoing messages that wait for another send, the earliest retry first */
+  getMessagesToRetry() {
+    return this.request<MessageRecord[]>(MESSAGES, 'readonly', (store) => store.index(BY_SEND_RETRY_AT).getAll());
+  }
+
   /** Messages whose disappearing timer ran out by `time` */
   getExpiredMessages(time: number) {
     return this.request<MessageRecord[]>(
@@ -451,6 +471,21 @@ export default class MessageDb {
           const stories = db.createObjectStore(STORIES, { keyPath: 'id', autoIncrement: true });
           stories.createIndex(BY_AUTHOR_SENT_AT, ['authorAci', 'sentAt']);
           stories.createIndex(BY_EXPIRES_AT, 'expiresAt');
+        }
+        if (oldVersion < 4) {
+          const messages = openRequest.transaction!.objectStore(MESSAGES);
+          messages.createIndex(BY_SEND_RETRY_AT, 'sendRetry.at');
+          // Messages that an earlier version left pending are sent again, or failed once a day passed
+          messages.openCursor().onsuccess = ({ target }) => {
+            const cursor = (target as IDBRequest<IDBCursorWithValue | undefined>).result;
+            if (!cursor) return;
+            const message = cursor.value as MessageRecord;
+            if (message.isOutgoing && Object.values(message.recipientStatus ?? {}).includes('pending')) {
+              const startedAt = message.editedAt ?? message.sentAt;
+              cursor.update({ ...message, sendRetry: { startedAt, attempt: 0, at: startedAt } });
+            }
+            cursor.continue();
+          };
         }
       };
       // An older version of the app in another tab keeps the upgrade waiting until that tab closes
