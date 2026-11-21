@@ -2708,6 +2708,24 @@ export function ServerPublicParams_ReceiveExpiringProfileKeyCredential(params, r
 }
 
 /**
+ * Verifies the server's notary signature, such as `GroupChange.serverSignature` over its actions
+ * @param {ServerPublicParams} params
+ * @param {Uint8Array} message
+ * @param {Uint8Array} notary_signature
+ */
+export function ServerPublicParams_VerifySignature(params, message, notary_signature) {
+    _assertClass(params, ServerPublicParams);
+    const ptr0 = passArray8ToWasm0(message, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(notary_signature, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.ServerPublicParams_VerifySignature(params.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
  * @param {Uint8Array} input
  * @returns {Uint8Array}
  */
@@ -3786,7 +3804,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 90, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 89, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },

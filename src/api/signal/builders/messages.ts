@@ -1,6 +1,7 @@
 import { fromBinary } from '@bufbuild/protobuf';
 
 import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
+import type { GroupUpdate } from '../../../lib/signal/groups/groupUpdates';
 import type {
   BodyRange, DataMessage_PollCreate, DataMessage_Quote,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
@@ -15,6 +16,7 @@ import type {
   ApiUser,
   MediaContent,
 } from '../../types';
+import type { ApiMessageAction, ApiMessageActionGroupUpdate } from '../../types/messageActions';
 import type { MentionedUser } from './bodyRanges';
 
 import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
@@ -31,6 +33,12 @@ import { buildApiUser } from './users';
 type UserResolver = ReturnType<typeof createUserResolver>;
 
 const MS_PER_SECOND = 1000;
+const INVITE_LINK_UPDATES = {
+  on: 'linkOn',
+  onWithApproval: 'linkOnWithApproval',
+  off: 'linkOff',
+  reset: 'linkReset',
+} as const;
 const DELIVERED_STATUSES = new Set<SendStatus>(['delivered', 'read', 'viewed']);
 
 /** Builds the app message of a stored Signal message; `conversation` is the one it belongs to */
@@ -60,6 +68,17 @@ export async function buildApiMessageWithPoll(
       message: {
         ...base,
         content: { action: { mediaType: 'action', type: 'setMessagesTtl', period: message.expireTimer ?? 0 } },
+      },
+    };
+  }
+  if (message.kind === 'groupUpdate' && message.groupUpdate) {
+    const { action, senderAci: speakerAci } = await buildGroupUpdateAction(message.groupUpdate, conversation, users);
+    return {
+      message: {
+        ...base,
+        senderId: speakerAci ? await users.getUserId(speakerAci) : base.senderId,
+        isOutgoing: speakerAci ? speakerAci === selfAci : base.isOutgoing,
+        content: { action },
       },
     };
   }
@@ -122,6 +141,64 @@ export async function buildApiMessageWithPoll(
     },
     poll,
   };
+}
+
+/**
+ * The service message of a group notice. Notices with a Telegram counterpart use it; `senderAci` replaces the
+ * actor when the notice reads as said by someone else, such as an approved join request.
+ */
+async function buildGroupUpdateAction(
+  update: GroupUpdate, conversation: ConversationRecord, users: UserResolver,
+): Promise<{ action: ApiMessageAction; senderAci?: string }> {
+  const groupAction = (fields: Omit<ApiMessageActionGroupUpdate, 'mediaType' | 'type'>) => ({
+    action: { mediaType: 'action' as const, type: 'groupUpdate' as const, ...fields },
+  });
+
+  switch (update.type) {
+    case 'create':
+      return { action: { mediaType: 'action', type: 'chatCreate', title: conversation.title ?? '', userIds: [] } };
+    case 'title':
+      return { action: { mediaType: 'action', type: 'chatEditTitle', title: update.title ?? '' } };
+    case 'avatar':
+      return { action: { mediaType: 'action', type: update.isRemoved ? 'chatDeletePhoto' : 'chatEditPhoto' } };
+    case 'description':
+      return groupAction({ update: update.isRemoved ? 'descriptionRemoved' : 'description' });
+    case 'membersAdded':
+      if (update.isFromInviteLink) {
+        return {
+          action: { mediaType: 'action', type: 'chatJoinedByLink', inviterId: await users.getUserId(update.acis[0]) },
+        };
+      }
+      return {
+        action: {
+          mediaType: 'action',
+          type: 'chatAddUser',
+          userIds: await Promise.all(update.acis.map((aci) => users.getUserId(aci))),
+        },
+      };
+    case 'memberRemoved':
+      return { action: { mediaType: 'action', type: 'chatDeleteUser', userId: await users.getUserId(update.aci) } };
+    case 'joinApproved':
+      return { action: { mediaType: 'action', type: 'chatJoinedByRequest' }, senderAci: update.aci };
+    case 'joinRequested':
+      return groupAction({ update: 'joinRequested' });
+    case 'invited':
+      return groupAction({ update: 'invited', count: update.count });
+    case 'adminChanged':
+      return groupAction({
+        update: update.isAdmin ? 'adminAdded' : 'adminRemoved', userId: await users.getUserId(update.aci),
+      });
+    case 'access':
+      return groupAction({
+        update: update.target === 'info' ? 'infoAccess' : 'membersAccess', isAdminOnly: update.isAdminOnly,
+      });
+    case 'inviteLink':
+      return groupAction({ update: INVITE_LINK_UPDATES[update.state] });
+    case 'announcementsOnly':
+      return groupAction({ update: update.isEnabled ? 'announcementsOn' : 'announcementsOff' });
+    default:
+      return { action: { mediaType: 'action', type: 'unsupported' } };
+  }
 }
 
 /**

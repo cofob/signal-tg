@@ -1,4 +1,5 @@
 import MessageDb from '../../lib/signal/db/MessageDb';
+import GroupManager from '../../lib/signal/groups/GroupManager';
 import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
@@ -23,6 +24,8 @@ export const processor = new MessageProcessor(db, client, {
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
 });
+
+export const groups = new GroupManager(client, db, processor);
 
 export function logError(error: unknown) {
   // eslint-disable-next-line no-console
