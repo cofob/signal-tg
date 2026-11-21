@@ -1,6 +1,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8Array;
+
+export function AccountEntropyPool_Generate(): string;
+
 export class CiphertextMessage {
     private constructor();
     free(): void;
@@ -588,6 +592,8 @@ export function SignedPreKeyRecord_New(id: number, timestamp_millis: number, pub
 
 export function SignedPreKeyRecord_Serialize(obj: SignedPreKeyRecord): Uint8Array;
 
+export function SvrKey_DeriveRegistrationRecoveryPassword(svr_key: Uint8Array): Uint8Array;
+
 export class TlsClient {
     free(): void;
     [Symbol.dispose](): void;
@@ -649,6 +655,8 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
+    readonly AccountEntropyPool_Generate: () => [number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
     readonly CiphertextMessage_Type: (a: number) => number;
@@ -811,6 +819,7 @@ export interface InitOutput {
     readonly SignedPreKeyRecord_GetTimestamp: (a: number) => [number, number, number];
     readonly SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
+    readonly SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
     readonly UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContentHint: (a: number) => [number, number, number];
     readonly UnidentifiedSenderMessageContent_GetContents: (a: number) => [number, number, number, number];
@@ -884,8 +893,8 @@ export interface InitOutput {
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_destroy_closure: (a: number, b: number) => void;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __externref_table_dealloc: (a: number) => void;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __externref_drop_slice: (a: number, b: number) => void;
     readonly __wbindgen_start: () => void;
 }

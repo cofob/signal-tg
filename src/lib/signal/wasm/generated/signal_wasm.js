@@ -1,5 +1,37 @@
 /* @ts-self-types="./signal_wasm.d.ts" */
 
+/**
+ * @param {string} account_entropy
+ * @returns {Uint8Array}
+ */
+export function AccountEntropyPool_DeriveSvrKey(account_entropy) {
+    const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.AccountEntropyPool_DeriveSvrKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @returns {string}
+ */
+export function AccountEntropyPool_Generate() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.AccountEntropyPool_Generate();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
 export class CiphertextMessage {
     static __wrap(ptr) {
         const obj = Object.create(CiphertextMessage.prototype);
@@ -3116,6 +3148,22 @@ export function SignedPreKeyRecord_Serialize(obj) {
     return v1;
 }
 
+/**
+ * @param {Uint8Array} svr_key
+ * @returns {Uint8Array}
+ */
+export function SvrKey_DeriveRegistrationRecoveryPassword(svr_key) {
+    const ptr0 = passArray8ToWasm0(svr_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrKey_DeriveRegistrationRecoveryPassword(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
 export class TlsClient {
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
@@ -3655,7 +3703,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 88, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 89, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },

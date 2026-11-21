@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
+export const AccountEntropyPool_Generate: () => [number, number];
 export const CiphertextMessage_FromPlaintextContent: (a: number) => number;
 export const CiphertextMessage_Serialize: (a: number) => [number, number];
 export const CiphertextMessage_Type: (a: number) => number;
@@ -163,6 +165,7 @@ export const SignedPreKeyRecord_GetSignature: (a: number) => [number, number, nu
 export const SignedPreKeyRecord_GetTimestamp: (a: number) => [number, number, number];
 export const SignedPreKeyRecord_New: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
 export const SignedPreKeyRecord_Serialize: (a: number) => [number, number, number, number];
+export const SvrKey_DeriveRegistrationRecoveryPassword: (a: number, b: number) => [number, number, number, number];
 export const UnidentifiedSenderMessageContent_Deserialize: (a: number, b: number) => [number, number, number];
 export const UnidentifiedSenderMessageContent_GetContentHint: (a: number) => [number, number, number];
 export const UnidentifiedSenderMessageContent_GetContents: (a: number) => [number, number, number, number];
@@ -236,7 +239,7 @@ export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_destroy_closure: (a: number, b: number) => void;
-export const __wbindgen_free: (a: number, b: number, c: number) => void;
 export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
 export const __externref_drop_slice: (a: number, b: number) => void;
 export const __wbindgen_start: () => void;

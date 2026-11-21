@@ -3,6 +3,7 @@
 //! TypeScript in `src/lib/signal` calls them through `src/lib/signal/wasm`.
 #![allow(non_snake_case)]
 
+mod account_keys;
 mod cipher;
 mod error;
 mod handles;

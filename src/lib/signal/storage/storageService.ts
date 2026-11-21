@@ -12,6 +12,7 @@ import {
 } from '../crypto';
 import { sendHttpRequest } from '../net/http';
 import { getBasicAuthorization } from '../net/rest';
+import { wasm } from '../wasm';
 
 import {
   ManifestRecordSchema, ReadOperationSchema, StorageItemsSchema, StorageManifestSchema, StorageRecordSchema,
@@ -23,7 +24,6 @@ export type StorageSnapshot = {
   records: Map<string, StorageRecord>;
 };
 
-const MASTER_KEY_INFO = '20240801_SIGNAL_SVR_MASTER_KEY';
 const STORAGE_KEY_INFO = 'Storage Service Encryption';
 const ITEM_KEY_INFO_PREFIX = '20240801_SIGNAL_STORAGE_SERVICE_ITEM_';
 const KEY_LENGTH = 32;
@@ -75,7 +75,7 @@ export async function fetchStorageSnapshot(
 async function getStorageKey(account: AccountRecord) {
   let masterKey = account.masterKey;
   if (!masterKey && account.accountEntropyPool) {
-    masterKey = deriveSecrets(KEY_LENGTH, encodeUtf8(account.accountEntropyPool), encodeUtf8(MASTER_KEY_INFO));
+    masterKey = wasm.AccountEntropyPool_DeriveSvrKey(account.accountEntropyPool);
   }
   if (!masterKey) throw new Error('No master key: wait for the keys sync from the primary device');
   return hmacSha256(concat(masterKey), encodeUtf8(STORAGE_KEY_INFO));
