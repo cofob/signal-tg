@@ -34,7 +34,7 @@ Out of scope: the Signal service, libsignal's cryptography, the browser and oper
 | S-06 | Low | Unlink | After the phone unlinks the browser, conversations and messages stay in plaintext with no way to erase them from the app | Accepted: Signal Desktop does the same; an erase action is recommended |
 | S-07 | Low | Logging | Production error logs carried ACIs, numbers and key-sized values | Fixed |
 | S-08 | Low | Tauri | The record of saved files (paths, attachment keys) survived logout, and log lines named saved files | Fixed |
-| S-09 | Low | Web | Links from messages sent the app's origin as `Referer` | Fixed |
+| S-09 | Low | Web | Links from messages sent the app's origin as `Referer` | Fixed (`same-origin`, not `no-referrer`) |
 | S-10 | Low | CSP | `frame-src 'self'` although the app embeds no frames | Fixed |
 | S-11 | Info | CSP | `connect-src` allows any `wss:` host and `style-src` allows inline styles | Accepted |
 | S-12 | Info | Web | The share target accepts a cross-site POST and pre-fills a draft | Accepted |
@@ -80,6 +80,13 @@ fields, attachments sit in the Cache API, the engine has to start with the key a
 half-way state (only the keys encrypted) would suggest that the history is protected. The concrete design (record format,
 which fields stay open, migration, lock and multi-tab behaviour, what it does not protect) is in
 `docs/signal/PLAN.md`, stage 6, "Шифрование хранилища движка код-паролем".
+
+Two rules for whoever implements it. Disabling the passcode must decrypt the stores before the key is dropped:
+`commitPasscodeDisable` removes the vault generation, and with it the engine key, so a disable that finishes first
+leaves records that nothing can read. And a corrupted key blob must not block a passcode change: while the stores are
+plaintext, `changePasscode` logs the corruption and `getEngineKey()` creates a new key later (tested in
+`engineKey.test.ts`); once the stores are encrypted, a key that cannot be read must fail the change loudly instead, since
+a new key would orphan the records.
 
 ### S-03 The CSP does not cover the engine's worker (Medium, open)
 
@@ -150,7 +157,8 @@ file paths. Test: `clearing_drops_every_record_from_storage` in `tauri/src/files
 
 ### S-09, S-10 Referrer and frames (Low, fixed)
 
-`<meta name="referrer" content="no-referrer">` keeps the app's origin from the sites that links open; `frame-src` is
+`<meta name="referrer" content="same-origin">` keeps the app's origin from the sites that links open and still sends
+the referrer between the app's own pages, which the multi-account "back" navigation reads (`document.referrer`); `frame-src` is
 `'none'` because the only iframe, Telegram's Instant View embed, is unreachable in the Signal app.
 
 ### S-11 to S-13 Accepted

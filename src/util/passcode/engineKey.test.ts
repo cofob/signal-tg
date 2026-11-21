@@ -65,6 +65,21 @@ describe('Engine key', () => {
     expect(toHex(await getEngineKey())).toBe(toHex(key));
   });
 
+  test('does not block a passcode change when its blob is corrupted', async () => {
+    await clearPasscodeStore();
+    const { generation } = await createPasscode('passcode', SNAPSHOT);
+    const key = await getEngineKey();
+    await PASSCODE_IDB_STORE.set(`engineKeyVault_${generation}`, new Uint8Array(64).buffer);
+    await expect(getEngineKey()).rejects.toThrow('Failed to restore engine key');
+
+    const changed = await changePasscode('another passcode');
+    const replacement = await getEngineKey();
+    expect(replacement.byteLength).toBe(32);
+    expect(toHex(replacement)).not.toBe(toHex(key));
+    expect(await PASSCODE_IDB_STORE.keys()).not.toContain(`engineKeyVault_${generation}`);
+    expect(changed.generation).not.toBe(generation);
+  });
+
   test('is removed with the passcode store', async () => {
     await clearPasscodeStore();
     await createPasscode('passcode', SNAPSHOT);

@@ -168,7 +168,7 @@ nginx, in the `server` block of the app (`<policy>` is that output):
 ```nginx
 add_header Content-Security-Policy "<policy>; frame-ancestors 'none'" always;
 add_header X-Content-Type-Options nosniff always;
-add_header Referrer-Policy no-referrer always;
+add_header Referrer-Policy same-origin always;
 add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
 ```
 
@@ -178,7 +178,7 @@ Caddy:
 header {
     Content-Security-Policy "<policy>; frame-ancestors 'none'"
     X-Content-Type-Options nosniff
-    Referrer-Policy no-referrer
+    Referrer-Policy same-origin
     Strict-Transport-Security "max-age=63072000; includeSubDomains"
 }
 ```
