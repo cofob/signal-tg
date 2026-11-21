@@ -14,7 +14,7 @@ import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, MUTE_INDEFINITE_TIMESTAMP } from '..
 import { getIsConversationAccepted } from '../../../lib/signal/messages/messageRequests';
 import { SyncMessage_MessageRequestResponse_Type } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { buildCollectionByKey } from '../../../util/iteratees';
-import { GLOBAL_SEARCH_CONTACTS_LIMIT } from '../../../limits';
+import { GLOBAL_SEARCH_CONTACTS_LIMIT, LIMITS } from '../../../limits';
 import {
   buildApiChat,
   buildGroupFullInfo,
@@ -32,9 +32,6 @@ import { getConversationByPeerId, getPeerId } from '../peers';
 import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
 import { sendApiUpdate } from '../updates';
 import { collectShownMessages } from './messages';
-
-// The `global.pinnedChatLimit` remote config default of Signal Android and Signal Desktop
-const MAX_PINNED_CHATS = 4;
 
 type ChatSummary = {
   chat: ApiChat;
@@ -234,7 +231,8 @@ export async function searchChats({ query }: { query: string }) {
 
 /**
  * Pins append to the end and bring the chat out of the archive, as in Signal Desktop
- * (`ts/models/conversations.preload.ts`, `pin`). Other devices learn about pins through the storage service.
+ * (`ts/models/conversations.preload.ts`, `pin`). Other devices learn about pins through the storage service. Pins
+ * of conversations that only other devices have count toward the limit; at the limit the chat stays unpinned.
  */
 export async function toggleChatPinned({ chat, shouldBePinned }: { chat: ApiChat; shouldBePinned: boolean }) {
   const conversation = await getConversationByPeerId(chat.id);
@@ -245,8 +243,9 @@ export async function toggleChatPinned({ chat, shouldBePinned }: { chat: ApiChat
     return;
   }
 
+  if (await processor.countPinnedConversations() >= LIMITS.dialogFolderPinned) return { isLimitReached: true };
+
   const pinned = getPinnedConversations(await db.getConversations());
-  if (pinned.length >= MAX_PINNED_CHATS) return;
   await processor.updateConversationState(conversation.id, {
     pinIndex: pinned.length ? pinned[pinned.length - 1].pinIndex! + 1 : 0,
     isArchived: false,

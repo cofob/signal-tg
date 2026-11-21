@@ -180,6 +180,16 @@ export function buildStorageWrite({
   return { write: { manifest: next, inserts, deleteIds }, writtenKeys };
 }
 
+/**
+ * The number of pinned conversations: the local ones and the pins of the account record that this device has no
+ * conversation for, such as the release notes chat. `records` are the stored records of the manifest.
+ */
+export function countPinnedConversations(records: Map<string, Uint8Array>, conversations: ConversationRecord[]) {
+  const { record } = indexRecords(records).get(ACCOUNT_KEY)?.record ?? {};
+  return buildPinnedConversations(record?.case === 'account' ? record.value.pinnedConversations : [], conversations)
+    .length;
+}
+
 /** Stored records by what they belong to: a contact's ACI, `group:` and a group's master key, or the account */
 function indexRecords(records: Map<string, Uint8Array>) {
   const index = new Map<string, { id: string; record: StorageRecord }>();

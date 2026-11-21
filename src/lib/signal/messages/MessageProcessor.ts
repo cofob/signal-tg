@@ -62,6 +62,7 @@ import { uuidToBytes, uuidToString } from '../serviceId';
 import {
   ACCOUNT_KEY,
   buildStorageWrite,
+  countPinnedConversations,
   getAci,
   getMutedUntil,
   getStorageChanges,
@@ -784,12 +785,7 @@ export default class MessageProcessor {
 
       const account = await this.getAccount();
       const manifest = fromBinary(ManifestRecordSchema, stored);
-      const ids = getManifestIds(manifest);
-      const serialized = await store.getStorageRecords(ids);
-      const records = new Map<string, Uint8Array>();
-      ids.forEach((id, index) => {
-        if (serialized[index]) records.set(id, serialized[index]);
-      });
+      const records = await this.getStoredRecords(manifest);
       const profileKeys = new Map<string, Uint8Array>();
       for (const id of Object.keys(changes)) {
         const profileKey = id !== ACCOUNT_KEY ? (await store.getRecipient(id))?.profileKey : undefined;
@@ -816,6 +812,16 @@ export default class MessageProcessor {
         hasUsernameChange: Boolean(accountFields?.includes('username')),
       };
     });
+  }
+
+  /**
+   * How many conversations are pinned, in the chat list and in the account record of the storage service, where
+   * other devices may pin conversations that this one does not have
+   */
+  async countPinnedConversations() {
+    const stored = await this.client.store.getItem('storageManifest');
+    const records = stored ? await this.getStoredRecords(fromBinary(ManifestRecordSchema, stored)) : new Map();
+    return countPinnedConversations(records, await this.db.getConversations());
   }
 
   /** Stores the records of an accepted write and clears the changes it carried */
@@ -1048,6 +1054,17 @@ export default class MessageProcessor {
 
   private queueProfileRefresh(aci: string) {
     this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
+  }
+
+  /** The stored records of a manifest, serialized, by base64 storage id */
+  private async getStoredRecords(manifest: ManifestRecord) {
+    const ids = getManifestIds(manifest);
+    const serialized = await this.client.store.getStorageRecords(ids);
+    const records = new Map<string, Uint8Array>();
+    ids.forEach((id, index) => {
+      if (serialized[index]) records.set(id, serialized[index]);
+    });
+    return records;
   }
 
   /** Runs a storage service sync after `STORAGE_SYNC_DELAY_MS`, or after the next connection while there is none */

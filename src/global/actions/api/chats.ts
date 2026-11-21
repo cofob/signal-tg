@@ -1206,7 +1206,7 @@ addActionHandler('createGroupChat', async (global, actions, payload): Promise<vo
   }
 });
 
-addActionHandler('toggleChatPinned', (global, actions, payload): ActionReturnType => {
+addActionHandler('toggleChatPinned', async (global, actions, payload): Promise<void> => {
   const { id, folderId, tabId = getCurrentTabId() } = payload;
 
   if (selectIsCurrentUserFrozen(global)) {
@@ -1254,7 +1254,9 @@ addActionHandler('toggleChatPinned', (global, actions, payload): ActionReturnTyp
       });
       return;
     }
-    void callApi('toggleChatPinned', { chat, shouldBePinned: !isPinned });
+    const result = await callApi('toggleChatPinned', { chat, shouldBePinned: !isPinned });
+    // The chats of other devices count as well
+    if (result?.isLimitReached) actions.openLimitReachedModal({ limit: 'dialogFolderPinned', tabId });
   }
 });
 
