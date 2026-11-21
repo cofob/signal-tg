@@ -19,6 +19,9 @@ import widgetSandboxPlugin, {widgetSandboxQuickjsPlugin} from './scripts/widget-
 import path from 'path';
 import {createRequire} from 'module';
 import {fileURLToPath} from 'url';
+import {loadEnv} from 'vite';
+import buildCsp from '../plugins/csp';
+import rootPackageJson from '../package.json';
 
 // CommonJS, which a config evaluated as an ES module (`--configLoader runner`) cannot import
 const require = createRequire(import.meta.url);
@@ -26,11 +29,38 @@ const {watchLangFile} = require('./watch-lang.js') as typeof import('./watch-lan
 const {watchScssTypes} = require('./scss-types.js') as typeof import('./scss-types.js');
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
+// * TeleSignal: Web K is the frontend at /k/ of the repository's build, Web A the one at /a/ (`../vite.config.ts`).
+// * Both run the Signal engine of `../src` (`@signal-app`), in this app's worker.
+const repositoryDir = path.resolve(rootDir, '..');
+const signalAppDir = path.join(repositoryDir, 'src');
+const repositoryEnv = loadEnv(process.env.NODE_ENV === 'development' ? 'development' : 'production', repositoryDir, '');
+const appEnv = repositoryEnv.APP_ENV || process.env.APP_ENV || (process.env.NODE_ENV === 'development' ? 'development' : 'production');
+const appName = repositoryEnv.APP_NAME || 'TeleSignal';
+const appTitle = repositoryEnv.APP_TITLE || `${appName}${appEnv !== 'production' ? ' Beta' : ''}`;
+const csp = buildCsp(appEnv, repositoryEnv.SIGNAL_TUNNEL_URL);
+// * Web A's code reads these (`../src/config.ts`); the VITE_ ones replace upstream's `.env`, which held Telegram's keys
+const SIGNAL_APP_ENV: Record<string, string> = {
+  TG_APP_ENV: appEnv,
+  TG_APP_NAME: repositoryEnv.APP_NAME || '',
+  TG_APP_TITLE: appTitle,
+  TG_PUBLIC_URL: repositoryEnv.BASE_URL || '',
+  TG_SIGNAL_TUNNEL_URL: repositoryEnv.SIGNAL_TUNNEL_URL || '',
+  VITE_VERSION: rootPackageJson.version,
+  VITE_VERSION_FULL: rootPackageJson.version,
+  VITE_BUILD: '1',
+  VITE_LANG_PACK_VERSION: '0',
+  VITE_MTPROTO_WORKER: '1'
+};
+Object.entries(SIGNAL_APP_ENV).forEach(([key, value]) => process.env[key] ??= value);
+// * the port of `npm run dev` (dev/dev.ts) serves both frontends, and proxies /k/ here
+const DEV_PORT = +(process.env.WEBK_DEV_PORT || 1235);
+const DEV_PUBLIC_PORT = process.env.DEV_PUBLIC_PORT ? +process.env.DEV_PUBLIC_PORT : undefined;
+const BUILD_OUT_DIR = path.resolve(repositoryDir, process.env.BUILD_OUT_DIR || 'dist', 'k');
 const certsDir = path.join(rootDir, 'certs');
 const ENV_LOCAL_FILE_PATH = path.join(rootDir, '.env.local');
 const LANG_PACK_LOCAL_FILE_PATH = path.join(rootDir, 'src', 'langPackLocalVersion.ts');
 const NODE_MODULES_PATH = path.join(rootDir, 'node_modules');
-const SERVER_FS_ALLOW = new Set([searchForWorkspaceRoot(rootDir)]);
+const SERVER_FS_ALLOW = new Set([searchForWorkspaceRoot(rootDir), signalAppDir, path.join(repositoryDir, 'node_modules')]);
 
 if(existsSync(NODE_MODULES_PATH)) {
   // Worktrees reuse the main checkout's node_modules through a symlink. Vite
@@ -60,6 +90,7 @@ if(isDEV) {
   // run, and nobody edits SCSS through it.
   if(!process.env.TWEB_E2E) {
     watchLangFile();
+    // * TeleSignal: the dev checks of upstream type-check the whole tree in watch mode, run `pnpm typecheck` instead
     // the dev server is what runs while the SCSS is being edited, so it is what keeps the generated
     // `*.module.d.scss.ts` in step — otherwise the editor (and `typecheck:watch`) reports a class
     // that was just renamed as missing until someone remembers to regenerate.
@@ -69,10 +100,11 @@ if(isDEV) {
 
 const handlebarsPlugin = handlebars({
   context: {
-    title: 'Telegram Web',
-    description: 'Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.',
-    url: 'https://web.telegram.org/k/',
-    origin: 'https://web.telegram.org/'
+    title: appTitle,
+    description: 'A web client for Signal',
+    url: repositoryEnv.BASE_URL ? new URL('k/', repositoryEnv.BASE_URL).href : '',
+    origin: repositoryEnv.BASE_URL || '',
+    csp
   }
 });
 
@@ -85,7 +117,7 @@ const USE_SELF_SIGNED_CERTS = USE_SSL && false;
 // * chmod 644 web.telegram.org-key.pem
 // * nano /etc/hosts
 // * 127.0.0.1 web.telegram.org
-const host = USE_SSL ? 'web.telegram.org' : 'localhost';
+const host = USE_SSL ? 'web.telegram.org' : '0.0.0.0';
 
 // HTTP/2 for `pnpm start`. Vite serves dev modules unbundled — one request per module —
 // and over http/1.1 the browser's ~6-connections-per-origin cap serialises the hundreds
@@ -103,7 +135,13 @@ const USE_DEV_HTTP2 = !USE_SSL && !process.env.TWEB_PREVIEW && !process.env.VITE
 
 const serverOptions: ServerOptions = {
   host,
-  port: USE_SSL ? 443 : 8080,
+  port: USE_SSL ? 443 : DEV_PORT,
+  strictPort: true,
+  headers: {
+    'Content-Security-Policy': csp
+  },
+  // * the browser connects through the port of `npm run dev`
+  hmr: DEV_PUBLIC_PORT ? {clientPort: DEV_PUBLIC_PORT} : undefined,
   fs: {
     allow: [...SERVER_FS_ALLOW],
     // Vite's defaults plus tmp/: it holds auth seeds and other credentials, and bundles that boot
@@ -184,6 +222,7 @@ const ADDITIONAL_ALIASES = {
   // Vite-only on purpose: tsc does not follow it into the vendored sources (written for strictNullChecks),
   // and sees the API through src/lib/widgetSandbox/vendor.d.ts instead.
   'widget-sandbox': resolve(rootDir, 'src/vendor/widget-sandbox/src'),
+  '@signal-app/provider': path.join(signalAppDir, 'api/signal/methods/init.ts'),
   '@': resolve(rootDir, 'src')
 };
 
@@ -200,6 +239,19 @@ if(USE_OWN_SOLID) {
 // of JS heap. V8 reads it only above the first line of code, and vite:build-import-analysis puts
 // `__vite__mapDeps` in front of a chunk in its generateBundle, so it goes on after that — not as
 // output.banner / postBanner. Workers have their own build and stay without it.
+// * TeleSignal: Web A's code reads its version from the global `APP_VERSION` (`../src/@types/global.d.ts`), which
+// * `define` does not replace in the dev server's workers
+function signalAppVersionPlugin(): Plugin {
+  const version = JSON.stringify(rootPackageJson.version);
+  return {
+    name: 'signal-app-version',
+    transform(code, id) {
+      if(!id.startsWith(signalAppDir) || !code.includes('APP_VERSION')) return;
+      return {code: code.replace(/\bAPP_VERSION\b/g, version), map: null};
+    }
+  };
+}
+
 function compileHintsPlugin(): Plugin {
   const hint = '//# allFunctionsCalledOnLoad\n';
   return {
@@ -263,10 +315,11 @@ export default defineConfig({
     //   /* features options - all disabled by default */
     //   autoname: true // e.g. enable autoname
     // }),
-    process.env.VITEST || process.env.TWEB_PREVIEW ? undefined : devChecks(rootDir),
+    process.env.TWEB_DEV_CHECKS ? devChecks(rootDir) : undefined,
     process.env.VITEST ? undefined : settingsSearchPlugin(),
     watchTransformCache(),
     hotReloadPlugin(),
+    signalAppVersionPlugin(),
     solidPlugin(),
     widgetSandboxPlugin(rootDir),
     handlebarsPlugin as any,
@@ -332,7 +385,11 @@ export default defineConfig({
     setupFiles: ['./src/tests/setup.ts']
   },
   server: serverOptions,
-  base: '',
+  base: process.env.NODE_ENV === 'development' ? '/k/' : '',
+  envPrefix: ['VITE_', 'TG_'],
+  define: {
+    APP_VERSION: JSON.stringify(rootPackageJson.version)
+  },
   // Pin the dep-optimizer's scan to the real entry (index.html → src/index.ts).
   // Otherwise Vite auto-globs every *.html (stats.html, public/*.html, the icomoon
   // demo.html) as scan entries, and a parse error in any of them (e.g. the stale
@@ -366,6 +423,7 @@ export default defineConfig({
     sourcemap: true,
     assetsDir: '',
     copyPublicDir: false,
+    outDir: BUILD_OUT_DIR,
     emptyOutDir: true,
     minify: NO_MINIFY ? false : undefined,
     rolldownOptions: {

@@ -22,9 +22,12 @@ import {transformForHotWithMap} from './hot-module-transform.mjs';
 
 const LANG = {'.ts': 'ts', '.tsx': 'tsx', '.js': 'js', '.jsx': 'jsx'};
 
+// * TeleSignal: Web K's own sources, not the Signal engine of the repository's `src` that it imports
+const OWN_SRC = fileURLToPath(new URL('../src/', import.meta.url));
+
 // an app module: not a dependency, a worker's entry (it comes with a query), the vendored libraries, the tests, nor
 // the registry itself
-const isAppModule = (id) => !id.includes('?') && !id.includes('\0') && !id.includes('/node_modules/') &&
+const isAppModule = (id) => id.startsWith(OWN_SRC) && !id.includes('?') && !id.includes('\0') && !id.includes('/node_modules/') &&
   /\/src\/.+\.[jt]sx?$/.test(id) && !id.endsWith('.d.ts') && !/\/src\/(vendor|tests)\//.test(id) &&
   !/\/src\/helpers\/hot(Module|Registry)\.ts$/.test(id);
 

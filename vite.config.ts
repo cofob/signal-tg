@@ -8,6 +8,7 @@ import { defineConfig, loadEnv, normalizePath, type Plugin, type PluginOption, t
 import { type Target, viteStaticCopy } from 'vite-plugin-static-copy';
 import { watchAndRun } from 'vite-plugin-watch-and-run';
 
+import buildCsp from './plugins/csp.ts';
 import buildGitInfoPlugin from './plugins/gitInfo.ts';
 import buildWebManifestPlugin from './plugins/webManifest.ts';
 import packageJson from './package.json' with { type: 'json' };
@@ -18,12 +19,17 @@ const DEFAULT_BASE_URL = 'http://localhost:1234/';
 
 const { version: APP_VERSION } = packageJson;
 const BUNDLE_STATS_OUT_DIR = 'bundle-stats';
+// One build holds both frontends: Web K at `/k/`, the default (`webk/`), and this one, Web A, at `/a/`
+const WEB_A_PATH = '/a/';
+const WEB_K_PATH = '/k/';
+const DEFAULT_DEV_PORT = 1234;
 const DEFAULT_BUNDLE_STATS_BASELINE_FILE = 'baseline.json';
 const BUNDLE_STATS_VISUALIZER_FILE = 'visualizer.html';
 const WORKER_BUNDLE_COLLECTOR_PLUGIN_NAME = 'telegram:collect-worker-report-bundle';
 const BUNDLE_REPORT_PLUGIN_SUFFIX = ':with-workers';
 const DEV_SERVER_WATCH_IGNORES = [
   '**/.cache/**',
+  '**/webk/**',
   '**/dist/**',
   '**/tauri/target/**',
 ];
@@ -65,7 +71,7 @@ type BundleReportHook = (
   isWrite: boolean,
 ) => void | Promise<void>;
 
-export default defineConfig(({ mode }): UserConfig => {
+export default defineConfig(({ command, mode }): UserConfig => {
   const env = loadEnv(mode, process.cwd(), '');
   setViteEnv(env);
   const {
@@ -90,8 +96,12 @@ export default defineConfig(({ mode }): UserConfig => {
     'Service-Worker-Allowed': '/',
   };
   const isDevelopmentMode = mode === 'development';
+  // `npm run dev` (`dev/dev.ts`) serves both frontends on this port and runs Web K's server on the next one
+  const devPort = Number(env.DEV_PORT) || DEFAULT_DEV_PORT;
+  const webKDevPort = Number(env.WEBK_DEV_PORT) || devPort + 1;
   const workerReportBundles: OutputBundle[] = [];
   const plugins: PluginOption[] = [
+    command === 'serve' && buildDevRootRedirectPlugin(),
     buildGitInfoPlugin({
       appEnv,
       head: HEAD,
@@ -179,7 +189,8 @@ export default defineConfig(({ mode }): UserConfig => {
   });
 
   return {
-    base: './',
+    // The built files refer to each other by relative paths, so the frontend works wherever its directory is served
+    base: command === 'serve' ? WEB_A_PATH : './',
     envPrefix: ['VITE_', 'TG_'],
     assetsInclude: ['**/*.tgs'],
     define: {
@@ -196,9 +207,16 @@ export default defineConfig(({ mode }): UserConfig => {
         generateScopedName: isProductionApp ? '[hash:base64:8]' : '[name]__[local]',
       },
     },
+    // Web K (`webk/`) has a page of its own, with its own server and dependencies
+    optimizeDeps: {
+      entries: ['index.html'],
+    },
     server: {
       host: '0.0.0.0',
-      port: 1234,
+      port: devPort,
+      proxy: {
+        [WEB_K_PATH]: { target: `http://127.0.0.1:${webKDevPort}`, ws: true },
+      },
       strictPort: true,
       headers: responseHeaders,
       https: getHttpsConfig(httpsCertPath, httpsKeyPath),
@@ -213,6 +231,8 @@ export default defineConfig(({ mode }): UserConfig => {
       headers: responseHeaders,
     },
     build: {
+      outDir: resolve(DIR_NAME, env.BUILD_OUT_DIR || 'dist', WEB_A_PATH.slice(1)),
+      emptyOutDir: true,
       sourcemap: true,
       assetsInlineLimit: (filePath) => (IMAGE_ASSET_RE.test(filePath) ? false : undefined),
     },
@@ -229,6 +249,25 @@ export default defineConfig(({ mode }): UserConfig => {
     plugins,
   };
 });
+
+// The production root page (`dev/build.ts`) sends `/` to Web K, and so does the dev server
+function buildDevRootRedirectPlugin(): Plugin {
+  return {
+    name: 'dev-root-redirect',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url !== '/' && !req.url?.startsWith('/?')) {
+          next();
+          return;
+        }
+
+        res.statusCode = 302;
+        res.setHeader('Location', `${WEB_K_PATH}${req.url.slice(1)}`);
+        res.end();
+      });
+    },
+  };
+}
 
 function createBundleReportPlugin(plugin: BundleReportPlugin, workerReportBundles: OutputBundle[]): Plugin {
   return {
@@ -279,32 +318,6 @@ function setViteEnv(env: Record<string, string>) {
   Object.entries(env).forEach(([key, value]) => {
     process.env[key] = value;
   });
-}
-
-// The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy settings
-// (`SharedSettings.signalProxyUrl` and `signalSealedSenderProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
-// client terminates with Signal's certificate authority, so a wrong host cannot read traffic, but the policy no longer
-// stops scripts from reaching other `wss:` servers. A local tunnel stays usable through `ws:` on `localhost` and
-// `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `ipc:` and, on Windows,
-// `http://ipc.localhost` carry the desktop app's in-process IPC, including the native transport's bytes.
-function buildCsp(appEnv: string, tunnelUrl?: string) {
-  const isDevelopment = appEnv === 'development';
-  const tunnelOrigin = tunnelUrl ? new URL(tunnelUrl).origin : '';
-
-  return `
-  default-src 'self';
-  connect-src 'self' ${tunnelOrigin} wss: ws://localhost:* ws://127.0.0.1:* blob: data: ipc: http://ipc.localhost;
-  script-src 'self' 'wasm-unsafe-eval';
-  worker-src 'self'${isDevelopment ? ' blob:' : ''};
-  style-src 'self' 'unsafe-inline';
-  font-src 'self' data:;
-  img-src 'self' data: blob:;
-  media-src 'self' blob: data:;
-  object-src 'none';
-  frame-src 'none';
-  base-uri 'none';
-  form-action 'none';`
-    .replace(/\s+/g, ' ').trim();
 }
 
 function buildProjectPath(projectPath: string) {
