@@ -11,7 +11,6 @@ import {SetStoreFunction} from 'solid-js/store';
 import {scaffoldSolidJSTab, scaffoldSolidJSTabEventable} from '@components/solidJsTabs/scaffoldSolidJSTab';
 import rootScope from '@lib/rootScope';
 import {appSettings} from '@stores/appSettings';
-import type {EditProfileTabPayload} from '@components/sidebarLeft/tabs/editProfile';
 import type {BusinessHoursTabPayload} from '@components/sidebarLeft/tabs/businessHours';
 import type {BusinessLocationTabPayload} from '@components/sidebarLeft/tabs/businessLocation';
 import type {BusinessChatLinksTabPayload} from '@components/sidebarLeft/tabs/businessChatLinks';
@@ -142,17 +141,8 @@ export const AppNotificationExceptionsTab =
   });
 
 
-export function getEditProfileInitArgs(overwriteConnectedBot?: boolean): EditProfileTabPayload {
-  return {
-    bioMaxLength: rootScope.managers.apiManager.getLimit('bio'),
-    user: rootScope.managers.appUsersManager.getSelf(),
-    userFull: rootScope.managers.appProfileManager.getProfile(rootScope.myId.toUserId()),
-    connectedBot: rootScope.managers.appBusinessManager.getConnectedBot(overwriteConnectedBot)
-  };
-}
-
 export const AppEditProfileTab =
-  scaffoldSolidJSTab<EditProfileTabPayload>({
+  scaffoldSolidJSTab({
     title: 'EditAccount.Title',
     getComponentModule: () => import('../sidebarLeft/tabs/editProfile')
   });
@@ -596,17 +586,11 @@ export const AppPrivacyGiftsTab =
   });
 
 
-type AppActiveSessionsTabPayload = {
-  authorizations: Authorization.authorization[];
-  connectedBot?: ConnectedBot.connectedBot;
-  /** `account.authorizations.authorization_ttl_days` — 0 while unknown. */
-  ttlDays?: number;
-};
-
-export const AppActiveSessionsTab =
-  scaffoldSolidJSTabEventable<AppActiveSessionsTabPayload>({
-    title: 'SessionsTitle',
-    getComponentModule: () => import('../sidebarLeft/tabs/activeSessions')
+/** TeleSignal: the linked devices of the Signal account, which the settings open from their own row */
+export const AppLinkedDevicesTab =
+  scaffoldSolidJSTab({
+    title: 'Signal.Devices.Title',
+    getComponentModule: () => import('../sidebarLeft/tabs/linkedDevices')
   });
 
 type AppSessionTabPayload = {
@@ -875,23 +859,11 @@ export const AppGroupPermissionsTab =
     }
   });
 
-const getPrivacyAndSecurityInitArgs = (fromTab: SliderSuperTab) => ({
-  appConfig: fromTab.managers.apiManager.getAppConfig(),
-  globalPrivacy: fromTab.managers.appPrivacyManager.getGlobalPrivacySettings(),
-  webAuthorizations: fromTab.managers.appSeamlessLoginManager.getWebAuthorizations()
-});
-
-type AppPrivacyAndSecurityTabPayload = ReturnType<typeof getPrivacyAndSecurityInitArgs>;
-
 export const AppPrivacyAndSecurityTab =
-  scaffoldSolidJSTabEventable<AppPrivacyAndSecurityTabPayload>({
+  scaffoldSolidJSTab({
     title: 'PrivacySettings',
     getComponentModule: () => import('../sidebarLeft/tabs/privacyAndSecurity')
   });
-
-// Preload (appConfig / globalPrivacy / webAuthorizations) read off the constructor
-// by settings.tsx's makeSubTabConfig, matching the old static getInitArgs.
-(AppPrivacyAndSecurityTab as any).getInitArgs = getPrivacyAndSecurityInitArgs;
 
 
 type AppEditChatInviteLinkTabPayload = {

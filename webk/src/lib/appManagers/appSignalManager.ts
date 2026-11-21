@@ -109,6 +109,11 @@ export default class AppSignalManager extends AppManager {
     await this.call('destroy');
   }
 
+  /** A provider method that the settings screens call, run by the engine of this worker (`lib/signal/settingsApi`) */
+  public callSignal(name: string, ...args: any[]) {
+    return this.call(name, ...args);
+  }
+
   private async call<T = any>(name: string, ...args: any[]): Promise<T> {
     const {callApi} = await getProvider();
     return callApi(name, ...args);
@@ -189,7 +194,9 @@ export default class AppSignalManager extends AppManager {
       'users.getUsers': (params) => this.getUsers(params),
       'contacts.getContacts': () => this.getContacts(),
       'contacts.getTopPeers': () => ({_: 'contacts.topPeersDisabled'}),
-      'contacts.getBlocked': () => ({_: 'contacts.blocked', blocked: [], chats: [], users: []}),
+      'contacts.getBlocked': (params: MethodDeclMap['contacts.getBlocked']['req']) => this.getBlocked(params),
+      'contacts.block': (params: MethodDeclMap['contacts.block']['req']) => this.setBlocked(params.id, true),
+      'contacts.unblock': (params: MethodDeclMap['contacts.unblock']['req']) => this.setBlocked(params.id, false),
       'stories.getAllStories': () => ({
         _: 'stories.allStories',
         pFlags: {},
@@ -513,6 +520,32 @@ export default class AppSignalManager extends AppManager {
       users: params.id.map((inputUser) => ({id: toSignalPeerId(getInputUserId(inputUser))}))
     });
     return (result?.users || []).map(buildUser);
+  }
+
+  /** A page of the blocked contacts; the engine sends their users and chats as entities, which the cache takes */
+  private async getBlocked(params: MethodDeclMap['contacts.getBlocked']['req']) {
+    const result: {blockedIds: string[]} = await this.call('fetchBlockedUsers', {});
+    const blockedIds = result?.blockedIds || [];
+    const page = blockedIds.slice(params.offset || 0, params.limit ? (params.offset || 0) + params.limit : undefined);
+    const now = tsNow(true);
+    return {
+      _: 'contacts.blockedSlice',
+      count: blockedIds.length,
+      blocked: page.map((id) => ({_: 'peerBlocked', peer_id: buildPeer(id), date: now})),
+      chats: [],
+      users: []
+    } as MethodDeclMap['contacts.getBlocked']['res'];
+  }
+
+  /** Blocks or unblocks a private chat; a block answers its message request as Signal Desktop does */
+  private async setBlocked(inputPeer: InputPeer, isBlocked: boolean) {
+    const user = {id: toSignalPeerId(this.getInputPeerId(inputPeer))};
+    const done = await this.call(isBlocked ? 'blockUser' : 'unblockUser', {user});
+    if(!done) {
+      throw makeError('SIGNAL_BLOCK_FAILED' as ErrorType);
+    }
+
+    return true;
   }
 
   private async getContacts() {
