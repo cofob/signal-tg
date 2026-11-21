@@ -20,7 +20,6 @@ import type {
   ApiReaction,
   ApiRequestPeerType,
   ApiRichText,
-  ApiSearchPostsFlood,
   ApiSticker,
   ApiTypeStoryView,
   ApiUrlAuthResultRequest,
@@ -249,12 +248,10 @@ export type TabState = {
     currentContent?: GlobalSearchContent;
     chatId?: string;
     foundTopicIds?: number[];
-    searchFlood?: ApiSearchPostsFlood;
     fetchingStatus?: {
       chats?: boolean;
       messages?: boolean;
       botApps?: boolean;
-      publicPosts?: boolean;
     };
     isClosing?: boolean;
     localResults?: {
@@ -679,11 +676,6 @@ export type TabState = {
     webAppKey?: string;
     customEmojiId: string;
     duration?: number;
-  };
-
-  profileRatingModal?: {
-    userId: string;
-    level: number;
   };
 
   quickPreview?: {

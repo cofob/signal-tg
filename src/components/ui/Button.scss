@@ -242,26 +242,6 @@
       --button-no-ripple-background-color: var(--color-green);
     }
 
-    &.stars {
-      --ripple-color: rgba(0, 0, 0, 0.08);
-      --button-text-color: var(--color-white);
-      --button-background-color: #ffb727;
-      --button-active-text-color: var(--color-white);
-      --button-active-background-color: #ffb727cc;
-      --button-no-ripple-background-color: #ffb727;
-
-      .theme-dark & {
-        --button-background-color: #cf8920;
-      }
-    }
-
-    &.bluredStarsBadge {
-      --button-text-color: var(--color-white);
-
-      background: rgba(0, 0, 0, 0.2) !important;
-      backdrop-filter: blur(50px);
-    }
-
     &.transparentBlured {
       --button-text-color: white;
       --button-background-color: rgba(255, 255, 255, 0.1);

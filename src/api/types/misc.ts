@@ -218,7 +218,6 @@ export type ApiNotification = {
   shouldShowTimer?: boolean;
   icon?: IconName;
   customEmojiIconId?: string;
-  shouldUseCustomIcon?: boolean;
   dismissAction?: CallbackAction;
 } & ({
   message: string;

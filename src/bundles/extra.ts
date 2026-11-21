@@ -90,7 +90,6 @@ export { default as AudioPlaylistModal } from '../components/modals/audioPlaylis
 export { default as OneTimeMediaModal } from '../components/modals/oneTimeMedia/OneTimeMediaModal';
 export { default as BrowserCloseConfirmationModal } from '../components/main/BrowserCloseConfirmationModal';
 export { default as FrozenAccountModal } from '../components/modals/frozenAccount/FrozenAccountModal';
-export { default as ProfileRatingModal } from '../components/modals/profileRating/ProfileRatingModal';
 export { default as DisableSharingAboutModal } from '../components/modals/disableSharing/DisableSharingAboutModal';
 export { default as AutoDeleteTimerModal } from '../components/modals/autoDeleteTimer/AutoDeleteTimerModal';
 export { default as SettingsConfirmationModal }

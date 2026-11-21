@@ -486,9 +486,6 @@ export interface ActionPayloads {
     shouldCheckFetchingMessagesStatus?: boolean;
   } & WithTabId;
   searchPopularBotApps: WithTabId | undefined;
-  checkSearchPostsFlood: {
-    query?: string;
-  } & WithTabId;
   addRecentlyFoundChatId: {
     id: string;
   };
@@ -1733,11 +1730,6 @@ export interface ActionPayloads {
     userId: string;
   } & WithTabId;
   closeDisableSharingAboutModal: WithTabId | undefined;
-  openProfileRatingModal: {
-    userId: string;
-    level: number;
-  } & WithTabId;
-  closeProfileRatingModal: WithTabId | undefined;
   openRankModal: {
     chatId: string;
     userId: string;

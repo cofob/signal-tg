@@ -12,7 +12,6 @@ import type {
   ApiUserFullInfo,
   ApiUserStatus,
 } from '../../../api/types/index';
-import type { IconName } from '../../../types/icons/index';
 import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
@@ -58,7 +57,6 @@ import usePhotosPreload from '../hooks/usePhotosPreload';
 import Transition from '../../ui/Transition.tsx';
 import Avatar from '../Avatar.tsx';
 import FullNameTitle from '../FullNameTitle.tsx';
-import Icon from '../icons/Icon.tsx';
 import TopicIcon from '../TopicIcon.tsx';
 import ProfileMusicStrip from './ProfileMusicStrip';
 import ProfilePhoto from './ProfilePhoto';
@@ -97,8 +95,6 @@ type StateProps = {
   hasAvatar?: boolean;
   isSystemAccount?: boolean;
 };
-
-const MAX_LEVEL_ICON = 90;
 
 const EMOJI_STATUS_SIZE = 24;
 const EMOJI_TOPIC_SIZE = 120;
@@ -139,7 +135,6 @@ const ProfileInfo = ({
     openMediaViewer,
     openPrivacySettingsNoticeModal,
     loadMoreProfilePhotos,
-    openProfileRatingModal,
   } = getActions();
 
   const savedMusic = userFullInfo?.savedMusic;
@@ -250,12 +245,6 @@ const ProfileInfo = ({
     openPrivacySettingsNoticeModal({ chatId: chat!.id, isReadDate: false });
   });
 
-  const handleRatingClick = useLastCallback((level: number) => {
-    if (user) {
-      openProfileRatingModal({ userId: user.id, level });
-    }
-  });
-
   const handleMinimizedAvatarClick = useLastCallback(() => {
     if (isForSettings) {
       handleProfilePhotoClick();
@@ -356,43 +345,6 @@ const ProfileInfo = ({
     );
   }
 
-  function renderUserRating() {
-    if (!userFullInfo?.starsRating) return undefined;
-
-    const level = userFullInfo.starsRating.level;
-    const isNegative = level < 0;
-
-    const onRatingClick = () => handleRatingClick(level);
-
-    if (isNegative) {
-      return (
-        <span role="button" tabIndex={0} className={styles.userRatingNegativeWrapper} onClick={onRatingClick}>
-          <Icon
-            name="rating-icons-negative"
-            className={styles.ratingNegativeIcon}
-          />
-          <span className={styles.ratingLevel}>!</span>
-        </span>
-      );
-    }
-
-    const safeLevel = Math.max(level, 1);
-    const iconLevel = Math.min(safeLevel, MAX_LEVEL_ICON);
-    const iconName = (iconLevel < 10
-      ? `rating-icons-level${iconLevel}`
-      : `rating-icons-level${Math.floor(iconLevel / 10) * 10}`) as IconName;
-
-    return (
-      <span role="button" tabIndex={0} className={styles.userRatingWrapper} onClick={onRatingClick}>
-        <Icon
-          name={iconName}
-          className={styles.ratingIcon}
-        />
-        <span className={styles.ratingLevel}>{level}</span>
-      </span>
-    );
-  }
-
   function renderStatus() {
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
     const isSystemBotChat = isSystemBot(peerId);
@@ -420,7 +372,6 @@ const ProfileInfo = ({
           )}
           style={createVtnStyle('status', true)}
         >
-          {renderUserRating()}
           <span className={styles.userStatus} dir="auto">
             {getUserStatus(lang, user, userStatus)}
           </span>
@@ -467,8 +418,6 @@ const ProfileInfo = ({
         savedMusic && styles.hasMusic,
       )}
       style={buildStyle(
-        profileColorSet && `--rating-outline-color: ${isExpanded ? 'transparent' : profileColorSet?.bgColors[0]}`,
-        profileColorSet && !isExpanded && `--rating-text-color: ${profileColorSet?.bgColors[0]}`,
         profileColorSet && `--profile-button-base: ${profileColorSet.buttonBaseColor}`,
         createVtnStyle('profileInfo', true),
       )}

@@ -94,10 +94,6 @@ export const MEMBERS_LOAD_SLICE = 200;
 export const PROFILE_SENSITIVE_AREA = 500;
 export const TOPIC_LIST_SENSITIVE_AREA = 600;
 
-// Public Posts Search defaults
-export const PUBLIC_POSTS_SEARCH_DEFAULT_STARS_AMOUNT = 10;
-export const PUBLIC_POSTS_SEARCH_DEFAULT_TOTAL_DAILY = 2;
-
 export const VERIFY_AGE_MIN_DEFAULT = 18;
 
 export const STORY_VIEWS_MIN_SEARCH = 15;

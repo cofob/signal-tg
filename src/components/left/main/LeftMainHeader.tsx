@@ -103,7 +103,6 @@ const LeftMainHeader = ({
     setGlobalSearchChatId,
     lockScreen,
     openSettingsScreen,
-    searchMessagesGlobal,
     closeForumPanel,
   } = getActions();
 
@@ -189,15 +188,6 @@ const LeftMainHeader = ({
     lockScreen();
   });
 
-  const handleSearchEnter = useLastCallback(() => {
-    if (searchQuery && content === LeftColumnContent.GlobalSearch) {
-      searchMessagesGlobal({
-        type: 'publicPosts',
-        shouldResetResultsByType: true,
-      });
-    }
-  });
-
   const isSearchRelevant = Boolean(globalSearchChatId)
     || content === LeftColumnContent.GlobalSearch
     || content === LeftColumnContent.Contacts;
@@ -276,7 +266,6 @@ const LeftMainHeader = ({
           onReset={onReset}
           onFocus={handleSearchFocus}
           onSpinnerClick={connectionStatusPosition === 'minimized' ? toggleConnectionStatus : undefined}
-          onEnter={handleSearchEnter}
         >
           {searchContent}
           <StoryToggler
@@ -326,8 +315,7 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       searchQuery,
-      isLoading: fetchingStatus ? Boolean(fetchingStatus.chats
-        || fetchingStatus.messages || fetchingStatus.publicPosts) : false,
+      isLoading: fetchingStatus ? Boolean(fetchingStatus.chats || fetchingStatus.messages) : false,
       globalSearchChatId: chatId,
       searchDate: minDate,
       theme: selectTheme(global),

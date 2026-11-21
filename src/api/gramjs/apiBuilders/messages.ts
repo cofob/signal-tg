@@ -23,7 +23,6 @@ import type {
   ApiPeer,
   ApiPreparedInlineMessage,
   ApiReplyInfo,
-  ApiSearchPostsFlood,
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
@@ -43,7 +42,6 @@ import buildUploadingMedia from '../../../util/buildUploadingMedia';
 import { addTimestampEntities } from '../../../util/dates/timestamp';
 import { omitUndefined } from '../../../util/iteratees';
 import { getEphemeralMessageId } from '../../../util/keys/messageKey';
-import { toJSNumber } from '../../../util/numbers';
 import { getServerTime } from '../../../util/serverTime';
 import { buildPeer, getEntityTypeById } from '../gramjsBuilders';
 import {
@@ -786,19 +784,5 @@ export function buildPreparedInlineMessage(
     result: processInlineBotResult(queryId, result.result),
     peerTypes: result.peerTypes?.map(buildApiInlineQueryPeerType),
     cacheTime: result.cacheTime,
-  };
-}
-
-export function buildApiSearchPostsFlood(
-  searchFlood: GramJs.SearchPostsFlood,
-  query?: string,
-): ApiSearchPostsFlood {
-  return {
-    query,
-    queryIsFree: searchFlood.queryIsFree,
-    totalDaily: searchFlood.totalDaily,
-    remains: searchFlood.remains,
-    waitTill: searchFlood.waitTill,
-    starsAmount: toJSNumber(searchFlood.starsAmount),
   };
 }

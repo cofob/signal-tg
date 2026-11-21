@@ -11,7 +11,6 @@ import type {
   ApiShareTheme,
   ApiTypePeerColor,
 } from './peers';
-import type { ApiStarsRating } from './stars';
 
 export interface ApiUser {
   id: string;
@@ -73,9 +72,6 @@ export interface ApiUserFullInfo {
   personalChannelId?: string;
   personalChannelMessageId?: number;
   privateForwardName?: string;
-  starsRating?: ApiStarsRating;
-  starsMyPendingRating?: ApiStarsRating;
-  starsMyPendingRatingDate?: number;
   isBotCanManageEmojiStatus?: boolean;
   isBotAccessEmojiGranted?: boolean;
   hasScheduledMessages?: boolean;

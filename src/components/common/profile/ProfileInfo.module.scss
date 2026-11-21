@@ -3,8 +3,6 @@
 .root {
   --profile-info-bg: var(--color-background-secondary);
   --music-band-height: 0rem;
-  --rating-outline-color: #000000;
-  --rating-text-color: #000000;
 
   position: relative;
 
@@ -39,11 +37,6 @@
 
   .info {
     background-image: linear-gradient(0deg, var(--profile-info-bg) 50%, transparent);
-  }
-
-  .userRatingNegativeWrapper,
-  .userRatingWrapper {
-    color: var(--color-white);
   }
 
   .status {
@@ -278,53 +271,6 @@
 .info,
 .title {
   align-self: flex-start;
-}
-
-.userRatingNegativeWrapper,
-.userRatingWrapper {
-  pointer-events: all;
-  cursor: pointer;
-
-  position: relative;
-  z-index: 1;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  margin-right: 0.25rem;
-
-  font-size: 1rem;
-}
-
-.userRatingWrapper {
-  font-size: 1.5rem;
-}
-
-.ratingIcon, .ratingNegativeIcon {
-  pointer-events: none;
-  paint-order: stroke fill;
-
-  -webkit-text-stroke: 3px var(--rating-outline-color);
-}
-
-.ratingNegativeIcon {
-  font-size: 1rem;
-}
-
-.ratingLevel {
-  pointer-events: none;
-
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  font-size: 0.625rem;
-  font-weight: var(--font-weight-semibold);
-  line-height: 1;
-  color: var(--rating-text-color);
 }
 
 .userStatus {

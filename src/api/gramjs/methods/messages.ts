@@ -24,7 +24,6 @@ import type {
   ApiOnProgress,
   ApiPeer,
   ApiReaction,
-  ApiSearchPostsFlood,
   ApiSendMessageAction,
   ApiSticker,
   ApiTopicWithState,
@@ -77,7 +76,6 @@ import {
   buildApiFactCheck,
   buildApiMessage,
   buildApiReportResult,
-  buildApiSearchPostsFlood,
   buildApiThreadInfo,
   buildApiThreadInfoFromMessage,
   buildLocalForwardedMessage,
@@ -132,7 +130,6 @@ type SearchResults = {
   nextOffsetRate?: number;
   nextOffsetPeerId?: string;
   nextOffsetId?: number;
-  searchFlood?: ApiSearchPostsFlood;
 };
 
 export async function fetchMessages({
@@ -1903,16 +1900,6 @@ export async function searchMessagesGlobal({
   minDate?: number;
   maxDate?: number;
 }): Promise<SearchResults | undefined> {
-  if (type === 'publicPosts') {
-    return searchPublicPosts({
-      query,
-      offsetRate,
-      offsetPeer,
-      offsetId,
-      limit,
-    });
-  }
-
   let filter;
   switch (type) {
     case 'media':
@@ -1992,10 +1979,9 @@ export async function searchMessagesGlobal({
 }
 
 export async function searchPublicPosts({
-  hashtag, query, offsetRate, offsetPeer, offsetId, limit,
+  hashtag, offsetRate, offsetPeer, offsetId, limit,
 }: {
-  hashtag?: string;
-  query?: string;
+  hashtag: string;
   offsetRate?: number;
   offsetPeer?: ApiPeer;
   offsetId?: number;
@@ -2003,20 +1989,12 @@ export async function searchPublicPosts({
 }): Promise<SearchResults | undefined> {
   const peer = (offsetPeer && buildInputPeer(offsetPeer.id, offsetPeer.accessHash)) || new GramJs.InputPeerEmpty();
 
-  const resultFlood = await checkSearchPostsFlood(query);
-
-  if (!resultFlood) {
-    return undefined;
-  }
-
   const result = await invokeRequest(new GramJs.channels.SearchPosts({
     hashtag,
-    query,
     offsetRate: offsetRate ?? DEFAULT_PRIMITIVES.INT,
     offsetId: offsetId ?? DEFAULT_PRIMITIVES.INT,
     offsetPeer: peer,
     limit: limit ?? DEFAULT_PRIMITIVES.INT,
-    allowPaidStars: BigInt(resultFlood.starsAmount),
   }));
 
   if (!result || result instanceof GramJs.messages.MessagesNotModified) {
@@ -2039,10 +2017,6 @@ export async function searchPublicPosts({
   const nextOffsetRate = 'nextRate' in result && result.nextRate ? result.nextRate : undefined;
   const nextOffsetId = lastMessage?.id;
 
-  const searchFlood = result instanceof GramJs.messages.MessagesSlice && result.searchFlood
-    ? buildApiSearchPostsFlood(result.searchFlood, query)
-    : undefined;
-
   return {
     messages,
     topics,
@@ -2051,18 +2025,7 @@ export async function searchPublicPosts({
     nextOffsetRate,
     nextOffsetPeerId,
     nextOffsetId,
-    searchFlood,
   };
-}
-
-export async function checkSearchPostsFlood(query?: string) {
-  const result = await invokeRequest(new GramJs.channels.CheckSearchPostsFlood({ query }));
-
-  if (!result) {
-    return undefined;
-  }
-
-  return buildApiSearchPostsFlood(result, query);
 }
 
 export async function fetchWebPagePreview({

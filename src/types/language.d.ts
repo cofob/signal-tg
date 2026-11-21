@@ -1432,7 +1432,6 @@ export interface LangPair {
   'SearchTabMusic': undefined;
   'SearchTabVoice': undefined;
   'SearchTabMessages': undefined;
-  'SearchTabPublicPosts': undefined;
   'SearchResultTopics': undefined;
   'SearchResultMyChannels': undefined;
   'SearchResultRecommendedChannels': undefined;
@@ -1628,25 +1627,8 @@ export interface LangPair {
   'ContextLinkRemovePreview': undefined;
   'AccLinkRemovePreview': undefined;
   'GlobalSearch': undefined;
-  'DescriptionPublicPostsSearch': undefined;
   'PublicPosts': undefined;
-  'PublicPostsLimitReached': undefined;
-  'PublicPostsPremiumFeatureDescription': undefined;
-  'PublicPostsPremiumFeatureSubtitle': undefined;
   'AllStoriesCategory': undefined;
-  'TitleRating': undefined;
-  'RatingYourReflectsActivity': undefined;
-  'RatingGiftsFromTelegram': undefined;
-  'RatingGiftsFromTelegramDesc': undefined;
-  'RatingGiftsAndPostsFromUsers': undefined;
-  'RatingGiftsAndPostsFromUsersDesc': undefined;
-  'RatingRefundsAndConversions': undefined;
-  'RatingRefundsAndConversionsDesc': undefined;
-  'RatingBadgeAdded': undefined;
-  'RatingBadgeDeducted': undefined;
-  'RatingNegativeLevel': undefined;
-  'LinkDescriptionRatingBack': undefined;
-  'LinkDescriptionRatingPreview': undefined;
   'ErrorFocusInaccessibleMessage': undefined;
   'ContextMenuHintMouse': undefined;
   'ContextMenuHintTouch': undefined;
@@ -2886,12 +2868,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'GiftInfoChannelHidden': {
     'link': V;
   };
-  'StarsAmount': {
-    'amount': V;
-  };
-  'StarsAmountIconLast': {
-    'amount': V;
-  };
   'AriaMiniApp': {
     'bot': V;
   };
@@ -3232,24 +3208,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ButtonSensitiveAlways': {
     'years': V;
-  };
-  'ButtonSearchPublicPosts': {
-    'query': V;
-  };
-  'PublicPostsSearchForStars': {
-    'stars': V;
-  };
-  'UnlockTimerPublicPostsSearch': {
-    'time': V;
-  };
-  'NotificationPaidExtraSearch': {
-    'stars': V;
-  };
-  'RatingReflectsActivity': {
-    'name': V;
-  };
-  'RatingLevel': {
-    'level': V;
   };
   'VideoQualityInfo': {
     'type': V;
@@ -3753,9 +3711,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ChatGroups': {
     'count': V;
   };
-  'StarsAmountText': {
-    'amount': V;
-  };
   'BrowserMoreTabs': {
     'title': V;
     'count': V;
@@ -3799,22 +3754,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   };
   'TextAgeVerificationModal': {
     'count': V;
-  };
-  'RemainingPublicPostsSearch': {
-    'count': V;
-  };
-  'HintPublicPostsSearchQuota': {
-    'count': V;
-  };
-  'DescriptionPendingRating': {
-    'time': V;
-    'points': V;
-    'link': V;
-  };
-  'DescriptionFutureRating': {
-    'time': V;
-    'points': V;
-    'link': V;
   };
   'MediaSizeB': {
     'size': V;
@@ -4156,8 +4095,7 @@ export interface LangKeyGroups {
       | 'MediaAccessCameraText'
       | 'MediaAccessMicrophoneText'
       | 'MediaAccessCameraMicrophoneText'
-      | 'ContextMenuNoForwardsPeer'
-      | 'RatingReflectsActivity';
+      | 'ContextMenuNoForwardsPeer';
     variables: 'name';
   };
   'time': {
@@ -4181,7 +4119,6 @@ export interface LangKeyGroups {
       | 'LastSeenTodayAt'
       | 'LastSeenYesterdayAt'
       | 'LiveLocationUpdatedTodayAt'
-      | 'UnlockTimerPublicPostsSearch'
       | 'StealthModeOnHint'
       | 'LiveLocationUpdatedYesterdayAt';
     variables: 'time';
@@ -4384,7 +4321,6 @@ export interface LangKeyGroups {
   'query': {
     keys:
       | 'NoAudioFoundInfo2'
-      | 'ButtonSearchPublicPosts'
       | 'NoResultFoundFor';
     variables: 'query';
   };
@@ -4413,8 +4349,7 @@ export interface LangKeyGroups {
   };
   'level': {
     keys:
-      | 'RichEditorHeadingLevel'
-      | 'RatingLevel';
+      | 'RichEditorHeadingLevel';
     variables: 'level';
   };
   'channel,group': {
@@ -4444,14 +4379,6 @@ export interface LangKeyGroups {
       | 'SubscribeTagAbout'
       | 'UsernamePurchaseAvailable';
     variables: 'link';
-  };
-  'amount': {
-    keys:
-      | 'StarsAmount'
-      | 'StarsAmountIconLast'
-      | 'ActionStarGiftConvertTextYou'
-      | 'ActionStarGiftConvertedTextYou';
-    variables: 'amount';
   };
   'bot,duration': {
     keys:
@@ -4592,6 +4519,12 @@ export interface LangKeyGroups {
       | 'ActionStarGiftPrepaidUpgradeYou';
     variables: 'cost' | 'peer';
   };
+  'amount': {
+    keys:
+      | 'ActionStarGiftConvertTextYou'
+      | 'ActionStarGiftConvertedTextYou';
+    variables: 'amount';
+  };
   'from,topic': {
     keys:
       | 'ActionTopicClosed'
@@ -4646,12 +4579,6 @@ export interface LangKeyGroups {
       | 'TitleSensitiveModal'
       | 'ButtonSensitiveAlways';
     variables: 'years';
-  };
-  'stars': {
-    keys:
-      | 'PublicPostsSearchForStars'
-      | 'NotificationPaidExtraSearch';
-    variables: 'stars';
   };
   'height,size,type,width': {
     keys:
@@ -4857,8 +4784,6 @@ export interface LangPluralKeyGroups {
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
       | 'TextAgeVerificationModal'
-      | 'RemainingPublicPostsSearch'
-      | 'HintPublicPostsSearchQuota'
       | 'InviteRestrictedUsers'
       | 'AttachmentReplacePhoto'
       | 'AttachmentReplaceVideo'
@@ -4910,11 +4835,6 @@ export interface LangPluralKeyGroups {
       | 'ProfileBirthdayTodayValueAge';
     variables: 'age' | 'date';
   };
-  'amount': {
-    keys:
-      | 'StarsAmountText';
-    variables: 'amount';
-  };
   'count,title': {
     keys:
       | 'BrowserMoreTabs';
@@ -4934,12 +4854,6 @@ export interface LangPluralKeyGroups {
     keys:
       | 'ActionGameScoreNoGame';
     variables: 'count' | 'from';
-  };
-  'link,points,time': {
-    keys:
-      | 'DescriptionPendingRating'
-      | 'DescriptionFutureRating';
-    variables: 'link' | 'points' | 'time';
   };
   'size': {
     keys:

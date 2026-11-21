@@ -3,14 +3,12 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type {
   ApiBirthday,
   ApiPeerSettings,
-  ApiStarsRating,
   ApiUser,
   ApiUserFullInfo,
   ApiUserStatus,
   ApiUserType,
 } from '../../types';
 
-import { toJSNumber } from '../../../util/numbers';
 import { addDocumentToLocalDb, addSavedMusicRepairInfo } from '../helpers/localDb';
 import { buildApiBotInfo } from './bots';
 import {
@@ -37,7 +35,7 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, botVerification,
       botCanManageEmojiStatus, settings,
-      starsRating, starsMyPendingRating, starsMyPendingRatingDate, mainTab, savedMusic, note,
+      mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
       ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
     },
@@ -67,9 +65,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     personalChannelMessageId: personalChannelMessage,
     privateForwardName,
     botVerification: botVerification && buildApiBotVerification(botVerification),
-    starsRating: starsRating && buildApiStarsRating(starsRating),
-    starsMyPendingRating: starsMyPendingRating && buildApiStarsRating(starsMyPendingRating),
-    starsMyPendingRatingDate,
     isBotCanManageEmojiStatus: botCanManageEmojiStatus,
     hasScheduledMessages: hasScheduled,
     settings: buildApiPeerSettings(settings),
@@ -207,15 +202,6 @@ export function buildApiUserStatuses(mtpUsers: GramJs.TypeUser[]) {
 
 export function buildApiBirthday(birthday: GramJs.TypeBirthday): ApiBirthday {
   return omitVirtualClassFields(birthday);
-}
-
-export function buildApiStarsRating(starsRating: GramJs.StarsRating): ApiStarsRating {
-  return {
-    level: starsRating.level,
-    currentLevelStars: toJSNumber(starsRating.currentLevelStars),
-    stars: toJSNumber(starsRating.stars),
-    nextLevelStars: toJSNumber(starsRating.nextLevelStars),
-  };
 }
 
 function buildApiSavedMusic(document: GramJs.TypeDocument, peerId: string) {

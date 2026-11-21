@@ -107,18 +107,7 @@ The reference column describes the initialized defaults. In particular, matching
 | <a id="color-forum-hover-unread-topic-hover"></a>`--color-forum-hover-unread-topic-hover` | Forum hover unread topic hover | `#e2e2e2` | `#3f3f3f` | No; literal or Sass-computed value |
 | <a id="color-deleted-account"></a>`--color-deleted-account` | Deleted account | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
 | <a id="color-archive"></a>`--color-archive` | Archive | `#9eaab5` | `#9eaab5` | No; literal or Sass-computed value |
-| <a id="stars-gradient"></a>`--stars-gradient` | Stars gradient | `linear-gradient(90deg, #FFAA00 0%, #FFCD3A 100%)` | `linear-gradient(90deg, #FFAA00 0%, #FFCD3A 100%)` | No; literal or Sass-computed value |
-| <a id="color-stars"></a>`--color-stars` | Stars | `#FFAA00` | `#FFAA00` | No; literal or Sass-computed value |
 | <a id="color-heart"></a>`--color-heart` | Heart | `#ff3c32` | `#ff3c32` | No; literal or Sass-computed value |
-| <a id="color-gift-uncommon"></a>`--color-gift-uncommon` | Gift uncommon | `#40A920` | `#40A920` | No; literal or Sass-computed value |
-| <a id="color-gift-uncommon-bg"></a>`--color-gift-uncommon-bg` | Gift uncommon bg | `rgba(64, 169, 32, 0.15)` | `rgba(64, 169, 32, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-rare"></a>`--color-gift-rare` | Gift rare | `#11AABE` | `#11AABE` | No; literal or Sass-computed value |
-| <a id="color-gift-rare-bg"></a>`--color-gift-rare-bg` | Gift rare bg | `rgba(17, 170, 190, 0.15)` | `rgba(17, 170, 190, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-epic"></a>`--color-gift-epic` | Gift epic | `#955CDB` | `#955CDB` | No; literal or Sass-computed value |
-| <a id="color-gift-epic-bg"></a>`--color-gift-epic-bg` | Gift epic bg | `rgba(149, 92, 219, 0.15)` | `rgba(149, 92, 219, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-gift-legendary"></a>`--color-gift-legendary` | Gift legendary | `#BF7600` | `#BF7600` | No; literal or Sass-computed value |
-| <a id="color-gift-legendary-bg"></a>`--color-gift-legendary-bg` | Gift legendary bg | `rgba(191, 118, 0, 0.15)` | `rgba(191, 118, 0, 0.15)` | No; literal or Sass-computed value |
-| <a id="color-negative-progress"></a>`--color-negative-progress` | Negative progress | `#CE4C47` | `#CE4C47` | No; literal or Sass-computed value |
 | <a id="premium-gradient"></a>`--premium-gradient` | Premium gradient | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | `linear-gradient(84.4deg, #6C93FF -4.85%, #976FFF 51.72%, #DF69D1 110.7%)` | No; literal or Sass-computed value |
 | <a id="color-web-app-browser"></a>`--color-web-app-browser` | Web app browser | `#FFFFFFBB` | `#0303038F` | No; literal or Sass-computed value |
 | <a id="color-chat-active-greyed"></a>`--color-chat-active-greyed` | Chat active greyed | `#2973bd` | `#6c5db4` | No CSS alias; [--color-primary](#color-primary) mixed 20% toward the selected neutral |
@@ -377,7 +366,7 @@ Outgoing bubbles override [--color-text-selection](#color-text-selection) with [
 | `.Message` | [--color-reaction-chosen](#color-reaction-chosen) / [--text-color-reaction-chosen](#text-color-reaction-chosen) | `transparent` / `#000` |
 | Custom-shape content (stickers, round videos) | [--message-media-text](#message-media-text) | `#555`, since badges sit on the cleared service surface |
 
-The cleared [--message-incoming-control](#message-incoming-control) also clears its [--color-primary](#message-alias-color-primary) alias, so diff insertions, incoming voice durations and embed sources get explicit print colors. Exceptions keep their screen colors: the unique gift card keeps its backdrop and sets [--message-service-text](#message-service-text) back to `#fff`, and media metadata and duration overlays keep [--message-media-background](#message-media-background) and [--message-media-text](#message-media-text) with exact color printing.
+The cleared [--message-incoming-control](#message-incoming-control) also clears its [--color-primary](#message-alias-color-primary) alias, so diff insertions, incoming voice durations and embed sources get explicit print colors. Exceptions keep their screen colors: media metadata and duration overlays keep [--message-media-background](#message-media-background) and [--message-media-text](#message-media-text) with exact color printing.
 
 ### Wallpaper inputs
 
