@@ -18,6 +18,8 @@ export type ConversationRecord = {
   about?: string;
   aboutEmoji?: string;
   avatarPath?: string;
+  // When the profile was last fetched, by the device clock
+  profileFetchedAt?: number;
   username?: string;
   // Groups
   masterKey?: Uint8Array;
