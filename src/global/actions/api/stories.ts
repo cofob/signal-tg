@@ -21,6 +21,7 @@ import {
   updatePeersWithStories,
   updateSentStoryReaction,
   updateStealthMode,
+  updateStoriesState,
   updateStoryViews,
   updateStoryViewsLoading,
 } from '../../reducers';
@@ -661,10 +662,70 @@ addActionHandler('sendStoryReaction', async (global, actions, payload): Promise<
   setGlobal(global);
 });
 
-addActionHandler('activateStealthMode', (global, actions, payload): ActionReturnType => {
-  const { isForPast = true, isForFuture = true } = payload || {};
+addActionHandler('sendStory', async (global, actions, payload): Promise<void> => {
+  const {
+    story, listIds, groupIds, tabId = getCurrentTabId(),
+  } = payload;
 
-  callApi('activateStealthMode', { isForPast: isForPast || true, isForFuture: isForFuture || true });
+  actions.closeStoryComposer({ tabId });
+  const result = await callApi('sendStory', { story, listIds, groupIds });
+  actions.showNotification({ message: { key: result ? 'StorySent' : 'StorySendFailed' }, tabId });
+});
+
+addActionHandler('loadStoryDistributionLists', async (global): Promise<void> => {
+  const distributionLists = await callApi('fetchStoryDistributionLists');
+  if (!distributionLists) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, { distributionLists });
+  setGlobal(global);
+});
+
+addActionHandler('saveStoryDistributionList', async (global, actions, payload): Promise<void> => {
+  const saved = await callApi('saveStoryDistributionList', { list: payload.list });
+  if (!saved) return;
+
+  global = getGlobal();
+  const lists = global.stories.distributionLists ?? [];
+  const isNew = !lists.some(({ id }) => id === saved.id);
+  global = updateStoriesState(global, {
+    distributionLists: isNew ? [...lists, saved] : lists.map((list) => (list.id === saved.id ? saved : list)),
+  });
+  setGlobal(global);
+});
+
+addActionHandler('deleteStoryDistributionList', async (global, actions, payload): Promise<void> => {
+  const { id } = payload;
+  const result = await callApi('deleteStoryDistributionList', { id });
+  if (!result) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, {
+    distributionLists: global.stories.distributionLists?.filter((list) => list.id !== id),
+  });
+  setGlobal(global);
+});
+
+addActionHandler('loadStorySettings', async (global): Promise<void> => {
+  const settings = await callApi('fetchStorySettings');
+  if (!settings) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, { settings });
+  setGlobal(global);
+});
+
+addActionHandler('updateStorySettings', async (global, actions, payload): Promise<void> => {
+  const previous = global.stories.settings;
+  if (previous) {
+    global = updateStoriesState(global, { settings: { ...previous, ...payload } });
+    setGlobal(global);
+  }
+
+  const settings = await callApi('updateStorySettings', payload);
+  global = getGlobal();
+  global = updateStoriesState(global, { settings: settings ?? previous });
+  setGlobal(global);
 });
 
 addActionHandler('loadStoryAlbums', async (global, actions, payload): Promise<void> => {

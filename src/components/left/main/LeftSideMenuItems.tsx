@@ -51,6 +51,7 @@ type StateProps = {
   theme: ThemeKey;
   canInstall?: boolean;
   attachBots: GlobalState['attachMenu']['bots'];
+  areStoriesDisabled?: boolean;
 } & Pick<GlobalState, 'currentUserId' | 'archiveSettings'>;
 
 const LeftSideMenuItems = ({
@@ -61,6 +62,7 @@ const LeftSideMenuItems = ({
   canInstall,
   attachBots,
   currentUser,
+  areStoriesDisabled,
   onSelectArchived,
   onSelectContacts,
   onSelectSettings,
@@ -74,6 +76,7 @@ const LeftSideMenuItems = ({
     setSharedSettingOption,
     updatePerformanceSettings,
     openChatWithInfo,
+    openStoryComposer,
   } = getActions();
   const lang = useLang();
 
@@ -142,6 +145,14 @@ const LeftSideMenuItems = ({
       >
         {lang('NoteToSelf')}
       </MenuItem>
+      {!areStoriesDisabled && (
+        <MenuItem
+          icon="story"
+          onClick={() => openStoryComposer()}
+        >
+          {lang('StoryNew')}
+        </MenuItem>
+      )}
       {archiveSettings.isHidden && (
         <MenuItem
           icon="archive"
@@ -233,6 +244,7 @@ export default memo(withGlobal<OwnProps>(
       canInstall: Boolean(tabState.canInstall),
       archiveSettings,
       attachBots,
+      areStoriesDisabled: global.stories.settings?.areStoriesDisabled,
     };
   },
 )(LeftSideMenuItems));

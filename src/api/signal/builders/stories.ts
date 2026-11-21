@@ -100,6 +100,8 @@ export async function buildStoryViewList(story: StoryRecord, users: UserResolver
     });
   }
   for (const { authorAci, sentAt, body, emoji } of replies) {
+    // Reactions of viewers show with their view
+    if (!body && story.recipients?.[authorAci]?.viewedAt) continue;
     views.push({
       type: 'reply',
       peerId: await users.getUserId(authorAci),

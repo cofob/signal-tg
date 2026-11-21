@@ -32,6 +32,7 @@ import type {
   ApiMessageReadMetric,
   ApiMessageSearchContext,
   ApiNewMediaTodo,
+  ApiNewStory,
   ApiNotification,
   ApiNotifyPeerType,
   ApiPeer,
@@ -50,6 +51,8 @@ import type {
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
+  ApiStoryDistributionList,
+  ApiStorySettings,
   ApiThemeParameters,
   ApiTodoItem,
   ApiTopPeerCategory,
@@ -1633,14 +1636,22 @@ export interface ActionPayloads {
     reaction?: ApiReaction;
     shouldAddToRecent?: boolean;
   } & WithTabId;
-  openStealthModal: ({
-    targetPeerId: string;
-  } | Record<string, never>) & WithTabId;
-  closeStealthModal: WithTabId | undefined;
-  activateStealthMode: {
-    isForPast?: boolean;
-    isForFuture?: boolean;
-  } | undefined;
+  openStoryComposer: WithTabId | undefined;
+  closeStoryComposer: WithTabId | undefined;
+  sendStory: {
+    story: ApiNewStory;
+    listIds: string[];
+    groupIds: string[];
+  } & WithTabId;
+  loadStoryDistributionLists: undefined;
+  saveStoryDistributionList: {
+    list: Omit<ApiStoryDistributionList, 'id'> & { id?: string };
+  };
+  deleteStoryDistributionList: {
+    id: string;
+  };
+  loadStorySettings: undefined;
+  updateStorySettings: Partial<ApiStorySettings>;
   loadStoryAlbums: {
     peerId: string;
   };

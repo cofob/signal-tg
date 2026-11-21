@@ -1,5 +1,6 @@
 export { default as MediaViewer } from '../components/mediaViewer/MediaViewer';
 export { default as StoryViewer } from '../components/story/StoryViewer';
+export { default as StoryComposerModal } from '../components/story/StoryComposerModal';
 
 export { default as ForwardRecipientPicker } from '../components/main/ForwardRecipientPicker';
 export { default as DraftRecipientPicker } from '../components/main/DraftRecipientPicker';
@@ -109,7 +110,6 @@ export { default as SettingsConfirmationModal }
 export { default as EditRankModal } from '../components/modals/rank/EditRankModal';
 export { default as RankModal } from '../components/modals/rank/RankModal';
 export { default as QuickPreviewModal } from '../components/modals/quickPreview/QuickPreviewModal';
-export { default as StealthModeModal } from '../components/modals/storyStealthMode/StealthModeModal';
 export { default as LeaveGroupModal } from '../components/modals/leaveGroup/LeaveGroupModal';
 export { default as TwoFaCheckModal } from '../components/modals/twoFaCheck/TwoFaCheckModal';
 export { default as QuickChatPickerModal } from '../components/modals/quickChatPicker/QuickChatPickerModal';

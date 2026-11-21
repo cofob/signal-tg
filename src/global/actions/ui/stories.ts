@@ -315,17 +315,13 @@ addActionHandler('closeStoryPrivacyEditor', (global, actions, payload): ActionRe
   }, tabId);
 });
 
-addActionHandler('openStealthModal', (global, actions, payload): ActionReturnType => {
-  const { targetPeerId, tabId = getCurrentTabId() } = payload;
+addActionHandler('openStoryComposer', (global, actions, payload): ActionReturnType => {
+  const { tabId = getCurrentTabId() } = payload || {};
 
-  return updateTabState(global, {
-    storyStealthModal: {
-      targetPeerId,
-    },
-  }, tabId);
+  return updateTabState(global, { storyComposerModal: {} }, tabId);
 });
 
-addTabStateResetterAction('closeStealthModal', 'storyStealthModal');
+addTabStateResetterAction('closeStoryComposer', 'storyComposerModal');
 
 addActionHandler('clearStoryViews', (global, actions, payload): ActionReturnType => {
   const { isLoading, tabId = getCurrentTabId() } = payload || {};

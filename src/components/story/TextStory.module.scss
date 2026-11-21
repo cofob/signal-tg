@@ -1,0 +1,97 @@
+// Text stories fill the story frame; text sizes follow its width, as Signal scales its story canvas
+.root {
+  position: absolute;
+  inset: 0;
+
+  container-type: size;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+
+  // Percentages follow the frame width, as the text sizes do
+  padding: 8%;
+}
+
+.text {
+  overflow: hidden;
+
+  max-width: 100%;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.large {
+  font-size: 11cqw;
+}
+
+.medium {
+  font-size: 8cqw;
+}
+
+.small {
+  font-size: 6cqw;
+  text-align: start;
+}
+
+// Signal's fonts are approximated with system fonts
+.styleDefault {
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-normal);
+}
+
+.styleBold {
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-semibold);
+}
+
+.styleSerif {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: var(--font-weight-normal);
+}
+
+.styleScript {
+  font-family: "Segoe Script", "Brush Script MT", "Comic Sans MS", cursive;
+  font-weight: var(--font-weight-normal);
+}
+
+.styleCondensed {
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-weight: var(--font-weight-medium);
+
+  font-stretch: condensed;
+}
+
+.linkPreview {
+  max-width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+
+  color: #fff;
+
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.linkTitle {
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkUrl {
+  overflow: hidden;
+
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  opacity: 0.8;
+}

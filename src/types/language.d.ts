@@ -1869,26 +1869,38 @@ export interface LangPair {
   'InviteViaLinkButton': undefined;
   'StoryUnsupported': undefined;
   'StoryRibbonMyStory': undefined;
-  'StoryMenuSavedStories': undefined;
-  'StoryMenuArchivedStories': undefined;
   'StoryMenuSendMessage': undefined;
   'StoryMenuViewProfile': undefined;
-  'StoryMenuViewChannel': undefined;
-  'StoryMenuOpenStealth': undefined;
   'StoryMenuArchivePeer': undefined;
   'StoryMenuUnarchivePeer': undefined;
-  'StealthModeOnTitle': undefined;
-  'StealthModeOnHintEnabled': undefined;
-  'StealthModeTitle': undefined;
-  'StealthModeDescription': undefined;
-  'StealthModeDescriptionPremium': undefined;
-  'StealthModeHideRecentTitle': undefined;
-  'StealthModeHideRecentDescription': undefined;
-  'StealthModeHideFutureTitle': undefined;
-  'StealthModeHideFutureDescription': undefined;
-  'StealthModeButtonPremium': undefined;
-  'StealthModeButton': undefined;
-  'StealthModeButtonToStory': undefined;
+  'StoryMenuViewGroup': undefined;
+  'StoryNew': undefined;
+  'StoryModeText': undefined;
+  'StoryModeMedia': undefined;
+  'StoryTextPlaceholder': undefined;
+  'StoryChooseMedia': undefined;
+  'StoryCaption': undefined;
+  'StorySendTo': undefined;
+  'StorySend': undefined;
+  'StorySent': undefined;
+  'StorySendFailed': undefined;
+  'StoryGroupStory': undefined;
+  'StoryMyStoryAllConnections': undefined;
+  'StoryListName': undefined;
+  'StoriesSettingTitle': undefined;
+  'StoriesSettingEnable': undefined;
+  'StoriesSettingEnableInfo': undefined;
+  'StoriesSettingViewReceipts': undefined;
+  'StoriesSettingViewReceiptsInfo': undefined;
+  'StoriesSettingAllExcept': undefined;
+  'StoriesSettingOnlyShare': undefined;
+  'StoriesSettingChoosePeople': undefined;
+  'StoriesSettingAllowReplies': undefined;
+  'StoriesSettingMyStoryInfo': undefined;
+  'StoriesSettingCustomLists': undefined;
+  'StoriesSettingCustomList': undefined;
+  'StoriesSettingNewList': undefined;
+  'SettingsKeywordsStories': undefined;
   'GiftAuctionFinished': undefined;
   'StarGift': undefined;
   'SettingsItemPrivacyPasskeys': undefined;
@@ -2097,7 +2109,6 @@ export interface LangPair {
   'AllViewers': undefined;
   'AnonymousForward': undefined;
   'April': undefined;
-  'ArchiveStory': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
   'August': undefined;
@@ -2193,7 +2204,6 @@ export interface LangPair {
   'English': undefined;
   'ExpiredStory': undefined;
   'ExpiredStoryMention': undefined;
-  'ExpiredViewsStub': undefined;
   'FactCheck': undefined;
   'February': undefined;
   'SearchFilterByUser': undefined;
@@ -2291,7 +2301,6 @@ export interface LangPair {
   'ReactionsAll': undefined;
   'ReactionsOff': undefined;
   'RecoveryEmailSubtitle': undefined;
-  'RemoveFromPosts': undefined;
   'RemoveQuote': undefined;
   'Replace': undefined;
   'ReplyPrivate': undefined;
@@ -2305,7 +2314,6 @@ export interface LangPair {
   'ReportStory': undefined;
   'CallMicrophoneAccessNeeded': undefined;
   'Reset': undefined;
-  'SaveToPosts': undefined;
   'Saved': undefined;
   'SavedTagFilterByTag': undefined;
   'SavedTagLabelTag': undefined;
@@ -2322,7 +2330,6 @@ export interface LangPair {
   'SearchThisChat': undefined;
   'SelectSendAsPeerPremiumHint': undefined;
   'September': undefined;
-  'ServerErrorViewers': undefined;
   'SettingsMyStories': undefined;
   'ShareLinkCopied': undefined;
   'ShowOriginalButton': undefined;
@@ -2342,7 +2349,6 @@ export interface LangPair {
   'StoryToastSavedToProfileText': undefined;
   'StoryTooltipVideoHasNoSound': undefined;
   'StoryViewListEmptyTextSearch': undefined;
-  'StoryViewListNotFullyRecorded': undefined;
   'StoryExpiredSubtitle': undefined;
   'StoryKeep': undefined;
   'StoryListArchivedEmptyStateTitle': undefined;
@@ -2362,7 +2368,6 @@ export interface LangPair {
   'StoryPrivacyOptionSelectedContacts': undefined;
   'StoryPrivacyOptionSelectedContactsDetail': undefined;
   'StoryReactionsHint': undefined;
-  'StorySave': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
   'TelegramStars': undefined;
@@ -3674,11 +3679,8 @@ export interface LangPairWithVariables<V = LangVariable> {
   'InviteRestrictedPremiumReasonMultiple': {
     'list': V;
   };
-  'StealthModeOnHint': {
-    'time': V;
-  };
-  'StealthModeButtonRecharge': {
-    'timer': V;
+  'StoryBackground': {
+    'index': V;
   };
   'StealthModeComposerPlaceholder': {
     'timer': V;
@@ -3876,12 +3878,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ReplyToQuote': {
     'senderTitle': V;
   };
-  'StoryCloseFriendsHint': {
-    'user': V;
-  };
-  'StoryContactsHint': {
-    'user': V;
-  };
   'StoryHideFrom': {
     'user': V;
   };
@@ -3889,9 +3885,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'peer': V;
   };
   'StoryPrivacyOptionExcludePerson': {
-    'user': V;
-  };
-  'StorySelectedContactsHint': {
     'user': V;
   };
   'StorySharedTo': {
@@ -4278,6 +4271,15 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'list': V;
     'count': V;
   };
+  'StoryMyStoryExcept': {
+    'count': V;
+  };
+  'StoryMyStoryOnly': {
+    'count': V;
+  };
+  'StoryListMembers': {
+    'count': V;
+  };
   'AttachmentReplacePhoto': {
     'count': V;
   };
@@ -4446,11 +4448,8 @@ export interface LangKeyGroups {
       | 'ExpiredStoryMentioned'
       | 'PremiumLastSeenText1Locked'
       | 'PremiumReadText1'
-      | 'StoryCloseFriendsHint'
-      | 'StoryContactsHint'
       | 'StoryHideFrom'
       | 'StoryPrivacyOptionExcludePerson'
-      | 'StorySelectedContactsHint'
       | 'StorySharedTo'
       | 'StoryShowBackTo'
       | 'StoryYouMentionedTitle'
@@ -4563,7 +4562,6 @@ export interface LangKeyGroups {
       | 'LiveLocationUpdatedTodayAt'
       | 'ButtonPublishAtTime'
       | 'UnlockTimerPublicPostsSearch'
-      | 'StealthModeOnHint'
       | 'LiveLocationUpdatedYesterdayAt';
     variables: 'time';
   };
@@ -4769,7 +4767,6 @@ export interface LangKeyGroups {
   'timer': {
     keys:
       | 'SlowModePlaceholder'
-      | 'StealthModeButtonRecharge'
       | 'StealthModeComposerPlaceholder';
     variables: 'timer';
   };
@@ -5287,6 +5284,11 @@ export interface LangKeyGroups {
       | 'InviteRestrictedPremiumReasonMultiple';
     variables: 'list';
   };
+  'index': {
+    keys:
+      | 'StoryBackground';
+    variables: 'index';
+  };
   'current,total': {
     keys:
       | 'GiftAuctionRoundValue'
@@ -5489,6 +5491,9 @@ export interface LangPluralKeyGroups {
       | 'RemainingPublicPostsSearch'
       | 'HintPublicPostsSearchQuota'
       | 'InviteRestrictedUsers'
+      | 'StoryMyStoryExcept'
+      | 'StoryMyStoryOnly'
+      | 'StoryListMembers'
       | 'AttachmentReplacePhoto'
       | 'AttachmentReplaceVideo'
       | 'AttachmentReplaceAudio'

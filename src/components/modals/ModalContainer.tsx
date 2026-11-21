@@ -12,6 +12,7 @@ import useShowTransition from '../../hooks/useShowTransition';
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
+import StoryComposerModal from '../story/StoryComposerModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AiTonePreviewModal from './aiTonePreview/AiTonePreviewModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
@@ -50,7 +51,6 @@ import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
-import StealthModeModal from './storyStealthMode/StealthModeModal.async';
 import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
 import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
@@ -89,7 +89,7 @@ type ModalKey = keyof Pick<TabState,
   'profileRatingModal' |
   'qrCodeModal' |
   'quickPreview' |
-  'storyStealthModal' |
+  'storyComposerModal' |
   'isAudioPlaylistModalOpen' |
   'isPasskeyModalOpen' |
   'birthdaySetupModal' |
@@ -191,7 +191,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   profileRatingModal: ProfileRatingModal,
   qrCodeModal: QrCodeModal,
   quickPreview: QuickPreviewModal,
-  storyStealthModal: StealthModeModal,
+  storyComposerModal: StoryComposerModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
   isPasskeyModalOpen: PasskeyModal,
   birthdaySetupModal: BirthdaySetupModal,

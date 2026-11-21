@@ -45,6 +45,7 @@ import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityE
 import SettingsQuickReaction from './SettingsQuickReaction';
 import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
+import SettingsStories from './SettingsStories';
 import SettingsTwoFa from './twoFa/SettingsTwoFa';
 
 import './Settings.scss';
@@ -94,6 +95,7 @@ const PRIVACY_SCREENS = [
   SettingsScreens.PrivacyBlockedUsers,
   SettingsScreens.ActiveWebsites,
   SettingsScreens.Passkeys,
+  SettingsScreens.Stories,
 ];
 
 const PRIVACY_PHONE_NUMBER_SCREENS = [
@@ -389,6 +391,13 @@ const Settings = ({
       case SettingsScreens.PrivacyBlockedUsers:
         return (
           <SettingsPrivacyBlockedUsers
+            isActive={isScreenActive}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.Stories:
+        return (
+          <SettingsStories
             isActive={isScreenActive}
             onReset={handleReset}
           />

@@ -239,6 +239,7 @@ const Main = ({
     loadAllChats,
     loadAllStories,
     loadAllHiddenStories,
+    loadStorySettings,
     loadContentSettings,
     loadPromoData,
   } = getActions();
@@ -298,14 +299,16 @@ const Main = ({
       loadPasswordInfo();
       loadNotificationSettings();
       loadNotificationExceptions();
+      // Signal stories come from the local database and need no app config
+      loadAllStories();
+      loadAllHiddenStories();
+      loadStorySettings();
     }
   }, [isMasterTab, isSynced]);
 
   // Initial API calls
   useEffect(() => {
     if (isMasterTab && isSynced && isAppConfigLoaded && !isAccountFrozen) {
-      loadAllStories();
-      loadAllHiddenStories();
       loadPromoData();
       loadContentSettings();
       loadRecentReactions();

@@ -17,7 +17,6 @@ import useMedia from '../../../hooks/useMedia';
 import useShowTransitionDeprecated from '../../../hooks/useShowTransitionDeprecated';
 
 import Icon from '../../common/icons/Icon';
-import MediaAreaOverlay from '../../story/mediaArea/MediaAreaOverlay';
 import MediaBadge from './MediaBadge';
 
 import styles from './BaseStory.module.scss';
@@ -99,7 +98,6 @@ function BaseStory({
             className={buildClassName(styles.media, isPreview && styles.linkPreview, transitionClassNames)}
             draggable={false}
           />
-          {isLoaded && <MediaAreaOverlay story={story} className={transitionClassNames} />}
         </>
       )}
       {isExpired && (
