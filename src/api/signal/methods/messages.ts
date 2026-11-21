@@ -310,8 +310,12 @@ export async function closePoll({ messageId }: { chat: ApiChat; messageId: numbe
   await processor.endPoll(messageId).catch(logError);
 }
 
-/** Forwarded messages show no author in Signal, so their local messages have no forward header */
-export async function forwardMessagesLocal(params: ForwardMessagesParams) {
+/**
+ * A forward is a new message with the content of the original; attachments keep their CDN pointers, which
+ * recipients can download while the CDN keeps the file. Forwarded messages show no author in Signal, so their
+ * local messages have no forward header
+ */
+export async function forwardMessages(params: ForwardMessagesParams) {
   const {
     toChat, messages, noCaptions, lastMessageId, wasDrafted,
   } = params;
@@ -322,21 +326,10 @@ export async function forwardMessagesLocal(params: ForwardMessagesParams) {
     const content = noCaptions && hasMedia ? omit(message.content, ['text']) : message.content;
     localMessages.push(await showLocalMessage(toChat, lastMessageId, content, { wasDrafted }));
   }
-  return { messageIds: messages.map(({ id }) => id), localMessages };
-}
 
-/**
- * A forward is a new message with the content of the original; attachments keep their CDN pointers, which
- * recipients can download while the CDN keeps the file
- */
-export async function forwardApiMessages(params: ForwardMessagesParams) {
-  const { toChat, noCaptions, forwardedLocalMessagesSlice } = params;
-  if (!forwardedLocalMessagesSlice) return;
-
-  const { messageIds, localMessages } = forwardedLocalMessagesSlice;
   const conversation = await getConversationByPeerId(toChat.id);
   for (const [index, localMessage] of localMessages.entries()) {
-    const record = await db.getMessage(messageIds[index]);
+    const record = await db.getMessage(messages[index].id);
     if (!conversation || !record?.dataMessage) {
       markLocalMessageFailed(localMessage);
       continue;
@@ -359,13 +352,6 @@ export async function forwardApiMessages(params: ForwardMessagesParams) {
       sticker: original.sticker,
     }, localMessage);
   }
-}
-
-export async function forwardMessages(params: ForwardMessagesParams) {
-  await forwardApiMessages({
-    ...params,
-    forwardedLocalMessagesSlice: params.forwardedLocalMessagesSlice ?? await forwardMessagesLocal(params),
-  });
 }
 
 /**
