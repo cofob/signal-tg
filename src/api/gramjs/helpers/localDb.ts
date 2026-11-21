@@ -229,6 +229,6 @@ export function addUserToLocalDb(user: GramJs.TypeUser) {
   localDb.users[id] = user;
 }
 
-export function addWebDocumentToLocalDb(webDocument: GramJs.TypeWebDocument) {
+function addWebDocumentToLocalDb(webDocument: GramJs.TypeWebDocument) {
   localDb.webDocuments[webDocument.url] = webDocument;
 }

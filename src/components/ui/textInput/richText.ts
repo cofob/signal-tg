@@ -493,7 +493,6 @@ function buildTiptapMediaFallbackNodes(
     case 'audio':
     case 'document':
     case 'embed':
-    case 'map':
       return buildTiptapCaptionNodes(block.caption);
     case 'cover':
       return buildTiptapNodesFromBlock(block.cover, options);

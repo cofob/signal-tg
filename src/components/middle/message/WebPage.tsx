@@ -10,7 +10,7 @@ import buildClassName from '../../../util/buildClassName';
 import { tryParseDeepLink } from '../../../util/deepLinkParser';
 import trimText from '../../../util/text/trimText';
 import renderText from '../../common/helpers/renderText';
-import { getWebpageButtonIcon, getWebpageButtonLangKey } from './helpers/webpageType';
+import { getWebpageButtonLangKey } from './helpers/webpageType';
 
 import useDynamicColorListener from '../../../hooks/stickers/useDynamicColorListener';
 import useEnsureStory from '../../../hooks/useEnsureStory';
@@ -20,7 +20,6 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import Audio from '../../common/Audio';
 import Document from '../../common/Document';
 import EmojiIconBackground from '../../common/embedded/EmojiIconBackground';
-import Icon from '../../common/icons/Icon';
 import PeerColorWrapper from '../../common/PeerColorWrapper';
 import SafeLink from '../../common/SafeLink';
 import StickerView from '../../common/StickerView';
@@ -85,7 +84,7 @@ const WebPage = ({
   onAudioPlay,
   onCancelMediaTransfer,
 }: OwnProps) => {
-  const { openBrowserTab, openUrl, openTelegramLink } = getActions();
+  const { openUrl, openTelegramLink } = getActions();
   const stickersRef = useRef<HTMLDivElement>();
 
   const lang = useLang();
@@ -101,7 +100,6 @@ const WebPage = ({
   const fullWebPage = webPage?.webpageType === 'full' ? webPage : undefined;
 
   const { story: storyData, stickers } = fullWebPage || {};
-  const cachedPage = fullWebPage?.cachedPage;
 
   useEnsureStory(storyData?.peerId, storyData?.id, story);
 
@@ -122,8 +120,6 @@ const WebPage = ({
     openUrl({
       url: webPage.url!,
       shouldSkipModal: messageWebPage.isSafe,
-      tryInstant: Boolean(cachedPage),
-      previewId: webPage.id,
     });
   });
 
@@ -131,15 +127,6 @@ const WebPage = ({
     openTelegramLink({
       url: webPage.url!,
     });
-  });
-
-  const handleQuickButtonClick = useLastCallback(() => {
-    if (cachedPage) {
-      openBrowserTab({ tab: { type: 'instantView', webPageId: webPage.id } });
-      return;
-    }
-
-    handleOpenTelegramLink();
   });
 
   if (webPage?.webpageType !== 'full') return undefined;
@@ -162,10 +149,9 @@ const WebPage = ({
 
   const resultType = stickers?.isEmoji ? 'telegram_emojiset' : type;
   const quickButtonLangKey = !isExpiredStory
-    ? getWebpageButtonLangKey(resultType, { cachedPage: fullWebPage?.cachedPage })
+    ? getWebpageButtonLangKey(resultType)
     : undefined;
   const quickButtonTitle = quickButtonLangKey && lang(quickButtonLangKey);
-  const quickButtonIcon = getWebpageButtonIcon(resultType, { cachedPage: fullWebPage?.cachedPage });
 
   const truncatedDescription = trimText(description, MAX_TEXT_LENGTH);
   const isArticle = Boolean(truncatedDescription || title || siteName);
@@ -195,9 +181,8 @@ const WebPage = ({
         isRectangular
         inline
         noForcedUpperCase
-        onClick={handleQuickButtonClick}
+        onClick={handleOpenTelegramLink}
       >
-        {quickButtonIcon && <Icon name={quickButtonIcon} className="in-text-icon" />}
         {quickButtonTitle}
       </Button>
     );
@@ -236,8 +221,6 @@ const WebPage = ({
               url={url}
               text={siteName || displayUrl}
               shouldSkipModal={messageWebPage.isSafe}
-              tryInstantView={Boolean(cachedPage)}
-              previewId={webPage.id}
             />
             {title && (
               <p className="site-title">{renderText(title)}</p>

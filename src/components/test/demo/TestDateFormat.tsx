@@ -160,10 +160,6 @@ const DateFormatTest = () => {
         label: `Last seen: ${seconds}s`,
         value: formatRecentTimestamp(lang, date, { ...options, context: 'lastSeen' }),
       },
-      {
-        label: `Location updated: ${seconds}s`,
-        value: formatRecentTimestamp(lang, date, { ...options, context: 'location' }),
-      },
       { label: `Chat timestamp: ${seconds}s`, value: formatCompactTimestamp(lang, date, options) },
       { label: `Calendar date: ${seconds}s`, value: formatCalendarDate(lang, date, options) },
     ];

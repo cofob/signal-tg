@@ -21,9 +21,6 @@ export async function fetchTopPeers({
 }): Promise<ApiTopPeersResult | undefined> {
   const result = await invokeRequest(new GramJs.contacts.GetTopPeers({
     correspondents: category === 'correspondents' || undefined,
-    botsInline: category === 'botsInline' || undefined,
-    botsApp: category === 'botsApp' || undefined,
-    botsGuestchat: category === 'botsGuestChat' || undefined,
     offset: DEFAULT_PRIMITIVES.INT,
     limit: TOP_PEER_LIMIT,
     hash: DEFAULT_PRIMITIVES.BIGINT,
@@ -76,15 +73,6 @@ function getTopPeerCategory(category: GramJs.TypeTopPeerCategory): ApiTopPeerCat
   if (category instanceof GramJs.TopPeerCategoryCorrespondents) {
     return 'correspondents';
   }
-  if (category instanceof GramJs.TopPeerCategoryBotsInline) {
-    return 'botsInline';
-  }
-  if (category instanceof GramJs.TopPeerCategoryBotsApp) {
-    return 'botsApp';
-  }
-  if (category instanceof GramJs.TopPeerCategoryBotsGuestChat) {
-    return 'botsGuestChat';
-  }
 
   return undefined;
 }
@@ -93,11 +81,5 @@ function buildTopPeerCategory(category: ApiTopPeerCategory): GramJs.TypeTopPeerC
   switch (category) {
     case 'correspondents':
       return new GramJs.TopPeerCategoryCorrespondents();
-    case 'botsInline':
-      return new GramJs.TopPeerCategoryBotsInline();
-    case 'botsApp':
-      return new GramJs.TopPeerCategoryBotsApp();
-    case 'botsGuestChat':
-      return new GramJs.TopPeerCategoryBotsGuestChat();
   }
 }

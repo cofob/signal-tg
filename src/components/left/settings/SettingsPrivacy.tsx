@@ -33,7 +33,6 @@ type StateProps = {
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
-  webAuthCount: number;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   canDisplayAutoarchiveSetting: boolean;
@@ -44,8 +43,6 @@ type StateProps = {
   privacy: GlobalState['settings']['privacy'];
   accountDaysTtl?: number;
   defaultHistoryTtl?: number;
-  passkeyCount?: number;
-  arePasskeysAvailable?: boolean;
 };
 
 const DAYS_PER_MONTH = 30;
@@ -56,9 +53,6 @@ const SettingsPrivacy = ({
   isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
-  webAuthCount,
-  passkeyCount,
-  arePasskeysAvailable,
   isSensitiveEnabled,
   canChangeSensitive,
   canDisplayAutoarchiveSetting,
@@ -81,13 +75,10 @@ const SettingsPrivacy = ({
     loadDefaultHistoryTtl,
     loadGlobalPrivacySettings,
     updateGlobalPrivacySettings,
-    loadWebAuthorizations,
     setSharedSettingOption,
     openSettingsScreen,
     loadAccountDaysTtl,
     openAgeVerificationModal,
-    loadPasskeys,
-    openPasskeyModal,
     loadSignalPinSettings,
     loadSignalContactDiscovery,
     setSignalContactDiscovery,
@@ -98,8 +89,6 @@ const SettingsPrivacy = ({
       loadBlockedUsers();
       loadPrivacySettings({});
       loadPhoneNumberPrivacy();
-      loadWebAuthorizations();
-      loadPasskeys();
       loadSignalPinSettings();
       loadSignalContactDiscovery();
     }
@@ -154,16 +143,6 @@ const SettingsPrivacy = ({
     openDeleteAccountModal({ days: accountDaysTtl });
   });
 
-  const handleOpenPasskeys = useLastCallback(() => {
-    if (!arePasskeysAvailable || passkeyCount === undefined) return;
-    if (passkeyCount === 0) {
-      openPasskeyModal();
-      return;
-    }
-
-    openSettingsScreen({ screen: SettingsScreens.Passkeys });
-  });
-
   const handleOpenAutoDeleteMessages = useLastCallback(() => {
     if (defaultHistoryTtl === undefined) return;
 
@@ -178,11 +157,9 @@ const SettingsPrivacy = ({
   function getVisibilityValue(setting?: ApiPrivacySettings) {
     if (!setting) return lang('Loading');
 
-    const { visibility, botsPrivacy } = setting;
+    const { visibility } = setting;
 
-    const isAllowBots = botsPrivacy === 'allow';
     const isVisibilityEverybody = visibility === 'everybody';
-    const shouldShowBotsString = isAllowBots && !isVisibilityEverybody;
 
     const blockCount = setting.blockChatIds.length + setting.blockUserIds.length;
     const allowCount = setting.allowChatIds.length + setting.allowUserIds.length;
@@ -190,11 +167,7 @@ const SettingsPrivacy = ({
     if (blockCount) total.push(`-${blockCount}`);
     if (allowCount && !isVisibilityEverybody) total.push(`+${allowCount}`);
 
-    const botPrivacyString = shouldShowBotsString ? lang('PrivacyValueBots') : '';
-    const totalString = lang.conjunction(total);
-
-    const exceptionString = [botPrivacyString, totalString].filter(Boolean).join(' ');
-    if (shouldShowBotsString && !isVisibilityEverybody) return exceptionString;
+    const exceptionString = lang.conjunction(total);
 
     switch (visibility) {
       case 'everybody':
@@ -252,33 +225,6 @@ const SettingsPrivacy = ({
                 {lang(signalPin.hasPin ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
               </span>
             </div>
-          </ListItem>
-        )}
-        {arePasskeysAvailable && (
-          <ListItem
-            icon="key-filled"
-            iconBg="gray"
-            narrow
-            onClick={handleOpenPasskeys}
-          >
-            <div className="multiline-item">
-              <span className="title">{lang('SettingsItemPrivacyPasskeys')}</span>
-              <span className="subtitle" dir="auto">
-                {lang(passkeyCount === undefined ? 'Loading'
-                  : passkeyCount > 0 ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-              </span>
-            </div>
-          </ListItem>
-        )}
-        {webAuthCount > 0 && (
-          <ListItem
-            icon="web-filled"
-            iconBg="purple"
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveWebsites })}
-          >
-            {lang('PrivacySettingsWebSessions')}
-            <span className="settings-item__current-value">{webAuthCount}</span>
           </ListItem>
         )}
         {!isCurrentUserFrozen && (
@@ -518,7 +464,6 @@ export default memo(withGlobal<OwnProps>(
         },
         privacy,
         accountDaysTtl,
-        passkeys,
       },
       blocked,
       passcode: {
@@ -535,7 +480,6 @@ export default memo(withGlobal<OwnProps>(
       isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
-      webAuthCount: global.activeWebSessions.orderedHashes.length,
       isSensitiveEnabled,
       canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting),
       shouldArchiveAndMuteNewNonContact,
@@ -547,8 +491,6 @@ export default memo(withGlobal<OwnProps>(
       isCurrentUserFrozen,
       accountDaysTtl,
       defaultHistoryTtl,
-      passkeyCount: passkeys?.length,
-      arePasskeysAvailable: appConfig.arePasskeysAvailable,
     };
   },
 )(SettingsPrivacy));

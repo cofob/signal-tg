@@ -4,7 +4,6 @@ import {
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type {
-  ApiBotVerification,
   ApiChat,
   ApiCountryCode,
   ApiUser,
@@ -13,7 +12,7 @@ import type {
 } from '../../../api/types';
 import type { RegularLangKey } from '../../../types/language';
 import { MAIN_THREAD_ID } from '../../../api/types';
-import { type BotAppPermissions, ManagementScreens } from '../../../types';
+import { ManagementScreens } from '../../../types';
 
 import {
   MUTE_INDEFINITE_TIMESTAMP, UNMUTE_TIMESTAMP,
@@ -21,7 +20,6 @@ import {
 import {
   getChatLink,
   getHasAdminRight,
-  getMainUsername,
   isChatAdmin,
   isChatChannel,
   isUserRightBanned,
@@ -29,7 +27,6 @@ import {
 import { getIsChatMuted } from '../../../global/helpers/notifications';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import {
-  selectBotAppPermissions,
   selectChat,
   selectChatFullInfo,
   selectCurrentMessageList,
@@ -45,7 +42,6 @@ import buildClassName from '../../../util/buildClassName';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { formatPhoneNumberWithCode } from '../../../util/phoneNumber';
 import stopEvent from '../../../util/stopEvent';
-import { extractCurrentThemeParams } from '../../../util/themeStyle';
 import { ChatAnimationTypes } from '../../left/main/hooks';
 import formatUsername from '../helpers/formatUsername';
 import renderText from '../helpers/renderText';
@@ -58,13 +54,11 @@ import useEffectWithPrevDeps from '../../../hooks/useEffectWithPrevDeps';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import Island, { IslandDescription } from '../../gili/layout/Island';
+import Island from '../../gili/layout/Island';
 import Switch from '../../gili/primitives/Switch';
 import Chat from '../../left/main/Chat';
 import Button from '../../ui/Button';
-import Link from '../../ui/Link';
 import ListItem from '../../ui/ListItem';
-import CustomEmoji from '../CustomEmoji';
 import Icon from '../icons/Icon';
 import QrIcon from '../icons/QrIcon';
 import UserBirthday from './UserBirthday';
@@ -93,15 +87,9 @@ type StateProps = {
   topicLink?: string;
   hasSavedMessages?: boolean;
   personalChannel?: ApiChat;
-  hasMainMiniApp?: boolean;
-  isBotCanManageEmojiStatus?: boolean;
-  botAppPermissions?: BotAppPermissions;
-  botVerification?: ApiBotVerification;
-  botManager?: ApiUser;
   canViewSubscribers?: boolean;
 };
 
-const BOT_VERIFICATION_ICON_SIZE = 16;
 const NOTE_MAX_LINES = 3;
 
 const ChatExtra = ({
@@ -119,11 +107,6 @@ const ChatExtra = ({
   topicLink,
   hasSavedMessages,
   personalChannel,
-  hasMainMiniApp,
-  isBotCanManageEmojiStatus,
-  botAppPermissions,
-  botVerification,
-  botManager,
   className,
   style,
   isInSettings,
@@ -135,13 +118,8 @@ const ChatExtra = ({
     updateTopicMutedState,
     loadPeerStories,
     openSavedDialog,
-    requestMainWebView,
-    toggleUserEmojiStatusPermission,
-    toggleUserLocationPermission,
-    toggleUserMediaPermission,
     requestNextManagementScreen,
     openQrCodeModal,
-    openChatWithInfo,
     openSafetyNumberModal,
   } = getActions();
 
@@ -221,26 +199,6 @@ const ChatExtra = ({
     }
   });
 
-  const manageEmojiStatusChange = useLastCallback(() => {
-    if (!user) return;
-    toggleUserEmojiStatusPermission({ botId: user.id, isEnabled: !isBotCanManageEmojiStatus });
-  });
-
-  const handleLocationPermissionChange = useLastCallback(() => {
-    if (!user) return;
-    toggleUserLocationPermission({ botId: user.id, isAccessGranted: !botAppPermissions?.geolocation });
-  });
-
-  const handleCameraPermissionChange = useLastCallback(() => {
-    if (!user) return;
-    toggleUserMediaPermission({ botId: user.id, kind: 'camera', isAccessGranted: !botAppPermissions?.camera });
-  });
-
-  const handleMicrophonePermissionChange = useLastCallback(() => {
-    if (!user) return;
-    toggleUserMediaPermission({ botId: user.id, kind: 'microphone', isAccessGranted: !botAppPermissions?.microphone });
-  });
-
   const handleOpenSavedDialog = useLastCallback(() => {
     openSavedDialog({ chatId: chatOrUserId });
   });
@@ -288,26 +246,6 @@ const ChatExtra = ({
   const handleOpenSafetyNumber = useLastCallback(() => {
     openSafetyNumberModal({ userId: userId! });
   });
-
-  const handleBotManagerClick = useLastCallback(() => {
-    openChatWithInfo({ id: botManager!.id });
-  });
-
-  const handleOpenApp = useLastCallback(() => {
-    const botId = user?.id;
-    if (!botId) {
-      return;
-    }
-    const theme = extractCurrentThemeParams();
-    requestMainWebView({
-      botId,
-      peerId: botId,
-      theme,
-      shouldMarkBotTrusted: true,
-    });
-  });
-
-  const appTermsInfo = lang('ProfileOpenAppAbout', { terms: lang('ProfileOpenAppTerms') }, { withNodes: true });
 
   const isRestricted = chatId ? selectIsChatRestricted(getGlobal(), chatId) : false;
   if (isRestricted || (isSelf && !isOwnProfile && !isInSettings)) {
@@ -459,25 +397,6 @@ const ChatExtra = ({
         {birthday && (
           <UserBirthday key={peerId} birthday={birthday} user={user!} isInSettings={isInSettings} />
         )}
-        {hasMainMiniApp && (
-          <ListItem
-            multiline
-            className={styles.miniapp}
-            isStatic
-            narrow
-            style={createVtnStyle('miniapp')}
-          >
-            <Button
-              className={styles.openAppButton}
-              onClick={handleOpenApp}
-            >
-              {lang('OpenApp')}
-            </Button>
-            <div className={styles.sectionInfo}>
-              {appTermsInfo}
-            </div>
-          </ListItem>
-        )}
         {!isOwnProfile && !isInSettings && (
           <ListItem
             icon="notifications-filled"
@@ -568,74 +487,6 @@ const ChatExtra = ({
             <span>{lang('NoteToSelf')}</span>
           </ListItem>
         )}
-        {userFullInfo && 'isBotAccessEmojiGranted' in userFullInfo && (
-          <ListItem
-            icon="user-filled"
-            iconBg="blue"
-            className={styles.botEmojiStatus}
-            narrow
-            ripple
-            onClick={manageEmojiStatusChange}
-            style={createVtnStyle('botEmojiStatus')}
-          >
-            <span>{lang('BotProfilePermissionEmojiStatus')}</span>
-            <Switch
-              checked={Boolean(isBotCanManageEmojiStatus)}
-              className={styles.switch}
-            />
-          </ListItem>
-        )}
-        {botAppPermissions?.geolocation !== undefined && (
-          <ListItem
-            icon="location-filled"
-            iconBg="green"
-            className={styles.botLocation}
-            narrow
-            ripple
-            onClick={handleLocationPermissionChange}
-            style={createVtnStyle('botLocation')}
-          >
-            <span>{lang('BotProfilePermissionLocation')}</span>
-            <Switch
-              checked={Boolean(botAppPermissions?.geolocation)}
-              className={styles.switch}
-            />
-          </ListItem>
-        )}
-        {botAppPermissions?.camera !== undefined && (
-          <ListItem
-            icon="camera"
-            iconBg="blue"
-            className={styles.botCamera}
-            narrow
-            ripple
-            onClick={handleCameraPermissionChange}
-            style={createVtnStyle('botCamera')}
-          >
-            <span>{lang('BotProfilePermissionCamera')}</span>
-            <Switch
-              checked={Boolean(botAppPermissions?.camera)}
-              className={styles.switch}
-            />
-          </ListItem>
-        )}
-        {botAppPermissions?.microphone !== undefined && (
-          <ListItem
-            icon="microphone"
-            iconBg="red"
-            className={styles.botMicrophone}
-            narrow
-            ripple
-            onClick={handleMicrophonePermissionChange}
-            style={createVtnStyle('botMicrophone')}
-          >
-            <span>{lang('BotProfilePermissionMicrophone')}</span>
-            <Switch
-              checked={Boolean(botAppPermissions?.microphone)}
-              className={styles.switch}
-            />
-          </ListItem>
-        )}
         {canViewSubscribers && (
           <ListItem
             icon="group-filled"
@@ -651,37 +502,9 @@ const ChatExtra = ({
             <span className="subtitle">{lang.number(chat?.membersCount || 0)}</span>
           </ListItem>
         )}
-        {botVerification && (
-          <div className={styles.botVerificationSection} style={createVtnStyle('botVerification')}>
-            <CustomEmoji
-              className={styles.botVerificationIcon}
-              documentId={botVerification.iconId}
-              size={BOT_VERIFICATION_ICON_SIZE}
-            />
-            {botVerification.description}
-          </div>
-        )}
       </Island>
-      {botManager && renderBotManager(botManager)}
     </div>
   );
-
-  function renderBotManager(manager: ApiUser) {
-    const username = getMainUsername(manager);
-
-    return (
-      <IslandDescription className={styles.botManager} style={createVtnStyle('botManager')}>
-        <Icon name="code" className={styles.botManagerIcon} />
-        {lang('ProfileBotManagedBy', {
-          bot: (
-            <Link isPrimary onClick={handleBotManagerClick}>
-              {username ? formatUsername(username) : getPeerTitle(lang, manager)}
-            </Link>
-          ),
-        }, { withNodes: true })}
-      </IslandDescription>
-    );
-  }
 };
 
 export default memo(withGlobal<OwnProps>(
@@ -690,7 +513,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chat = chatOrUserId ? selectChat(global, chatOrUserId) : undefined;
     const user = chatOrUserId ? selectUser(global, chatOrUserId) : undefined;
-    const botAppPermissions = chatOrUserId ? selectBotAppPermissions(global, chatOrUserId) : undefined;
     const isForum = chat?.isForum;
     const isMuted = chat && getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chat.id));
     const { threadId } = selectCurrentMessageList(global) || {};
@@ -698,9 +520,6 @@ export default memo(withGlobal<OwnProps>(
 
     const chatFullInfo = chat && selectChatFullInfo(global, chat.id);
     const userFullInfo = user && selectUserFullInfo(global, user.id);
-
-    const botVerification = userFullInfo?.botVerification || chatFullInfo?.botVerification;
-    const botManager = userFullInfo?.botManagerId ? selectUser(global, userFullInfo.botManagerId) : undefined;
 
     const chatInviteLink = chatFullInfo?.inviteLink;
     const description = userFullInfo?.bio || chatFullInfo?.about;
@@ -719,15 +538,12 @@ export default memo(withGlobal<OwnProps>(
       ? selectChat(global, userFullInfo.personalChannelId)
       : undefined;
 
-    const hasMainMiniApp = user?.hasMainMiniApp;
-
     return {
       phoneCodeList,
       chat,
       user,
       userFullInfo,
       canInviteUsers,
-      botAppPermissions,
       isMuted,
       topicId,
       chatInviteLink,
@@ -735,10 +551,6 @@ export default memo(withGlobal<OwnProps>(
       topicLink,
       hasSavedMessages,
       personalChannel,
-      hasMainMiniApp,
-      isBotCanManageEmojiStatus: userFullInfo?.isBotCanManageEmojiStatus,
-      botVerification,
-      botManager,
       canViewSubscribers,
     };
   },

@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPhoto, ApiPrivacySettings, BotsPrivacyType } from '../../../api/types';
+import type { ApiPhoto, ApiPrivacySettings } from '../../../api/types';
 import { SettingsScreens } from '../../../types';
 
 import { selectUserFullInfo } from '../../../global/selectors';
@@ -178,13 +178,12 @@ function PrivacySubsection({
   }, [lang, screen]);
 
   const prepareSubtitle = useLastCallback(
-    (userIds?: string[], chatIds?: string[], botsPrivacy?: BotsPrivacyType) => {
+    (userIds?: string[], chatIds?: string[]) => {
       const userIdsCount = userIds?.length || 0;
       const chatIdsCount = chatIds?.length || 0;
-      const isAllowBots = botsPrivacy === 'allow';
       const hasPeers = userIdsCount || chatIdsCount;
 
-      if (!hasPeers && !isAllowBots) {
+      if (!hasPeers) {
         return lang('EditAdminAddUsers');
       }
 
@@ -193,10 +192,7 @@ function PrivacySubsection({
       const chatCountString = chatIdsCount > 0
         ? lang('ChatsPlural', { count: chatIdsCount }, { pluralValue: chatIdsCount }) : undefined;
 
-      const botPrivacyString = isAllowBots ? lang('PrivacyValueBots') : '';
-      const peersString = lang.conjunction([userCountString, chatCountString].filter(Boolean));
-
-      return [botPrivacyString, peersString].filter(Boolean).join(' ');
+      return lang.conjunction([userCountString, chatCountString].filter(Boolean));
     },
   );
 
@@ -204,7 +200,6 @@ function PrivacySubsection({
     return prepareSubtitle(
       privacy?.allowUserIds,
       privacy?.allowChatIds,
-      privacy?.botsPrivacy,
     );
   }, [privacy]);
 

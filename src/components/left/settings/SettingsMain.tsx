@@ -26,14 +26,12 @@ type OwnProps = {
 };
 
 type StateProps = {
-  sessionCount: number;
   currentUserId?: string;
 };
 
 const SettingsMain = ({
   isActive,
   currentUserId,
-  sessionCount,
   onReset,
 }: OwnProps & StateProps) => {
   const {
@@ -192,20 +190,6 @@ const SettingsMain = ({
               <span className="subtitle">{lang('KeyboardShortcutsDesc')}</span>
             </ListItem>
           )}
-
-          <ListItem
-            icon="devices-filled"
-            iconBg="blue"
-            multiline
-            narrow
-            rightElement={sessionCount > 0
-              ? <span className="settings-item__current-value">{sessionCount}</span>
-              : undefined}
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveSessions })}
-          >
-            <span className="title">{lang('SessionsTitle')}</span>
-            <span className="subtitle">{lang('SettingsSessionsDesc')}</span>
-          </ListItem>
         </Island>
 
         <Island>
@@ -236,7 +220,6 @@ export default memo(withGlobal<OwnProps>(
     const { currentUserId } = global;
 
     return {
-      sessionCount: global.activeSessions.orderedHashes.length,
       currentUserId,
     };
   },

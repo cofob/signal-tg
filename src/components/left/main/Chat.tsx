@@ -198,7 +198,6 @@ const Chat = ({
   const isCommunity = Boolean(chat && isChatCommunity(chat));
 
   const listedTopicIds = topicsInfo?.listedTopicIds;
-  const shouldForceNonForumView = chat?.isBotForum && listedTopicIds && !listedTopicIds.length;
 
   const {
     members: communityMembers, unreadCount: communityUnreadCount, lastMessageChatId = chatId,
@@ -232,7 +231,6 @@ const Chat = ({
     isPreview,
     onReorderAnimationEnd,
     topicIds: listedTopicIds,
-    shouldForceNonForumView,
   });
 
   const getIsForumPanelClosed = useSelectorSignal(selectIsForumPanelClosed);
@@ -243,7 +241,7 @@ const Chat = ({
       return false;
     }
 
-    const noForumTopicPanel = (isMobile && isForumAsMessages) || shouldForceNonForumView;
+    const noForumTopicPanel = isMobile && isForumAsMessages;
 
     if (isMobile) {
       setShouldCloseRightColumn({ value: true });
@@ -276,7 +274,7 @@ const Chat = ({
           openForumPanel({ chatId }, { forceOnHeavyAnimation: true });
         }
 
-        if (!isForumAsMessages && !shouldForceNonForumView) return false;
+        if (!isForumAsMessages) return false;
       }
     }
 
@@ -416,7 +414,7 @@ const Chat = ({
   const chatClassName = buildClassName(
     'Chat chat-item-clickable',
     isUserId(chatId) ? 'private' : 'group',
-    isForum && !shouldForceNonForumView && 'forum',
+    isForum && 'forum',
     isSelected && 'selected',
     isSelectedForum && 'selected-forum',
     isPreview && 'standalone',
@@ -519,7 +517,6 @@ const Chat = ({
               isPinned={isPinned}
               isMuted={isMuted}
               isSavedDialog={isSavedDialog}
-              hasMiniApp={user?.hasMainMiniApp}
               forceUnreadCount={communityUnreadCount}
               isSelected={isSelected}
               transitionClassName="chat-badge-transition"

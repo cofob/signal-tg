@@ -9,7 +9,6 @@ import type {
   ApiInputPrivacyRules,
   ApiLanguage,
   ApiNotifyPeerType,
-  ApiPasskeyRegistrationOption,
   ApiPeer,
   ApiPeerNotifySettings,
   ApiPhoto,
@@ -20,23 +19,18 @@ import type {
 
 import {
   ACCEPTABLE_USERNAME_ERRORS,
-  DEBUG,
   LANG_PACK,
   MUTE_INDEFINITE_TIMESTAMP,
   UNMUTE_TIMESTAMP,
 } from '../../../config';
-import { buildCollectionByKey } from '../../../util/iteratees';
 import { BLOCKED_LIST_LIMIT } from '../../../limits';
 import { buildApiPhoto, buildPrivacyRules } from '../apiBuilders/common';
 import {
   buildApiChatTheme,
   buildApiCountryList,
   buildApiLanguage,
-  buildApiPasskey,
-  buildApiSession,
   buildApiShareThemeBackdrop,
   buildApiWallpaper,
-  buildApiWebSession,
   buildLangStrings,
 } from '../apiBuilders/misc';
 import {
@@ -57,7 +51,6 @@ import {
   buildInputUser,
   DEFAULT_PRIMITIVES,
 } from '../gramjsBuilders';
-import { buildInputPasskeyCredential } from '../gramjsBuilders/passkeys';
 import { addPhotoToLocalDb } from '../helpers/localDb';
 import localDb from '../localDb';
 import {
@@ -154,18 +147,16 @@ export async function updateProfilePhoto(photo?: ApiPhoto, isFallback?: boolean)
 }
 
 export async function uploadProfilePhoto({
-  photo, isFallback, bot,
+  photo, isFallback,
 }: {
   photo: ApiAvatarUpload;
   isFallback?: boolean;
-  bot?: ApiUser;
 }) {
   const { file, video, videoStartTs } = await uploadAvatar(photo);
   const result = await invokeRequest(new GramJs.photos.UploadProfilePhoto({
     file,
     video,
     videoStartTs,
-    bot: bot ? buildInputUser(bot.id, bot.accessHash) : undefined,
     fallback: isFallback || undefined,
   }));
 
@@ -321,45 +312,6 @@ export function unblockUser({
     id: buildInputPeer(user.id, user.accessHash),
     myStoriesFrom: isOnlyStories,
   }));
-}
-
-export async function fetchAuthorizations() {
-  const result = await invokeRequest(new GramJs.account.GetAuthorizations());
-  if (!result) {
-    return undefined;
-  }
-
-  return {
-    authorizations: buildCollectionByKey(result.authorizations.map(buildApiSession), 'hash'),
-    ttlDays: result.authorizationTtlDays,
-  };
-}
-
-export function terminateAuthorization(hash: string) {
-  return invokeRequest(new GramJs.account.ResetAuthorization({ hash: BigInt(hash) }));
-}
-
-export function terminateAllAuthorizations() {
-  return invokeRequest(new GramJs.auth.ResetAuthorizations());
-}
-
-export async function fetchWebAuthorizations() {
-  const result = await invokeRequest(new GramJs.account.GetWebAuthorizations());
-  if (!result) {
-    return undefined;
-  }
-
-  return {
-    webAuthorizations: buildCollectionByKey(result.authorizations.map(buildApiWebSession), 'hash'),
-  };
-}
-
-export function terminateWebAuthorization(hash: string) {
-  return invokeRequest(new GramJs.account.ResetWebAuthorization({ hash: BigInt(hash) }));
-}
-
-export function terminateAllWebAuthorizations() {
-  return invokeRequest(new GramJs.account.ResetWebAuthorizations());
 }
 
 export async function fetchNotificationExceptions() {
@@ -786,49 +738,4 @@ export function reorderUsernames({ chatId, accessHash, usernames }: {
   return invokeRequest(new GramJs.account.ReorderUsernames({
     order: usernames,
   }));
-}
-
-export async function fetchPasskeys() {
-  const result = await invokeRequest(new GramJs.account.GetPasskeys());
-  if (!result) {
-    return undefined;
-  }
-
-  return {
-    passkeys: result.passkeys.map(buildApiPasskey),
-  };
-}
-
-export async function initPasskeyRegistration() {
-  const result = await invokeRequest(new GramJs.account.InitPasskeyRegistration());
-  if (!result) {
-    return undefined;
-  }
-
-  try {
-    return JSON.parse(result.options.data) as ApiPasskeyRegistrationOption;
-  } catch (err: unknown) {
-    if (DEBUG) {
-      // eslint-disable-next-line no-console
-      console.warn('Failed to parse passkey registration options:', err);
-    }
-  }
-  return undefined;
-}
-
-export async function registerPasskey(credentialJson: RegistrationResponseJSON) {
-  const result = await invokeRequest(new GramJs.account.RegisterPasskey({
-    credential: buildInputPasskeyCredential(credentialJson),
-  }));
-  if (!result) {
-    return undefined;
-  }
-
-  return buildApiPasskey(result);
-}
-
-export function deletePasskey({ id }: { id: string }) {
-  return invokeRequest(new GramJs.account.DeletePasskey({ id }), {
-    shouldReturnTrue: true,
-  });
 }

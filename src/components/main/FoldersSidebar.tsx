@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef } from '@teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { ApiChatFolder, ApiChatlistExportedInvite } from '../../api/types';
+import type { ApiChatFolder } from '../../api/types';
 import { LeftColumnContent, SettingsScreens } from '../../types';
 
 import { requestMeasure, requestMutation } from '../../lib/fasterdom/fasterdom';
@@ -24,7 +24,6 @@ import styles from './FoldersSidebar.module.scss';
 
 type StateProps = {
   chatFoldersById: Record<number, ApiChatFolder>;
-  folderInvitesById: Record<number, ApiChatlistExportedInvite[]>;
   orderedFolderIds?: number[];
   activeChatFolder: number;
 };
@@ -39,7 +38,6 @@ const FoldersSidebar = ({
   chatFoldersById,
   orderedFolderIds,
   activeChatFolder,
-  folderInvitesById,
   isActive,
 }: OwnProps & StateProps) => {
   const {
@@ -68,7 +66,6 @@ const FoldersSidebar = ({
     sidebarMode: true,
     orderedFolderIds,
     chatFoldersById,
-    folderInvitesById,
   });
 
   const {
@@ -206,14 +203,12 @@ export default memo(withGlobal(
       chatFolders: {
         byId: chatFoldersById,
         orderedIds: orderedFolderIds,
-        invites: folderInvitesById,
       },
     } = global;
     const { activeChatFolder } = selectTabState(global);
 
     return {
       chatFoldersById,
-      folderInvitesById,
       orderedFolderIds,
       activeChatFolder,
     };

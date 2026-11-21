@@ -33,7 +33,7 @@ const MediaAreaOverlay = ({
   story, isActive, className, isStoryPlaying,
 }: OwnProps) => {
   const {
-    openMapModal, focusMessage, closeStoryViewer, openUrl,
+    focusMessage, closeStoryViewer, openUrl,
   } = getActions();
 
   const ref = useRef<HTMLDivElement>();
@@ -69,11 +69,6 @@ const MediaAreaOverlay = ({
 
   const handleMediaAreaClick = (mediaArea: ApiMediaArea) => {
     switch (mediaArea.type) {
-      case 'geoPoint':
-      case 'venue': {
-        openMapModal({ geoPoint: mediaArea.geo });
-        break;
-      }
       case 'channelPost': {
         focusMessage({
           chatId: mediaArea.channelId,
@@ -98,8 +93,6 @@ const MediaAreaOverlay = ({
     >
       {mediaAreas?.map((mediaArea, i) => {
         switch (mediaArea.type) {
-          case 'geoPoint':
-          case 'venue':
           case 'channelPost':
           case 'url': {
             const isShiny = isActive && !NO_SHINY_TYPES.has(mediaArea.type);

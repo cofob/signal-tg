@@ -1,18 +1,15 @@
 import {
   memo, useCallback, useMemo, useState,
 } from '../../lib/teact/teact';
-import { getGlobal, withGlobal } from '../../global';
+import { withGlobal } from '../../global';
 
 import type {
   ApiChatMember,
 } from '../../api/types';
 import { NewChatMembersProgress } from '../../types';
 
-import {
-  isChatChannel, isUserBot,
-} from '../../global/helpers';
 import { filterPeersByQuery } from '../../global/helpers/peers';
-import { selectChat, selectChatFullInfo, selectTabState } from '../../global/selectors';
+import { selectChatFullInfo, selectTabState } from '../../global/selectors';
 import { unique } from '../../util/iteratees';
 import sortChatIds from '../common/helpers/sortChatIds';
 
@@ -34,7 +31,6 @@ export type OwnProps = {
 };
 
 type StateProps = {
-  isChannel?: boolean;
   members?: ApiChatMember[];
   currentUserId?: string;
   localContactIds?: string[];
@@ -42,7 +38,6 @@ type StateProps = {
 };
 
 const AddChatMembers = ({
-  isChannel,
   members,
   onNextStep,
   currentUserId,
@@ -72,8 +67,6 @@ const AddChatMembers = ({
   }, [members]);
 
   const displayedIds = useMemo(() => {
-    // No need for expensive global updates on users, so we avoid them
-    const usersById = getGlobal().users.byId;
     const filteredIds = filterPeersByQuery({
       ids: unique([
         ...(localContactIds || []),
@@ -85,21 +78,16 @@ const AddChatMembers = ({
 
     return sortChatIds(
       filteredIds.filter((userId) => {
-        const user = usersById[userId];
-
         // The user can be added to the chat if the following conditions are met:
         // the user has not yet been added to the current chat
-        // AND it is not the current user,
-        // AND (it is not found (user from global search) OR it is not a bot OR it is a bot,
-        // but the current chat is not a channel AND the appropriate permission is set).
+        // AND it is not the current user
         return (
           !memberIds.includes(userId)
           && userId !== currentUserId
-          && (!user || !isUserBot(user) || (!isChannel && user.canBotBeInvitedToGroup))
         );
       }),
     );
-  }, [localContactIds, relevantFoundIds, searchQuery, currentUserId, memberIds, isChannel]);
+  }, [localContactIds, relevantFoundIds, searchQuery, currentUserId, memberIds]);
 
   const handleNextStep = useCallback(() => {
     if (selectedMemberIds.length) {
@@ -143,14 +131,11 @@ const AddChatMembers = ({
 
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
-    const chat = selectChat(global, chatId);
     const { userIds: localContactIds } = global.contactList || {};
     const { newChatMembersProgress } = selectTabState(global);
     const { currentUserId } = global;
-    const isChannel = chat && isChatChannel(chat);
 
     return {
-      isChannel,
       members: selectChatFullInfo(global, chatId)?.members,
       currentUserId,
       localContactIds,

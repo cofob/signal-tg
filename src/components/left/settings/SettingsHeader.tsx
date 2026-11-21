@@ -170,37 +170,8 @@ const SettingsHeader = ({
       case SettingsScreens.KeyboardShortcuts:
         return <h3>{lang('KeyboardShortcuts')}</h3>;
 
-      case SettingsScreens.ActiveSessions:
-        return <h3>{lang('SessionsTitle')}</h3>;
-      case SettingsScreens.ActiveWebsites:
-        return <h3>{lang('OtherWebSessions')}</h3>;
       case SettingsScreens.PrivacyBlockedUsers:
         return <h3>{lang('BlockedUsers')}</h3>;
-
-      case SettingsScreens.TwoFaDisabled:
-      case SettingsScreens.TwoFaEnabled:
-        return <h3>{lang('TwoStepVerification')}</h3>;
-      case SettingsScreens.TwoFaNewPassword:
-      case SettingsScreens.TwoFaChangePasswordNew:
-      case SettingsScreens.TwoFaChangePasswordConfirm:
-        return <h3>{lang('PleaseEnterCurrentPassword')}</h3>;
-      case SettingsScreens.TwoFaNewPasswordConfirm:
-        return <h3>{lang('PleaseReEnterPassword')}</h3>;
-      case SettingsScreens.TwoFaNewPasswordHint:
-      case SettingsScreens.TwoFaChangePasswordHint:
-        return <h3>{lang('PasswordHint')}</h3>;
-      case SettingsScreens.TwoFaNewPasswordEmail:
-      case SettingsScreens.TwoFaRecoveryEmail:
-        return <h3>{lang('RecoveryEmailTitle')}</h3>;
-      case SettingsScreens.TwoFaNewPasswordEmailCode:
-      case SettingsScreens.TwoFaRecoveryEmailCode:
-        return <h3>{lang('RecoveryEmailCode')}</h3>;
-      case SettingsScreens.TwoFaCongratulations:
-        return <h3>{lang('TwoStepVerificationPasswordSet')}</h3>;
-      case SettingsScreens.TwoFaChangePasswordCurrent:
-      case SettingsScreens.TwoFaTurnOff:
-      case SettingsScreens.TwoFaRecoveryEmailCurrentPassword:
-        return <h3>{lang('PleaseEnterCurrentPassword')}</h3>;
 
       case SettingsScreens.PasscodeDisabled:
       case SettingsScreens.PasscodeEnabled:
@@ -225,11 +196,8 @@ const SettingsHeader = ({
         return <h3>{lang('Filters')}</h3>;
       case SettingsScreens.FoldersCreateFolder:
         return <h3>{lang('FilterNew')}</h3>;
-      case SettingsScreens.FoldersShare:
-        return <h3>{lang('FolderLinkScreenTitle')}</h3>;
       case SettingsScreens.FoldersEditFolder:
       case SettingsScreens.FoldersEditFolderFromChatList:
-      case SettingsScreens.FoldersEditFolderInvites:
         return (
           <div className="settings-main-header">
             <h3>{lang('EditFolder')}</h3>
@@ -257,9 +225,6 @@ const SettingsHeader = ({
               ? 'FilterInclude' : 'FilterExclude')}
           </h3>
         );
-
-      case SettingsScreens.Passkeys:
-        return <h3>{lang('SettingsPasskeyTitle')}</h3>;
 
       default:
         return (

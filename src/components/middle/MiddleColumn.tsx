@@ -30,7 +30,6 @@ import {
 import { getIsChatMuted } from '../../global/helpers/notifications';
 import {
   selectActionMessageBg,
-  selectBot,
   selectCanAnimateInterface, selectCanAnimateRightColumn,
   selectCanPostInMessageList,
   selectChat,
@@ -39,7 +38,6 @@ import {
   selectChatWallpaperSettings,
   selectCurrentMessageList,
   selectCurrentMiddleSearch,
-  selectIsChatBotNotStarted,
   selectIsCurrentUserFrozen,
   selectIsInSelectMode,
   selectIsRightColumnShown,
@@ -143,9 +141,6 @@ type StateProps = {
   isChannel?: boolean;
   arePeerSettingsLoaded?: boolean;
   canSubscribe?: boolean;
-  canStartBot?: boolean;
-  botStartParam?: string;
-  canRestartBot?: boolean;
   shouldLoadFullChat?: boolean;
   activeEmojiInteractions?: ActiveEmojiInteraction[];
   shouldJoinToSend?: boolean;
@@ -160,7 +155,6 @@ type StateProps = {
   canShowOpenChatButton?: boolean;
   topics?: Record<number, ApiTopic>;
   isAccountFrozen?: boolean;
-  freezeAppealChat?: ApiChat;
   shouldBlockSendInMonoforum?: boolean;
   isUiReady?: boolean;
 };
@@ -217,9 +211,6 @@ function MiddleColumn({
   isChannel,
   arePeerSettingsLoaded,
   canSubscribe,
-  canStartBot,
-  botStartParam,
-  canRestartBot,
   activeEmojiInteractions,
   shouldJoinToSend,
   shouldSendJoinRequest,
@@ -234,7 +225,6 @@ function MiddleColumn({
   canShowOpenChatButton,
   topics,
   isAccountFrozen,
-  freezeAppealChat,
   shouldBlockSendInMonoforum,
   isUiReady,
 }: OwnProps & StateProps) {
@@ -271,8 +261,6 @@ function MiddleColumn({
   const renderingThreadId = usePrevDuringAnimation(threadId, closeAnimationDuration);
   const renderingMessageListType = usePrevDuringAnimation(messageListType, closeAnimationDuration);
   const renderingCanSubscribe = usePrevDuringAnimation(canSubscribe, closeAnimationDuration);
-  const renderingCanStartBot = usePrevDuringAnimation(canStartBot, closeAnimationDuration);
-  const renderingCanRestartBot = usePrevDuringAnimation(canRestartBot, closeAnimationDuration);
   const renderingCanUnblock = usePrevDuringAnimation(canUnblock, closeAnimationDuration);
   const renderingCanPost = usePrevDuringAnimation(canPost, closeAnimationDuration);
   const renderingIsScrollDownShown = usePrevDuringAnimation(
@@ -506,7 +494,7 @@ function MiddleColumn({
   const composerRestrictionMessage = messageSendingRestrictionReason
     || forumComposerPlaceholder
     || (shouldBlockSendInMonoforum ? lang('MonoforumComposerPlaceholder') : undefined)
-    || (isAccountFrozen && freezeAppealChat?.id !== chatId ? <FrozenAccountPlaceholder /> : undefined);
+    || (isAccountFrozen ? <FrozenAccountPlaceholder /> : undefined);
 
   useHistoryBack({
     isActive: isSelectModeActive,
@@ -517,9 +505,9 @@ function MiddleColumn({
   useFluidBackgroundFilter(actionMessageBg);
 
   const isMessagingDisabled = Boolean(
-    !isPinnedMessageList && !isSavedDialog && !renderingCanPost && !renderingCanRestartBot && !renderingCanStartBot
+    !isPinnedMessageList && !isSavedDialog && !renderingCanPost
     && !renderingCanSubscribe && composerRestrictionMessage,
-  ) || (isAccountFrozen && freezeAppealChat?.id !== chatId);
+  ) || Boolean(isAccountFrozen);
   const hasFooterActionBar = getHasFooterActionBar({
     isPinnedMessageList,
     canUnpin,
@@ -527,8 +515,6 @@ function MiddleColumn({
     canSubscribe: renderingCanSubscribe,
     shouldJoinToSend: renderingShouldJoinToSend,
     shouldSendJoinRequest: renderingShouldSendJoinRequest,
-    canStartBot: renderingCanStartBot,
-    canRestartBot: renderingCanRestartBot,
     canUnblock: renderingCanUnblock,
     isChannelMuteBar: renderingIsChannelMuteBar,
   });
@@ -544,8 +530,6 @@ function MiddleColumn({
     canSubscribe: renderingCanSubscribe,
     shouldJoinToSend: renderingShouldJoinToSend,
     shouldSendJoinRequest: renderingShouldSendJoinRequest,
-    canStartBot: renderingCanStartBot,
-    canRestartBot: renderingCanRestartBot,
     canUnblock: renderingCanUnblock,
     isChannelMuteBar: renderingIsChannelMuteBar,
   });
@@ -671,9 +655,6 @@ function MiddleColumn({
                     canSubscribe={renderingCanSubscribe}
                     shouldJoinToSend={renderingShouldJoinToSend}
                     shouldSendJoinRequest={renderingShouldSendJoinRequest}
-                    canStartBot={renderingCanStartBot}
-                    botStartParam={botStartParam}
-                    canRestartBot={renderingCanRestartBot}
                     canUnblock={renderingCanUnblock}
                     isChannelMuteBar={renderingIsChannelMuteBar}
                     isMuted={renderingIsMuted}
@@ -732,7 +713,7 @@ export default memo(withGlobal<OwnProps>(
       messageLists, isLeftColumnShown, activeEmojiInteractions,
       seenByModal, reactorModal, shouldSkipHistoryAnimations,
       privacySettingsNoticeModal,
-      uiReadyState, isRichInputExpanded, pendingBotStart,
+      uiReadyState, isRichInputExpanded,
     } = selectTabState(global);
     const currentMessageList = selectCurrentMessageList(global);
     const { leftColumnWidth } = global;
@@ -769,14 +750,12 @@ export default memo(withGlobal<OwnProps>(
     const { chatId, threadId, type: messageListType } = currentMessageList;
     const isPrivate = isUserId(chatId);
     const chat = selectChat(global, chatId);
-    const bot = selectBot(global, chatId);
     const pinnedIds = selectPinnedIds(global, chatId, threadId);
     const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
     const userFullInfo = chatId ? selectUserFullInfo(global, chatId) : undefined;
 
     const threadInfo = selectThreadInfo(global, chatId, threadId);
     const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
-    const isBotNotStarted = selectIsChatBotNotStarted(global, chatId);
     const isPinnedMessageList = messageListType === 'pinned';
     const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
     const isChannel = Boolean(chat && isChatChannel(chat));
@@ -787,10 +766,7 @@ export default memo(withGlobal<OwnProps>(
     const shouldJoinToSend = Boolean(chat?.isNotJoined && chat.isJoinToSend);
     const shouldSendJoinRequest = Boolean(chat?.isNotJoined && chat.isJoinRequest);
     const isUserBlocked = isPrivate ? selectIsUserBlocked(global, chatId) : false;
-    const canRestartBot = Boolean(bot && isUserBlocked);
-    const botStartParam = pendingBotStart?.botId === chatId ? pendingBotStart.param : undefined;
-    const canStartBot = !canRestartBot && (isBotNotStarted || Boolean(botStartParam));
-    const canUnblock = Boolean(isUserBlocked && !bot);
+    const canUnblock = isUserBlocked;
     const shouldLoadFullChat = Boolean(
       chat && (isChatGroup(chat) || isChannel) && !chatFullInfo,
     );
@@ -811,9 +787,6 @@ export default memo(withGlobal<OwnProps>(
     );
 
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
-    const botFreezeAppealId = global.botFreezeAppealId;
-    const freezeAppealChat = botFreezeAppealId
-      ? selectChat(global, botFreezeAppealId) : undefined;
 
     const canPost = selectCanPostInMessageList(global, chatId, threadId, messageListType);
     const isMuted = chat
@@ -840,9 +813,6 @@ export default memo(withGlobal<OwnProps>(
       shouldSkipHistoryAnimations,
       isChannel,
       canSubscribe,
-      canStartBot,
-      botStartParam,
-      canRestartBot,
       shouldJoinToSend,
       shouldSendJoinRequest,
       shouldLoadFullChat,
@@ -856,7 +826,6 @@ export default memo(withGlobal<OwnProps>(
       canShowOpenChatButton,
       topics,
       isAccountFrozen,
-      freezeAppealChat,
       shouldBlockSendInMonoforum,
     } as Complete<StateProps>;
   },

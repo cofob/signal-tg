@@ -167,13 +167,6 @@
     }
   }
 
-  &.has-inline-buttons {
-    .message-content {
-      --border-bottom-left-radius: var(--border-radius-messages-small);
-      --border-bottom-right-radius: var(--border-radius-messages-small);
-    }
-  }
-
   &.has-active-effect {
     .message-content-wrapper {
       z-index: 1;
@@ -186,10 +179,6 @@
     .no-avatars &,
     &.is-thread-top {
       padding-left: 0;
-    }
-
-    &.has-guest-avatar {
-      padding-left: 2.5rem;
     }
 
     &.first-in-group:not(.last-in-group) {
@@ -219,10 +208,6 @@
       .no-avatars &,
       &.is-thread-top {
         padding-left: 0.25rem;
-      }
-
-      &.has-guest-avatar {
-        padding-left: 2.875rem;
       }
     }
   }

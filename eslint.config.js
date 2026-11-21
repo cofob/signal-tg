@@ -27,7 +27,6 @@ export default defineConfig(
   globalIgnores([
     '.cache/',
     'src/lib/video-preview/polyfill',
-    'src/lib/widget-sandbox/**',
     'src/lib/gramjs/tl/',
     'src/lib/signal/wasm/generated/',
     'src/lib/signal/proto/generated/',

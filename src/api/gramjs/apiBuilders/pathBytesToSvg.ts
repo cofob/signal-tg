@@ -8,7 +8,7 @@ export function pathBytesToSvg(bytes: Uint8Array, width: number, height: number)
     .replace('{{height}}', String(height));
 }
 
-export function buildSvgPath(bytes: Uint8Array) {
+function buildSvgPath(bytes: Uint8Array) {
   let path = 'M';
 
   const len = bytes.length;

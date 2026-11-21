@@ -944,14 +944,13 @@ export default memo(withGlobal<OwnProps>((global, {
     },
     forwardMessages: { storyId: forwardedStoryId },
     safeLinkModalUrl,
-    mapModal,
     reportModal,
   } = tabState;
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
     viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
-    || isDeleteModalOpen || safeLinkModalUrl || mapModal,
+    || isDeleteModalOpen || safeLinkModalUrl,
   );
 
   const forwardInfo = isLoadedStory ? story.forwardInfo : undefined;

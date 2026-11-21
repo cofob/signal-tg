@@ -261,11 +261,6 @@
       text-overflow: ellipsis;
     }
 
-    .via-sender {
-      display: flex;
-      align-items: center;
-    }
-
     .sender-hidden {
       font-weight: normal;
     }
@@ -283,15 +278,6 @@
 
     & + .File {
       margin-top: 0.25rem;
-    }
-
-    .via {
-      padding-right: 0.25rem;
-      font-weight: var(--font-weight-normal);
-    }
-
-    span + .via {
-      padding-left: 0.25rem;
     }
 
     .custom-emoji {
@@ -394,11 +380,10 @@
     background: var(--background-color);
   }
 
-  // The canvas follows the bubble's transforms and opacity, including its tail and shadow. A widget's bubble keeps its
-  // one colour, which the widget paints its background in (widget-sandbox sdk-v1 §5.1). A bubble torn around its
+  // The canvas follows the bubble's transforms and opacity, including its tail and shadow. A bubble torn around its
   // top-level unsupported blocks is drawn by the canvas in any theme.
-  .with-own-gradient .Message.own &.has-solid-background:not(.has-widget),
-  .with-own-gradient .Message.own &.has-background:not(.has-widget),
+  .with-own-gradient .Message.own &.has-solid-background,
+  .with-own-gradient .Message.own &.has-background,
   .with-own-gradient .Message.own.is-album &,
   .with-bubble-canvas &.has-solid-background:has([data-bubble-tear]) {
     background-color: transparent;
@@ -538,53 +523,10 @@
     }
   }
 
-  &.custom-shape.is-via-bot {
-    font-size: inherit !important;
-
-    .content-inner {
-      direction: ltr;
-      display: flex;
-      flex-direction: row-reverse;
-      gap: 0.5rem;
-      align-items: flex-start;
-
-      & > .message-title {
-        @include subheader-styles();
-        /* stylelint-disable-next-line no-duplicate-selectors */
-        & {
-          position: absolute;
-          top: 0.125rem;
-          left: 100%;
-          color: var(--message-service-text);
-        }
-
-        .Message.own & {
-          right: 100%;
-          left: initial;
-        }
-
-        .admin-title {
-          color: var(--message-service-text);
-        }
-      }
-
-      .Message.own & {
-        flex-direction: row;
-      }
-    }
-
-    .media-inner {
-      margin-top: 0.375rem;
-    }
-  }
-
   @media (max-width: 600px) {
     max-width: min(29rem, calc(100vw - 6.25rem));
     .MessageList.no-avatars & {
       max-width: min(29rem, calc(100vw - 3.75rem));
-    }
-    .has-guest-avatar & {
-      max-width: min(29rem, calc(100vw - 6.25rem));
     }
     .Message.own & {
       max-width: min(30rem, calc(100vw - 3.75rem));
@@ -595,9 +537,6 @@
 
       .MessageList.no-avatars & {
         max-width: min(29rem, calc(100vw - 4.5rem));
-      }
-      .has-guest-avatar & {
-        max-width: min(29rem, calc(100vw - 7rem));
       }
 
       .Message.own & {
@@ -638,14 +577,12 @@
     }
   }
 
-  &.round.is-via-bot,
   &.round.has-subheader {
     width: auto !important;
   }
 
   &.force-sender-name,
   &.text,
-  &.is-via-bot,
   &.has-subheader,
   &.is-forwarded {
     --message-media-breakout-left: 0.5rem;

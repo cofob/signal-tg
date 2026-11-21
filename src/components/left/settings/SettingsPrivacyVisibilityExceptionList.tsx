@@ -5,7 +5,6 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type { ApiPrivacySettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
-import type { CustomPeerType, UniqueCustomPeer } from '../../../types';
 import { SettingsScreens } from '../../../types';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
@@ -25,7 +24,6 @@ import FloatingActionButton from '../../ui/FloatingActionButton';
 
 export type OwnProps = {
   isAllowList?: boolean;
-  withMiniAppsCategory?: boolean;
   usersOnly?: boolean;
   screen: SettingsScreens;
   isActive?: boolean;
@@ -39,7 +37,6 @@ type StateProps = {
 
 const SettingsPrivacyVisibilityExceptionList = ({
   isAllowList,
-  withMiniAppsCategory,
   screen,
   isActive,
   currentUserId,
@@ -50,21 +47,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
   const { setPrivacySettings } = getActions();
 
   const lang = useLang();
-
-  const customPeerBots: UniqueCustomPeer = useMemo(() => {
-    return {
-      isCustomPeer: true,
-      type: 'bots',
-      title: lang('PrivacyValueBots'),
-      avatarIcon: 'bots',
-      isAvatarSquare: true,
-      peerColorId: 6,
-    };
-  }, [lang]);
-
-  const miniAppsCategory = useMemo(() => {
-    return [customPeerBots];
-  }, [customPeerBots]);
 
   const selectedContactIds = useMemo(() => {
     if (!settings) {
@@ -77,27 +59,16 @@ const SettingsPrivacyVisibilityExceptionList = ({
       return [...settings.blockUserIds, ...settings.blockChatIds];
     }
   }, [isAllowList, settings]);
-  const selectedCategoryTypes = useMemo(() => {
-    if (!settings) {
-      return [];
-    }
-    if (settings.botsPrivacy === 'allow' && isAllowList) {
-      return [customPeerBots.type];
-    }
-    return [];
-  }, [settings, isAllowList, customPeerBots]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSubmitShown, setIsSubmitShown] = useState<boolean>(false);
   const [newSelectedContactIds, setNewSelectedContactIds] = useState<string[]>(selectedContactIds);
-  const [newSelectedCategoryTypes, setNewSelectedCategoryTypes] = useState<CustomPeerType[]>(selectedCategoryTypes);
 
   // Reset selected contact ids on change from other client when screen is not active
   useEffect(() => {
     if (!isActive) {
       setNewSelectedContactIds(selectedContactIds);
-      setNewSelectedCategoryTypes(selectedCategoryTypes);
     }
-  }, [isActive, selectedCategoryTypes, selectedContactIds]);
+  }, [isActive, selectedContactIds]);
 
   const folderAllOrderedIds = useFolderManagerForOrderedIds(ALL_FOLDER_ID);
   const folderArchivedOrderedIds = useFolderManagerForOrderedIds(ARCHIVED_FOLDER_ID);
@@ -129,11 +100,6 @@ const SettingsPrivacyVisibilityExceptionList = ({
     ]);
   }, [folderAllOrderedIds, folderArchivedOrderedIds, selectedContactIds, searchQuery, currentUserId, usersOnly]);
 
-  const handleSelectedCategoriesChange = useCallback((value: CustomPeerType[]) => {
-    setNewSelectedCategoryTypes(value);
-    setIsSubmitShown(true);
-  }, []);
-
   const handleSelectedContactIdsChange = useCallback((value: string[]) => {
     setNewSelectedContactIds(value);
     setIsSubmitShown(true);
@@ -144,19 +110,14 @@ const SettingsPrivacyVisibilityExceptionList = ({
       privacyKey: getPrivacyKey(screen)!,
       isAllowList: Boolean(isAllowList),
       updatedIds: newSelectedContactIds,
-      botsPrivacy: (!withMiniAppsCategory) ? 'none'
-        : (newSelectedCategoryTypes.includes(customPeerBots.type) ? 'allow' : 'disallow'),
     });
 
     onReset();
   }, [
     isAllowList,
-    withMiniAppsCategory,
-    newSelectedCategoryTypes,
     newSelectedContactIds,
     onReset,
     screen,
-    customPeerBots,
   ]);
 
   useHistoryBack({
@@ -164,25 +125,16 @@ const SettingsPrivacyVisibilityExceptionList = ({
     onBack: onReset,
   });
 
-  function getCustomCategory() {
-    if (withMiniAppsCategory && isAllowList) return miniAppsCategory;
-    return undefined;
-  }
-
   return (
     <div className="Picker settings-picker-islands">
       <PeerPicker
-        categories={getCustomCategory()}
         itemIds={displayedIds || []}
         selectedIds={newSelectedContactIds}
-        selectedCategories={newSelectedCategoryTypes}
         filterValue={searchQuery}
         filterPlaceholder={isAllowList ? lang('AlwaysAllowPlaceholder') : lang('NeverAllowPlaceholder')}
-        categoryPlaceholderKey="PrivacyUserTypes"
         searchInputId="new-group-picker-search"
         isSearchable
         onSelectedIdsChange={handleSelectedContactIdsChange}
-        onSelectedCategoriesChange={handleSelectedCategoriesChange}
         onFilterChange={setSearchQuery}
         allowMultiple
         itemInputType="checkbox"

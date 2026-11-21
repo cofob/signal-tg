@@ -6,31 +6,25 @@ import type {
   ApiConfig,
   ApiCountry,
   ApiLanguage,
-  ApiPasskey,
   ApiPeerTheme,
   ApiPendingSuggestion,
   ApiPrivacyKey,
   ApiPromoData,
   ApiRestrictionReason,
-  ApiSession,
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiThemeSettings,
-  ApiUrlAuthResult,
   ApiWallpaper,
   ApiWallpaperSettings,
-  ApiWebSession,
   LangPackStringValue,
 } from '../../types';
 
 import int2hex from '../../../util/int2hex';
-import { omitUndefined, pick } from '../../../util/iteratees';
-import { addDocumentToLocalDb, addUserToLocalDb } from '../helpers/localDb';
+import { omitUndefined } from '../../../util/iteratees';
+import { addDocumentToLocalDb } from '../helpers/localDb';
 import { buildApiFormattedText } from './common';
 import { buildApiDocument } from './messageContent';
-import { buildApiPeerId } from './peers';
 import { buildApiReaction } from './reactions';
-import { buildApiUser } from './users';
 
 const PATTERN_MIME_TYPE = 'application/x-tgwallpattern';
 
@@ -144,32 +138,6 @@ function buildApiThemeSettings(settings: GramJs.TypeThemeSettings): ApiThemeSett
   };
 }
 
-export function buildApiSession(session: GramJs.Authorization): ApiSession {
-  return {
-    isCurrent: Boolean(session.current),
-    isOfficialApp: Boolean(session.officialApp),
-    isPasswordPending: Boolean(session.passwordPending),
-    hash: String(session.hash),
-    areCallsEnabled: !session.callRequestsDisabled,
-    areSecretChatsEnabled: !session.encryptedRequestsDisabled,
-    isUnconfirmed: session.unconfirmed,
-    ...pick(session, [
-      'deviceModel', 'platform', 'systemVersion', 'appName', 'appVersion', 'dateCreated', 'dateActive',
-      'ip', 'country', 'region',
-    ]),
-  };
-}
-
-export function buildApiWebSession(session: GramJs.WebAuthorization): ApiWebSession {
-  return {
-    hash: String(session.hash),
-    botId: buildApiPeerId(session.botId, 'user'),
-    ...pick(session, [
-      'platform', 'browser', 'dateCreated', 'dateActive', 'ip', 'region', 'domain',
-    ]),
-  };
-}
-
 export function buildPrivacyKey(key: GramJs.TypePrivacyKey): ApiPrivacyKey | undefined {
   switch (key.className) {
     case 'PrivacyKeyPhoneNumber':
@@ -252,50 +220,6 @@ export function buildJson(json: GramJs.TypeJSONValue): any {
     acc[el.key] = buildJson(el.value);
     return acc;
   }, {});
-}
-
-export function buildApiUrlAuthResult(result: GramJs.TypeUrlAuthResult): ApiUrlAuthResult | undefined {
-  if (result instanceof GramJs.UrlAuthResultRequest) {
-    const {
-      bot, domain, requestWriteAccess, requestPhoneNumber, browser, platform, ip, region, matchCodes,
-      matchCodesFirst, userIdHint, isApp, verifiedAppName,
-    } = result;
-    const user = buildApiUser(bot);
-    if (!user) return undefined;
-
-    addUserToLocalDb(bot);
-
-    return {
-      type: 'request',
-      domain,
-      isApp,
-      shouldRequestWriteAccess: requestWriteAccess,
-      bot: user,
-      shouldRequestPhoneNumber: requestPhoneNumber,
-      browser,
-      platform,
-      ip,
-      region,
-      matchCodes,
-      matchCodesFirst,
-      userIdHint: userIdHint?.toString(),
-      verifiedAppName,
-    };
-  }
-
-  if (result instanceof GramJs.UrlAuthResultAccepted) {
-    return {
-      type: 'accepted',
-      url: result.url,
-    };
-  }
-
-  if (result instanceof GramJs.UrlAuthResultDefault) {
-    return {
-      type: 'default',
-    };
-  }
-  return undefined;
 }
 
 export function buildApiConfig(config: GramJs.Config): ApiConfig {
@@ -403,17 +327,6 @@ export function buildApiRestrictionReasons(
   return restrictionReasons.map((
     { reason, text, platform }) =>
     ({ reason, text, platform }));
-}
-
-export function buildApiPasskey(passkey: GramJs.TypePasskey): ApiPasskey {
-  const { id, name, date, softwareEmojiId, lastUsageDate } = passkey;
-  return {
-    id,
-    name,
-    date,
-    softwareEmojiId: softwareEmojiId?.toString(),
-    lastUsageDate,
-  };
 }
 
 export function buildApiShareTheme(shareTheme: GramJs.TypeShareTheme): ApiShareTheme | undefined {

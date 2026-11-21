@@ -3,10 +3,6 @@ import type { TeactNode } from '../lib/teact/teact';
 import type {
   ApiAttachment,
   ApiAudio,
-  ApiBotInlineMediaResult,
-  ApiBotInlineResult,
-  ApiBotInlineSwitchPm,
-  ApiBotInlineSwitchWebview,
   ApiChat,
   ApiChatInviteImporter,
   ApiContact,
@@ -171,7 +167,6 @@ export interface AccountSettings {
   shouldSuggestCustomEmoji: boolean;
   shouldUpdateStickerSetOrder: boolean;
   lastRecordMessageMode?: 'voice' | 'video';
-  hasPassword?: boolean;
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
   isSignalContactDiscoveryEnabled?: boolean;
@@ -193,10 +188,10 @@ export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
-export type SettingsConfirmation = 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
+export type SettingsConfirmation = 'logOut';
 
 export type SettingsAction = SettingsConfirmation | 'openSupport'
-  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
+  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'setBirthday'
   | 'setAccountTtl';
 
 export enum SettingsScreens {
@@ -206,7 +201,6 @@ export enum SettingsScreens {
   Notifications,
   DataStorage,
   Language,
-  ActiveSessions,
   General,
   GeneralChatBackground,
   GeneralChatBackgroundColor,
@@ -252,28 +246,10 @@ export enum SettingsScreens {
   FoldersCreateFolder,
   FoldersEditFolder,
   FoldersEditFolderFromChatList,
-  FoldersEditFolderInvites,
   FoldersIncludedChats,
   FoldersIncludedChatsFromChatList,
   FoldersExcludedChats,
   FoldersExcludedChatsFromChatList,
-  TwoFaDisabled,
-  TwoFaNewPassword,
-  TwoFaNewPasswordConfirm,
-  TwoFaNewPasswordHint,
-  TwoFaNewPasswordEmail,
-  TwoFaNewPasswordEmailCode,
-  TwoFaEnabled,
-  TwoFaChangePasswordCurrent,
-  TwoFaChangePasswordNew,
-  TwoFaChangePasswordConfirm,
-  TwoFaChangePasswordHint,
-  TwoFaTurnOff,
-  TwoFaRecoveryEmailCurrentPassword,
-  TwoFaRecoveryEmail,
-  TwoFaRecoveryEmailCode,
-  TwoFaCongratulations,
-  ActiveWebsites,
   PasscodeDisabled,
   PasscodeNewPasscode,
   PasscodeNewPasscodeConfirm,
@@ -289,8 +265,6 @@ export enum SettingsScreens {
   Stickers,
   QuickReaction,
   CustomEmoji,
-  FoldersShare,
-  Passkeys,
   KeyboardShortcuts,
   SignalProxy,
   Username,
@@ -319,7 +293,6 @@ export enum LeftColumnContent {
 export enum GlobalSearchContent {
   ChatList,
   ChannelList,
-  BotApps,
   Media,
   Links,
   Files,
@@ -362,7 +335,6 @@ export enum MediaViewerOrigin {
   SearchResult,
   ChannelAvatar,
   SuggestedAvatar,
-  PreviewMedia,
   PollPreview,
   RichPageBlock,
   IVPageBlock,
@@ -387,7 +359,7 @@ export type PlaybackSource =
   | { type: 'savedMusic'; peerId: string }
   | { type: 'single' };
 
-export type PlaybackContextType = 'message' | 'savedMusic' | 'instantView' | 'musicSearch';
+export type PlaybackContextType = 'message' | 'savedMusic' | 'musicSearch';
 
 export type PlaybackMedia = ApiAudio | ApiVoice | ApiVideo;
 
@@ -398,7 +370,6 @@ export type PlaybackItemRef =
     documentId?: string; isScheduled?: boolean;
   }
   | { type: 'savedMusic'; peerId: string; audioId: string }
-  | { type: 'instantView'; webPageId: string; documentId: string }
   | { type: 'musicSearch'; audioId: string };
 
 export type PlaybackCapabilities = {
@@ -470,7 +441,6 @@ export type ProfileTabType =
   | 'members'
   | 'commonChats'
   | 'media'
-  | 'previewMedia'
   | 'documents'
   | 'links'
   | 'audio'
@@ -479,7 +449,6 @@ export type ProfileTabType =
   | 'stories'
   | 'storiesArchive'
   | 'similarChannels'
-  | 'similarBots'
   | 'dialogs'
   | 'polls';
 export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif' | 'polls';
@@ -557,7 +526,7 @@ export enum ManagementScreens {
   NewDiscussionGroup,
 }
 
-export type ManagementType = 'user' | 'group' | 'channel' | 'bot';
+export type ManagementType = 'user' | 'group' | 'channel';
 
 export type EmojiKeywords = {
   isLoading?: boolean;
@@ -565,21 +534,8 @@ export type EmojiKeywords = {
   keywords?: Record<string, string[]>;
 };
 
-export type InlineBotSettings = {
-  id: string;
-  help?: string;
-  query?: string;
-  offset?: string;
-  canLoadMore?: boolean;
-  results?: (ApiBotInlineResult | ApiBotInlineMediaResult)[];
-  isGallery?: boolean;
-  switchPm?: ApiBotInlineSwitchPm;
-  switchWebview?: ApiBotInlineSwitchWebview;
-  cacheTime: number;
-};
-
 export type CustomPeerType = 'contacts' | 'nonContacts'
-  | 'groups' | 'channels' | 'bots' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
+  | 'groups' | 'channels' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
   isCustomPeer: true;
@@ -653,7 +609,6 @@ export interface TabThread {
   scrollOffset?: number;
   replyStack?: number[];
   viewportIds?: number[];
-  hiddenBotKeyboardId?: number;
 }
 
 export interface ThreadReadState {
@@ -723,11 +678,6 @@ export interface TopicsInfo {
   orderedPinnedTopicIds?: number[];
 }
 
-export type SimilarBotsInfo = {
-  similarBotsIds?: string[];
-  count: number;
-};
-
 export type ConfettiParams = OptionalCombine<{
   style?: ConfettiStyle;
   withStars?: boolean;
@@ -755,12 +705,6 @@ export type AttachmentCompression = 'compress' | 'original';
 export type CallSound = (
   'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
 );
-
-export type BotAppPermissions = {
-  geolocation?: boolean;
-  camera?: boolean;
-  microphone?: boolean;
-};
 
 export type SendMessageParams = {
   chat?: ApiChat;

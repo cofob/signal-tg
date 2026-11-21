@@ -7,7 +7,6 @@ import type { ApiAvatarUpload, ApiPhoto, ApiUser } from '../../../api/types';
 import { ManagementProgress } from '../../../types';
 
 import { MUTE_INDEFINITE_TIMESTAMP, SERVICE_NOTIFICATIONS_USER_ID, UNMUTE_TIMESTAMP } from '../../../config';
-import { isUserBot } from '../../../global/helpers';
 import { getIsChatMuted } from '../../../global/helpers/notifications';
 import {
   selectChat,
@@ -236,7 +235,7 @@ const ManageUser = ({
     return undefined;
   }
 
-  const canSetPersonalPhoto = !isUserBot(user) && user.id !== SERVICE_NOTIFICATIONS_USER_ID;
+  const canSetPersonalPhoto = user.id !== SERVICE_NOTIFICATIONS_USER_ID;
   const canSuggestBirthday = canSetPersonalPhoto && hasBirthday === false;
   const isLoading = progress === ManagementProgress.InProgress;
   const noteSymbolsLeft = contactNoteLimit - note.length;

@@ -5,8 +5,6 @@ export type ApiPrivacyKey = 'phoneNumber' | 'addByPhone' | 'lastSeen' | 'profile
   'forwards' | 'chatInvite' | 'phoneCall' | 'phoneP2P' | 'bio' | 'birthday' |
   'savedMusic';
 export type PrivacyVisibility = 'everybody' | 'contacts' | 'closeFriends' | 'nonContacts' | 'nobody';
-export type BotsPrivacyType = 'allow' | 'disallow' | 'none';
-
 /** The Signal PIN of a primary device and the Registration Lock that needs it */
 export type ApiSignalPinSettings = {
   hasPin: boolean;
@@ -20,7 +18,6 @@ export interface ApiPrivacySettings {
   allowChatIds: string[];
   blockUserIds: string[];
   blockChatIds: string[];
-  botsPrivacy: BotsPrivacyType;
 }
 
 export interface ApiInputPrivacyRules {
@@ -30,7 +27,6 @@ export interface ApiInputPrivacyRules {
   allowedChats?: ApiChat[];
   blockedUsers?: ApiUser[];
   blockedChats?: ApiChat[];
-  botsPrivacy: BotsPrivacyType;
 }
 
 export interface ApiLanguage {

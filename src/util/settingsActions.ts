@@ -13,7 +13,6 @@ import { getCurrentTabId } from './establishMultitabRole';
 import { validateFiles } from './files';
 import { openSystemFilesDialog } from './systemFilesDialog';
 import { buildDefaultWallpaperSettings } from './wallpaper';
-import { clearWidgetStorage } from './widgetStorage';
 
 const WALLPAPER_FILE_TYPES = 'image/jpeg';
 
@@ -25,9 +24,6 @@ const SETTINGS_ACTIONS: [SettingsScreens, RegularLangKey, SettingsAction][] = [
   [SettingsScreens.GeneralChatBackground, 'UploadImage', 'uploadWallpaper'],
   [SettingsScreens.GeneralChatBackground, 'ThemeResetToDefaults', 'resetWallpaper'],
   [SettingsScreens.DataStorage, 'SettingsDataClearMediaCache', 'clearMediaCache'],
-  [SettingsScreens.ActiveSessions, 'TerminateAllSessions', 'terminateAllSessions'],
-  [SettingsScreens.ActiveWebsites, 'AuthSessionsLogOutApplications', 'terminateAllWebSessions'],
-  [SettingsScreens.Privacy, 'SettingsItemPrivacyPasskeys', 'openPasskeys'],
   [SettingsScreens.Privacy, 'DeleteAccountIfAwayFor', 'setAccountTtl'],
 ];
 
@@ -55,13 +51,6 @@ export function runSettingsAction(action: SettingsAction, tabId = getCurrentTabI
       break;
     case 'clearMediaCache':
       clearMediaCache(tabId);
-      break;
-    case 'openPasskeys':
-      if (getGlobal().settings.passkeys) {
-        openPasskeys(tabId);
-      } else {
-        void runAfterLoading(tabId, () => getPromiseActions().loadPasskeys(), () => openPasskeys(tabId));
-      }
       break;
     case 'setBirthday':
       openBirthdaySetup(tabId);
@@ -95,9 +84,6 @@ export function resetWallpaper() {
 
 export function clearMediaCache(tabId?: number) {
   purgeClearableCache();
-  // Widgets' storage goes with the cache, as the widget spec asks and tdesktop does
-  clearWidgetStorage();
-  getActions().clearMessageWidgetStorage();
   getActions().showNotification({
     message: { key: 'SettingsDataClearMediaDone' },
     tabId,
@@ -112,25 +98,6 @@ async function runAfterLoading(tabId: number, load: () => Promise<void>, callbac
   if (leftColumn.contentKey !== contentKey || leftColumn.settingsScreen !== settingsScreen) return;
 
   callback();
-}
-
-function openPasskeys(tabId: number) {
-  const { openPasskeyModal, openSettingsScreen } = getActions();
-  const { passkeys } = getGlobal().settings;
-  if (!passkeys) {
-    openSettingsScreen({
-      screen: SettingsScreens.Privacy,
-      highlight: { langKey: 'SettingsItemPrivacyPasskeys' },
-      tabId,
-    });
-    return;
-  }
-
-  if (passkeys.length) {
-    openSettingsScreen({ screen: SettingsScreens.Passkeys, tabId });
-  } else {
-    openPasskeyModal({ tabId });
-  }
 }
 
 function openBirthdaySetup(tabId: number) {

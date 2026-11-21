@@ -1,4 +1,4 @@
-import { memo, useMemo } from '../../../lib/teact/teact';
+import { memo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
 import type { ApiUser } from '../../../api/types';
@@ -27,7 +27,6 @@ import { useFolderManagerForUnreadCounters } from '../../../hooks/useFolderManag
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import AttachBotItem from '../../middle/composer/AttachBotItem';
 import MenuItem from '../../ui/MenuItem';
 import MenuSeparator from '../../ui/MenuSeparator';
 import NestedMenuItem from '../../ui/NestedMenuItem';
@@ -39,8 +38,6 @@ type OwnProps = {
   onSelectSettings: NoneToVoidFunction;
   onSelectContacts: NoneToVoidFunction;
   onSelectArchived: NoneToVoidFunction;
-  onBotMenuOpened: NoneToVoidFunction;
-  onBotMenuClosed: NoneToVoidFunction;
   onSwitchAccount: (url: string) => void;
   footer?: string;
 };
@@ -50,7 +47,6 @@ type StateProps = {
   currentUser?: ApiUser;
   theme: ThemeKey;
   canInstall?: boolean;
-  attachBots: GlobalState['attachMenu']['bots'];
 } & Pick<GlobalState, 'currentUserId' | 'archiveSettings'>;
 
 const LeftSideMenuItems = ({
@@ -59,13 +55,10 @@ const LeftSideMenuItems = ({
   animationLevel,
   theme,
   canInstall,
-  attachBots,
   currentUser,
   onSelectArchived,
   onSelectContacts,
   onSelectSettings,
-  onBotMenuOpened,
-  onBotMenuClosed,
   onSwitchAccount,
   footer,
 }: OwnProps & StateProps) => {
@@ -81,10 +74,6 @@ const LeftSideMenuItems = ({
     ? (animationLevel === ANIMATION_LEVEL_MAX ? 'max' : 'mid') : 'min';
 
   const archivedUnreadChatsCount = useFolderManagerForUnreadCounters()[ARCHIVED_FOLDER_ID]?.chatsCount || 0;
-
-  const bots = useMemo(() => Object.values(attachBots).filter((bot) => (
-    bot.isForSideMenu
-  )), [attachBots]);
 
   const handleSelectMyProfile = useLastCallback(() => {
     openChatWithInfo({ id: currentUserId, shouldReplaceHistory: true, isOwnProfile: true });
@@ -159,16 +148,6 @@ const LeftSideMenuItems = ({
       >
         {lang('MenuContacts')}
       </MenuItem>
-      {bots.map((bot) => (
-        <AttachBotItem
-          bot={bot}
-          theme={theme}
-          isInSideMenu
-          canShowNew
-          onMenuOpened={onBotMenuOpened}
-          onMenuClosed={onBotMenuClosed}
-        />
-      ))}
       <MenuItem
         icon="settings"
         onClick={onSelectSettings}
@@ -223,7 +202,6 @@ export default memo(withGlobal<OwnProps>(
       currentUserId, archiveSettings,
     } = global;
     const { animationLevel } = selectSharedSettings(global);
-    const attachBots = global.attachMenu.bots;
 
     return {
       currentUserId,
@@ -232,7 +210,6 @@ export default memo(withGlobal<OwnProps>(
       animationLevel,
       canInstall: Boolean(tabState.canInstall),
       archiveSettings,
-      attachBots,
     };
   },
 )(LeftSideMenuItems));

@@ -127,13 +127,10 @@ export function groupMessages(
         || message.senderId !== nextMessage.senderId
         || message.isEphemeral !== nextMessage.isEphemeral
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
-        || message.guestChatViaId !== nextMessage.guestChatViaId
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle
         || (isActionMessage(message) && message.content.action?.type !== 'phoneCall')
         || (isActionMessage(nextMessage) && nextMessage.content.action?.type !== 'phoneCall')
-        || message.inlineButtons
-        || nextMessage.inlineButtons
         || (nextMessage.date - message.date) > GROUP_INTERVAL_SECONDS
         || (topMessageId
           && (message.id === topMessageId

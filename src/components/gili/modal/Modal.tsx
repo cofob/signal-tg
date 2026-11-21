@@ -17,7 +17,6 @@ import captureKeyboardListeners from '../../../util/captureKeyboardListeners';
 import { waitForAnimationEnd } from '../../../util/cssAnimationEndListeners';
 import Deferred from '../../../util/Deferred';
 import { disableDirectTextInput, enableDirectTextInput } from '../../../util/directInputManager';
-import { countOpenModal } from '../../../util/openModals';
 import animateToPictureInPicture from './animateToPictureInPicture';
 
 import useContext from '../../../hooks/data/useContext';
@@ -127,15 +126,12 @@ export function useModalContext() {
 function addBodyDialogClass() {
   openModalCount += 1;
 
-  const stopCounting = countOpenModal();
-
   requestMutation(() => {
     document.body.classList.add('has-open-dialog');
   });
 
   return () => {
     openModalCount = Math.max(0, openModalCount - 1);
-    stopCounting();
 
     if (!openModalCount) {
       requestMutation(() => {

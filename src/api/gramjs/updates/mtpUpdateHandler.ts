@@ -18,7 +18,6 @@ import {
 } from '../../../util/iteratees';
 import { getEphemeralMessageId } from '../../../util/keys/messageKey';
 import { getServerTimeOffset, setServerTimeOffset } from '../../../util/serverTime';
-import { buildApiBotCommand, buildApiBotMenuButton, buildApiJoinChatBotResult } from '../apiBuilders/bots';
 import {
   buildApiGroupCall,
   buildApiGroupCallParticipant,
@@ -455,15 +454,6 @@ export function updater(update: Update) {
         hasUnreadMention: false,
         isMediaUnread: false,
       },
-    });
-  } else if (update instanceof GramJs.UpdateMessageWidgetData) {
-    sendApiUpdate({
-      '@type': 'updateMessageWidgetData',
-      chatId: getApiChatIdFromMtpPeer(update.peer),
-      messageId: update.msgId,
-      chatData: update.chatData,
-      publicData: update.publicData,
-      publicDataHash: update.publicDataHash?.toString(),
     });
   } else if (update instanceof GramJs.UpdateMessagePoll) {
     const {
@@ -1035,20 +1025,6 @@ export function updater(update: Update) {
       callId: update.phoneCallId.toString(),
       data: Array.from(update.data),
     });
-  } else if (update instanceof GramJs.UpdateWebViewResultSent) {
-    const { queryId } = update;
-
-    sendApiUpdate({
-      '@type': 'updateWebViewResultSent',
-      queryId: queryId.toString(),
-    });
-  } else if (update instanceof GramJs.UpdateJoinChatWebViewDecision) {
-    sendApiUpdate({
-      '@type': 'updateJoinChatWebViewDecision',
-      peerId: getApiChatIdFromMtpPeer(update.peer),
-      queryId: update.queryId.toString(),
-      result: buildApiJoinChatBotResult(update.result),
-    });
   } else if (update instanceof GramJs.UpdateWebPage || update instanceof GramJs.UpdateChannelWebPage) {
     const webPage = buildWebPage(update.webpage);
     if (webPage) {
@@ -1057,34 +1033,6 @@ export function updater(update: Update) {
         webPage,
       });
     }
-  } else if (update instanceof GramJs.UpdateBotMenuButton) {
-    const {
-      botId,
-      button,
-    } = update;
-
-    const id = buildApiPeerId(botId, 'user');
-
-    sendApiUpdate({
-      '@type': 'updateBotMenuButton',
-      botId: id,
-      button: buildApiBotMenuButton(button),
-    });
-  } else if (update instanceof GramJs.UpdateBotCommands) {
-    const {
-      peer,
-      botId,
-      commands,
-    } = update;
-
-    const id = buildApiPeerId(botId, 'user');
-    const commandsArray = commands.map((command) => buildApiBotCommand(id, command));
-    sendApiUpdate({
-      '@type': 'updateBotCommands',
-      peerId: getApiChatIdFromMtpPeer(peer),
-      botId: id,
-      commands: commandsArray.length ? commandsArray : undefined,
-    });
   } else if (update instanceof GramJs.UpdateConfig) {
     sendApiUpdate({ '@type': 'updateConfig' });
   } else if (update instanceof GramJs.UpdatePinnedForumTopic) {
@@ -1141,19 +1089,6 @@ export function updater(update: Update) {
       peerId: getApiChatIdFromMtpPeer(update.peer),
       storyId: update.storyId,
       reaction,
-    });
-  } else if (update instanceof GramJs.UpdateAttachMenuBots) {
-    sendApiUpdate({
-      '@type': 'updateAttachMenuBots',
-    });
-  } else if (update instanceof GramJs.UpdateNewAuthorization) {
-    sendApiUpdate({
-      '@type': 'updateNewAuthorization',
-      hash: update.hash.toString(),
-      date: update.date,
-      device: update.device,
-      location: update.location,
-      isUnconfirmed: update.unconfirmed,
     });
   } else if (update instanceof GramJs.UpdateChannelViewForumAsMessages) {
     sendApiUpdate({

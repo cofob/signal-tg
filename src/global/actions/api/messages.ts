@@ -1,7 +1,6 @@
 import type {
   ApiAttachment,
   ApiChat,
-  ApiChatType,
   ApiDraft,
   ApiError,
   ApiInputDraftReplyInfo,
@@ -76,9 +75,7 @@ import {
   isEphemeralSendSupported,
   isMessageLocal,
   isServiceNotificationMessage,
-  isUserBot,
   isUserRightBanned,
-  resolveEphemeralCommand,
   runForFocusedTabs,
   splitMessagesForForwarding,
 } from '../../helpers';
@@ -156,7 +153,6 @@ import {
   selectUserFullInfo,
   selectUserStatus,
   selectViewportIds,
-  selectWebPage,
 } from '../../selectors';
 import { selectPlaybackMedia } from '../../selectors/audioPlayer';
 import {
@@ -164,7 +160,6 @@ import {
   selectEditingId,
   selectEditingScheduledId,
   selectNoWebPage,
-  selectThreadIdFromMessage,
   selectThreadInfo,
   selectThreadLocalStateParam,
   selectThreadReadState,
@@ -519,40 +514,10 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   }
 
   const chat = selectChat(global, chatId!)!;
-  const user = selectUser(global, chatId!);
   const draft = selectDraft(global, chatId!, threadId!);
   const isForwarding = selectTabState(global, tabId).forwardMessages?.messageIds?.length;
 
   const draftReplyInfo = !isForwarding && !isStoryReply ? draft?.replyInfo : undefined;
-
-  const ephemeralCommand = draftReplyInfo?.type !== 'ephemeral' && payload.text
-    ? resolveEphemeralCommand(global, { chat, commandText: payload.text }) : undefined;
-  if (ephemeralCommand && !payload.scheduledAt) {
-    if (!isEphemeralSendSupported(payload)) return;
-
-    const receiver = selectUser(global, ephemeralCommand.botId);
-    if (!receiver) return;
-
-    const replyInfo = draftReplyInfo
-      ? selectMessageReplyInfo(global, chatId!, threadId!, draftReplyInfo)
-      : undefined;
-    void sendEphemeralMessages(global, {
-      chat,
-      receiver,
-      text: payload.text,
-      entities: payload.entities,
-      richMessage: payload.richMessage,
-      replyInfo,
-      attachments: payload.attachments || (payload.attachment ? [payload.attachment] : undefined),
-      sticker: payload.sticker,
-      gif: payload.gif,
-      topMsgId: threadId !== MAIN_THREAD_ID ? Number(threadId) : undefined,
-      tabId,
-    });
-    actions.resetDraftReplyInfo({ chatId: chatId!, threadId: threadId! });
-    actions.clearWebPagePreview({ chatId: chatId!, threadId: threadId! });
-    return;
-  }
 
   if (draftReplyInfo?.type === 'ephemeral') {
     if (!isEphemeralSendSupported(payload)) return;
@@ -594,17 +559,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
   const lastMessageId = threadId === MAIN_THREAD_ID
     ? selectChatLastMessageId(global, chatId!) : threadInfo?.lastMessageId;
 
-  if (chat.isBotForum && threadId === MAIN_THREAD_ID && replyInfo?.type === 'message'
-    && user?.canManageBotForumTopics) {
-    const replyMessage = selectChatMessage(global, chatId!, replyInfo.replyToMsgId);
-    const replyThreadId = replyMessage && selectThreadIdFromMessage(global, replyMessage);
-    actions.openThread({
-      chatId: chatId!,
-      threadId: replyThreadId || replyInfo?.replyToTopId || replyInfo?.replyToMsgId,
-      tabId,
-    });
-  }
-
   const areStickersDisabled = isUserRightBanned(chat, 'sendStickers');
 
   const diceEmojies = global.appConfig.diceEmojies;
@@ -629,27 +583,6 @@ addActionHandler('sendMessage', async (global, actions, payload): Promise<void> 
 
   if (!isStoryReply) {
     actions.clearWebPagePreview({ chatId: chatId!, threadId: threadId! });
-  }
-
-  // Create new bot forum topic
-  if (chat.isBotForum && user?.canManageBotForumTopics && threadId === MAIN_THREAD_ID
-    && replyInfo?.type !== 'message'
-  ) {
-    const baseTitle = params.text ?? getTranslationFn()('BotForumTopicTitlePlaceholder');
-    const title = baseTitle.length > 12 ? `${baseTitle.slice(0, 12)}...` : baseTitle;
-    const topic = await callApi('createTopic', {
-      chat,
-      title,
-      isTitleMissing: true,
-      sendAs: params.sendAs,
-    });
-    if (topic) {
-      threadId = topic;
-      params.replyInfo = params.replyInfo?.type === 'message'
-        ? { ...params.replyInfo, replyToTopId: topic }
-        : { type: 'message', replyToMsgId: topic, replyToTopId: topic };
-      getActions().openThread({ chatId: chat.id, threadId: topic });
-    }
   }
 
   if (!payload.scheduledAt && !isStoryReply) {
@@ -1424,7 +1357,7 @@ addActionHandler('sendMessageAction', async (global, actions, payload): Promise<
   const chat = selectChat(global, chatId)!;
   if (!chat || chat.isMonoforum) return;
   const user = selectUser(global, chatId);
-  if (user && (isUserBot(user) || isDeletedUser(user))) return;
+  if (user && isDeletedUser(user)) return;
 
   await callApi('sendMessageAction', {
     peer: chat, threadId, action,
@@ -1816,8 +1749,7 @@ function executeForwardMessages(global: GlobalState, sendParams: SendMessagePara
         scheduledAt,
         sendAs,
         withMyScore,
-        // A widget always shows which bot it is from: the server keeps its forward header (widget-sandbox sdk-v1 §5.11)
-        noAuthors: noAuthors && !slice.some((message) => message.content.widget),
+        noAuthors,
         noCaptions,
         privateForwardName,
         wasDrafted: Boolean(draft),
@@ -2289,7 +2221,7 @@ async function sendMessage<T extends GlobalState>(global: T, params: SendMessage
   ), params.localMessage);
 }
 
-export async function sendEphemeralMessages<T extends GlobalState>(
+async function sendEphemeralMessages<T extends GlobalState>(
   global: T,
   {
     chat,
@@ -2668,9 +2600,9 @@ addActionHandler('readAllPollVotes', (global, actions, payload): ActionReturnTyp
   return global;
 });
 
-addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
+addActionHandler('openUrl', (global, actions, payload): ActionReturnType => {
   const {
-    url, shouldSkipModal, ignoreDeepLinks, tryInstant, previewId, linkContext, tabId = getCurrentTabId(),
+    url, shouldSkipModal, ignoreDeepLinks, linkContext, tabId = getCurrentTabId(),
   } = payload;
   const urlWithProtocol = ensureProtocol(url);
   const parsedUrl = new URL(urlWithProtocol);
@@ -2693,27 +2625,6 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
     return;
   }
 
-  if (tryInstant) {
-    const localWebPage = previewId ? selectWebPage(global, previewId) : undefined;
-    if (localWebPage?.webpageType === 'full' && localWebPage.cachedPage) {
-      actions.openBrowserTab({ tab: { type: 'instantView', webPageId: localWebPage.id }, tabId });
-      return;
-    }
-
-    const webPage = await callApi('fetchWebPage', { url: urlWithProtocol });
-    if (webPage) {
-      actions.apiUpdate({
-        '@type': 'updateWebPage',
-        webPage,
-      });
-    }
-
-    if (webPage?.webpageType === 'full' && webPage.cachedPage) {
-      actions.openBrowserTab({ tab: { type: 'instantView', webPageId: webPage.id }, tabId });
-      return;
-    }
-  }
-
   const { appConfig, config } = global;
   if (
     parsedUrl.protocol === 'https:'
@@ -2722,13 +2633,6 @@ addActionHandler('openUrl', async (global, actions, payload): Promise<void> => {
   ) {
     parsedUrl.searchParams.set(AUTOLOGIN_TOKEN_KEY, config.autologinToken);
     window.open(parsedUrl.href, '_blank', 'noopener');
-    return;
-  }
-
-  if (appConfig.urlAuthDomains.includes(parsedUrl.hostname)) {
-    actions.closeStoryViewer({ tabId });
-
-    actions.requestLinkUrlAuth({ url, tabId });
     return;
   }
 
@@ -3379,59 +3283,6 @@ addActionHandler('reportMessageDelivery', (global, actions, payload): ActionRetu
       MESSAGES_TO_REPORT_DELIVERY.clear();
     }, 500);
   }
-});
-
-addActionHandler('openPreparedInlineMessageModal', async (global, actions, payload): Promise<void> => {
-  const {
-    botId, messageId, webAppKey, tabId = getCurrentTabId(),
-  } = payload;
-
-  const bot = selectUser(global, botId);
-  if (!bot) return;
-
-  const result = await callApi('fetchPreparedInlineMessage', {
-    bot,
-    id: messageId,
-  });
-  if (!result) {
-    actions.sendWebAppEvent({
-      webAppKey,
-      event: {
-        eventType: 'prepared_message_failed',
-        eventData: { error: 'MESSAGE_EXPIRED' },
-      },
-      tabId,
-    });
-    return;
-  }
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    preparedMessageModal: {
-      message: result,
-      webAppKey,
-      botId,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('openSharePreparedMessageModal', (global, actions, payload): ActionReturnType => {
-  const {
-    webAppKey, message, tabId = getCurrentTabId(),
-  } = payload;
-
-  const supportedFilters = message.peerTypes?.filter((type): type is ApiChatType => type !== 'self');
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    sharePreparedMessageModal: {
-      webAppKey,
-      filter: supportedFilters,
-      message,
-    },
-  }, tabId);
-  setGlobal(global);
 });
 
 function countSortedIds(ids: number[], from: number, to: number) {

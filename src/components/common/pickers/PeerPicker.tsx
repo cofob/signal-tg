@@ -60,7 +60,7 @@ type MultipleModeProps<CategoryType extends string> = {
   onSelectedIdsChange?: (Ids: string[]) => void;
 };
 
-export type PeerPickerSection = {
+type PeerPickerSection = {
   key: string;
   title: string;
   ids: string[];

@@ -240,13 +240,6 @@ addActionHandler('closeDeleteChatFolderModal', (global, actions, payload): Actio
   }, tabId);
 });
 
-addActionHandler('closeChatlistModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    chatlistModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('closeChatInviteModal', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};
   return updateTabState(global, {

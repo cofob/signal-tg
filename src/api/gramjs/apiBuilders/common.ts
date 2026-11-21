@@ -12,7 +12,6 @@ import type {
   ApiThumbnail,
   ApiUsername,
   ApiVideoSize,
-  BotsPrivacyType,
   PrivacyVisibility,
 } from '../../types';
 import {
@@ -165,7 +164,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
   let allowChatIds: string[] | undefined;
   let blockUserIds: string[] | undefined;
   let blockChatIds: string[] | undefined;
-  let botsPrivacy: BotsPrivacyType = 'none';
 
   const localChats = localDb.chats;
 
@@ -199,10 +197,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
         if (localChats[dialogId]) return dialogId;
         return channelId;
       });
-    } else if (rule instanceof GramJs.PrivacyValueAllowBots) {
-      botsPrivacy = 'allow';
-    } else if (rule instanceof GramJs.PrivacyValueDisallowBots) {
-      botsPrivacy = 'disallow';
     }
   });
 
@@ -219,7 +213,6 @@ export function buildPrivacyRules(rules: GramJs.TypePrivacyRule[]): ApiPrivacySe
     allowChatIds: allowChatIds || [],
     blockUserIds: blockUserIds || [],
     blockChatIds: blockChatIds || [],
-    botsPrivacy,
   };
 }
 

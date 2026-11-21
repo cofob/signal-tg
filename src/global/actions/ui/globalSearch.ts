@@ -1,5 +1,4 @@
 import type { ActionReturnType } from '../../types';
-import { GlobalSearchContent } from '../../../types';
 
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { addActionHandler } from '../../index';
@@ -11,11 +10,9 @@ const MAX_RECENTLY_FOUND_IDS = 10;
 
 addActionHandler('setGlobalSearchQuery', (global, actions, payload): ActionReturnType => {
   const { query, tabId = getCurrentTabId() } = payload;
-  const { chatId, currentContent } = selectTabState(global, tabId).globalSearch;
+  const { chatId } = selectTabState(global, tabId).globalSearch;
 
-  const fetchingStatus = query
-    && currentContent !== GlobalSearchContent.BotApps
-    ? { chats: !chatId, messages: true } : undefined;
+  const fetchingStatus = query ? { chats: !chatId, messages: true } : undefined;
 
   const resultsByType = query ? undefined : keepPlayingSearchResults(global, tabId);
   if (query) {

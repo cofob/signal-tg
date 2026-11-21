@@ -1,14 +1,10 @@
 import { getActions } from '../global';
 
-import type {
-  ApiChatType, ApiFormattedText, LinkContext,
-} from '../api/types';
+import type { ApiFormattedText, LinkContext } from '../api/types';
 import type { DeepLinkMethod } from './deepLinkParser';
 import { LeftColumnContent } from '../types';
 
-import {
-  API_CHAT_TYPES, RE_TG_LINK,
-} from '../config';
+import { RE_TG_LINK } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { tryParseDeepLink } from './deepLinkParser';
 import { parseSignalMeLink } from './signalLinks';
@@ -54,25 +50,13 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
         });
         return true;
       }
-      case 'publicUsernameOrBotLink': {
-        const choose = parseChooseParameter(parsedLink.choose);
-
+      case 'publicUsernameOrBotLink':
         actions.openChatByUsername({
           username: parsedLink.username,
-          startParam: parsedLink.start,
-          startGroup: parsedLink.startGroup,
-          ref: parsedLink.ref,
           text: parsedLink.text,
-          startApp: parsedLink.startApp,
-          mode: parsedLink.mode,
-          startAttach: parsedLink.startAttach,
-          attach: parsedLink.attach,
-          choose,
-          originalParts: [parsedLink.username, parsedLink.appName],
           isDirect: parsedLink.isDirect,
         });
         return true;
-      }
       case 'groupCallLink':
         actions.joinVoiceChatByLink({
           username: parsedLink.username,
@@ -98,17 +82,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
         }
         return true;
       }
-      case 'oauth':
-        if (linkContext?.type !== 'inner') return false;
-        actions.requestLinkUrlAuth({ url: parsedLink.url });
-        return true;
-      case 'newBotLink':
-        actions.openBotCreationModal({
-          managerUsername: parsedLink.managerUsername,
-          suggestedName: parsedLink.name,
-          suggestedUsername: parsedLink.username,
-        });
-        return true;
       default:
         break;
     }
@@ -135,49 +108,31 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     openChatByPhoneNumber,
     openStickerSet,
     openChatWithDraft,
-    checkChatlistInvite,
     openStoryViewerByUsername,
   } = actions;
 
   switch (method) {
     case 'resolve': {
       const {
-        domain, phone, post, comment, start, startattach, attach, thread, topic,
-        appname, startapp, mode, story, text,
+        domain, phone, post, comment, thread, topic, story, text,
       } = params;
 
       const threadId = Number(thread) || Number(topic) || undefined;
 
-      if (domain !== 'telegrampassport') {
-        if (appname) {
-          openChatByUsername({
-            username: domain,
-            startApp: startapp,
-            mode,
-            originalParts: [domain, appname],
-            text,
-          });
-        } else if (phone) {
-          openChatByPhoneNumber({
-            phoneNumber: phone,
-            startAttach: startattach,
-            attach,
-            text,
-          });
-        } else if (story) {
-          openStoryViewerByUsername({ username: domain, storyId: Number(story) });
-        } else {
-          openChatByUsername({
-            username: domain,
-            messageId: post ? Number(post) : undefined,
-            commentId: comment ? Number(comment) : undefined,
-            startParam: start,
-            mode,
-            startAttach: startattach,
-            attach,
-            threadId,
-          });
-        }
+      if (phone) {
+        openChatByPhoneNumber({
+          phoneNumber: phone,
+          text,
+        });
+      } else if (story) {
+        openStoryViewerByUsername({ username: domain, storyId: Number(story) });
+      } else {
+        openChatByUsername({
+          username: domain,
+          messageId: post ? Number(post) : undefined,
+          commentId: comment ? Number(comment) : undefined,
+          threadId,
+        });
       }
       break;
     }
@@ -211,11 +166,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       openChatWithDraft({ text: formatShareText(urlParam, text) });
       break;
     }
-    case 'addlist': {
-      checkChatlistInvite({ slug: params.slug });
-      break;
-    }
-
     case 'login': {
       // const { code, token } = params;
       break;
@@ -232,15 +182,4 @@ export function formatShareText(url?: string, text?: string, title?: string): Ap
   return {
     text: [url, title, text].filter(Boolean).join('\n'),
   };
-}
-
-function parseChooseParameter(choose?: string) {
-  if (!choose) return undefined;
-  const types = choose.toLowerCase().split(' ').flatMap((type) => {
-    if (type === 'groups') {
-      return ['chats', 'groups'];
-    }
-    return [type];
-  });
-  return types.filter((type): type is ApiChatType => API_CHAT_TYPES.includes(type as ApiChatType));
 }

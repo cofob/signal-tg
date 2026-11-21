@@ -114,8 +114,6 @@ function LeftColumn({
     setGlobalSearchChatId,
     resetChatCreation,
     setGlobalSearchDate,
-    loadPasswordInfo,
-    clearTwoFaError,
     openChat,
     openLeftColumnContent,
     openSettingsScreen,
@@ -215,7 +213,6 @@ function LeftColumn({
         case SettingsScreens.Privacy:
         case SettingsScreens.Performance:
         case SettingsScreens.KeyboardShortcuts:
-        case SettingsScreens.ActiveSessions:
         case SettingsScreens.Language:
         case SettingsScreens.Stickers:
         case SettingsScreens.Experimental:
@@ -261,14 +258,9 @@ function LeftColumn({
         case SettingsScreens.PrivacyVoiceMessages:
         case SettingsScreens.AutoDeleteMessages:
         case SettingsScreens.PrivacyBlockedUsers:
-        case SettingsScreens.ActiveWebsites:
-        case SettingsScreens.TwoFaDisabled:
-        case SettingsScreens.TwoFaEnabled:
-        case SettingsScreens.TwoFaCongratulations:
         case SettingsScreens.PasscodeDisabled:
         case SettingsScreens.PasscodeEnabled:
         case SettingsScreens.PasscodeCongratulations:
-        case SettingsScreens.Passkeys:
           openSettingsScreen({ screen: SettingsScreens.Privacy });
           return;
 
@@ -341,49 +333,9 @@ function LeftColumn({
         case SettingsScreens.PrivacyGroupChatsDeniedContacts:
           openSettingsScreen({ screen: SettingsScreens.PrivacyGroupChats });
           return;
-        case SettingsScreens.TwoFaNewPassword:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaDisabled });
-          return;
-        case SettingsScreens.TwoFaNewPasswordConfirm:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaNewPassword });
-          return;
-        case SettingsScreens.TwoFaNewPasswordHint:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaNewPasswordConfirm });
-          return;
-        case SettingsScreens.TwoFaNewPasswordEmail:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaNewPasswordHint });
-          return;
-        case SettingsScreens.TwoFaNewPasswordEmailCode:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaNewPasswordEmail });
-          return;
-        case SettingsScreens.TwoFaChangePasswordCurrent:
-        case SettingsScreens.TwoFaTurnOff:
-        case SettingsScreens.TwoFaRecoveryEmailCurrentPassword:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaEnabled });
-          return;
-        case SettingsScreens.TwoFaChangePasswordNew:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaChangePasswordCurrent });
-          return;
-        case SettingsScreens.TwoFaChangePasswordConfirm:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaChangePasswordNew });
-          return;
-        case SettingsScreens.TwoFaChangePasswordHint:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaChangePasswordConfirm });
-          return;
-        case SettingsScreens.TwoFaRecoveryEmail:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaRecoveryEmailCurrentPassword });
-          return;
-        case SettingsScreens.TwoFaRecoveryEmailCode:
-          openSettingsScreen({ screen: SettingsScreens.TwoFaRecoveryEmail });
-          return;
-
         case SettingsScreens.FoldersCreateFolder:
         case SettingsScreens.FoldersEditFolder:
           openSettingsScreen({ screen: SettingsScreens.Folders });
-          return;
-
-        case SettingsScreens.FoldersShare:
-          openSettingsScreen({ screen: SettingsScreens.FoldersEditFolder });
           return;
 
         case SettingsScreens.FoldersIncludedChatsFromChatList:
@@ -392,7 +344,6 @@ function LeftColumn({
           return;
 
         case SettingsScreens.FoldersEditFolderFromChatList:
-        case SettingsScreens.FoldersEditFolderInvites:
           openLeftColumnContent({ contentKey: LeftColumnContent.ChatList });
           openSettingsScreen({ screen: SettingsScreens.Main });
           return;
@@ -491,14 +442,6 @@ function LeftColumn({
     archivedChats: handleArchivedChats,
     openSettings: handleHotkeySettings,
   }), []));
-
-  useEffect(() => {
-    clearTwoFaError();
-
-    if (settingsScreen === SettingsScreens.Privacy) {
-      loadPasswordInfo();
-    }
-  }, [clearTwoFaError, loadPasswordInfo, settingsScreen]);
 
   useSyncEffect(() => {
     if (nextFoldersAction) {

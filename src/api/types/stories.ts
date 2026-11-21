@@ -1,7 +1,6 @@
 import type {
   ApiAudio,
   ApiDocument,
-  ApiGeoPoint,
   ApiMessage,
   ApiPhoto,
   ApiReaction,
@@ -137,19 +136,6 @@ export type ApiMediaAreaCoordinates = {
   radius?: number;
 };
 
-export type ApiMediaAreaVenue = {
-  type: 'venue';
-  coordinates: ApiMediaAreaCoordinates;
-  geo: ApiGeoPoint;
-  title: string;
-};
-
-export type ApiMediaAreaGeoPoint = {
-  type: 'geoPoint';
-  coordinates: ApiMediaAreaCoordinates;
-  geo: ApiGeoPoint;
-};
-
 export type ApiMediaAreaSuggestedReaction = {
   type: 'suggestedReaction';
   coordinates: ApiMediaAreaCoordinates;
@@ -179,8 +165,8 @@ export type ApiMediaAreaWeather = {
   color: number;
 };
 
-export type ApiMediaArea = ApiMediaAreaVenue | ApiMediaAreaGeoPoint | ApiMediaAreaSuggestedReaction
-  | ApiMediaAreaChannelPost | ApiMediaAreaUrl | ApiMediaAreaWeather;
+export type ApiMediaArea = ApiMediaAreaSuggestedReaction | ApiMediaAreaChannelPost | ApiMediaAreaUrl
+  | ApiMediaAreaWeather;
 
 export type ApiStoryAlbum = {
   albumId: number;

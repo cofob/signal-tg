@@ -135,8 +135,6 @@ function getPrivateTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStat
       return lang('SendActionUploadPhoto');
     case 'uploadFile':
       return lang('SendActionUploadFile');
-    case 'playingGame':
-      return lang('PlayingGame');
     case 'recordRound':
       return lang('SendActionRecordRound');
     case 'uploadRound':
@@ -146,7 +144,6 @@ function getPrivateTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStat
     case 'watchingAnimations':
       return lang('ActionWatchingAnimations', { emoji: typingStatus.emoji });
     case 'typing':
-    case 'chooseLocation':
     case 'chooseContact':
     default:
       return lang('Typing');
@@ -167,15 +164,12 @@ function getGroupTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStatus
       return lang('UserActionUploadPhoto', { user }, { withNodes: true });
     case 'uploadFile':
       return lang('UserActionUploadFile', { user }, { withNodes: true });
-    case 'playingGame':
-      return lang('UserPlayingGame', { user }, { withNodes: true });
     case 'recordRound':
       return lang('UserActionRecordRound', { user }, { withNodes: true });
     case 'uploadRound':
       return lang('UserActionUploadRound', { user }, { withNodes: true });
     case 'chooseSticker':
       return lang('UserActionChooseSticker', { user, eyes: renderEyesIcon() }, { withNodes: true });
-    case 'chooseLocation':
     case 'chooseContact':
     case 'typing':
     default:
@@ -184,9 +178,7 @@ function getGroupTypingStatusContent(lang: LangFn, typingStatus: ApiTypingStatus
 }
 
 function shouldRenderTypingIcon(typingStatus: ApiTypingStatus) {
-  return typingStatus.type === 'typing'
-    || typingStatus.type === 'chooseLocation'
-    || typingStatus.type === 'chooseContact';
+  return typingStatus.type === 'typing' || typingStatus.type === 'chooseContact';
 }
 
 function getTypingPeerName(lang: LangFn, peer: ReturnType<typeof selectPeer>, fallback: string) {

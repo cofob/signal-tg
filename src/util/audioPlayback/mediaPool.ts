@@ -148,10 +148,6 @@ export function makeMusicSearchTrackKey(audioId: string): TrackKey {
   return `musicSearch:${audioId}`;
 }
 
-export function makeInstantViewTrackKey(webPageId: string, documentId: string): TrackKey {
-  return `iv:${webPageId}:${documentId}`;
-}
-
 export function makeDraftTrackKey(attachmentUid: string): TrackKey {
   return `draft:${attachmentUid}`;
 }

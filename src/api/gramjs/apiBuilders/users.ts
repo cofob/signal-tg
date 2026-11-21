@@ -10,7 +10,6 @@ import type {
 } from '../../types';
 
 import { addDocumentToLocalDb, addSavedMusicRepairInfo } from '../helpers/localDb';
-import { buildApiBotInfo } from './bots';
 import {
   buildApiFormattedText, buildApiPhoto, buildApiUsernames,
 } from './common';
@@ -18,7 +17,6 @@ import { omitVirtualClassFields } from './helpers';
 import { buildApiAudioFromDocument } from './media';
 import { buildApiPeerTheme, buildApiShareTheme, buildApiWallpaper } from './misc';
 import {
-  buildApiBotVerification,
   buildApiEmojiStatus,
   buildApiPeerColor,
   buildApiPeerId,
@@ -29,14 +27,13 @@ import {
 export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUserFullInfo {
   const {
     fullUser: {
-      about, commonChatsCount, pinnedMsgId, botInfo, blocked,
+      about, commonChatsCount, pinnedMsgId, blocked,
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, storiesPinnedAvailable,
-      birthday, personalChannelId, personalChannelMessage, botVerification,
-      botCanManageEmojiStatus, settings,
+      birthday, personalChannelId, personalChannelMessage, settings,
       mainTab, savedMusic, note,
       noforwardsMyEnabled, noforwardsPeerEnabled, unofficialSecurityRisk, privateForwardName,
-      ttlPeriod, theme, wallpaper, botManagerId, shareTheme,
+      ttlPeriod, theme, wallpaper, shareTheme,
     },
     users,
   } = mtpUserFull;
@@ -56,14 +53,11 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     profilePhoto: profilePhoto instanceof GramJs.Photo ? buildApiPhoto(profilePhoto) : undefined,
     fallbackPhoto: fallbackPhoto instanceof GramJs.Photo ? buildApiPhoto(fallbackPhoto) : undefined,
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,
-    botInfo: botInfo && buildApiBotInfo(botInfo, userId),
     birthday: birthday && buildApiBirthday(birthday),
     personalChannelId: personalChannelId !== undefined
       ? buildApiPeerId(personalChannelId, 'channel') : undefined,
     personalChannelMessageId: personalChannelMessage,
     privateForwardName,
-    botVerification: botVerification && buildApiBotVerification(botVerification),
-    isBotCanManageEmojiStatus: botCanManageEmojiStatus,
     hasScheduledMessages: hasScheduled,
     settings: buildApiPeerSettings(settings),
     mainTab: mainTab && buildApiProfileTab(mainTab),
@@ -72,7 +66,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     noForwardsMyEnabled: noforwardsMyEnabled,
     noForwardsPeerEnabled: noforwardsPeerEnabled,
     isUnofficialSecurityRisk: unofficialSecurityRisk,
-    botManagerId: botManagerId !== undefined ? buildApiPeerId(botManagerId, 'user') : undefined,
     shareTheme: shareTheme && buildApiShareTheme(shareTheme),
   };
 }
@@ -105,10 +98,7 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
   }
 
   const {
-    id, firstName, lastName, fake, scam, support, closeFriend, storiesUnavailable,
-    botActiveUsers, botVerificationIcon, botInlinePlaceholder, botAttachMenu, botCanEdit,
-    profileColor, botForumView, botForumCanManageTopics, botGuestchat,
-    botGuard, botCanManageBots,
+    id, firstName, lastName, fake, scam, support, closeFriend, storiesUnavailable, profileColor,
   } = mtpUser;
   const storiesMaxId = mtpUser.storiesMaxId?.maxId;
   const hasVideoAvatar = mtpUser.photo instanceof GramJs.UserProfilePhoto ? Boolean(mtpUser.photo.hasVideo) : undefined;
@@ -130,9 +120,6 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     type: userType,
     firstName,
     lastName,
-    hasMainMiniApp: Boolean(mtpUser.botHasMainApp),
-    canEditBot: botCanEdit,
-    canBotBeInvitedToGroup: userType === 'userTypeBot' ? !mtpUser.botNochats : undefined,
     usernames,
     hasUsername,
     phoneNumber: mtpUser.phone || '',
@@ -144,24 +131,12 @@ export function buildApiUser(mtpUser: GramJs.TypeUser): ApiUser | undefined {
     areStoriesHidden: Boolean(mtpUser.storiesHidden),
     maxStoryId: storiesMaxId,
     hasStories: Boolean(storiesMaxId) && !storiesUnavailable,
-    botPlaceholder: botInlinePlaceholder || undefined,
-    isAttachBot: botAttachMenu || undefined,
-    botActiveUsers,
-    botVerificationIconId: botVerificationIcon?.toString(),
     color: mtpUser.color && buildApiPeerColor(mtpUser.color),
     profileColor: profileColor && buildApiPeerColor(profileColor),
-    isBotForum: botForumView,
-    canManageBotForumTopics: botForumCanManageTopics,
-    canManageBots: botCanManageBots,
-    isGuestChatBot: botGuestchat,
-    isGuardBot: botGuard || undefined,
   };
 }
 
 function buildApiUserType(user: GramJs.User): ApiUserType {
-  if (user.bot) {
-    return 'userTypeBot';
-  }
   if (user.deleted) {
     return 'userTypeDeleted';
   }

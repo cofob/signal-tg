@@ -80,7 +80,7 @@ const ChatForumLastMessage = ({
     const lastActiveTopic = orderedTopics?.[0];
     if (!lastActiveTopic) return false;
     if (topicsThreads[lastActiveTopic.id]?.readState?.unreadCount === 0
-      || (chat.isForumAsMessages && !chat.isBotForum)) {
+      || chat.isForumAsMessages) {
       return false;
     }
 

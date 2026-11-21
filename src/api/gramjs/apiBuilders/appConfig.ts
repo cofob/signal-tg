@@ -27,9 +27,6 @@ export interface GramJsAppConfig {
   reactions_user_max_premium: number;
   autologin_domains: string[];
   autologin_token: string;
-  url_auth_domains: string[];
-  web_app_allowed_protocols?: string[];
-  web_widgets_disabled?: boolean;
   whitelisted_domains: string[];
   default_emoji_statuses_stickerset_id: string;
   hidden_members_group_size_min: number;
@@ -64,7 +61,6 @@ export interface GramJsAppConfig {
   ignore_restriction_reasons?: string[];
   need_age_video_verification?: boolean;
   verify_age_bot_username?: string;
-  music_search_username?: string;
   verify_age_country?: string;
   verify_age_min?: number;
   message_typing_draft_ttl?: number;
@@ -75,10 +71,6 @@ export interface GramJsAppConfig {
   rich_message_max_depth?: number;
   rich_message_max_media?: number;
   rich_message_max_table_cols?: number;
-  whitelisted_bots?: string[];
-  settings_display_passkeys?: boolean;
-  passkeys_account_passkeys_max?: number;
-  bot_allowed_suffixes?: string[];
 }
 
 function buildEmojiSounds(appConfig: GramJsAppConfig) {
@@ -119,10 +111,7 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     seenByExpiresAt: appConfig.chat_read_mark_expire_period,
     readDateExpiresAt: appConfig.pm_read_date_expire_period,
     autologinDomains: appConfig.autologin_domains || [],
-    urlAuthDomains: appConfig.url_auth_domains || [],
     whitelistedDomains: appConfig.whitelisted_domains || [],
-    webAppAllowedProtocols: appConfig.web_app_allowed_protocols,
-    areWidgetsDisabled: appConfig.web_widgets_disabled,
     maxUniqueReactions: appConfig.reactions_uniq_max,
     defaultEmojiStatusesStickerSetId: appConfig.default_emoji_statuses_stickerset_id,
     topicsPinnedLimit: appConfig.topics_pinned_limit,
@@ -157,17 +146,12 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     ignoreRestrictionReasons: appConfig.ignore_restriction_reasons,
     needAgeVideoVerification: appConfig.need_age_video_verification,
     verifyAgeBotUsername: appConfig.verify_age_bot_username,
-    musicSearchUsername: appConfig.music_search_username,
     verifyAgeCountry: appConfig.verify_age_country,
     verifyAgeMin: appConfig.verify_age_min,
     typingDraftTtl: appConfig.message_typing_draft_ttl,
     isMessagePrimaryEditedDateEnabled: appConfig.message_primary_edited_date,
-    whitelistedBotIds: appConfig.whitelisted_bots,
-    arePasskeysAvailable: appConfig.settings_display_passkeys,
-    passkeysMaxCount: appConfig.passkeys_account_passkeys_max,
     diceEmojies: appConfig.emojies_send_dice,
     diceEmojiesSuccess: buildDiceEmojiesSuccess(appConfig),
-    botAllowedSuffixes: appConfig.bot_allowed_suffixes,
   };
 
   return {

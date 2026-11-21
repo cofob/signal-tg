@@ -18,11 +18,6 @@ const RE_CACHE_FIRST_ASSETS = new RegExp(
 );
 const ACTIVATE_TIMEOUT = 3000;
 const SNAPSHOT_PATHS = [WALLPAPER_SNAPSHOT_PATH, SKELETON_SNAPSHOT_PATH];
-// A worker loaded from a URL runs under the policy of its own response, not the page's: the widget runtime's worker
-// may load same-origin code and WASM and fetch its WASM, nothing else
-const RE_WIDGET_WORKER = /\/widgetSandbox\.worker-[\w-]{8}\.js$/;
-const WIDGET_WORKER_CSP = `default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; `
-  + `connect-src 'self'; worker-src 'none'`;
 
 self.addEventListener('install', (e) => {
   if (DEBUG) {
@@ -88,11 +83,6 @@ self.addEventListener('fetch', (e: FetchEvent) => {
       return true;
     }
 
-    if (RE_WIDGET_WORKER.test(pathname)) {
-      e.respondWith(respondWithCache(e).then(withWidgetWorkerPolicy));
-      return true;
-    }
-
     if (pathname.match(RE_CACHE_FIRST_ASSETS)) {
       e.respondWith(respondWithCache(e));
       return true;
@@ -103,12 +93,6 @@ self.addEventListener('fetch', (e: FetchEvent) => {
 });
 
 // The page saves it, and the empty file from `public` stands in until then
-function withWidgetWorkerPolicy(response: Response) {
-  const headers = new Headers(response.headers);
-  headers.set('Content-Security-Policy', WIDGET_WORKER_CSP);
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
-}
-
 async function respondWithSnapshot(request: Request) {
   const cached = await self.caches.match(request, { cacheName: SNAPSHOT_CACHE_NAME });
   return cached || fetch(request);

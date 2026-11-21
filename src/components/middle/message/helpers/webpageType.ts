@@ -1,17 +1,7 @@
-import type { ApiInstantViewPage } from '../../../../api/types';
-import type { IconName } from '../../../../types/icons';
 import type { RegularLangKey } from '../../../../types/language';
 
 // https://github.com/telegramdesktop/tdesktop/blob/3da787791f6d227f69b32bf4003bc6071d05e2ac/Telegram/SourceFiles/history/view/history_view_view_button.cpp#L51
-export function getWebpageButtonLangKey(type: string | undefined, {
-  cachedPage,
-}: {
-  cachedPage?: ApiInstantViewPage;
-}): RegularLangKey | undefined {
-  if (cachedPage) {
-    return 'ViewButtonInstantView';
-  }
-
+export function getWebpageButtonLangKey(type: string | undefined): RegularLangKey | undefined {
   switch (type) {
     case 'telegram_channel_request':
     case 'telegram_megagroup_request':
@@ -19,8 +9,6 @@ export function getWebpageButtonLangKey(type: string | undefined, {
       return 'ViewButtonRequestJoin';
     case 'telegram_message':
       return 'ViewButtonMessage';
-    case 'telegram_bot':
-      return 'ViewButtonBot';
     case 'telegram_voicechat':
       return 'ViewButtonVoiceChat';
     case 'telegram_livestream':
@@ -32,10 +20,6 @@ export function getWebpageButtonLangKey(type: string | undefined, {
       return 'ViewButtonChannel';
     case 'telegram_user':
       return 'ViewButtonUser';
-    case 'telegram_botapp':
-      return 'ViewButtonBotApp';
-    case 'telegram_chatlist':
-      return 'ViewChatList';
     case 'telegram_story':
       return 'ViewButtonStory';
     case 'telegram_stickerset':
@@ -45,15 +29,4 @@ export function getWebpageButtonLangKey(type: string | undefined, {
     default:
       return undefined;
   }
-}
-
-export function getWebpageButtonIcon(type: string | undefined, {
-  cachedPage,
-}: {
-  cachedPage?: ApiInstantViewPage;
-}): IconName | undefined {
-  if (cachedPage) {
-    return 'boost';
-  }
-  return undefined;
 }

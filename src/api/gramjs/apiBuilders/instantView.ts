@@ -1,7 +1,6 @@
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
-  ApiInstantViewPage,
   ApiPageBlock,
   ApiPageCaption,
   ApiPageListItem,
@@ -25,7 +24,6 @@ import {
 import { buildApiInlineButtonAction } from './buttons';
 import { buildApiPhoto } from './common';
 import { type ApiPageDocument, buildApiDocument, buildApiPageDocument } from './media';
-import { buildGeoPoint } from './messageContent';
 import { buildApiPeerId } from './peers';
 
 type PageRepairContext = {
@@ -37,22 +35,6 @@ type PageMediaContext = {
   photosById: Record<string, ApiPhoto>;
   documentsById: Record<string, GramJs.Document>;
 };
-
-export function buildApiInstantViewPage(page: GramJs.Page, webPage: GramJs.WebPage): ApiInstantViewPage {
-  const {
-    url, blocks, photos, documents, views, rtl, part, v2,
-  } = page;
-  const mediaContext = buildApiPageMediaContext(photos, documents, { webPage });
-
-  return {
-    url,
-    blocks: blocks.map((block) => buildApiPageBlock(block, mediaContext)),
-    views,
-    isRtl: rtl,
-    isPart: part,
-    isV2: v2,
-  };
-}
 
 export function buildApiPageMediaContext(
   photos: GramJs.TypePhoto[],
@@ -521,17 +503,6 @@ export function buildApiPageBlock(block: GramJs.TypePageBlock, context: PageMedi
       type: 'relatedArticles',
       title: buildApiRichText(block.title, context),
       articles: articles.filter(Boolean),
-    };
-  }
-
-  if (block instanceof GramJs.PageBlockMap) {
-    return {
-      type: 'map',
-      geo: buildGeoPoint(block.geo),
-      zoom: block.zoom,
-      width: block.w,
-      height: block.h,
-      caption: buildApiPageCaption(block.caption, context),
     };
   }
 

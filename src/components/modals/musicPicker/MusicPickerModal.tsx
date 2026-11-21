@@ -1,5 +1,5 @@
 import {
-  memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
+  memo, useCallback, useEffect, useMemo, useState,
 } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
@@ -11,11 +11,7 @@ import type { MessageList, PlaybackItemRef, PlaybackSource } from '../../../type
 import { MAIN_THREAD_ID } from '../../../api/types';
 import { LoadMoreDirection } from '../../../types';
 
-import {
-  MUSIC_PICKER_GLOBAL_MIN_QUERY_LENGTH,
-  MUSIC_PICKER_SEARCH_DEBOUNCE,
-  SUPPORTED_AUDIO_CONTENT_TYPES,
-} from '../../../config';
+import { SUPPORTED_AUDIO_CONTENT_TYPES } from '../../../config';
 import { getChatNotifySettings } from '../../../global/helpers/notifications';
 import {
   selectChat,
@@ -25,17 +21,14 @@ import {
   selectUserSavedMusic,
 } from '../../../global/selectors';
 import { revokeAttachmentUrls } from '../../../util/attachments';
-import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import { validateFiles } from '../../../util/files';
 import { buildCollectionByCallback } from '../../../util/iteratees';
 import { parseSearchResultKey } from '../../../util/keys/searchResultKey';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
-import { debounce } from '../../../util/schedulers';
 import { openSystemFilesDialog } from '../../../util/systemFilesDialog';
 import { MAX_UPLOAD_SIZE } from '../../../limits';
 import buildAttachment from '../../middle/composer/helpers/buildAttachment';
 
-import { useTransitionActiveKey } from '../../../hooks/animations/useTransitionActiveKey';
 import { useShallowSelector } from '../../../hooks/data/useSelector';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -43,7 +36,6 @@ import useSchedule from '../../../hooks/useSchedule';
 
 import Button from '../../ui/Button';
 import InfiniteScroll from '../../ui/InfiniteScroll';
-import SearchInput from '../../ui/SearchInput';
 import Transition from '../../ui/Transition';
 import MusicPickerRow from './MusicPickerRow';
 import Interactive from '@gili/layout/Interactive';
@@ -65,9 +57,6 @@ type StateProps = {
   chat?: ApiChat;
   currentUserId?: string;
   savedMusic?: ApiUserSavedMusic;
-  musicSearchAudiosById: Record<string, ApiAudio>;
-  hasMusicSearchBot: boolean;
-  isAppConfigLoaded?: boolean;
   isSilentPosting?: boolean;
 };
 
@@ -75,11 +64,6 @@ type TrackRowData = {
   key: string;
   audio: ApiAudio;
   item: PlaybackItemRef;
-};
-
-type SearchDisplay = {
-  key: string;
-  rows: TrackRowData[];
 };
 
 type SendContent = {
@@ -93,52 +77,31 @@ const SCROLL_CONTAINER_SELECTOR = '.custom-scroll';
 const SINGLE_SOURCE: PlaybackSource = { type: 'single' };
 const AUDIO_FILES_ACCEPT = Array.from(SUPPORTED_AUDIO_CONTENT_TYPES).join(',');
 
-const runDebouncedForSearch = debounce((cb) => cb(), MUSIC_PICKER_SEARCH_DEBOUNCE, false);
-
 const MusicPickerModal = ({
   modal,
   isOpen,
   chat,
   currentUserId,
   savedMusic,
-  musicSearchAudiosById,
-  hasMusicSearchBot,
-  isAppConfigLoaded,
   isSilentPosting,
 }: OwnProps & StateProps) => {
   const {
-    closeMusicPicker, loadSavedMusic, loadMusicPickerShared, loadMusicPickerGlobal, requestRichInputMedia, sendMessage,
+    closeMusicPicker, loadSavedMusic, loadMusicPickerShared, requestRichInputMedia, sendMessage,
     openLimitReachedModal, showNotification,
   } = getActions();
 
   const lang = useLang();
-  const [query, setQuery] = useState('');
   const [listGeneration, setListGeneration] = useState(0);
   const [requestCalendar, calendar] = useSchedule();
 
-  const { shared, global: globalResults } = modal;
+  const { shared } = modal;
   const isInScheduledList = modal.messageListType === 'scheduled';
-  const trimmedQuery = query.trim();
-  const isSearchMode = trimmedQuery.length >= MUSIC_PICKER_GLOBAL_MIN_QUERY_LENGTH;
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setQuery('');
     loadMusicPickerShared();
   }, [isOpen, loadMusicPickerShared]);
-
-  const retryGlobalSearch = useLastCallback(() => {
-    if (!isOpen || !isSearchMode || globalResults?.query === trimmedQuery) return;
-
-    loadMusicPickerGlobal({ query: trimmedQuery });
-  });
-
-  useEffect(() => {
-    if (!hasMusicSearchBot) return;
-
-    retryGlobalSearch();
-  }, [hasMusicSearchBot, retryGlobalSearch]);
 
   useEffect(() => {
     if (!isOpen || !currentUserId || savedMusic) return;
@@ -198,48 +161,14 @@ const MusicPickerModal = ({
     }, []);
   }, [sharedIds, sharedMessagesById]);
 
-  const globalIds = globalResults?.ids;
-  const globalRows = useMemo<TrackRowData[]>(() => {
-    if (!globalIds?.length) return MEMO_EMPTY_ARRAY;
-
-    return globalIds.reduce<TrackRowData[]>((rows, audioId) => {
-      const audio = musicSearchAudiosById[audioId];
-      if (!audio) return rows;
-
-      rows.push({ key: audioId, audio, item: { type: 'musicSearch', audioId } });
-
-      return rows;
-    }, []);
-  }, [globalIds, musicSearchAudiosById]);
-
-  const loadMoreItems = isSearchMode ? globalIds : sharedIds;
-
   const messageList = useMemo<MessageList>(() => ({
     chatId: modal.chatId,
     threadId: modal.threadId,
     type: isInScheduledList ? 'scheduled' : 'thread',
   }), [modal.chatId, modal.threadId, isInScheduledList]);
 
-  const handleQueryChange = useLastCallback((value: string) => {
-    setQuery(value);
-
-    const nextQuery = value.trim();
-    runDebouncedForSearch(() => {
-      if (nextQuery.length >= MUSIC_PICKER_GLOBAL_MIN_QUERY_LENGTH) {
-        loadMusicPickerGlobal({ query: nextQuery });
-      }
-    });
-  });
-
   const handleLoadMore = useLastCallback(({ direction }: { direction: LoadMoreDirection }) => {
     if (direction !== LoadMoreDirection.Backwards) return;
-
-    if (isSearchMode) {
-      if (globalResults?.query === trimmedQuery && !globalResults.isFullyLoaded) {
-        loadMusicPickerGlobal({ query: trimmedQuery });
-      }
-      return;
-    }
 
     if (shared && !shared.isFullyLoaded) {
       loadMusicPickerShared();
@@ -337,51 +266,16 @@ const MusicPickerModal = ({
 
   const isProfileLoading = !savedMusic?.isLoaded && !profileRows.length;
   const isSharedLoading = Boolean(shared?.isLoading);
-  const isGlobalLoading = Boolean(globalResults?.isLoading);
   const isDefaultReady = shared !== undefined && !(isSharedLoading && !sharedRows.length) && !isProfileLoading;
-  const isGlobalReady = hasMusicSearchBot
-    ? globalResults?.query === trimmedQuery && !(isGlobalLoading && !globalRows.length)
-    : Boolean(isAppConfigLoaded);
-
-  const searchDisplayRef = useRef<SearchDisplay>();
-  if (isSearchMode && isGlobalReady) {
-    searchDisplayRef.current = { key: trimmedQuery, rows: globalRows };
-  }
-  const searchDisplay = isSearchMode ? searchDisplayRef.current : undefined;
-  const isShowingSearchResults = Boolean(searchDisplay);
-  const isSearchLoading = isSearchMode && searchDisplay?.key !== trimmedQuery;
-  const isSearching = isSearchMode ? isSearchLoading || isGlobalLoading : !isDefaultReady || isSharedLoading;
-
-  const contentActiveKey = useTransitionActiveKey([isShowingSearchResults, searchDisplay?.key, isDefaultReady]);
-
-  const listRef = useRef<HTMLDivElement>();
-  useLayoutEffect(() => {
-    const scrollContainer = listRef.current?.closest<HTMLDivElement>(SCROLL_CONTAINER_SELECTOR);
-    if (!scrollContainer) return;
-
-    scrollContainer.scrollTop = 0;
-  }, [isShowingSearchResults, searchDisplay?.key]);
 
   const shouldShowProfileMore = savedMusic !== undefined && !savedMusic.isFullyLoaded && !isProfileLoading;
 
   const header = useMemo(() => (
-    <>
-      <ModalHeader>
-        <ModalCloseButton />
-        <ModalTitle>{lang('AttachMusic')}</ModalTitle>
-      </ModalHeader>
-      <div className={styles.search}>
-        <SearchInput
-          variant="island"
-          value={query}
-          placeholder={lang('SearchMusic')}
-          isLoading={isSearching}
-          autoFocusSearch={!IS_TOUCH_ENV}
-          onChange={handleQueryChange}
-        />
-      </div>
-    </>
-  ), [lang, query, isSearching, handleQueryChange]);
+    <ModalHeader>
+      <ModalCloseButton />
+      <ModalTitle>{lang('AttachMusic')}</ModalTitle>
+    </ModalHeader>
+  ), [lang]);
 
   function renderRows(rows: TrackRowData[], source: PlaybackSource) {
     return rows.map(({ key, audio, item }) => (
@@ -395,37 +289,18 @@ const MusicPickerModal = ({
     ));
   }
 
-  function renderEmpty(searchQuery: string) {
+  function renderEmpty() {
     return (
       <div className={styles.empty}>
-        <div className={styles.emptyTitle}>{lang(searchQuery ? 'NoAudioFound' : 'NoAudioFiles')}</div>
-        <div className={styles.emptyDescription}>
-          {searchQuery
-            ? lang('NoAudioFoundInfo2', { query: searchQuery }, { withNodes: true, withMarkdown: true })
-            : lang('NoAudioFilesInfo')}
-        </div>
+        <div className={styles.emptyTitle}>{lang('NoAudioFiles')}</div>
+        <div className={styles.emptyDescription}>{lang('NoAudioFilesInfo')}</div>
       </div>
-    );
-  }
-
-  function renderSearchResults({ key: searchQuery, rows }: SearchDisplay) {
-    if (!rows.length) {
-      return renderEmpty(searchQuery);
-    }
-
-    return (
-      <>
-        <IslandTitle>{lang('AudioSearchGlobal')}</IslandTitle>
-        <Island className={styles.island}>
-          {renderRows(rows, SINGLE_SOURCE)}
-        </Island>
-      </>
     );
   }
 
   function renderDefaultLists() {
     if (!profileRows.length && !sharedRows.length) {
-      return renderEmpty('');
+      return renderEmpty();
     }
 
     return (
@@ -473,9 +348,8 @@ const MusicPickerModal = ({
         contentClassName={styles.content}
       >
         <InfiniteScroll
-          ref={listRef}
           scrollContainerClosest={SCROLL_CONTAINER_SELECTOR}
-          items={loadMoreItems}
+          items={sharedIds}
           cacheBuster={listGeneration}
           itemSelector={`.${styles.row}`}
           onLoadMore={handleLoadMore}
@@ -487,8 +361,8 @@ const MusicPickerModal = ({
               {lang('AttachmentSelectFromFiles')}
             </Interactive>
           </Island>
-          <Transition name="fade" activeKey={contentActiveKey} shouldCleanup onStop={handleTransitionStop}>
-            {searchDisplay ? renderSearchResults(searchDisplay) : isDefaultReady ? renderDefaultLists() : undefined}
+          <Transition name="fade" activeKey={Number(isDefaultReady)} shouldCleanup onStop={handleTransitionStop}>
+            {isDefaultReady ? renderDefaultLists() : undefined}
           </Transition>
         </InfiniteScroll>
       </Modal>
@@ -506,9 +380,6 @@ export default memo(withGlobal<OwnProps>(
       chat,
       currentUserId,
       savedMusic: currentUserId ? selectUserSavedMusic(global, currentUserId) : undefined,
-      musicSearchAudiosById: global.musicSearch.audiosById,
-      hasMusicSearchBot: Boolean(global.appConfig.musicSearchUsername),
-      isAppConfigLoaded: global.isAppConfigLoaded,
       isSilentPosting: chat ? getChatNotifySettings(
         chat,
         selectNotifyDefaults(global),

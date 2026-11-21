@@ -9,70 +9,41 @@ import { pick } from '../../util/iteratees';
 import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useShowTransition from '../../hooks/useShowTransition';
 
-import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
-import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
 import BirthdaySetupModal from './birthday/BirthdaySetupModal.async';
-import BotCreationModal from './botCreation/BotCreationModal.async';
-import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
-import ChatlistModal from './chatlist/ChatlistModal.async';
 import DeleteAccountModal from './deleteAccount/DeleteAccountModal.async';
 import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
-import EmojiStatusAccessModal from './emojiStatusAccess/EmojiStatusAccessModal.async';
 import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
 import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
-import LeaveGroupModal from './leaveGroup/LeaveGroupModal.async';
-import LocationAccessModal from './locationAccess/LocationAccessModal.async';
-import MapModal from './map/MapModal.async';
-import MediaAccessModal from './mediaAccess/MediaAccessModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
-import PasskeyModal from './passkey/PasskeyModal.async';
 import PhoneNumberLookupModal from './phoneNumberLookup/PhoneNumberLookupModal';
 import PollModal from './poll/PollModal.async';
-import PreparedMessageModal from './preparedMessage/PreparedMessageModal.async';
 import QrCodeModal from './qrCode/QrCodeModal.async';
 import QuickChatPickerModal from './quickChatPicker/QuickChatPickerModal.async';
 import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
 import ReportModal from './reportModal/ReportModal.async';
-import RequestPeerModal from './requestPeer/RequestPeerModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
-import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
-import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
-import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
-import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
-  'chatlistModal' |
-  'urlAuth' |
   'safeLinkModalUrl' |
-  'mapModal' |
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
-  'requestedAttachBotInstall' |
   'reportModal' |
   'pollModal' |
   'musicPicker' |
-  'browser' |
   'chatInviteModal' |
-  'isBrowserCloseConfirmationModalOpen' |
-  'suggestedStatusModal' |
-  'emojiStatusAccessModal' |
-  'locationAccessModal' |
-  'preparedMessageModal' |
-  'sharePreparedMessageModal' |
-  'requestPeerModal' |
   'disableSharingAboutModal' |
   'isFrozenAccountModalOpen' |
   'deleteAccountModal' |
@@ -82,23 +53,18 @@ type ModalKey = keyof Pick<TabState,
   'safetyNumberModal' |
   'quickPreview' |
   'isAudioPlaylistModalOpen' |
-  'isPasskeyModalOpen' |
   'birthdaySetupModal' |
-  'leaveGroupModal' |
-  'isTwoFaCheckModalOpen' |
   'isQuickChatPickerOpen' |
   'editRankModal' |
   'rankModal' |
   'languageModal' |
   'autoDeleteTimerModal' |
-  'botCreationModal' |
   'settingsConfirmation' |
-  'mediaAccessModal' |
   'joinGroupCallModal' |
   'phoneNumberLookupModal'
 >;
-type WrappedModalKey = 'pollModal' | 'musicPicker' | 'mapModal' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
-  | 'botCreationModal' | 'settingsConfirmation' | 'mediaAccessModal' | 'joinGroupCallModal'
+type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
+  | 'settingsConfirmation' | 'joinGroupCallModal'
   | 'phoneNumberLookupModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
@@ -156,21 +122,10 @@ const WrappedModalBoundary = <T,>({
 };
 
 const LEGACY_MODALS: LegacyModalRegistry = {
-  chatlistModal: ChatlistModal,
-  urlAuth: UrlAuthModal,
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
-  requestedAttachBotInstall: AttachBotInstallModal,
   reportModal: ReportModal,
-  browser: BrowserModal,
   chatInviteModal: ChatInviteModal,
-  isBrowserCloseConfirmationModalOpen: BrowserCloseConfirmationModal,
-  suggestedStatusModal: SuggestedStatusModal,
-  emojiStatusAccessModal: EmojiStatusAccessModal,
-  locationAccessModal: LocationAccessModal,
-  preparedMessageModal: PreparedMessageModal,
-  sharePreparedMessageModal: SharePreparedMessageModal,
-  requestPeerModal: RequestPeerModal,
   disableSharingAboutModal: DisableSharingAboutModal,
   isFrozenAccountModalOpen: FrozenAccountModal,
   deleteAccountModal: DeleteAccountModal,
@@ -180,10 +135,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   safetyNumberModal: SafetyNumberModal,
   quickPreview: QuickPreviewModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
-  isPasskeyModalOpen: PasskeyModal,
   birthdaySetupModal: BirthdaySetupModal,
-  leaveGroupModal: LeaveGroupModal,
-  isTwoFaCheckModalOpen: TwoFaCheckModal,
   isQuickChatPickerOpen: QuickChatPickerModal,
   editRankModal: EditRankModal,
   rankModal: RankModal,
@@ -192,12 +144,9 @@ const LEGACY_MODALS: LegacyModalRegistry = {
 const WRAPPED_MODALS: WrappedModalRegistry = {
   pollModal: PollModal,
   musicPicker: MusicPickerModal,
-  mapModal: MapModal,
   safeLinkModalUrl: SafeLinkModal,
   autoDeleteTimerModal: AutoDeleteTimerModal,
-  botCreationModal: BotCreationModal,
   settingsConfirmation: SettingsConfirmationModal,
-  mediaAccessModal: MediaAccessModal,
   joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
 };

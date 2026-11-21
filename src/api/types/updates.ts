@@ -7,7 +7,6 @@ import type {
 } from '../../lib/vibecalls';
 import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
-import type { ApiBotCommand, ApiBotMenuButton } from './bots';
 import type {
   ApiGroupCall, ApiPhoneCall,
 } from './calls';
@@ -104,7 +103,7 @@ export type ApiUpdateWebAuthTokenFailed = {
   '@type': 'updateWebAuthTokenFailed';
 };
 
-export type ApiUpdatePasskeyOption = {
+type ApiUpdatePasskeyOption = {
   '@type': 'updatePasskeyOption';
   option: ApiPasskeyOption;
 };
@@ -415,15 +414,6 @@ export type ApiUpdateMessagePoll = {
   pollId: string;
   pollUpdate: Partial<ApiMessagePoll>;
   webPages?: ApiWebPage[];
-};
-
-export type ApiUpdateMessageWidgetData = {
-  '@type': 'updateMessageWidgetData';
-  chatId: string;
-  messageId: number;
-  chatData?: string;
-  publicData?: string;
-  publicDataHash?: string;
 };
 
 export type ApiUpdateMessagePollUnread = {
@@ -754,30 +744,6 @@ export type ApiUpdatePhoneCallConnectionState = {
   connectionState: RTCPeerConnectionState;
 };
 
-export type ApiUpdateWebViewResultSent = {
-  '@type': 'updateWebViewResultSent';
-  queryId: string;
-};
-
-export type ApiJoinChatBotResult =
-  | { type: 'approved' }
-  | { type: 'declined' }
-  | { type: 'queued' }
-  | { type: 'webView'; url: string };
-
-export type ApiUpdateJoinChatWebViewDecision = {
-  '@type': 'updateJoinChatWebViewDecision';
-  peerId: string;
-  queryId: string;
-  result: ApiJoinChatBotResult;
-};
-
-export type ApiUpdateBotMenuButton = {
-  '@type': 'updateBotMenuButton';
-  botId: string;
-  button: ApiBotMenuButton;
-};
-
 export type ApiUpdatePinnedTopic = {
   '@type': 'updatePinnedTopic';
   topicId: number;
@@ -859,19 +825,6 @@ export type ApiRequestSync = {
   '@type': 'requestSync';
 };
 
-export type ApiUpdateAttachMenuBots = {
-  '@type': 'updateAttachMenuBots';
-};
-
-export type ApiUpdateNewAuthorization = {
-  '@type': 'updateNewAuthorization';
-  hash: string;
-  isUnconfirmed?: true;
-  date?: number;
-  device?: string;
-  location?: string;
-};
-
 export type ApiUpdateGroupInvitePrivacyForbidden = {
   '@type': 'updateGroupInvitePrivacyForbidden';
   userId: string;
@@ -916,13 +869,6 @@ export type ApiUpdateLangPack = {
   keysToRemove: string[];
 };
 
-export type ApiUpdateBotCommands = {
-  '@type': 'updateBotCommands';
-  peerId: string;
-  botId: string;
-  commands?: ApiBotCommand[];
-};
-
 export type ApiUpdateWebPage = {
   '@type': 'updateWebPage';
   webPage: ApiWebPage;
@@ -937,7 +883,7 @@ export type ApiUpdate = (
   ApiUpdateChatListType | ApiUpdateChatFolder | ApiUpdateChatFoldersOrder | ApiUpdateRecommendedChatFolders |
   ApiUpdateNewMessage | ApiUpdateMessage | ApiUpdateNewEphemeralMessage | ApiUpdateEphemeralMessage
   | ApiUpdateDeleteEphemeralMessages | ApiUpdateThreadInfo | ApiUpdateCommonBoxMessages | ApiUpdatePasskeyOption |
-  ApiUpdateDeleteMessages | ApiUpdateMessageWidgetData |
+  ApiUpdateDeleteMessages |
   ApiUpdateMessagePoll | ApiUpdateMessagePollUnread | ApiUpdateMessagePollVote |
   ApiUpdateDeleteHistory |
   ApiDeleteParticipantHistory | ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed |
@@ -953,22 +899,21 @@ export type ApiUpdate = (
   ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateWebPage | ApiUpdateChatTypingDraft
   | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
-  ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode | ApiUpdateWebViewResultSent |
-  ApiUpdateJoinChatWebViewDecision |
+  ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode |
   ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings | ApiUpdatePeerBlocked | ApiUpdatePrivacy |
   ApiUpdateServerTimeOffset | ApiUpdateMessageReactions | ApiUpdateSavedReactionTags |
   ApiUpdateGroupCallParticipants | ApiUpdateGroupCallConnection | ApiUpdateGroupCall | ApiUpdateGroupCallStreams |
   ApiUpdateGroupCallConnectionState | ApiUpdateGroupCallLeavePresentation | ApiUpdateGroupCallChatId |
   ApiUpdatePendingJoinRequests |
   ApiUpdatePhoneCall | ApiUpdatePhoneCallSignalingData | ApiUpdatePhoneCallMediaState |
-  ApiUpdatePhoneCallConnectionState | ApiUpdateBotMenuButton | ApiUpdateUserEmojiStatus |
+  ApiUpdatePhoneCallConnectionState | ApiUpdateUserEmojiStatus |
   ApiUpdateConfig | ApiUpdateTopicNotifySettings | ApiUpdatePinnedTopic |
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
-  ApiUpdateAttachMenuBots | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
+  ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
-  ApiUpdateDeleteSavedHistory | ApiUpdateBotCommands
+  ApiUpdateDeleteSavedHistory
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError

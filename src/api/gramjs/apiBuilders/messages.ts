@@ -21,7 +21,6 @@ import type {
   ApiMessageThreadInfo,
   ApiNewPoll,
   ApiPeer,
-  ApiPreparedInlineMessage,
   ApiReplyInfo,
   ApiSticker,
   ApiStory,
@@ -45,18 +44,9 @@ import { getEphemeralMessageId } from '../../../util/keys/messageKey';
 import { getServerTime } from '../../../util/serverTime';
 import { buildPeer, getEntityTypeById } from '../gramjsBuilders';
 import {
-  addDocumentToLocalDb,
-  addPhotoToLocalDb,
-  addWebDocumentToLocalDb,
   type MediaRepairContext,
 } from '../helpers/localDb';
 import { resolveMessageApiChatId, serializeBytes } from '../helpers/misc';
-import {
-  buildApiBotInlineMediaResult,
-  buildApiBotInlineResult,
-  buildApiInlineQueryPeerType,
-  buildReplyButtons,
-} from './bots';
 import {
   buildApiFormattedText,
 } from './common';
@@ -203,15 +193,9 @@ export function buildApiMessageWithChatId(
     && Boolean(mtpMessage.media.extendedMedia);
 
   const isEdited = Boolean(mtpMessage.editDate) && !mtpMessage.editHide;
-  const {
-    inlineButtons, keyboardButtons, keyboardPlaceholder, isKeyboardSingleUse, isKeyboardSelective, isKeyboardFullHeight,
-  } = buildReplyButtons(mtpMessage.replyMarkup) || {};
   const { mediaUnread: isMediaUnread, postAuthor } = mtpMessage;
   const groupedId = mtpMessage.groupedId !== undefined ? String(mtpMessage.groupedId) : undefined;
   const isInAlbum = Boolean(groupedId) && !(content.document || content.audio || content.sticker);
-  const shouldHideKeyboardButtons = mtpMessage.replyMarkup instanceof GramJs.ReplyKeyboardHide;
-  const isHideKeyboardSelective = mtpMessage.replyMarkup instanceof GramJs.ReplyKeyboardHide
-    && mtpMessage.replyMarkup.selective;
   const isProtected = mtpMessage.noforwards || isInvoiceMedia;
   const isForwardingAllowed = !mtpMessage.noforwards;
   const emojiOnlyCount = getEmojiOnlyCountForMessage(content, groupedId);
@@ -255,12 +239,6 @@ export function buildApiMessageWithChatId(
       groupedId,
       isInAlbum,
     }),
-    inlineButtons,
-    ...(keyboardButtons && {
-      keyboardButtons, keyboardPlaceholder, isKeyboardSingleUse, isKeyboardSelective, isKeyboardFullHeight,
-    }),
-    ...(shouldHideKeyboardButtons && { shouldHideKeyboardButtons, isHideKeyboardSelective }),
-    ...(mtpMessage.viaBotId && { viaBotId: buildApiPeerId(mtpMessage.viaBotId, 'user') }),
     postAuthorTitle: postAuthor,
     isProtected,
     isForwardingAllowed,
@@ -272,7 +250,6 @@ export function buildApiMessageWithChatId(
     reportDeliveryUntilDate: mtpMessage.reportDeliveryUntilDate,
     restrictionReasons,
     fromRank: mtpMessage.fromRank,
-    guestChatViaId: mtpMessage.guestchatViaFrom && getApiChatIdFromMtpPeer(mtpMessage.guestchatViaFrom),
   };
 }
 
@@ -551,14 +528,6 @@ export function buildLocalForwardedMessage({
   const updatedContent = {
     ...content,
     text: !shouldHideText ? textWithTimestamps : undefined,
-    // A forward is a copy: no queries and no chat state, its shared state and widget id stay (tgw-format.md)
-    widget: content.widget ? {
-      ...content.widget,
-      isCopy: true as const,
-      canQuery: undefined,
-      canBackgroundQuery: undefined,
-      chatData: undefined,
-    } : undefined,
   };
 
   // TODO Prepare reply info between forwarded messages locally, to prevent height jumps
@@ -737,38 +706,5 @@ export function buildApiReportResult(
     type: 'selectOption',
     title,
     options,
-  };
-}
-
-function processInlineBotResult(queryId: string, result: GramJs.TypeBotInlineResult) {
-  if (result instanceof GramJs.BotInlineMediaResult) {
-    if (result.document instanceof GramJs.Document) {
-      addDocumentToLocalDb(result.document);
-    }
-
-    if (result.photo instanceof GramJs.Photo) {
-      addPhotoToLocalDb(result.photo);
-    }
-
-    return buildApiBotInlineMediaResult(result, queryId);
-  }
-
-  if (result.thumb) {
-    addWebDocumentToLocalDb(result.thumb);
-  }
-
-  return buildApiBotInlineResult(result, queryId);
-}
-
-export function buildPreparedInlineMessage(
-  result: GramJs.messages.TypePreparedInlineMessage,
-): ApiPreparedInlineMessage {
-  const queryId = result.queryId.toString();
-
-  return {
-    queryId,
-    result: processInlineBotResult(queryId, result.result),
-    peerTypes: result.peerTypes?.map(buildApiInlineQueryPeerType),
-    cacheTime: result.cacheTime,
   };
 }

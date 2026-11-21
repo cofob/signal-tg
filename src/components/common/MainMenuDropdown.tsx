@@ -38,7 +38,6 @@ const LeftSideMenuDropdown = ({
   } = getActions();
   const pendingAccountSwitchRef = useRef<VoidFunction>();
   const isSwitchingAccountRef = useRef(false);
-  const [isBotMenuOpen, markBotMenuOpen, unmarkBotMenuOpen] = useFlag();
   const [isSwitchingAccount, markSwitchingAccount, unmarkSwitchingAccount] = useFlag();
   const lang = useLang();
 
@@ -131,7 +130,7 @@ const LeftSideMenuDropdown = ({
         shouldDisableDropdownMenuTransitionRef.current && lang.isRtl && 'disable-transition',
         className,
       )}
-      forceOpen={isBotMenuOpen || isSwitchingAccount}
+      forceOpen={isSwitchingAccount}
       positionX={shouldHideSearch && lang.isRtl ? 'right' : 'left'}
       transformOriginX={90}
       transformOriginY={100}
@@ -143,8 +142,6 @@ const LeftSideMenuDropdown = ({
         onSelectArchived={handleSelectArchived}
         onSelectContacts={handleSelectContacts}
         onSelectSettings={handleSelectSettings}
-        onBotMenuOpened={markBotMenuOpen}
-        onBotMenuClosed={unmarkBotMenuOpen}
         onSwitchAccount={handleSwitchAccount}
         footer={`${APP_NAME} ${versionString}`}
       />

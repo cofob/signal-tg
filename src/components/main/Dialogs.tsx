@@ -3,16 +3,14 @@ import { memo, useEffect } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiContact,
   ApiDialog,
   ApiDialogError,
   ApiDialogLocalizedMessage,
   ApiDialogMessage,
 } from '../../api/types';
-import type { MessageList } from '../../types';
 import type { LangFn } from '../../util/localization';
 
-import { selectCurrentMessageList, selectTabState } from '../../global/selectors';
+import { selectTabState } from '../../global/selectors';
 import getReadableErrorText from '../../util/getReadableErrorText';
 import { renderTextWithEntities } from '../common/helpers/renderTextWithEntities';
 
@@ -23,15 +21,11 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 
 type StateProps = {
-  currentMessageList?: MessageList;
   dialogs: ApiDialog[];
 };
 
-const Dialogs = ({ dialogs, currentMessageList }: StateProps) => {
-  const {
-    dismissDialog,
-    sendMessage,
-  } = getActions();
+const Dialogs = ({ dialogs }: StateProps) => {
+  const { dismissDialog } = getActions();
   const [isModalOpen, openModal, closeModal] = useFlag();
 
   const lang = useLang();
@@ -45,48 +39,6 @@ const Dialogs = ({ dialogs, currentMessageList }: StateProps) => {
   if (!dialogs.length) {
     return undefined;
   }
-
-  const renderContactRequest = (contactRequest: ApiContact) => {
-    const handleConfirm = () => {
-      if (!currentMessageList) {
-        return;
-      }
-
-      sendMessage({
-        contact: contactRequest,
-        messageList: currentMessageList,
-      });
-      closeModal();
-    };
-
-    return (
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        className="confirm"
-        title={lang('ShareYouPhoneNumberTitle')}
-        isNativeDialog
-        onCloseAnimationEnd={dismissDialog}
-      >
-        {lang(
-          'AreYouSureShareMyContactInfoBot',
-          undefined,
-          { withNodes: true, withMarkdown: true, renderTextFilters: ['br'],
-          })}
-        <div className="dialog-buttons mt-2">
-          <Button
-            className="confirm-dialog-button"
-            isText
-
-            onClick={handleConfirm}
-          >
-            {lang('OK')}
-          </Button>
-          <Button className="confirm-dialog-button" isText onClick={closeModal}>{lang('Cancel')}</Button>
-        </div>
-      </Modal>
-    );
-  };
 
   const renderTextDialog = (renderedText: TeactNode, title = 'Telegram') => {
     return (
@@ -127,10 +79,6 @@ const Dialogs = ({ dialogs, currentMessageList }: StateProps) => {
   };
 
   const renderDialog = (dialog: ApiDialog) => {
-    if (dialog.type === 'contact') {
-      return renderContactRequest(dialog.contact);
-    }
-
     if (dialog.type === 'message') {
       return renderFormattedTextDialog(dialog);
     }
@@ -161,7 +109,6 @@ export default memo(withGlobal(
   (global): Complete<StateProps> => {
     return {
       dialogs: selectTabState(global).dialogs,
-      currentMessageList: selectCurrentMessageList(global),
     };
   },
 )(Dialogs));

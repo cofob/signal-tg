@@ -50,8 +50,6 @@ const SettingsFoldersChatFilters = ({
   const folderAllOrderedIds = useFolderManagerForOrderedIds(ALL_FOLDER_ID);
   const folderArchivedOrderedIds = useFolderManagerForOrderedIds(ARCHIVED_FOLDER_ID);
 
-  const shouldHideChatTypes = state.folder.isChatList;
-
   useEffect(() => {
     if (!isActive) {
       setIsTouched(false);
@@ -132,7 +130,7 @@ const SettingsFoldersChatFilters = ({
   return (
     <div className="Picker settings-folders-chat-list settings-picker-islands">
       <PeerPicker
-        categories={shouldHideChatTypes ? undefined : chatTypes}
+        categories={chatTypes}
         itemIds={displayedIds}
         selectedIds={selectedChatIds}
         selectedCategories={selectedChatTypes}

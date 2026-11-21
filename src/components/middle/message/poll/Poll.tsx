@@ -11,7 +11,6 @@ import { getActions, getGlobal, getPromiseActions, withGlobal } from '../../../.
 import type {
   ApiChat,
   ApiFormattedText,
-  ApiLocation,
   ApiMessagePoll,
   ApiPoll,
   ApiSticker,
@@ -40,7 +39,6 @@ import useLang from '../../../../hooks/useLang';
 import useLastCallback from '../../../../hooks/useLastCallback';
 
 import AvatarList from '../../../common/AvatarList';
-import CompactMapPreview from '../../../common/CompactMapPreview';
 import Document from '../../../common/Document';
 import Icon from '../../../common/icons/Icon';
 import StickerView from '../../../common/StickerView';
@@ -71,9 +69,6 @@ type StateProps = {
   phoneCountryIso2?: string;
 };
 
-const ATTACHED_MAP_WIDTH = 350;
-const ATTACHED_MAP_HEIGHT = 200;
-const ATTACHED_MAP_ZOOM = 15;
 const STICKER_PREVIEW_SIZE = 96;
 const VOTE_TIMEOUT = 5000;
 const MAX_OPTION_LENGTH = 100;
@@ -92,7 +87,6 @@ const Poll = ({
   phoneCountryIso2,
 }: OwnProps & StateProps) => {
   const {
-    openMapModal,
     openMediaViewer,
     openPollResults,
     sendPollVote,
@@ -355,13 +349,6 @@ const Poll = ({
     });
   });
 
-  const handleOpenLocation = useLastCallback((location: ApiLocation) => {
-    openMapModal({
-      geoPoint: location.geo,
-      zoom: ATTACHED_MAP_ZOOM,
-    });
-  });
-
   const handleOpenResults = useLastCallback(() => {
     if (!canShowResultsPanel) {
       return;
@@ -390,7 +377,6 @@ const Poll = ({
     previewId: attachedPreviewIndex !== undefined ? getPollPreviewId(messageId, attachedPreviewIndex) : undefined,
     observeIntersectionForLoading,
     observeIntersectionForPlaying,
-    onOpenLocation: handleOpenLocation,
     onOpenPreview: handleOpenPreview,
   });
 
@@ -625,7 +611,6 @@ const Poll = ({
                 observeIntersectionForPlaying={observeIntersectionForPlaying}
                 onSelect={handleSelectOption}
                 onOpenMedia={handleOpenPreview}
-                onOpenLocation={handleOpenLocation}
               />
             );
           })}
@@ -694,10 +679,7 @@ function renderPollMedia({
   previewId,
   observeIntersectionForLoading,
   observeIntersectionForPlaying,
-  onOpenLocation,
   onOpenPreview,
-  locationWidth = ATTACHED_MAP_WIDTH,
-  locationHeight = ATTACHED_MAP_HEIGHT,
 }: {
   content: MediaContent;
   theme: ThemeKey;
@@ -706,10 +688,7 @@ function renderPollMedia({
   previewId?: string;
   observeIntersectionForLoading?: ObserveFn;
   observeIntersectionForPlaying?: ObserveFn;
-  onOpenLocation: (location: ApiLocation) => void;
   onOpenPreview: (previewIndex: number) => void;
-  locationWidth?: number;
-  locationHeight?: number;
 }) {
   if (content.photo) {
     return (
@@ -749,20 +728,6 @@ function renderPollMedia({
         className={className}
         observeIntersection={observeIntersectionForLoading}
         onMediaClick={previewIndex !== undefined ? () => onOpenPreview(previewIndex) : undefined}
-      />
-    );
-  }
-
-  if (content.location) {
-    return (
-      <CompactMapPreview
-        className={buildClassName(className, 'media-inner')}
-        geo={content.location.geo}
-        width={locationWidth}
-        height={locationHeight}
-        zoom={ATTACHED_MAP_ZOOM}
-        isFullWidth
-        onClick={() => onOpenLocation(content.location!)}
       />
     );
   }
@@ -809,7 +774,6 @@ function hasPollOptionMedia(answer: ApiPoll['answers'][number]) {
   return Boolean(
     answer.media?.photo
     || answer.media?.video
-    || answer.media?.location
     || answer.media?.sticker
     || answer.media?.webPage,
   );

@@ -73,7 +73,6 @@ import {
   restoreWallpaperBlobsFromPasscode,
   syncLockScreenWallpaperBlobs,
 } from '../../../util/wallpaper/storage';
-import { flushWidgetStorage } from '../../../util/widgetStorage';
 import { closeApi } from '../../../api/gramjs';
 import {
   cacheGlobalForSlot,
@@ -232,8 +231,6 @@ addActionHandler('clearPasscode', async (global, actions): Promise<void> => {
 
 addActionHandler('lockScreen', async (global): Promise<void> => {
   if (!global.passcode.hasPasscode || global.passcode.isScreenLocked) return;
-  // Widgets' writes still held go to the state, and their actions run before the vault takes it, after the awaits below
-  flushWidgetStorage();
   let shouldLockCurrentTab = false;
   let lockCurrentTabPromise: Promise<void> | undefined;
   try {
@@ -492,8 +489,6 @@ addActionHandler('setPasscodeAutolockDuration', async (global, actions, payload)
 });
 
 addActionHandler('onPasscodeStateChangedRemotely', async (global, actions, payload): Promise<void> => {
-  // A lock from another tab: as in `lockScreen`, this master tab's vault snapshot takes the widgets' writes
-  flushWidgetStorage();
   await requestPasscodeStateLock(async () => {
     const meta = await loadPasscodeMeta();
     global = getGlobal();

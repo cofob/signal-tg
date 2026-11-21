@@ -80,7 +80,7 @@
 
   transition: background-color var(--message-color-transition-duration, 0.2s);
 
-  &:hover:not(.no-hover) {
+  &:hover {
     background-color: var(--color-interactive-element-hover);
   }
 }
@@ -153,24 +153,6 @@
   :global(body.is-ios) & {
     font-size: 0.9375rem;
   }
-}
-
-.inlineButton,
-.inlineButton:global(.Button.tiny) {
-  overflow: hidden;
-  display: block;
-  flex-shrink: 0;
-
-  width: auto;
-  max-width: 10rem;
-  height: 2rem;
-  padding: 0 0.75rem;
-  border-radius: 1.5rem;
-
-  font-weight: var(--font-weight-medium);
-  text-overflow: ellipsis;
-  text-transform: none;
-  white-space: nowrap;
 }
 
 .pictogramTransition {

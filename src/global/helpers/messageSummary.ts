@@ -141,12 +141,9 @@ function getSummaryDescription(
     document,
     sticker,
     contact,
-    location,
-    game,
     storyData,
     dice,
     richMessage,
-    widget,
   } = mediaContent;
   const { poll } = statefulContent || {};
 
@@ -181,11 +178,6 @@ function getSummaryDescription(
     summary = truncatedText || lang('AttachAudio');
   }
 
-  if (widget) {
-    hasUsedTruncatedText = true;
-    summary = truncatedText || lang('Widget');
-  }
-
   if (document) {
     hasUsedTruncatedText = !isExtended;
     summary = isExtended ? document.fileName : (truncatedText || document.fileName);
@@ -209,18 +201,6 @@ function getSummaryDescription(
     } else {
       summary = truncatedText as string;
     }
-  }
-
-  if (location?.mediaType === 'geo' || location?.mediaType === 'venue') {
-    summary = lang('AttachLocation');
-  }
-
-  if (location?.mediaType === 'geoLive') {
-    summary = lang('AttachLiveLocation');
-  }
-
-  if (game) {
-    summary = `🎮 ${game.title}`;
   }
 
   if (storyData) {

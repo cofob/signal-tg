@@ -1,17 +1,15 @@
 import {
   memo, useRef, useSignal, useState,
 } from '@teact';
-import { getActions, getGlobal } from '../../../global';
+import { getActions } from '../../../global';
 
 import type { FolderEditDispatch, FoldersState } from '../../../hooks/reducers/useFoldersReducer';
 import type { AnimationLevel, SettingsHighlight } from '../../../types';
 import type { SettingsSearchItem } from './search/searchSettings';
 import { SettingsScreens } from '../../../types';
 
-import { selectTabState } from '../../../global/selectors';
 import { resolveTransitionName } from '../../../util/resolveTransitionName';
 
-import useTwoFaReducer from '../../../hooks/reducers/useTwoFaReducer';
 import useLastCallback from '../../../hooks/useLastCallback';
 import useScrollNotch from '../../../hooks/useScrollNotch';
 import useSyncEffect from '../../../hooks/useSyncEffect';
@@ -22,8 +20,6 @@ import SettingsFolders from './folders/SettingsFolders';
 import SettingsKeyboardShortcuts from './keyboardShortcuts/SettingsKeyboardShortcuts';
 import SettingsPasscode from './passcode/SettingsPasscode';
 import SettingsSearch from './search/SettingsSearch';
-import SettingsActiveSessions from './SettingsActiveSessions';
-import SettingsActiveWebsites from './SettingsActiveWebsites';
 import SettingsAutoDeleteMessages from './SettingsAutoDeleteMessages';
 import SettingsCustomEmoji from './SettingsCustomEmoji';
 import SettingsDataStorage from './SettingsDataStorage';
@@ -36,7 +32,6 @@ import SettingsHeader from './SettingsHeader';
 import SettingsLanguage from './SettingsLanguage';
 import SettingsMain from './SettingsMain';
 import SettingsNotifications from './SettingsNotifications';
-import SettingsPasskeys from './SettingsPasskeys';
 import SettingsPerformance from './SettingsPerformance';
 import SettingsPrivacy from './SettingsPrivacy';
 import SettingsPrivacyBlockedUsers from './SettingsPrivacyBlockedUsers';
@@ -49,31 +44,11 @@ import SettingsSignalPinForm from './SettingsSignalPinForm';
 import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
 import SettingsUsername from './SettingsUsername';
-import SettingsTwoFa from './twoFa/SettingsTwoFa';
 
 import './Settings.scss';
 
 const TRANSITION_RENDER_COUNT = Object.keys(SettingsScreens).length / 2;
 const TRANSITION_DURATION = 200;
-
-const TWO_FA_SCREENS = [
-  SettingsScreens.TwoFaDisabled,
-  SettingsScreens.TwoFaNewPassword,
-  SettingsScreens.TwoFaNewPasswordConfirm,
-  SettingsScreens.TwoFaNewPasswordHint,
-  SettingsScreens.TwoFaNewPasswordEmail,
-  SettingsScreens.TwoFaNewPasswordEmailCode,
-  SettingsScreens.TwoFaCongratulations,
-  SettingsScreens.TwoFaEnabled,
-  SettingsScreens.TwoFaChangePasswordCurrent,
-  SettingsScreens.TwoFaChangePasswordNew,
-  SettingsScreens.TwoFaChangePasswordConfirm,
-  SettingsScreens.TwoFaChangePasswordHint,
-  SettingsScreens.TwoFaTurnOff,
-  SettingsScreens.TwoFaRecoveryEmailCurrentPassword,
-  SettingsScreens.TwoFaRecoveryEmail,
-  SettingsScreens.TwoFaRecoveryEmailCode,
-];
 
 const PASSCODE_SCREENS = [
   SettingsScreens.PasscodeDisabled,
@@ -85,19 +60,15 @@ const FOLDERS_SCREENS = [
   SettingsScreens.FoldersCreateFolder,
   SettingsScreens.FoldersEditFolder,
   SettingsScreens.FoldersEditFolderFromChatList,
-  SettingsScreens.FoldersEditFolderInvites,
   SettingsScreens.FoldersIncludedChats,
   SettingsScreens.FoldersIncludedChatsFromChatList,
   SettingsScreens.FoldersExcludedChats,
   SettingsScreens.FoldersExcludedChatsFromChatList,
-  SettingsScreens.FoldersShare,
 ];
 
 const PRIVACY_SCREENS = [
   SettingsScreens.AutoDeleteMessages,
   SettingsScreens.PrivacyBlockedUsers,
-  SettingsScreens.ActiveWebsites,
-  SettingsScreens.Passkeys,
   SettingsScreens.SignalPin,
   SettingsScreens.SignalPinNew,
   SettingsScreens.SignalPinConfirm,
@@ -184,7 +155,6 @@ const Settings = ({
   searchSessionId,
 }: OwnProps) => {
   const {
-    closeShareChatFolderModal,
     openSettingsScreen,
     loadNestedSettingsData,
   } = getActions();
@@ -199,7 +169,6 @@ const Settings = ({
 
   useSettingsHighlight(containerRef, highlight);
 
-  const [twoFaState, twoFaDispatch] = useTwoFaReducer();
   const [privacyPasscode, setPrivacyPasscode] = useState<string>('');
   // The new Signal PIN between its entry and its confirmation
   const [newSignalPin, setNewSignalPin] = useState<string | undefined>();
@@ -211,13 +180,7 @@ const Settings = ({
   }, [currentScreen]);
 
   const handleReset = useLastCallback((forceReturnToChatList?: true | Event) => {
-    const isFromSettings = selectTabState(getGlobal()).shareFolderScreen?.isFromSettings;
-
-    if (currentScreen === SettingsScreens.FoldersShare) {
-      closeShareChatFolderModal();
-    }
-
-    if (forceReturnToChatList === true || (isFromSettings !== undefined && !isFromSettings)) {
+    if (forceReturnToChatList === true) {
       onReset(true);
       return;
     }
@@ -226,7 +189,6 @@ const Settings = ({
       currentScreen === SettingsScreens.FoldersCreateFolder
       || currentScreen === SettingsScreens.FoldersEditFolder
       || currentScreen === SettingsScreens.FoldersEditFolderFromChatList
-      || currentScreen === SettingsScreens.FoldersEditFolderInvites
     ) {
       setTimeout(() => {
         foldersDispatch({ type: 'reset' });
@@ -272,11 +234,9 @@ const Settings = ({
       [SettingsScreens.PrivacyGroupChats]: PRIVACY_GROUP_CHATS_SCREENS.includes(activeScreen),
     };
 
-    const isTwoFaScreen = TWO_FA_SCREENS.includes(activeScreen);
     const isPasscodeScreen = PASSCODE_SCREENS.includes(activeScreen);
     const isFoldersScreen = FOLDERS_SCREENS.includes(activeScreen);
     const isPrivacyScreen = PRIVACY_SCREENS.includes(activeScreen)
-      || isTwoFaScreen
       || isPasscodeScreen
       || Object.keys(privacyAllowScreens).map(Number).includes(activeScreen)
       || Object.values(privacyAllowScreens).includes(true);
@@ -410,20 +370,6 @@ const Settings = ({
             onReset={handleReset}
           />
         );
-      case SettingsScreens.ActiveSessions:
-        return (
-          <SettingsActiveSessions
-            isActive={isScreenActive}
-            onReset={handleReset}
-          />
-        );
-      case SettingsScreens.ActiveWebsites:
-        return (
-          <SettingsActiveWebsites
-            isActive={isScreenActive}
-            onReset={handleReset}
-          />
-        );
       case SettingsScreens.PrivacyBlockedUsers:
         return (
           <SettingsPrivacyBlockedUsers
@@ -495,45 +441,16 @@ const Settings = ({
       case SettingsScreens.FoldersCreateFolder:
       case SettingsScreens.FoldersEditFolder:
       case SettingsScreens.FoldersEditFolderFromChatList:
-      case SettingsScreens.FoldersEditFolderInvites:
       case SettingsScreens.FoldersIncludedChats:
       case SettingsScreens.FoldersIncludedChatsFromChatList:
       case SettingsScreens.FoldersExcludedChats:
       case SettingsScreens.FoldersExcludedChatsFromChatList:
-      case SettingsScreens.FoldersShare:
         return (
           <SettingsFolders
             currentScreen={currentScreen}
             shownScreen={activeScreen}
             state={foldersState}
             dispatch={foldersDispatch}
-            isActive={isScreenActive}
-            onReset={handleReset}
-          />
-        );
-
-      case SettingsScreens.TwoFaDisabled:
-      case SettingsScreens.TwoFaNewPassword:
-      case SettingsScreens.TwoFaNewPasswordConfirm:
-      case SettingsScreens.TwoFaNewPasswordHint:
-      case SettingsScreens.TwoFaNewPasswordEmail:
-      case SettingsScreens.TwoFaNewPasswordEmailCode:
-      case SettingsScreens.TwoFaCongratulations:
-      case SettingsScreens.TwoFaEnabled:
-      case SettingsScreens.TwoFaChangePasswordCurrent:
-      case SettingsScreens.TwoFaChangePasswordNew:
-      case SettingsScreens.TwoFaChangePasswordConfirm:
-      case SettingsScreens.TwoFaChangePasswordHint:
-      case SettingsScreens.TwoFaTurnOff:
-      case SettingsScreens.TwoFaRecoveryEmailCurrentPassword:
-      case SettingsScreens.TwoFaRecoveryEmail:
-      case SettingsScreens.TwoFaRecoveryEmailCode:
-        return (
-          <SettingsTwoFa
-            currentScreen={currentScreen}
-            state={twoFaState}
-            dispatch={twoFaDispatch}
-            shownScreen={activeScreen}
             isActive={isScreenActive}
             onReset={handleReset}
           />
@@ -564,14 +481,6 @@ const Settings = ({
       case SettingsScreens.Performance:
         return (
           <SettingsPerformance
-            isActive={isScreenActive}
-            onReset={handleReset}
-          />
-        );
-
-      case SettingsScreens.Passkeys:
-        return (
-          <SettingsPasskeys
             isActive={isScreenActive}
             onReset={handleReset}
           />

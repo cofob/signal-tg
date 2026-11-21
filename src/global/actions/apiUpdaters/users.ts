@@ -9,14 +9,13 @@ import {
   deleteContact,
   replaceUserStatuses,
   updateChat,
-  updateChatFullInfo,
   updatePeerFullInfo,
   updatePeerStoriesHidden,
   updateUser,
   updateUserFullInfo,
 } from '../../reducers';
 import {
-  selectChatFullInfo, selectPeerFullInfo,
+  selectPeerFullInfo,
   selectUser, selectUserFullInfo,
 } from '../../selectors';
 
@@ -81,62 +80,11 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       return updateUserFullInfo(global, id, fullInfo);
     }
 
-    case 'updateBotMenuButton': {
-      const { botId, button } = update;
-
-      const targetUserFullInfo = selectUserFullInfo(global, botId);
-      if (!targetUserFullInfo?.botInfo) {
-        return undefined;
-      }
-
-      return updateUserFullInfo(global, botId, {
-        botInfo: {
-          ...targetUserFullInfo.botInfo,
-          menuButton: button,
-        },
-      });
-    }
-
-    case 'updateBotCommands': {
-      const { peerId, botId, commands } = update;
-
-      if (!isUserId(peerId)) {
-        const targetChatFullInfo = selectChatFullInfo(global, peerId);
-        if (!targetChatFullInfo?.botCommands) {
-          actions.loadFullChat({ chatId: peerId, force: true });
-          return undefined;
-        }
-
-        const botCommands = targetChatFullInfo.botCommands.filter((command) => command.botId !== botId);
-        if (commands) {
-          botCommands.push(...commands);
-        }
-
-        return updateChatFullInfo(global, peerId, { botCommands });
-      }
-
-      if (peerId !== botId) {
-        return undefined;
-      }
-
-      const targetUserFullInfo = selectUserFullInfo(global, botId);
-      if (!targetUserFullInfo?.botInfo) {
-        return undefined;
-      }
-
-      return updateUserFullInfo(global, botId, {
-        botInfo: {
-          ...targetUserFullInfo.botInfo,
-          commands,
-        },
-      });
-    }
-
     case 'updatePeerSettings': {
       const { id, settings } = update;
 
       const targetUserFullInfo = selectUserFullInfo(global, id);
-      if (!targetUserFullInfo?.botInfo) {
+      if (!targetUserFullInfo) {
         actions.loadFullUser({ userId: id });
         return undefined;
       }

@@ -5,14 +5,12 @@ import {
 import { getActions } from '../../global';
 
 import type {
-  ApiGeoPoint,
   ApiPageBlock,
   ApiPageBlockBlockquote,
   ApiPageBlockBlockquoteBlocks,
   ApiPageBlockCollage,
   ApiPageBlockDetails,
   ApiPageBlockEmbed,
-  ApiPageBlockMap,
   ApiPageBlockPhoto,
   ApiPageBlockPullquote,
   ApiPageBlockRelatedArticles,
@@ -66,7 +64,6 @@ import useScrollableHint from '../../hooks/useScrollableHint';
 import useUniqueId from '../../hooks/useUniqueId';
 
 import CodeBlock from '../common/code/CodeBlock';
-import CompactMapPreview from '../common/CompactMapPreview';
 import CompactMediaPreview from '../common/CompactMediaPreview';
 import Document from '../common/Document';
 import PlayableAudio from '../common/PlayableAudio';
@@ -106,7 +103,6 @@ type OwnProps = {
   theme: ThemeKey;
   fontSizeAdjust?: number;
   pageUrl?: string;
-  webPageId?: string;
   chatId?: string;
   messageId?: number;
   threadId?: ThreadId;
@@ -129,8 +125,6 @@ type RichTextContext = {
 
 const RELATED_ARTICLE_PHOTO_SIZE = 48;
 const SINGLE_SOURCE: PlaybackSource = { type: 'single' };
-const MAP_FALLBACK_WIDTH = 480;
-const MAP_FALLBACK_HEIGHT = 360;
 
 const RichContent = ({
   blocks,
@@ -146,7 +140,6 @@ const RichContent = ({
   theme,
   fontSizeAdjust,
   pageUrl,
-  webPageId,
   chatId,
   messageId,
   threadId,
@@ -155,7 +148,7 @@ const RichContent = ({
   onTelegramChannelClick,
 }: OwnProps) => {
   const {
-    openMapModal, openMediaViewer, openUrl, searchChatMediaMessages,
+    openMediaViewer, openUrl, searchChatMediaMessages,
   } = getActions();
 
   const lang = useLang();
@@ -201,13 +194,11 @@ const RichContent = ({
         itemsById.set(documentId, {
           type: 'message', chatId, threadId: threadId ?? MAIN_THREAD_ID, messageId, documentId,
         });
-      } else if (webPageId) {
-        itemsById.set(documentId, { type: 'instantView', webPageId, documentId });
       }
     });
 
     return itemsById;
-  }, [blocks, chatId, messageId, threadId, webPageId]);
+  }, [blocks, chatId, messageId, threadId]);
 
   const richTextContext: RichTextContext = {
     unsupportedText,
@@ -225,10 +216,6 @@ const RichContent = ({
     return formatDateTime(lang, secondsToDate(date), { date: 'long' });
   }, [lang]);
 
-  const handleOpenMap = useLastCallback((geoPoint: ApiGeoPoint, zoom: number) => {
-    openMapModal({ geoPoint, zoom });
-  });
-
   const handleOpenMediaLink = useLastCallback((block: ApiPageBlockPhoto) => {
     if (!block.url) {
       return false;
@@ -236,8 +223,6 @@ const RichContent = ({
 
     openUrl({
       url: block.url,
-      tryInstant: true,
-      previewId: block.webPageId,
       linkContext: getLinkContext(chatId, messageId, threadId),
     });
 
@@ -448,8 +433,6 @@ const RichContent = ({
         return renderTextBlock(block.text, styles.thinking, renderContext);
       case 'details':
         return renderDetailsBlock(block, renderContext, sourceKey, renderBlock);
-      case 'map':
-        return renderMapBlock(block, renderContext, handleOpenMap);
       case 'embed':
         return renderEmbedBlock(block, renderContext, embedTitle);
       case 'relatedArticles':
@@ -580,7 +563,6 @@ type RenderBlockContext = {
 };
 
 type RenderBlockFn = (block: ApiPageBlock, sourceKey: string) => TeactNode;
-type OpenMapHandler = (geoPoint: ApiGeoPoint, zoom: number) => void;
 type OpenMediaHandler = (mediaBlocks: PageMediaBlock[], sourceIds: string[], mediaIndex: number) => void;
 type OpenMediaLinkHandler = (block: ApiPageBlockPhoto) => boolean;
 type TableCellPosition = {
@@ -877,8 +859,6 @@ function renderRelatedArticle(
       chatId={context.richTextContext.chatId}
       messageId={context.richTextContext.messageId}
       threadId={context.richTextContext.threadId}
-      previewId={article.webPageId}
-      tryInstantView
     >
       <span className={styles.relatedArticleContent}>
         <span className={styles.relatedArticleTitle}>{renderText(title)}</span>
@@ -1011,34 +991,6 @@ function renderDetailsBlock(
         ))}
       </div>
     </details>
-  );
-}
-
-function renderMapBlock(
-  block: ApiPageBlockMap,
-  context: RenderBlockContext,
-  onOpenMap: OpenMapHandler,
-) {
-  const { geo } = block;
-
-  if (!geo) {
-    return renderUnsupportedBlock(context.unsupportedText, 'map');
-  }
-
-  return (
-    <figure className={buildClassName(styles.figure, styles.centeredBlock)}>
-      <CompactMapPreview
-        className={styles.mapPreview}
-        geo={geo}
-        width={block.width || MAP_FALLBACK_WIDTH}
-        height={block.height || MAP_FALLBACK_HEIGHT}
-        zoom={block.zoom}
-        shouldShowPin
-        isFullWidth
-        onClick={() => onOpenMap(geo, block.zoom)}
-      />
-      {renderCaption(block.caption, context)}
-    </figure>
   );
 }
 

@@ -3,7 +3,6 @@ import type { IconName } from '../../types/icons';
 import type { MediaEditState, VideoProcessingParams, VideoQualityLevel } from '../../types/mediaEditor';
 import type { AdvancedLangFnParameters, RegularLangFnParameters } from '../../util/localization';
 import type {
-  ApiContact,
   ApiDocument,
   ApiFormattedText,
   ApiMessageEntity,
@@ -12,8 +11,6 @@ import type {
   ApiSticker,
   ApiVideo,
 } from './messages';
-import type { ApiBotVerification } from './peers';
-import type { ApiUser } from './users';
 
 export interface ApiInitialArgs {
   userAgent: string;
@@ -44,10 +41,6 @@ export type ApiAccountConnection = Pick<ApiInitialArgs,
 
 export type ApiPasskeyOption = {
   publicKey: PublicKeyCredentialRequestOptionsJSON;
-};
-
-export type ApiPasskeyRegistrationOption = {
-  publicKey: PublicKeyCredentialCreationOptionsJSON;
 };
 
 export interface ApiOnProgress {
@@ -162,38 +155,6 @@ export type ApiPeerTheme = {
   emoticon: string;
 };
 
-export interface ApiSession {
-  hash: string;
-  isCurrent: boolean;
-  isOfficialApp: boolean;
-  isPasswordPending: boolean;
-  deviceModel: string;
-  platform: string;
-  systemVersion: string;
-  appName: string;
-  appVersion: string;
-  dateCreated: number;
-  dateActive: number;
-  ip: string;
-  country: string;
-  region: string;
-  areCallsEnabled: boolean;
-  areSecretChatsEnabled: boolean;
-  isUnconfirmed?: true;
-}
-
-export interface ApiWebSession {
-  hash: string;
-  botId: string;
-  domain: string;
-  browser: string;
-  platform: string;
-  dateCreated: number;
-  dateActive: number;
-  ip: string;
-  region: string;
-}
-
 export interface ApiSessionData {
   mainDcId: number;
   keys: Record<number, string>;
@@ -237,18 +198,13 @@ export type ApiDialogMessage = {
   text: ApiFormattedText;
 };
 
-export type ApiDialogContact = {
-  type: 'contact';
-  contact: ApiContact;
-};
-
 export type ApiDialogLocalizedMessage = {
   type: 'localized';
   title?: RegularLangFnParameters;
   text: AdvancedLangFnParameters;
 };
 
-export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogContact | ApiDialogLocalizedMessage;
+export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogLocalizedMessage;
 
 export type ApiError = {
   message: string;
@@ -289,7 +245,6 @@ export type ApiChatInviteInfo = {
   color: number;
   isBroadcast?: boolean;
   isRequestNeeded?: boolean;
-  botVerification?: ApiBotVerification;
 };
 
 export type ApiChatInviteImporter = {
@@ -320,10 +275,7 @@ export interface ApiAppConfig {
   seenByExpiresAt: number;
   readDateExpiresAt: number;
   autologinDomains: string[];
-  urlAuthDomains: string[];
   whitelistedDomains: string[];
-  webAppAllowedProtocols: string[];
-  areWidgetsDisabled?: boolean;
   defaultEmojiStatusesStickerSetId: string;
   maxUniqueReactions: number;
   topicsPinnedLimit: number;
@@ -355,21 +307,16 @@ export interface ApiAppConfig {
   ignoreRestrictionReasons?: string[];
   needAgeVideoVerification?: boolean;
   verifyAgeBotUsername?: string;
-  musicSearchUsername?: string;
   verifyAgeCountry?: string;
   verifyAgeMin?: number;
   typingDraftTtl: number;
   isMessagePrimaryEditedDateEnabled: boolean;
   contactNoteLimit?: number;
-  whitelistedBotIds?: string[];
-  arePasskeysAvailable: boolean;
-  passkeysMaxCount: number;
   diceEmojies: string[];
   diceEmojiesSuccess: Record<string, {
     value: number;
     frameStart: number;
   }>;
-  botAllowedSuffixes?: string[];
 }
 
 export interface ApiConfig {
@@ -385,7 +332,7 @@ export interface ApiConfig {
   ratingEDecay: number;
 }
 
-export type ApiTopPeerCategory = 'correspondents' | 'botsInline' | 'botsApp' | 'botsGuestChat';
+export type ApiTopPeerCategory = 'correspondents';
 
 export type ApiTopPeer = {
   peerId: string;
@@ -428,42 +375,6 @@ export interface ApiEmojiInteraction {
   timestamps: number[];
 }
 
-export type ApiUrlAuthResultRequest = {
-  type: 'request';
-  bot: ApiUser;
-  domain: string;
-  isApp?: boolean;
-  shouldRequestWriteAccess?: boolean;
-  shouldRequestPhoneNumber?: boolean;
-  browser?: string;
-  platform?: string;
-  ip?: string;
-  region?: string;
-  matchCodes?: string[];
-  matchCodesFirst?: boolean;
-  userIdHint?: string;
-  verifiedAppName?: string;
-};
-
-type ApiUrlAuthResultAccepted = {
-  type: 'accepted';
-  url?: string;
-};
-
-type ApiUrlAuthResultExpired = {
-  type: 'expired';
-};
-
-type ApiUrlAuthResultDefault = {
-  type: 'default';
-};
-
-export type ApiUrlAuthResult =
-  ApiUrlAuthResultRequest
-  | ApiUrlAuthResultAccepted
-  | ApiUrlAuthResultExpired
-  | ApiUrlAuthResultDefault;
-
 export type ApiLimitType =
   | 'uploadMaxFileparts'
   | 'stickersFaved'
@@ -480,13 +391,12 @@ export type ApiLimitType =
   | 'chatlistJoined'
   | 'savedDialogsPinned'
   | 'maxReactions'
-  | 'moreAccounts'
-  | 'botsCreate';
+  | 'moreAccounts';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
   'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
-  | 'maxReactions' | 'botsCreate'
+  | 'maxReactions'
 )>;
 
 export type ApiPeerNotifySettings = {
@@ -502,14 +412,6 @@ export interface ApiRestrictionReason {
   reason: string;
   text: string;
   platform: string;
-}
-
-export interface ApiPasskey {
-  id: string;
-  name: string;
-  date: number;
-  softwareEmojiId?: string;
-  lastUsageDate?: number;
 }
 
 export type ApiEmojiGroup = {
