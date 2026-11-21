@@ -203,8 +203,6 @@ export type TabState = {
     sendAsMessage?: boolean;
   };
 
-  recoveryEmail?: string;
-
   leftColumn: {
     contentKey: LeftColumnContent;
     settingsScreen: SettingsScreens;

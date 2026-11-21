@@ -8,14 +8,13 @@ import type { AccountSettings } from '../../../types';
 
 import { selectCanPlayAnimatedEmojis } from '../../../global/selectors';
 import { pick } from '../../../util/iteratees';
-import renderText from '../../common/helpers/renderText';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import { useIntersectionObserver } from '../../../hooks/useIntersectionObserver';
 import useLang from '../../../hooks/useLang';
 
 import StickerSetCard from '../../common/StickerSetCard';
-import Island, { IslandDescription } from '../../gili/layout/Island';
+import Island from '../../gili/layout/Island';
 import Checkbox from '../../ui/Checkbox';
 
 type OwnProps = {
@@ -88,9 +87,6 @@ const SettingsCustomEmoji = ({
               ))}
             </div>
           </Island>
-          <IslandDescription dir="auto">
-            {renderText(lang('EmojiBotInfo'), ['links'])}
-          </IslandDescription>
         </>
       )}
     </div>

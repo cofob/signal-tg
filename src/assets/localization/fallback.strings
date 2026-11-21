@@ -2277,7 +2277,6 @@
 "DoNotReply" = "Do Not Reply";
 "EditTopic" = "Edit topic";
 "Emoji" = "Emoji";
-"EmojiBotInfo" = "Artists are welcome to add their own emoji packs using our @stickers bot.";
 "EmojiCount_one" = "{count} emoji";
 "EmojiCount_other" = "{count} emoji";
 "EnableAllReactionsInfo" = "Members of the group can use any emoji as reactions to messages.";
@@ -2432,7 +2431,6 @@
 "Spoiler" = "Spoiler";
 "Start" = "Start";
 "StatusHiddenShow" = "when?";
-"StickersBotInfo" = "Artists are welcome to add their own sticker sets using our @stickers bot.";
 "StickersListEmojiItem" = "Custom Emoji";
 "StoryContextRemoveFromProfile" = "Remove from Profile";
 "StoryHeaderEdited" = "edited";

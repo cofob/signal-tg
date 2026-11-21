@@ -1838,7 +1838,6 @@ export interface LangPair {
   'DoNotReply': undefined;
   'EditTopic': undefined;
   'Emoji': undefined;
-  'EmojiBotInfo': undefined;
   'EnableAllReactionsInfo': undefined;
   'EnableSomeReactionsInfo': undefined;
   'English': undefined;
@@ -1959,7 +1958,6 @@ export interface LangPair {
   'Spoiler': undefined;
   'Start': undefined;
   'StatusHiddenShow': undefined;
-  'StickersBotInfo': undefined;
   'StickersListEmojiItem': undefined;
   'StoryContextRemoveFromProfile': undefined;
   'StoryHeaderEdited': undefined;
