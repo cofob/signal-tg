@@ -33,7 +33,7 @@ import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { AccountStorageField, LocalAccountFields, StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
-import type { AccountRecord, StoryDistributionList } from '../store/SignalStore';
+import type { AccountRecord, EarlyReceiptRecord, StoryDistributionList } from '../store/SignalStore';
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
@@ -244,6 +244,8 @@ export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 const MIN_SEND_RETRY_TIMER_MS = 1000;
+const EARLY_RECEIPT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_EARLY_RECEIPTS = 500;
 // Signal Desktop `ts/util/isConversationUnregistered.std.ts`: group sends skip a member for this long after a send
 // found their account gone
 const UNREGISTERED_SKIP_MS = 6 * 60 * 60 * 1000;
@@ -2311,7 +2313,7 @@ export default class MessageProcessor {
   private async addDataMessage(conversation: ConversationRecord, source: MessageSource, message: DataMessage) {
     const expireTimer = message.expireTimer || undefined;
     const expirationStart = source.isOutgoing ? source.expirationStartTimestamp ?? source.sentAt : undefined;
-    await this.addMessage(conversation, {
+    const { message: added } = await this.addMessage(conversation, {
       conversationId: conversation.id,
       kind: 'message',
       authorAci: source.authorAci,
@@ -2331,6 +2333,7 @@ export default class MessageProcessor {
       isSealedSender: source.isSealedSender,
       serverGuid: source.serverGuid,
     });
+    if (source.isOutgoing && added.recipientStatus) await this.applyEarlyReceipts(source.sentAt);
   }
 
   private async handleEditMessage(source: MessageSource, edit: EditMessage) {
@@ -2567,6 +2570,7 @@ export default class MessageProcessor {
       viewedAt: sentAt,
       recipients,
     });
+    await this.applyEarlyReceipts(sentAt);
   }
 
   /**
@@ -2624,7 +2628,7 @@ export default class MessageProcessor {
   private async applyStoryReceipt(senderAci: string, sentAt: number, status: SendStatus) {
     const story = await this.db.findStory((await this.getAccount()).aci, sentAt);
     const recipient = story?.recipients?.[senderAci];
-    if (!story || !recipient) return;
+    if (!story || !recipient) return Boolean(story);
     await this.putStory({
       ...story,
       recipients: {
@@ -2636,6 +2640,7 @@ export default class MessageProcessor {
         },
       },
     });
+    return true;
   }
 
   /** Sends a story to the members of distribution lists, each once, and tells our other devices */
@@ -2794,15 +2799,20 @@ export default class MessageProcessor {
   }
 
   private async handleReceipt(senderAci: string, receipt: ReceiptMessage) {
-    const { account } = this.client.getSenderContext();
-    const status = STATUS_BY_RECEIPT_TYPE[receipt.type];
+    const status = STATUS_BY_RECEIPT_TYPE[receipt.type] as EarlyReceiptRecord['status'];
     for (const timestamp of receipt.timestamp) {
-      const message = await this.db.findMessage(account.aci, Number(timestamp));
-      if (!message) {
-        await this.applyStoryReceipt(senderAci, Number(timestamp), status);
-        continue;
-      }
-      if (!message.recipientStatus || !(senderAci in message.recipientStatus)) continue;
+      const sentAt = Number(timestamp);
+      if (!await this.applyReceipt(senderAci, sentAt, status)) await this.addEarlyReceipt(senderAci, sentAt, status);
+    }
+  }
+
+  /** Returns whether a message or story of ours at `sentAt` exists; receipts for it from non-recipients change nothing */
+  private async applyReceipt(senderAci: string, sentAt: number, status: SendStatus) {
+    const { account } = this.client.getSenderContext();
+    const message = await this.db.findMessage(account.aci, sentAt);
+    if (!message) return this.applyStoryReceipt(senderAci, sentAt, status);
+
+    if (message.recipientStatus && senderAci in message.recipientStatus) {
       await this.putMessage({
         ...message,
         recipientStatus: {
@@ -2810,6 +2820,36 @@ export default class MessageProcessor {
           [senderAci]: maxStatus(message.recipientStatus[senderAci], status),
         },
       });
+    }
+    return true;
+  }
+
+  /**
+   * Keeps a receipt for a message or story that is not stored yet, as can happen for one that another device of ours
+   * sent, whose copy reaches us after the recipient's receipt (Signal Desktop `ts/messageModifiers/MessageReceipts.preload.ts`
+   * keeps such receipts for `forMessage`). The store is small and keeps receipts for a day.
+   */
+  private async addEarlyReceipt(senderAci: string, sentAt: number, status: EarlyReceiptRecord['status']) {
+    const { store } = this.client;
+    const now = Date.now();
+    const receipts = (await store.getItem('earlyReceipts') ?? []).filter(({ receivedAt }) => (
+      now - receivedAt < EARLY_RECEIPT_MAX_AGE_MS
+    ));
+    receipts.push({ senderAci, sentAt, status, receivedAt: now });
+    await store.setItem('earlyReceipts', receipts.slice(-MAX_EARLY_RECEIPTS));
+  }
+
+  /** Applies the early receipts for the message or story of ours that was just stored at `sentAt` */
+  private async applyEarlyReceipts(sentAt: number) {
+    const { store } = this.client;
+    const receipts = await store.getItem('earlyReceipts');
+    if (!receipts?.some((receipt) => receipt.sentAt === sentAt)) return;
+
+    const now = Date.now();
+    await store.setItem('earlyReceipts', receipts.filter((receipt) => receipt.sentAt !== sentAt));
+    for (const receipt of receipts) {
+      if (receipt.sentAt !== sentAt || now - receipt.receivedAt >= EARLY_RECEIPT_MAX_AGE_MS) continue;
+      await this.applyReceipt(receipt.senderAci, sentAt, receipt.status);
     }
   }
 
