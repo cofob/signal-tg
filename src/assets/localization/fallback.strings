@@ -3200,6 +3200,9 @@
 "ErrorChatWriteForbidden" = "You can't write in this chat";
 "ErrorChatAdminRequired" = "You must be an admin in this chat to do this";
 "ErrorGroupChangeFailed" = "The group could not be updated. Check your connection and try again.";
+"ErrorGroupTitleTooLong" = "Group names can be up to 32 characters long.";
+"ErrorGroupDescriptionTooLong" = "Group descriptions can be up to 480 characters long.";
+"ErrorGroupLastAdmin" = "Before you leave, you must choose at least one new admin for this group.";
 "DownloadSizeUnsupported" = "Downloading files bigger than 2GB is not supported in your browser.";
 "DownloadKeepAppOpen" = "Download started. Please, do not close the app before it is finished.";
 "ReportSubmitError" = "An error occurred while submitting your report. Please, try again later.";

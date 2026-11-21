@@ -946,21 +946,24 @@ addActionHandler('deleteChatUser', (global, actions, payload): ActionReturnType 
   void callApi('deleteChatUser', { chat, user, shouldRevokeHistory });
 });
 
-addActionHandler('deleteChat', (global, actions, payload): ActionReturnType => {
+// Signal groups cannot be deleted for everyone; deleting one leaves it, which the last admin cannot do
+addActionHandler('deleteChat', async (global, actions, payload): Promise<void> => {
   const { chatId, tabId = getCurrentTabId() } = payload;
   const chat = selectChat(global, chatId);
   if (!chat) {
     return;
   }
 
+  const isLeft = await callApi('deleteChat', { chatId: chat.id });
+  if (!isLeft) return;
+
+  global = getGlobal();
   global = leaveChat(global, chatId);
   setGlobal(global);
 
   if (selectCurrentMessageList(global, tabId)?.chatId === chatId) {
     actions.openChat({ id: undefined, tabId });
   }
-
-  void callApi('deleteChat', { chatId: chat.id });
 });
 
 async function checkFutureCreatorAndOpenModal(
@@ -1043,14 +1046,13 @@ addActionHandler('leaveBasicGroup', async (global, actions, payload): Promise<vo
     return;
   }
 
-  actions.deleteHistory({ chatId, shouldDeleteForAll: false, tabId });
-
+  // The history stays until leaving succeeds: the last admin of a Signal group cannot leave
   global = getGlobal();
   const user = selectUser(global, currentUserId);
-  if (user) {
-    await callApi('deleteChatUser', { chat, user, shouldRevokeHistory: false });
-  }
+  const isLeft = user && await callApi('deleteChatUser', { chat, user, shouldRevokeHistory: false });
+  if (!isLeft) return;
 
+  actions.deleteHistory({ chatId, shouldDeleteForAll: false, tabId });
   cleanupAfterLeave(chatId, tabId);
 });
 

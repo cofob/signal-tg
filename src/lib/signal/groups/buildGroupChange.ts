@@ -24,6 +24,13 @@ export type GroupChangeBuilder = (
   state: GroupState, context: GroupChangeContext,
 ) => GroupActions | undefined | Promise<GroupActions | undefined>;
 
+/** A change Signal clients do not make, such as a title over the length limit or the last admin leaving */
+export class GroupChangeRefusedError extends Error {
+  constructor(readonly reason: 'titleTooLong' | 'descriptionTooLong' | 'lastAdmin') {
+    super(`Group change refused: ${reason}`);
+  }
+}
+
 export type InviteLinkSettings = {
   isEnabled: boolean;
   isApprovalRequired?: boolean;
@@ -34,6 +41,9 @@ export type InviteLinkSettings = {
 // Signal Desktop `ts/groups.preload.ts`
 const GROUP_TITLE_MAX_ENCRYPTED_BYTES = 1024;
 const GROUP_DESCRIPTION_MAX_ENCRYPTED_BYTES = 8192;
+// Signal Android `RemoteConfig.maxGroupNameGraphemeLength` and `CreateProfileFragment.MAX_DESCRIPTION_GLYPHS`
+export const GROUP_TITLE_MAX_GRAPHEMES = 32;
+const GROUP_DESCRIPTION_MAX_GRAPHEMES = 480;
 const INVITE_LINK_PASSWORD_LENGTH = 16;
 // Signal Android `RemoteConfig.groupLimits` hard limit, which also bounds the banned list
 const GROUP_SIZE_HARD_LIMIT = 1001;
@@ -41,6 +51,7 @@ const GROUP_SIZE_HARD_LIMIT = 1001;
 export function buildTitleChange(title: string): GroupChangeBuilder {
   return (state, { secretParams }) => {
     if (state.title === title) return undefined;
+    checkGroupTitle(title);
     const encrypted = encryptGroupAttribute(secretParams, { case: 'title', value: title });
     if (encrypted.length > GROUP_TITLE_MAX_ENCRYPTED_BYTES) throw new Error('Group title is too long');
     return { modifyTitle: { title: encrypted } };
@@ -50,6 +61,9 @@ export function buildTitleChange(title: string): GroupChangeBuilder {
 export function buildDescriptionChange(description: string): GroupChangeBuilder {
   return (state, { secretParams }) => {
     if ((state.description ?? '') === description) return undefined;
+    if (countGraphemes(description) > GROUP_DESCRIPTION_MAX_GRAPHEMES) {
+      throw new GroupChangeRefusedError('descriptionTooLong');
+    }
     const encrypted = encryptGroupAttribute(secretParams, { case: 'descriptionText', value: description });
     if (encrypted.length > GROUP_DESCRIPTION_MAX_ENCRYPTED_BYTES) throw new Error('Group description is too long');
     return { modifyDescription: { description: encrypted } };
@@ -138,12 +152,17 @@ export function buildRemoveMemberChange(serviceId: string, shouldBan?: boolean):
 
 /**
  * Leaves the group, or declines an invitation or a join request we sent (Signal Desktop `leaveGroupV2`).
- * Our PNI stays invited after we leave with our ACI.
+ * Our PNI stays invited after we leave with our ACI. The only admin of a group with other members has to make
+ * one of them an admin first (Signal Android `LeaveGroupDialog`).
  */
 export function buildLeaveChange(): GroupChangeBuilder {
   return (state, context) => {
     const { selfAci, selfPni } = context;
     const isMember = state.members.some(({ aci }) => aci === selfAci);
+    const others = state.members.filter(({ aci }) => aci !== selfAci);
+    const isOnlyAdmin = state.members.some(({ aci, role }) => aci === selfAci && role === Member_Role.ADMINISTRATOR)
+      && !others.some(({ role }) => role === Member_Role.ADMINISTRATOR);
+    if (isOnlyAdmin && others.length) throw new GroupChangeRefusedError('lastAdmin');
     const invitedServiceId = [selfAci, selfPni].find((serviceId) => (
       serviceId && state.pendingMembers.some((member) => member.serviceId === serviceId)
     ));
@@ -271,6 +290,15 @@ export function combineGroupChanges(...builders: GroupChangeBuilder[]): GroupCha
     }
     return combined;
   };
+}
+
+/** Group titles are limited in grapheme clusters, as Signal Android counts them */
+export function checkGroupTitle(title: string) {
+  if (countGraphemes(title) > GROUP_TITLE_MAX_GRAPHEMES) throw new GroupChangeRefusedError('titleTooLong');
+}
+
+function countGraphemes(text: string) {
+  return [...new Intl.Segmenter().segment(text)].length;
 }
 
 function getAccessRequired(isAdminOnly?: boolean) {

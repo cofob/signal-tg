@@ -9,9 +9,10 @@ import type { GroupState } from './fetchGroup';
 import type { GroupJoinInfo, NewGroup } from './groupRequests';
 
 import { bufferToBase64 } from '../../../util/encoding/buffer';
+import { pause } from '../../../util/schedulers';
 import { isPniServiceId, toPniServiceId } from '../serviceId';
 import { wasm } from '../wasm';
-import { buildAvatarChange } from './buildGroupChange';
+import { buildAvatarChange, checkGroupTitle, combineGroupChanges } from './buildGroupChange';
 import { buildAccessControl, fetchGroup, GroupRequestError } from './fetchGroup';
 import { applyGroupChange, decryptGroupChange } from './groupChange';
 import {
@@ -35,6 +36,8 @@ export type GroupLinkPreview = GroupJoinInfo & {
 
 // Signal Desktop `modifyGroupV2`: attempts after conflicts and after rejected profile key credentials
 const MAX_ATTEMPTS = 5;
+// How long an edit of the title, description or avatar waits for the others of the same save
+const ATTRIBUTE_EDIT_WINDOW_MS = 50;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_CONFLICT = 409;
 
@@ -47,6 +50,9 @@ export default class GroupManager {
   // Changes of one group run one at a time, so each builds on the revision the previous one made
   private queues = new Map<string, Promise<unknown>>();
 
+  // Title, description and avatar edits that wait to go as one change
+  private attributeEdits = new Map<string, { builders: GroupChangeBuilder[]; result: Promise<unknown> }>();
+
   constructor(
     private client: SignalClient,
     private db: MessageDb,
@@ -58,14 +64,36 @@ export default class GroupManager {
     return this.enqueue(id, () => this.runChange(id, build));
   }
 
-  /** Uploads a new avatar and sets it, or removes the avatar without `avatar` */
-  async setAvatar(id: string, avatar?: Uint8Array) {
-    const conversation = await this.getGroupConversation(id);
-    const { account, connection } = this.client.getSenderContext();
-    const avatarUrl = avatar && await uploadGroupAvatar(
-      account, connection, wasm.GroupSecretParams_DeriveFromMasterKey(conversation.masterKey!), avatar,
-    );
-    return this.modifyGroup(id, buildAvatarChange(avatarUrl));
+  /**
+   * Edits the title, description or avatar. Edits made together, as the app makes them from one save, go as one
+   * change, like the group details screens of Signal clients do.
+   */
+  editAttributes(id: string, build: GroupChangeBuilder) {
+    const pending = this.attributeEdits.get(id);
+    if (pending) {
+      pending.builders.push(build);
+      return pending.result;
+    }
+
+    const builders = [build];
+    const result = pause(ATTRIBUTE_EDIT_WINDOW_MS).then(() => {
+      this.attributeEdits.delete(id);
+      return this.modifyGroup(id, combineGroupChanges(...builders));
+    });
+    this.attributeEdits.set(id, { builders, result });
+    return result;
+  }
+
+  /** Sets a new avatar, uploaded once for the change, or removes the avatar without `avatar` */
+  setAvatar(id: string, avatar?: Uint8Array) {
+    let avatarUrl: string | undefined;
+    return this.editAttributes(id, async (state, context) => {
+      if (avatar && !avatarUrl) {
+        const { account, connection } = this.client.getSenderContext();
+        avatarUrl = await uploadGroupAvatar(account, connection, context.secretParams, avatar);
+      }
+      return buildAvatarChange(avatarUrl)(state, context);
+    });
   }
 
   /**
@@ -73,6 +101,7 @@ export default class GroupManager {
    * cannot get are invited; the server rejecting a credential fetches all of them once more.
    */
   async createGroup({ title, memberAcis, expireTimer }: { title: string; memberAcis: string[]; expireTimer?: number }) {
+    checkGroupTitle(title);
     const { store, account, connection } = this.client.getSenderContext();
     const others = [...new Set(memberAcis)].filter((aci) => aci !== account.aci);
 

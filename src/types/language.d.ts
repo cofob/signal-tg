@@ -2496,6 +2496,9 @@ export interface LangPair {
   'ErrorChatWriteForbidden': undefined;
   'ErrorChatAdminRequired': undefined;
   'ErrorGroupChangeFailed': undefined;
+  'ErrorGroupTitleTooLong': undefined;
+  'ErrorGroupDescriptionTooLong': undefined;
+  'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
   'ReportSubmitError': undefined;

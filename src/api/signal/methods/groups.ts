@@ -28,6 +28,7 @@ import {
   buildTitleChange,
   buildUnbanChange,
   combineGroupChanges,
+  GroupChangeRefusedError,
 } from '../../../lib/signal/groups/buildGroupChange';
 import { GroupRequestError } from '../../../lib/signal/groups/fetchGroup';
 import { AccessControl_AccessRequired } from '../../../lib/signal/proto/generated/Groups_pb';
@@ -44,6 +45,11 @@ import { sendApiUpdate } from '../updates';
 // Error keys of `getReadableErrorText`
 const GROUP_CHANGE_ERROR = 'SIGNAL_GROUP_CHANGE_FAILED';
 const INVITE_LINK_ERROR = 'INVITE_HASH_EXPIRED';
+const REFUSED_CHANGE_ERRORS = {
+  titleTooLong: 'SIGNAL_GROUP_TITLE_TOO_LONG',
+  descriptionTooLong: 'SIGNAL_GROUP_DESCRIPTION_TOO_LONG',
+  lastAdmin: 'SIGNAL_GROUP_LAST_ADMIN',
+} as const;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 
@@ -65,11 +71,11 @@ export async function createGroupChat({ title, users }: { title: string; users: 
 }
 
 export async function updateChatTitle(chat: ApiChat, title: string) {
-  await changeGroup(chat, buildTitleChange(title));
+  await changeGroup(chat, buildTitleChange(title), true);
 }
 
 export async function updateChatAbout(chat: ApiChat, about: string) {
-  await changeGroup(chat, buildDescriptionChange(about));
+  await changeGroup(chat, buildDescriptionChange(about), true);
 }
 
 /** Sets a new group avatar, or removes it without `photo`; earlier avatars cannot be chosen again in Signal */
@@ -318,13 +324,17 @@ export async function joinChannel({ channelId }: { channelId: string; accessHash
   return isChanged ? { type: 'ok' as const } : undefined;
 }
 
-/** Runs a change of the group behind `chat`; returns `true` once it is applied and `undefined` when it fails */
-async function changeGroup(chat: Pick<ApiChat, 'id'>, build: GroupChangeBuilder) {
+/**
+ * Runs a change of the group behind `chat`; returns `true` once it is applied and `undefined` when it fails.
+ * Edits of the title, description and avatar (`isAttributeEdit`) made together go as one change.
+ */
+async function changeGroup(chat: Pick<ApiChat, 'id'>, build: GroupChangeBuilder, isAttributeEdit?: boolean) {
   const conversation = await getGroupConversation(chat);
   if (!conversation) return undefined;
 
   try {
-    await groups.modifyGroup(conversation.id, build);
+    const { id } = conversation;
+    await (isAttributeEdit ? groups.editAttributes(id, build) : groups.modifyGroup(id, build));
     return true as const;
   } catch (err) {
     reportError(err);
@@ -361,13 +371,13 @@ async function buildApiInvite(conversation: ConversationRecord): Promise<ApiExpo
   };
 }
 
-/** A refused link shows as expired; other failures show a generic group error */
+/** Refused changes explain why, a refused link shows as expired, and other failures show a generic group error */
 function reportError(err: unknown, forbiddenKey = GROUP_CHANGE_ERROR) {
   logError(err);
   const isForbidden = err instanceof GroupRequestError
     && (err.status === HTTP_FORBIDDEN || err.status === HTTP_NOT_FOUND);
-  sendApiUpdate({
-    '@type': 'error',
-    error: { message: isForbidden ? forbiddenKey : GROUP_CHANGE_ERROR, hasErrorKey: true },
-  });
+  const message = err instanceof GroupChangeRefusedError
+    ? REFUSED_CHANGE_ERRORS[err.reason]
+    : isForbidden ? forbiddenKey : GROUP_CHANGE_ERROR;
+  sendApiUpdate({ '@type': 'error', error: { message, hasErrorKey: true } });
 }
