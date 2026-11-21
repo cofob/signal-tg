@@ -42,7 +42,7 @@ import {
 import { fetchGroupLog } from '../groups/groupLog';
 import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
-import { fetchProfile } from '../profiles/fetchProfile';
+import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
 import {
@@ -927,7 +927,20 @@ export default class MessageProcessor {
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
-    const profile = await fetchProfile(connection, aci, profileKey);
+    let profile;
+    try {
+      profile = await fetchProfile(connection, aci, profileKey);
+    } catch (err) {
+      if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
+      // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
+      // try again after the usual interval instead of on every connection
+      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
+      await this.runSerial(async () => {
+        await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });
+      });
+      return;
+    }
     if (profile.hasUnrestrictedUnidentifiedAccess) {
       await store.updateRecipient(aci, { sealedSender: 'unrestricted' });
     }
