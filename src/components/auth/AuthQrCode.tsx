@@ -41,7 +41,7 @@ const AuthCode = ({
   auth,
   language,
 }: StateProps) => {
-  const { setSharedSettingOption } = getActions();
+  const { setSharedSettingOption, returnToAuthPhoneNumber } = getActions();
 
   const { qrCode: authQrCode } = auth;
 
@@ -104,6 +104,10 @@ const AuthCode = ({
     navigateBack();
   });
 
+  const handleRegister = useLastCallback(() => {
+    returnToAuthPhoneNumber();
+  });
+
   const handleLangChange = useLastCallback(async () => {
     markIsLoading();
 
@@ -144,11 +148,14 @@ const AuthCode = ({
           {!isQrMounted && <div className="qr-loading"><Loading /></div>}
         </div>
         <h1>{lang('SignalLinkTitle')}</h1>
-        <ol>
+        <ol className="auth-steps">
           <li><span>{lang('SignalLinkHelp1')}</span></li>
           <li><span>{lang('SignalLinkHelp2', undefined, { withNodes: true, withMarkdown: true })}</span></li>
           <li><span>{lang('SignalLinkHelp3')}</span></li>
         </ol>
+        <Button className="auth-button" isText onClick={handleRegister}>
+          {lang('SignalRegisterLink')}
+        </Button>
         <Button className="auth-button" isText onClick={openProxyModal}>
           {lang('SignalProxySettings')}
         </Button>

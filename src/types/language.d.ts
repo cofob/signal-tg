@@ -138,6 +138,32 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalRegisterLink': undefined;
+  'SignalLinkExisting': undefined;
+  'SignalRegisterTitle': undefined;
+  'SignalRegisterHelp': undefined;
+  'SignalRegisterDiscoverable': undefined;
+  'SignalCaptchaTitle': undefined;
+  'SignalCaptchaHelp1': undefined;
+  'SignalCaptchaHelp2': undefined;
+  'SignalCaptchaHelp3': undefined;
+  'SignalCaptchaOpen': undefined;
+  'SignalCaptchaLink': undefined;
+  'SignalCaptchaErrorFormat': undefined;
+  'SignalCaptchaErrorRejected': undefined;
+  'SignalCodeSentSms': undefined;
+  'SignalCodeSentVoice': undefined;
+  'SignalCodeResendSms': undefined;
+  'SignalCodeCall': undefined;
+  'SignalCodeErrorSendFailed': undefined;
+  'SignalCodeErrorUndeliverable': undefined;
+  'SignalCodeErrorNoCode': undefined;
+  'SignalCodeErrorNotRequested': undefined;
+  'SignalProfileDescription': undefined;
+  'SignalRegisterErrorSession': undefined;
+  'SignalRegisterErrorRegLock': undefined;
+  'SignalRegisterErrorRejected': undefined;
+  'SignalRegisterErrorChallenge': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -2626,6 +2652,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'SignalCodeResendSmsIn': {
+    'time': V;
+  };
+  'SignalCodeCallIn': {
+    'time': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -4558,6 +4590,36 @@ export interface LangKeyGroups {
       | 'LimitReachedSharedFoldersPremium';
     variables: 'limit';
   };
+  'time': {
+    keys:
+      | 'SignalCodeResendSmsIn'
+      | 'SignalCodeCallIn'
+      | 'ConversationScheduleMessageSendToday'
+      | 'AutoDeleteSetInfo'
+      | 'AutoDeleteIn'
+      | 'AutoDeleteGlobalActionFromYou'
+      | 'ActionTTLYouChanged'
+      | 'ActionTTLChannelChanged'
+      | 'SlowModeHint'
+      | 'ErrorFloodTime'
+      | 'ErrorPasswordFresh'
+      | 'ErrorSessionFresh'
+      | 'PollEndsTime'
+      | 'PollResultsTime'
+      | 'TimeIn'
+      | 'MessageMetaEditedAtTime'
+      | 'QrFreeExpiresIn'
+      | 'LinkExpiresIn'
+      | 'InviteLinkExpiresIn'
+      | 'LastSeenTodayAt'
+      | 'LastSeenYesterdayAt'
+      | 'LiveLocationUpdatedTodayAt'
+      | 'ButtonPublishAtTime'
+      | 'UnlockTimerPublicPostsSearch'
+      | 'StealthModeOnHint'
+      | 'LiveLocationUpdatedYesterdayAt';
+    variables: 'time';
+  };
   'volume': {
     keys:
       | 'SpeakingWithVolume';
@@ -4631,34 +4693,6 @@ export interface LangKeyGroups {
       | 'ContextMenuNoForwardsPeer'
       | 'RatingReflectsActivity';
     variables: 'name';
-  };
-  'time': {
-    keys:
-      | 'ConversationScheduleMessageSendToday'
-      | 'AutoDeleteSetInfo'
-      | 'AutoDeleteIn'
-      | 'AutoDeleteGlobalActionFromYou'
-      | 'ActionTTLYouChanged'
-      | 'ActionTTLChannelChanged'
-      | 'SlowModeHint'
-      | 'ErrorFloodTime'
-      | 'ErrorPasswordFresh'
-      | 'ErrorSessionFresh'
-      | 'PollEndsTime'
-      | 'PollResultsTime'
-      | 'TimeIn'
-      | 'MessageMetaEditedAtTime'
-      | 'QrFreeExpiresIn'
-      | 'LinkExpiresIn'
-      | 'InviteLinkExpiresIn'
-      | 'LastSeenTodayAt'
-      | 'LastSeenYesterdayAt'
-      | 'LiveLocationUpdatedTodayAt'
-      | 'ButtonPublishAtTime'
-      | 'UnlockTimerPublicPostsSearch'
-      | 'StealthModeOnHint'
-      | 'LiveLocationUpdatedYesterdayAt';
-    variables: 'time';
   };
   'date,time': {
     keys:

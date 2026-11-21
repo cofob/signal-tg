@@ -3,6 +3,7 @@ import type {
   ApiAttachBot,
   ApiAttachment,
   ApiAudio,
+  ApiAuthCodeTransport,
   ApiAvatarUpload,
   ApiBirthday,
   ApiChat,
@@ -136,10 +137,13 @@ export interface ActionPayloads {
   // auth
   setAuthPhoneNumber: { phoneNumber: string };
   setAuthCode: { code: string };
+  setAuthCaptcha: { captchaLink: string };
+  requestAuthCode: { transport: ApiAuthCodeTransport };
   setAuthPassword: { password: string };
   signUp: {
     firstName: string;
     lastName: string;
+    isDiscoverableByPhoneNumber?: boolean;
   };
   returnToAuthPhoneNumber: undefined;
   setAuthRememberMe: { value: boolean };
