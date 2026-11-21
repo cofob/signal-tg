@@ -1,12 +1,5 @@
 # Friction log
 
-## The built `dist/` directory is tracked
-
-`git ls-files dist` lists about 11 500 files (145 MB), the output of `npm run web:release:production` from Telegram
-Web A's release flow, although only `dist/build-stats.json` is ignored. Every `npm run build:production` rewrites
-tracked files, so a build leaves the working tree dirty and CI cannot check that the committed bundle is current. The
-release workflow publishes a bundle built from the tag instead and does not use the tracked one.
-
 ## Release scripts from Telegram Web A remain in `package.json`
 
 `web:release:production` (commits `dist/` and pushes) and `telegraph:update_changelog` (posts to telegra.ph) belong to
