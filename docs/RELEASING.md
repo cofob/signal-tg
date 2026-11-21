@@ -62,6 +62,10 @@ Assets go to a draft release, and the release becomes visible only when every jo
 cause and rerun the failed jobs, or start `release.yml` manually with the same tag (select the tag as the workflow
 ref); the draft is completed and its notes are refreshed. A published release is never changed.
 
+A tag pushed with the workflow token starts no workflows. Automation that creates tags that way calls `release.yml`
+as a reusable workflow (`uses: ./.github/workflows/release.yml` with `tag`) and grants `contents`, `packages`,
+`id-token` and `attestations` write access.
+
 ### Pre-releases
 
 A tag with a suffix, such as `v0.2.0-rc.1`, publishes a pre-release: it is never marked as the latest release, the
