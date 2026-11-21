@@ -4,6 +4,22 @@
  * @param {string} account_entropy
  * @returns {Uint8Array}
  */
+export function AccountEntropyPool_DeriveBackupKey(account_entropy) {
+    const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.AccountEntropyPool_DeriveBackupKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {string} account_entropy
+ * @returns {Uint8Array}
+ */
 export function AccountEntropyPool_DeriveSvrKey(account_entropy) {
     const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
@@ -33,6 +49,114 @@ export function AccountEntropyPool_Generate() {
 }
 
 /**
+ * @param {string} account_entropy
+ * @returns {boolean}
+ */
+export function AccountEntropyPool_IsValid(account_entropy) {
+    const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.AccountEntropyPool_IsValid(ptr0, len0);
+    return ret !== 0;
+}
+
+/**
+ * @param {Uint8Array} context_bytes
+ * @returns {Uint8Array}
+ */
+export function BackupAuthCredentialRequestContext_GetRequest(context_bytes) {
+    const ptr0 = passArray8ToWasm0(context_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupAuthCredentialRequestContext_GetRequest(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Backup credentials: the context of a backup key and ACI requests a credential (`PUT /v1/archives/backupid`),
+ * receives the server's response (`GET /v1/archives/auth`) and presents the credential to the backup service
+ * @param {Uint8Array} backup_key
+ * @param {Uint8Array} uuid
+ * @returns {Uint8Array}
+ */
+export function BackupAuthCredentialRequestContext_New(backup_key, uuid) {
+    const ptr0 = passArray8ToWasm0(backup_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(uuid, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupAuthCredentialRequestContext_New(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * `expected_redemption_time` is in seconds, as in `GET /v1/archives/auth`
+ * @param {Uint8Array} context_bytes
+ * @param {Uint8Array} response_bytes
+ * @param {number} expected_redemption_time
+ * @param {Uint8Array} params_bytes
+ * @returns {Uint8Array}
+ */
+export function BackupAuthCredentialRequestContext_ReceiveResponse(context_bytes, response_bytes, expected_redemption_time, params_bytes) {
+    const ptr0 = passArray8ToWasm0(context_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(response_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(params_bytes, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupAuthCredentialRequestContext_ReceiveResponse(ptr0, len0, ptr1, len1, expected_redemption_time, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
+ * @param {Uint8Array} credential_bytes
+ * @returns {number}
+ */
+export function BackupAuthCredential_GetBackupLevel(credential_bytes) {
+    const ptr0 = passArray8ToWasm0(credential_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupAuthCredential_GetBackupLevel(ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0];
+}
+
+/**
+ * @param {Uint8Array} credential_bytes
+ * @param {Uint8Array} server_params_bytes
+ * @param {Uint8Array} randomness_bytes
+ * @returns {Uint8Array}
+ */
+export function BackupAuthCredential_PresentDeterministic(credential_bytes, server_params_bytes, randomness_bytes) {
+    const ptr0 = passArray8ToWasm0(credential_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(server_params_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(randomness_bytes, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupAuthCredential_PresentDeterministic(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v4;
+}
+
+/**
  * @param {Uint8Array} backup_key_bytes
  * @param {Uint8Array} aci_bytes
  * @returns {Uint8Array}
@@ -49,6 +173,39 @@ export function BackupKey_DeriveBackupId(backup_key_bytes, aci_bytes) {
     var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v3;
+}
+
+/**
+ * @param {Uint8Array} backup_key_bytes
+ * @param {Uint8Array} aci_bytes
+ * @returns {PrivateKey}
+ */
+export function BackupKey_DeriveEcKey(backup_key_bytes, aci_bytes) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupKey_DeriveEcKey(ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return PrivateKey.__wrap(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} backup_key_bytes
+ * @returns {Uint8Array}
+ */
+export function BackupKey_DeriveLocalBackupMetadataKey(backup_key_bytes) {
+    const ptr0 = passArray8ToWasm0(backup_key_bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.BackupKey_DeriveLocalBackupMetadataKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
 }
 
 /**
@@ -1166,6 +1323,26 @@ export class MessageBackupKey {
 if (Symbol.dispose) MessageBackupKey.prototype[Symbol.dispose] = MessageBackupKey.prototype.free;
 
 /**
+ * @param {string} account_entropy
+ * @param {Uint8Array} aci_bytes
+ * @param {Uint8Array | null} [forward_secrecy_token]
+ * @returns {MessageBackupKey}
+ */
+export function MessageBackupKey_FromAccountEntropyPool(account_entropy, aci_bytes, forward_secrecy_token) {
+    const ptr0 = passStringToWasm0(account_entropy, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(aci_bytes, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    var ptr2 = isLikeNone(forward_secrecy_token) ? 0 : passArray8ToWasm0(forward_secrecy_token, wasm.__wbindgen_malloc);
+    var len2 = WASM_VECTOR_LEN;
+    const ret = wasm.MessageBackupKey_FromAccountEntropyPool(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return MessageBackupKey.__wrap(ret[0]);
+}
+
+/**
  * @param {Uint8Array} backup_key_bytes
  * @param {Uint8Array} backup_id
  * @param {Uint8Array | null} [forward_secrecy_token]
@@ -1207,6 +1384,90 @@ export function MessageBackupKey_GetHmacKey(key) {
     var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v1;
+}
+
+/**
+ * @param {bigint} uncompressed_len
+ * @param {bigint} estimated_total_uncompressed_len
+ * @returns {bigint}
+ */
+export function MessageBackupSizing_FlushInterval(uncompressed_len, estimated_total_uncompressed_len) {
+    const ret = wasm.MessageBackupSizing_FlushInterval(uncompressed_len, estimated_total_uncompressed_len);
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * @param {bigint} max_interval_bytes
+ * @param {bigint} compressed_len
+ * @returns {bigint}
+ */
+export function MessageBackupSizing_PaddingSize(max_interval_bytes, compressed_len) {
+    const ret = wasm.MessageBackupSizing_PaddingSize(max_interval_bytes, compressed_len);
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * Checks the frames of a backup as they are added, without holding them
+ * (upstream `OnlineBackupValidator` in `rust/bridge/shared/types/src/message_backup.rs`)
+ */
+export class OnlineBackupValidator {
+    static __wrap(ptr) {
+        const obj = Object.create(OnlineBackupValidator.prototype);
+        obj.__wbg_ptr = ptr;
+        OnlineBackupValidatorFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        OnlineBackupValidatorFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_onlinebackupvalidator_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) OnlineBackupValidator.prototype[Symbol.dispose] = OnlineBackupValidator.prototype.free;
+
+/**
+ * @param {OnlineBackupValidator} backup
+ * @param {Uint8Array} frame
+ */
+export function OnlineBackupValidator_AddFrame(backup, frame) {
+    _assertClass(backup, OnlineBackupValidator);
+    const ptr0 = passArray8ToWasm0(frame, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.OnlineBackupValidator_AddFrame(backup.__wbg_ptr, ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @param {OnlineBackupValidator} backup
+ */
+export function OnlineBackupValidator_Finalize(backup) {
+    _assertClass(backup, OnlineBackupValidator);
+    const ret = wasm.OnlineBackupValidator_Finalize(backup.__wbg_ptr);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @param {Uint8Array} backup_info_frame
+ * @param {number} purpose
+ * @returns {OnlineBackupValidator}
+ */
+export function OnlineBackupValidator_New(backup_info_frame, purpose) {
+    const ptr0 = passArray8ToWasm0(backup_info_frame, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.OnlineBackupValidator_New(ptr0, len0, purpose);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return OnlineBackupValidator.__wrap(ret[0]);
 }
 
 export class PinHash {
@@ -4162,7 +4423,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 199, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 235, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },
@@ -4232,6 +4493,9 @@ const KyberSecretKeyFinalization = (typeof FinalizationRegistry === 'undefined')
 const MessageBackupKeyFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_messagebackupkey_free(ptr, 1));
+const OnlineBackupValidatorFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_onlinebackupvalidator_free(ptr, 1));
 const PinHashFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_pinhash_free(ptr, 1));

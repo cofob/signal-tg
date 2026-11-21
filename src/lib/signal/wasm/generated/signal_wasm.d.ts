@@ -1,11 +1,36 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function AccountEntropyPool_DeriveBackupKey(account_entropy: string): Uint8Array;
+
 export function AccountEntropyPool_DeriveSvrKey(account_entropy: string): Uint8Array;
 
 export function AccountEntropyPool_Generate(): string;
 
+export function AccountEntropyPool_IsValid(account_entropy: string): boolean;
+
+export function BackupAuthCredentialRequestContext_GetRequest(context_bytes: Uint8Array): Uint8Array;
+
+/**
+ * Backup credentials: the context of a backup key and ACI requests a credential (`PUT /v1/archives/backupid`),
+ * receives the server's response (`GET /v1/archives/auth`) and presents the credential to the backup service
+ */
+export function BackupAuthCredentialRequestContext_New(backup_key: Uint8Array, uuid: Uint8Array): Uint8Array;
+
+/**
+ * `expected_redemption_time` is in seconds, as in `GET /v1/archives/auth`
+ */
+export function BackupAuthCredentialRequestContext_ReceiveResponse(context_bytes: Uint8Array, response_bytes: Uint8Array, expected_redemption_time: number, params_bytes: Uint8Array): Uint8Array;
+
+export function BackupAuthCredential_GetBackupLevel(credential_bytes: Uint8Array): number;
+
+export function BackupAuthCredential_PresentDeterministic(credential_bytes: Uint8Array, server_params_bytes: Uint8Array, randomness_bytes: Uint8Array): Uint8Array;
+
 export function BackupKey_DeriveBackupId(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): Uint8Array;
+
+export function BackupKey_DeriveEcKey(backup_key_bytes: Uint8Array, aci_bytes: Uint8Array): PrivateKey;
+
+export function BackupKey_DeriveLocalBackupMetadataKey(backup_key_bytes: Uint8Array): Uint8Array;
 
 export function Cds2ClientState_New(mrenclave: Uint8Array, attestation_msg: Uint8Array, current_timestamp: number): SgxClientState;
 
@@ -210,11 +235,33 @@ export class MessageBackupKey {
     [Symbol.dispose](): void;
 }
 
+export function MessageBackupKey_FromAccountEntropyPool(account_entropy: string, aci_bytes: Uint8Array, forward_secrecy_token?: Uint8Array | null): MessageBackupKey;
+
 export function MessageBackupKey_FromBackupKeyAndBackupId(backup_key_bytes: Uint8Array, backup_id: Uint8Array, forward_secrecy_token?: Uint8Array | null): MessageBackupKey;
 
 export function MessageBackupKey_GetAesKey(key: MessageBackupKey): Uint8Array;
 
 export function MessageBackupKey_GetHmacKey(key: MessageBackupKey): Uint8Array;
+
+export function MessageBackupSizing_FlushInterval(uncompressed_len: bigint, estimated_total_uncompressed_len: bigint): bigint;
+
+export function MessageBackupSizing_PaddingSize(max_interval_bytes: bigint, compressed_len: bigint): bigint;
+
+/**
+ * Checks the frames of a backup as they are added, without holding them
+ * (upstream `OnlineBackupValidator` in `rust/bridge/shared/types/src/message_backup.rs`)
+ */
+export class OnlineBackupValidator {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+}
+
+export function OnlineBackupValidator_AddFrame(backup: OnlineBackupValidator, frame: Uint8Array): void;
+
+export function OnlineBackupValidator_Finalize(backup: OnlineBackupValidator): void;
+
+export function OnlineBackupValidator_New(backup_info_frame: Uint8Array, purpose: number): OnlineBackupValidator;
 
 export class PinHash {
     private constructor();
@@ -735,9 +782,18 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly AccountEntropyPool_DeriveBackupKey: (a: number, b: number) => [number, number, number, number];
     readonly AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
     readonly AccountEntropyPool_Generate: () => [number, number];
+    readonly AccountEntropyPool_IsValid: (a: number, b: number) => number;
+    readonly BackupAuthCredentialRequestContext_GetRequest: (a: number, b: number) => [number, number, number, number];
+    readonly BackupAuthCredentialRequestContext_New: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly BackupAuthCredentialRequestContext_ReceiveResponse: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+    readonly BackupAuthCredential_GetBackupLevel: (a: number, b: number) => [number, number, number];
+    readonly BackupAuthCredential_PresentDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+    readonly BackupKey_DeriveEcKey: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly BackupKey_DeriveLocalBackupMetadataKey: (a: number, b: number) => [number, number, number, number];
     readonly Cds2ClientState_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly CiphertextMessage_FromPlaintextContent: (a: number) => number;
     readonly CiphertextMessage_Serialize: (a: number) => [number, number];
@@ -794,9 +850,15 @@ export interface InitOutput {
     readonly KyberPublicKey_Equals: (a: number, b: number) => number;
     readonly KyberPublicKey_Serialize: (a: number) => [number, number];
     readonly KyberSecretKey_Deserialize: (a: number, b: number) => [number, number, number];
+    readonly MessageBackupKey_FromAccountEntropyPool: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly MessageBackupKey_FromBackupKeyAndBackupId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly MessageBackupKey_GetAesKey: (a: number) => [number, number];
     readonly MessageBackupKey_GetHmacKey: (a: number) => [number, number];
+    readonly MessageBackupSizing_FlushInterval: (a: bigint, b: bigint) => bigint;
+    readonly MessageBackupSizing_PaddingSize: (a: bigint, b: bigint) => bigint;
+    readonly OnlineBackupValidator_AddFrame: (a: number, b: number, c: number) => [number, number];
+    readonly OnlineBackupValidator_Finalize: (a: number) => [number, number];
+    readonly OnlineBackupValidator_New: (a: number, b: number, c: number) => [number, number, number];
     readonly PinHash_DecodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
     readonly PinHash_EncodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
     readonly PinHash_FromUsernameMrenclave: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
@@ -938,6 +1000,7 @@ export interface InitOutput {
     readonly __wbg_kyberprekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_kyberpublickey_free: (a: number, b: number) => void;
     readonly __wbg_messagebackupkey_free: (a: number, b: number) => void;
+    readonly __wbg_onlinebackupvalidator_free: (a: number, b: number) => void;
     readonly __wbg_prekeybundle_free: (a: number, b: number) => void;
     readonly __wbg_prekeyrecord_free: (a: number, b: number) => void;
     readonly __wbg_prekeysignalmessage_free: (a: number, b: number) => void;

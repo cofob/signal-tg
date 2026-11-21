@@ -1,9 +1,18 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const AccountEntropyPool_DeriveBackupKey: (a: number, b: number) => [number, number, number, number];
 export const AccountEntropyPool_DeriveSvrKey: (a: number, b: number) => [number, number, number, number];
 export const AccountEntropyPool_Generate: () => [number, number];
+export const AccountEntropyPool_IsValid: (a: number, b: number) => number;
+export const BackupAuthCredentialRequestContext_GetRequest: (a: number, b: number) => [number, number, number, number];
+export const BackupAuthCredentialRequestContext_New: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const BackupAuthCredentialRequestContext_ReceiveResponse: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number, number, number];
+export const BackupAuthCredential_GetBackupLevel: (a: number, b: number) => [number, number, number];
+export const BackupAuthCredential_PresentDeterministic: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
 export const BackupKey_DeriveBackupId: (a: number, b: number, c: number, d: number) => [number, number, number, number];
+export const BackupKey_DeriveEcKey: (a: number, b: number, c: number, d: number) => [number, number, number];
+export const BackupKey_DeriveLocalBackupMetadataKey: (a: number, b: number) => [number, number, number, number];
 export const Cds2ClientState_New: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
 export const CiphertextMessage_FromPlaintextContent: (a: number) => number;
 export const CiphertextMessage_Serialize: (a: number) => [number, number];
@@ -60,9 +69,15 @@ export const KyberPublicKey_Deserialize: (a: number, b: number) => [number, numb
 export const KyberPublicKey_Equals: (a: number, b: number) => number;
 export const KyberPublicKey_Serialize: (a: number) => [number, number];
 export const KyberSecretKey_Deserialize: (a: number, b: number) => [number, number, number];
+export const MessageBackupKey_FromAccountEntropyPool: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const MessageBackupKey_FromBackupKeyAndBackupId: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
 export const MessageBackupKey_GetAesKey: (a: number) => [number, number];
 export const MessageBackupKey_GetHmacKey: (a: number) => [number, number];
+export const MessageBackupSizing_FlushInterval: (a: bigint, b: bigint) => bigint;
+export const MessageBackupSizing_PaddingSize: (a: bigint, b: bigint) => bigint;
+export const OnlineBackupValidator_AddFrame: (a: number, b: number, c: number) => [number, number];
+export const OnlineBackupValidator_Finalize: (a: number) => [number, number];
+export const OnlineBackupValidator_New: (a: number, b: number, c: number) => [number, number, number];
 export const PinHash_DecodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
 export const PinHash_EncodeMasterKey: (a: number, b: number, c: number) => [number, number, number, number];
 export const PinHash_FromUsernameMrenclave: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
@@ -204,6 +219,7 @@ export const __wbg_kyberkeypair_free: (a: number, b: number) => void;
 export const __wbg_kyberprekeyrecord_free: (a: number, b: number) => void;
 export const __wbg_kyberpublickey_free: (a: number, b: number) => void;
 export const __wbg_messagebackupkey_free: (a: number, b: number) => void;
+export const __wbg_onlinebackupvalidator_free: (a: number, b: number) => void;
 export const __wbg_prekeybundle_free: (a: number, b: number) => void;
 export const __wbg_prekeyrecord_free: (a: number, b: number) => void;
 export const __wbg_prekeysignalmessage_free: (a: number, b: number) => void;
