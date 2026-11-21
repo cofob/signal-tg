@@ -2499,7 +2499,7 @@ addActionHandler('toggleJoinRequest', async (global, actions, payload): Promise<
   } = payload;
 
   const chat = await ensureIsSuperGroup(global, actions, chatId, tabId);
-  if (!chat || (!isChatSuperGroup(chat) && !isChatChannel(chat))) return;
+  if (!chat) return;
 
   global = getGlobal();
   const guardBot = guardBotId ? selectUser(global, guardBotId) : undefined;
