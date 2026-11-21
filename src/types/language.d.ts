@@ -26,7 +26,6 @@ export interface LangPair {
   'SendActionUploadRound': undefined;
   'CreateGroupError': undefined;
   'PasscodeControllerErrorCurrent': undefined;
-  'LimitReachedPublicLinksPremium': undefined;
   'SendMessage': undefined;
   'MessageUnsupported': undefined;
   'PageContentUnsupported': undefined;
@@ -551,8 +550,6 @@ export interface LangPair {
   'MessagePreview': undefined;
   'FilterGroups': undefined;
   'NotificationsForGroups': undefined;
-  'FilterChannels': undefined;
-  'NotificationsForChannels': undefined;
   'PhoneOther': undefined;
   'ContactJoined': undefined;
   'P2PEverybody': undefined;
@@ -1898,7 +1895,6 @@ export interface LangPair {
   'SettingsKeywordsNotifications': undefined;
   'SettingsKeywordsPrivateChats': undefined;
   'SettingsKeywordsGroups': undefined;
-  'SettingsKeywordsChannels': undefined;
   'SettingsKeywordsArchiveAndMute': undefined;
   'SettingsKeywordsBlockedUsers': undefined;
   'SettingsKeywordsPasscode': undefined;
@@ -1994,9 +1990,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'limit': V;
   };
   'LimitReachedPinDialogsPremium': {
-    'limit': V;
-  };
-  'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
   'SignalUsernameDeleteConfirm': {
@@ -2684,12 +2677,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'FactCheckFooter': {
     'country': V;
   };
-  'LimitReachedFolderLinksPremium': {
-    'limit': V;
-  };
-  'LimitReachedSharedFoldersPremium': {
-    'limit': V;
-  };
   'MessageContainsEmojiPack': {
     'pack': V;
   };
@@ -3009,9 +2996,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'RichMediaSkippedFiles': {
     'count': V;
   };
-  'Channels': {
-    'count': V;
-  };
   'ChatDeleteMessagesConfirmation': {
     'count': V;
   };
@@ -3169,10 +3153,7 @@ export interface LangKeyGroups {
       | 'LimitReachedFileSizePremium'
       | 'LimitReachedFoldersPremium'
       | 'LimitReachedPinDialogsPremium'
-      | 'LimitReachedCommunitiesPremium'
-      | 'AutodownloadSizeLimitUpTo'
-      | 'LimitReachedFolderLinksPremium'
-      | 'LimitReachedSharedFoldersPremium';
+      | 'AutodownloadSizeLimitUpTo';
     variables: 'limit';
   };
   'title': {
@@ -3731,7 +3712,6 @@ export interface LangPluralKeyGroups {
       | 'FwdMessagesToChats'
       | 'PollModalAddMoreText'
       | 'RichMediaSkippedFiles'
-      | 'Channels'
       | 'ChatDeleteMessagesConfirmation'
       | 'EmojiCount'
       | 'Files'

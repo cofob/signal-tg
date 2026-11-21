@@ -202,10 +202,10 @@ export function getCanDeleteChat(chat: ApiChat) {
 export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, chatsCount?: number) {
   const {
     excludedChatIds, includedChatIds,
-    groups, contacts, nonContacts, channels,
+    groups, contacts, nonContacts,
   } = folder;
 
-  const filters = [groups, contacts, nonContacts, channels];
+  const filters = [groups, contacts, nonContacts];
 
   // If folder has multiple additive filters or uses include/exclude lists,
   // we display folder chats count
@@ -221,8 +221,6 @@ export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, ch
   // Otherwise, we return a short description of a single filter
   if (groups) {
     return lang('FilterGroups');
-  } else if (channels) {
-    return lang('FilterChannels');
   } else if (contacts) {
     return lang('FilterContacts');
   } else if (nonContacts) {

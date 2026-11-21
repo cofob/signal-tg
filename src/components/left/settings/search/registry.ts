@@ -296,7 +296,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
 
   ...buildEntries(SettingsScreens.Notifications, [
     'NotificationsWeb', 'NotificationsForPrivateChats', 'MessagePreview',
-    'NotificationsForGroups', 'NotificationsForChannels', 'ContactJoined', 'PinnedMessagesNotifications',
+    'NotificationsForGroups', 'ContactJoined', 'PinnedMessagesNotifications',
   ]),
   ...buildEntries(SettingsScreens.Notifications, IS_IOS ? [] : ['NotificationsSound']),
   ...buildEntries(SettingsScreens.Notifications, ['PushPreviewsWhenLocked'], { requires: 'hasPasscode' }),
@@ -304,7 +304,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywordsKey: 'SettingsKeywordsPrivateChats',
   }),
   ...buildEntries(SettingsScreens.Notifications, ['FilterGroups'], { keywordsKey: 'SettingsKeywordsGroups' }),
-  ...buildEntries(SettingsScreens.Notifications, ['FilterChannels'], { keywordsKey: 'SettingsKeywordsChannels' }),
 
   ...buildEntries(SettingsScreens.DataStorage, [
     'AutoDownloadPhotosTitle', 'AutoDownloadVideosTitle', 'AutoDownloadFilesTitle', 'AutoDownloadSettingsContacts',

@@ -32,7 +32,6 @@ interface FolderSummary {
   contacts?: true;
   nonContacts?: true;
   groups?: true;
-  channels?: true;
   excludeMuted?: true;
   excludeRead?: true;
   excludeArchived?: true;

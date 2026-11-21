@@ -347,11 +347,7 @@ addActionHandler('joinChannel', async (global, actions, payload): Promise<void> 
       });
     }
   } catch (error) {
-    if ((error as ApiError).message === 'CHANNELS_TOO_MUCH') {
-      actions.openLimitReachedModal({ limit: 'channels', tabId });
-    } else {
-      actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-    }
+    actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
   }
 });
 

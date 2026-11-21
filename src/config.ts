@@ -316,7 +316,7 @@ export const NSFW_RESTRICTION_REASON = 'sensitive';
 // eslint-disable-next-line @stylistic/max-len
 export const COUNTRIES_WITH_12H_TIME_FORMAT = new Set(['AU', 'BD', 'CA', 'CO', 'EG', 'HN', 'IE', 'IN', 'JO', 'MX', 'MY', 'NI', 'NZ', 'PH', 'PK', 'SA', 'SV', 'US']);
 
-export const API_CHAT_TYPES = ['channels', 'chats', 'users', 'groups'] as const;
+export const API_CHAT_TYPES = ['chats', 'users', 'groups'] as const;
 
 export const HEART_REACTION: ApiReactionEmoji = {
   type: 'emoji',

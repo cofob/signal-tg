@@ -35,8 +35,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['notifications/private-chats/show', [SettingsScreens.Notifications, 'NotificationsForPrivateChats']],
   ['notifications/groups', [SettingsScreens.Notifications, 'FilterGroups']],
   ['notifications/groups/show', [SettingsScreens.Notifications, 'NotificationsForGroups']],
-  ['notifications/channels', [SettingsScreens.Notifications, 'FilterChannels']],
-  ['notifications/channels/show', [SettingsScreens.Notifications, 'NotificationsForChannels']],
   ['notifications/new-contacts', [SettingsScreens.Notifications, 'ContactJoined']],
   ['notifications/pinned-messages', [SettingsScreens.Notifications, 'PinnedMessagesNotifications']],
 

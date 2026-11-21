@@ -352,12 +352,7 @@ export type ApiLimitType =
   | 'dialogFolderPinned'
   | 'messageLength'
   | 'captionLength'
-  | 'channels'
-  | 'channelsPublic'
   | 'aboutLength'
-  | 'chatlistInvites'
-  | 'chatlistJoined'
-  | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts';
 
@@ -374,7 +369,7 @@ export type ApiPeerNotifySettings = {
   shouldShowPreviews?: boolean;
 };
 
-export type ApiNotifyPeerType = 'users' | 'groups' | 'channels';
+export type ApiNotifyPeerType = 'users' | 'groups';
 
 export interface ApiRestrictionReason {
   reason: string;

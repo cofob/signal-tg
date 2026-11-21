@@ -514,7 +514,7 @@ export type EmojiKeywords = {
 };
 
 export type CustomPeerType = 'contacts' | 'nonContacts'
-  | 'groups' | 'channels' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
+  | 'groups' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
   isCustomPeer: true;
