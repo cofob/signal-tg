@@ -57,7 +57,6 @@ const AuthPhoneNumber = ({
     clearAuthErrorKey,
     goToAuthQrCode,
     setSharedSettingOption,
-    loginWithPasskey,
   } = getActions();
 
   const {
@@ -68,7 +67,6 @@ const AuthPhoneNumber = ({
     errorKey,
     rememberMe,
     isLoadingQrCode,
-    passkeyOption,
   } = auth;
 
   const lang = useLang();
@@ -236,10 +234,6 @@ const AuthPhoneNumber = ({
     goToAuthQrCode();
   });
 
-  const handleLoginWithPasskey = useLastCallback(() => {
-    loginWithPasskey();
-  });
-
   const isAuthReady = state === 'authorizationStateWaitPhoneNumber';
 
   return (
@@ -304,11 +298,6 @@ const AuthPhoneNumber = ({
               onClick={handleGoToAuthQrCode}
             >
               {lang('LoginQRLogin')}
-            </Button>
-          )}
-          {passkeyOption && (
-            <Button className="auth-button" isText onClick={handleLoginWithPasskey}>
-              {lang('LoginPasskey')}
             </Button>
           )}
           {suggestedLanguage && suggestedLanguage !== language && continueText && (

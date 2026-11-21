@@ -204,7 +204,7 @@ Signal позволяет аккаунты без номера: у них нет
 | Shareable chatlists, custom emoji, emoji status, TGS-стикеры | `modals/chatlist`, `StatusPickerMenu`, `emojiStatusAccess`, `lib/tlottie` | |
 | Instant View | `components/iv`, `InstantViewTab` | Используется в `MessageRichText`, отделяем при удалении |
 | Музыкальный пикер, карты и геолокация | `modals/musicPicker`, `Location.tsx`, `modals/map`, `locationAccess` | Плеер аудио остаётся |
-| Облачный пароль, passkeys, активные сессии и сайты | `left/settings/twoFa`, `modals/twoFaCheck`, `SettingsPasskeys`, `SettingsActiveSessions` | |
+| Облачный пароль, passkeys, активные сессии и сайты | `left/settings/twoFa`, `modals/twoFaCheck`, `SettingsPasskeys`, `SettingsActiveSessions` | Экрана сессий нет: связанными устройствами управляет основное устройство (раздел 3) |
 | Прочие модалки Telegram | `frozenAccount`, `ageVerification`, `cocoon`, `suggestMessage`, `suggestedPostApproval`, `rank`, `profileRating`, `birthday`, `aboutAds`, `reportAd` | |
 | Серверные обои и темы чатов, langpack с сервера, ссылки `t.me` и `tg://` | `fetchWallpapers`, `fetchChatThemes`, `util/localization`, `deepLinkParser.ts`, `config.ts` | Заменяем на `signal.me`, `signal.group`, `sgnl://` |
 | GramJS | `src/lib/gramjs`, `src/api/gramjs` | 82 тыс. строк, на этапе 3 |

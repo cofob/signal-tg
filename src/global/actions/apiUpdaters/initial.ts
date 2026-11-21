@@ -3,7 +3,6 @@ import type {
   ApiUpdateAuthorizationState,
   ApiUpdateConnectionState,
   ApiUpdateCurrentUser,
-  ApiUpdatePasskeyOption,
   ApiUpdateServerTimeOffset,
   ApiUpdateSession,
   ApiUpdateUserAlreadyAuthorized,
@@ -46,10 +45,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateUserAlreadyAuthorized':
       onUpdateUserAlreadyAuthorized(global, update);
-      break;
-
-    case 'updatePasskeyOption':
-      onUpdatePasskeyOption(global, update);
       break;
 
     case 'updateConnectionState':
@@ -144,12 +139,6 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
       });
       setGlobal(global);
       break;
-    case 'authorizationStateWaitPassword':
-      global = updateAuth(global, {
-        hint: update.hint,
-      });
-      setGlobal(global);
-      break;
     case 'authorizationStateWaitQrCode':
       global = updateAuth(global, {
         isLoadingQrCode: false,
@@ -203,13 +192,6 @@ function onUpdateUserAlreadyAuthorized<T extends GlobalState>(global: T, update:
   if (!slot) return;
   const url = getAccountSlotUrl(Number(slot));
   window.location.replace(url);
-}
-
-function onUpdatePasskeyOption<T extends GlobalState>(global: T, update: ApiUpdatePasskeyOption) {
-  global = updateAuth(global, {
-    passkeyOption: update.option,
-  });
-  setGlobal(global);
 }
 
 function onUpdateConnectionState<T extends GlobalState>(

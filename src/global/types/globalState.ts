@@ -18,8 +18,6 @@ import type {
   ApiMessage,
   ApiMessagePoll,
   ApiNotifyPeerType,
-  ApiPasskey,
-  ApiPasskeyOption,
   ApiPeerColors,
   ApiPeerNotifySettings,
   ApiPeerPhotos,
@@ -31,7 +29,6 @@ import type {
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
-  ApiSession,
   ApiShareThemeBackdrop,
   ApiStealthMode,
   ApiSticker,
@@ -49,7 +46,6 @@ import type {
   ApiVideo,
   ApiWallpaper,
   ApiWebPage,
-  ApiWebSession,
 } from '../../api/types';
 import type {
   AccountSettings,
@@ -118,13 +114,6 @@ export type GlobalState = {
   recentlyFoundChatIds?: string[];
   recentlyFoundSettingIds?: string[];
 
-  twoFaSettings: {
-    hint?: string;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
-    waitingEmailCodeLength?: number;
-  };
-
   attachmentSettings: {
     shouldCompress: boolean;
     defaultAttachmentCompression: AttachmentCompression;
@@ -158,13 +147,11 @@ export type GlobalState = {
     rememberMe?: boolean;
     nearestCountry?: string;
     isCodeViaApp?: boolean;
-    hint?: string;
     qrCode?: {
       token: string;
       expires: number;
     };
     historySync?: ApiHistorySyncProgress;
-    passkeyOption?: ApiPasskeyOption;
 
   };
   countryList: {
@@ -406,17 +393,6 @@ export type GlobalState = {
     isDisabled?: boolean;
   }>>;
 
-  activeSessions: {
-    byHash: Record<string, ApiSession>;
-    orderedHashes: string[];
-    ttlDays?: number;
-  };
-
-  activeWebSessions: {
-    byHash: Record<string, ApiWebSession>;
-    orderedHashes: string[];
-  };
-
   settings: {
     byKey: AccountSettings;
     loadedWallpapers?: ApiWallpaper[];
@@ -425,7 +401,6 @@ export type GlobalState = {
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
     lastPremiumBandwithNotificationDate?: number;
     accountDaysTtl: number;
-    passkeys?: ApiPasskey[];
   };
 
   transcriptions: Record<string, ApiTranscription>;

@@ -43,10 +43,6 @@ export type ApiPasskeyOption = {
   publicKey: PublicKeyCredentialRequestOptionsJSON;
 };
 
-export type ApiPasskeyRegistrationOption = {
-  publicKey: PublicKeyCredentialCreationOptionsJSON;
-};
-
 export interface ApiOnProgress {
   (
     progress: number, // Float between 0 and 1.
@@ -158,38 +154,6 @@ export type ApiPeerTheme = {
   type: 'emoticon';
   emoticon: string;
 };
-
-export interface ApiSession {
-  hash: string;
-  isCurrent: boolean;
-  isOfficialApp: boolean;
-  isPasswordPending: boolean;
-  deviceModel: string;
-  platform: string;
-  systemVersion: string;
-  appName: string;
-  appVersion: string;
-  dateCreated: number;
-  dateActive: number;
-  ip: string;
-  country: string;
-  region: string;
-  areCallsEnabled: boolean;
-  areSecretChatsEnabled: boolean;
-  isUnconfirmed?: true;
-}
-
-export interface ApiWebSession {
-  hash: string;
-  botId: string;
-  domain: string;
-  browser: string;
-  platform: string;
-  dateCreated: number;
-  dateActive: number;
-  ip: string;
-  region: string;
-}
 
 export interface ApiSessionData {
   mainDcId: number;
@@ -369,8 +333,6 @@ export interface ApiAppConfig {
   typingDraftTtl: number;
   isMessagePrimaryEditedDateEnabled: boolean;
   contactNoteLimit?: number;
-  arePasskeysAvailable: boolean;
-  passkeysMaxCount: number;
   diceEmojies: string[];
   diceEmojiesSuccess: Record<string, {
     value: number;
@@ -475,14 +437,6 @@ export interface ApiRestrictionReason {
   reason: string;
   text: string;
   platform: string;
-}
-
-export interface ApiPasskey {
-  id: string;
-  name: string;
-  date: number;
-  softwareEmojiId?: string;
-  lastUsageDate?: number;
 }
 
 export type ApiEmojiGroup = {

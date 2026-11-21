@@ -14,7 +14,6 @@ export { default as DeleteAccountModal } from '../components/modals/deleteAccoun
 export { default as AgeVerificationModal } from '../components/modals/ageVerification/AgeVerificationModal';
 export { default as ChatlistModal } from '../components/modals/chatlist/ChatlistModal';
 export { default as ChatInviteModal } from '../components/modals/chatInvite/ChatInviteModal';
-export { default as PasskeyModal } from '../components/modals/passkey/PasskeyModal';
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 
 export { default as ReportModal } from '../components/modals/reportModal/ReportModal';
@@ -92,7 +91,5 @@ export { default as EditRankModal } from '../components/modals/rank/EditRankModa
 export { default as RankModal } from '../components/modals/rank/RankModal';
 export { default as QuickPreviewModal } from '../components/modals/quickPreview/QuickPreviewModal';
 export { default as StealthModeModal } from '../components/modals/storyStealthMode/StealthModeModal';
-export { default as LeaveGroupModal } from '../components/modals/leaveGroup/LeaveGroupModal';
-export { default as TwoFaCheckModal } from '../components/modals/twoFaCheck/TwoFaCheckModal';
 export { default as QuickChatPickerModal } from '../components/modals/quickChatPicker/QuickChatPickerModal';
 export { default as CocoonModal } from '../components/modals/cocoon/CocoonModal';

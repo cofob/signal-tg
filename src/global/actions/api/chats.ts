@@ -945,32 +945,6 @@ addActionHandler('deleteChat', (global, actions, payload): ActionReturnType => {
   void callApi('deleteChat', { chatId: chat.id });
 });
 
-async function checkFutureCreatorAndOpenModal(
-  chat: ApiChat,
-  shouldSkipOwnershipCheck: boolean | undefined,
-  tabId: number,
-): Promise<boolean> {
-  if (shouldSkipOwnershipCheck || !chat.isOwner) {
-    return false;
-  }
-
-  const futureCreator = await callApi('fetchFutureCreatorAfterLeave', { chat });
-  if (!futureCreator) {
-    return false;
-  }
-
-  const global = getGlobal();
-  const hasPassword = global.settings.byKey.hasPassword;
-  const actions = getActions();
-  if (!hasPassword) {
-    actions.openTwoFaCheckModal({ tabId });
-    return true;
-  }
-
-  actions.openLeaveGroupModal({ chatId: chat.id, nextOwnerId: futureCreator.id, tabId });
-  return true;
-}
-
 function cleanupAfterLeave(chatId: string, tabId: number) {
   let global = getGlobal();
   global = leaveChat(global, chatId);
@@ -996,14 +970,9 @@ function cleanupAfterLeave(chatId: string, tabId: number) {
 }
 
 addActionHandler('leaveChannel', async (global, actions, payload): Promise<void> => {
-  const { chatId, shouldSkipOwnershipCheck, tabId = getCurrentTabId() } = payload;
+  const { chatId, tabId = getCurrentTabId() } = payload;
   const chat = selectChat(global, chatId);
   if (!chat) {
-    return;
-  }
-
-  const isModalOpen = await checkFutureCreatorAndOpenModal(chat, shouldSkipOwnershipCheck, tabId);
-  if (isModalOpen) {
     return;
   }
 
@@ -1013,15 +982,10 @@ addActionHandler('leaveChannel', async (global, actions, payload): Promise<void>
 });
 
 addActionHandler('leaveBasicGroup', async (global, actions, payload): Promise<void> => {
-  const { chatId, shouldSkipOwnershipCheck, tabId = getCurrentTabId() } = payload;
+  const { chatId, tabId = getCurrentTabId() } = payload;
   const chat = selectChat(global, chatId);
   const currentUserId = global.currentUserId;
   if (!chat || !currentUserId) {
-    return;
-  }
-
-  const isModalOpen = await checkFutureCreatorAndOpenModal(chat, shouldSkipOwnershipCheck, tabId);
-  if (isModalOpen) {
     return;
   }
 
@@ -1034,70 +998,6 @@ addActionHandler('leaveBasicGroup', async (global, actions, payload): Promise<vo
   }
 
   cleanupAfterLeave(chatId, tabId);
-});
-
-addActionHandler('verifyTransferOwnership', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, userId, onSuccess, onPasswordMissing, onPasswordTooFresh, onSessionTooFresh,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const user = selectUser(global, userId);
-  if (!chat || !user) {
-    return;
-  }
-
-  const result = await callApi('verifyTransferOwnership', {
-    chat,
-    user,
-  });
-
-  if (!result) {
-    return;
-  }
-
-  if ('canTransfer' in result) {
-    onSuccess?.();
-    return;
-  }
-
-  switch (result.errorMessage) {
-    case 'PASSWORD_MISSING':
-      onPasswordMissing?.();
-      break;
-    case 'PASSWORD_TOO_FRESH':
-      onPasswordTooFresh?.();
-      break;
-    case 'SESSION_TOO_FRESH':
-      onSessionTooFresh?.();
-      break;
-    default:
-      break;
-  }
-});
-
-addActionHandler('transferChatOwnership', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, userId, password, onSuccess,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  const user = selectUser(global, userId);
-  if (!chat || !user?.accessHash) {
-    return;
-  }
-
-  const result = await callApi('editChatCreator', {
-    chat,
-    user,
-    password,
-  });
-
-  if (result !== true) {
-    return;
-  }
-
-  onSuccess?.();
 });
 
 addActionHandler('deleteChannel', (global, actions, payload): ActionReturnType => {

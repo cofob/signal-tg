@@ -93,8 +93,6 @@ export interface GramJsAppConfig {
   rich_message_max_depth?: number;
   rich_message_max_media?: number;
   rich_message_max_table_cols?: number;
-  settings_display_passkeys?: boolean;
-  passkeys_account_passkeys_max?: number;
   aicompose_tone_examples_num?: number;
   aicompose_tone_title_length_max?: number;
   aicompose_tone_prompt_length_max?: number;
@@ -202,8 +200,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     verifyAgeMin: appConfig.verify_age_min,
     typingDraftTtl: appConfig.message_typing_draft_ttl,
     isMessagePrimaryEditedDateEnabled: appConfig.message_primary_edited_date,
-    arePasskeysAvailable: appConfig.settings_display_passkeys,
-    passkeysMaxCount: appConfig.passkeys_account_passkeys_max,
     diceEmojies: appConfig.emojies_send_dice,
     diceEmojiesSuccess: buildDiceEmojiesSuccess(appConfig),
     aiComposeToneExamplesNum: appConfig.aicompose_tone_examples_num,

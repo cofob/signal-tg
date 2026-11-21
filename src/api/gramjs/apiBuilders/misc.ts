@@ -6,28 +6,24 @@ import type {
   ApiConfig,
   ApiCountry,
   ApiLanguage,
-  ApiPasskey,
   ApiPeerTheme,
   ApiPendingSuggestion,
   ApiPrivacyKey,
   ApiPromoData,
   ApiRestrictionReason,
-  ApiSession,
   ApiShareTheme,
   ApiShareThemeBackdrop,
   ApiThemeSettings,
   ApiWallpaper,
   ApiWallpaperSettings,
-  ApiWebSession,
   LangPackStringValue,
 } from '../../types';
 
 import int2hex from '../../../util/int2hex';
-import { omitUndefined, pick } from '../../../util/iteratees';
+import { omitUndefined } from '../../../util/iteratees';
 import { addDocumentToLocalDb } from '../helpers/localDb';
 import { buildApiFormattedText } from './common';
 import { buildApiDocument } from './messageContent';
-import { buildApiPeerId } from './peers';
 import { buildApiReaction } from './reactions';
 
 const PATTERN_MIME_TYPE = 'application/x-tgwallpattern';
@@ -139,32 +135,6 @@ function buildApiThemeSettings(settings: GramJs.TypeThemeSettings): ApiThemeSett
     areOutgoingColorsAnimated: settings.messageColorsAnimated,
     outboxAccentColor: settings.outboxAccentColor !== undefined ? int2hex(settings.outboxAccentColor) : undefined,
     wallpaper: settings.wallpaper && buildApiWallpaper(settings.wallpaper),
-  };
-}
-
-export function buildApiSession(session: GramJs.Authorization): ApiSession {
-  return {
-    isCurrent: Boolean(session.current),
-    isOfficialApp: Boolean(session.officialApp),
-    isPasswordPending: Boolean(session.passwordPending),
-    hash: String(session.hash),
-    areCallsEnabled: !session.callRequestsDisabled,
-    areSecretChatsEnabled: !session.encryptedRequestsDisabled,
-    isUnconfirmed: session.unconfirmed,
-    ...pick(session, [
-      'deviceModel', 'platform', 'systemVersion', 'appName', 'appVersion', 'dateCreated', 'dateActive',
-      'ip', 'country', 'region',
-    ]),
-  };
-}
-
-export function buildApiWebSession(session: GramJs.WebAuthorization): ApiWebSession {
-  return {
-    hash: String(session.hash),
-    botId: buildApiPeerId(session.botId, 'user'),
-    ...pick(session, [
-      'platform', 'browser', 'dateCreated', 'dateActive', 'ip', 'region', 'domain',
-    ]),
   };
 }
 
@@ -357,17 +327,6 @@ export function buildApiRestrictionReasons(
   return restrictionReasons.map((
     { reason, text, platform }) =>
     ({ reason, text, platform }));
-}
-
-export function buildApiPasskey(passkey: GramJs.TypePasskey): ApiPasskey {
-  const { id, name, date, softwareEmojiId, lastUsageDate } = passkey;
-  return {
-    id,
-    name,
-    date,
-    softwareEmojiId: softwareEmojiId?.toString(),
-    lastUsageDate,
-  };
 }
 
 export function buildApiShareTheme(shareTheme: GramJs.TypeShareTheme): ApiShareTheme | undefined {

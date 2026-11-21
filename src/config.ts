@@ -377,7 +377,6 @@ export const SCHEDULED_WHEN_ONLINE = 0x7FFFFFFE;
 export const SUPPORT_URL = 'https://support.signal.org/';
 export const PRIVACY_URL = 'https://signal.org/legal/#privacy-policy';
 export const GENERAL_TOPIC_ID = 1;
-export const FRESH_AUTH_PERIOD = 86400; // 1 day
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];
 

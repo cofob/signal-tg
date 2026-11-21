@@ -91,7 +91,7 @@ export type ApiUpdateWebAuthTokenFailed = {
   '@type': 'updateWebAuthTokenFailed';
 };
 
-export type ApiUpdatePasskeyOption = {
+type ApiUpdatePasskeyOption = {
   '@type': 'updatePasskeyOption';
   option: ApiPasskeyOption;
 };
@@ -851,15 +851,6 @@ export type ApiRequestSync = {
   '@type': 'requestSync';
 };
 
-export type ApiUpdateNewAuthorization = {
-  '@type': 'updateNewAuthorization';
-  hash: string;
-  isUnconfirmed?: true;
-  date?: number;
-  device?: string;
-  location?: string;
-};
-
 export type ApiUpdateGroupInvitePrivacyForbidden = {
   '@type': 'updateGroupInvitePrivacyForbidden';
   userId: string;
@@ -951,7 +942,7 @@ export type ApiUpdate = (
   ApiUpdatePinnedTopicsOrder | ApiUpdateTopic | ApiUpdateTopicEdit | ApiUpdateTopics | ApiUpdateRecentEmojiStatuses |
   ApiUpdateRecentReactions | ApiUpdateStory | ApiUpdateReadStories | ApiUpdateDeleteStory | ApiUpdateSentStoryReaction |
   ApiRequestReconnectApi | ApiRequestSync | ApiUpdateFetchingDifference | ApiUpdateChannelMessages |
-  ApiUpdateStealthMode | ApiUpdateNewAuthorization | ApiUpdateGroupInvitePrivacyForbidden |
+  ApiUpdateStealthMode | ApiUpdateGroupInvitePrivacyForbidden |
   ApiUpdateViewForumAsMessages | ApiUpdateSavedDialogPinned | ApiUpdatePinnedSavedDialogIds | ApiUpdateChatLastMessage |
   ApiUpdateDeleteSavedHistory | ApiUpdatePremiumFloodWait
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto

@@ -793,19 +793,6 @@ addCallback((global: GlobalState) => {
   prevBlurredTabsCount = blurredTabsCount;
 });
 
-addActionHandler('openLeaveGroupModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, nextOwnerId, tabId = getCurrentTabId() } = payload;
-
-  return updateTabState(global, {
-    leaveGroupModal: {
-      chatId,
-      nextOwnerId,
-    },
-  }, tabId);
-});
-
-addTabStateResetterAction('closeLeaveGroupModal', 'leaveGroupModal');
-
 addActionHandler('openAutoDeleteTimerModal', (global, actions, payload): ActionReturnType => {
   const { chatId, tabId = getCurrentTabId() } = payload;
 
@@ -815,16 +802,6 @@ addActionHandler('openAutoDeleteTimerModal', (global, actions, payload): ActionR
 });
 
 addTabStateResetterAction('closeAutoDeleteTimerModal', 'autoDeleteTimerModal');
-
-addActionHandler('openTwoFaCheckModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    isTwoFaCheckModalOpen: true,
-  }, tabId);
-});
-
-addTabStateResetterAction('closeTwoFaCheckModal', 'isTwoFaCheckModalOpen');
 
 addActionHandler('openQuickChatPicker', (global, actions, payload): ActionReturnType => {
   const { tabId = getCurrentTabId() } = payload || {};

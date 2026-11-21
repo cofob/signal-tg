@@ -169,7 +169,6 @@ export interface AccountSettings {
   shouldSuggestCustomEmoji: boolean;
   shouldUpdateStickerSetOrder: boolean;
   lastRecordMessageMode?: 'voice' | 'video';
-  hasPassword?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   shouldArchiveAndMuteNewNonContact?: boolean;
@@ -191,10 +190,10 @@ export type SettingsHighlight = {
   langKey: RegularLangKey;
 };
 
-export type SettingsConfirmation = 'logOut' | 'terminateAllSessions' | 'terminateAllWebSessions';
+export type SettingsConfirmation = 'logOut';
 
 export type SettingsAction = SettingsConfirmation | 'openSupport'
-  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'openPasskeys' | 'setBirthday'
+  | 'openPrivacyPolicy' | 'uploadWallpaper' | 'resetWallpaper' | 'clearMediaCache' | 'setBirthday'
   | 'setAccountTtl';
 
 export enum SettingsScreens {
@@ -204,7 +203,6 @@ export enum SettingsScreens {
   Notifications,
   DataStorage,
   Language,
-  ActiveSessions,
   General,
   GeneralChatBackground,
   GeneralChatBackgroundColor,
@@ -255,23 +253,6 @@ export enum SettingsScreens {
   FoldersIncludedChatsFromChatList,
   FoldersExcludedChats,
   FoldersExcludedChatsFromChatList,
-  TwoFaDisabled,
-  TwoFaNewPassword,
-  TwoFaNewPasswordConfirm,
-  TwoFaNewPasswordHint,
-  TwoFaNewPasswordEmail,
-  TwoFaNewPasswordEmailCode,
-  TwoFaEnabled,
-  TwoFaChangePasswordCurrent,
-  TwoFaChangePasswordNew,
-  TwoFaChangePasswordConfirm,
-  TwoFaChangePasswordHint,
-  TwoFaTurnOff,
-  TwoFaRecoveryEmailCurrentPassword,
-  TwoFaRecoveryEmail,
-  TwoFaRecoveryEmailCode,
-  TwoFaCongratulations,
-  ActiveWebsites,
   PasscodeDisabled,
   PasscodeNewPasscode,
   PasscodeNewPasscodeConfirm,
@@ -288,7 +269,6 @@ export enum SettingsScreens {
   QuickReaction,
   CustomEmoji,
   FoldersShare,
-  Passkeys,
   KeyboardShortcuts,
   SignalProxy,
 }

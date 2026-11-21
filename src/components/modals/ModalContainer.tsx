@@ -26,10 +26,8 @@ import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
 import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
-import LeaveGroupModal from './leaveGroup/LeaveGroupModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
-import PasskeyModal from './passkey/PasskeyModal.async';
 import PollModal from './poll/PollModal.async';
 import ProfileRatingModal from './profileRating/ProfileRatingModal.async';
 import QrCodeModal from './qrCode/QrCodeModal.async';
@@ -42,7 +40,6 @@ import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmati
 import StealthModeModal from './storyStealthMode/StealthModeModal.async';
 import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
 import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
-import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
@@ -67,10 +64,7 @@ type ModalKey = keyof Pick<TabState,
   'quickPreview' |
   'storyStealthModal' |
   'isAudioPlaylistModalOpen' |
-  'isPasskeyModalOpen' |
   'birthdaySetupModal' |
-  'leaveGroupModal' |
-  'isTwoFaCheckModalOpen' |
   'isQuickChatPickerOpen' |
   'isCocoonModalOpen' |
   'editRankModal' |
@@ -157,10 +151,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   quickPreview: QuickPreviewModal,
   storyStealthModal: StealthModeModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
-  isPasskeyModalOpen: PasskeyModal,
   birthdaySetupModal: BirthdaySetupModal,
-  leaveGroupModal: LeaveGroupModal,
-  isTwoFaCheckModalOpen: TwoFaCheckModal,
   isQuickChatPickerOpen: QuickChatPickerModal,
   isCocoonModalOpen: CocoonModal,
   editRankModal: EditRankModal,

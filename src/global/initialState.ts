@@ -117,7 +117,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
   cacheVersion: 10,
   isInited: true,
   passcode: {},
-  twoFaSettings: {},
   isAppUpdateAvailable: false,
   shouldShowContextMenuHint: true,
   appConfig: DEFAULT_APP_CONFIG,
@@ -274,16 +273,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
   },
 
   topPeerCategories: {},
-
-  activeSessions: {
-    byHash: {},
-    orderedHashes: [],
-  },
-
-  activeWebSessions: {
-    byHash: {},
-    orderedHashes: [],
-  },
 
   settings: {
     byKey: {

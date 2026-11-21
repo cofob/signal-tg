@@ -26,12 +26,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['edit/channel', [SettingsScreens.EditProfile, 'PersonalChannelTitle']],
   ['edit/log-out', [SettingsScreens.Main, 'LogOutTitle']],
 
-  ['devices', [SettingsScreens.ActiveSessions]],
-  ['devices/terminate-sessions', [
-    SettingsScreens.ActiveSessions, 'TerminateAllSessions', { requires: 'hasOtherSessions' },
-  ]],
-  ['devices/auto-terminate', [SettingsScreens.ActiveSessions, 'IfInactiveFor']],
-
   ['folders', [SettingsScreens.Folders]],
   ['folders/tab-view', [SettingsScreens.Folders, 'TabsPosition']],
   ['folders/show-tags', [SettingsScreens.Folders, 'ShowFolderTags']],
@@ -49,19 +43,10 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
 
   ['privacy', [SettingsScreens.Privacy]],
   ['privacy/blocked', [SettingsScreens.PrivacyBlockedUsers]],
-  ['privacy/active-websites', [SettingsScreens.ActiveWebsites]],
-  ['privacy/active-websites/disconnect-all', [SettingsScreens.ActiveWebsites, 'AuthSessionsLogOutApplications']],
   ['privacy/passcode', [SettingsScreens.PasscodeDisabled]],
   ['privacy/passcode/disable', [SettingsScreens.PasscodeEnabled, 'PasscodeTurnOff']],
   ['privacy/passcode/change', [SettingsScreens.PasscodeEnabled, 'PasscodeChange']],
   ['privacy/passcode/auto-lock', [SettingsScreens.PasscodeEnabled, 'PasscodeAutoLockTitle']],
-  ['privacy/2sv', [SettingsScreens.TwoFaDisabled]],
-  ['privacy/2sv/change', [SettingsScreens.TwoFaEnabled, 'ChangePassword']],
-  ['privacy/2sv/disable', [SettingsScreens.TwoFaEnabled, 'TurnPasswordOff']],
-  ['privacy/2sv/change-email', [SettingsScreens.TwoFaEnabled, 'SetRecoveryEmail']],
-  ['privacy/passkey', [
-    SettingsScreens.Privacy, 'SettingsItemPrivacyPasskeys', { requires: 'arePasskeysAvailable' },
-  ]],
   ['privacy/auto-delete', [SettingsScreens.AutoDeleteMessages]],
   ['privacy/auto-delete/set-custom', [SettingsScreens.AutoDeleteMessages, 'SetCustomTime']],
   ['privacy/phone-number', [SettingsScreens.PrivacyPhoneNumber]],

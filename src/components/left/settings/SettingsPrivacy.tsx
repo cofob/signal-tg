@@ -31,11 +31,9 @@ type OwnProps = {
 
 type StateProps = {
   isCurrentUserPremium?: boolean;
-  hasPassword?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
   blockedCount: number;
-  webAuthCount: number;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;
   canDisplayAutoarchiveSetting: boolean;
@@ -46,8 +44,6 @@ type StateProps = {
   privacy: GlobalState['settings']['privacy'];
   accountDaysTtl?: number;
   defaultHistoryTtl?: number;
-  passkeyCount?: number;
-  arePasskeysAvailable?: boolean;
 };
 
 const DAYS_PER_MONTH = 30;
@@ -55,12 +51,8 @@ const DAYS_PER_MONTH = 30;
 const SettingsPrivacy = ({
   isActive,
   isCurrentUserPremium,
-  hasPassword,
   hasPasscode,
   blockedCount,
-  webAuthCount,
-  passkeyCount,
-  arePasskeysAvailable,
   isSensitiveEnabled,
   canChangeSensitive,
   canDisplayAutoarchiveSetting,
@@ -82,21 +74,16 @@ const SettingsPrivacy = ({
     loadDefaultHistoryTtl,
     loadGlobalPrivacySettings,
     updateGlobalPrivacySettings,
-    loadWebAuthorizations,
     setSharedSettingOption,
     openSettingsScreen,
     loadAccountDaysTtl,
     openAgeVerificationModal,
-    loadPasskeys,
-    openPasskeyModal,
   } = getActions();
 
   useEffect(() => {
     if (!isCurrentUserFrozen) {
       loadBlockedUsers();
       loadPrivacySettings({});
-      loadWebAuthorizations();
-      loadPasskeys();
     }
   }, [isCurrentUserFrozen]);
 
@@ -143,16 +130,6 @@ const SettingsPrivacy = ({
   const handleOpenDeleteAccountModal = useLastCallback(() => {
     if (!accountDaysTtl) return;
     openDeleteAccountModal({ days: accountDaysTtl });
-  });
-
-  const handleOpenPasskeys = useLastCallback(() => {
-    if (!arePasskeysAvailable || passkeyCount === undefined) return;
-    if (passkeyCount === 0) {
-      openPasskeyModal();
-      return;
-    }
-
-    openSettingsScreen({ screen: SettingsScreens.Passkeys });
   });
 
   const handleOpenAutoDeleteMessages = useLastCallback(() => {
@@ -226,48 +203,6 @@ const SettingsPrivacy = ({
                 {lang(hasPasscode ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
               </span>
             </div>
-          </ListItem>
-        )}
-        <ListItem
-          icon="2fa-filled"
-          iconBg="green"
-          narrow
-          onClick={() => openSettingsScreen({
-            screen: hasPassword ? SettingsScreens.TwoFaEnabled : SettingsScreens.TwoFaDisabled,
-          })}
-        >
-          <div className="multiline-item">
-            <span className="title">{lang('TwoStepVerification')}</span>
-            <span className="subtitle" dir="auto">
-              {lang(hasPassword ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-            </span>
-          </div>
-        </ListItem>
-        {arePasskeysAvailable && (
-          <ListItem
-            icon="key-filled"
-            iconBg="gray"
-            narrow
-            onClick={handleOpenPasskeys}
-          >
-            <div className="multiline-item">
-              <span className="title">{lang('SettingsItemPrivacyPasskeys')}</span>
-              <span className="subtitle" dir="auto">
-                {lang(passkeyCount === undefined ? 'Loading'
-                  : passkeyCount > 0 ? 'SettingsItemPrivacyOn' : 'SettingsItemPrivacyOff')}
-              </span>
-            </div>
-          </ListItem>
-        )}
-        {webAuthCount > 0 && (
-          <ListItem
-            icon="web-filled"
-            iconBg="purple"
-            narrow
-            onClick={() => openSettingsScreen({ screen: SettingsScreens.ActiveWebsites })}
-          >
-            {lang('PrivacySettingsWebSessions')}
-            <span className="settings-item__current-value">{webAuthCount}</span>
           </ListItem>
         )}
         {!isCurrentUserFrozen && (
@@ -491,12 +426,11 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          hasPassword, isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
+          isSensitiveEnabled, canChangeSensitive, shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
         privacy,
         accountDaysTtl,
-        passkeys,
       },
       blocked,
       passcode: {
@@ -511,10 +445,8 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       isCurrentUserPremium,
-      hasPassword,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,
-      webAuthCount: global.activeWebSessions.orderedHashes.length,
       isSensitiveEnabled,
       canDisplayAutoarchiveSetting: appConfig.canDisplayAutoarchiveSetting || isCurrentUserPremium,
       shouldArchiveAndMuteNewNonContact,
@@ -526,8 +458,6 @@ export default memo(withGlobal<OwnProps>(
       isCurrentUserFrozen,
       accountDaysTtl,
       defaultHistoryTtl,
-      passkeyCount: passkeys?.length,
-      arePasskeysAvailable: appConfig.arePasskeysAvailable,
     };
   },
 )(SettingsPrivacy));

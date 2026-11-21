@@ -323,31 +323,8 @@ export interface LangPair {
   'PasscodeChange': undefined;
   'PasscodeTurnOff': undefined;
   'EnablePasscode': undefined;
-  'SessionPreviewTitle': undefined;
-  'SessionPreviewTerminateSession': undefined;
-  'PrivacySettingsLastSeen': undefined;
-  'SessionPreviewApp': undefined;
-  'SessionPreviewIp': undefined;
-  'SessionPreviewLocation': undefined;
-  'SessionPreviewIpDesc': undefined;
-  'AuthSessionsViewAcceptTitle': undefined;
-  'SessionPreviewAcceptSecret': undefined;
-  'SessionPreviewAcceptCalls': undefined;
-  'AuthSessionsCurrentSession': undefined;
-  'TerminateAllSessions': undefined;
-  'OtherSessions': undefined;
-  'TerminateOldSessionHeader': undefined;
-  'IfInactiveFor': undefined;
-  'AreYouSureSessions': undefined;
-  'WebSessionsTitle': undefined;
-  'AuthSessionsLogOut': undefined;
-  'AuthSessionsViewBrowser': undefined;
-  'AuthSessionsViewLocationInfo': undefined;
-  'AuthSessionsLogOutApplications': undefined;
   'AuthKeepSignedIn': undefined;
   'AuthTitle': undefined;
-  'ClearOtherWebSessionsHelp': undefined;
-  'AreYouSureWebSessions': undefined;
   'AutoDownloadMaxFileSize': undefined;
   'AutoDownloadSettingsContacts': undefined;
   'AutoDownloadSettingsPrivateChats': undefined;
@@ -470,16 +447,7 @@ export interface LangPair {
   'AutodownloadGroupChats': undefined;
   'AlwaysShareWith': undefined;
   'NeverShareWith': undefined;
-  'SessionsTitle': undefined;
-  'SessionTerminate': undefined;
-  'OtherWebSessions': undefined;
   'BlockedUsers': undefined;
-  'TwoStepVerification': undefined;
-  'PleaseEnterCurrentPassword': undefined;
-  'PleaseReEnterPassword': undefined;
-  'PasswordHint': undefined;
-  'RecoveryEmailTitle': undefined;
-  'TwoStepVerificationPasswordSet': undefined;
   'Passcode': undefined;
   'PasscodeControllerDisableTitle': undefined;
   'PasscodeControllerChangeTitle': undefined;
@@ -495,7 +463,6 @@ export interface LangPair {
   'AutoDeletePopupTitle': undefined;
   'AutoDeletePopupDescription': undefined;
   'AutoDeleteNever': undefined;
-  'AutoDeleteConfirm': undefined;
   'ActionTTLYouDisabled': undefined;
   'ActionTTLChannelDisabled': undefined;
   'LogOutTitle': undefined;
@@ -517,7 +484,6 @@ export interface LangPair {
   'P2PEverybody': undefined;
   'P2PContacts': undefined;
   'P2PNobody': undefined;
-  'PrivacySettingsWebSessions': undefined;
   'PrivacyTitle': undefined;
   'PrivacyPhoneTitle': undefined;
   'LastSeenTitle': undefined;
@@ -544,19 +510,6 @@ export interface LangPair {
   'AlwaysAllowPlaceholder': undefined;
   'NeverAllowPlaceholder': undefined;
   'PleaseEnterPassword': undefined;
-  'PasswordHintPlaceholder': undefined;
-  'TwoStepVerificationPasswordSetInfo': undefined;
-  'TwoStepVerificationPasswordReturnSettings': undefined;
-  'YourEmailCode': undefined;
-  'EnabledPasswordText': undefined;
-  'ChangePassword': undefined;
-  'TurnPasswordOff': undefined;
-  'SetRecoveryEmail': undefined;
-  'YourEmailSkip': undefined;
-  'YourEmailSkipWarning': undefined;
-  'YourEmailSkipWarningText': undefined;
-  'SetAdditionalPasswordInfo': undefined;
-  'EditAdminTransferSetPassword': undefined;
   'FilterDeleteAlert': undefined;
   'RequestToJoinChannelSentDescription': undefined;
   'RequestToJoinGroupSentDescription': undefined;
@@ -865,9 +818,6 @@ export interface LangPair {
   'EditAdminSendAnonymously': undefined;
   'EditAdminRank': undefined;
   'EditAdminRemoveAdmin': undefined;
-  'EditAdminTransferChannelOwnership': undefined;
-  'EditAdminTransferGroupOwnership': undefined;
-  'EditAdminTransferChangeOwner': undefined;
   'ChannelPermissionsHeader': undefined;
   'UserRestrictionsSend': undefined;
   'UserRestrictionsSendMedia': undefined;
@@ -1090,7 +1040,6 @@ export interface LangPair {
   'EditProfileNoFirstName': undefined;
   'LaunchConfetti': undefined;
   'AriaMoreButton': undefined;
-  'RecoveryEmailCode': undefined;
   'NotificationsWeb': undefined;
   'NotificationsSound': undefined;
   'SettingsPasswordEqual': undefined;
@@ -1727,31 +1676,9 @@ export interface LangPair {
   'StealthModeButtonToStory': undefined;
   'GiftAuctionFinished': undefined;
   'StarGift': undefined;
-  'SettingsItemPrivacyPasskeys': undefined;
   'SettingsItemPrivacyOn': undefined;
   'SettingsItemPrivacyOff': undefined;
-  'SettingsPasskeyTitle': undefined;
-  'SettingsPasskeyInfo': undefined;
-  'SettingsPasskeyFallbackTitle': undefined;
-  'SettingsPasskeysFooterLink': undefined;
-  'SettingsPasskeysCreate': undefined;
-  'PasskeyModalTitle': undefined;
-  'PasskeyModalDescription': undefined;
-  'PasskeyModalFeature1Title': undefined;
-  'PasskeyModalFeature1Description': undefined;
-  'PasskeyModalFeature2Title': undefined;
-  'PasskeyModalFeature2Description': undefined;
-  'PasskeyModalFeature3Title': undefined;
-  'PasskeyModalFeature3Description': undefined;
-  'PasskeyModalButtonText': undefined;
   'PasskeyDeleteTitle': undefined;
-  'PasskeyDeleteText': undefined;
-  'PasskeyCreateError': undefined;
-  'PasskeyLoginError': undefined;
-  'UnconfirmedAuthDeniedTitle': undefined;
-  'UnconfirmedAuthTitle': undefined;
-  'UnconfirmedAuthConfirm': undefined;
-  'UnconfirmedAuthDeny': undefined;
   'SuggestionBirthdaySetupTitle': undefined;
   'SuggestionBirthdaySetupMessage': undefined;
   'BirthdaySetupTitle': undefined;
@@ -1794,18 +1721,6 @@ export interface LangPair {
   'SettingsDataClearMediaCache': undefined;
   'SettingsDataClearMediaCacheDescription': undefined;
   'SettingsDataClearMediaDone': undefined;
-  'LeaveGroupAppointOwner': undefined;
-  'LeaveGroupAdmins': undefined;
-  'LeaveGroupMembers': undefined;
-  'SecurityCheck': undefined;
-  'SecurityCheckInfo': undefined;
-  'SecurityCheckTwoStepEnabled': undefined;
-  'SecurityCheckTwoStepNotChanged': undefined;
-  'SecurityCheckLoggedIn': undefined;
-  'SecurityCheckEnableTwoStep': undefined;
-  'EnterPassword': undefined;
-  'EnterPasswordDescription': undefined;
-  'Transfer': undefined;
   'TranslationTone': undefined;
   'TranslationToneNeutral': undefined;
   'TranslationToneFormal': undefined;
@@ -1894,7 +1809,6 @@ export interface LangPair {
   'SettingsFoldersDesc': undefined;
   'SettingsPerformanceDesc': undefined;
   'SettingsStickersDesc': undefined;
-  'SettingsSessionsDesc': undefined;
   'RichMediaCollage': undefined;
   'RichMediaSlideshow': undefined;
   'RichMediaRetry': undefined;
@@ -2109,7 +2023,6 @@ export interface LangPair {
   'QuotePrivate': undefined;
   'ReactionsAll': undefined;
   'ReactionsOff': undefined;
-  'RecoveryEmailSubtitle': undefined;
   'RemoveFromPosts': undefined;
   'RemoveQuote': undefined;
   'Replace': undefined;
@@ -2346,11 +2259,8 @@ export interface LangPair {
   'SettingsKeywordsChannels': undefined;
   'SettingsKeywordsArchiveAndMute': undefined;
   'SettingsKeywordsBlockedUsers': undefined;
-  'SettingsKeywordsTwoStep': undefined;
   'SettingsKeywordsPasscode': undefined;
   'SettingsKeywordsAutoDelete': undefined;
-  'SettingsKeywordsPasskeys': undefined;
-  'SettingsKeywordsSessions': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
   'SettingsKeywordsStickers': undefined;
@@ -2645,16 +2555,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'AreYouSureDeleteThisChatWithGroup': {
     'chat': V;
-  };
-  'EditAdminTransferOwnershipText': {
-    'chat': V;
-    'user': V;
-  };
-  'EditAdminTransferChannelOwnershipSuccess': {
-    'user': V;
-  };
-  'EditAdminTransferGroupOwnershipSuccess': {
-    'user': V;
   };
   'LinkExpiresIn': {
     'time': V;
@@ -3272,27 +3172,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'current': V;
     'total': V;
   };
-  'SettingsPasskeyUsedAt': {
-    'date': V;
-  };
-  'SettingsPasskeysFooter': {
-    'link': V;
-  };
-  'UnconfirmedAuthDeniedMessage': {
-    'location': V;
-  };
-  'UnconfirmedAuthSingle': {
-    'location': V;
-  };
-  'UnconfirmedAuthLocationRegion': {
-    'deviceModel': V;
-    'region': V;
-    'country': V;
-  };
-  'UnconfirmedAuthLocationCountry': {
-    'deviceModel': V;
-    'country': V;
-  };
   'BirthdayPrivacySuggestion': {
     'link': V;
   };
@@ -3305,17 +3184,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'GroupStatusWithOnline': {
     'status': V;
     'onlineCount': V;
-  };
-  'LeaveGroupTitle': {
-    'group': V;
-  };
-  'LeaveGroupDescription': {
-    'nextOwner': V;
-    'group': V;
-  };
-  'LeaveBasicGroupDescription': {
-    'nextOwner': V;
-    'group': V;
   };
   'CocoonFeature1Text': {
     'username': V;
@@ -3469,9 +3337,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'StoryYouMentionedTitle': {
     'user': V;
-  };
-  'TwoStepAuthConfirmEmailDescription': {
-    'recoveryEmail': V;
   };
   'UploadSpeedLimitedMessage': {
     'factor': V;
@@ -3927,8 +3792,6 @@ export interface LangKeyGroups {
       | 'PeerInfoConfirmRemovePeer'
       | 'EditAdminPromotedBy'
       | 'UserRemovedBy'
-      | 'EditAdminTransferChannelOwnershipSuccess'
-      | 'EditAdminTransferGroupOwnershipSuccess'
       | 'VoipPeerIncompatible'
       | 'ActionAddUserYou'
       | 'ActionKickUserYou'
@@ -4227,15 +4090,9 @@ export interface LangKeyGroups {
       | 'ProfileBirthdayValue'
       | 'ProfileBirthdayTodayValue'
       | 'ActionGroupCallScheduledChannel'
-      | 'SettingsPasskeyUsedAt'
       | 'ChatPrivateMessageEditTimestampDate'
       | 'MessageReadAt';
     variables: 'date';
-  };
-  'chat,user': {
-    keys:
-      | 'EditAdminTransferOwnershipText';
-    variables: 'chat' | 'user';
   };
   'phone': {
     keys:
@@ -4294,7 +4151,6 @@ export interface LangKeyGroups {
       | 'GiftInfoHidden'
       | 'GiftInfoChannelSaved'
       | 'GiftInfoChannelHidden'
-      | 'SettingsPasskeysFooter'
       | 'BirthdayPrivacySuggestion'
       | 'CocoonFeature3Text'
       | 'CocoonFooterText'
@@ -4659,37 +4515,10 @@ export interface LangKeyGroups {
       | 'MediaCounter';
     variables: 'current' | 'total';
   };
-  'location': {
-    keys:
-      | 'UnconfirmedAuthDeniedMessage'
-      | 'UnconfirmedAuthSingle';
-    variables: 'location';
-  };
-  'country,deviceModel,region': {
-    keys:
-      | 'UnconfirmedAuthLocationRegion';
-    variables: 'country' | 'deviceModel' | 'region';
-  };
-  'country,deviceModel': {
-    keys:
-      | 'UnconfirmedAuthLocationCountry';
-    variables: 'country' | 'deviceModel';
-  };
   'onlineCount,status': {
     keys:
       | 'GroupStatusWithOnline';
     variables: 'onlineCount' | 'status';
-  };
-  'group': {
-    keys:
-      | 'LeaveGroupTitle';
-    variables: 'group';
-  };
-  'group,nextOwner': {
-    keys:
-      | 'LeaveGroupDescription'
-      | 'LeaveBasicGroupDescription';
-    variables: 'group' | 'nextOwner';
   };
   'author,group,tag': {
     keys:
@@ -4748,11 +4577,6 @@ export interface LangKeyGroups {
     keys:
       | 'ReplyToQuote';
     variables: 'senderTitle';
-  };
-  'recoveryEmail': {
-    keys:
-      | 'TwoStepAuthConfirmEmailDescription';
-    variables: 'recoveryEmail';
   };
   'usernames': {
     keys:

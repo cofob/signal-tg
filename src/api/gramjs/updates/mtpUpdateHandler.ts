@@ -1105,15 +1105,6 @@ export function updater(update: Update) {
       '@type': 'updateStealthMode',
       stealthMode: buildApiStealthMode(update.stealthMode),
     });
-  } else if (update instanceof GramJs.UpdateNewAuthorization) {
-    sendApiUpdate({
-      '@type': 'updateNewAuthorization',
-      hash: update.hash.toString(),
-      date: update.date,
-      device: update.device,
-      location: update.location,
-      isUnconfirmed: update.unconfirmed,
-    });
   } else if (update instanceof GramJs.UpdateChannelViewForumAsMessages) {
     sendApiUpdate({
       '@type': 'updateViewForumAsMessages',

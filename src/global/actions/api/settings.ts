@@ -4,7 +4,6 @@ import type { ActionReturnType } from '../../types';
 import {
   LeftColumnContent,
   ProfileEditProgress,
-  SettingsScreens,
   UPLOADING_WALLPAPER_SLUG,
 } from '../../../types';
 
@@ -14,7 +13,6 @@ import {
   MUTE_INDEFINITE_TIMESTAMP,
   UNMUTE_TIMESTAMP,
 } from '../../../config';
-import { signalUnknownPasskey, toCredentialCreationOptions } from '../../../util/browser/passkeys';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { fetchBuiltInLanguages, getTranslationFn, loadAndChangeLanguage } from '../../../util/localization';
 import { requestPermission } from '../../../util/notifications';
@@ -1041,98 +1039,14 @@ addActionHandler('sortChatUsernames', async (global, actions, payload): Promise<
   }
 });
 
-addActionHandler('loadPasskeys', async (global): Promise<void> => {
-  const result = await callApi('fetchPasskeys');
-  if (!result) {
-    global = getGlobal();
-    global = {
-      ...global,
-      settings: {
-        ...global.settings,
-        passkeys: undefined,
-      },
-    };
-    setGlobal(global);
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    settings: {
-      ...global.settings,
-      passkeys: result.passkeys,
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('startPasskeyRegistration', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  const preparedOptions = await callApi('initPasskeyRegistration');
-  if (!preparedOptions) return;
-
-  const options = toCredentialCreationOptions(preparedOptions);
-  const credential = await navigator.credentials.create(options).catch((e: unknown) => {
-    if (e instanceof DOMException && e.name === 'NotAllowedError') {
-      actions.showNotification({
-        message: {
-          key: 'PasskeyCreateError',
-        },
-        tabId,
-      });
-      return undefined;
-    }
-    throw e;
-  });
-  if (!credential) return;
-  const publicKeyCredential = credential as PublicKeyCredential;
-
-  const result = await callApi('registerPasskey', publicKeyCredential.toJSON() as RegistrationResponseJSON);
-  if (!result) return;
-
-  await getPromiseActions().loadPasskeys();
-  actions.openSettingsScreen({ screen: SettingsScreens.Passkeys, tabId });
-});
-
-addActionHandler('deletePasskey', async (global, actions, payload): Promise<void> => {
-  const { id } = payload;
-
-  const passkeys = global.settings.passkeys;
-  if (passkeys?.length) {
-    const filteredPasskeys = passkeys.filter((passkey) => passkey.id !== id);
-    global = {
-      ...global,
-      settings: {
-        ...global.settings,
-        passkeys: filteredPasskeys,
-      },
-    };
-    setGlobal(global);
-  }
-
-  const isDeleted = await callApi('deletePasskey', { id });
-  if (isDeleted) signalUnknownPasskey(id);
-
-  actions.loadPasskeys();
-});
-
 addActionHandler('loadNestedSettingsData', async (global): Promise<void> => {
   const {
-    loadPasswordInfo, loadAuthorizations, loadBlockedUsers, loadWebAuthorizations, loadPasskeys, loadDefaultHistoryTtl,
-    loadGlobalPrivacySettings,
+    loadBlockedUsers, loadDefaultHistoryTtl, loadGlobalPrivacySettings,
   } = getPromiseActions();
 
-  const requests = [loadPasswordInfo(), loadAuthorizations()];
-  if (!selectIsCurrentUserFrozen(global)) {
-    requests.push(
-      loadBlockedUsers(), loadWebAuthorizations(), loadPasskeys(), loadDefaultHistoryTtl(),
-      loadGlobalPrivacySettings(),
-    );
-  }
+  if (selectIsCurrentUserFrozen(global)) return;
 
-  await Promise.all(requests);
+  await Promise.all([loadBlockedUsers(), loadDefaultHistoryTtl(), loadGlobalPrivacySettings()]);
 });
 
 addActionHandler('openSettingsLink', async (global, actions, payload): Promise<void> => {

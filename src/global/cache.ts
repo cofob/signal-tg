@@ -517,6 +517,12 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
       delete (webPage as AnyLiteral).cachedPageAudioById;
     });
     delete untypedCached.sharedState?.settings?.instantViewFontSizeAdjust;
+    // Cloud password and Telegram passkeys
+    delete untypedCached.auth?.hint;
+    delete untypedCached.auth?.passkeyOption;
+    delete untypedCached.settings.byKey.hasPassword;
+    delete untypedCached.appConfig?.arePasskeysAvailable;
+    delete untypedCached.appConfig?.passkeysMaxCount;
     cached.cacheVersion = 10;
   }
 

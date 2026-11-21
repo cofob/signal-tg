@@ -51,33 +51,6 @@ export async function reportProfilePhoto({
   return result;
 }
 
-export async function changeSessionSettings({
-  hash, areCallsEnabled, areSecretChatsEnabled, isConfirmed,
-}: {
-  hash: string; areCallsEnabled?: boolean; areSecretChatsEnabled?: boolean; isConfirmed?: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.account.ChangeAuthorizationSettings({
-    hash: BigInt(hash),
-    ...(areCallsEnabled !== undefined ? { callRequestsDisabled: !areCallsEnabled } : undefined),
-    ...(areSecretChatsEnabled !== undefined ? { encryptedRequestsDisabled: !areSecretChatsEnabled } : undefined),
-    ...(isConfirmed && { confirmed: isConfirmed }),
-  }));
-
-  return result;
-}
-
-export async function changeSessionTtl({
-  days,
-}: {
-  days: number;
-}) {
-  const result = await invokeRequest(new GramJs.account.SetAuthorizationTTL({
-    authorizationTtlDays: days,
-  }));
-
-  return result;
-}
-
 export function buildApiAccountDays(ttl: GramJs.AccountDaysTTL): { days: number } {
   return {
     days: ttl.days,

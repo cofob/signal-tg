@@ -667,20 +667,11 @@ export type TabState = {
     threadId?: ThreadId;
   };
 
-  isPasskeyModalOpen?: boolean;
-
   settingsConfirmation?: SettingsConfirmation;
-
-  leaveGroupModal?: {
-    chatId: string;
-    nextOwnerId?: string;
-  };
 
   autoDeleteTimerModal?: {
     chatId: string;
   };
-
-  isTwoFaCheckModalOpen?: true;
 
   insertingPeerIdMention?: string;
   shouldSaveAttachmentsCompression?: boolean;

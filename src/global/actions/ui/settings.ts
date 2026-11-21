@@ -352,15 +352,6 @@ addActionHandler('closeShareChatFolderModal', (global, actions, payload): Action
   }, tabId);
 });
 
-addActionHandler('openPasskeyModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    isPasskeyModalOpen: true,
-  }, tabId);
-});
-
-addTabStateResetterAction('closePasskeyModal', 'isPasskeyModalOpen');
-
 addActionHandler('openSettingsConfirmation', (global, actions, payload): ActionReturnType => {
   const { confirmation, tabId = getCurrentTabId() } = payload;
   return updateTabState(global, {

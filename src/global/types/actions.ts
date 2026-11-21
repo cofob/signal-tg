@@ -123,7 +123,6 @@ export interface ActionPayloads {
   // auth
   setAuthPhoneNumber: { phoneNumber: string };
   setAuthCode: { code: string };
-  setAuthPassword: { password: string };
   signUp: {
     firstName: string;
     lastName: string;
@@ -136,7 +135,6 @@ export interface ActionPayloads {
     isFallback?: boolean;
   } & WithTabId;
   goToAuthQrCode: undefined;
-  loginWithPasskey: undefined;
 
   // stickers & GIFs
   saveGif: {
@@ -194,31 +192,6 @@ export interface ActionPayloads {
     id: KeyboardShortcutId;
   } | undefined;
   updatePerformanceSettings: Partial<PerformanceType>;
-  loadPasswordInfo: undefined;
-  clearTwoFaError: undefined;
-  updatePassword: {
-    currentPassword: string;
-    password: string;
-    hint?: string;
-    email?: string;
-    onSuccess: VoidFunction;
-  };
-  updateRecoveryEmail: {
-    currentPassword: string;
-    email: string;
-    onSuccess: VoidFunction;
-  } & WithTabId;
-  clearPassword: {
-    currentPassword: string;
-    onSuccess: VoidFunction;
-  };
-  provideTwoFaEmailCode: {
-    code: string;
-  };
-  checkPassword: {
-    currentPassword: string;
-    onSuccess: VoidFunction;
-  };
   loadBlockedUsers: {
     isOnlyStories?: boolean;
   } | undefined;
@@ -252,13 +225,6 @@ export interface ActionPayloads {
   applyLanguage: { language: ApiLanguage } & WithTabId;
   removeCustomLanguage: { langCode: string };
 
-  loadPasskeys: undefined;
-  startPasskeyRegistration: WithTabId | undefined;
-  deletePasskey: {
-    id: string;
-  };
-  openPasskeyModal: WithTabId | undefined;
-  closePasskeyModal: WithTabId | undefined;
   openSettingsConfirmation: {
     confirmation: SettingsConfirmation;
   } & WithTabId;
@@ -420,11 +386,9 @@ export interface ActionPayloads {
   } & WithTabId;
   leaveChannel: {
     chatId: string;
-    shouldSkipOwnershipCheck?: boolean;
   } & WithTabId;
   leaveBasicGroup: {
     chatId: string;
-    shouldSkipOwnershipCheck?: boolean;
   } & WithTabId;
   deleteChannel: { chatId: string } & WithTabId;
   toggleChatPinned: {
@@ -998,15 +962,6 @@ export interface ActionPayloads {
     description: string;
     photo?: ApiPhoto;
   } & WithTabId;
-  changeSessionSettings: {
-    hash: string;
-    areCallsEnabled?: boolean;
-    areSecretChatsEnabled?: boolean;
-    isConfirmed?: boolean;
-  };
-  changeSessionTtl: {
-    days: number;
-  };
   openFrozenAccountModal: WithTabId | undefined;
   closeFrozenAccountModal: WithTabId | undefined;
   openDeleteAccountModal: {
@@ -1942,18 +1897,6 @@ export interface ActionPayloads {
     action: ApiInlineButtonAction;
   } & WithTabId;
 
-  // Settings
-  loadAuthorizations: undefined;
-  terminateAuthorization: {
-    hash: string;
-  };
-  terminateAllAuthorizations: undefined;
-
-  loadWebAuthorizations: undefined;
-  terminateWebAuthorization: {
-    hash: string;
-  };
-  terminateAllWebAuthorizations: undefined;
   toggleUsername: {
     username: string;
     isActive: boolean;
@@ -2249,34 +2192,11 @@ export interface ActionPayloads {
     num: number;
   } & WithTabId;
 
-  openLeaveGroupModal: {
-    chatId: string;
-    nextOwnerId?: string;
-  } & WithTabId;
-  closeLeaveGroupModal: WithTabId | undefined;
-
   openAutoDeleteTimerModal: {
     chatId: string;
   } & WithTabId;
   closeAutoDeleteTimerModal: WithTabId | undefined;
 
-  openTwoFaCheckModal: WithTabId | undefined;
-  closeTwoFaCheckModal: WithTabId | undefined;
-
-  verifyTransferOwnership: {
-    chatId: string;
-    userId: string;
-    onSuccess?: VoidFunction;
-    onPasswordMissing?: VoidFunction;
-    onPasswordTooFresh?: VoidFunction;
-    onSessionTooFresh?: VoidFunction;
-  };
-  transferChatOwnership: {
-    chatId: string;
-    userId: string;
-    password: string;
-    onSuccess?: VoidFunction;
-  } & WithTabId;
   openQuickChatPicker: WithTabId | undefined;
   closeQuickChatPicker: WithTabId | undefined;
 

@@ -80,12 +80,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       actions.loadAiComposeTones();
       break;
 
-    case 'updateNewAuthorization': {
-      // Load more info about this session
-      actions.loadAuthorizations();
-      break;
-    }
-
     case 'updateFavoriteStickers':
       actions.loadFavoriteStickers();
       break;

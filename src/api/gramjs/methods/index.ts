@@ -30,8 +30,6 @@ export * from './management';
 
 export * from './settings';
 
-export * from './twoFaSettings';
-
 export * from './calls';
 
 export * from './reactions';

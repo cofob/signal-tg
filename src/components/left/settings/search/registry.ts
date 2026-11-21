@@ -133,14 +133,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     iconBg: 'gray',
     requires: 'canSendWithKeyboard',
   },
-  {
-    screen: SettingsScreens.ActiveSessions,
-    parent: SettingsScreens.Main,
-    titleKey: 'SessionsTitle',
-    keywordsKey: 'SettingsKeywordsSessions',
-    icon: 'devices-filled',
-    iconBg: 'blue',
-  },
 
   {
     screen: SettingsScreens.GeneralChatBackground,
@@ -185,29 +177,6 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsPasscode',
     requires: 'canSetPasscode',
     screenWhen: { flag: 'hasPasscode', screen: SettingsScreens.PasscodeEnabled },
-  },
-  {
-    screen: SettingsScreens.TwoFaDisabled,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'TwoStepVerification',
-    keywordsKey: 'SettingsKeywordsTwoStep',
-    requires: 'isPasswordStateKnown',
-    screenWhen: { flag: 'hasPassword', screen: SettingsScreens.TwoFaEnabled },
-  },
-  {
-    screen: SettingsScreens.Passkeys,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'SettingsPasskeyTitle',
-    aliasKey: 'SettingsItemPrivacyPasskeys',
-    keywordsKey: 'SettingsKeywordsPasskeys',
-    requires: 'hasPasskeys',
-  },
-  {
-    screen: SettingsScreens.ActiveWebsites,
-    parent: SettingsScreens.Privacy,
-    titleKey: 'OtherWebSessions',
-    aliasKey: 'PrivacySettingsWebSessions',
-    requires: 'hasWebSessions',
   },
   {
     screen: SettingsScreens.AutoDeleteMessages,
@@ -343,11 +312,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     requires: 'isDesktopLayout',
   }),
 
-  ...buildEntries(SettingsScreens.ActiveSessions, ['TerminateOldSessionHeader', 'IfInactiveFor']),
-  ...buildEntries(SettingsScreens.ActiveSessions, ['AuthSessionsCurrentSession'], { requires: 'areSessionsLoaded' }),
-  ...buildEntries(SettingsScreens.ActiveSessions, ['TerminateAllSessions'], { requires: 'hasOtherSessions' }),
-  ...buildEntries(SettingsScreens.ActiveWebsites, ['WebSessionsTitle', 'AuthSessionsLogOutApplications']),
-
   ...buildEntries(SettingsScreens.Privacy, [
     'PrivacyTitle', 'SettingsWindowSystem', 'SettingsTitleChatName', 'DeleteMyAccount', 'DeleteAccountIfAwayFor',
   ]),
@@ -359,9 +323,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   }),
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
-  }),
-  ...buildEntries(SettingsScreens.Privacy, ['SettingsItemPrivacyPasskeys'], {
-    requires: 'arePasskeysAvailable', keywordsKey: 'SettingsKeywordsPasskeys',
   }),
 
   ...PRIVACY_VISIBILITY_SCREENS.flatMap(([screen, titleKey]) => [
@@ -375,9 +336,6 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     'SetAutoDeleteTimer', 'SettingsItemPrivacyOff', 'SetCustomTime',
   ]),
 
-  ...buildEntries(SettingsScreens.TwoFaEnabled, ['ChangePassword', 'TurnPasswordOff', 'SetRecoveryEmail'], {
-    requires: 'hasPassword',
-  }),
   ...buildEntries(SettingsScreens.PasscodeEnabled, [
     'PasscodeChange', 'PasscodeTurnOff', 'PasscodeLockScreenTitle', 'PasscodeKeepBackground', 'PasscodeAutoLockTitle',
     'PasscodeAutoLockDisabled', 'PasscodeAutoLock1Min', 'PasscodeAutoLock5Min', 'PasscodeAutoLock30Min',

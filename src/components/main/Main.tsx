@@ -212,11 +212,9 @@ const Main = ({
     loadRecentReactions,
     loadDefaultTagReactions,
     loadFeaturedEmojiStickers,
-    loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
     loadAiComposeTones,
-    loadPasswordInfo,
     loadAllChats,
     loadAllStories,
     loadAllHiddenStories,
@@ -275,8 +273,6 @@ const Main = ({
       initMain();
       loadContactList();
       checkAppVersion();
-      loadAuthorizations();
-      loadPasswordInfo();
       loadNotificationSettings();
       loadNotificationExceptions();
     }

@@ -14,7 +14,6 @@ import useHistoryBack from '../../hooks/useHistoryBack';
 import Transition from '../ui/Transition';
 import AuthCode from './AuthCode.async';
 import AuthHistorySync from './AuthHistorySync';
-import AuthPassword from './AuthPassword.async';
 import AuthPhoneNumber from './AuthPhoneNumber';
 import AuthQrCode from './AuthQrCode';
 import AuthRegister from './AuthRegister.async';
@@ -60,8 +59,6 @@ const Auth = ({
     switch (renderingAuthState) {
       case 'authorizationStateWaitCode':
         return <AuthCode />;
-      case 'authorizationStateWaitPassword':
-        return <AuthPassword />;
       case 'authorizationStateWaitRegistration':
         return <AuthRegister />;
       case 'authorizationStateWaitPhoneNumber':
@@ -77,8 +74,6 @@ const Auth = ({
     switch (renderingAuthState) {
       case 'authorizationStateWaitCode':
         return 0;
-      case 'authorizationStateWaitPassword':
-        return 1;
       case 'authorizationStateWaitRegistration':
         return 2;
       case 'authorizationStateWaitPhoneNumber':
