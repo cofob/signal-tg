@@ -1,0 +1,37 @@
+.root {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.info {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.status {
+  overflow: hidden;
+
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.missed {
+  color: var(--color-error);
+}
+
+.unseen {
+  flex-shrink: 0;
+
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+
+  background-color: var(--color-primary);
+}

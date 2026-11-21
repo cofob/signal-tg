@@ -8,9 +8,7 @@ import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
 import { ALL_FOLDER_ID, ARCHIVED_FOLDER_ID } from '../../../config';
-import {
-  isChatChannel, isDeletedUser,
-} from '../../../global/helpers';
+import { isDeletedUser } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import { unique } from '../../../util/iteratees';
 import { getPrivacyKey } from './helpers/privacy';
@@ -74,18 +72,15 @@ const SettingsPrivacyVisibilityExceptionList = ({
   const folderArchivedOrderedIds = useFolderManagerForOrderedIds(ARCHIVED_FOLDER_ID);
   const displayedIds = useMemo(() => {
     // No need for expensive global updates on chats, so we avoid them
-    const chatsById = getGlobal().chats.byId;
     const usersById = getGlobal().users.byId;
 
     const chatIds = unique([...folderAllOrderedIds || [], ...folderArchivedOrderedIds || []])
       .filter((chatId) => {
-        const chat = chatsById[chatId];
         const user = usersById[chatId];
         const isDeleted = user && isDeletedUser(user);
-        const isChannel = chat && isChatChannel(chat);
         return (!usersOnly || user)
           && chatId !== currentUserId
-          && !isChannel && !isDeleted;
+          && !isDeleted;
       });
 
     const filteredChats = filterPeersByQuery({ ids: chatIds, query: searchQuery });

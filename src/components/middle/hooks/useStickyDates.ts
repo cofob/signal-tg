@@ -5,7 +5,7 @@ import useLastCallback from '../../../hooks/useLastCallback';
 import useRunDebounced from '../../../hooks/useRunDebounced';
 
 const DEBOUNCE = 1000;
-const STICKY_SELECTORS = ['.sticky-date', '.sticky-topic'];
+const STICKY_SELECTORS = ['.sticky-date'];
 
 export default function useStickyDates() {
   // For some reason we can not synchronously hide a sticky element (from `useLayoutEffect`) when chat opens

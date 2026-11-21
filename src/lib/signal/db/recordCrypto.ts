@@ -2,7 +2,7 @@ import {
   decryptValue, type EncryptedValue, encryptValue, isEncryptedValue, isEncryptingWrites,
 } from '../store/atRest';
 
-export type StoreName = 'conversations' | 'messages' | 'stories';
+export type StoreName = 'conversations' | 'messages' | 'stories' | 'calls';
 
 type PlainFields = Record<string, unknown>;
 
@@ -65,6 +65,8 @@ function getPlainFields(store: StoreName, record: PlainFields): PlainFields {
         sendRetry: sendRetry && { at: sendRetry.at },
       });
     }
+    case 'calls':
+      return { peerId: record.peerId, callId: record.callId, timestamp: record.timestamp };
     case 'stories':
       return omitUndefined({
         id: record.id, authorAci: record.authorAci, sentAt: record.sentAt, expiresAt: record.expiresAt,

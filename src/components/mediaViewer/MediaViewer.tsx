@@ -72,7 +72,6 @@ import { dispatchPriorityPlaybackEvent } from '../../hooks/usePriorityPlaybackCh
 import useShowTransition from '../../hooks/useShowTransition';
 import { useMediaProps } from './hooks/useMediaProps';
 
-import ReportAvatarModal from '../common/ReportAvatarModal';
 import Button from '../ui/Button';
 import Transition from '../ui/Transition';
 import MediaViewerActions from './MediaViewerActions';
@@ -172,7 +171,6 @@ const MediaViewer = ({
   const isGhostAnimation = Boolean(withAnimation && !shouldSkipHistoryAnimations);
 
   /* Controls */
-  const [isReportAvatarModalOpen, openReportAvatarModal, closeReportAvatarModal] = useFlag();
 
   const {
     isVideo,
@@ -185,14 +183,6 @@ const MediaViewer = ({
   } = useMediaProps({
     media, isAvatar: Boolean(avatarOwner), origin, delay: isGhostAnimation && ANIMATION_DURATION,
   });
-
-  const canReportAvatar = (() => {
-    if (isChatWithSelf) return false;
-    if (currentItem?.type !== 'avatar' || !avatarOwner) return false;
-    const info = currentItem.profilePhotos;
-    if (media === info.personalPhoto) return false;
-    return true;
-  })();
 
   const mediaKeys = useMemo<SharedMediaKey[] | undefined>(() => (
     getSharedMediaKeys(chatMessages || {}, collectedMessageIds || [], contentType || 'media')
@@ -573,17 +563,9 @@ const MediaViewer = ({
           isVideo={isVideo}
           item={currentItem}
           canUpdateMedia={canUpdateMedia}
-          canReportAvatar={canReportAvatar}
           onBeforeDelete={handleBeforeDelete}
-          onReportAvatar={openReportAvatarModal}
           onCloseMediaViewer={handleClose}
           onForward={handleForward}
-        />
-        <ReportAvatarModal
-          isOpen={isReportAvatarModalOpen}
-          onClose={closeReportAvatarModal}
-          photo={avatar}
-          peerId={avatarOwner?.id}
         />
       </div>
       <MediaViewerSlides

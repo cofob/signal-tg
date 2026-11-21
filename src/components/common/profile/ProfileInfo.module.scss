@@ -301,50 +301,6 @@
   }
 }
 
-.topicContainer {
-  --custom-emoji-size: 7.5rem;
-
-  padding: 1rem 1rem 0.75rem;
-}
-
-.topicTitle {
-  margin: 0.5rem 0 0;
-  font-size: 1.25rem;
-  line-height: 1.5rem;
-  text-align: center;
-}
-
-.topicIcon {
-  display: flex !important;
-  width: 7.5rem !important;
-  height: 7.5rem !important;
-  margin: auto;
-
-  &:global(.general-forum-icon) {
-    font-size: 7.5rem;
-    color: var(--color-text-secondary);
-  }
-}
-
-.topicIconTitle {
-  font-size: 3rem !important;
-  font-weight: var(--font-weight-normal);
-
-  :global(.emoji-small) {
-    width: 3rem;
-    height: 3rem;
-  }
-}
-
-.topicMessagesCounter {
-  margin: 0;
-
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: var(--color-text-secondary);
-  text-align: center;
-}
-
 // A collapsed header with the music band is taller than a narrow column is wide, and a square would end above the
 // band. The square stays otherwise, so the pattern is not redrawn while the header height animates.
 .radialPatternBackground {

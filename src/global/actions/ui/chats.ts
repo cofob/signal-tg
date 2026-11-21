@@ -13,7 +13,7 @@ import {
 import { updateTabState } from '../../reducers/tabs';
 import { replaceTabThreadParam } from '../../reducers/threads';
 import {
-  selectCanOpenMessageList, selectChat, selectCurrentMessageList, selectTabState,
+  selectCanOpenMessageList, selectCurrentMessageList, selectTabState,
 } from '../../selectors';
 
 addActionHandler('openDeleteMemberModal', (global, actions, payload): ActionReturnType => {
@@ -39,7 +39,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
     type = 'thread',
     shouldReplaceHistory = false,
     shouldReplaceLast = false,
-    noForumTopicPanel,
     tabId = getCurrentTabId(),
   } = payload;
 
@@ -80,16 +79,6 @@ addActionHandler('processOpenChatOrThread', (global, actions, payload): ActionRe
     }, tabId);
   }
 
-  if (chatId) {
-    const chat = selectChat(global, chatId);
-
-    if (chat?.isForum && !noForumTopicPanel) {
-      actions.openForumPanel({ chatId, tabId });
-    } else if (chatId !== selectTabState(global, tabId).forumPanelChatId) {
-      actions.closeForumPanel({ tabId });
-    }
-  }
-
   actions.updatePageTitle({ tabId });
 
   return updateCurrentMessageList(global, chatId, threadId, type, shouldReplaceHistory, shouldReplaceLast, tabId);
@@ -125,20 +114,6 @@ addActionHandler('openChatWithInfo', (global, actions, payload): ActionReturnTyp
   processChatInfoState({ global, isSameMessageList, profileTab, forceScrollProfileTab, isOwnProfile, tabId });
 
   actions.openChat({ ...rest, tabId });
-});
-
-addActionHandler('openThreadWithInfo', (global, actions, payload): ActionReturnType => {
-  const { profileTab, forceScrollProfileTab, isOwnProfile, tabId = getCurrentTabId(), ...rest } = payload;
-  if (!selectCanOpenMessageList(global, rest.chatId, rest.threadId, rest.type, tabId)) return;
-
-  const currentMessageList = selectCurrentMessageList(global, tabId);
-  const isSameMessageList = currentMessageList?.chatId === rest.chatId
-    && currentMessageList?.threadId === rest.threadId
-    && currentMessageList?.type === (rest.type || 'thread');
-
-  processChatInfoState({ global, isSameMessageList, profileTab, forceScrollProfileTab, isOwnProfile, tabId });
-
-  actions.openThread({ ...rest, tabId });
 });
 
 function processChatInfoState<T extends GlobalState>({
@@ -181,12 +156,12 @@ function processChatInfoState<T extends GlobalState>({
 
 addActionHandler('openChatWithDraft', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, text, threadId = MAIN_THREAD_ID, files, filter, tabId = getCurrentTabId(),
+    chatId, text, files, filter, tabId = getCurrentTabId(),
   } = payload;
   if (selectTabState(global, tabId).richMediaUploadBlockingCount) return;
 
   if (chatId) {
-    actions.openThread({ chatId, threadId, tabId });
+    actions.openChat({ id: chatId, tabId });
   }
 
   return updateTabState(global, {

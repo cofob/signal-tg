@@ -170,7 +170,7 @@ export function getAllMultitabTokens() {
   return Array.from(collectedTokens);
 }
 
-export function reestablishMasterToSelf() {
+function reestablishMasterToSelf() {
   isWaitingForMaster = true;
   channel.postMessage({
     collectedTokens, masterToken: token, shouldGiveUpMaster: true,

@@ -1,5 +1,8 @@
-import { SIGNAL_USER_AGENT } from '../config';
+import type { TrafficClass } from '../config';
+
+import { SIGNAL_CHAT_HOST, SIGNAL_STORAGE_HOST, SIGNAL_USER_AGENT } from '../config';
 import { pause } from '../../../util/schedulers';
+import { getServerTimeOffset, setServerTimeOffset } from '../../../util/serverTime';
 
 import Http2Connection, { Http2Error } from './Http2Connection';
 import StreamReader from './StreamReader';
@@ -8,6 +11,8 @@ import TlsTunnel from './TlsTunnel';
 type OnBodyProgress = (transferredLength: number, totalLength: number) => void;
 
 export type HttpRequest = {
+  // Picks the tunnel and the connections that carry the request; the caller states whether it has account credentials
+  trafficClass: TrafficClass;
   method: string;
   path: string;
   headers?: Record<string, string>;
@@ -56,28 +61,81 @@ const IDLE_TIMEOUT_MS = 60 * 1000;
 const HTTP_ALPN_PROTOCOLS = ['h2', 'http/1.1'];
 const HTTP2_ALPN_PROTOCOL = 'h2';
 
-const pools = new Map<string, HostPool>();
-const http2Connections = new Map<string, Http2Connection>();
-const http2Opens = new Map<string, Promise<Http2Connection | undefined>>();
-// Hosts that did not negotiate HTTP/2
-const http1Hosts = new Set<string>();
+// The classes never share connections: each has its own pools, so a connection opened through one tunnel is never
+// used for the other class's requests
+type ClassConnections = {
+  pools: Map<string, HostPool>;
+  http2Connections: Map<string, Http2Connection>;
+  http2Opens: Map<string, Promise<Http2Connection | undefined>>;
+  // Hosts that did not negotiate HTTP/2
+  http1Hosts: Set<string>;
+};
+
+const connectionsByClass: Record<TrafficClass, ClassConnections> = {
+  authenticated: createClassConnections(),
+  unauthenticated: createClassConnections(),
+};
+
+function createClassConnections(): ClassConnections {
+  return {
+    pools: new Map(),
+    http2Connections: new Map(),
+    http2Opens: new Map(),
+    http1Hosts: new Set(),
+  };
+}
+
+// Servers that answer from their own clock; a CDN may send the time of an older response
+const SERVER_TIME_HOSTS = new Set([SIGNAL_CHAT_HOST, SIGNAL_STORAGE_HOST]);
+const MILLISECONDS_PER_SECOND = 1000;
+
+let serverTimeListener: ((serverTimeOffset: number) => void) | undefined;
+
+/** Called with the new offset of the device clock to the server's, in seconds, when a response changes it */
+export function setServerTimeListener(listener: (serverTimeOffset: number) => void) {
+  serverTimeListener = listener;
+}
 
 export async function sendHttpRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
-  if (!http1Hosts.has(host)) {
-    const response = await sendHttp2Request(host, request);
+  const response = await sendRequest(host, request);
+  if (SERVER_TIME_HOSTS.has(host)) updateServerTime(response);
+  return response;
+}
+
+function updateServerTime({ headers }: HttpResponse) {
+  const serverTime = Date.parse(headers.get('date') ?? '');
+  if (Number.isNaN(serverTime)) return;
+
+  const offset = Math.floor(serverTime / MILLISECONDS_PER_SECOND) - Math.floor(Date.now() / MILLISECONDS_PER_SECOND);
+  if (offset === getServerTimeOffset()) return;
+  setServerTimeOffset(offset);
+  serverTimeListener?.(offset);
+}
+
+async function sendRequest(host: string, request: HttpRequest): Promise<HttpResponse> {
+  const connections = connectionsByClass[request.trafficClass];
+  if (!connections.http1Hosts.has(host)) {
+    const response = await sendHttp2Request(connections, host, request);
     if (response) return response;
   }
-  return sendHttp1Request(host, request);
+  return sendHttp1Request(connections, host, request);
 }
 
 /** Sends the request as a stream of the host's HTTP/2 connection; resolves with `undefined` if it has none */
-async function sendHttp2Request(host: string, request: HttpRequest): Promise<HttpResponse | undefined> {
+async function sendHttp2Request(
+  connections: ClassConnections, host: string, request: HttpRequest,
+): Promise<HttpResponse | undefined> {
   let canRetry = true;
   for (;;) {
-    const existing = http2Connections.get(host);
-    const isReused = Boolean(existing?.canOpenStreams);
-    const connection = isReused ? existing : await openHttp2Connection(host);
+    const existing = getUsableHttp2Connection(connections, host);
+    const isReused = Boolean(existing);
+    const connection = existing ?? await openHttp2Connection(connections, host, request.trafficClass);
     if (!connection) return undefined;
+    // A setting changed while the connection opened: it carries nothing yet, so it closes and the request starts over
+    if (!connection.isOnCurrentTunnel) {
+      connection.retire();
+      continue;
+    }
     try {
       return await connection.request(request);
     } catch (err) {
@@ -91,15 +149,29 @@ async function sendHttp2Request(host: string, request: HttpRequest): Promise<Htt
   }
 }
 
+/**
+ * The host's HTTP/2 connection while new requests can use it. One whose tunnel a setting change ended stops taking
+ * requests; those in flight finish on it, and it closes after the last.
+ */
+function getUsableHttp2Connection({ http2Connections }: ClassConnections, host: string) {
+  const connection = http2Connections.get(host);
+  if (!connection?.canOpenStreams) return undefined;
+  if (connection.isOnCurrentTunnel) return connection;
+  connection.retire();
+  http2Connections.delete(host);
+  return undefined;
+}
+
 /** Opens one connection per host at a time; a host without HTTP/2 gets the tunnel as an idle HTTP/1.1 connection */
-function openHttp2Connection(host: string) {
+function openHttp2Connection(connections: ClassConnections, host: string, trafficClass: TrafficClass) {
+  const { http2Connections, http2Opens, http1Hosts } = connections;
   let opening = http2Opens.get(host);
   if (opening) return opening;
 
-  opening = TlsTunnel.open(host, HTTP_ALPN_PROTOCOLS).then((tunnel) => {
+  opening = TlsTunnel.open(host, trafficClass, HTTP_ALPN_PROTOCOLS).then((tunnel) => {
     if (tunnel.alpnProtocol !== HTTP2_ALPN_PROTOCOL) {
       http1Hosts.add(host);
-      const pool = getPool(host);
+      const pool = getPool(connections, host);
       pool.activeCount++;
       releaseConnection(pool, { tunnel, reader: new StreamReader(() => tunnel.read()) });
       return undefined;
@@ -117,8 +189,10 @@ function openHttp2Connection(host: string) {
   return opening;
 }
 
-async function sendHttp1Request(host: string, request: HttpRequest): Promise<HttpResponse> {
-  const pool = getPool(host);
+async function sendHttp1Request(
+  connections: ClassConnections, host: string, request: HttpRequest,
+): Promise<HttpResponse> {
+  const pool = getPool(connections, host);
   let connection = await acquireConnection(pool);
   const isReused = Boolean(connection);
 
@@ -126,7 +200,7 @@ async function sendHttp1Request(host: string, request: HttpRequest): Promise<Htt
   // more try on a fresh one, unless it is a POST that the server may have received
   let canRetry = isReused && request.method !== 'POST';
   for (;;) {
-    connection ??= await openConnection(pool, host);
+    connection ??= await openConnection(pool, host, request.trafficClass);
     try {
       const { response, isReusable } = await sendOnConnection(host, connection, request);
       releaseConnection(pool, isReusable ? connection : undefined);
@@ -143,7 +217,7 @@ async function sendHttp1Request(host: string, request: HttpRequest): Promise<Htt
   }
 }
 
-function getPool(host: string) {
+function getPool({ pools }: ClassConnections, host: string) {
   let pool = pools.get(host);
   if (!pool) {
     pool = { idle: [], activeCount: 0, waiters: [] };
@@ -157,10 +231,11 @@ function acquireConnection(pool: HostPool): Promise<HttpConnection | undefined> 
   while (pool.idle.length) {
     const { connection, timer } = pool.idle.pop()!;
     clearTimeout(timer);
-    if (connection.tunnel.isOpen) {
+    if (getIsUsable(connection)) {
       pool.activeCount++;
       return Promise.resolve(connection);
     }
+    connection.tunnel.close();
   }
   if (pool.activeCount < MAX_CONNECTIONS_PER_HOST) {
     pool.activeCount++;
@@ -171,9 +246,9 @@ function acquireConnection(pool: HostPool): Promise<HttpConnection | undefined> 
   });
 }
 
-async function openConnection(pool: HostPool, host: string): Promise<HttpConnection> {
+async function openConnection(pool: HostPool, host: string, trafficClass: TrafficClass): Promise<HttpConnection> {
   try {
-    const tunnel = await TlsTunnel.open(host);
+    const tunnel = await TlsTunnel.open(host, trafficClass);
     return { tunnel, reader: new StreamReader(() => tunnel.read()) };
   } catch (err) {
     releaseConnection(pool, undefined);
@@ -181,17 +256,30 @@ async function openConnection(pool: HostPool, host: string): Promise<HttpConnect
   }
 }
 
-/** Returns a slot: a reusable connection goes to the next waiter or the idle list; otherwise the slot frees up */
+/** Whether new requests can use the connection: it is open and its tunnel is still the class's tunnel */
+function getIsUsable(connection: HttpConnection) {
+  return connection.tunnel.isOpen && connection.tunnel.isOnCurrentTunnel;
+}
+
+/**
+ * Returns a slot: a reusable connection goes to the next waiter or the idle list; otherwise the slot frees up. A
+ * connection whose tunnel a setting change ended closes instead.
+ */
 function releaseConnection(pool: HostPool, connection: HttpConnection | undefined) {
+  if (connection && !getIsUsable(connection)) {
+    connection.tunnel.close();
+    connection = undefined;
+  }
+
   const waiter = pool.waiters.shift();
   if (waiter) {
     // The slot moves to the waiter; without a connection it opens a new one
-    waiter(connection?.tunnel.isOpen ? connection : undefined);
+    waiter(connection);
     return;
   }
 
   pool.activeCount--;
-  if (!connection?.tunnel.isOpen) return;
+  if (!connection) return;
   const entry = {
     connection,
     timer: setTimeout(() => {
@@ -204,13 +292,15 @@ function releaseConnection(pool: HostPool, connection: HttpConnection | undefine
 
 /** Closes the idle keep-alive connections, so the next requests open new ones through the current tunnel */
 export function closeIdleHttpConnections() {
-  for (const connection of http2Connections.values()) connection.closeIfIdle();
-  for (const pool of pools.values()) {
-    for (const { connection, timer } of pool.idle) {
-      clearTimeout(timer);
-      connection.tunnel.close();
+  for (const { pools, http2Connections } of Object.values(connectionsByClass)) {
+    for (const connection of http2Connections.values()) connection.closeIfIdle();
+    for (const pool of pools.values()) {
+      for (const { connection, timer } of pool.idle) {
+        clearTimeout(timer);
+        connection.tunnel.close();
+      }
+      pool.idle = [];
     }
-    pool.idle = [];
   }
 }
 

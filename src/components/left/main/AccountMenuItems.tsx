@@ -4,11 +4,10 @@ import type { ApiUser } from '../../../api/types';
 import type { AccountInfo, CustomPeer } from '../../../types';
 
 import { temporarilySuspendCacheUpdate } from '../../../global/cache';
-import { getCurrentProdAccountCount } from '../../../global/helpers';
+import { getCurrentAccountCount } from '../../../global/helpers';
 import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
 import { getAccountSlotUrl } from '../../../util/multiaccount';
 import { LIMITS } from '../../../limits';
-import { REM } from '../../common/helpers/mediaDimensions';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -33,11 +32,7 @@ const AccountMenuItems = ({
   const lang = useLang();
   const accounts = useMultiaccountInfo(currentUser);
 
-  const currentCount = getCurrentProdAccountCount();
-
-  const currentAccountInfo = useMemo(() => {
-    return Object.values(accounts).find((account) => account.userId === currentUser.id);
-  }, [accounts, currentUser.id]);
+  const currentCount = getCurrentAccountCount();
 
   const handleAccountClick = useLastCallback((account: AccountInfo, e: React.SyntheticEvent<HTMLElement>) => {
     if (account.userId === currentUser.id) {
@@ -86,12 +81,11 @@ const AccountMenuItems = ({
       {Object.entries(accounts || {})
         .sort(([, account]) => (account.userId === currentUser.id ? -1 : 1))
         .map(([slot, account], index, arr) => {
-          const isSameServer = account.isTest === currentAccountInfo?.isTest;
           const mockUser: CustomPeer = {
             title: [account.firstName, account.lastName].filter(Boolean).join(' '),
             isCustomPeer: true,
             peerColorId: account.color,
-            emojiStatusId: isSameServer ? account.emojiStatusId : undefined,
+            emojiStatusId: account.emojiStatusId,
           };
 
           const hasSeparator = account.userId === currentUser.id && (newAccountUrl || arr.length > 1);
@@ -111,8 +105,7 @@ const AccountMenuItems = ({
                 onClick={(e) => handleAccountClick(account, e)}
                 href={account.userId !== currentUser.id ? getAccountSlotUrl(Number(slot)) : undefined}
               >
-                {account.isTest && <span className="account-menu-item-test">T</span>}
-                <FullNameTitle peer={mockUser} withEmojiStatus emojiStatusSize={REM} />
+                <FullNameTitle peer={mockUser} />
               </MenuItem>
               {hasSeparator && <MenuSeparator />}
             </>

@@ -277,6 +277,37 @@ describe('MessageDb', () => {
     expect((await db.getMessages(ACI, 1))[0].sentAt).toBe(1251);
   });
 
+  test('keeps only the key and timestamp of a call in the clear', async () => {
+    const db = new MessageDb();
+    const calls = Array.from({ length: 130 }, (_, index) => ({
+      callId: `call-${index}`,
+      peerId: ACI,
+      mode: 'direct' as const,
+      type: 'video' as const,
+      direction: 'incoming' as const,
+      status: index % 2 ? 'deleted' as const : 'missed' as const,
+      timestamp: 5000 + index,
+      isUnseen: true as const,
+    }));
+    await db.putCalls(calls.slice(0, 100));
+    for (const call of calls.slice(100)) await db.putCall(call);
+    const plain = (await db.getCallLog(20)).map(({ callId }) => callId);
+
+    await setAtRestKey(KEY);
+    await db.convertRecords('encrypt');
+    const [stored] = await readAll('ts-signal-messages', 'calls') as Record<string, unknown>[];
+    expect(Object.keys(stored).sort()).toEqual(['callId', 'enc', 'peerId', 'timestamp']);
+    expect(hasText(stored, 'missed')).toBe(false);
+    expect((await db.getCallLog(20)).map(({ callId }) => callId)).toEqual(plain);
+    expect((await db.getCall(ACI, 'call-3'))?.status).toBe('deleted');
+    await db.putCall({ ...calls[0], status: 'accepted' });
+    expect((await db.getCall(ACI, 'call-0'))?.status).toBe('accepted');
+
+    await db.convertRecords('decrypt');
+    expect(hasText(await readAll('ts-signal-messages', 'calls'), 'missed')).toBe(true);
+    expect(await db.getCalls()).toHaveLength(130);
+  });
+
   test('rejects a record that was moved to another conversation', async () => {
     const db = new MessageDb();
     await setAtRestKey(KEY);

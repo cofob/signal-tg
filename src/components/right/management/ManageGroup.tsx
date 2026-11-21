@@ -1,10 +1,9 @@
 import {
-  memo, useEffect, useMemo, useRef, useState,
+  memo, useEffect, useMemo, useState,
 } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
-import type {
-  ApiAvailableReaction, ApiAvatarUpload, ApiChat, ApiChatBannedRights, ApiChatFullInfo, ApiExportedInvite, ApiPhoto,
+import type { ApiAvatarUpload, ApiChat, ApiChatBannedRights, ApiChatFullInfo, ApiExportedInvite, ApiPhoto,
 } from '../../../api/types';
 import { ManagementProgress, ManagementScreens } from '../../../types';
 
@@ -13,12 +12,10 @@ import {
   getHasAdminRight,
   isChatAdmin,
   isChatBasicGroup,
-  isChatPublic,
 } from '../../../global/helpers';
 import {
   selectCanBanUsers, selectChat, selectChatFullInfo, selectIsChatRestricted, selectPeerAvatarPhoto, selectTabState,
 } from '../../../global/selectors';
-import { debounce } from '../../../util/schedulers';
 import { formatInteger } from '../../../util/text/textFormat';
 import renderText from '../../common/helpers/renderText';
 
@@ -27,10 +24,8 @@ import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import Island, { IslandDescription } from '../../gili/layout/Island';
-import Switch from '../../gili/primitives/Switch';
+import Island from '../../gili/layout/Island';
 import AvatarEditable from '../../ui/AvatarEditable';
-import Checkbox from '../../ui/Checkbox';
 import ConfirmDialog from '../../ui/ConfirmDialog';
 import FloatingActionButton from '../../ui/FloatingActionButton';
 import InputText from '../../ui/InputText';
@@ -52,15 +47,11 @@ type StateProps = {
   currentAvatarPhoto?: ApiPhoto;
   progress?: ManagementProgress;
   isBasicGroup: boolean;
-  hasLinkedChannel: boolean;
+  canTerminate?: boolean;
   canChangeInfo?: boolean;
   canBanUsers?: boolean;
   canInvite?: boolean;
-  canTerminate?: boolean;
-  canEditForum?: boolean;
   exportedInvites?: ApiExportedInvite[];
-  isChannelsPremiumLimitReached: boolean;
-  availableReactions?: ApiAvailableReaction[];
 };
 
 const GROUP_TITLE_EMPTY = 'GroupTitleEmptyError';
@@ -73,7 +64,6 @@ const ALL_PERMISSIONS: Array<keyof ApiChatBannedRights> = [
   'changeInfo',
   'inviteUsers',
   'pinMessages',
-  'manageTopics',
   'sendPhotos',
   'sendVideos',
   'sendRoundvideos',
@@ -85,8 +75,6 @@ const ALL_PERMISSIONS: Array<keyof ApiChatBannedRights> = [
 // so we need to define the amount manually
 const TOTAL_PERMISSIONS_COUNT = ALL_PERMISSIONS.length + 1;
 
-const runDebounced = debounce((cb) => cb(), 500, false);
-
 const ManageGroup = ({
   chatId,
   chat,
@@ -94,31 +82,23 @@ const ManageGroup = ({
   currentAvatarPhoto,
   progress,
   isBasicGroup,
-  hasLinkedChannel,
+  canTerminate,
   canChangeInfo,
   canBanUsers,
   canInvite,
-  canTerminate,
-  canEditForum,
   isActive,
   exportedInvites,
-  isChannelsPremiumLimitReached,
-  availableReactions,
   onScreenSelect,
   onClose,
 }: OwnProps & StateProps) => {
   const {
-    togglePreHistoryHidden,
     updateChat,
     deleteChat,
     terminateChat,
-    leaveChannel,
-    deleteChannel,
     closeManagement,
     openChat,
     loadExportedChatInvites,
     loadChatJoinRequests,
-    toggleForum,
   } = getActions();
 
   const [isDeleteDialogOpen, openDeleteDialog, closeDeleteDialog] = useFlag();
@@ -131,11 +111,8 @@ const ManageGroup = ({
   const [about, setAbout] = useState(currentAbout);
   const [photo, setPhoto] = useState<ApiAvatarUpload | undefined>();
   const [error, setError] = useState<string | undefined>();
-  const [isForumEnabled, setIsForumEnabled] = useState(chat.isForum);
   const imageHash = getChatAvatarHash(chat);
-  const isPublicGroup = useMemo(() => isChatPublic(chat), [chat]);
   const lang = useLang();
-  const isPreHistoryHiddenCheckboxRef = useRef<HTMLDivElement>();
 
   useHistoryBack({
     isActive,
@@ -150,29 +127,12 @@ const ManageGroup = ({
     }
   }, [chatId, canInvite]);
 
-  // Resetting `isForum` switch on flood wait error
-  useEffect(() => {
-    setIsForumEnabled(Boolean(chat.isForum));
-  }, [chat.isForum]);
-
   useEffect(() => {
     if (progress === ManagementProgress.Complete) {
       setIsProfileFieldsTouched(false);
       setError(undefined);
     }
   }, [progress]);
-
-  const handleClickEditType = useLastCallback(() => {
-    onScreenSelect(ManagementScreens.ChatPrivacyType);
-  });
-
-  const handleClickDiscussion = useLastCallback(() => {
-    onScreenSelect(ManagementScreens.Discussion);
-  });
-
-  const handleClickReactions = useLastCallback(() => {
-    onScreenSelect(ManagementScreens.Reactions);
-  });
 
   const handleClickPermissions = useLastCallback(() => {
     onScreenSelect(ManagementScreens.GroupPermissions);
@@ -222,75 +182,20 @@ const ManageGroup = ({
     });
   });
 
-  const handleClickMembers = useLastCallback(() => {
-    onScreenSelect(ManagementScreens.GroupMembers);
-  });
-
   const handleClickInvitedUsers = useLastCallback(() => {
     onScreenSelect(ManagementScreens.GroupInvitedUsers);
   });
 
-  const handleTogglePreHistory = useLastCallback(() => {
-    if (!chatFullInfo) {
-      return;
-    }
-
-    const { isPreHistoryHidden } = chatFullInfo;
-
-    togglePreHistoryHidden({ chatId: chat.id, isEnabled: !isPreHistoryHidden });
+  const handleClickMembers = useLastCallback(() => {
+    onScreenSelect(ManagementScreens.GroupMembers);
   });
-
-  const handleForumToggle = useLastCallback(() => {
-    setIsForumEnabled((current) => {
-      const newIsForumEnabled = !current;
-
-      runDebounced(() => {
-        toggleForum({ chatId, isEnabled: newIsForumEnabled });
-      });
-
-      return newIsForumEnabled;
-    });
-  });
-
-  useEffect(() => {
-    if (!isChannelsPremiumLimitReached) {
-      return;
-    }
-
-    // Teact does not have full support of controlled form components, we need to "disable" input value change manually
-    // TODO Teact support added, this can now be removed
-    const checkbox = isPreHistoryHiddenCheckboxRef.current?.querySelector('input') as HTMLInputElement;
-    checkbox.checked = !chatFullInfo?.isPreHistoryHidden;
-  }, [isChannelsPremiumLimitReached, chatFullInfo?.isPreHistoryHidden]);
-
-  const chatReactionsDescription = useMemo(() => {
-    if (!chatFullInfo?.enabledReactions) {
-      return lang('ReactionsOff');
-    }
-
-    if (chatFullInfo.enabledReactions.type === 'all') {
-      return lang('ReactionsAll');
-    }
-
-    const enabledLength = chatFullInfo.enabledReactions.allowed.length;
-    const totalLength = availableReactions?.filter((reaction) => !reaction.isInactive).length || 0;
-
-    return totalLength
-      ? `${enabledLength} / ${totalLength}`
-      : enabledLength.toString();
-  }, [availableReactions, chatFullInfo?.enabledReactions, lang]);
 
   const enabledPermissionsCount = useMemo(() => {
     if (!chat.defaultBannedRights) {
       return 0;
     }
 
-    let totalCount = ALL_PERMISSIONS.filter(
-      (key) => {
-        if (key === 'manageTopics' && !isForumEnabled) return false;
-        return !chat.defaultBannedRights![key];
-      },
-    ).length;
+    let totalCount = ALL_PERMISSIONS.filter((key) => !chat.defaultBannedRights![key]).length;
 
     const { sendStickers, sendGifs } = chat.defaultBannedRights;
 
@@ -300,20 +205,14 @@ const ManageGroup = ({
     }
 
     return totalCount;
-  }, [chat.defaultBannedRights, isForumEnabled]);
+  }, [chat.defaultBannedRights]);
 
   const adminsCount = useMemo(() => {
     return Object.keys(chatFullInfo?.adminMembersById || {}).length;
   }, [chatFullInfo?.adminMembersById]);
 
   const handleDeleteGroup = useLastCallback(() => {
-    if (isBasicGroup) {
-      deleteChat({ chatId: chat.id });
-    } else if (!chat.isOwner) {
-      leaveChannel({ chatId: chat.id });
-    } else {
-      deleteChannel({ chatId: chat.id });
-    }
+    deleteChat({ chatId: chat.id });
     closeDeleteDialog();
     closeManagement();
     openChat({ id: undefined });
@@ -336,7 +235,6 @@ const ManageGroup = ({
     <div className="Management">
       <div className="panel-content custom-scroll">
         <AvatarEditable
-          isForForum={isForumEnabled}
           currentAvatarHash={imageHash}
           currentAvatarPhoto={currentAvatarPhoto}
           onChange={handleSetPhoto}
@@ -364,22 +262,6 @@ const ManageGroup = ({
               noReplaceNewlines
             />
           </div>
-          {chat.isOwner && (
-            <ListItem icon="lock" multiline onClick={handleClickEditType}>
-              <span className="title">{lang('GroupType')}</span>
-              <span className="subtitle">{isPublicGroup ? lang('TypePublic') : lang('TypePrivate')}</span>
-            </ListItem>
-          )}
-          {hasLinkedChannel && (
-            <ListItem
-              icon="message"
-              multiline
-              onClick={handleClickDiscussion}
-            >
-              <span className="title">{lang('LinkedChannel')}</span>
-              <span className="subtitle">{lang('DiscussionUnlink')}</span>
-            </ListItem>
-          )}
           <ListItem
             icon="permissions"
             multiline
@@ -390,18 +272,7 @@ const ManageGroup = ({
             <span className="subtitle" dir="auto">
               {enabledPermissionsCount}
               /
-              {TOTAL_PERMISSIONS_COUNT - (isForumEnabled ? 0 : 1)}
-            </span>
-          </ListItem>
-          <ListItem
-            icon="heart-outline"
-            multiline
-            onClick={handleClickReactions}
-            disabled={!canChangeInfo}
-          >
-            <span className="title">{lang('Reactions')}</span>
-            <span className="subtitle" dir="auto">
-              {chatReactionsDescription}
+              {TOTAL_PERMISSIONS_COUNT}
             </span>
           </ListItem>
           <ListItem
@@ -437,18 +308,6 @@ const ManageGroup = ({
               </span>
             </ListItem>
           )}
-          {canEditForum && (
-            <>
-              <ListItem icon="forums" ripple onClick={handleForumToggle}>
-                <span>{lang('ChannelTopics')}</span>
-                <Switch
-                  id="group-notifications"
-                  checked={Boolean(isForumEnabled)}
-                />
-              </ListItem>
-              <IslandDescription>{lang('ForumToggleDescription')}</IslandDescription>
-            </>
-          )}
         </Island>
         <Island>
           <ListItem icon="group" multiline onClick={handleClickMembers}>
@@ -461,20 +320,6 @@ const ManageGroup = ({
               <span className="title">{lang('GroupPendingInvites')}</span>
               <span className="subtitle">{formatInteger(chatFullInfo.pendingInvites.length)}</span>
             </ListItem>
-          )}
-
-          {!isPublicGroup && !hasLinkedChannel && Boolean(chatFullInfo) && (
-            <div className="ListItem narrow" ref={isPreHistoryHiddenCheckboxRef}>
-              <Checkbox
-                checked={!chatFullInfo.isPreHistoryHidden}
-                label={lang('ChatHistory')}
-                onChange={handleTogglePreHistory}
-                subLabel={
-                  chatFullInfo.isPreHistoryHidden ? lang('ChatHistoryHiddenInfo2') : lang('ChatHistoryVisibleInfo')
-                }
-                disabled={!canBanUsers}
-              />
-            </div>
           )}
         </Island>
         <Island>
@@ -509,12 +354,10 @@ const ManageGroup = ({
         isOpen={isDeleteDialogOpen}
         onClose={closeDeleteDialog}
         textParts={renderText(
-          isBasicGroup || !chat.isOwner
-            ? lang('AreYouSureDeleteAndExit')
-            : lang('AreYouSureDeleteThisChatWithGroup', { chat: chat.title }),
+          lang('AreYouSureDeleteAndExit'),
           ['br', 'simple_markdown'],
         )}
-        confirmLabel={isBasicGroup || !chat.isOwner ? lang('DeleteMega') : lang('DeleteGroupForAll')}
+        confirmLabel={lang('DeleteMega')}
         confirmHandler={handleDeleteGroup}
         confirmIsDestructive
       />
@@ -526,12 +369,9 @@ export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const chat = selectChat(global, chatId)!;
     const chatFullInfo = selectChatFullInfo(global, chatId);
-    const { management, limitReachedModal } = selectTabState(global);
+    const { management } = selectTabState(global);
     const { progress } = management;
-    const hasLinkedChannel = Boolean(chatFullInfo?.linkedChatId);
-    const isBasicGroup = isChatBasicGroup(chat);
     const { invites } = management.byChatId[chatId] || {};
-    const canEditForum = !hasLinkedChannel && getHasAdminRight(chat, 'changeInfo');
     const canChangeInfo = getHasAdminRight(chat, 'changeInfo');
     const canBanUsers = selectCanBanUsers(global, chatId);
     const canInvite = getHasAdminRight(chat, 'inviteUsers');
@@ -543,16 +383,12 @@ export default memo(withGlobal<OwnProps>(
       chatFullInfo,
       currentAvatarPhoto: selectPeerAvatarPhoto(global, chatId),
       progress,
-      isBasicGroup,
-      hasLinkedChannel,
+      isBasicGroup: isChatBasicGroup(chat),
       canChangeInfo,
       canBanUsers,
       canInvite,
       canTerminate,
       exportedInvites: invites,
-      isChannelsPremiumLimitReached: limitReachedModal?.limit === 'channels',
-      availableReactions: global.reactions.availableReactions,
-      canEditForum,
     };
   },
   (global, { chatId }) => {

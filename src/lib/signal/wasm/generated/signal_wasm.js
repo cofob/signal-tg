@@ -768,6 +768,55 @@ export function IdentityKeyPair_SignAlternateIdentity(public_key, private_key, o
     return v1;
 }
 
+/**
+ * @param {any} transport
+ * @param {Uint8Array} aci
+ * @param {PublicKey} aci_identity_key
+ * @param {string | null | undefined} e164
+ * @param {Uint8Array | null | undefined} unidentified_access_key
+ * @param {Uint8Array | null | undefined} username_hash
+ * @param {Uint8Array | null | undefined} account_data
+ * @param {Uint8Array | null | undefined} last_distinguished_tree_head
+ * @param {boolean} is_self_check
+ * @param {boolean} is_e164_discoverable
+ * @param {number} now
+ * @returns {Promise<any>}
+ */
+export function KeyTransparency_Check(transport, aci, aci_identity_key, e164, unidentified_access_key, username_hash, account_data, last_distinguished_tree_head, is_self_check, is_e164_discoverable, now) {
+    const ptr0 = passArray8ToWasm0(aci, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    _assertClass(aci_identity_key, PublicKey);
+    var ptr1 = isLikeNone(e164) ? 0 : passStringToWasm0(e164, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len1 = WASM_VECTOR_LEN;
+    var ptr2 = isLikeNone(unidentified_access_key) ? 0 : passArray8ToWasm0(unidentified_access_key, wasm.__wbindgen_malloc);
+    var len2 = WASM_VECTOR_LEN;
+    var ptr3 = isLikeNone(username_hash) ? 0 : passArray8ToWasm0(username_hash, wasm.__wbindgen_malloc);
+    var len3 = WASM_VECTOR_LEN;
+    var ptr4 = isLikeNone(account_data) ? 0 : passArray8ToWasm0(account_data, wasm.__wbindgen_malloc);
+    var len4 = WASM_VECTOR_LEN;
+    var ptr5 = isLikeNone(last_distinguished_tree_head) ? 0 : passArray8ToWasm0(last_distinguished_tree_head, wasm.__wbindgen_malloc);
+    var len5 = WASM_VECTOR_LEN;
+    const ret = wasm.KeyTransparency_Check(transport, ptr0, len0, aci_identity_key.__wbg_ptr, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, is_self_check, is_e164_discoverable, now);
+    return ret;
+}
+
+/**
+ * @param {Uint8Array} account_data
+ * @param {number} field
+ * @returns {Uint8Array}
+ */
+export function KeyTransparency_ResetDataField(account_data, field) {
+    const ptr0 = passArray8ToWasm0(account_data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.KeyTransparency_ResetDataField(ptr0, len0, field);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
 export class KyberKeyPair {
     static __wrap(ptr) {
         const obj = Object.create(KyberKeyPair.prototype);
@@ -4113,7 +4162,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 190, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 199, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },

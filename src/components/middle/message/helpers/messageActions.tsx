@@ -2,13 +2,11 @@ import { type TeactNode } from '../../../../lib/teact/teact';
 import { getActions } from '../../../../global';
 
 import type { ApiMessage } from '../../../../api/types';
-import type { ApiMessageActionPhoneCall } from '../../../../api/types/messageActions';
 import type {
   LangKey,
   LangPairPluralWithVariables,
   LangPairWithVariables,
   PluralLangKeyWithVariables,
-  RegularLangKey,
   RegularLangKeyWithVariables,
 } from '../../../../types/language';
 import type { LangFn } from '../../../../util/localization';
@@ -126,37 +124,4 @@ export function renderMessageLink(
       {text}
     </Link>
   );
-}
-
-export function renderTopicLink(chatId: string, topicId: number, content: TeactNode, asPreview?: boolean) {
-  if (asPreview) return content;
-
-  return (
-    <Link
-      className={styles.topicLink}
-      onClick={(e) => {
-        e.stopPropagation();
-        getActions().openThread({ chatId, threadId: topicId });
-      }}
-      withMultilineFix={IS_SAFARI}
-    >
-      {content}
-    </Link>
-  );
-}
-
-export function getCallMessageKey(action: ApiMessageActionPhoneCall, isOutgoing: boolean): RegularLangKey {
-  const isMissed = action.reason === 'missed';
-  const isCancelled = action.reason === 'busy' || action.duration === undefined;
-  if (action.isVideo) {
-    if (isMissed) return isOutgoing ? 'CallMessageVideoOutgoingMissed' : 'CallMessageVideoIncomingMissed';
-    if (isCancelled) return 'CallMessageVideoIncomingDeclined';
-
-    return isOutgoing ? 'CallMessageVideoOutgoing' : 'CallMessageVideoIncoming';
-  } else {
-    if (isMissed) return isOutgoing ? 'CallMessageOutgoingMissed' : 'CallMessageIncomingMissed';
-    if (isCancelled) return 'CallMessageIncomingDeclined';
-
-    return isOutgoing ? 'CallMessageOutgoing' : 'CallMessageIncoming';
-  }
 }

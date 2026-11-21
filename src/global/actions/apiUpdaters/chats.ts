@@ -1,4 +1,4 @@
-import type { ApiChat, ApiUpdateChat } from '../../../api/types';
+import type { ApiChat } from '../../../api/types';
 import type { ActionReturnType } from '../../types';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
@@ -6,47 +6,33 @@ import { ARCHIVED_FOLDER_ID, MAX_ACTIVE_PINNED_CHATS } from '../../../config';
 import { buildCollectionByKey, omit } from '../../../util/iteratees';
 import { isLocalMessageId } from '../../../util/keys/messageKey';
 import { closeMessageNotifications, notifyAboutMessage } from '../../../util/notifications';
-import { checkIfHasUnreadReactions, isChatChannel } from '../../helpers';
 import {
   addActionHandler, getGlobal, setGlobal,
 } from '../../index';
 import {
   addChatListIds,
   addUnreadMentions,
-  deleteChatMessages,
-  deletePeerPhoto,
   leaveChat,
-  removeUnreadMentions,
-  replaceChatMessages,
-  replacePeerPhotos,
-  replacePinnedTopicIds,
   updateChat,
   updateChatFullInfo,
   updateChatListType,
   updateChatParticipantRank,
   updatePeerStoriesHidden,
-  updateTopic,
 } from '../../reducers';
-import { removeUnreadReactions } from '../../reducers/reactions';
 import { updateTabState } from '../../reducers/tabs';
 import { addUnreadMessageToCounter, replaceThreadLocalStateParam } from '../../reducers/threads';
 import {
   selectChat,
   selectChatFullInfo,
   selectChatListType,
-  selectChatMessages,
-  selectCommonBoxChatId,
-  selectCurrentMessageList,
   selectIsChatListed,
-  selectPeer,
   selectTabState,
 } from '../../selectors';
 import { selectThreadLocalStateParam, selectThreadReadState } from '../../selectors/threads';
 
 const TYPING_STATUS_CLEAR_DELAY = 6000; // 6 seconds
 const INVALIDATE_FULL_CHAT_FIELDS = new Set<keyof ApiChat>([
-  'level', 'isForum', 'isLinkedInDiscussion', 'fakeType', 'restrictionReasons', 'isJoinToSend', 'isJoinRequest',
-  'type',
+  'restrictionReasons', 'isJoinRequest', 'type',
 ]);
 
 addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
@@ -54,7 +40,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateChat': {
       const localChat = selectChat(global, update.id);
       const localReadState = selectThreadReadState(global, update.id, MAIN_THREAD_ID);
-      const { isForum: prevIsForum } = localChat || {};
       const { lastReadOutboxMessageId } = localReadState || {};
       if (update.readState?.lastReadOutboxMessageId && lastReadOutboxMessageId
         && update.readState.lastReadOutboxMessageId < lastReadOutboxMessageId) {
@@ -67,15 +52,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
       if (localChat?.areStoriesHidden !== update.chat.areStoriesHidden) {
         global = updatePeerStoriesHidden(global, update.id, update.chat.areStoriesHidden || false);
-      }
-
-      const localAdminRights = localChat?.adminRights;
-      const newAdminRights = update.chat.adminRights;
-
-      if (localAdminRights && localAdminRights.manageDirectMessages && !update.chat.isMin
-        && newAdminRights?.manageDirectMessages !== localAdminRights.manageDirectMessages
-        && localChat.linkedMonoforumId) {
-        global = replaceChatMessages(global, localChat.linkedMonoforumId, {});
       }
 
       setGlobal(global);
@@ -94,34 +70,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
         });
       }
 
-      Object.values(global.byTabId).forEach(({ id: tabId }) => {
-        const { chatId: currentChatId } = selectCurrentMessageList(global, tabId) || {};
-        const chatUpdate = update as ApiUpdateChat;
-        // The property `isForum` was changed in another client
-        if (currentChatId === chatUpdate.id
-          && 'isForum' in chatUpdate.chat && prevIsForum !== chatUpdate.chat.isForum) {
-          if (prevIsForum) {
-            actions.closeForumPanel({ tabId });
-          }
-          actions.openChat({ id: currentChatId, tabId });
-        }
-      });
-
       if (localChat) {
         const chatUpdate = update.chat;
         const changedFields = (Object.keys(chatUpdate) as (keyof ApiChat)[])
           .filter((key) => localChat[key] !== chatUpdate[key]);
         if (changedFields.some((key) => INVALIDATE_FULL_CHAT_FIELDS.has(key))) {
           actions.invalidateFullInfo({ peerId: update.id });
-        }
-
-        if ('linkedCommunityId' in chatUpdate && localChat.linkedCommunityId !== chatUpdate.linkedCommunityId) {
-          if (localChat.linkedCommunityId) {
-            actions.loadFullCommunity({ communityId: localChat.linkedCommunityId });
-          }
-          if (chatUpdate.linkedCommunityId) {
-            actions.loadFullCommunity({ communityId: chatUpdate.linkedCommunityId });
-          }
         }
       }
 
@@ -155,15 +109,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateChatLeave': {
       global = leaveChat(global, update.id);
-      const chat = selectChat(global, update.id);
-      if (chat && isChatChannel(chat)) {
-        const chatMessages = selectChatMessages(global, update.id);
-        if (chatMessages) {
-          const localMessageIds = Object.keys(chatMessages).map(Number).filter(isLocalMessageId);
-          global = deleteChatMessages(global, chat.id, localMessageIds);
-        }
-      }
-
       return global;
     }
 
@@ -264,29 +209,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       return undefined;
     }
 
-    case 'updateCommonBoxMessages':
-    case 'updateChannelMessages': {
-      const { ids, messageUpdate } = update;
-
-      ids.forEach((id) => {
-        const chatId = ('channelId' in update ? update.channelId : selectCommonBoxChatId(global, id))!;
-
-        if (messageUpdate.reactions && !checkIfHasUnreadReactions(global, messageUpdate.reactions)) {
-          global = removeUnreadReactions({ global, chatId, ids: [id] });
-        }
-
-        if (!messageUpdate.hasUnreadMention) {
-          global = removeUnreadMentions({
-            global,
-            chatId,
-            ids: [id],
-          });
-        }
-      });
-
-      return global;
-    }
-
     case 'updateChatFullInfo': {
       return updateChatFullInfo(global, update.id, update.fullInfo);
     }
@@ -295,7 +217,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       const { ids, folderId } = update;
       const listType = folderId === ARCHIVED_FOLDER_ID ? 'archived' : 'active';
       if (!ids) {
-        actions.loadPinnedDialogs({ listType });
         return global;
       }
 
@@ -306,21 +227,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
           orderedPinnedIds: {
             ...global.chats.orderedPinnedIds,
             [listType]: ids.length ? ids : undefined,
-          },
-        },
-      };
-    }
-
-    case 'updatePinnedSavedDialogIds': {
-      const { ids } = update;
-
-      return {
-        ...global,
-        chats: {
-          ...global.chats,
-          orderedPinnedIds: {
-            ...global.chats.orderedPinnedIds,
-            saved: ids.length ? ids : undefined,
           },
         },
       };
@@ -358,30 +264,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
           orderedPinnedIds: {
             ...global.chats.orderedPinnedIds,
             [listType]: newOrderedPinnedIds.length ? newOrderedPinnedIds : undefined,
-          },
-        },
-      };
-    }
-
-    case 'updateSavedDialogPinned': {
-      const { id, isPinned } = update;
-
-      const { saved: orderedPinnedIds } = global.chats.orderedPinnedIds;
-
-      let newOrderedPinnedIds = orderedPinnedIds || [];
-      if (!isPinned) {
-        newOrderedPinnedIds = newOrderedPinnedIds.filter((pinnedId) => pinnedId !== id);
-      } else if (!newOrderedPinnedIds.includes(id)) {
-        newOrderedPinnedIds = [id, ...newOrderedPinnedIds];
-      }
-
-      return {
-        ...global,
-        chats: {
-          ...global.chats,
-          orderedPinnedIds: {
-            ...global.chats.orderedPinnedIds,
-            saved: newOrderedPinnedIds.length ? newOrderedPinnedIds : undefined,
           },
         },
       };
@@ -431,18 +313,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
         chatFolders: {
           ...global.chatFolders,
           orderedIds,
-        },
-      };
-    }
-
-    case 'updateRecommendedChatFolders': {
-      const { folders } = update;
-
-      return {
-        ...global,
-        chatFolders: {
-          ...global.chatFolders,
-          recommended: folders,
         },
       };
     }
@@ -526,122 +396,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
       actions.loadChatJoinRequests({ chatId });
       return undefined;
-    }
-
-    case 'updatePinnedTopic': {
-      const { chatId, topicId, isPinned } = update;
-
-      const chat = global.chats.byId[chatId];
-      if (!chat) {
-        return undefined;
-      }
-
-      global = updateTopic(global, chatId, topicId, {
-        isPinned,
-      });
-      setGlobal(global);
-
-      return undefined;
-    }
-
-    case 'updatePinnedTopicsOrder': {
-      const { chatId, order } = update;
-
-      const chat = global.chats.byId[chatId];
-      if (!chat) return undefined;
-
-      global = replacePinnedTopicIds(global, chatId, order);
-      setGlobal(global);
-
-      return undefined;
-    }
-
-    case 'updateTopic': {
-      const { chatId, topicId } = update;
-
-      const chat = selectChat(global, chatId);
-      if (!chat?.isForum) return undefined;
-
-      actions.loadTopicById({ chatId, topicId });
-
-      return undefined;
-    }
-
-    case 'updateTopicEdit': {
-      const { chatId, topicId, topicEdit } = update;
-
-      global = updateTopic(global, chatId, topicId, topicEdit);
-      setGlobal(global);
-
-      return undefined;
-    }
-
-    case 'updateTopics': {
-      const { chatId } = update;
-
-      const chat = selectChat(global, chatId);
-      if (!chat?.isForum) return undefined;
-
-      actions.loadTopics({ chatId, force: true });
-
-      return undefined;
-    }
-
-    case 'updateDiscussion': {
-      const { chatId, threadId } = update;
-
-      actions.loadDiscussion({ chatId, threadId });
-
-      return undefined;
-    }
-
-    case 'updateViewForumAsMessages': {
-      const { chatId, isEnabled } = update;
-
-      const chat = selectChat(global, chatId);
-      if (!chat?.isForum) return undefined;
-
-      global = updateChat(global, chatId, {
-        isForumAsMessages: isEnabled,
-      });
-      setGlobal(global);
-      break;
-    }
-
-    case 'updateNewProfilePhoto': {
-      const { peerId, photo } = update;
-
-      global = updateChat(global, peerId, {
-        avatarPhotoId: photo.id,
-      });
-      setGlobal(global);
-
-      actions.loadMoreProfilePhotos({ peerId, shouldInvalidateCache: true });
-
-      break;
-    }
-
-    case 'updateDeleteProfilePhoto': {
-      const { peerId, photoId } = update;
-
-      const peer = selectPeer(global, peerId);
-      if (!peer) {
-        return undefined;
-      }
-
-      if (!photoId || peer.avatarPhotoId === photoId) {
-        global = updateChat(global, peerId, {
-          avatarPhotoId: undefined,
-        });
-        global = replacePeerPhotos(global, peerId, undefined);
-      } else {
-        global = deletePeerPhoto(global, peerId, photoId);
-      }
-      setGlobal(global);
-
-      actions.loadMoreProfilePhotos({ peerId, shouldInvalidateCache: true });
-
-      break;
     }
   }
 

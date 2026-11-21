@@ -17,6 +17,7 @@ usernames = { path = "../libsignal/rust/usernames" }
 libsignal-account-keys = { path = "../libsignal/rust/account-keys" }
 libsignal-message-backup = { path = "../libsignal/rust/message-backup" }
 attest = { path = "../libsignal/rust/attest" }
+libsignal-keytrans = { path = "../libsignal/rust/keytrans" }
 
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -25,7 +26,13 @@ rand = "0.9"
 hkdf = "0.13"
 sha2 = "0.11"
 uuid = "1.5"
-serde = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+hex = "0.4"
+prost = "0.14"
+subtle = "2.6"
+const-str = { version = "1.0", features = ["proc"] }
 partial-default = "0.1"
 async-trait = "0.1"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
@@ -42,6 +49,10 @@ getrandom02 = { package = "getrandom", version = "0.2", features = ["js"] }
 # `test-util` accepts the old TCB evaluation data of the attestation test vectors that have a known private key
 attest = { path = "../libsignal/rust/attest", features = ["test-util"] }
 snow = "0.10"
+assert_matches = "1.5"
+futures-util = "0.3"
+test-case = "3.3"
+tokio = { version = "1", features = ["macros", "rt"] }
 
 # BoringSSL does not build for wasm32-unknown-unknown: `attest` gets a pure-Rust implementation of the `boring` API it uses
 [patch."https://github.com/signalapp/boring"]

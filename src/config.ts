@@ -246,7 +246,6 @@ export const POPULAR_SYMBOL_SET_ID = 'popular';
 export const RECENT_SYMBOL_SET_ID = 'recent';
 export const FAVORITE_SYMBOL_SET_ID = 'favorite';
 export const CHAT_STICKER_SET_ID = 'chatStickers';
-export const DEFAULT_TOPIC_ICON_STICKER_ID = 'topic-default-icon';
 export const DEFAULT_STATUS_ICON_ID = 'status-default-icon';
 export const EMOJI_IMG_REGEX = /<img[^>]+alt="([^"]+)"(?![^>]*data-document-id)[^>]*>/gm;
 
@@ -317,7 +316,7 @@ export const NSFW_RESTRICTION_REASON = 'sensitive';
 // eslint-disable-next-line @stylistic/max-len
 export const COUNTRIES_WITH_12H_TIME_FORMAT = new Set(['AU', 'BD', 'CA', 'CO', 'EG', 'HN', 'IE', 'IN', 'JO', 'MX', 'MY', 'NI', 'NZ', 'PH', 'PK', 'SA', 'SV', 'US']);
 
-export const API_CHAT_TYPES = ['channels', 'chats', 'users', 'groups'] as const;
+export const API_CHAT_TYPES = ['chats', 'users', 'groups'] as const;
 
 export const HEART_REACTION: ApiReactionEmoji = {
   type: 'emoji',
@@ -325,7 +324,6 @@ export const HEART_REACTION: ApiReactionEmoji = {
 };
 
 export const LOCAL_MESSAGES_LIMIT = 1e6; // 1M
-export const CHANNEL_ID_BASE = 10n ** 12n;
 export const DEFAULT_GIF_SEARCH_BOT_USERNAME = 'gif';
 export const ALL_FOLDER_ID = 0;
 export const ARCHIVED_FOLDER_ID = 1;
@@ -336,6 +334,7 @@ export const MAX_ACTIVE_PINNED_CHATS = 5;
 export const SCHEDULED_WHEN_ONLINE = 0x7FFFFFFE;
 export const SUPPORT_URL = 'https://support.signal.org/';
 export const PRIVACY_URL = 'https://signal.org/legal/#privacy-policy';
+export const KEY_TRANSPARENCY_URL = 'https://support.signal.org/hc/articles/10223569377562';
 export const GENERAL_TOPIC_ID = 1;
 
 export const CALL_PROTOCOL_LIBRARY_VERSIONS = ['13.0.0'];

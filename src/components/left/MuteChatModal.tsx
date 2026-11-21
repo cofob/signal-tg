@@ -14,7 +14,6 @@ import RadioGroup from '../ui/RadioGroup';
 export type OwnProps = {
   isOpen: boolean;
   chatId: string;
-  topicId?: number;
   onClose: () => void;
   onCloseAnimationEnd?: () => void;
 };
@@ -31,12 +30,11 @@ enum MuteDuration {
 const MuteChatModal = ({
   isOpen,
   chatId,
-  topicId,
   onClose,
   onCloseAnimationEnd,
 }: OwnProps) => {
   const [muteUntilOption, setMuteUntilOption] = useState(MuteDuration.Forever);
-  const { updateChatMutedState, updateTopicMutedState } = getActions();
+  const { updateChatMutedState } = getActions();
 
   const lang = useLang();
 
@@ -56,13 +54,9 @@ const MuteChatModal = ({
     } else {
       mutedUntil = Math.floor(Date.now() / 1000) + Number(muteUntilOption);
     }
-    if (topicId) {
-      updateTopicMutedState({ chatId, topicId, mutedUntil });
-    } else {
-      updateChatMutedState({ chatId, mutedUntil });
-    }
+    updateChatMutedState({ chatId, mutedUntil });
     onClose();
-  }, [chatId, muteUntilOption, onClose, topicId]);
+  }, [chatId, muteUntilOption, onClose]);
 
   return (
     <Modal

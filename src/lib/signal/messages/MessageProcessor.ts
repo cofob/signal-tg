@@ -1,13 +1,18 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
+import type { CallHistoryHost } from '../calls/CallHistory';
 import type MessageDb from '../db/MessageDb';
 import type {
-  ConversationRecord, MessageRecord, NewMessageRecord, NewStoryRecord, SendErrorKind, SendStatus, StoryRecipient,
-  StoryRecord, StoryReply,
+  CallRecord, ConversationRecord, MessageRecord, NewMessageRecord, NewStoryRecord, SendErrorKind, SendStatus,
+  StoryRecipient, StoryRecord, StoryReply,
 } from '../db/MessageDb';
 import type { GroupState } from '../groups/fetchGroup';
 import type { DecryptedGroupChange } from '../groups/groupChange';
+import type {
+  NotificationProfileDraft, NotificationProfilesState,
+} from '../notificationProfiles/NotificationProfileManager';
+import type { NotificationProfile } from '../notificationProfiles/notificationProfiles';
 import type {
   AddressableMessage,
   AddressableMessageSchema,
@@ -19,12 +24,11 @@ import type {
   ReceiptMessage,
   StoryMessage,
   SyncMessage,
-  SyncMessage_DeleteForMe,
+  SyncMessage_AttachmentBackfillResponse, SyncMessage_DeleteForMe,
   SyncMessage_DeleteForMeSchema,
   SyncMessage_Sent,
   TypingMessage,
-  Verified,
-} from '../proto/generated/SignalService_pb';
+  Verified } from '../proto/generated/SignalService_pb';
 import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
@@ -37,8 +41,10 @@ import type { AccountRecord, EarlyReceiptRecord, StoryDistributionList } from '.
 
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
-import { getAttachmentCacheKey, removeAttachmentBlob } from '../attachments/attachmentCache';
+import { applyBackfillResponse, ATTACHMENT_BACKFILL_TIMEOUT_MS } from '../attachments/attachmentBackfill';
+import { getAttachmentCacheKey, getIsAttachmentCached, removeAttachmentBlob } from '../attachments/attachmentCache';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { getCallEvent, getCallLogEvent } from '../calls/callDisposition';
 import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup, GroupRequestError } from '../groups/fetchGroup';
 import {
@@ -49,12 +55,14 @@ import { saveGroupSendEndorsements } from '../groups/groupSendEndorsements';
 import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
-import { saveProfileKey } from '../sender/sealedSender';
+import { getAccessKey, saveProfileKey } from '../sender/sealedSender';
 import {
   describeSendError, getSendErrorKind, GroupTerminatedError, NotGroupMemberError, UnregisteredUserError,
 } from '../sender/sendErrors';
 import {
+  sendAttachmentBackfillRequestSync,
   sendBlockedSync,
+  sendCallLogEventSync,
   sendConfigurationSync,
   sendDeleteForMeSync,
   sendMessage,
@@ -80,12 +88,15 @@ import {
   countPinnedConversations,
   getAci,
   getMutedUntil,
+  getNotificationProfileKey,
   getOptionalBool,
   getStickerPackStorageKey,
   getStorageChanges,
   getStoryListKey,
   mergeStorageChanges,
   omitChangedFields,
+  parseNotificationProfile,
+  parseNotificationProfileOverride,
   parseStoryDistributionList,
 } from '../storage/storageRecords';
 import { syncStorageService } from '../storage/syncStorage';
@@ -99,6 +110,10 @@ import { getIsConversationAccepted } from './messageRequests';
 import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './sendRetry';
 import { getFailedRecipients } from './sendState';
 
+import {
+  applyCallEvent, applyCallLogEvent, applyGroupCallUpdate, clearCallLog, markCallLogSeen,
+} from '../calls/CallHistory';
+import NotificationProfileManager from '../notificationProfiles/NotificationProfileManager';
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
   AttachmentPointerSchema,
@@ -108,6 +123,7 @@ import {
   GroupContextV2Schema,
   ReceiptMessage_Type,
   StoryMessageSchema,
+  SyncMessage_CallLogEvent_Type,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
   SyncMessage_Request_Type,
@@ -127,6 +143,8 @@ export type MessageChanges = {
   deletedMessages: { conversationId: string; id: number }[];
   stories: StoryRecord[];
   deletedStories: StoryRecord[];
+  // Calls added, changed and deleted (with status `deleted`)
+  calls: CallRecord[];
 };
 
 /** What a story from this device shows: a text story or an uploaded photo or video, with its caption ranges */
@@ -177,6 +195,10 @@ type MessageProcessorEvents = {
   onError(error: Error): void;
   // Ids of sticker packs installed or removed here or on another device
   onStickerPacksChange?(ids: string[]): void;
+  // The notification profiles, the one that is on, or the manual override changed
+  onNotificationProfilesChange?(state: NotificationProfilesState): void;
+  // Our username or phone number discoverability changed on another device, which key transparency has to learn
+  onOwnIdentifierChange?(identifier: 'username' | 'phoneNumberDiscoverability'): void;
 };
 
 type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
@@ -241,6 +263,8 @@ const STORAGE_SYNC_DELAY_MS = 500;
 const STORAGE_MERGE_PASSES: { id: string; cases: NonNullable<StorageRecord['record']['case']>[] }[] = [
   { id: 'installedStickerPack', cases: ['installedStickerPack'] },
   { id: 'storyDistributionList', cases: ['storyDistributionList'] },
+  // Notification profiles, and the manual override and sync setting of the account record
+  { id: 'notificationProfiles', cases: ['notificationProfile', 'account'] },
   // `hideStory` of contacts and groups, `storiesDisabled` and `storyViewReceiptsEnabled` of the account
   { id: 'storyFields', cases: ['contact', 'groupV2', 'account'] },
 ];
@@ -336,11 +360,37 @@ export default class MessageProcessor {
   // Counts local storage record changes, so a write clears only the changes it carried
   private storageChangeCount = 0;
 
+  // What call history changes in messages and chats goes through the processor, which serializes it
+  private callHistory: CallHistoryHost;
+
+  private notificationProfiles: NotificationProfileManager;
+
+  // Requests for attachments that the primary device has not completed, by message id; the timer ends a request that
+  // gets no answer, and is gone once the phone answered
+  private backfillRequests = new Map<number, ReturnType<typeof setTimeout> | undefined>();
+
   constructor(
     private db: MessageDb,
     private client: SignalClient,
     private events: MessageProcessorEvents,
-  ) {}
+  ) {
+    this.callHistory = {
+      db,
+      addMessage: (conversation, record) => this.addMessage(conversation, record),
+      putMessage: (record) => this.putMessage(record),
+      removeMessage: (message) => this.removeMessage(message),
+      updateLastMessage: (conversationId) => this.updateLastMessage(conversationId),
+      addChangedCall: (call) => {
+        this.changes.calls.push(call);
+      },
+    };
+    this.notificationProfiles = new NotificationProfileManager({
+      store: client.store,
+      markStorageChanges: (added) => this.markStorageChanges(added),
+      runSerial: (task) => this.runSerial(task),
+      onChange: (state) => this.events.onNotificationProfilesChange?.(state),
+    });
+  }
 
   /** Handles one decrypted envelope; `SignalClient.connect` passes it as `onContent` */
   async processContent(decrypted: DecryptedEnvelope) {
@@ -354,6 +404,7 @@ export default class MessageProcessor {
    */
   start() {
     this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
+    this.runSerial(() => this.notificationProfiles.refresh(true)).catch(this.events.onError);
     void this.flushPendingSends();
     this.retryUnsentMessages(true);
   }
@@ -366,6 +417,9 @@ export default class MessageProcessor {
     clearTimeout(this.storageSyncTimer);
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    this.notificationProfiles.stop();
+    this.backfillRequests.forEach(clearTimeout);
+    this.backfillRequests.clear();
     this.sendsInFlight.clear();
     this.retryPass = Promise.resolve();
     this.deliveryReceiptTimer = undefined;
@@ -808,20 +862,124 @@ export default class MessageProcessor {
 
   /**
    * Remembers that the CDN no longer has an attachment, an index in `DataMessage.attachments` or the sticker,
-   * so it is not downloaded again
+   * so it is not downloaded again, and asks the primary device for it (`requestAttachmentBackfill`)
    */
   async markAttachmentUnavailable(messageId: number, attachment: number | 'sticker') {
     await this.runSerial(async () => {
       const message = await this.db.getMessage(messageId);
       if (!message) return;
       if (attachment === 'sticker') {
-        if (!message.isStickerUnavailable) await this.putMessage({ ...message, isStickerUnavailable: true });
+        if (message.isStickerUnavailable) return;
+        await this.requestAttachmentBackfill(await this.putMessage({ ...message, isStickerUnavailable: true }));
         return;
       }
       if (message.unavailableAttachmentIndexes?.includes(attachment)) return;
-      await this.putMessage({
+      await this.requestAttachmentBackfill(await this.putMessage({
         ...message, unavailableAttachmentIndexes: [...message.unavailableAttachmentIndexes ?? [], attachment],
+      }));
+    });
+  }
+
+  /**
+   * Asks the primary device for the attachments of a message that the CDN no longer has, as Signal Desktop does
+   * (`AttachmentBackfill.request` in `ts/jobs/helpers/attachmentBackfill.preload.ts`): one request at a time for
+   * a message, and not again once the phone could not get them or did not answer in time. The response brings new
+   * pointers (`applyAttachmentBackfillResponse`). Stories, link previews and quotes have no request.
+   */
+  private async requestAttachmentBackfill(message: MessageRecord) {
+    const { deviceId } = this.client.getSenderContext().account;
+    // A primary device keeps the attachments itself, and only addressable messages can be named to it
+    if (deviceId === SIGNAL_PRIMARY_DEVICE_ID || !isAddressableMessage(message) || !message.dataMessage) return;
+    if (message.isBackfillFailed || this.backfillRequests.has(message.id) || message.deletedAt) return;
+    // Pointers that the phone sent failed too: it has nothing better, so this is the end
+    if (message.isBackfilled) {
+      await this.putMessage({ ...message, isBackfillFailed: true });
+      return;
+    }
+    const conversation = await this.db.getConversation(message.conversationId);
+    if (!conversation) return;
+
+    this.armBackfillTimeout(message.id);
+    void this.sendWhenConnected(async (context) => {
+      await sendAttachmentBackfillRequestSync(context, {
+        targetMessage: buildAddressableMessage(message),
+        targetConversation: buildConversationIdentifier(conversation),
       });
+    }).catch(this.events.onError);
+  }
+
+  /** Ends the request for the attachments of a message if the primary device does not answer in time */
+  private armBackfillTimeout(messageId: number) {
+    clearTimeout(this.backfillRequests.get(messageId));
+    this.backfillRequests.set(messageId, setTimeout(() => {
+      this.backfillRequests.delete(messageId);
+      void this.runSerial(() => this.failAttachmentBackfill(messageId)).catch(this.events.onError);
+    }, ATTACHMENT_BACKFILL_TIMEOUT_MS));
+  }
+
+  /** The request ran out of time, or the phone gave up: the attachments stay unavailable and are not asked for again */
+  private async failAttachmentBackfill(messageId: number) {
+    const message = await this.db.getMessage(messageId);
+    if (message && !message.isBackfillFailed) await this.putMessage({ ...message, isBackfillFailed: true });
+  }
+
+  /**
+   * Applies the response to our request for attachments (Signal Desktop `AttachmentBackfill.handleResponse`): the
+   * pointers that the primary device sends replace those that failed, and the message shows its media again. An
+   * answer that the phone has not finished leaves the request open, an error ends it. Answers to requests of other
+   * devices update the pointers too, which is why they are not ignored.
+   */
+  private async applyAttachmentBackfillResponse(response: SyncMessage_AttachmentBackfillResponse) {
+    const conversation = await this.findConversation(response.targetConversation);
+    const message = conversation && response.targetMessage
+      && await this.findAddressableMessage(conversation.id, response.targetMessage);
+    if (!message?.dataMessage) return;
+
+    const isRequested = this.backfillRequests.has(message.id);
+    clearTimeout(this.backfillRequests.get(message.id));
+    const { data } = response;
+    if (data.case !== 'attachments') {
+      // The phone does not have the message (`MESSAGE_NOT_FOUND`)
+      if (isRequested) {
+        this.backfillRequests.delete(message.id);
+        await this.failAttachmentBackfill(message.id);
+      }
+      return;
+    }
+
+    const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
+    const downloadedAttachmentIndexes = new Set<number>();
+    for (const [index, pointer] of dataMessage.attachments.entries()) {
+      if (!message.unavailableAttachmentIndexes?.includes(index) && await getIsAttachmentCached(pointer)) {
+        downloadedAttachmentIndexes.add(index);
+      }
+    }
+    const result = applyBackfillResponse({
+      dataMessage,
+      downloadedAttachmentIndexes,
+      isStickerDownloaded: Boolean(dataMessage.sticker?.data && !message.isStickerUnavailable
+        && await getIsAttachmentCached(dataMessage.sticker.data)),
+      unavailableAttachmentIndexes: message.unavailableAttachmentIndexes ?? [],
+      isStickerUnavailable: Boolean(message.isStickerUnavailable),
+      isRequested,
+      response: data.value,
+      longTextContentType: LONG_TEXT_CONTENT_TYPE,
+    });
+    if (isRequested) {
+      // The phone is working on what it has not sent yet; it gets another time to send it
+      if (result.pendingCount) this.armBackfillTimeout(message.id);
+      else this.backfillRequests.delete(message.id);
+    }
+    await this.putMessage({
+      ...message,
+      dataMessage: result.isChanged ? toBinary(DataMessageSchema, result.dataMessage) : message.dataMessage,
+      unavailableAttachmentIndexes: result.unavailableAttachmentIndexes.length
+        ? result.unavailableAttachmentIndexes
+        : undefined,
+      isStickerUnavailable: result.isStickerUnavailable || undefined,
+      // Attachments that the phone could not get stay unavailable
+      isBackfilled: result.isChanged ? true : message.isBackfilled,
+      isBackfillFailed: result.failedCount ? true : message.isBackfillFailed,
     });
   }
 
@@ -934,6 +1092,64 @@ export default class MessageProcessor {
       }
       const reads = messages.map(({ authorAci, sentAt }) => ({ senderAci: authorAci, timestamp: sentAt }));
       await sendReadSync(context, reads);
+    });
+  }
+
+  /** The notification profiles and which one is on */
+  getNotificationProfiles() {
+    return this.runSerial(() => this.notificationProfiles.refresh());
+  }
+
+  saveNotificationProfile(draft: NotificationProfileDraft) {
+    return this.runSerial(() => this.notificationProfiles.saveProfile(draft));
+  }
+
+  deleteNotificationProfile(id: string) {
+    return this.runSerial(() => this.notificationProfiles.deleteProfile(id));
+  }
+
+  /** Turns a profile on by hand until `endsAt`, or without a profile turns all profiles off by hand */
+  setNotificationProfileOverride(profileId: string | undefined, endsAt?: number) {
+    return this.runSerial(() => this.notificationProfiles.setOverride(profileId, endsAt));
+  }
+
+  /** The calls of the call history that were not cleared, newest first */
+  getCallLog(limit: number) {
+    return this.db.getCallLog(limit);
+  }
+
+  /** Marks the calls as seen here and on our other devices, as Desktop does when the calls list opens */
+  markCallLogSeen() {
+    return this.runSerial(async () => {
+      const newest = await markCallLogSeen(this.callHistory);
+      if (!newest) return;
+      await this.sendWhenConnected(async (context) => {
+        await sendCallLogEventSync(context, {
+          type: SyncMessage_CallLogEvent_Type.MARKED_AS_READ,
+          timestamp: BigInt(newest.timestamp),
+          conversationId: newest.mode === 'group' ? bufferFromBase64(newest.peerId) : uuidToBytes(newest.peerId),
+          callId: BigInt(newest.callId),
+        });
+      }).catch(this.events.onError);
+    });
+  }
+
+  /**
+   * Clears the call history here and on our other devices (Signal Desktop `clearCallHistoryDataAndSync` in
+   * `ts/util/callDisposition.preload.ts`). The sync names the newest call, which the other devices clear up to.
+   */
+  clearCallLog() {
+    return this.runSerial(async () => {
+      const newest = await clearCallLog(this.callHistory);
+      if (!newest) return;
+      await this.sendWhenConnected(async (context) => {
+        await sendCallLogEventSync(context, {
+          type: SyncMessage_CallLogEvent_Type.CLEAR,
+          timestamp: BigInt(newest.timestamp),
+          conversationId: newest.mode === 'group' ? bufferFromBase64(newest.peerId) : uuidToBytes(newest.peerId),
+          callId: BigInt(newest.callId),
+        });
+      }).catch(this.events.onError);
     });
   }
 
@@ -1269,6 +1485,8 @@ export default class MessageProcessor {
         deviceId: account.deviceId,
         localAccount: account,
         storyLists: await store.getItem('storyDistributionLists') ?? [],
+        notificationProfiles: await store.getItem('notificationProfiles') ?? [],
+        notificationProfileOverride: await store.getItem('notificationProfileOverride'),
       });
       if (!built) return undefined;
 
@@ -1427,18 +1645,23 @@ export default class MessageProcessor {
    * is in the account, other profile keys are in their recipients.
    */
   async refreshProfile(aci: string) {
-    const { store, connection, account } = this.client.getSenderContext();
+    const {
+      store, connection, unauthenticatedChat, account,
+    } = this.client.getSenderContext();
     const profileKey = aci === account.aci ? account.profileKey : (await store.getRecipient(aci))?.profileKey;
     if (!profileKey) return;
 
+    // Other users' profiles are fetched without account credentials, unless they turned sealed sender off
+    const accessKey = aci === account.aci ? undefined : await getAccessKey(store, aci);
+    const unauthenticated = accessKey ? { chat: unauthenticatedChat, accessKey } : undefined;
     let profile;
     try {
-      profile = await fetchProfile(connection, aci, profileKey);
+      profile = await fetchProfile(connection, aci, profileKey, unauthenticated);
     } catch (err) {
       if (!(err instanceof ProfileNotFoundError) || aci === account.aci) throw err;
       // Our profile key of this user is out of date, or they deleted their account: keep the identity key current and
       // try again after the usual interval instead of on every connection
-      const identityKey = await fetchProfileIdentityKey(connection, aci);
+      const identityKey = await fetchProfileIdentityKey(connection, aci, unauthenticated);
       if (identityKey) await store.runExclusive(() => saveIdentity(store, aci, identityKey));
       await this.runSerial(async () => {
         await this.putConversation({ ...await this.ensurePrivateConversation(aci), profileFetchedAt: Date.now() });
@@ -1820,6 +2043,13 @@ export default class MessageProcessor {
     const blockedE164Count = blockedE164s.size;
     // Lists changed here since the last write keep their local state
     const remoteStoryLists: StoryDistributionList[] = [];
+    // The same for notification profiles; the account record brings the manual override and the sync setting
+    const remoteNotificationProfiles: NotificationProfile[] = [];
+    // Groups of notification profiles are allowed by their conversations, which have to be here with their master key
+    const groupIdsWithKey = new Set(
+      (await this.db.getConversations()).filter(({ masterKey }) => masterKey).map(({ id }) => id),
+    );
+    let notificationProfileAccount: Parameters<NotificationProfileManager['mergeRemote']>[1];
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
     let isProfileKeyChanged = false;
@@ -1907,7 +2137,7 @@ export default class MessageProcessor {
             : self.avatarPath,
         });
         const { usernameLink } = accountRecord;
-        await this.client.updateAccount({
+        const updatedAccount = await this.client.updateAccount({
           ...omitAccountChanges({
             isReadReceiptsEnabled: accountRecord.readReceipts,
             isTypingIndicatorsEnabled: accountRecord.typingIndicators,
@@ -1925,10 +2155,19 @@ export default class MessageProcessor {
             isStoryViewReceiptsEnabled: getOptionalBool(accountRecord.storyViewReceiptsEnabled),
           }, accountChanges),
         });
+        if (Boolean(account.isPhoneNumberUnlisted) !== Boolean(updatedAccount.isPhoneNumberUnlisted)) {
+          this.events.onOwnIdentifierChange?.('phoneNumberDiscoverability');
+        }
         if (accountRecord.storiesDisabled && !accountChanges.has('storiesDisabled')) await this.removeAllStories();
+        notificationProfileAccount = {
+          override: parseNotificationProfileOverride(accountRecord),
+          isOverrideChanged: accountChanges.has('notificationProfileManualOverride'),
+          isSyncDisabled: accountRecord.notificationProfileSyncDisabled,
+        };
         const username = accountRecord.username || undefined;
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+          this.events.onOwnIdentifierChange?.('username');
         }
         // Signal Desktop `mergeAccountRecord`: the primary device rotates the profile key, linked devices follow it
         const { profileKey } = accountRecord;
@@ -1942,6 +2181,9 @@ export default class MessageProcessor {
       } else if (record.case === 'storyDistributionList') {
         const list = parseStoryDistributionList(record.value);
         if (list && !changes[getStoryListKey(list.id)]) remoteStoryLists.push(list);
+      } else if (record.case === 'notificationProfile') {
+        const profile = parseNotificationProfile(record.value, getGroupId, (id) => groupIdsWithKey.has(id));
+        if (profile && !changes[getNotificationProfileKey(profile.id)]) remoteNotificationProfiles.push(profile);
       } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
         // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
         const { packId, packKey, position, deletedAtTimestamp } = record.value;
@@ -1964,6 +2206,10 @@ export default class MessageProcessor {
       await store.setItem('storyDistributionLists', [
         ...local.filter(({ id }) => !remoteIds.has(id)), ...remoteStoryLists,
       ]);
+    }
+
+    if (remoteNotificationProfiles.length || notificationProfileAccount) {
+      await this.notificationProfiles.mergeRemote(remoteNotificationProfiles, notificationProfileAccount);
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
@@ -2349,6 +2595,10 @@ export default class MessageProcessor {
   private async applyDataMessage(source: MessageSource, message: DataMessage, conversation: ConversationRecord) {
     if (!source.isOutgoing && conversation.isBlocked) return;
 
+    if (message.groupCallUpdate) {
+      await this.applyGroupCallUpdate(conversation, source, message.groupCallUpdate.eraId);
+      return;
+    }
     if (message.storyContext) {
       await this.applyStoryReply(conversation, source, message);
       return;
@@ -2439,6 +2689,18 @@ export default class MessageProcessor {
     });
   }
 
+  /**
+   * Signal Desktop `handleGroupCallUpdateMessage` in `ts/messages/handleDataMessage.preload.ts`: a call that someone
+   * started adds to the call history, unless the group is a message request or only admins may write and the sender
+   * is none
+   */
+  private async applyGroupCallUpdate(conversation: ConversationRecord, source: MessageSource, eraId: string) {
+    const selfAci = this.client.getSenderContext().account.aci;
+    const canCreate = !source.isOutgoing && getIsConversationAccepted(conversation, selfAci)
+      && (!conversation.isAnnouncementsOnly || Boolean(conversation.adminAcis?.includes(source.authorAci)));
+    await applyGroupCallUpdate(this.callHistory, conversation, eraId, source.sentAt, canCreate);
+  }
+
   private async handleSyncMessage(source: MessageSource, sync: SyncMessage) {
     const ownSource = { ...source, isOutgoing: true };
 
@@ -2510,6 +2772,19 @@ export default class MessageProcessor {
         // Another device changed our username and wrote it to the storage service
         this.scheduleStorageSync();
         break;
+      case 'attachmentBackfillResponse':
+        await this.applyAttachmentBackfillResponse(content.value);
+        break;
+      case 'callEvent': {
+        const event = getCallEvent(content.value);
+        if (event) await applyCallEvent(this.callHistory, event);
+        break;
+      }
+      case 'callLogEvent': {
+        const event = getCallLogEvent(content.value);
+        if (event) await applyCallLogEvent(this.callHistory, event);
+        break;
+      }
       case 'request':
         await this.answerSyncRequest(content.value.type);
         break;
@@ -3841,7 +4116,9 @@ export default class MessageProcessor {
     const updated = await this.putConversation({
       ...conversation,
       lastMessageId: message.id,
-      lastMessageAt: record.sentAt,
+      // A call notice has the time of the call, which can be older than the messages that came since (Desktop keeps the
+      // latest time)
+      lastMessageAt: record.kind === 'call' ? Math.max(conversation.lastMessageAt ?? 0, record.sentAt) : record.sentAt,
       unreadCount: conversation.unreadCount + (isIncoming ? 1 : 0),
       // New messages bring archived conversations back unless they are muted
       isArchived: conversation.isArchived && isIncoming && !isMuted(conversation) ? false : conversation.isArchived,
@@ -3909,7 +4186,7 @@ export default class MessageProcessor {
   private flush() {
     const { changes } = this;
     if (!changes.conversations.length && !changes.messages.length && !changes.deletedMessages.length
-      && !changes.stories.length && !changes.deletedStories.length) {
+      && !changes.stories.length && !changes.deletedStories.length && !changes.calls.length) {
       return;
     }
     this.changes = createChanges();
@@ -3921,13 +4198,20 @@ export default class MessageProcessor {
       deletedMessages: changes.deletedMessages,
       stories: dedupeById(changes.stories).filter(({ id }) => !deletedStoryIds.has(id)),
       deletedStories: changes.deletedStories,
+      calls: changes.calls,
     });
   }
 }
 
 function createChanges(): MessageChanges {
   return {
-    conversations: [], messages: [], addedMessageIds: [], deletedMessages: [], stories: [], deletedStories: [],
+    conversations: [],
+    messages: [],
+    addedMessageIds: [],
+    deletedMessages: [],
+    stories: [],
+    deletedStories: [],
+    calls: [],
   };
 }
 

@@ -1,3 +1,5 @@
+import type { CallDirection, CallMode, CallStatus, CallType } from '../calls/callDisposition';
+import type { ChatStyleRecord } from '../chatStyle/chatStyle';
 import type { GroupState } from '../groups/fetchGroup';
 import type { GroupUpdate } from '../groups/groupUpdates';
 import type { ConversionDirection } from '../store/SecureIdbStore';
@@ -55,13 +57,15 @@ export type ConversationRecord = {
   // The last `reportSpamToken` of an envelope from the contact, sent with spam reports
   reportingToken?: Uint8Array;
   mutedUntil?: number;
+  // The chat color and wallpaper from the transferred history; the account's default style applies without one
+  chatStyle?: ChatStyleRecord;
   // Position in the pinned conversations list
   pinIndex?: number;
   pinnedMessages?: { messageId: number; pinnedAt: number; expiresAt?: number }[];
 };
 
-// Safety number notices name the contact in `actorAci`
-export type MessageKind = 'message' | 'timerUpdate' | 'groupUpdate' | 'safetyNumberChange' | 'verifiedChange';
+// Safety number notices name the contact in `actorAci`; call notices stand for the call `callId`
+export type MessageKind = 'message' | 'timerUpdate' | 'groupUpdate' | 'safetyNumberChange' | 'verifiedChange' | 'call';
 
 export type SendStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'viewed' | 'failed';
 
@@ -118,6 +122,11 @@ export type MessageRecord = {
   // Indexes in `DataMessage.attachments` that the CDN no longer has
   unavailableAttachmentIndexes?: number[];
   isStickerUnavailable?: true;
+  // The primary device sent new pointers for attachments that the CDN no longer had; a second failure is final
+  isBackfilled?: true;
+  // The primary device could not get the attachments that the CDN no longer has, or did not answer; this device does
+  // not ask for them again
+  isBackfillFailed?: true;
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
   // The reason for each recipient whose status is `failed`; messages stored earlier have none
@@ -130,6 +139,31 @@ export type MessageRecord = {
   // Verification notices: whether the safety number became verified, and whether another of our devices did it
   isVerified?: boolean;
   isFromOtherDevice?: boolean;
+  // Call notices: the call in `CallRecord`, which holds its status
+  callId?: string;
+};
+
+/**
+ * A call of the call history, from sync messages of other devices and group call updates (Signal Desktop
+ * `CallHistoryDetails` in `ts/types/CallDisposition.std.ts`). `status` `deleted` marks a call that was cleared: it stays
+ * so that a late event cannot bring the call back.
+ */
+export type CallRecord = {
+  callId: string;
+  // The ACI of a 1:1 call, or the group id
+  peerId: string;
+  mode: CallMode;
+  type: CallType;
+  direction: CallDirection;
+  status: CallStatus;
+  // The Signal timestamp of the call; a deleted call has the time of its deletion
+  timestamp: number;
+  // The member who started a group call, when known
+  ringerId?: string;
+  // The call notice in the chat
+  messageId?: number;
+  // A missed or pending incoming call that the call log has not marked as read
+  isUnseen?: true;
 };
 
 export type NewMessageRecord = Omit<MessageRecord, 'id'>;
@@ -177,15 +211,17 @@ const DB_NAME = 'ts-signal-messages';
 // Records per transaction when the stores are rewritten, and per read when messages are filtered after decryption
 const CONVERT_BATCH_SIZE = 100;
 const FIND_BATCH_SIZE = 100;
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
 const STORIES = 'stories';
+const CALLS = 'calls';
 const BY_CONVERSATION = 'byConversation';
 const BY_AUTHOR_SENT_AT = 'byAuthorSentAt';
 const BY_EXPIRES_AT = 'byExpiresAt';
 const BY_LOCAL_ID = 'byLocalId';
 const BY_SEND_RETRY_AT = 'bySendRetryAt';
+const BY_TIMESTAMP = 'byTimestamp';
 
 /**
  * Conversations, messages and stories of the linked device in IndexedDB. Message ids grow in arrival order,
@@ -462,10 +498,59 @@ export default class MessageDb {
     return story?.expiresAt;
   }
 
+  getCall(peerId: string, callId: string) {
+    return this.readRecord<CallRecord>(CALLS, (store) => store.get([peerId, callId]));
+  }
+
+  async putCall(record: CallRecord) {
+    const stored = await encodeRecord(CALLS, record);
+    await this.request(CALLS, 'readwrite', (store) => store.put(stored));
+    return record;
+  }
+
+  /** Puts calls in one transaction */
+  async putCalls(records: CallRecord[]) {
+    const stored = await Promise.all(records.map((record) => encodeRecord(CALLS, record)));
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(CALLS, 'readwrite');
+      const store = transaction.objectStore(CALLS);
+      for (const record of stored) store.put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
+  /** Every stored call, deleted ones included, in no particular order */
+  getCalls() {
+    return this.readRecords<CallRecord>(CALLS, (store) => store.getAll());
+  }
+
+  /** Calls that were not deleted, newest first */
+  async getCallLog(limit: number) {
+    const stored: unknown[] = [];
+    const openCursor = (store: IDBObjectStore) => store.index(BY_TIMESTAMP).openCursor(undefined, 'prev');
+    await this.iterate(CALLS, 'readonly', openCursor, (cursor) => {
+      stored.push(cursor.value);
+      return true;
+    });
+    // Decrypted a batch at a time, so a long log is read only as far as `limit` needs
+    const calls: CallRecord[] = [];
+    for (let index = 0; index < stored.length && calls.length < limit; index += FIND_BATCH_SIZE) {
+      const batch = await decodeRecords<CallRecord>(CALLS, stored.slice(index, index + FIND_BATCH_SIZE));
+      for (const call of batch) {
+        if (call.status !== 'deleted' && calls.length < limit) calls.push(call);
+      }
+    }
+    return calls;
+  }
+
   async clear() {
     await this.request(CONVERSATIONS, 'readwrite', (store) => store.clear());
     await this.request(MESSAGES, 'readwrite', (store) => store.clear());
     await this.request(STORIES, 'readwrite', (store) => store.clear());
+    await this.request(CALLS, 'readwrite', (store) => store.clear());
   }
 
   /**
@@ -473,7 +558,7 @@ export default class MessageDb {
    * changed since it was read stays as the change left it, because writes already use the current mode.
    */
   async convertRecords(direction: ConversionDirection) {
-    for (const storeName of [CONVERSATIONS, MESSAGES, STORIES] as const) {
+    for (const storeName of [CONVERSATIONS, MESSAGES, STORIES, CALLS] as const) {
       let lastKey: IDBValidKey | undefined;
       for (;;) {
         const batch = await this.readBatch(storeName, lastKey);
@@ -590,6 +675,10 @@ export default class MessageDb {
             }
             cursor.continue();
           };
+        }
+        if (oldVersion < 5) {
+          const calls = db.createObjectStore(CALLS, { keyPath: ['peerId', 'callId'] });
+          calls.createIndex(BY_TIMESTAMP, 'timestamp');
         }
       };
       // An older version of the app in another tab keeps the upgrade waiting until that tab closes

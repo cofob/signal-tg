@@ -16,8 +16,6 @@ export function buildContentClassName(
     asForwarded,
     hasThread,
     forceSenderName,
-    hasCommentCounter,
-    hasBottomCommentButton,
     hasActionButton,
     hasReactions,
     peerColorClass,
@@ -31,8 +29,6 @@ export function buildContentClassName(
     asForwarded?: boolean;
     hasThread?: boolean;
     forceSenderName?: boolean;
-    hasCommentCounter?: boolean;
-    hasBottomCommentButton?: boolean;
     hasActionButton?: boolean;
     hasReactions?: boolean;
     peerColorClass?: string;
@@ -97,10 +93,6 @@ export function buildContentClassName(
 
     if (isRoundVideo) {
       classNames.push('round');
-    }
-
-    if (hasCommentCounter) {
-      classNames.push('has-comment-counter');
     }
   }
   if (isMedia) {
@@ -180,7 +172,7 @@ export function buildContentClassName(
     }
 
     if (isLastInGroup
-      && (photo || !isMediaWithNoText || hasBottomCommentButton)) {
+      && (photo || !isMediaWithNoText)) {
       classNames.push('has-appendix');
     }
   }

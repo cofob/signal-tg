@@ -8,12 +8,9 @@ import { getActions, getGlobal, withGlobal } from '../../../global';
 import type { ApiMessage, ApiMessageSearchContext } from '../../../api/types';
 import { LoadMoreDirection } from '../../../types';
 
-import { ALL_FOLDER_ID, GLOBAL_SUGGESTED_CHANNELS_ID } from '../../../config';
-import {
-  isChatChannel,
-} from '../../../global/helpers';
+import { ALL_FOLDER_ID } from '../../../config';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
-import { selectSimilarChannelIds, selectTabState } from '../../../global/selectors';
+import { selectTabState } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { getOrderedIds } from '../../../util/folderManager';
 import { unique } from '../../../util/iteratees';
@@ -26,7 +23,6 @@ import sortChatIds from '../../common/helpers/sortChatIds';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useContextMenuHandlers from '../../../hooks/useContextMenuHandlers';
-import useEffectOnce from '../../../hooks/useEffectOnce';
 import useHorizontalScroll from '../../../hooks/useHorizontalScroll';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -53,7 +49,6 @@ export type OwnProps = {
   searchQuery?: string;
   dateSearchQuery?: string;
   searchDate?: number;
-  isChannelList?: boolean;
   onReset: () => void;
   onSearchDateSelect: (value: Date) => void;
 };
@@ -66,7 +61,6 @@ type StateProps = {
   foundIds?: SearchResultKey[];
   globalMessagesByChatId?: Record<string, { byId: Record<number, ApiMessage> }>;
   fetchingStatus?: { chats?: boolean; messages?: boolean };
-  suggestedChannelIds?: string[];
 };
 
 const MIN_QUERY_LENGTH_FOR_GLOBAL_SEARCH = 4;
@@ -75,7 +69,6 @@ const LESS_LIST_ITEMS_AMOUNT = 5;
 const runThrottled = throttle((cb) => cb(), 500, false);
 
 const ChatResults: FC<OwnProps & StateProps> = ({
-  isChannelList,
   searchQuery,
   searchDate,
   dateSearchQuery,
@@ -86,13 +79,12 @@ const ChatResults: FC<OwnProps & StateProps> = ({
   foundIds,
   globalMessagesByChatId,
   fetchingStatus,
-  suggestedChannelIds,
   onReset,
   onSearchDateSelect,
 }) => {
   const {
     openChat, addRecentlyFoundChatId, searchMessagesGlobal,
-    setGlobalSearchChatId, loadChannelRecommendations,
+    setGlobalSearchChatId,
   } = getActions();
 
   const containerRef = useRef<HTMLDivElement>();
@@ -106,15 +98,11 @@ const ChatResults: FC<OwnProps & StateProps> = ({
   const [searchContext, setSearchContext] = useState<ApiMessageSearchContext>('all');
   const ref = useRef<HTMLDivElement>();
 
-  useEffectOnce(() => {
-    if (isChannelList) loadChannelRecommendations({});
-  });
-
   const handleLoadMore = useCallback(({ direction }: { direction: LoadMoreDirection }) => {
     if (direction === LoadMoreDirection.Backwards) {
       runThrottled(() => {
         searchMessagesGlobal({
-          type: isChannelList ? 'channels' : 'text',
+          type: 'text',
           context: searchContext,
         });
       });
@@ -144,7 +132,6 @@ const ChatResults: FC<OwnProps & StateProps> = ({
   function getSearchContextCaption(context: ApiMessageSearchContext) {
     if (context === 'users') return lang('PrivateChatsSearchContext');
     if (context === 'groups') return lang('GroupChatsSearchContext');
-    if (context === 'channels') return lang('ChannelsSearchContext');
     return lang('AllChatsSearchContext');
   }
 
@@ -201,36 +188,18 @@ const ChatResults: FC<OwnProps & StateProps> = ({
           >
             {getSearchContextCaption('groups')}
           </MenuItem>
-          <MenuItem
-            icon={searchContext === 'channels' ? 'check' : undefined}
-            customIcon={searchContext !== 'channels' ? <i className={itemPlaceholderClass} /> : undefined}
-
-            onClick={() => setSearchContext('channels')}
-          >
-            {getSearchContextCaption('channels')}
-          </MenuItem>
         </>
       </Menu>
     );
   }
 
   const localResults = useMemo(() => {
-    if (!isChannelList && (!searchQuery || (searchQuery.startsWith('@') && searchQuery.length < 2))) {
+    if (!searchQuery || (searchQuery.startsWith('@') && searchQuery.length < 2)) {
       return MEMO_EMPTY_ARRAY;
     }
 
-    // No need for expensive global updates, so we avoid them
-    const chatsById = getGlobal().chats.byId;
-
     const orderedChatIds = getOrderedIds(ALL_FOLDER_ID) ?? [];
-    const filteredChatIds = orderedChatIds.filter((id) => {
-      if (!isChannelList) return true;
-      const chat = chatsById[id];
-      return chat && isChatChannel(chat);
-    });
-    const localChatIds = filterPeersByQuery({ ids: filteredChatIds, query: searchQuery, type: 'chat' });
-
-    if (isChannelList) return localChatIds;
+    const localChatIds = filterPeersByQuery({ ids: orderedChatIds, query: searchQuery, type: 'chat' });
 
     const contactIdsWithMe = [
       ...(currentUserId ? [currentUserId] : []),
@@ -247,29 +216,20 @@ const ChatResults: FC<OwnProps & StateProps> = ({
     ];
 
     return unique([
-      ...sortChatIds(localPeerIds, undefined, currentUserId ? [currentUserId] : undefined),
+      ...sortChatIds(localPeerIds, currentUserId ? [currentUserId] : undefined),
       ...sortChatIds(accountPeerIds || []),
     ]);
-  }, [searchQuery, currentUserId, contactIds, accountPeerIds, isChannelList]);
+  }, [searchQuery, currentUserId, contactIds, accountPeerIds]);
 
-  useHorizontalScroll(chatSelectionRef, !localResults.length || isChannelList, true);
+  useHorizontalScroll(chatSelectionRef, !localResults.length, true);
 
   const globalResults = useMemo(() => {
     if (!searchQuery || searchQuery.length < MIN_QUERY_LENGTH_FOR_GLOBAL_SEARCH || !globalPeerIds) {
       return MEMO_EMPTY_ARRAY;
     }
 
-    // No need for expensive global updates, so we avoid them
-    const chatsById = getGlobal().chats.byId;
-
-    const filteredIds = globalPeerIds.filter((id) => {
-      if (!isChannelList) return true;
-      const chat = chatsById[id];
-      return chat && isChatChannel(chat);
-    });
-
-    return sortChatIds(filteredIds, true);
-  }, [globalPeerIds, isChannelList, searchQuery]);
+    return sortChatIds(globalPeerIds);
+  }, [globalPeerIds, searchQuery]);
 
   const foundMessages = useMemo(() => {
     if ((!searchQuery && !searchDate) || !foundIds || foundIds.length === 0) {
@@ -284,17 +244,16 @@ const ChatResults: FC<OwnProps & StateProps> = ({
         const [chatId, messageId] = parseSearchResultKey(id);
         const chat = chatsById[chatId];
         if (!chat) return undefined;
-        if (isChannelList && !isChatChannel(chat)) return undefined;
 
         return globalMessagesByChatId?.[chatId]?.byId[messageId];
       })
       .filter(Boolean);
-  }, [searchQuery, searchDate, foundIds, isChannelList, globalMessagesByChatId]);
+  }, [searchQuery, searchDate, foundIds, globalMessagesByChatId]);
 
   useEffect(() => {
     if (!searchQuery) return;
     searchMessagesGlobal({
-      type: isChannelList ? 'channels' : 'text',
+      type: 'text',
       context: searchContext,
       shouldResetResultsByType: true,
       shouldCheckFetchingMessagesStatus: true,
@@ -304,9 +263,9 @@ const ChatResults: FC<OwnProps & StateProps> = ({
 
   // A Signal link that was pasted can be opened from the results
   const signalLink = useMemo(() => {
-    const link = searchQuery && !isChannelList ? parseSignalLink(searchQuery) : undefined;
+    const link = searchQuery ? parseSignalLink(searchQuery) : undefined;
     return link?.type === 'invalid' ? undefined : link;
-  }, [searchQuery, isChannelList]);
+  }, [searchQuery]);
 
   const handleClickShowMoreLocal = useCallback(() => {
     setShouldShowMoreLocal(!shouldShowMoreLocal);
@@ -341,7 +300,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
     && !signalLink && !localResults.length && !globalResults.length && !actualFoundIds.length;
   const isMessagesFetching = fetchingStatus?.messages;
 
-  const shouldRenderTopPeers = !searchQuery && !searchDate && !isChannelList;
+  const shouldRenderTopPeers = !searchQuery && !searchDate;
 
   if (shouldRenderTopPeers) {
     return <RecentContacts onReset={onReset} />;
@@ -375,7 +334,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
           description={lang('ChatListSearchNoResultsDescription')}
         />
       )}
-      {Boolean(localResults.length) && !isChannelList && (
+      {Boolean(localResults.length) && (
         <Island className="search-island">
           <div
             className="chat-selection no-scrollbar"
@@ -402,7 +361,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
                 {lang(shouldShowMoreLocal ? 'ChatListSearchShowLess' : 'ChatListSearchShowMore')}
               </Link>
             )}
-            {lang(isChannelList ? 'SearchResultMyChannels' : 'DialogListSearchSectionDialogs')}
+            {lang('DialogListSearchSectionDialogs')}
           </h3>
           {localResults.map((id, index) => {
             if (!shouldShowMoreLocal && index >= LESS_LIST_ITEMS_AMOUNT) {
@@ -443,47 +402,29 @@ const ChatResults: FC<OwnProps & StateProps> = ({
           })}
         </Island>
       )}
-      {Boolean(suggestedChannelIds?.length) && !searchQuery && (
-        <Island className="search-island search-section">
-          <h3 className="section-heading" dir={lang.isRtl ? 'auto' : undefined}>
-            {lang('SearchResultRecommendedChannels')}
-          </h3>
-          {suggestedChannelIds.map((id) => {
-            return (
-              <LeftSearchResultChat
-                chatId={id}
-                withUsername
-                onClick={handleChatClick}
-              />
-            );
-          })}
-        </Island>
-      )}
       <div className="menuOwner" ref={ref}>
         {renderContextMenu()}
         {shouldRenderMessagesSection && (
           <Island className="search-island search-section">
             <h3 className="section-heading" dir={lang.isRtl ? 'auto' : undefined}>
-              {!isChannelList && (
-                <Link className="Link menuTrigger dropDownLink" onClick={handleClickContext}>
-                  {lang('SearchContextCaption', {
-                    type: getSearchContextCaption(searchContext),
-                  }, {
-                    withNodes: true,
-                  })}
+              <Link className="Link menuTrigger dropDownLink" onClick={handleClickContext}>
+                {lang('SearchContextCaption', {
+                  type: getSearchContextCaption(searchContext),
+                }, {
+                  withNodes: true,
+                })}
 
-                  <Transition
-                    name="fade"
-                    shouldCleanup
-                    activeKey={Number(isMessagesFetching)}
-                    className="iconContainer"
-                    slideClassName="iconContainerSlide"
-                  >
-                    {isMessagesFetching && (<Loading />)}
-                    {!isMessagesFetching && <Icon name="down" />}
-                  </Transition>
-                </Link>
-              )}
+                <Transition
+                  name="fade"
+                  shouldCleanup
+                  activeKey={Number(isMessagesFetching)}
+                  className="iconContainer"
+                  slideClassName="iconContainerSlide"
+                >
+                  {isMessagesFetching && (<Loading />)}
+                  {!isMessagesFetching && <Icon name="down" />}
+                </Transition>
+              </Link>
               {lang('SearchMessages')}
             </h3>
             {actualFoundIds.map(renderFoundMessage)}
@@ -495,7 +436,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { isChannelList }): Complete<StateProps> => {
+  (global): Complete<StateProps> => {
     const { userIds: contactIds } = global.contactList || {};
     const {
       currentUserId, messages,
@@ -511,8 +452,7 @@ export default memo(withGlobal<OwnProps>(
     const { peerIds: globalPeerIds } = globalResults || {};
     const { peerIds: accountPeerIds } = localResults || {};
     const { byChatId: globalMessagesByChatId } = messages;
-    const foundIds = resultsByType?.[isChannelList ? 'channels' : 'text']?.foundIds;
-    const { similarChannelIds } = selectSimilarChannelIds(global, GLOBAL_SUGGESTED_CHANNELS_ID) || {};
+    const foundIds = resultsByType?.text?.foundIds;
 
     return {
       currentUserId,
@@ -522,7 +462,6 @@ export default memo(withGlobal<OwnProps>(
       foundIds,
       globalMessagesByChatId,
       fetchingStatus,
-      suggestedChannelIds: similarChannelIds,
     };
   },
 )(ChatResults));

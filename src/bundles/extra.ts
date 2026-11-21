@@ -15,11 +15,9 @@ export { default as AgeVerificationModal } from '../components/modals/ageVerific
 export { default as ChatInviteModal } from '../components/modals/chatInvite/ChatInviteModal';
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 
-export { default as ReportModal } from '../components/modals/reportModal/ReportModal';
 export { default as CalendarModal } from '../components/common/CalendarModal';
 export { default as DeleteMessageModal } from '../components/common/DeleteMessageModal';
 export { default as DeleteMemberModal } from '../components/modals/deleteMember/DeleteMemberModal';
-export { default as JoinGroupCallModal } from '../components/modals/joinGroupCall/JoinGroupCallModal';
 export { default as PinMessageModal } from '../components/common/PinMessageModal';
 export { default as UnpinAllMessagesModal } from '../components/common/UnpinAllMessagesModal';
 export { default as SeenByModal } from '../components/common/SeenByModal';
@@ -58,11 +56,8 @@ export { default as CustomEmojiTooltip } from '../components/common/tooltips/Cus
 export { default as CustomSendMenu } from '../components/middle/composer/CustomSendMenu';
 export { default as DropArea } from '../components/middle/composer/DropArea';
 export { default as EmojiTooltip } from '../components/common/tooltips/EmojiTooltip';
-export { default as SendAsMenu } from '../components/middle/composer/SendAsMenu';
 
 export { default as PollResults } from '../components/right/PollResults';
-export { default as CreateTopic } from '../components/right/CreateTopic';
-export { default as EditTopic } from '../components/right/EditTopic';
 
 export { default as Management } from '../components/right/management/Management';
 

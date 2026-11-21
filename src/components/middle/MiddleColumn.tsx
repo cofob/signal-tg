@@ -2,10 +2,9 @@ import type { ElementRef } from '@teact';
 import { memo, useEffect, useRef, useState } from '@teact';
 import { getActions, withGlobal } from '../../global';
 
-import type { ApiChat, ApiChatBannedRights, ApiInputDraftReplyInfo, ApiThemeSettings, ApiTopic } from '../../api/types';
+import type { ApiChat, ApiChatBannedRights, ApiInputDraftReplyInfo, ApiThemeSettings } from '../../api/types';
 import type { ActiveEmojiInteraction, AnimationLevel, MessageListType, ThemeKey, ThreadId } from '../../types';
 import type { PaneState } from './hooks/useHeaderPane';
-import { MAIN_THREAD_ID } from '../../api/types';
 
 import {
   ANIMATION_END_DELAY,
@@ -17,16 +16,11 @@ import {
 } from '../../config';
 import { forceMutation, requestMeasure, requestMutation } from '../../lib/fasterdom/fasterdom';
 import {
-  getForumComposerPlaceholder,
   getHasAdminRight,
-  getIsSavedDialog,
   getMessageSendingRestrictionReason,
-  isChatChannel,
   isChatGroup,
-  isChatSuperGroup,
   isUserRightBanned,
 } from '../../global/helpers';
-import { getIsChatMuted } from '../../global/helpers/notifications';
 import {
   selectActionMessageBg,
   selectCanAnimateInterface, selectCanAnimateRightColumn,
@@ -41,17 +35,13 @@ import {
   selectIsInSelectMode,
   selectIsRightColumnShown,
   selectIsUserBlocked,
-  selectNotifyDefaults,
-  selectNotifyException,
   selectPinnedIds,
-  selectShouldBlockSendInMonoforum,
   selectTabState,
   selectTheme,
-  selectTopics,
   selectUserFullInfo,
 } from '../../global/selectors';
 import { selectSharedSettings } from '../../global/selectors/sharedState';
-import { selectDraft, selectThreadInfo } from '../../global/selectors/threads';
+import { selectDraft } from '../../global/selectors/threads';
 import {
   IS_ANDROID, IS_IOS, IS_SAFARI, MASK_IMAGE_DISABLED,
 } from '../../util/browser/windowEnvironment';
@@ -106,7 +96,6 @@ interface OwnProps {
 type StateProps = {
   chatId?: string;
   threadId?: ThreadId;
-  isComments?: boolean;
   messageListType?: MessageListType;
   chat?: ApiChat;
   draftReplyInfo?: ApiInputDraftReplyInfo;
@@ -137,24 +126,15 @@ type StateProps = {
   withRightColumnAnimation?: boolean;
   shouldSkipHistoryAnimations?: boolean;
   currentTransitionKey: number;
-  isChannel?: boolean;
   arePeerSettingsLoaded?: boolean;
-  canSubscribe?: boolean;
+  canJoin?: boolean;
   shouldLoadFullChat?: boolean;
   activeEmojiInteractions?: ActiveEmojiInteraction[];
-  shouldJoinToSend?: boolean;
   shouldSendJoinRequest?: boolean;
   pinnedIds?: number[];
   canUnpin?: boolean;
   canUnblock?: boolean;
-  isChannelMuteBar?: boolean;
-  isMuted?: boolean;
-  linkedMonoforumId?: string;
-  isSavedDialog?: boolean;
-  canShowOpenChatButton?: boolean;
-  topics?: Record<number, ApiTopic>;
   isAccountFrozen?: boolean;
-  shouldBlockSendInMonoforum?: boolean;
   isUiReady?: boolean;
 };
 
@@ -174,7 +154,6 @@ function MiddleColumn({
   leftColumnRef,
   chatId,
   threadId,
-  isComments,
   messageListType,
   isMobile,
   onPlayerPaneStateChange,
@@ -207,24 +186,15 @@ function MiddleColumn({
   withRightColumnAnimation,
   shouldSkipHistoryAnimations,
   currentTransitionKey,
-  isChannel,
   arePeerSettingsLoaded,
-  canSubscribe,
+  canJoin,
   activeEmojiInteractions,
-  shouldJoinToSend,
   shouldSendJoinRequest,
   shouldLoadFullChat,
   pinnedIds,
   canUnpin,
   canUnblock,
-  isChannelMuteBar,
-  isMuted,
-  linkedMonoforumId,
-  isSavedDialog,
-  canShowOpenChatButton,
-  topics,
   isAccountFrozen,
-  shouldBlockSendInMonoforum,
   isUiReady,
 }: OwnProps & StateProps) {
   const {
@@ -259,18 +229,13 @@ function MiddleColumn({
   const renderingChatId = usePrevDuringAnimation(chatId, closeAnimationDuration);
   const renderingThreadId = usePrevDuringAnimation(threadId, closeAnimationDuration);
   const renderingMessageListType = usePrevDuringAnimation(messageListType, closeAnimationDuration);
-  const renderingCanSubscribe = usePrevDuringAnimation(canSubscribe, closeAnimationDuration);
+  const renderingCanJoin = usePrevDuringAnimation(canJoin, closeAnimationDuration);
   const renderingCanUnblock = usePrevDuringAnimation(canUnblock, closeAnimationDuration);
   const renderingCanPost = usePrevDuringAnimation(canPost, closeAnimationDuration);
   const renderingIsScrollDownShown = usePrevDuringAnimation(
     isScrollDownShown, closeAnimationDuration,
   ) && chatId !== TMP_CHAT_ID;
-  const renderingIsChannel = usePrevDuringAnimation(isChannel, closeAnimationDuration);
-  const renderingShouldJoinToSend = usePrevDuringAnimation(shouldJoinToSend, closeAnimationDuration);
   const renderingShouldSendJoinRequest = usePrevDuringAnimation(shouldSendJoinRequest, closeAnimationDuration);
-  const renderingIsChannelMuteBar = usePrevDuringAnimation(isChannelMuteBar, closeAnimationDuration);
-  const renderingIsMuted = usePrevDuringAnimation(isMuted, closeAnimationDuration);
-  const renderingLinkedMonoforumId = usePrevDuringAnimation(linkedMonoforumId, closeAnimationDuration);
   const renderingHandleIntersectPinnedMessage = usePrevDuringAnimation(
     chatId ? handleIntersectPinnedMessage : undefined,
     closeAnimationDuration,
@@ -486,13 +451,8 @@ function MiddleColumn({
   const messageSendingRestrictionReason = getMessageSendingRestrictionReason(
     lang, currentUserBannedRights, defaultBannedRights,
   );
-  const forumComposerPlaceholder = getForumComposerPlaceholder(
-    lang, chat, threadId, topics, Boolean(draftReplyInfo),
-  );
 
   const composerRestrictionMessage = messageSendingRestrictionReason
-    || forumComposerPlaceholder
-    || (shouldBlockSendInMonoforum ? lang('MonoforumComposerPlaceholder') : undefined)
     || (isAccountFrozen ? <FrozenAccountPlaceholder /> : undefined);
 
   useHistoryBack({
@@ -504,18 +464,15 @@ function MiddleColumn({
   useFluidBackgroundFilter(actionMessageBg);
 
   const isMessagingDisabled = Boolean(
-    !isPinnedMessageList && !isSavedDialog && !renderingCanPost
-    && !renderingCanSubscribe && composerRestrictionMessage,
+    !isPinnedMessageList && !renderingCanPost
+    && !renderingCanJoin && composerRestrictionMessage,
   ) || Boolean(isAccountFrozen);
   const hasFooterActionBar = getHasFooterActionBar({
     isPinnedMessageList,
     canUnpin,
-    canShowOpenChatButton,
-    canSubscribe: renderingCanSubscribe,
-    shouldJoinToSend: renderingShouldJoinToSend,
+    canJoin: renderingCanJoin,
     shouldSendJoinRequest: renderingShouldSendJoinRequest,
     canUnblock: renderingCanUnblock,
-    isChannelMuteBar: renderingIsChannelMuteBar,
   });
   const withMessageListBottomShift = hasFooterActionBar;
   const withExtraShift = Boolean(isMessagingDisabled || isSelectModeActive);
@@ -525,12 +482,9 @@ function MiddleColumn({
     withExtraShift,
     isPinnedMessageList,
     canUnpin,
-    canShowOpenChatButton,
-    canSubscribe: renderingCanSubscribe,
-    shouldJoinToSend: renderingShouldJoinToSend,
+    canJoin: renderingCanJoin,
     shouldSendJoinRequest: renderingShouldSendJoinRequest,
     canUnblock: renderingCanUnblock,
-    isChannelMuteBar: renderingIsChannelMuteBar,
   });
 
   const footerClassName = buildClassName(
@@ -577,7 +531,6 @@ function MiddleColumn({
               chatId={renderingChatId!}
               threadId={renderingThreadId!}
               messageListType={renderingMessageListType!}
-              isComments={isComments}
               isMobile={isMobile}
               getCurrentPinnedIndex={getCurrentPinnedIndex}
               getLoadingPinnedId={getLoadingPinnedId}
@@ -609,7 +562,6 @@ function MiddleColumn({
                 chatId={renderingChatId!}
                 threadId={renderingThreadId!}
                 type={renderingMessageListType!}
-                isComments={isComments}
                 canPost={renderingCanPost!}
                 hasFooter={hasFooter}
                 onScrollDownToggle={setIsScrollDownNeeded}
@@ -650,18 +602,11 @@ function MiddleColumn({
                 {!isMessagingDisabled && (
                   <FooterActionBar
                     chatId={renderingChatId!}
-                    isChannel={renderingIsChannel}
-                    canSubscribe={renderingCanSubscribe}
-                    shouldJoinToSend={renderingShouldJoinToSend}
+                    canJoin={renderingCanJoin}
                     shouldSendJoinRequest={renderingShouldSendJoinRequest}
                     canUnblock={renderingCanUnblock}
-                    isChannelMuteBar={renderingIsChannelMuteBar}
-                    isMuted={renderingIsMuted}
-                    linkedMonoforumId={renderingLinkedMonoforumId}
                     canUnpinAll={Boolean(isPinnedMessageList && canUnpin)}
                     pinnedMessagesCount={pinnedMessagesCount}
-                    canOpenSavedChat={canShowOpenChatButton}
-                    savedChatId={canShowOpenChatButton ? String(renderingThreadId) : undefined}
                     onUnpinAll={handleOpenUnpinModal}
                   />
                 )}
@@ -753,32 +698,20 @@ export default memo(withGlobal<OwnProps>(
     const chatFullInfo = chatId ? selectChatFullInfo(global, chatId) : undefined;
     const userFullInfo = chatId ? selectUserFullInfo(global, chatId) : undefined;
 
-    const threadInfo = selectThreadInfo(global, chatId, threadId);
-    const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);
     const isPinnedMessageList = messageListType === 'pinned';
-    const isMainThread = messageListType === 'thread' && threadId === MAIN_THREAD_ID;
-    const isChannel = Boolean(chat && isChatChannel(chat));
-    const canSubscribe = Boolean(
-      chat && (isMainThread || chat.isForum) && (isChannel || isChatSuperGroup(chat)) && chat.isNotJoined
-      && !chat.joinRequests && !chat.isMonoforum,
-    );
-    const shouldJoinToSend = Boolean(chat?.isNotJoined && chat.isJoinToSend);
+    // An invitation to a group is accepted with the button of the footer bar
+    const canJoin = Boolean(chat?.isNotJoined && !chat.isJoinRequest);
     const shouldSendJoinRequest = Boolean(chat?.isNotJoined && chat.isJoinRequest);
     const isUserBlocked = isPrivate ? selectIsUserBlocked(global, chatId) : false;
     const canUnblock = isUserBlocked;
     const shouldLoadFullChat = Boolean(
-      chat && (isChatGroup(chat) || isChannel) && !chatFullInfo,
+      chat && isChatGroup(chat) && !chatFullInfo,
     );
     const draftReplyInfo = selectDraft(global, chatId, threadId)?.replyInfo;
-    const shouldBlockSendInMonoforum = selectShouldBlockSendInMonoforum(global, chatId, threadId);
-    const topics = selectTopics(global, chatId);
-
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
-    const canShowOpenChatButton = isSavedDialog && threadId !== global.currentUserId;
 
     const canUnpin = chat && (
       isPrivate || (
-        (!isChannel && !isUserRightBanned(chat, 'pinMessages'))
+        !isUserRightBanned(chat, 'pinMessages')
         || getHasAdminRight(chat, 'pinMessages')
       )
     );
@@ -786,11 +719,6 @@ export default memo(withGlobal<OwnProps>(
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
     const canPost = selectCanPostInMessageList(global, chatId, threadId, messageListType);
-    const isMuted = chat
-      ? getIsChatMuted(chat, selectNotifyDefaults(global), selectNotifyException(global, chatId))
-      : undefined;
-    const linkedMonoforumId = chat?.linkedMonoforumId;
-    const isChannelMuteBar = Boolean(isChannel && !chat?.isNotJoined && isMainThread && !canPost);
 
     return {
       ...state,
@@ -801,29 +729,19 @@ export default memo(withGlobal<OwnProps>(
       draftReplyInfo,
       isPrivate,
       arePeerSettingsLoaded: Boolean(userFullInfo?.settings),
-      isComments: isMessageThread,
       canPost,
       isPinnedMessageList,
       currentUserBannedRights: chat?.currentUserBannedRights,
       defaultBannedRights: chat?.defaultBannedRights,
       pinnedMessagesCount: pinnedIds ? pinnedIds.length : 0,
       shouldSkipHistoryAnimations,
-      isChannel,
-      canSubscribe,
-      shouldJoinToSend,
+      canJoin,
       shouldSendJoinRequest,
       shouldLoadFullChat,
       pinnedIds,
       canUnpin,
       canUnblock,
-      isChannelMuteBar,
-      isMuted,
-      linkedMonoforumId,
-      isSavedDialog,
-      canShowOpenChatButton,
-      topics,
       isAccountFrozen,
-      shouldBlockSendInMonoforum,
     } as Complete<StateProps>;
   },
 )(MiddleColumn));

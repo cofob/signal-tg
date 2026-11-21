@@ -6,6 +6,7 @@ import type {
   ApiDialog,
   ApiFormattedText,
   ApiGlobalMessageSearchType,
+  ApiKeyTransparencyStatus,
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
@@ -13,7 +14,6 @@ import type {
   ApiMissingInvitedUser,
   ApiNewPoll,
   ApiNotification,
-  ApiPhoneCall,
   ApiReaction,
   ApiRichText,
   ApiSticker,
@@ -58,43 +58,10 @@ import type {
 } from '../../types';
 import type { RegularLangKey } from '../../types/language';
 import type { SearchResultKey } from '../../util/keys/searchResultKey';
-import type { CallbackAction } from './actions';
 
 export type PollVote = {
   peerId: string;
   date: number;
-};
-
-export type ReactionDeletionContext = {
-  peerId: string;
-  count: number;
-};
-
-type ReportOptionsSection = {
-  type: 'options';
-  title: string;
-  subtitle?: string;
-  options: {
-    text: string;
-    option: string;
-  }[];
-};
-
-type ReportCommentSection = {
-  type: 'comment';
-  title?: string;
-  isOptional?: boolean;
-  option: string;
-};
-
-export type ReportSection = ReportOptionsSection | ReportCommentSection;
-
-type MessageReportContext = {
-  option: string;
-  description: string;
-  title?: string;
-  sections: ReportSection[];
-  isSubmitting?: boolean;
 };
 
 export type MusicPickerSharedResults = {
@@ -134,10 +101,6 @@ export type TabState = {
   };
   nextFoldersAction?: ReducerAction<FoldersActions>;
 
-  isCallPanelVisible?: boolean;
-  multitabNextAction?: CallbackAction;
-  ratingPhoneCall?: ApiPhoneCall;
-
   messageLists: MessageList[];
   globalThemePreviewChatId?: string;
 
@@ -153,8 +116,6 @@ export type TabState = {
 
   activeChatFolder: number;
   tabThreads: Record<string, Record<ThreadId, TabThread>>;
-  forumPanelChatId?: string;
-  communityPanelId?: string;
 
   focusedMessage?: {
     chatId?: string;
@@ -172,7 +133,6 @@ export type TabState = {
   selectedMessages?: {
     chatId: string;
     messageIds: number[];
-    reportContext?: MessageReportContext;
   };
 
   chatInviteModal?: {
@@ -216,7 +176,6 @@ export type TabState = {
     maxDate?: number;
     currentContent?: GlobalSearchContent;
     chatId?: string;
-    foundTopicIds?: number[];
     fetchingStatus?: {
       chats?: boolean;
       messages?: boolean;
@@ -402,15 +361,6 @@ export type TabState = {
   openedStickerSetShortName?: string;
   openedCustomEmojiSetIds?: string[];
 
-  reportModal?: {
-    chatId?: string;
-    messageIds: number[];
-    description: string;
-    peerId?: string;
-    subject: 'story' | 'message';
-    sections: ReportSection[];
-  };
-
   activeDownloads: ActiveDownloads;
   // Keys (media hashes) of the files that the desktop app saved and that still exist
   savedFiles: Record<string, true>;
@@ -478,19 +428,11 @@ export type TabState = {
     messageIds: number[];
     isSchedule?: boolean;
     onConfirm?: NoneToVoidFunction;
-    reactionContext?: ReactionDeletionContext;
   };
 
   deleteMemberModal?: {
     chatId: string;
     peerId: string;
-  };
-
-  joinGroupCallModal?: {
-    chatId: string;
-    id: string;
-    accessHash: string;
-    inviteHash?: string;
   };
 
   isQuickChatPickerOpen?: boolean;
@@ -506,17 +448,6 @@ export type TabState = {
   };
 
   deleteFolderDialogModal?: number;
-
-  createTopicPanel?: {
-    chatId: string;
-    isLoading?: boolean;
-  };
-
-  editTopicPanel?: {
-    chatId: string;
-    topicId: number;
-    isLoading?: boolean;
-  };
 
   deleteAccountModal?: {
     selfDestructAccountDays: number;
@@ -566,6 +497,7 @@ export type TabState = {
     qrData?: string;
     isVerified?: boolean;
     isUnavailable?: boolean;
+    keyTransparencyStatus?: ApiKeyTransparencyStatus;
   };
 
   // Signal: a message that was not sent to `userIds` because their safety numbers changed
@@ -590,7 +522,6 @@ export type TabState = {
 
   quickPreview?: {
     chatId: string;
-    threadId?: ThreadId;
   };
 
   settingsConfirmation?: SettingsConfirmation;

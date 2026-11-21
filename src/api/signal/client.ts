@@ -7,7 +7,9 @@ import { checkAccountAuthorized, linkDevice, unlinkDevice } from '../../lib/sign
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { resumePendingRegistration } from '../../lib/signal/account/register';
 import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
-import { getSignalTunnelUrl, setSignalProxyUrl, SIGNAL_PRIMARY_DEVICE_ID } from '../../lib/signal/config';
+import {
+  getSignalTunnelUrl, setSignalProxyUrl, setSignalSealedSenderProxyUrl, SIGNAL_PRIMARY_DEVICE_ID,
+} from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
@@ -17,7 +19,7 @@ import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
-  client, db, logError, processor, store,
+  client, db, keyTransparency, logError, processor, store,
 } from './engine';
 import { resetRegistration, resumeRegistration, startRegistration } from './registration';
 import { sendApiUpdate } from './updates';
@@ -60,7 +62,7 @@ let historyTransferController: AbortController | undefined;
 export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
-  applyProxyUrl(args.signalProxyUrl);
+  applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
   try {
     await applyStorageKey(args.storageKey, store, db);
   } catch (err) {
@@ -127,6 +129,7 @@ export async function stopClient(shouldForget: boolean) {
   resetRegistration();
   historyTransferController?.abort();
   processor.stop();
+  keyTransparency.stop();
   client.close();
   resetCdsiState();
   currentAccount = undefined;
@@ -138,10 +141,12 @@ export async function stopClient(shouldForget: boolean) {
   }
 }
 
-function applyProxyUrl(url: string | undefined) {
-  const prevTunnelUrl = getSignalTunnelUrl();
-  setSignalProxyUrl(url);
-  if (getSignalTunnelUrl() !== prevTunnelUrl) closeIdleHttpConnections();
+function applyProxyUrls(proxyUrl: string | undefined, sealedSenderProxyUrl: string | undefined) {
+  const prevTunnelUrls = [getSignalTunnelUrl('authenticated'), getSignalTunnelUrl('unauthenticated')];
+  setSignalProxyUrl(proxyUrl);
+  setSignalSealedSenderProxyUrl(sealedSenderProxyUrl);
+  const tunnelUrls = [getSignalTunnelUrl('authenticated'), getSignalTunnelUrl('unauthenticated')];
+  if (tunnelUrls.some((url, i) => url !== prevTunnelUrls[i])) closeIdleHttpConnections();
 }
 
 function stopDeviceLink() {
@@ -358,6 +363,7 @@ async function attemptConnection() {
 
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
+  keyTransparency.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
 }

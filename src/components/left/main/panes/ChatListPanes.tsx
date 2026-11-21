@@ -6,7 +6,7 @@ import { withGlobal } from '../../../../global';
 
 import type { ApiPromoData } from '../../../../api/types';
 
-import { selectIsCurrentUserFrozen, selectIsForumPanelOpen } from '../../../../global/selectors';
+import { selectIsCurrentUserFrozen } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { REM } from '../../../common/helpers/mediaDimensions';
 
@@ -32,7 +32,6 @@ type OwnProps = {
 type StateProps = {
   promoData?: ApiPromoData;
   isAccountFrozen?: boolean;
-  isForumPanelOpen?: boolean;
 };
 
 const BOTTOM_MARGIN = 0.5 * REM;
@@ -43,7 +42,6 @@ const ChatListPanes = ({
   noBanners,
   promoData,
   isAccountFrozen,
-  isForumPanelOpen,
   onHeightChange,
 }: OwnProps & StateProps) => {
   const [getPlayerState, setPlayerState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
@@ -63,7 +61,7 @@ const ChatListPanes = ({
   // Cancel any in-flight deferred writes when the component unmounts
   useUnmountCleanup(invalidateVisualToken);
 
-  const canShowSuggestions = !isAccountFrozen && !isForumPanelOpen && promoData;
+  const canShowSuggestions = !isAccountFrozen && promoData;
 
   useSignalEffect(() => {
     // Keep in sync with the order of the panes in the DOM
@@ -138,7 +136,6 @@ const ChatListPanes = ({
 export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     return {
-      isForumPanelOpen: selectIsForumPanelOpen(global),
       promoData: global.promoData,
       isAccountFrozen: selectIsCurrentUserFrozen(global),
     };

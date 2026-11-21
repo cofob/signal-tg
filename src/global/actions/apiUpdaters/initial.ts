@@ -5,28 +5,20 @@ import type {
   ApiUpdateCurrentUser,
   ApiUpdateServerTimeOffset,
   ApiUpdateSession,
-  ApiUpdateUserAlreadyAuthorized,
 } from '../../../api/types';
 import type { RequiredGlobalActions } from '../../index';
 import type { ActionReturnType, GlobalState } from '../../types';
 
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { retryLocalization } from '../../../util/localization';
-import { getAccountsInfo, getAccountSlotUrl } from '../../../util/multiaccount';
 import { setServerTimeOffset } from '../../../util/serverTime';
 import { updateSessionUserId } from '../../../util/sessions';
 import {
   addActionHandler, getActions, getGlobal, setGlobal,
 } from '../../index';
-import {
-  getOpenedShortpollChannelIds,
-  resetOpenedChannelShortpollState,
-  syncOpenedShortpollChannelIds,
-} from '../../openedChannelShortpoll';
 import { updateUser, updateUserFullInfo } from '../../reducers';
 import { updateAuth } from '../../reducers/auth';
 import { updateTabState } from '../../reducers/tabs';
-import { selectTabState } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 
 addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
@@ -41,10 +33,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateAuthorizationError':
       onUpdateAuthorizationError(global, update);
-      break;
-
-    case 'updateUserAlreadyAuthorized':
-      onUpdateUserAlreadyAuthorized(global, update);
       break;
 
     case 'updateConnectionState':
@@ -76,14 +64,7 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
 
     case 'requestSync':
-      resetOpenedChannelShortpollState();
-      syncOpenedShortpollChannelIds(global);
       actions.sync();
-      break;
-
-    case 'updateFetchingDifference':
-      global = { ...global, isFetchingDifference: update.isFetching };
-      setGlobal(global);
       break;
 
     case 'error': {
@@ -184,28 +165,10 @@ function onUpdateAuthorizationError<T extends GlobalState>(global: T, update: Ap
   setGlobal(global);
 }
 
-function onUpdateUserAlreadyAuthorized<T extends GlobalState>(global: T, update: ApiUpdateUserAlreadyAuthorized) {
-  const { userId } = update;
-  if (global.currentUserId === userId) return;
-
-  const accounts = getAccountsInfo();
-  const slot = Object.entries(accounts).find(([_, info]) => info.userId === userId)?.[0];
-  if (!slot) return;
-  const url = getAccountSlotUrl(Number(slot));
-  window.location.replace(url);
-}
-
 function onUpdateConnectionState<T extends GlobalState>(
   global: T, actions: RequiredGlobalActions, update: ApiUpdateConnectionState,
 ) {
   const { connectionState } = update;
-
-  const tabState = selectTabState(global, getCurrentTabId());
-  if (connectionState === 'connectionStateReady' && tabState.isMasterTab && tabState.multitabNextAction) {
-    // @ts-ignore
-    actions[tabState.multitabNextAction.action](tabState.multitabNextAction.payload);
-    actions.clearMultitabNextAction({ tabId: tabState.id });
-  }
 
   if (connectionState === global.connectionState) {
     return;
@@ -216,16 +179,6 @@ function onUpdateConnectionState<T extends GlobalState>(
     connectionState,
   };
   setGlobal(global);
-
-  if (global.isSynced) {
-    const channelStackIds = getOpenedShortpollChannelIds(global);
-
-    if (connectionState === 'connectionStateReady' && tabState.isMasterTab && channelStackIds.length) {
-      channelStackIds.forEach((chatId) => {
-        actions.requestChannelDifference({ chatId });
-      });
-    }
-  }
 
   if (connectionState === 'connectionStateBroken') {
     actions.signOut({ forceInitApi: true });

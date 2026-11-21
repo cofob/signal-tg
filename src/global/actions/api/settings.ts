@@ -1,5 +1,5 @@
 import type {
-  ApiChatTheme, ApiPrivacySettings, ApiSignalPinSettings, ApiUsername,
+  ApiChatTheme, ApiPrivacySettings, ApiSignalPinSettings,
 } from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 import type { ActionReturnType } from '../../types';
@@ -31,13 +31,12 @@ import {
 } from '../../index';
 import {
   addBlockedUser, addNotifyExceptions, deletePeerPhoto,
-  removeBlockedUser, replacePersonalChannelIds, replacePrivacySettings, replaceSettings, updateChat,
+  removeBlockedUser, replacePersonalChannelIds, replacePrivacySettings, replaceSettings,
   updateNotifyDefaults, updateSharedSettings, updateThemeSettings, updateUser, updateUserFullInfo,
   updateUsernameEdit,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
-import {
-  selectChat, selectCurrentMessageList, selectIsCurrentUserFrozen,
+import { selectCurrentMessageList, selectIsCurrentUserFrozen,
   selectLanguageCode,
   selectPeer,
   selectTabState, selectUser,
@@ -232,40 +231,6 @@ addActionHandler('deleteProfilePhoto', async (global, actions, payload): Promise
   setGlobal(global);
 
   actions.loadFullUser({ userId: currentUserId, withPhotos: true });
-});
-
-addActionHandler('checkUsername', async (global, actions, payload): Promise<void> => {
-  const { username, tabId = getCurrentTabId() } = payload;
-
-  let tabState = selectTabState(global, tabId);
-  // No need to check the username if profile update is already in progress
-  if (tabState.profileEdit && tabState.profileEdit.progress === ProfileEditProgress.InProgress) {
-    return;
-  }
-
-  global = updateTabState(global, {
-    profileEdit: {
-      progress: tabState.profileEdit ? tabState.profileEdit.progress : ProfileEditProgress.Idle,
-      checkedUsername: undefined,
-      isUsernameAvailable: undefined,
-      error: undefined,
-    },
-  }, tabId);
-  setGlobal(global);
-
-  const { result, error } = (await callApi('checkUsername', username));
-
-  global = getGlobal();
-  tabState = selectTabState(global, tabId);
-  global = updateTabState(global, {
-    profileEdit: {
-      ...tabState.profileEdit!,
-      checkedUsername: username,
-      isUsernameAvailable: result === true,
-      error,
-    },
-  }, tabId);
-  setGlobal(global);
 });
 
 addActionHandler('loadWallpapers', async (global): Promise<void> => {
@@ -906,21 +871,6 @@ addActionHandler('loadPeerColors', async (global): Promise<void> => {
   setGlobal(global);
 });
 
-addActionHandler('loadShareThemeBackdrops', async (global): Promise<void> => {
-  const result = await callApi('fetchShareThemeBackdrops', global.shareThemeBackdrops?.hash);
-  if (!result) return;
-
-  global = getGlobal();
-  global = {
-    ...global,
-    shareThemeBackdrops: {
-      list: result.backdrops,
-      hash: result.hash,
-    },
-  };
-  setGlobal(global);
-});
-
 addActionHandler('loadGlobalPrivacySettings', async (global): Promise<void> => {
   const globalSettings = await callApi('fetchGlobalPrivacySettings');
   if (!globalSettings) {
@@ -979,115 +929,6 @@ addActionHandler('updateGlobalPrivacySettings', async (global, actions, payload)
   setGlobal(global);
 });
 
-addActionHandler('toggleUsername', async (global, actions, payload): Promise<void> => {
-  const { username, isActive } = payload;
-  const { currentUserId } = global;
-  if (!currentUserId) {
-    return;
-  }
-
-  const currentUser = selectUser(global, currentUserId);
-  if (!currentUser?.usernames) {
-    return;
-  }
-
-  const usernames = currentUser.usernames.map((item) => {
-    if (item.username !== username) {
-      return item;
-    }
-
-    return { ...item, isActive: isActive || undefined };
-  });
-
-  global = updateUser(global, currentUserId, { usernames });
-  setGlobal(global);
-
-  const result = await callApi('toggleUsername', { username, isActive });
-
-  if (!result) {
-    actions.loadFullUser({ userId: currentUserId });
-  }
-});
-
-addActionHandler('toggleChatUsername', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, username, isActive,
-  } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat?.usernames) {
-    return;
-  }
-
-  const usernames = chat.usernames.map((item) => {
-    if (item.username !== username) {
-      return item;
-    }
-
-    return { ...item, isActive: isActive || undefined };
-  });
-
-  global = updateChat(global, chatId, { usernames });
-  setGlobal(global);
-
-  const result = await callApi('toggleUsername', {
-    chatId: chat.id,
-    accessHash: chat.accessHash,
-    username,
-    isActive,
-  });
-
-  if (!result) {
-    actions.loadFullChat({ chatId });
-  }
-});
-
-addActionHandler('sortUsernames', async (global, actions, payload): Promise<void> => {
-  const { usernames } = payload;
-  const { currentUserId } = global;
-  if (!currentUserId) {
-    return;
-  }
-
-  const result = await callApi('reorderUsernames', { usernames });
-
-  // After saving the order of usernames, server sends an update with the necessary data,
-  // so there is no need to update the state in this place
-  if (!result) {
-    actions.loadUser({ userId: currentUserId });
-  }
-});
-
-addActionHandler('sortChatUsernames', async (global, actions, payload): Promise<void> => {
-  const { chatId, usernames } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return;
-  }
-
-  const prevUsernames = [...chat.usernames!];
-  const sortedUsernames = chat.usernames!.reduce((res, currentUsername) => {
-    const idx = usernames.findIndex((username) => username === currentUsername.username);
-    res[idx] = currentUsername;
-
-    return res;
-  }, [] as ApiUsername[]);
-
-  global = updateChat(global, chatId, { usernames: sortedUsernames });
-  setGlobal(global);
-
-  const result = await callApi('reorderUsernames', {
-    chatId: chat.id,
-    accessHash: chat.accessHash,
-    usernames,
-  });
-
-  if (!result) {
-    global = getGlobal();
-    global = updateChat(global, chatId, { usernames: prevUsernames });
-    setGlobal(global);
-  }
-});
-
 const LINK_DEVICE_ERROR_KEYS = {
   badCode: 'SignalDeviceLinkBadCode',
   limitExceeded: 'SignalDeviceLinkLimit',
@@ -1101,6 +942,25 @@ addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
   const signalPin = await callApi('fetchSignalPinSettings');
   global = getGlobal();
   global = replaceSettings(global, { signalPin });
+  setGlobal(global);
+});
+
+addActionHandler('loadKeyTransparencySelfStatus', async (global): Promise<void> => {
+  const keyTransparencySelfStatus = await callApi('fetchKeyTransparencySelfStatus');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
+  setGlobal(global);
+});
+
+addActionHandler('runKeyTransparencySelfCheck', async (global): Promise<void> => {
+  if (global.settings.byKey.keyTransparencySelfStatus === 'running') return;
+
+  global = replaceSettings(global, { keyTransparencySelfStatus: 'running' });
+  setGlobal(global);
+
+  const keyTransparencySelfStatus = await callApi('checkKeyTransparencySelf');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
   setGlobal(global);
 });
 

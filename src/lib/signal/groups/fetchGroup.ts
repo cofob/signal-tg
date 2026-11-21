@@ -111,8 +111,9 @@ export async function fetchGroup(
 }
 
 /**
- * Sends a request to the storage service group API with the group authorization of `secretParams`;
- * throws `GroupRequestError` on other statuses than 2xx. A 401 means that the server is on another day than
+ * Sends a request to the storage service group API with the group authorization of `secretParams`, which is a
+ * zero-knowledge presentation and no account credential, so the request takes the sealed sender proxy when that is
+ * set; throws `GroupRequestError` on other statuses than 2xx. A 401 means that the server is on another day than
  * our clock at the UTC day boundary, so the request is sent once more with the credential of the next day.
  */
 export async function sendGroupRequest(
@@ -130,7 +131,7 @@ export async function sendGroupRequest(
     };
     if (body) headers['Content-Type'] = contentType ?? PROTOBUF_CONTENT_TYPE;
     return sendHttpRequest(SIGNAL_STORAGE_HOST, {
-      method, path, headers, body,
+      trafficClass: 'unauthenticated', method, path, headers, body,
     });
   };
 
@@ -220,6 +221,7 @@ export function buildAccessControl(accessControl?: AccessControl): GroupAccessCo
  */
 export async function downloadGroupAvatar(avatarUrl: string, masterKey: Uint8Array) {
   const response = await sendHttpRequest(SIGNAL_CDN_HOSTS[AVATAR_CDN_NUMBER], {
+    trafficClass: 'unauthenticated',
     method: 'GET',
     path: `/${encodeURIComponent(avatarUrl)}`,
   });

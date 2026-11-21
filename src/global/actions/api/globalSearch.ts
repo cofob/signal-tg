@@ -1,29 +1,22 @@
-import type {
-  ApiChat, ApiGlobalMessageSearchType, ApiMessage, ApiMessageSearchContext, ApiPeer,
-  ApiTopicWithState,
+import type { ApiGlobalMessageSearchType, ApiMessage, ApiMessageSearchContext, ApiPeer,
   ApiUserStatus,
 } from '../../../api/types';
 import type { ActionReturnType, GlobalState, TabArgs } from '../../types';
 
-import { GLOBAL_SEARCH_SLICE, GLOBAL_TOPIC_SEARCH_SLICE } from '../../../config';
+import { GLOBAL_SEARCH_SLICE } from '../../../config';
 import { timestampPlusDay } from '../../../util/dates/dateMath';
-import { isDeepLink, tryParseDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { throttle } from '../../../util/schedulers';
 import { callApi } from '../../../api';
 import { addActionHandler, getActions, getGlobal, setGlobal } from '../..';
-import { isChatChannel, isChatGroup } from '../../helpers/chats';
-import { isApiPeerChat } from '../../helpers/peers';
 import {
   addMessages,
   addUserStatuses,
   updateGlobalSearch,
   updateGlobalSearchFetchingStatus,
   updateGlobalSearchResults,
-  updateTopicWithState,
 } from '../../reducers';
-import {
-  selectChat, selectChatByUsername, selectChatMessage, selectCurrentGlobalSearchQuery, selectPeer, selectTabState,
+import { selectCurrentGlobalSearchQuery, selectPeer, selectTabState,
 } from '../../selectors';
 import { selectPlaybackSource } from '../../selectors/audioPlayer';
 
@@ -147,18 +140,14 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
   let result: {
     messages: ApiMessage[];
     userStatusesById?: Record<number, ApiUserStatus>;
-    topics?: ApiTopicWithState[];
-    totalTopicsCount?: number;
     totalCount: number;
     nextOffsetRate?: number;
     nextOffsetId?: number;
     nextOffsetPeerId?: string;
   } | undefined;
 
-  let messageLink: ApiMessage | undefined;
-
   if (peer) {
-    const inChatResultRequest = callApi('searchMessagesInChat', {
+    const inChatResult = await callApi('searchMessagesInChat', {
       peer,
       query,
       type,
@@ -167,25 +156,11 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
       minDate,
       maxDate,
     });
-    const isChat = isApiPeerChat(peer);
-    const topicsRequest = isChat && peer.isForum ? callApi('fetchTopics', {
-      chat: peer,
-      query,
-      limit: GLOBAL_TOPIC_SEARCH_SLICE,
-    }) : undefined;
-
-    const [inChatResult, topics] = await Promise.all([inChatResultRequest, topicsRequest]);
 
     if (inChatResult) {
-      const {
-        messages, totalCount, nextOffsetId, topics: messagesTopics,
-      } = inChatResult;
-
-      const { topics: localTopics, count } = topics || {};
+      const { messages, totalCount, nextOffsetId } = inChatResult;
 
       result = {
-        topics: messagesTopics.concat(localTopics || []),
-        totalTopicsCount: count,
         messages,
         totalCount,
         nextOffsetId,
@@ -203,19 +178,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
       maxDate,
       minDate,
     });
-
-    if (isDeepLink(query)) {
-      const link = tryParseDeepLink(query);
-      if (link?.type === 'publicMessageLink') {
-        global = getGlobal();
-        messageLink = await getMessageByPublicLink(global, link);
-      }
-
-      if (link?.type === 'privateMessageLink') {
-        global = getGlobal();
-        messageLink = await getMessageByPrivateLink(global, link);
-      }
-    }
   }
 
   global = getGlobal();
@@ -234,10 +196,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     setGlobal(global);
     settlePlayerStepForGlobalSearch(type, tabId, false);
     return;
-  }
-
-  if (messageLink) {
-    result.totalCount = result.messages.unshift(messageLink);
   }
 
   const {
@@ -263,19 +221,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     tabId,
   );
 
-  if (peer && result.topics?.length) {
-    result.topics.forEach((topicState) => {
-      global = updateTopicWithState(global, peer.id, topicState);
-    });
-  }
-
-  const sortedTopicIds = result.topics?.sort((a, b) => (
-    (b.lastMessageId || b.topic.id) - (a.lastMessageId || a.topic.id)
-  )).map(({ topic }) => topic.id);
-  global = updateGlobalSearch(global, {
-    foundTopicIds: sortedTopicIds,
-  }, tabId);
-
   setGlobal(global);
 
   global = getGlobal();
@@ -283,40 +228,6 @@ async function searchMessagesGlobal<T extends GlobalState>(global: T, params: {
     getActions().loadShufflePlaylist({ tabId });
   }
   settlePlayerStepForGlobalSearch(type, tabId, true);
-}
-
-async function getMessageByPublicLink(global: GlobalState, link: { username: string; messageId: number }) {
-  const { username, messageId } = link;
-  const localChat = selectChatByUsername(global, username);
-  if (localChat) {
-    return getChatGroupOrChannelMessage(global, localChat, messageId);
-  }
-  const { chat } = await callApi('getChatByUsername', username) ?? {};
-  if (!chat) {
-    return undefined;
-  }
-  return getChatGroupOrChannelMessage(global, chat, messageId);
-}
-
-function getMessageByPrivateLink(global: GlobalState, link: { channelId: string; messageId: number }) {
-  const { channelId, messageId } = link;
-  const chat = selectChat(global, channelId);
-  if (!chat) {
-    return undefined;
-  }
-  return getChatGroupOrChannelMessage(global, chat, messageId);
-}
-
-async function getChatGroupOrChannelMessage(global: GlobalState, chat: ApiChat, messageId: number) {
-  if (!isChatGroup(chat) && !isChatChannel(chat)) {
-    return undefined;
-  }
-  const localMessage = selectChatMessage(global, chat.id, messageId);
-  if (localMessage) {
-    return localMessage;
-  }
-  const result = await callApi('fetchMessage', { chat, messageId });
-  return result === 'MESSAGE_DELETED' ? undefined : result?.message;
 }
 
 function settlePlayerStepForGlobalSearch(type: ApiGlobalMessageSearchType, tabId: number, shouldContinue: boolean) {

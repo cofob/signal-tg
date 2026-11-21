@@ -47,6 +47,12 @@ export async function convertCachedBlobs(direction: 'encrypt' | 'decrypt') {
   });
 }
 
+/** Whether the decrypted attachment is cached */
+export async function getIsAttachmentCached(pointer: AttachmentLocation) {
+  const cached = await cacheApi.fetch(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer), cacheApi.Type.Blob);
+  return Boolean(cached);
+}
+
 /** Drops a cached attachment, such as the media of an expired story */
 export async function removeAttachmentBlob(pointer: AttachmentLocation) {
   await cacheApi.remove(ATTACHMENT_CACHE_NAME, getAttachmentCacheKey(pointer));

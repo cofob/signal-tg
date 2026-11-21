@@ -34,7 +34,6 @@ type StateProps = {
   connectionState: GlobalState['connectionState'];
   language?: string;
   phoneCodeList: ApiCountryCode[];
-  isTestServer?: boolean;
 };
 
 const MIN_NUMBER_LENGTH = 7;
@@ -46,7 +45,6 @@ const AuthPhoneNumber = ({
   connectionState,
   phoneCodeList,
   language,
-  isTestServer,
 }: StateProps) => {
   const {
     setAuthPhoneNumber,
@@ -82,12 +80,11 @@ const AuthPhoneNumber = ({
   const hasActiveAccount = Object.values(accountsInfo).length > 0;
   const phoneNumberSlots = useMemo(() => (
     Object.entries(accountsInfo)
-      .filter(([, info]) => info.isTest === isTestServer)
       .reduce((acc, [key, { phone }]) => {
         if (phone) acc[phone] = Number(key);
         return acc;
       }, {} as Record<string, number>)
-  ), [accountsInfo, isTestServer]);
+  ), [accountsInfo]);
 
   const fullNumber = country ? `+${country.countryCode} ${phoneNumber || ''}` : phoneNumber;
   const canSubmit = fullNumber && fullNumber.replace(/[^\d]+/g, '').length >= MIN_NUMBER_LENGTH;
@@ -308,7 +305,6 @@ export default memo(withGlobal(
     const {
       sharedState: { settings: { language } },
       countryList: { phoneCodes: phoneCodeList },
-      config,
       auth,
       connectionState,
     } = global;
@@ -318,7 +314,6 @@ export default memo(withGlobal(
       connectionState,
       language,
       phoneCodeList,
-      isTestServer: config?.isTestServer,
     };
   },
 )(AuthPhoneNumber));

@@ -128,6 +128,7 @@ async function uploadAvatar(form: AvatarUploadForm, encrypted: Uint8Array) {
   body.set(endBytes, startBytes.length + encrypted.length);
 
   const { status } = await sendHttpRequest(SIGNAL_CDN_HOSTS[AVATAR_CDN_NUMBER], {
+    trafficClass: 'authenticated',
     method: 'POST',
     path: '/',
     headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },

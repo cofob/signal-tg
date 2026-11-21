@@ -66,7 +66,7 @@ readable; only Web A's own state (`tt-passcode`) was encrypted.
 
 Now, while a passcode exists, the engine encrypts:
 
-- every value of `ts-signal` (`SecureIdbStore`), and every conversation, message and story of `ts-signal-messages`
+- every value of `ts-signal` (`SecureIdbStore`), and every conversation, message, story and call of `ts-signal-messages`
   (`recordCrypto.ts`), as AES-GCM envelopes `{ $enc: 1, iv, data }` with a random IV per write; the context
   (authenticated data) names the record's place, and for `ts-signal-messages` includes the fields left in the clear, so
   a record moved to another conversation, or with such a field changed, no longer decrypts;
@@ -91,6 +91,7 @@ What stays in the clear (everything else above is encrypted):
 | `ts-signal-messages` conversations | `id` (the contact's ACI or the group id), `localId` | key and unique index |
 | `ts-signal-messages` messages | `id`, `conversationId`, `authorAci`, `sentAt`, `expiresAt` (when set), `sendRetry.at` (when set) | key and indexes: lookup by conversation, by author and timestamp, expiry and resend queues |
 | `ts-signal-messages` stories | `id`, `authorAci`, `sentAt`, `expiresAt` | key and indexes |
+| `ts-signal-messages` calls | `peerId`, `callId`, `timestamp` | compound key and the call log's index |
 | Cache `ts-signal-attachments` | request URLs (`attachment/<digest>` or `attachment/<cdn>/<id>`, `sticker/<pack>/<n>`), the last-access header | cache keys |
 | all | the number and size of records and files, and when they were written | observable from the files |
 

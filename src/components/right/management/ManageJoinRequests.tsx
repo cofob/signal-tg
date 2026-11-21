@@ -4,7 +4,6 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiChat } from '../../../api/types';
 
 import { STICKER_SIZE_JOIN_REQUESTS } from '../../../config';
-import { isChatChannel } from '../../../global/helpers';
 import { selectChat } from '../../../global/selectors';
 import { isUserId } from '../../../util/entities/ids';
 import { LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
@@ -28,14 +27,12 @@ type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  isChannel?: boolean;
 };
 
 const ManageJoinRequests = ({
   chat,
   chatId,
   isActive,
-  isChannel,
   onClose,
 }: OwnProps & StateProps) => {
   const { hideAllChatJoinRequests, loadChatJoinRequests } = getActions();
@@ -99,7 +96,7 @@ const ManageJoinRequests = ({
           )}
           {chat?.joinRequests?.length === 0 && (
             <IslandDescription key="empty">
-              {isChannel ? lang('NoSubscribeRequestsDescription') : lang('NoMemberRequestsDescription')}
+              {lang('NoMemberRequestsDescription')}
             </IslandDescription>
           )}
           {chat?.joinRequests?.map(({ userId, about, date }) => (
@@ -107,7 +104,6 @@ const ManageJoinRequests = ({
               userId={userId}
               about={about}
               date={date}
-              isChannel={isChannel}
               chatId={chatId}
               key={userId}
             />
@@ -138,7 +134,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       chat,
-      isChannel: chat && isChatChannel(chat),
     };
   },
 )(ManageJoinRequests));

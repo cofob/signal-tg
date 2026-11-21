@@ -42,6 +42,8 @@ export const HKDF_DeriveSecrets: (a: number, b: number, c: number, d: number, e:
 export const IdentityKeyPair_Deserialize: (a: number, b: number) => [number, number, number];
 export const IdentityKeyPair_Serialize: (a: number, b: number) => [number, number];
 export const IdentityKeyPair_SignAlternateIdentity: (a: number, b: number, c: number) => [number, number, number, number];
+export const KeyTransparency_Check: (a: any, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => any;
+export const KeyTransparency_ResetDataField: (a: number, b: number, c: number) => [number, number, number, number];
 export const KyberKeyPair_Generate: () => number;
 export const KyberKeyPair_GetPublicKey: (a: number) => number;
 export const KyberKeyPair_GetSecretKey: (a: number) => number;

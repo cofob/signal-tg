@@ -45,8 +45,6 @@ export function selectAvailableSettingsScreen<T extends GlobalState>(global: T, 
     case SettingsScreens.AutoDeleteMessages:
       if (selectIsCurrentUserFrozen(global) || global.settings.byKey.defaultHistoryTtl === undefined) return undefined;
       return screen;
-    case SettingsScreens.QuickReaction:
-      return global.config?.defaultReaction ? screen : undefined;
     default:
       return screen;
   }
@@ -58,13 +56,14 @@ export function selectIsWallpaperUploading<T extends GlobalState>(global: T) {
 
 export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   const {
-    settings: { byKey: { canChangeSensitive, signalPin }, privacy }, appConfig,
+    settings: { byKey: { canChangeSensitive, signalPin, keyTransparencySelfStatus }, privacy }, appConfig,
   } = global;
   const hasPasscode = Boolean(global.passcode.hasPasscode);
   const lastSeenVisibility = privacy.lastSeen?.visibility;
 
   return {
     hasSignalPinSettings: Boolean(signalPin),
+    hasKeyTransparency: Boolean(keyTransparencySelfStatus),
     hasPasscode,
     canSetPasscode: selectCanSetPasscode(global),
     canUnlockWithPasskey: hasPasscode && Boolean(IS_WEBAUTHN_SUPPORTED),
@@ -75,7 +74,6 @@ export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
     canHideReadTime: lastSeenVisibility === 'contacts' || lastSeenVisibility === 'nobody',
     areStickerSetsLoaded: Boolean(global.stickers.added.setIds),
     areCustomEmojiSetsLoaded: Boolean(global.customEmojis.added.setIds),
-    isQuickReactionAvailable: selectAvailableSettingsScreen(global, SettingsScreens.QuickReaction) !== undefined,
   };
 }
 

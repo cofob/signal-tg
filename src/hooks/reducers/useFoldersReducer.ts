@@ -12,13 +12,13 @@ export type FolderChatType = {
   icon: IconName;
   title: string;
   key: keyof Pick<ApiChatFolder, (
-    'contacts' | 'nonContacts' | 'groups' | 'channels' |
+    'contacts' | 'nonContacts' | 'groups' |
     'excludeMuted' | 'excludeArchived' | 'excludeRead'
   )>;
 };
 
 const INCLUDE_FILTER_FIELDS: Array<keyof FolderIncludeFilters> = [
-  'includedChatIds', 'channels', 'groups', 'contacts', 'nonContacts',
+  'includedChatIds', 'groups', 'contacts', 'nonContacts',
 ];
 const EXCLUDE_FILTER_FIELDS: Array<keyof FolderExcludeFilters> = [
   'excludedChatIds', 'excludeArchived', 'excludeMuted', 'excludeRead',
@@ -83,8 +83,6 @@ function getSuggestedFolderName(includeFilters?: FolderIncludeFilters) {
 
     if (filters.groups) {
       return 'Groups';
-    } else if (filters.channels) {
-      return 'Channels';
     } else if (filters.contacts) {
       return 'Contacts';
     } else if (filters.nonContacts) {
@@ -96,7 +94,7 @@ function getSuggestedFolderName(includeFilters?: FolderIncludeFilters) {
 }
 
 type FolderIncludeFilters = Pick<ApiChatFolder, (
-  'includedChatIds' | 'channels' | 'groups' | 'contacts' | 'nonContacts'
+  'includedChatIds' | 'groups' | 'contacts' | 'nonContacts'
 )>;
 type FolderExcludeFilters = Pick<ApiChatFolder, 'excludedChatIds' | 'excludeArchived' | 'excludeMuted' | 'excludeRead'>;
 

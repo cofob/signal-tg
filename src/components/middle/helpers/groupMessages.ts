@@ -2,7 +2,6 @@ import type { ApiMessage } from '../../../api/types';
 import type { IAlbum, IDocumentGroup } from '../../../types';
 
 import { getMessageOriginalId, isActionMessage } from '../../../global/helpers';
-import { getMessageForumTopicId } from '../../../global/helpers/replies';
 import { getDayStartAt } from '../../../util/dates/dateMath';
 
 type SenderGroup = (ApiMessage | IAlbum | IDocumentGroup)[];
@@ -26,8 +25,8 @@ export function isDocumentGroup(
 }
 
 export function groupMessages(
-  messages: ApiMessage[], firstUnreadId?: number, topMessageId?: number, isChatWithSelf?: boolean, withUsers?: boolean,
-  splitBeforeMessageId?: number, withTopicSplit?: boolean,
+  messages: ApiMessage[], firstUnreadId?: number, isChatWithSelf?: boolean, withUsers?: boolean,
+  splitBeforeMessageId?: number,
 ) {
   const initDateGroup: MessageDateGroup = {
     originalDate: messages[0].date,
@@ -111,7 +110,6 @@ export function groupMessages(
       currentDocumentGroup = undefined;
     }
 
-    const lastMessageInSenderGroup = currentSenderGroup[currentSenderGroup.length - 1];
     if (nextMessage && !currentAlbum && !currentDocumentGroup) {
       const nextMessageDayStartsAt = getDayStartAt(nextMessage.date * 1000);
       if (currentDateGroup.datetime !== nextMessageDayStartsAt) {
@@ -129,19 +127,10 @@ export function groupMessages(
         || message.ephemeralBotId !== nextMessage.ephemeralBotId
         || message.isOutgoing !== nextMessage.isOutgoing
         || message.postAuthorTitle !== nextMessage.postAuthorTitle
-        || (isActionMessage(message) && message.content.action?.type !== 'phoneCall')
-        || (isActionMessage(nextMessage) && nextMessage.content.action?.type !== 'phoneCall')
+        || isActionMessage(message)
+        || isActionMessage(nextMessage)
         || (nextMessage.date - message.date) > GROUP_INTERVAL_SECONDS
-        || (topMessageId
-          && (message.id === topMessageId
-            || (lastMessageInSenderGroup && (
-              (isAlbum(lastMessageInSenderGroup) && lastMessageInSenderGroup.mainMessage.id === topMessageId)
-              || (isDocumentGroup(lastMessageInSenderGroup) && lastMessageInSenderGroup.firstMessageId === topMessageId)
-            )))
-            && nextMessage.id !== topMessageId
-            && !(message.groupedId && message.groupedId === nextMessage.groupedId))
-          || (isChatWithSelf && message.forwardInfo?.fromId !== nextMessage.forwardInfo?.fromId)
-          || (withTopicSplit && getMessageForumTopicId(message) !== getMessageForumTopicId(nextMessage))
+        || (isChatWithSelf && message.forwardInfo?.fromId !== nextMessage.forwardInfo?.fromId)
       ) {
         currentDateGroup.senderGroups.push([]);
       }

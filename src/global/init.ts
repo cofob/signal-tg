@@ -2,11 +2,10 @@ import type { ActionReturnType, GlobalState } from './types';
 
 import { IS_MULTIACCOUNT_SUPPORTED } from '../util/browser/globalEnvironment';
 import { isCacheApiSupported } from '../util/cacheApi';
-import { getCurrentTabId, reestablishMasterToSelf } from '../util/establishMultitabRole';
+import { getCurrentTabId } from '../util/establishMultitabRole';
 import { initGlobal } from '../util/init';
 import { cloneDeep } from '../util/iteratees';
 import { isLocalMessageId } from '../util/keys/messageKey';
-import { Bundles, loadBundle } from '../util/moduleLoader';
 import { parseLocationHash } from '../util/routing';
 import { updatePeerColors } from '../util/theme';
 import { batchMessageStoreUpdates, updateMessageStore } from './reducers/messages';
@@ -20,7 +19,6 @@ import {
   addActionHandler, getGlobal, setGlobal,
 } from './index';
 import { INITIAL_TAB_STATE } from './initialState';
-import { selectTabState } from './selectors';
 
 initCache();
 
@@ -134,40 +132,5 @@ addActionHandler('init', (global, actions, payload): ActionReturnType => {
 
   return updateTabState(global, {
     messageLists: parsedMessageList ? [parsedMessageList] : initialTabState.messageLists,
-  }, tabId);
-});
-
-addActionHandler('requestMasterAndCallAction', async (
-  global, actions, payload,
-): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload;
-
-  if (selectTabState(global, tabId).isMasterTab) {
-    const { action, payload: actionPayload } = payload;
-    // @ts-ignore
-    actions[action](actionPayload);
-    return;
-  }
-
-  if (global.phoneCall || global.groupCalls.activeGroupCallId) {
-    await loadBundle(Bundles.Calls);
-    if ('hangUp' in actions) actions.hangUp({ tabId });
-    if ('leaveGroupCall' in actions) actions.leaveGroupCall({ tabId });
-  } else {
-    reestablishMasterToSelf();
-  }
-
-  global = getGlobal();
-  global = updateTabState(global, {
-    multitabNextAction: payload,
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('clearMultitabNextAction', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    multitabNextAction: undefined,
   }, tabId);
 });

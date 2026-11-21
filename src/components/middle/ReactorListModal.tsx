@@ -9,10 +9,9 @@ import type { AnimationLevel } from '../../types';
 import { LoadMoreDirection } from '../../types';
 
 import {
-  getHasAdminRight, getReactionKey, isChatSuperGroup, isSameReaction,
+  getReactionKey, isSameReaction,
 } from '../../global/helpers';
 import {
-  selectChat,
   selectChatMessage,
   selectTabState,
 } from '../../global/selectors';
@@ -56,8 +55,6 @@ export type StateProps = Pick<ApiMessage, 'reactors' | 'reactions' | 'seenByDate
   messageId?: number;
   availableReactions?: ApiAvailableReaction[];
   animationLevel: AnimationLevel;
-  canDeleteReactions?: boolean;
-  currentUserId?: string;
 };
 
 const DEFAULT_REACTION_SIZE = 1.5 * REM;
@@ -71,14 +68,11 @@ const ReactorListModal = ({
   seenByDates,
   availableReactions,
   animationLevel,
-  canDeleteReactions,
-  currentUserId,
 }: OwnProps & StateProps) => {
   const {
     loadReactors,
     closeReactorListModal,
     openChat,
-    openDeleteMessageModal,
   } = getActions();
 
   // No need for expensive global updates on chats or users, so we avoid them
@@ -120,17 +114,6 @@ const ReactorListModal = ({
 
   const handleClick = useLastCallback((userId: string) => {
     chatIdRef.current = userId;
-    handleClose();
-  });
-
-  const handleDeleteReactionClick = useLastCallback((peerId: string, count: number) => {
-    if (!chatId || !messageId) return;
-
-    openDeleteMessageModal({
-      chatId,
-      messageIds: [messageId],
-      reactionContext: { peerId, count },
-    });
     handleClose();
   });
 
@@ -264,22 +247,15 @@ const ReactorListModal = ({
                   peerReactions?.forEach((r) => {
                     if (chosenTab && !isSameReaction(r.reaction, chosenTab)) return;
 
-                    const isDeletable = canDeleteReactions && !r.isOwn
-                      && peerId !== currentUserId && Boolean(r.reaction);
-
                     items.push(
                       <ListItem
                         key={`${peerId}-${getReactionKey(r.reaction)}`}
-                        className={buildClassName(
-                          'chat-item-clickable reactors-list-item',
-                          isDeletable && 'reactors-list-item-deletable',
-                        )}
-
+                        className="chat-item-clickable reactors-list-item"
                         onClick={() => handleClick(peerId)}
                       >
                         <Avatar peer={peer} size="medium" />
                         <div className="info">
-                          <FullNameTitle peer={peer} withEmojiStatus />
+                          <FullNameTitle peer={peer} />
                           <span className="status" dir="auto">
                             <Icon name="heart-outline" className="status-icon" />
                             {formatCalendarDate(lang, secondsToDate(r.addedDate), {
@@ -295,20 +271,6 @@ const ReactorListModal = ({
                               availableReactions={availableReactions}
                               size={DEFAULT_REACTION_SIZE}
                             />
-                            {isDeletable && (
-                              <Button
-                                round
-                                size="smaller"
-                                color="translucent"
-                                className="reactors-list-delete"
-                                ariaLabel={lang('DeleteReactionTooltip')}
-                                iconName="delete"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteReactionClick(peerId, peerReactions?.length || 1);
-                                }}
-                              />
-                            )}
                           </div>
                         )}
                       </ListItem>,
@@ -350,11 +312,6 @@ export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const { chatId, messageId } = selectTabState(global).reactorModal || {};
     const message = chatId && messageId ? selectChatMessage(global, chatId, messageId) : undefined;
-    const chat = chatId ? selectChat(global, chatId) : undefined;
-    const canDeleteReactions = Boolean(
-      chat && isChatSuperGroup(chat) && !chat.isMonoforum
-      && getHasAdminRight(chat, 'deleteMessages'),
-    );
 
     return {
       chatId,
@@ -364,8 +321,6 @@ export default memo(withGlobal<OwnProps>(
       seenByDates: message?.seenByDates,
       availableReactions: global.reactions.availableReactions,
       animationLevel: selectSharedSettings(global).animationLevel,
-      canDeleteReactions,
-      currentUserId: global.currentUserId,
     };
   },
 )(ReactorListModal));

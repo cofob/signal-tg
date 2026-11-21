@@ -11,13 +11,11 @@ import {
   ARCHIVED_FOLDER_ID,
   CHAT_HEIGHT_PX,
   CHAT_LIST_SLICE,
-  SAVED_FOLDER_ID,
 } from '../../../config';
 import buildClassName from '../../../util/buildClassName';
 import { getOrderKey, getPinnedChatsCount } from '../../../util/folderManager';
 import { ARCHIVE_ANIMATION_ID } from './hooks';
 
-import usePeerStoriesPolling from '../../../hooks/polling/usePeerStoriesPolling';
 import useTopOverscroll from '../../../hooks/scroll/useTopOverscroll';
 import { useFolderManagerForOrderedIds } from '../../../hooks/useFolderManager';
 import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
@@ -35,12 +33,11 @@ import ChatListPanes from './panes/ChatListPanes';
 
 type OwnProps = {
   className?: string;
-  folderType: 'all' | 'archived' | 'saved' | 'folder';
+  folderType: 'all' | 'archived' | 'folder';
   folderId?: number;
   isActive: boolean;
   canDisplayArchive?: boolean;
   archiveSettings?: GlobalState['archiveSettings'];
-  isForumPanelOpen?: boolean;
   isMainList?: boolean;
   isFoldersSidebarShown?: boolean;
   isStoryRibbonShown?: boolean;
@@ -60,7 +57,6 @@ const ChatList = ({
   folderType,
   folderId,
   isActive,
-  isForumPanelOpen,
   canDisplayArchive,
   archiveSettings,
   isMainList,
@@ -77,8 +73,6 @@ const ChatList = ({
   const {
     openChat,
     openNextChat,
-    closeForumPanel,
-    closeCommunityPanel,
     toggleStoryRibbon,
     openLeftColumnContent,
   } = getActions();
@@ -87,15 +81,13 @@ const ChatList = ({
 
   const isArchived = folderType === 'archived';
   const isAllFolder = folderType === 'all';
-  const isSaved = folderType === 'saved';
   const resolvedFolderId = (
-    isAllFolder ? ALL_FOLDER_ID : isArchived ? ARCHIVED_FOLDER_ID : isSaved ? SAVED_FOLDER_ID : folderId!
+    isAllFolder ? ALL_FOLDER_ID : isArchived ? ARCHIVED_FOLDER_ID : folderId!
   );
 
   const shouldDisplayArchive = isAllFolder && canDisplayArchive && archiveSettings;
 
   const orderedIds = useFolderManagerForOrderedIds(resolvedFolderId);
-  usePeerStoriesPolling(orderedIds);
 
   const chatsHeight = (orderedIds?.length || 0) * CHAT_HEIGHT_PX;
   const archiveHeight = shouldDisplayArchive
@@ -115,7 +107,7 @@ const ChatList = ({
     nextChat: () => openNextChat({ targetIndexDelta: 1, orderedIds }),
   } : undefined), [isActive, orderedIds]));
 
-  useKeyboardShortcuts(useMemo(() => (isActive && !isSaved && orderedIds ? {
+  useKeyboardShortcuts(useMemo(() => (isActive && orderedIds ? {
     openChatByNumber: (e: KeyboardEvent) => {
       const [, digit] = e.code.match(/Digit(\d)/) || [];
       const isArchiveInList = shouldDisplayArchive && archiveSettings && !archiveSettings.isMinimized;
@@ -135,7 +127,7 @@ const ChatList = ({
       openChat({ id: orderedIds[position], shouldReplaceHistory: true });
       return true;
     },
-  } : undefined), [archiveSettings, isActive, isMainList, isSaved, orderedIds, shouldDisplayArchive]));
+  } : undefined), [archiveSettings, isActive, isMainList, orderedIds, shouldDisplayArchive]));
 
   const { observe } = useIntersectionObserver({
     rootRef: containerRef,
@@ -144,8 +136,6 @@ const ChatList = ({
 
   const handleArchivedClick = useLastCallback(() => {
     openLeftColumnContent({ contentKey: LeftColumnContent.Archived });
-    closeForumPanel();
-    closeCommunityPanel();
   });
 
   const handleShowStoryRibbon = useLastCallback(() => {
@@ -160,7 +150,6 @@ const ChatList = ({
     containerRef,
     onOverscroll: handleShowStoryRibbon,
     onReset: handleHideStoryRibbon,
-    isDisabled: isSaved,
     isOverscrolled: isStoryRibbonShown,
   });
 
@@ -178,11 +167,10 @@ const ChatList = ({
       return (
         <Chat
           key={id}
-          teactOrderKey={isPinned ? i : getOrderKey(id, isSaved)}
+          teactOrderKey={isPinned ? i : getOrderKey(id)}
           chatId={id}
           isPinned={isPinned}
           folderId={folderId}
-          isSavedDialog={isSaved}
           animationType={getAnimationType(id)}
           orderDiff={orderDiffById[id]}
           shiftDiff={shiftDiff}
@@ -198,7 +186,7 @@ const ChatList = ({
 
   return (
     <InfiniteScroll
-      className={buildClassName('chat-list custom-scroll', isForumPanelOpen && 'forum-panel-open', className)}
+      className={buildClassName('chat-list custom-scroll', className)}
       ref={containerRef}
       items={viewportIds}
       itemSelector=".ListItem:not(.chat-item-archive)"
@@ -211,7 +199,7 @@ const ChatList = ({
       onLoadMore={getMore}
       onScroll={onScroll}
     >
-      {!isSaved && <ChatListPanes key="panes" noBanners={!isAllFolder} onHeightChange={setPanesHeight} />}
+      <ChatListPanes key="panes" noBanners={!isAllFolder} onHeightChange={setPanesHeight} />
       {shouldDisplayArchive && (
         <Archive
           key="archive"
@@ -224,7 +212,7 @@ const ChatList = ({
       )}
       {viewportIds?.length ? (
         renderChats()
-      ) : viewportIds && !viewportIds.length && !isSaved ? (
+      ) : viewportIds && !viewportIds.length ? (
         (
           <EmptyFolder
             folderId={folderId}

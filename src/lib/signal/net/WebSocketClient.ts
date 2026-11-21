@@ -1,3 +1,5 @@
+import type { TrafficClass } from '../config';
+
 import { SIGNAL_USER_AGENT } from '../config';
 
 import NetworkError from './NetworkError';
@@ -67,8 +69,8 @@ export default class WebSocketClient {
 
   private constructor(private tunnel: TlsTunnel, private reader: StreamReader) {}
 
-  static async connect(host: string, path: string, headers: Record<string, string> = {}) {
-    const tunnel = await TlsTunnel.open(host);
+  static async connect(host: string, path: string, trafficClass: TrafficClass, headers: Record<string, string> = {}) {
+    const tunnel = await TlsTunnel.open(host, trafficClass);
     const reader = new StreamReader(() => tunnel.read());
     const key = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(KEY_LENGTH))));
 

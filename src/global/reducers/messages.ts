@@ -50,11 +50,9 @@ import {
   selectViewportIds,
   selectWebPage,
 } from '../selectors';
-import { selectThreadIdFromMessage, selectThreadInfo, selectThreadLocalStateParam } from '../selectors/threads';
+import { selectThreadInfo, selectThreadLocalStateParam } from '../selectors/threads';
 import { removeUnreadMentions } from './chats';
 import { removeIdFromSearchResults } from './middleSearch';
-import { removeUnreadPollVotes } from './polls';
-import { removeUnreadReactions } from './reactions';
 import { updateTabState } from './tabs';
 import {
   deleteThread,
@@ -436,7 +434,7 @@ export function deleteChatMessages<T extends GlobalState>(
     if (!shouldPreserveMedia && hasWindowedMediaContent(message)) {
       mediaIdsToRemove.push(messageId);
     }
-    const threadId = selectThreadIdFromMessage(global, message);
+    const threadId = MAIN_THREAD_ID;
     if (!threadId || threadId === MAIN_THREAD_ID) {
       return;
     }
@@ -538,9 +536,7 @@ export function deleteChatMessages<T extends GlobalState>(
     });
   }
 
-  global = removeUnreadReactions({ global, chatId, ids: messageIds });
   global = removeUnreadMentions({ global, chatId, ids: messageIds });
-  global = removeUnreadPollVotes({ global, chatId, ids: messageIds });
 
   const newById = omit(byId, messageIds);
   global = replaceChatMessages(global, chatId, newById);
@@ -789,7 +785,7 @@ export function toggleMessageSelection<T extends GlobalState>(
     newMessageIds = [...messageIds, ...newSelectedMessageIds];
   }
 
-  if (!newMessageIds.length && !oldSelectedMessages.reportContext) {
+  if (!newMessageIds.length) {
     return exitMessageSelectMode(global, tabId);
   }
 

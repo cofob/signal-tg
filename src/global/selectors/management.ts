@@ -56,11 +56,7 @@ export function selectCurrentManagementType<T extends GlobalState>(
     return undefined;
   }
 
-  if (isChatGroup(chat)) {
-    return 'group';
-  }
-
-  return 'channel';
+  return isChatGroup(chat) ? 'group' : undefined;
 }
 
 export function selectCanManage<T extends GlobalState>(
@@ -69,7 +65,7 @@ export function selectCanManage<T extends GlobalState>(
 ) {
   const chat = selectChat(global, chatId);
   const isRestricted = selectIsChatRestricted(global, chatId);
-  if (!chat || isRestricted || chat.isMonoforum) return false;
+  if (!chat || isRestricted) return false;
 
   const isPrivate = isUserId(chat.id);
   const user = isPrivate ? selectUser(global, chatId) : undefined;
@@ -88,7 +84,7 @@ export function selectCanManageAutoDelete<T extends GlobalState>(
   chatId: string,
 ) {
   const chat = selectChat(global, chatId);
-  if (!chat || selectIsChatRestricted(global, chatId) || chat.isMonoforum) return false;
+  if (!chat || selectIsChatRestricted(global, chatId)) return false;
 
   if (selectIsChatWithSelf(global, chatId)) {
     return false;

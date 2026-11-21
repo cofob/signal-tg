@@ -158,6 +158,8 @@ async function exchange(credentials: Credentials, mrenclave: string, inner: Requ
     connection = await AttestedConnection.connect(
       SIGNAL_SVR2_HOST,
       `/v1/${mrenclave}`,
+      // The backup token is issued to the account, so through the sealed sender proxy Signal could tie its address to it
+      'authenticated',
       credentials,
       (attestation, now) => wasm.Svr2Client_New(mrenclaveBytes, attestation, now),
     );

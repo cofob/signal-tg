@@ -64,8 +64,6 @@ function getLangKeyForBannedRightKey(key: keyof ApiChatBannedRights) {
       return 'UserRestrictionsInviteUsers';
     case 'pinMessages':
       return 'UserRestrictionsPinMessages';
-    case 'manageTopics':
-      return 'GroupPermissionNoManageTopics';
     case 'sendPlain':
       return 'UserRestrictionsNoSendText';
     case 'sendDocs':
