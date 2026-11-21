@@ -1104,6 +1104,25 @@ addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
   setGlobal(global);
 });
 
+addActionHandler('loadKeyTransparencySelfStatus', async (global): Promise<void> => {
+  const keyTransparencySelfStatus = await callApi('fetchKeyTransparencySelfStatus');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
+  setGlobal(global);
+});
+
+addActionHandler('runKeyTransparencySelfCheck', async (global): Promise<void> => {
+  if (global.settings.byKey.keyTransparencySelfStatus === 'running') return;
+
+  global = replaceSettings(global, { keyTransparencySelfStatus: 'running' });
+  setGlobal(global);
+
+  const keyTransparencySelfStatus = await callApi('checkKeyTransparencySelf');
+  global = getGlobal();
+  global = replaceSettings(global, { keyTransparencySelfStatus });
+  setGlobal(global);
+});
+
 addActionHandler('loadSignalMessageSettings', async (global): Promise<void> => {
   const signalMessageSettings = await callApi('fetchSignalMessageSettings');
   global = getGlobal();

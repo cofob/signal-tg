@@ -6,6 +6,7 @@ import type {
   ApiDialog,
   ApiFormattedText,
   ApiGlobalMessageSearchType,
+  ApiKeyTransparencyStatus,
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
@@ -566,6 +567,7 @@ export type TabState = {
     qrData?: string;
     isVerified?: boolean;
     isUnavailable?: boolean;
+    keyTransparencyStatus?: ApiKeyTransparencyStatus;
   };
 
   // Signal: a message that was not sent to `userIds` because their safety numbers changed
