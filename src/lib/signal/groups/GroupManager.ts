@@ -87,18 +87,20 @@ export default class GroupManager {
         invitedAcis: others.filter((_, index) => !credentials[index]),
       };
 
+      let created: Awaited<ReturnType<typeof createGroupOnServer>>;
       try {
-        const { masterKey, state, sendEndorsementsResponse } = await createGroupOnServer(
-          account, connection, group, selfCredential,
-        );
-        const conversation = await this.processor.applyGroupState(masterKey, state, { isCreated: true });
-        await this.saveEndorsements(conversation.id, masterKey, state, sendEndorsementsResponse);
-        await this.processor.sendGroupUpdate(conversation.id);
-        return conversation;
+        created = await createGroupOnServer(account, connection, group, selfCredential);
       } catch (err) {
         if (attempt || !(err instanceof GroupRequestError) || err.status !== HTTP_BAD_REQUEST) throw err;
         await forgetProfileKeyCredentials(store, [account.aci, ...others]);
+        continue;
       }
+
+      const { masterKey, state, sendEndorsementsResponse } = created;
+      const conversation = await this.processor.applyGroupState(masterKey, state, { isCreated: true });
+      await this.saveEndorsements(conversation.id, masterKey, state, sendEndorsementsResponse);
+      await this.processor.sendGroupUpdate(conversation.id);
+      return conversation;
     }
   }
 
@@ -142,7 +144,12 @@ export default class GroupManager {
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       const info = await fetchGroupJoinInfo(account, connection, secretParams, inviteLinkPassword);
-      if (info.isPendingApproval && existing) return existing;
+      // We asked to join before, maybe on another device
+      if (info.isPendingApproval) {
+        return existing ?? this.processor.applyGroupState(
+          masterKey, buildRequestedState(info, info.revision, account.aci), {},
+        );
+      }
       const credential = await getProfileKeyCredential(store, connection, account.aci, account.profileKey);
       if (!credential) throw new Error('Our profile key credential is missing');
       const presentation = createProfileKeyCredentialPresentation(secretParams, credential);
@@ -151,24 +158,26 @@ export default class GroupManager {
         : { addMembers: [{ added: { role: Member_Role.DEFAULT, presentation }, joinFromInviteLink: true }] };
       actions.version = info.revision + 1;
 
+      let response: Awaited<ReturnType<typeof submitGroupChange>>;
       try {
-        const { groupChange, sendEndorsementsResponse } = await submitGroupChange(
-          account, connection, secretParams, actions, inviteLinkPassword,
-        );
-        const change = decryptGroupChange(secretParams, fromBinary(GroupChange_ActionsSchema, groupChange.actions));
-        if (info.isApprovalRequired) {
-          const requested = buildRequestedState(info, change.revision, account.aci);
-          return await this.processor.applyGroupState(masterKey, requested, { change });
-        }
-
-        const { state } = await fetchGroup(account, connection, masterKey);
-        const conversation = await this.processor.applyGroupState(masterKey, state, { change });
-        await this.saveEndorsements(groupId, masterKey, state, sendEndorsementsResponse);
-        await this.processor.sendGroupUpdate(groupId, toBinary(GroupChangeSchema, groupChange));
-        return conversation;
+        response = await submitGroupChange(account, connection, secretParams, actions, inviteLinkPassword);
       } catch (err) {
         if (!(err instanceof GroupRequestError) || err.status !== HTTP_CONFLICT) throw err;
+        continue;
       }
+
+      const { groupChange, sendEndorsementsResponse } = response;
+      const change = decryptGroupChange(secretParams, fromBinary(GroupChange_ActionsSchema, groupChange.actions));
+      if (info.isApprovalRequired) {
+        const requested = buildRequestedState(info, change.revision, account.aci);
+        return this.processor.applyGroupState(masterKey, requested, { change });
+      }
+
+      const { state } = await fetchGroup(account, connection, masterKey);
+      const conversation = await this.processor.applyGroupState(masterKey, state, { change });
+      await this.saveEndorsements(groupId, masterKey, state, sendEndorsementsResponse);
+      await this.processor.sendGroupUpdate(groupId, toBinary(GroupChangeSchema, groupChange));
+      return conversation;
     }
     throw new Error('Joining the group conflicted with other changes too many times');
   }
@@ -200,11 +209,9 @@ export default class GroupManager {
       if (!actions) return conversation;
       actions.version = state.revision + 1;
 
+      let response: Awaited<ReturnType<typeof submitGroupChange>>;
       try {
-        const { groupChange, sendEndorsementsResponse } = await submitGroupChange(
-          account, connection, secretParams, actions,
-        );
-        return await this.applyOwnChange(conversation.id, masterKey, state, groupChange, sendEndorsementsResponse);
+        response = await submitGroupChange(account, connection, secretParams, actions);
       } catch (err) {
         if (!(err instanceof GroupRequestError)) throw err;
         if (err.status === HTTP_CONFLICT) {
@@ -216,7 +223,10 @@ export default class GroupManager {
         } else {
           throw err;
         }
+        continue;
       }
+      const { groupChange, sendEndorsementsResponse } = response;
+      return this.applyOwnChange(conversation.id, masterKey, state, groupChange, sendEndorsementsResponse);
     }
     throw new Error('The group change conflicted with other changes too many times');
   }
