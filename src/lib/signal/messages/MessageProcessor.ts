@@ -224,6 +224,9 @@ export default class MessageProcessor {
 
   private deliveryReceiptTimer?: ReturnType<typeof setTimeout>;
 
+  // Changes on every `stop`, so work queued for the previous account does not run for the next one
+  private generation = 0;
+
   private expirationTimer?: ReturnType<typeof setTimeout>;
 
   private groupRefreshes = new Map<string, Promise<ConversationRecord | undefined>>();
@@ -263,10 +266,19 @@ export default class MessageProcessor {
     void this.flushPendingSends();
   }
 
+  /** Stops the timers and drops the queued sends, storage syncs and profile fetches of the current account */
   stop() {
+    this.generation++;
     clearTimeout(this.expirationTimer);
     clearTimeout(this.deliveryReceiptTimer);
     clearTimeout(this.storageSyncTimer);
+    this.deliveryReceiptTimer = undefined;
+    this.storageSyncTimer = undefined;
+    this.isStorageSyncQueued = false;
+    this.deliveryReceipts.clear();
+    this.pendingSends = [];
+    this.profileQueue = Promise.resolve();
+    this.storageSync = Promise.resolve();
   }
 
   /**
@@ -743,7 +755,10 @@ export default class MessageProcessor {
    * (see `syncStorageService`)
    */
   syncStorage() {
-    const sync = this.storageSync.then(() => syncStorageService(this.client.getSenderContext(), this));
+    const { generation } = this;
+    const sync = this.storageSync.then(() => (
+      generation === this.generation ? syncStorageService(this.client.getSenderContext(), this) : undefined
+    ));
     this.storageSync = sync.catch(() => undefined);
     return sync;
   }
@@ -1034,6 +1049,7 @@ export default class MessageProcessor {
    * A send that fails because the connection closed meanwhile waits for the next one as well.
    */
   private async sendWhenConnected(send: (context: SenderContext) => Promise<void>) {
+    const { generation } = this;
     if (!this.client.isConnected) {
       this.pendingSends.push(send);
       return;
@@ -1042,18 +1058,23 @@ export default class MessageProcessor {
       await send(this.client.getSenderContext());
     } catch (err) {
       if (this.client.isConnected) throw err;
-      this.pendingSends.push(send);
+      if (generation === this.generation) this.pendingSends.push(send);
     }
   }
 
   private async flushPendingSends() {
+    const { generation } = this;
     for (const send of this.pendingSends.splice(0)) {
+      if (generation !== this.generation) return;
       await this.sendWhenConnected(send).catch(this.events.onError);
     }
   }
 
   private queueProfileRefresh(aci: string) {
-    this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
+    const { generation } = this;
+    this.profileQueue = this.profileQueue
+      .then(() => (generation === this.generation ? this.refreshProfile(aci) : undefined))
+      .catch(this.events.onError);
   }
 
   /** The stored records of a manifest, serialized, by base64 storage id */
@@ -1646,9 +1667,7 @@ export default class MessageProcessor {
       id: aci, localId: await this.db.allocateLocalId(), type: 'private', unreadCount: 0,
     });
     // Profiles need the connection; our own conversation is created before it, and its profile is fetched after
-    if (this.client.isConnected) {
-      this.profileQueue = this.profileQueue.then(() => this.refreshProfile(aci)).catch(this.events.onError);
-    }
+    if (this.client.isConnected) this.queueProfileRefresh(aci);
     return created;
   }
 
