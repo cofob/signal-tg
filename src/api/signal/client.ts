@@ -41,6 +41,9 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let linkSession: Awaited<ReturnType<typeof startDeviceLink>> | undefined;
 let isDestroyed = false;
 let hasSyncedThisSession = false;
+// Whether the session reached its first connection attempt, from which it stays connected until it stops
+let isConnectionStarted = false;
+let isConnecting = false;
 // Changes on every stop, so a device link loop of an earlier start ends instead of running beside a new one
 let clientGeneration = 0;
 let historyTransferController: AbortController | undefined;
@@ -105,6 +108,7 @@ export function getCurrentAccount() {
 /** Closes the connections; `shouldForget` also removes the account, every local message and attachment */
 export async function stopClient(shouldForget: boolean) {
   isDestroyed = true;
+  isConnectionStarted = false;
   clientGeneration++;
   clearTimeout(reconnectTimer);
   linkSession?.cancel();
@@ -213,6 +217,7 @@ export async function startSession(storedAccount: AccountRecord) {
   }
 
   hasSyncedThisSession = false;
+  isConnectionStarted = true;
   await connect();
 }
 
@@ -296,6 +301,7 @@ async function connect() {
   if (isDestroyed) return;
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateConnecting' });
 
+  isConnecting = true;
   try {
     await client.connect({
       onContent: (decrypted) => processor.processContent(decrypted),
@@ -310,12 +316,29 @@ async function connect() {
     logError(err);
     scheduleReconnect();
     return;
+  } finally {
+    isConnecting = false;
   }
 
   reconnectDelay = RECONNECT_MIN_DELAY_MS;
   processor.start();
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
   syncAfterConnect().catch(logError);
+}
+
+/**
+ * Replaces the chat connection at once, for the page to call after the computer slept or the network changed: the
+ * old socket can look alive for up to the keepalive timeout, and after failed attempts the next one waits for the
+ * backoff. An attempt that is already under way is left to finish.
+ */
+export function reconnectClient() {
+  if (isDestroyed || !isConnectionStarted || isConnecting || currentAccount?.isDemo) return;
+
+  // The close reaches `scheduleReconnect`, whose timer the connection below makes unnecessary
+  client.close();
+  clearTimeout(reconnectTimer);
+  reconnectDelay = RECONNECT_MIN_DELAY_MS;
+  void connect();
 }
 
 function scheduleReconnect() {
