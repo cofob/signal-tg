@@ -51,6 +51,9 @@ type StateProps = {
   areStoriesDisabled?: boolean;
 } & Pick<GlobalState, 'currentUserId' | 'archiveSettings'>;
 
+// The other frontend of the same build, which opens the same account (`webk/`)
+const WEB_K_PATH = '../k/';
+
 const LeftSideMenuItems = ({
   currentUserId,
   archiveSettings,
@@ -95,6 +98,10 @@ const LeftSideMenuItems = ({
 
     setSharedSettingOption({ theme: newTheme });
     setSharedSettingOption({ shouldUseSystemTheme });
+  });
+
+  const handleSwitchToWebK = useLastCallback(() => {
+    window.location.href = new URL(WEB_K_PATH, window.location.href).href;
   });
 
   const handleAnimationLevelChange = useLastCallback((e: React.SyntheticEvent<HTMLElement>) => {
@@ -196,6 +203,12 @@ const LeftSideMenuItems = ({
             >
               <span className="menu-item-name capitalize">{lang('MenuUIFeaturesSwitch')}</span>
               <Toggle value={animationLevelValue} />
+            </MenuItem>
+            <MenuItem
+              icon="device-webk"
+              onClick={handleSwitchToWebK}
+            >
+              {lang('MenuSwitchToK')}
             </MenuItem>
             {canInstall && (
               <MenuItem

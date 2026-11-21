@@ -24,6 +24,7 @@ import appNavigationController, {NavigationItem} from '@components/appNavigation
 import findUpClassName from '@helpers/dom/findUpClassName';
 import findUpTag from '@helpers/dom/findUpTag';
 import App, {getAppVersionText} from '@config/app';
+import {switchToWebA} from '@lib/signal/frontend';
 import Modes from '@config/modes';
 import ButtonMenuToggle from '@components/buttonMenuToggle';
 import sessionStorage from '@lib/sessionStorage';
@@ -990,32 +991,9 @@ export class AppSidebarLeft extends SidebarSlider {
     }, {
       icon: 'aversion',
       text: 'ChatList.Menu.SwitchTo.A',
-      onClick: () => {
-        // * with a passcode the accounts are kept encrypted, where Web A can't read them; and it asks
-        // * the same before switching here
-        const [appSettings] = useAppSettings();
-        if(appSettings.passcode?.enabled) {
-          confirmationPopup({
-            titleLangKey: 'ChatList.Menu.SwitchTo.A',
-            descriptionLangKey: 'ChatList.Menu.SwitchTo.A.Passcode',
-            button: {langKey: 'Continue'}
-          }).then(() => {
-            closeTabsBefore(() => {
-              AppPasscodeLockTab.openChecked(this);
-            });
-          }, noop);
-          return;
-        }
-
-        Promise.all([
-          sessionStorage.set({kz_version: 'Z'}),
-          sessionStorage.delete('tgme_sync')
-        ]).then(() => {
-          appNavigationController.navigateToUrl('https://web.telegram.org/a/');
-        });
-      },
-      separator: App.isMainDomain,
-      verify: () => App.isMainDomain
+      // * TeleSignal: the A version of the same build opens the same account (@lib/signal/frontend)
+      onClick: switchToWebA,
+      separator: true
     }, {
       icon: 'help',
       text: 'TelegramFeatures',
