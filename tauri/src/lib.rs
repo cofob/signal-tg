@@ -398,22 +398,37 @@ fn quit_app(app: tauri::AppHandle) {
 /// of links that the app shows are opened: `file:` and the schemes of installed apps would run something else.
 #[tauri::command]
 fn open_external_url(window: tauri::WebviewWindow, url: String) -> Result<(), String> {
-  let url = Url::parse(&url).map_err(|err| err.to_string())?;
-  if !is_external_url_allowed(&url) {
-    return Err(format!("Disallowed URL scheme: {}", url.scheme()));
-  }
+  let url = parse_external_url(&url)?;
   window
     .opener()
     .open_url(url.as_str(), None::<&str>)
     .map_err(|err| err.to_string())
 }
 
-fn is_external_url_allowed(url: &Url) -> bool {
-  match url.scheme() {
+/// Parses a link for `open_external_url`, or says why the app refuses it
+fn parse_external_url(raw: &str) -> Result<Url, String> {
+  let url = Url::parse(raw).map_err(|err| err.to_string())?;
+  let is_allowed = match url.scheme() {
     "http" | "https" => url.has_host(),
-    "mailto" | "tel" => true,
+    // Mail and phone apps get the opaque part as it is, so neither the text nor its serialized form may hold
+    // whitespace, quotes, angle brackets or control characters, which could split or extend the command that a
+    // handler builds from it. The parser drops tabs and newlines and encodes some others, so the text is checked too.
+    "mailto" | "tel" => {
+      !url.path().is_empty()
+        && !raw.chars().any(is_unsafe_url_char)
+        && !url.as_str().chars().any(is_unsafe_url_char)
+    }
     _ => false,
+  };
+  if is_allowed {
+    Ok(url)
+  } else {
+    Err(format!("Disallowed URL: {}", url.scheme()))
   }
+}
+
+fn is_unsafe_url_char(char: char) -> bool {
+  char.is_whitespace() || char.is_control() || matches!(char, '"' | '<' | '>')
 }
 
 #[tauri::command]
@@ -604,7 +619,7 @@ mod tests {
 
   /// What `open_external_url` accepts: a URL that parses, with an allowed scheme
   fn is_allowed(url: &str) -> bool {
-    Url::parse(url).is_ok_and(|url| is_external_url_allowed(&url))
+    parse_external_url(url).is_ok()
   }
 
   #[test]
@@ -614,6 +629,7 @@ mod tests {
       "http://example.com/a?b=c#d",
       "mailto:someone@example.com",
       "tel:+123456789",
+      "mailto:someone@example.com?subject=Hi&body=Hello%20there",
     ] {
       assert!(is_allowed(url), "{url}");
     }
@@ -630,6 +646,15 @@ mod tests {
       "tauri://localhost/",
       "sgnl://signal.me/#p/+1",
       "http:///",
+      "mailto:",
+      "mailto:a@b.c\"><script>",
+      "mailto:a@b.c?body=x<y",
+      "mailto:a@b.c?body=x\"y",
+      "mailto:a b@c.d",
+      "mailto:a@b.c\ttab",
+      "mailto:a@b.c\nBcc:x@y.z",
+      "tel:+123\u{7f}456",
+      "tel:+123\u{a0}456",
     ] {
       assert!(!is_allowed(url), "{url}");
     }
