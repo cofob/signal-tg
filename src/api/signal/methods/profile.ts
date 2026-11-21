@@ -40,6 +40,8 @@ const ERROR_KEY_BY_LIBSIGNAL_NAME: Record<string, UsernameErrorKey> = {
   BadDiscriminatorCharacter: 'discriminatorInvalid',
   DiscriminatorTooLarge: 'discriminatorInvalid',
 };
+// Signal Desktop `processImageFile` in `ts/util/processImageFile.dom.ts`: profile avatars are square, at most this big
+const AVATAR_MAX_SIZE = 512;
 // The about emoji is the emoji that starts the bio, as `buildApiUserFullInfo` shows it
 const LEADING_EMOJI_REGEX = new RegExp(`^(${EMOJI_REGEX.source})(?:\\s+|$)`);
 
@@ -64,7 +66,7 @@ export async function updateOwnProfile({
     const avatarPath = await writeProfile(client.getSenderContext(), {
       givenName: firstName, familyName: lastName || undefined, about, aboutEmoji,
     }, photo
-      ? { type: 'update', avatar: new Uint8Array(await photo.arrayBuffer()) }
+      ? { type: 'update', avatar: await buildProfileAvatar(photo) }
       : { type: shouldRemovePhoto ? 'clear' : 'unchanged' });
     await processor.updateOwnConversation({
       profileName: firstName, profileFamilyName: lastName || undefined, about, aboutEmoji, avatarPath,
@@ -269,6 +271,19 @@ export async function updatePhoneNumberPrivacy({ isShared, isDiscoverable }: {
 async function getSelf() {
   const selfAci = getCurrentAccount()?.aci;
   return selfAci ? db.getConversation(selfAci) : undefined;
+}
+
+/** Crops the picture to a centered square, scales it down to `AVATAR_MAX_SIZE` and encodes it as JPEG */
+async function buildProfileAvatar(photo: Blob) {
+  const bitmap = await createImageBitmap(photo, { imageOrientation: 'from-image' });
+  const side = Math.min(bitmap.width, bitmap.height);
+  const size = Math.min(side, AVATAR_MAX_SIZE);
+  const canvas = new OffscreenCanvas(size, size);
+  canvas.getContext('2d')!.drawImage(
+    bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size,
+  );
+  bitmap.close();
+  return new Uint8Array(await (await canvas.convertToBlob({ type: 'image/jpeg' })).arrayBuffer());
 }
 
 function splitBio(bio: string) {

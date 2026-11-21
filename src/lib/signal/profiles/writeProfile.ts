@@ -40,8 +40,9 @@ const textDecoder = new TextDecoder();
  * version and commitment of that key, uploads a new avatar to the form the server returns, and asks our other
  * devices to fetch the profile (Signal Desktop `ts/services/writeProfile.preload.ts`). `fields` are merged over
  * the current profile on the server, so a field that is present replaces it, even as `undefined`, and the others
- * keep their values. The payment address and, unless `isPhoneNumberShared` is given, phone number sharing keep
- * their current values as well. The write fails without a given name. Returns the CDN path of the avatar.
+ * keep their values. The payment address, the visible badges and, unless `isPhoneNumberShared` is given, phone
+ * number sharing keep their current values as well. The write fails without a given name. Returns the CDN path of
+ * the avatar.
  */
 export async function writeProfile(
   context: SenderContext,
@@ -70,6 +71,7 @@ export async function writeProfile(
     name: await encryptProfileText(name, profileKey, NAME_PADDED_LENGTHS),
     about: about ? await encryptProfileText(about, profileKey, ABOUT_PADDED_LENGTHS) : undefined,
     aboutEmoji: aboutEmoji ? await encryptProfileText(aboutEmoji, profileKey, ABOUT_EMOJI_PADDED_LENGTHS) : undefined,
+    badgeIds: current.visibleBadgeIds,
     paymentAddress: current.paymentAddress,
     phoneNumberSharing,
     avatar: avatarChange.type !== 'clear',
