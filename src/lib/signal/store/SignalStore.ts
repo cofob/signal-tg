@@ -30,6 +30,10 @@ export type AccountRecord = {
   isLinkPreviewsEnabled?: boolean;
   // Registered primary devices only: the account attribute that lets people find us by phone number
   isDiscoverableByPhoneNumber?: boolean;
+  // Registered primary devices only: SVR2 stores the master key under a PIN
+  hasSvrPin?: boolean;
+  // Registered primary devices only: registering the number again needs the PIN
+  isRegistrationLockEnabled?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out
@@ -86,6 +90,13 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  cdsiToken: CdsiToken;
+};
+
+/** The contact discovery token for the numbers of earlier lookups, which later lookups send again */
+export type CdsiToken = {
+  token: Uint8Array;
+  e164s: string[];
 };
 
 export type NotificationDefaults = {

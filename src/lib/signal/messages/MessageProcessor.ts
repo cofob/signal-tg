@@ -22,7 +22,7 @@ import type {
   SyncMessage_Sent,
   TypingMessage,
 } from '../proto/generated/SignalService_pb';
-import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ContactRecord, ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
 import type { OutgoingMessage } from '../sender/sendMessage';
@@ -32,8 +32,10 @@ import type { StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
 import type { AccountRecord } from '../store/SignalStore';
 
+import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
+import { lookUpE164s } from '../cdsi/cdsiLookup';
 import { decryptGroupState, fetchGroup } from '../groups/fetchGroup';
 import {
   applyGroupChange, decryptGroupChange, getChangeProfileKeys, verifyGroupChange,
@@ -1012,12 +1014,56 @@ export default class MessageProcessor {
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
+    // The primary device discovers which numbers of its contacts use Signal; a linked device gets them with ACIs
+    if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) {
+      const numberOnlyContacts = records
+        .map(({ record }) => (record.case === 'contact' ? record.value : undefined))
+        .filter((contact): contact is ContactRecord => (
+          Boolean(contact?.e164 && !contact.blocked && !getAci(contact.aci, contact.aciBinary))
+        ));
+      if (numberOnlyContacts.length) {
+        this.resolveContactNumbers(numberOnlyContacts).catch(this.events.onError);
+      }
+    }
 
     if (!pinIndexById) return;
     for (const conversation of await this.db.getConversations()) {
       const pinIndex = pinIndexById.get(conversation.id);
       if (conversation.pinIndex !== pinIndex) await this.putConversation({ ...conversation, pinIndex });
     }
+  }
+
+  /**
+   * Creates conversations for the storage service contacts whose numbers turn out to have Signal accounts. Their
+   * records stay as they are: the conversations change only locally.
+   */
+  private async resolveContactNumbers(contacts: ContactRecord[]) {
+    const records = await this.discoverE164s(contacts.map(({ e164 }) => e164));
+    await this.runSerial(async () => {
+      for (const contact of contacts) {
+        const aci = records.get(contact.e164)?.aci;
+        if (!aci) continue;
+        if (contact.profileKey.length) await saveProfileKey(this.client.store, aci, contact.profileKey);
+        const conversation = await this.ensurePrivateConversation(aci);
+        await this.putConversation({
+          ...conversation,
+          e164: contact.e164,
+          systemName: [contact.systemGivenName, contact.systemFamilyName].filter(Boolean).join(' ') || undefined,
+        });
+      }
+    });
+    this.flush();
+  }
+
+  /** Looks numbers up with the ACIs and access keys of the users whose numbers we know, as Signal Desktop does */
+  private async discoverE164s(e164s: string[]) {
+    const { store, connection } = this.client.getSenderContext();
+    const acisAndAccessKeys = [];
+    for (const { id, type, e164 } of await this.db.getConversations()) {
+      const profileKey = type === 'private' && e164 ? (await store.getRecipient(id))?.profileKey : undefined;
+      if (profileKey) acisAndAccessKeys.push({ aci: id, accessKey: wasm.ProfileKey_DeriveAccessKey(profileKey) });
+    }
+    return lookUpE164s(connection, store, e164s, acisAndAccessKeys);
   }
 
   /** The account of this device; it is stored at linking, so local records work without a connection */
@@ -1359,6 +1405,28 @@ export default class MessageProcessor {
   /** Returns the private conversation with `aci`, creating it (and fetching the profile) when absent */
   getOrCreatePrivateConversation(aci: string) {
     return this.runSerial(() => this.ensurePrivateConversation(aci));
+  }
+
+  /**
+   * Finds the Signal user of a phone number in the contact discovery enclave and returns their private conversation,
+   * which gets the number. Signal Desktop looks up a number that the user typed in the same way
+   * (`lookupConversationWithoutServiceId`). Resolves with `undefined` for numbers without a Signal account.
+   */
+  async lookUpPhoneNumber(e164: string) {
+    const known = (await this.db.getConversations()).find((conversation) => (
+      conversation.type === 'private' && conversation.e164 === e164
+    ));
+    if (known) return known;
+
+    const records = await this.discoverE164s([e164]);
+    const aci = records.get(e164)?.aci;
+    if (!aci) return undefined;
+    const conversation = await this.runSerial(async () => {
+      const existing = await this.ensurePrivateConversation(aci);
+      return existing.e164 === e164 ? existing : this.putConversation({ ...existing, e164 });
+    });
+    this.flush();
+    return conversation;
   }
 
   private async ensurePrivateConversation(aci: string) {
