@@ -102,6 +102,8 @@ export type RecipientRecord = {
   sealedSender?: SealedSenderAccess;
   // Expiring profile key credential for adding the recipient to groups, valid for `profileKey` only
   profileKeyCredential?: { credential: Uint8Array; profileKey: Uint8Array; expiresAt: number };
+  // When a send found the account gone, by the device clock (Signal Desktop `discoveredUnregisteredAt`)
+  discoveredUnregisteredAt?: number;
 };
 
 export type SenderCertificateRecord = {

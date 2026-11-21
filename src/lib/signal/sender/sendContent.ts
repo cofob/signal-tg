@@ -12,6 +12,7 @@ import { padMessage } from '../crypto';
 import { createProtocolStores, saveIdentity } from '../store/protocolStores';
 import { wasm } from '../wasm';
 import { getAccessKey, getSenderCertificate } from './sealedSender';
+import { SendHttpError, UnregisteredUserError } from './sendErrors';
 
 import { ContentSchema, Envelope_Type } from '../proto/generated/SignalService_pb';
 
@@ -89,12 +90,6 @@ const ENVELOPE_TYPE_BY_MESSAGE_TYPE: Partial<Record<number, Envelope_Type>> = {
   8: Envelope_Type.PLAINTEXT_CONTENT,
 };
 
-export class UnregisteredUserError extends Error {
-  constructor(readonly serviceId: string) {
-    super(`${serviceId} is not a registered Signal user`);
-  }
-}
-
 /**
  * Encrypts `content` to every device of `destination` and sends it, fixing the device list from 409/410
  * responses (Signal Desktop `ts/textsecure/OutgoingMessage.preload.ts`). Messages to other users go
@@ -138,7 +133,7 @@ export async function sendContent(
     }
 
     if (status !== HTTP_CONFLICT && status !== HTTP_GONE) {
-      throw new Error(`Sending to ${destination} failed with HTTP ${status}`);
+      throw new SendHttpError(status, `Sending to ${destination} failed with HTTP ${status}`);
     }
     await fixDevices(state, json ?? {});
     deviceIds = await getDeviceIds(state, isToSelf);
@@ -331,7 +326,9 @@ async function fetchSessions(state: SendState, deviceSpecifier: string) {
 
   const { status, json } = response;
   if (status === HTTP_NOT_FOUND) throw new UnregisteredUserError(destination);
-  if (status !== HTTP_OK || !json) throw new Error(`Fetching prekeys of ${destination} failed with HTTP ${status}`);
+  if (status !== HTTP_OK || !json) {
+    throw new SendHttpError(status, `Fetching prekeys of ${destination} failed with HTTP ${status}`);
+  }
 
   return state.context.store.runExclusive(() => startSessions(state, json));
 }

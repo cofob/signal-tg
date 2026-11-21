@@ -2,6 +2,7 @@ import { getSignalTunnelUrl, SIGNAL_CA_PEM } from '../config';
 import { wasm } from '../wasm';
 
 import NativeTransport, { hasNativeTransport } from './NativeTransport';
+import NetworkError from './NetworkError';
 
 const PORT = 443;
 const TUNNEL_PATH = '/tunnel';
@@ -62,7 +63,7 @@ export default class TlsTunnel {
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        const error = new Error(`TLS handshake with ${host} timed out`);
+        const error = new NetworkError(`TLS handshake with ${host} timed out`);
         tunnel.transport.close();
         tunnel.fail(error);
         reject(error);
@@ -93,7 +94,7 @@ export default class TlsTunnel {
         },
         onClose: (reason) => {
           clearTimeout(timeout);
-          const error = new Error(`Tunnel to ${host} closed${reason ? `: ${reason}` : ''}`);
+          const error = new NetworkError(`Tunnel to ${host} closed${reason ? `: ${reason}` : ''}`);
           tunnel.fail(error);
           reject(error);
         },
@@ -111,7 +112,7 @@ export default class TlsTunnel {
   }
 
   write(data: Uint8Array) {
-    if (this.isClosed) throw this.closeError ?? new Error(`Tunnel to ${this.host} is closed`);
+    if (this.isClosed) throw this.closeError ?? new NetworkError(`Tunnel to ${this.host} is closed`);
     this.tls.send(data);
     this.flush();
   }
@@ -135,7 +136,7 @@ export default class TlsTunnel {
       // The connection may already be unusable
     }
     this.transport.close();
-    this.fail(new Error(`Tunnel to ${this.host} is closed`));
+    this.fail(new NetworkError(`Tunnel to ${this.host} is closed`));
   }
 
   private receive(data: Uint8Array) {

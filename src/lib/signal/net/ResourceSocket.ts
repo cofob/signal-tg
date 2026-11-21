@@ -1,6 +1,7 @@
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import { WebSocketMessage_Type, WebSocketMessageSchema } from '../proto/generated/WebSocketResources_pb';
+import NetworkError from './NetworkError';
 import WebSocketClient from './WebSocketClient';
 
 export type ResourceRequest = {
@@ -83,7 +84,7 @@ export default class ResourceSocket {
   sendRequest({
     verb, path, headers = {}, body, timeout = REQUEST_TIMEOUT_MS,
   }: ResourceRequest): Promise<ResourceResponse> {
-    if (this.isClosed) return Promise.reject(new Error('Socket is closed'));
+    if (this.isClosed) return Promise.reject(new NetworkError('Socket is closed'));
 
     const id = this.nextId++;
     this.socket.send(toBinary(WebSocketMessageSchema, create(WebSocketMessageSchema, {
@@ -103,7 +104,7 @@ export default class ResourceSocket {
         reject,
         timeout: setTimeout(() => {
           this.pending.delete(id);
-          reject(new Error(`Request ${verb} ${path} timed out`));
+          reject(new NetworkError(`Request ${verb} ${path} timed out`));
         }, timeout),
       });
     });
@@ -185,7 +186,7 @@ export default class ResourceSocket {
     clearInterval(this.keepaliveTimer);
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timeout);
-      pending.reject(new Error(`Socket closed: ${code} ${reason}`));
+      pending.reject(new NetworkError(`Socket closed: ${code} ${reason}`));
     }
     this.pending.clear();
     this.onClose?.(code, reason);

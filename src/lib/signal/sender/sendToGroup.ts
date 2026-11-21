@@ -11,7 +11,8 @@ import { uuidToBytes } from '../serviceId';
 import { getSenderKeyId } from '../store/protocolStores';
 import { wasm } from '../wasm';
 import { getSenderCertificate } from './sealedSender';
-import { createAciStores, getSendDevices, sendToEach, UnregisteredUserError, updateDevices } from './sendContent';
+import { createAciStores, getSendDevices, sendToEach, updateDevices } from './sendContent';
+import { SendHttpError, UnregisteredUserError } from './sendErrors';
 
 import { parseJson } from '../net/ResourceSocket';
 import { ContentSchema } from '../proto/generated/SignalService_pb';
@@ -55,9 +56,9 @@ const FATAL_STATUSES = new Set([400, 413, 428, 429, 500, 508]);
 // Sends to one group run one at a time, since each reads and updates its sender key info
 const queues = new Map<string, Promise<unknown>>();
 
-class MultiRecipientSendError extends Error {
-  constructor(readonly status: number) {
-    super(`Multi-recipient send failed with HTTP ${status}`);
+class MultiRecipientSendError extends SendHttpError {
+  constructor(status: number) {
+    super(status, `Multi-recipient send failed with HTTP ${status}`);
   }
 }
 

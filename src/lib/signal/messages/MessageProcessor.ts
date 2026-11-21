@@ -3,7 +3,7 @@ import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type {
-  ConversationRecord, MessageRecord, NewMessageRecord, SendStatus,
+  ConversationRecord, MessageRecord, NewMessageRecord, SendErrorKind, SendStatus,
 } from '../db/MessageDb';
 import type { GroupState } from '../groups/fetchGroup';
 import type { DecryptedGroupChange } from '../groups/groupChange';
@@ -47,7 +47,7 @@ import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
-import { UnregisteredUserError } from '../sender/sendContent';
+import { describeSendError, getSendErrorKind, UnregisteredUserError } from '../sender/sendErrors';
 import {
   sendBlockedSync,
   sendDeleteForMeSync,
@@ -81,6 +81,7 @@ import { saveIdentity } from '../store/protocolStores';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
+import { getResendRecipients } from './sendState';
 
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
@@ -207,6 +208,9 @@ const DELETE_FOR_EVERYONE_MAX_AGE_MS = DAY_MS;
 export const LONG_TEXT_CONTENT_TYPE = 'text/x-signal-plain';
 const ACI_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+// Signal Desktop `ts/util/isConversationUnregistered.std.ts`: group sends skip a member for this long after a send
+// found their account gone
+const UNREGISTERED_SKIP_MS = 6 * 60 * 60 * 1000;
 const UUID_BYTE_LENGTH = 16;
 const STATUS_RANK: Record<SendStatus, number> = {
   failed: 0, pending: 1, sent: 2, delivered: 3, read: 4, viewed: 5,
@@ -1175,20 +1179,45 @@ export default class MessageProcessor {
    */
   async sendMessageAnyway(messageId: number) {
     for (const aci of await this.getUnverifiedRecipients(messageId)) await this.setVerified(aci, false);
+    return this.resendMessage(messageId);
+  }
 
-    const message = await this.db.getMessage(messageId);
-    const conversation = message && await this.db.getConversation(message.conversationId);
-    if (!message?.isOutgoing || !message.dataMessage || !conversation) {
-      throw new Error('The message cannot be sent again');
-    }
+  /**
+   * Sends an outgoing message again to the recipients it failed for, as pending until the send ends (Signal Desktop
+   * `retryMessageSend`). Members of a group whose accounts are gone are not tried again. Returns `undefined` when no
+   * recipient is left to try.
+   */
+  async resendMessage(messageId: number) {
+    const prepared = await this.runSerial(async () => {
+      const message = await this.db.getMessage(messageId);
+      const conversation = message && await this.db.getConversation(message.conversationId);
+      if (!message?.isOutgoing || !message.dataMessage || !conversation) {
+        throw new Error('The message cannot be sent again');
+      }
 
-    const failed = Object.entries(message.recipientStatus ?? {})
-      .filter(([, status]) => status === 'failed')
-      .map(([aci]) => aci);
-    return this.sendStoredMessage(conversation, message, {
-      case: 'dataMessage', value: fromBinary(DataMessageSchema, message.dataMessage),
-    }, {
-      timestamp: message.sentAt,
+      const failed = getResendRecipients(message, conversation.type);
+      if (!failed.length) return undefined;
+      const recipientStatus = { ...message.recipientStatus };
+      const recipientErrors = { ...message.recipientErrors };
+      for (const aci of failed) {
+        recipientStatus[aci] = 'pending';
+        delete recipientErrors[aci];
+      }
+      const pending = await this.putMessage({
+        ...message, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+      });
+      return { conversation, message: pending, dataMessage: message.dataMessage, failed };
+    });
+    if (!prepared) return undefined;
+
+    const { conversation, message, failed } = prepared;
+    const dataMessage = fromBinary(DataMessageSchema, prepared.dataMessage);
+    // An edited message shows the send state of its latest edit, so that edit goes again
+    const content: OutgoingMessage = message.editedAt
+      ? { case: 'editMessage', value: { targetSentTimestamp: BigInt(message.sentAt), dataMessage } }
+      : { case: 'dataMessage', value: dataMessage };
+    return this.sendStoredMessage(conversation, message, content, {
+      timestamp: message.editedAt ?? message.sentAt,
       expirationStartTimestamp: message.expireTimer ? message.sentAt : undefined,
     }, failed);
   }
@@ -1565,7 +1594,10 @@ export default class MessageProcessor {
     return this.lastTimestamp;
   }
 
-  /** Sends the content of a stored outgoing message and records each recipient's status */
+  /**
+   * Sends the content of a stored outgoing message and records each recipient's status and, for a failure, its
+   * reason (Signal Desktop `send` in `ts/messages/send.preload.ts`)
+   */
   private async sendStoredMessage(
     conversation: ConversationRecord,
     message: MessageRecord,
@@ -1578,13 +1610,44 @@ export default class MessageProcessor {
       const current = await this.db.getMessage(message.id);
       if (!current) return message;
       const recipientStatus = { ...current.recipientStatus };
+      const recipientErrors = { ...current.recipientErrors };
       for (const serviceId of recipients) {
-        recipientStatus[serviceId] = getResultError(results, serviceId)
-          ? 'failed'
-          : maxStatus(recipientStatus[serviceId], 'sent');
+        const error = getResultError(results, serviceId);
+        if (error) {
+          recipientStatus[serviceId] = 'failed';
+          recipientErrors[serviceId] = getSendErrorKind(error);
+        } else {
+          recipientStatus[serviceId] = maxStatus(recipientStatus[serviceId], 'sent');
+          delete recipientErrors[serviceId];
+        }
       }
-      return this.putMessage({ ...current, recipientStatus });
+      this.logFailedSends(message.id, conversation, recipients, results);
+      return this.putMessage({
+        ...current, recipientStatus, recipientErrors: Object.keys(recipientErrors).length ? recipientErrors : undefined,
+      });
     });
+  }
+
+  /** Logs how many recipients a send failed for and why, without account ids, phone numbers or content */
+  private logFailedSends(
+    messageId: number, conversation: ConversationRecord, recipients: string[], results: RecipientResult[],
+  ) {
+    const reasons = new Map<string, { kind: SendErrorKind; count: number }>();
+    for (const { error } of results) {
+      if (!error) continue;
+      const reason = describeSendError(error);
+      const entry = reasons.get(reason) ?? { kind: getSendErrorKind(error), count: 0 };
+      entry.count++;
+      reasons.set(reason, entry);
+    }
+    if (!reasons.size) return;
+
+    const failedCount = [...reasons.values()].reduce((sum, { count }) => sum + count, 0);
+    const details = [...reasons].map(([reason, { kind, count }]) => `${count} x ${kind} (${reason})`).join('; ');
+    this.events.onError(new Error(
+      `Message ${messageId} of a ${conversation.type} conversation failed for ${failedCount} of ${recipients.length} `
+      + `recipients: ${details}`,
+    ));
   }
 
   /**
@@ -1606,21 +1669,67 @@ export default class MessageProcessor {
     return !recipients.length || recipients.some((serviceId) => !getResultError(results, serviceId));
   }
 
-  /** Without a connection, or when the send fails as a whole, every recipient fails */
+  /**
+   * Sends to `recipients`; without a connection, or when the send fails as a whole, every recipient fails. A group
+   * send leaves out members whose accounts a send found gone in the last `UNREGISTERED_SKIP_MS`, and they fail as
+   * unregistered without a request (Signal Desktop `getSendRecipientLists`).
+   */
   private async sendContentTo(
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
     options: { timestamp: number; expirationStartTimestamp?: number; isUrgent?: boolean },
   ): Promise<RecipientResult[]> {
+    const { store } = this.client;
+    const unregisteredAt = new Map<string, number>();
+    for (const serviceId of recipients) {
+      const discoveredAt = (await store.getRecipient(serviceId))?.discoveredUnregisteredAt;
+      if (discoveredAt) unregisteredAt.set(serviceId, discoveredAt);
+    }
+    const isSkipped = (serviceId: string) => (
+      conversation.type === 'group' && Date.now() - (unregisteredAt.get(serviceId) ?? 0) < UNREGISTERED_SKIP_MS
+    );
+    const skipped = recipients.filter(isSkipped);
+    const sendable = recipients.filter((serviceId) => !isSkipped(serviceId));
+
+    let results: RecipientResult[];
     try {
-      return await sendMessage(this.client.getSenderContext(), recipients, content, {
+      const context = this.client.getSenderContext();
+      const outcome = await sendMessage(context, sendable, content, {
         ...options,
         group: this.getGroupTarget(conversation),
       });
+      results = outcome.results;
+      if (outcome.followUpError) {
+        this.events.onError(new Error(
+          `The transcript of a ${conversation.type} message failed: ${describeSendError(outcome.followUpError)}`,
+        ));
+        // The transcript is all that a message to ourselves sends; for others, the recipients got it either way
+        if (sendable.includes(context.account.aci)) {
+          results.push({ serviceId: context.account.aci, error: outcome.followUpError });
+        }
+      }
     } catch (err) {
       this.events.onError(err as Error);
-      return recipients.map((serviceId) => ({ serviceId, error: err as Error }));
+      results = sendable.map((serviceId) => ({ serviceId, error: err as Error }));
+    }
+
+    await this.updateRegistrations(results, unregisteredAt);
+    return [...results, ...skipped.map((serviceId) => ({ serviceId, error: new UnregisteredUserError(serviceId) }))];
+  }
+
+  /**
+   * Remembers the recipients whose accounts are gone, and forgets that for those the send reached after all
+   * (Signal Desktop `setUnregistered` and `setRegistered`)
+   */
+  private async updateRegistrations(results: RecipientResult[], unregisteredAt: Map<string, number>) {
+    const { store } = this.client;
+    for (const { serviceId, error } of results) {
+      if (error instanceof UnregisteredUserError) {
+        await store.updateRecipient(serviceId, { discoveredUnregisteredAt: Date.now() });
+      } else if (!error && unregisteredAt.has(serviceId)) {
+        await store.updateRecipient(serviceId, { discoveredUnregisteredAt: undefined });
+      }
     }
   }
 

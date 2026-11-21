@@ -57,6 +57,10 @@ export type MessageKind = 'message' | 'timerUpdate' | 'groupUpdate' | 'safetyNum
 
 export type SendStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'viewed' | 'failed';
 
+// Why a send to a recipient failed. `identityChanged` is the new safety number of a verified contact, which the
+// user has to accept; `unregistered` is an account that no longer exists.
+export type SendErrorKind = 'unregistered' | 'identityChanged' | 'network' | 'rateLimited' | 'other';
+
 export type MessageRecord = {
   id: number;
   conversationId: string;
@@ -96,6 +100,8 @@ export type MessageRecord = {
   isStickerUnavailable?: true;
   // Delivery state per recipient of an outgoing message
   recipientStatus?: Record<string, SendStatus>;
+  // The reason for each recipient whose status is `failed`; messages stored earlier have none
+  recipientErrors?: Record<string, SendErrorKind>;
   isSealedSender?: boolean;
   // The server's id of the envelope, which spam reports name
   serverGuid?: string;

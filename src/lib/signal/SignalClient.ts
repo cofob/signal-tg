@@ -12,6 +12,7 @@ import { initSignalWasm } from './wasm';
 
 import ChatConnection from './chat/ChatConnection';
 import UnauthenticatedChat from './chat/UnauthenticatedChat';
+import NetworkError from './net/NetworkError';
 
 export type SignalClientHandlers = {
   // Decrypted content for the app; protocol-level content is handled before this
@@ -90,7 +91,7 @@ export default class SignalClient {
   }
 
   getSenderContext(): SenderContext {
-    if (!this.account || !this.connection) throw new Error('Signal client is not connected');
+    if (!this.account || !this.connection) throw new NetworkError('Signal client is not connected');
     return {
       store: this.store,
       account: this.account,

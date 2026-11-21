@@ -36,6 +36,12 @@ type MessageOptions = {
   isUrgent?: boolean;
 };
 
+export type MessageSendOutcome = {
+  results: RecipientResult[];
+  // Keeping the content for resend requests and telling our other devices failed after the recipients were sent to
+  followUpError?: Error;
+};
+
 const SENT_PROTO_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SENT_PROTO_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -45,18 +51,36 @@ let lastSentProtoPruneAt = 0;
  * Sends a data or edit message to its recipients (group messages with sender key where possible), then a
  * sent transcript to our other devices, and keeps the content for a day so recipients can ask for a resend
  * (Signal Desktop `ts/textsecure/SendMessage.preload.ts`). A message to ourselves sends only the transcript.
+ * A failure of the transcript does not change what the recipients got, so it comes back beside their results.
  */
 export async function sendMessage(
   context: SenderContext, recipients: string[], message: OutgoingMessage, options: MessageOptions,
-) {
-  const { store, account } = context;
-  const others = recipients.filter((serviceId) => serviceId !== account.aci);
+): Promise<MessageSendOutcome> {
+  const others = recipients.filter((serviceId) => serviceId !== context.account.aci);
   const content = { content: message };
   const groupId = options.group?.id;
   const results = await sendToRecipients(context, others, content, {
     timestamp: options.timestamp, contentHint: ContentHint.Resendable, groupId, isUrgent: options.isUrgent,
   }, options.group);
 
+  try {
+    await followUpSend(context, message, options, others, results);
+  } catch (err) {
+    return { results, followUpError: err as Error };
+  }
+  return { results };
+}
+
+async function followUpSend(
+  context: SenderContext,
+  message: OutgoingMessage,
+  options: MessageOptions,
+  others: string[],
+  results: RecipientResult[],
+) {
+  const { store, account } = context;
+  const content = { content: message };
+  const groupId = options.group?.id;
   await store.addSentProto({
     timestamp: options.timestamp,
     content: toBinary(ContentSchema, create(ContentSchema, content)),
@@ -93,7 +117,6 @@ export async function sendMessage(
     lastSentProtoPruneAt = Date.now();
     await store.removeSentProtosBefore(Date.now() - SENT_PROTO_MAX_AGE_MS);
   }
-  return results;
 }
 
 /** Sends delivery, read or viewed receipts for messages of one sender */

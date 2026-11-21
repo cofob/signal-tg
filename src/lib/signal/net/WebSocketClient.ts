@@ -1,5 +1,6 @@
 import { SIGNAL_USER_AGENT } from '../config';
 
+import NetworkError from './NetworkError';
 import StreamReader from './StreamReader';
 import TlsTunnel from './TlsTunnel';
 
@@ -96,7 +97,7 @@ export default class WebSocketClient {
     const expectedAccept = await computeAccept(key);
     if (acceptHeader?.slice(acceptHeader.indexOf(':') + 1).trim() !== expectedAccept) {
       tunnel.close();
-      throw new Error('WebSocket handshake failed: invalid Sec-WebSocket-Accept');
+      throw new NetworkError('WebSocket handshake failed: invalid Sec-WebSocket-Accept');
     }
 
     const client = new WebSocketClient(tunnel, reader);
@@ -211,7 +212,7 @@ export default class WebSocketClient {
   }
 }
 
-export class WebSocketConnectError extends Error {
+export class WebSocketConnectError extends NetworkError {
   constructor(readonly status: number) {
     super(`WebSocket handshake failed with HTTP ${status}`);
   }
