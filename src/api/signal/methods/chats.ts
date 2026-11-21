@@ -33,6 +33,9 @@ import { rememberConversation, rememberReadOutbox } from '../updaters/chats';
 import { sendApiUpdate } from '../updates';
 import { collectShownMessages } from './messages';
 
+// The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
+const PINNED_LIMIT_ERROR = 'SIGNAL_PINNED_LIMIT';
+
 type ChatSummary = {
   chat: ApiChat;
   user?: ApiUser;
@@ -243,7 +246,10 @@ export async function toggleChatPinned({ chat, shouldBePinned }: { chat: ApiChat
     return;
   }
 
-  if (await processor.countPinnedConversations() >= LIMITS.dialogFolderPinned) return { isLimitReached: true };
+  if (await processor.countPinnedConversations() >= LIMITS.dialogFolderPinned) {
+    sendApiUpdate({ '@type': 'error', error: { message: PINNED_LIMIT_ERROR, hasErrorKey: true } });
+    return;
+  }
 
   const pinned = getPinnedConversations(await db.getConversations());
   await processor.updateConversationState(conversation.id, {
