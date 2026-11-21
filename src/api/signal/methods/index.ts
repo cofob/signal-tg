@@ -107,10 +107,14 @@ export {
   blockUser,
   fetchBlockedUsers,
   fetchConfig,
+  fetchDefaultHistoryTtl,
   fetchNotifyDefaultSettings,
   fetchPeerColors,
+  fetchSignalMessageSettings,
+  setDefaultHistoryTtl,
   unblockUser,
   updateNotificationSettings,
+  updateSignalMessageSettings,
 } from './settings';
 export {
   clearRecentStickers,

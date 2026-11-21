@@ -11,6 +11,14 @@ export type ApiSignalPinSettings = {
   isRegistrationLockEnabled: boolean;
 };
 
+/** The message settings of the account, which the storage service keeps for all its devices */
+export type ApiSignalMessageSettings = {
+  isReadReceiptsEnabled: boolean;
+  isTypingIndicatorsEnabled: boolean;
+  isLinkPreviewsEnabled: boolean;
+  isSealedSenderIndicatorsEnabled: boolean;
+};
+
 /** A device of the account; `lastSeen` is in milliseconds, with the precision of a day */
 export type ApiSignalDevice = {
   id: number;

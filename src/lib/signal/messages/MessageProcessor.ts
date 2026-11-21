@@ -207,6 +207,11 @@ type PendingStorageWrite = {
 /** Account record fields that this device changes; each one present is written to the storage service */
 export type OwnAccountUpdate = Partial<Pick<ConversationRecord, 'username'> & LocalAccountFields>;
 
+export type MessageSettingsUpdate = Pick<OwnAccountUpdate,
+  'isReadReceiptsEnabled' | 'isTypingIndicatorsEnabled' | 'isLinkPreviewsEnabled' | 'isSealedSenderIndicatorsEnabled'
+  | 'universalExpireTimer'
+>;
+
 // The account record fields that our profile fills, see `updateOwnConversation`
 const PROFILE_STORAGE_FIELDS: AccountStorageField[] = ['givenName', 'familyName', 'avatarUrlPath'];
 const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = {
@@ -216,9 +221,16 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
   isPhoneNumberUnlisted: 'unlistedPhoneNumber',
   isStoriesDisabled: 'storiesDisabled',
   isStoryViewReceiptsEnabled: 'storyViewReceiptsEnabled',
+  isReadReceiptsEnabled: 'readReceipts',
+  isTypingIndicatorsEnabled: 'typingIndicators',
+  isLinkPreviewsEnabled: 'linkPreviews',
+  isSealedSenderIndicatorsEnabled: 'sealedSenderIndicators',
+  universalExpireTimer: 'universalExpireTimer',
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
+// How many of the latest messages tell whether a chat has any message of a person
+const USER_MESSAGE_SCAN_LIMIT = 50;
 // Signal Desktop `ts/util/expirationTimer.std.ts` and `ts/models/conversations.preload.ts`
 const INITIAL_EXPIRE_TIMER_VERSION = 1;
 const MAX_EXPIRE_TIMER_VERSION = 0xffffffff;
@@ -355,6 +367,7 @@ export default class MessageProcessor {
     onStored?: (message: MessageRecord) => void,
   ) {
     const account = await this.getAccount();
+    await this.maybeApplyUniversalTimer(conversationId, account);
     const sentAt = this.allocateTimestamp();
 
     const { conversation, message, dataMessage } = await this.runSerial(async () => {
@@ -390,6 +403,23 @@ export default class MessageProcessor {
       timestamp: sentAt,
       expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
     });
+  }
+
+  /**
+   * The first message of a private chat that has no messages and no timer starts the timer that the account sets for
+   * new chats (Signal Desktop `maybeApplyUniversalTimer` in `ts/models/conversations.preload.ts`, called before a
+   * message is queued). Note to Self keeps messages for good, as in Signal Android.
+   */
+  private async maybeApplyUniversalTimer(conversationId: string, { aci, universalExpireTimer }: AccountRecord) {
+    if (!universalExpireTimer || conversationId === aci || !ACI_PATTERN.test(conversationId)) return;
+
+    const conversation = await this.db.getConversation(conversationId);
+    if (conversation && (conversation.type !== 'private' || conversation.expireTimer)) return;
+    if (conversation && (await this.db.getMessages(conversationId, USER_MESSAGE_SCAN_LIMIT))
+      .some(({ kind }) => kind === 'message')) return;
+
+    await this.getOrCreatePrivateConversation(conversationId);
+    await this.setExpireTimer(conversationId, universalExpireTimer);
   }
 
   /**
@@ -1303,6 +1333,17 @@ export default class MessageProcessor {
     });
   }
 
+  /**
+   * Changes receipts, typing indicators, link previews, sealed sender indicators or the timer of new chats. They
+   * go to the account record of the storage service, which other devices read, and a primary device also tells the
+   * devices it linked, as Signal Android does with `MultiDeviceConfigurationUpdateJob`.
+   */
+  async updateMessageSettings(update: MessageSettingsUpdate) {
+    await this.updateOwnAccount(update);
+    const account = await this.getAccount();
+    if (account.deviceId === SIGNAL_PRIMARY_DEVICE_ID) await this.sendConfiguration(account);
+  }
+
   /** Stores the username of a contact that a username lookup found */
   setConversationUsername(aci: string, username: string) {
     return this.runSerial(async () => {
@@ -1719,10 +1760,12 @@ export default class MessageProcessor {
         });
         const { usernameLink } = accountRecord;
         await this.client.updateAccount({
-          isReadReceiptsEnabled: accountRecord.readReceipts,
-          isTypingIndicatorsEnabled: accountRecord.typingIndicators,
-          isLinkPreviewsEnabled: accountRecord.linkPreviews,
           ...omitAccountChanges({
+            isReadReceiptsEnabled: accountRecord.readReceipts,
+            isTypingIndicatorsEnabled: accountRecord.typingIndicators,
+            isLinkPreviewsEnabled: accountRecord.linkPreviews,
+            isSealedSenderIndicatorsEnabled: accountRecord.sealedSenderIndicators,
+            universalExpireTimer: accountRecord.universalExpireTimer || undefined,
             // Signal Desktop `mergeAccountRecord`: an unknown sharing mode means nobody
             isPhoneNumberShared: accountRecord.phoneNumberSharingMode
               === AccountRecord_PhoneNumberSharingMode.EVERYBODY,
@@ -2250,6 +2293,7 @@ export default class MessageProcessor {
           isReadReceiptsEnabled: content.value.readReceipts,
           isTypingIndicatorsEnabled: content.value.typingIndicators,
           isLinkPreviewsEnabled: content.value.linkPreviews,
+          isSealedSenderIndicatorsEnabled: content.value.unidentifiedDeliveryIndicators,
         });
         break;
       case 'viewOnceOpen': {
@@ -2287,6 +2331,17 @@ export default class MessageProcessor {
     }
   }
 
+  private sendConfiguration(account: AccountRecord) {
+    return this.sendWhenConnected(async (context) => {
+      await sendConfigurationSync(context, {
+        readReceipts: account.isReadReceiptsEnabled,
+        typingIndicators: account.isTypingIndicatorsEnabled,
+        linkPreviews: account.isLinkPreviewsEnabled,
+        unidentifiedDeliveryIndicators: account.isSealedSenderIndicatorsEnabled,
+      });
+    });
+  }
+
   /**
    * A device we linked asks for our message settings and blocked list. Only a primary device answers (Signal
    * Android `SyncMessageProcessor.handleSynchronizeRequestMessage`); contacts and keys reach the new device through
@@ -2297,14 +2352,7 @@ export default class MessageProcessor {
     if (account.deviceId !== SIGNAL_PRIMARY_DEVICE_ID) return;
 
     if (type === SyncMessage_Request_Type.CONFIGURATION) {
-      await this.sendWhenConnected(async (context) => {
-        await sendConfigurationSync(context, {
-          readReceipts: account.isReadReceiptsEnabled,
-          typingIndicators: account.isTypingIndicatorsEnabled,
-          linkPreviews: account.isLinkPreviewsEnabled,
-          unidentifiedDeliveryIndicators: account.isSealedSenderIndicatorsEnabled,
-        });
-      });
+      await this.sendConfiguration(account);
     } else if (type === SyncMessage_Request_Type.BLOCKED) {
       await this.sendWhenConnected((context) => this.sendBlockedList(context));
     }

@@ -38,6 +38,7 @@ import type {
   ApiSendMessageAction,
   ApiSessionData,
   ApiShareThemeEmojiBackdrop,
+  ApiSignalMessageSettings,
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
@@ -226,6 +227,8 @@ export interface ActionPayloads {
 
   loadSignalPinSettings: undefined;
   loadSignalDevices: undefined;
+  loadSignalMessageSettings: undefined;
+  updateSignalMessageSettings: Partial<ApiSignalMessageSettings>;
   linkSignalDevice: { url: string } & WithTabId;
   unlinkSignalDevice: { deviceId: number } & WithTabId;
   openSignalLinkDevice: { url: string } & WithTabId;

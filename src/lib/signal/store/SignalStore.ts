@@ -33,6 +33,8 @@ export type AccountRecord = {
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
   isSealedSenderIndicatorsEnabled?: boolean;
+  // The disappearing messages timer that new private chats start with, in seconds (`universalExpireTimer`)
+  universalExpireTimer?: number;
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;

@@ -349,6 +349,14 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   ...buildEntries(SettingsScreens.Privacy, ['ArchiveAndMute'], {
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalReadReceipts'], { keywordsKey: 'SettingsKeywordsReadReceipts' }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalTypingIndicators'], {
+    keywordsKey: 'SettingsKeywordsTypingIndicators',
+  }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalSealedSenderIndicators'], {
+    keywordsKey: 'SettingsKeywordsSealedSender',
+  }),
+  ...buildEntries(SettingsScreens.Privacy, ['SignalLinkPreviews'], { keywordsKey: 'SettingsKeywordsLinkPreviews' }),
   ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
   ...buildEntries(SettingsScreens.Stories, [
     'StoriesSettingEnable', 'StoriesSettingViewReceipts', 'StoryRibbonMyStory', 'StoriesSettingAllowReplies',

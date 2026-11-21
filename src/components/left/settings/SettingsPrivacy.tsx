@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiPrivacySettings, ApiSignalPinSettings } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalMessageSettings, ApiSignalPinSettings } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import { SettingsScreens } from '../../../types';
 
@@ -29,6 +29,7 @@ type OwnProps = {
 
 type StateProps = {
   signalPin?: ApiSignalPinSettings;
+  signalMessageSettings?: ApiSignalMessageSettings;
   isContactDiscoveryEnabled?: boolean;
   hasPasscode?: boolean;
   canSetPasscode?: boolean;
@@ -50,6 +51,7 @@ const DAYS_PER_MONTH = 30;
 const SettingsPrivacy = ({
   isActive,
   signalPin,
+  signalMessageSettings,
   isContactDiscoveryEnabled,
   hasPasscode,
   blockedCount,
@@ -83,6 +85,8 @@ const SettingsPrivacy = ({
     loadSignalPinSettings,
     loadSignalContactDiscovery,
     setSignalContactDiscovery,
+    loadSignalMessageSettings,
+    updateSignalMessageSettings,
   } = getActions();
 
   useEffect(() => {
@@ -92,6 +96,7 @@ const SettingsPrivacy = ({
       loadPhoneNumberPrivacy();
       loadSignalPinSettings();
       loadSignalContactDiscovery();
+      loadSignalMessageSettings();
     }
   }, [isCurrentUserFrozen]);
 
@@ -117,6 +122,22 @@ const SettingsPrivacy = ({
 
   const handleContactDiscoveryChange = useLastCallback((isEnabled: boolean) => {
     setSignalContactDiscovery({ isEnabled });
+  });
+
+  const handleReadReceiptsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isReadReceiptsEnabled: isEnabled });
+  });
+
+  const handleTypingIndicatorsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isTypingIndicatorsEnabled: isEnabled });
+  });
+
+  const handleLinkPreviewsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isLinkPreviewsEnabled: isEnabled });
+  });
+
+  const handleSealedSenderIndicatorsChange = useLastCallback((isEnabled: boolean) => {
+    updateSignalMessageSettings({ isSealedSenderIndicatorsEnabled: isEnabled });
   });
 
   const handleArchiveAndMuteChange = useLastCallback((isEnabled: boolean) => {
@@ -270,6 +291,35 @@ const SettingsPrivacy = ({
             subLabel={lang('SignalContactDiscoveryAbout')}
             checked={isContactDiscoveryEnabled}
             onCheck={handleContactDiscoveryChange}
+          />
+        </Island>
+      )}
+
+      {signalMessageSettings && (
+        <Island>
+          <Checkbox
+            label={lang('SignalReadReceipts')}
+            subLabel={lang('SignalReadReceiptsAbout')}
+            checked={signalMessageSettings.isReadReceiptsEnabled}
+            onCheck={handleReadReceiptsChange}
+          />
+          <Checkbox
+            label={lang('SignalTypingIndicators')}
+            subLabel={lang('SignalTypingIndicatorsAbout')}
+            checked={signalMessageSettings.isTypingIndicatorsEnabled}
+            onCheck={handleTypingIndicatorsChange}
+          />
+          <Checkbox
+            label={lang('SignalSealedSenderIndicators')}
+            subLabel={lang('SignalSealedSenderIndicatorsAbout')}
+            checked={signalMessageSettings.isSealedSenderIndicatorsEnabled}
+            onCheck={handleSealedSenderIndicatorsChange}
+          />
+          <Checkbox
+            label={lang('SignalLinkPreviews')}
+            subLabel={lang('SignalLinkPreviewsAbout')}
+            checked={signalMessageSettings.isLinkPreviewsEnabled}
+            onCheck={handleLinkPreviewsChange}
           />
         </Island>
       )}
@@ -478,7 +528,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       settings: {
         byKey: {
-          signalPin, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
+          signalPin, signalMessageSettings, isSignalContactDiscoveryEnabled, isSensitiveEnabled, canChangeSensitive,
           shouldArchiveAndMuteNewNonContact,
           defaultHistoryTtl,
         },
@@ -497,6 +547,7 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       signalPin,
+      signalMessageSettings,
       isContactDiscoveryEnabled: isSignalContactDiscoveryEnabled,
       hasPasscode: Boolean(hasPasscode),
       blockedCount: blocked.totalCount,

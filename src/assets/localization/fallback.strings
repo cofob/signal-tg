@@ -297,6 +297,14 @@
 "SignalCallLinkText" = "TeleSignal doesn't support calls yet. Open this link in Signal on your phone or computer to join the call.";
 "SignalDeviceLinkTitle" = "Link a device";
 "SignalDeviceLinkText" = "This link links a new device to a Signal account. TeleSignal is a linked device itself and can't link other devices. Link new devices in Signal on your phone.";
+"SignalReadReceipts" = "Read Receipts";
+"SignalReadReceiptsAbout" = "If read receipts are disabled, you won't be able to see read receipts from others.";
+"SignalTypingIndicators" = "Typing Indicators";
+"SignalTypingIndicatorsAbout" = "If typing indicators are disabled, you won't be able to see typing indicators from others.";
+"SignalSealedSenderIndicators" = "Show Sealed Sender Indicator";
+"SignalSealedSenderIndicatorsAbout" = "Show a status icon in message details for messages that were delivered using sealed sender.";
+"SignalLinkPreviews" = "Link Previews";
+"SignalLinkPreviewsAbout" = "Generate link previews for messages you send. They are supported for some websites.";
 "SignalDevices" = "Linked Devices";
 "SettingsSignalDevicesDesc" = "Link and unlink devices";
 "SignalDevicesLink" = "Link New Device";
@@ -2764,6 +2772,10 @@
 "SettingsKeywordsDataStorage" = "storage, cache, data usage, auto download, traffic";
 "SettingsKeywordsSignalProxy" = "proxy, tunnel, connection, network, server, blocked, censorship";
 "SettingsKeywordsSignalDevices" = "devices, link, linked, desktop, qr code, unlink, sessions";
+"SettingsKeywordsReadReceipts" = "read receipts, seen, delivered, ticks, blue";
+"SettingsKeywordsTypingIndicators" = "typing indicators, typing, writing";
+"SettingsKeywordsSealedSender" = "sealed sender, indicator, status icon, delivery, metadata";
+"SettingsKeywordsLinkPreviews" = "link previews, preview, url, website";
 "SettingsKeywordsSignalPin" = "pin, registration lock, password, security, recovery";
 "SettingsKeywordsStickers" = "stickers, emoji, gifs, masks, reactions";
 "SettingsKeywordsFolders" = "folders, filters, tabs";

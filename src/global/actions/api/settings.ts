@@ -1103,6 +1103,27 @@ addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
   setGlobal(global);
 });
 
+addActionHandler('loadSignalMessageSettings', async (global): Promise<void> => {
+  const signalMessageSettings = await callApi('fetchSignalMessageSettings');
+  global = getGlobal();
+  global = replaceSettings(global, { signalMessageSettings });
+  setGlobal(global);
+});
+
+// The change shows at once and goes back when it fails
+addActionHandler('updateSignalMessageSettings', async (global, actions, payload): Promise<void> => {
+  const previous = global.settings.byKey.signalMessageSettings;
+  if (!previous) return;
+
+  global = replaceSettings(global, { signalMessageSettings: { ...previous, ...payload } });
+  setGlobal(global);
+
+  const signalMessageSettings = await callApi('updateSignalMessageSettings', payload);
+  global = getGlobal();
+  global = replaceSettings(global, { signalMessageSettings: signalMessageSettings ?? previous });
+  setGlobal(global);
+});
+
 addActionHandler('loadSignalDevices', async (global): Promise<void> => {
   const signalDevices = await callApi('fetchSignalDevices');
   global = getGlobal();

@@ -24,6 +24,7 @@ import type {
   ApiReaction,
   ApiSessionData,
   ApiSignalDevices,
+  ApiSignalMessageSettings,
   ApiSignalPinSettings,
   ApiSticker,
   ApiStickerSet,
@@ -171,6 +172,7 @@ export interface AccountSettings {
   // Registered primary devices only
   signalPin?: ApiSignalPinSettings;
   signalDevices?: ApiSignalDevices;
+  signalMessageSettings?: ApiSignalMessageSettings;
   isSignalContactDiscoveryEnabled?: boolean;
   isSensitiveEnabled?: boolean;
   canChangeSensitive?: boolean;

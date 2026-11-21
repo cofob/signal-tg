@@ -257,6 +257,14 @@ export interface LangPair {
   'SignalCallLinkText': undefined;
   'SignalDeviceLinkTitle': undefined;
   'SignalDeviceLinkText': undefined;
+  'SignalReadReceipts': undefined;
+  'SignalReadReceiptsAbout': undefined;
+  'SignalTypingIndicators': undefined;
+  'SignalTypingIndicatorsAbout': undefined;
+  'SignalSealedSenderIndicators': undefined;
+  'SignalSealedSenderIndicatorsAbout': undefined;
+  'SignalLinkPreviews': undefined;
+  'SignalLinkPreviewsAbout': undefined;
   'SignalDevices': undefined;
   'SettingsSignalDevicesDesc': undefined;
   'SignalDevicesLink': undefined;
@@ -2239,6 +2247,10 @@ export interface LangPair {
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
   'SettingsKeywordsSignalDevices': undefined;
+  'SettingsKeywordsReadReceipts': undefined;
+  'SettingsKeywordsTypingIndicators': undefined;
+  'SettingsKeywordsSealedSender': undefined;
+  'SettingsKeywordsLinkPreviews': undefined;
   'SettingsKeywordsSignalPin': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
