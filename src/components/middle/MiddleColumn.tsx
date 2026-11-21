@@ -95,7 +95,6 @@ import MessageSelectToolbar from './MessageSelectToolbar';
 import MiddleHeader from './MiddleHeader';
 import MiddleHeaderPanesIsland from './MiddleHeaderPanesIsland';
 import AudioPlayer from './panes/AudioPlayer';
-import PremiumRequiredPlaceholder from './PremiumRequiredPlaceholder';
 import ReactorListModal from './ReactorListModal.async';
 import MiddleSearch from './search/MiddleSearch.async';
 
@@ -159,7 +158,6 @@ type StateProps = {
   linkedMonoforumId?: string;
   isSavedDialog?: boolean;
   canShowOpenChatButton?: boolean;
-  isContactRequirePremium?: boolean;
   topics?: Record<number, ApiTopic>;
   isAccountFrozen?: boolean;
   freezeAppealChat?: ApiChat;
@@ -234,7 +232,6 @@ function MiddleColumn({
   linkedMonoforumId,
   isSavedDialog,
   canShowOpenChatButton,
-  isContactRequirePremium,
   topics,
   isAccountFrozen,
   freezeAppealChat,
@@ -509,7 +506,6 @@ function MiddleColumn({
   const composerRestrictionMessage = messageSendingRestrictionReason
     || forumComposerPlaceholder
     || (shouldBlockSendInMonoforum ? lang('MonoforumComposerPlaceholder') : undefined)
-    || (isContactRequirePremium ? <PremiumRequiredPlaceholder userId={chatId!} /> : undefined)
     || (isAccountFrozen && freezeAppealChat?.id !== chatId ? <FrozenAccountPlaceholder /> : undefined);
 
   useHistoryBack({
@@ -635,7 +631,6 @@ function MiddleColumn({
                 hasFooter={hasFooter}
                 onScrollDownToggle={setIsScrollDownNeeded}
                 isReady={isReady}
-                isContactRequirePremium={isContactRequirePremium}
                 withBottomShift={withMessageListBottomShift}
                 withDefaultBg={Boolean(!customBackground && !backgroundColor)}
                 onIntersectPinnedMessage={renderingHandleIntersectPinnedMessage}
@@ -815,9 +810,6 @@ export default memo(withGlobal<OwnProps>(
       )
     );
 
-    const userFull = selectUserFullInfo(global, chatId);
-
-    const isContactRequirePremium = userFull?.isContactRequirePremium;
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
     const botFreezeAppealId = global.botFreezeAppealId;
     const freezeAppealChat = botFreezeAppealId
@@ -862,7 +854,6 @@ export default memo(withGlobal<OwnProps>(
       linkedMonoforumId,
       isSavedDialog,
       canShowOpenChatButton,
-      isContactRequirePremium,
       topics,
       isAccountFrozen,
       freezeAppealChat,

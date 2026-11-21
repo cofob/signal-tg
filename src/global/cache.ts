@@ -539,6 +539,7 @@ function removeTelegramOnlyFields(untypedCached: any) {
     delete settings.translationLanguage;
     delete settings.translationTone;
   }
+  delete untypedCached.settings?.lastPremiumBandwithNotificationDate;
 
   Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
     delete messageStore.summaryById;
@@ -1052,7 +1053,7 @@ function omitLocalDocument(document: ApiDocument): ApiDocument {
 
 function reduceSettings<T extends GlobalState>(global: T): GlobalState['settings'] {
   const {
-    byKey, botVerificationShownPeerIds, notifyDefaults, lastPremiumBandwithNotificationDate, accountDaysTtl, chatThemes,
+    byKey, botVerificationShownPeerIds, notifyDefaults, accountDaysTtl, chatThemes,
   } = global.settings;
 
   // Cached palettes remain usable offline; the catalog refresh restores wallpaper documents in the worker
@@ -1060,7 +1061,6 @@ function reduceSettings<T extends GlobalState>(global: T): GlobalState['settings
     byKey,
     privacy: {},
     botVerificationShownPeerIds,
-    lastPremiumBandwithNotificationDate,
     notifyDefaults,
     accountDaysTtl,
     chatThemes,

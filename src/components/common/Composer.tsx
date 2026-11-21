@@ -307,7 +307,6 @@ type StateProps = {
   canSendOneTimeMedia?: boolean;
   webPagePreview?: ApiWebPage;
   noWebPage?: boolean;
-  isContactRequirePremium?: boolean;
   richMessageLengthLimit: number;
   richMessageMaxBlocks: number;
   richMessageMaxDepth: number;
@@ -424,7 +423,6 @@ const Composer = ({
   canSendOneTimeMedia,
   webPagePreview,
   noWebPage,
-  isContactRequirePremium,
   richMessageLengthLimit,
   richMessageMaxBlocks,
   richMessageMaxDepth,
@@ -746,8 +744,7 @@ const Composer = ({
 
   const canUseInlineBots = !chat || isChatAdmin(chat) || !isUserRightBanned(chat, 'sendInline');
 
-  const isNeedPremium = isContactRequirePremium && isInStoryViewer;
-  const isSendTextBlocked = isNeedPremium || (Boolean(chat) && !canSendPlainText);
+  const isSendTextBlocked = Boolean(chat) && !canSendPlainText;
 
   const hasWebPagePreview = !hasAttachments && canAttachEmbedLinks && !noWebPage
     && webPagePreview?.webpageType === 'full';
@@ -886,7 +883,7 @@ const Composer = ({
   const hasBotKeyboard = Boolean(botKeyboardMessageId) && isInMessageList && messageListType === 'thread';
   const canShowBotKeyboard = hasBotKeyboard && !editingMessage && !isSelectModeActive && !activeRecording;
   const canShowSymbolMenu = (!isComposerBlocked || canSendGifs || canSendStickers)
-    && !isNeedPremium && !isAccountFrozen;
+    && !isAccountFrozen;
   const isSymbolMenuShown = canShowSymbolMenu && (isSymbolMenuOpen || isSymbolMenuForced) && isSymbolMenuLoaded;
   const isSymbolMenuInKeyboardSlot = Boolean(isMobile && hasBotKeyboard);
   const isBotKeyboardSuppressed = (IS_TOUCH_ENV && isInputHasFocus) || hasInputContent
@@ -2523,7 +2520,7 @@ const Composer = ({
           onFileSelect={handleFileSelect}
         />
       )}
-      {shouldRenderReactionSelector && !isNeedPremium && (
+      {shouldRenderReactionSelector && (
         <ReactionSelector
           topReactions={topReactions}
           allAvailableReactions={availableReactions}
@@ -2658,37 +2655,35 @@ const Composer = ({
               )}
             </>
           )}
-          {!isNeedPremium && (
-            <AttachMenu
-              chatId={chatId}
-              threadId={threadId}
-              editingMessage={editingMessage}
-              canEditMedia={canMediaBeReplaced}
-              isRichInputExpanded={isRichInputExpansionActive}
-              isButtonVisible={!activeRecording}
-              canAttachMedia={canAttachMedia}
-              canAttachFiles={isRichInputExpansionActive || !hasRichOnlyContent}
-              canAttachPolls={canAttachPolls}
-              canSendPhotos={canSendPhotos}
-              canSendVideos={canSendVideos}
-              canSendDocuments={canSendDocuments}
-              canSendAudios={canSendAudios}
-              canInsertDate={!isComposerBlocked}
-              onFileSelect={isRichInputExpansionActive ? handleRichMediaSelect : handleFileSelect}
-              onDateInsert={handleFormattedDateInsert}
-              isScheduled={isInScheduledList}
-              attachBots={isInMessageList ? attachBots : undefined}
-              peerType={attachMenuPeerType}
-              shouldCollectDebugLogs={shouldCollectDebugLogs}
-              theme={theme}
-              onMenuOpen={onAttachMenuOpen}
-              onMenuClose={onAttachMenuClose}
-              messageListType={messageListType}
-              canExpandRichInput={canExpandRichInput}
-              menuPositionX={isInMessageList ? 'left' : 'right'}
-              onRichInputExpand={handleOpenRichInput}
-            />
-          )}
+          <AttachMenu
+            chatId={chatId}
+            threadId={threadId}
+            editingMessage={editingMessage}
+            canEditMedia={canMediaBeReplaced}
+            isRichInputExpanded={isRichInputExpansionActive}
+            isButtonVisible={!activeRecording}
+            canAttachMedia={canAttachMedia}
+            canAttachFiles={isRichInputExpansionActive || !hasRichOnlyContent}
+            canAttachPolls={canAttachPolls}
+            canSendPhotos={canSendPhotos}
+            canSendVideos={canSendVideos}
+            canSendDocuments={canSendDocuments}
+            canSendAudios={canSendAudios}
+            canInsertDate={!isComposerBlocked}
+            onFileSelect={isRichInputExpansionActive ? handleRichMediaSelect : handleFileSelect}
+            onDateInsert={handleFormattedDateInsert}
+            isScheduled={isInScheduledList}
+            attachBots={isInMessageList ? attachBots : undefined}
+            peerType={attachMenuPeerType}
+            shouldCollectDebugLogs={shouldCollectDebugLogs}
+            theme={theme}
+            onMenuOpen={onAttachMenuOpen}
+            onMenuClose={onAttachMenuClose}
+            messageListType={messageListType}
+            canExpandRichInput={canExpandRichInput}
+            menuPositionX={isInMessageList ? 'left' : 'right'}
+            onRichInputExpand={handleOpenRichInput}
+          />
           <div
             className={buildClassName(
               'rich-editor-history',
@@ -2757,7 +2752,6 @@ const Composer = ({
             onMediaFiles={handleRichMediaFiles}
             onFocus={markInputHasFocus}
             onBlur={unmarkInputHasFocus}
-            isNeedPremium={isNeedPremium}
             messageListType={messageListType}
             isRichOnlyContent={hasRichOnlyContent}
             maxLength={isCurrentUserPremium || hasRichOnlyContent ? richMessageLengthLimit : LIMITS.messageLength}
@@ -3171,7 +3165,6 @@ export default memo(withGlobal<OwnProps>(
       replyToTopic,
       noWebPage,
       webPagePreview,
-      isContactRequirePremium: userFullInfo?.isContactRequirePremium,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
       richMessageMaxBlocks: global.appConfig.richMessageMaxBlocks,
       richMessageMaxDepth: global.appConfig.richMessageMaxDepth,

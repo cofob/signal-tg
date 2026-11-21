@@ -1075,9 +1075,3 @@
     margin-right: calc(var(--margin-for-scrollbar) + 0.5rem);
   }
 }
-
-#story-input-text .placeholder-text {
-  &.is-need-premium {
-    pointer-events: auto;
-  }
-}

@@ -579,7 +579,7 @@ export function selectCanPostInMessageList<T extends GlobalState>(
   if (selectShouldBlockSendInMonoforum(global, chatId, threadId)) return false;
 
   const userFullInfo = selectUserFullInfo(global, chatId);
-  if (userFullInfo?.isBlocked || userFullInfo?.isContactRequirePremium) return false;
+  if (userFullInfo?.isBlocked) return false;
 
   const chat = selectChat(global, chatId);
   if (selectIsCurrentUserFrozen(global) && (!chat || chatId !== global.botFreezeAppealId)) return false;

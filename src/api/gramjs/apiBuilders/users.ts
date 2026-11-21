@@ -32,7 +32,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
       about, commonChatsCount, pinnedMsgId, botInfo, blocked,
       profilePhoto, voiceMessagesForbidden, hasScheduled,
       fallbackPhoto, personalPhoto, storiesPinnedAvailable,
-      contactRequirePremium,
       birthday, personalChannelId, personalChannelMessage, botVerification,
       botCanManageEmojiStatus, settings,
       mainTab, savedMusic, note,
@@ -58,7 +57,6 @@ export function buildApiUserFullInfo(mtpUserFull: GramJs.users.UserFull): ApiUse
     fallbackPhoto: fallbackPhoto instanceof GramJs.Photo ? buildApiPhoto(fallbackPhoto) : undefined,
     personalPhoto: personalPhoto instanceof GramJs.Photo ? buildApiPhoto(personalPhoto) : undefined,
     botInfo: botInfo && buildApiBotInfo(botInfo, userId),
-    isContactRequirePremium: contactRequirePremium,
     birthday: birthday && buildApiBirthday(birthday),
     personalChannelId: personalChannelId !== undefined
       ? buildApiPeerId(personalChannelId, 'channel') : undefined,

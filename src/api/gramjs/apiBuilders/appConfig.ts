@@ -46,10 +46,6 @@ export interface GramJsAppConfig {
   // Boosts
   group_transcribe_level_min?: number;
   new_noncontact_peers_require_premium_without_ownpremium?: boolean;
-  // Upload premium notifications
-  upload_premium_speedup_notify_period?: number;
-  upload_premium_speedup_download?: number;
-  upload_premium_speedup_upload?: number;
   ton_blockchain_explorer_url?: string;
   stars_paid_messages_available?: boolean;
   stars_usd_withdraw_rate_x1000?: number;
@@ -151,9 +147,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     canLimitNewMessagesWithoutPremium: appConfig.new_noncontact_peers_require_premium_without_ownpremium,
     starsUsdWithdrawRateX1000: appConfig.stars_usd_withdraw_rate_x1000,
     starsUsdSellRateX1000: appConfig.stars_usd_sell_rate_x1000,
-    bandwidthPremiumNotifyPeriod: appConfig.upload_premium_speedup_notify_period,
-    bandwidthPremiumUploadSpeedup: appConfig.upload_premium_speedup_upload,
-    bandwidthPremiumDownloadSpeedup: appConfig.upload_premium_speedup_download,
     channelAutoTranslationLevelMin: appConfig.channel_autotranslation_level_min,
     tonExplorerUrl: appConfig.ton_blockchain_explorer_url,
     freezeSinceDate: appConfig.freeze_since_date,

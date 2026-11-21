@@ -1733,10 +1733,6 @@ export interface LangPair {
   'InviteBlockedTitle': undefined;
   'InviteBlockedOneMessage': undefined;
   'InviteBlockedManyMessage': undefined;
-  'InviteBlockedOr': undefined;
-  'InviteBlockedNoLinkTitle': undefined;
-  'InviteBlockedPremiumTitle': undefined;
-  'InviteRestrictedPremiumReason': undefined;
   'InviteViaLinkButton': undefined;
   'StoryUnsupported': undefined;
   'StoryRibbonMyStory': undefined;
@@ -1987,7 +1983,6 @@ export interface LangPair {
   'DeselectAll': undefined;
   'DisableReactionsInfo': undefined;
   'DoNotReply': undefined;
-  'DownloadSpeedLimited': undefined;
   'EditTopic': undefined;
   'Emoji': undefined;
   'EmojiBotInfo': undefined;
@@ -2169,7 +2164,6 @@ export interface LangPair {
   'Unlock': undefined;
   'UnlockPremiumEmojiHint': undefined;
   'UnlockPremiumEmojiHint2': undefined;
-  'UploadSpeedLimited': undefined;
   'UserInfoCustomPhoto': undefined;
   'UserInfoCustomVideo': undefined;
   'UserInfoPublicPhoto': undefined;
@@ -3210,12 +3204,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'currentSize': V;
     'totalSize': V;
   };
-  'InviteRestrictedPremiumReasonSingle': {
-    'user': V;
-  };
-  'InviteRestrictedPremiumReasonMultiple': {
-    'list': V;
-  };
   'GiftAuctionRoundValue': {
     'current': V;
     'total': V;
@@ -3304,9 +3292,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ChannelVisibilityConfirmMakePrivateChannel': {
     'currentUsername': V;
   };
-  'ChatMessagingRestrictedPlaceholder': {
-    'user': V;
-  };
   'ChatPrivateMessageEditTimestampDate': {
     'date': V;
   };
@@ -3327,9 +3312,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'DeleteMessagesOptionAlso': {
     'user': V;
-  };
-  'DownloadSpeedLimitedMessage': {
-    'factor': V;
   };
   'ExactTextCopied': {
     'text': V;
@@ -3357,9 +3339,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'MessageContainsEmojiPack': {
     'pack': V;
-  };
-  'MessageLockedPremium': {
-    'peer': V;
   };
   'NoResultFoundFor': {
     'query': V;
@@ -3413,9 +3392,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'TwoStepAuthConfirmEmailDescription': {
     'recoveryEmail': V;
-  };
-  'UploadSpeedLimitedMessage': {
-    'factor': V;
   };
   'UserInfoCustomPhotoInfo': {
     'user': V;
@@ -3741,10 +3717,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'InviteRestrictedUsers': {
     'count': V;
   };
-  'InviteRestrictedPremiumReasonMultipleMore': {
-    'list': V;
-    'count': V;
-  };
   'AttachmentReplacePhoto': {
     'count': V;
   };
@@ -3895,11 +3867,9 @@ export interface LangKeyGroups {
       | 'ActionSuggestedPhoto'
       | 'ActionSuggestedBirthdayYou'
       | 'ActionSuggestedBirthday'
-      | 'InviteRestrictedPremiumReasonSingle'
       | 'BirthdayTitleForPeer'
       | 'RankEditText'
       | 'BotRemoveFromMenu'
-      | 'ChatMessagingRestrictedPlaceholder'
       | 'ConversationShareLinkTooltipChatOne'
       | 'DeleteAllFrom'
       | 'DeleteBan'
@@ -4196,7 +4166,6 @@ export interface LangKeyGroups {
       | 'PlaylistTitle'
       | 'ActionChangedWallpaperBothYou'
       | 'UnofficialSecurityRisk'
-      | 'MessageLockedPremium'
       | 'StoryMentionedTitle';
     variables: 'peer';
   };
@@ -4563,11 +4532,6 @@ export interface LangKeyGroups {
       | 'FileTransferProgress';
     variables: 'currentSize' | 'totalSize';
   };
-  'list': {
-    keys:
-      | 'InviteRestrictedPremiumReasonMultiple';
-    variables: 'list';
-  };
   'current,total': {
     keys:
       | 'GiftAuctionRoundValue'
@@ -4627,12 +4591,6 @@ export interface LangKeyGroups {
     keys:
       | 'ChatSendAllowedContentText';
     variables: 'types';
-  };
-  'factor': {
-    keys:
-      | 'DownloadSpeedLimitedMessage'
-      | 'UploadSpeedLimitedMessage';
-    variables: 'factor';
   };
   'country': {
     keys:
@@ -4830,11 +4788,6 @@ export interface LangPluralKeyGroups {
       | 'MediaSizeMB'
       | 'MediaSizeGB';
     variables: 'size';
-  };
-  'count,list': {
-    keys:
-      | 'InviteRestrictedPremiumReasonMultipleMore';
-    variables: 'count' | 'list';
   };
 }
 

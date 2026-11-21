@@ -1013,9 +1013,6 @@ export interface ActionPayloads {
   setGlobalSearchClosing: ({
     isClosing?: boolean;
   } & WithTabId) | undefined;
-  processPremiumFloodWait: {
-    isUpload?: boolean;
-  };
 
   // Accounts
   reportPeer: {

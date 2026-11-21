@@ -2176,17 +2176,9 @@
 "InviteBlockedTitle" = "Invite via Link";
 "InviteBlockedOneMessage" = "This user restricts adding them to groups. You can send an invite link in a private message instead.";
 "InviteBlockedManyMessage" = "Some users restrict adding them to groups. You can send these people an invite link in a private message instead.";
-"InviteBlockedOr" = "or";
-"InviteBlockedNoLinkTitle" = "You can't create a link";
-"InviteBlockedPremiumTitle" = "Upgrade to Premium";
-"InviteRestrictedPremiumReason" = "available only to Premium users";
 "InviteRestrictedUsers_one" = "**{count} user** can only be invited via link, but you don't have permission to share invite links to this group.";
 "InviteRestrictedUsers_other" = "**{count} users** can only be invited via link, but you don't have permission to share invite links to this group.";
 "InviteViaLinkButton" = "Send Invite Link";
-"InviteRestrictedPremiumReasonSingle" = "**{user}** accepts invitations to groups from contacts and **Premium** users.";
-"InviteRestrictedPremiumReasonMultiple" = "{list} only accept invitations to groups from contacts and **Premium** users.";
-"InviteRestrictedPremiumReasonMultipleMore_one" = "{list} and **{count} more** person only accept invitations to groups from contacts and **Premium** users.";
-"InviteRestrictedPremiumReasonMultipleMore_other" = "{list} and **{count} more** people only accept invitations to groups from contacts and **Premium** users.";
 "StoryUnsupported" = "This story is not supported in Telegram Web A. Try viewing it in the Telegram app.";
 "StoryRibbonMyStory" = "My Story";
 "StoryMenuSavedStories" = "Posted Stories";
@@ -2433,7 +2425,6 @@
 "ChatDeleteMessagesConfirmation_other" = "Delete {count} messages";
 "ChatEmptyTopicPlaceholderText" = "Send a message to\nstart this topic.";
 "ChatEmptyTopicPlaceholderTitle" = "Almost done!";
-"ChatMessagingRestrictedPlaceholder" = "Only Premium users can message {user}.";
 "ChatPlayOnceVoiceMessageTooltip" = "This voice message can only be played once.";
 "ChatPrivateMessageEditTimestampDate" = "edited {date}";
 "ChatSendAllowedContentText" = "The admins of this group only allow to send {types}.";
@@ -2503,8 +2494,6 @@
 "DeselectAll" = "Deselect All";
 "DisableReactionsInfo" = "Members of the group can’t add any reactions to messages.";
 "DoNotReply" = "Do Not Reply";
-"DownloadSpeedLimited" = "Download speed limited";
-"DownloadSpeedLimitedMessage" = "Subscribe to **Telegram Premium** and increase download speeds {factor} times.";
 "EditTopic" = "Edit topic";
 "Emoji" = "Emoji";
 "EmojiBotInfo" = "Artists are welcome to add their own emoji packs using our @stickers bot.";
@@ -2586,7 +2575,6 @@
 "MessageContainsEmojiPack" = "This message contains emoji from {pack} pack.";
 "MessageContainsEmojiPacks_one" = "This message contains emoji from **{count} Packs**.";
 "MessageContainsEmojiPacks_other" = "This message contains emoji from **{count} Packs**.";
-"MessageLockedPremium" = "Subscribe to **Premium** to message **{peer}**.";
 "MessageNotFound" = "Message doesn't exist.";
 "MoreSimilar" = "More Channels";
 "MuteForDays_one" = "Mute for 1 day";
@@ -2747,8 +2735,6 @@
 "Unlock" = "Unlock";
 "UnlockPremiumEmojiHint" = "Subscribe to **Telegram Premium** to unlock this emoji.";
 "UnlockPremiumEmojiHint2" = "Try sending these emoji in **Saved Messages** for free to test.";
-"UploadSpeedLimited" = "Upload speed limited";
-"UploadSpeedLimitedMessage" = "Subscribe to **Telegram Premium** to increase upload speeds {factor} times.";
 "UserInfoCustomPhoto" = "photo set by you";
 "UserInfoCustomPhotoInfo" = "You can replace {user}’s photo with another photo that only you will see.";
 "UserInfoCustomVideo" = "photo set by you";

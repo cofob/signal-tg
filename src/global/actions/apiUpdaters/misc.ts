@@ -246,13 +246,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
     case 'updateAttachMenuBots':
       actions.loadAttachBots();
       break;
-
-    case 'updatePremiumFloodWait': {
-      actions.processPremiumFloodWait({
-        isUpload: update.isUpload,
-      });
-      break;
-    }
   }
 
   return undefined;

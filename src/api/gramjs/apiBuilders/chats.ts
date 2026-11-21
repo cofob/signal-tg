@@ -635,8 +635,6 @@ export function buildApiMissingInvitedUser(
 ): ApiMissingInvitedUser {
   return {
     id: user.userId.toString(),
-    isRequiringPremiumToMessage: user.premiumRequiredForPm,
-    isRequiringPremiumToInvite: user.premiumWouldAllowInvite,
   };
 }
 

@@ -342,9 +342,6 @@ export interface ApiAppConfig {
   canLimitNewMessagesWithoutPremium: boolean;
   starsUsdWithdrawRateX1000: number;
   starsUsdSellRateX1000?: number;
-  bandwidthPremiumNotifyPeriod?: number;
-  bandwidthPremiumUploadSpeedup?: number;
-  bandwidthPremiumDownloadSpeedup?: number;
   channelAutoTranslationLevelMin?: number;
   tonExplorerUrl?: string;
   freezeSinceDate?: number;

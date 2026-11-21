@@ -97,7 +97,6 @@ import { scheduleMutedChatUpdate, scheduleMutedTopicUpdate } from '../scheduleUn
 import { sendApiUpdate } from './apiUpdateEmitter';
 import { processMessageAndUpdateThreadInfo } from './entityProcessor';
 
-import LocalUpdatePremiumFloodWait from './UpdatePremiumFloodWait';
 import { LocalUpdateChannelPts, LocalUpdatePts } from './UpdatePts';
 
 export function updater(update: Update) {
@@ -1183,11 +1182,6 @@ export function updater(update: Update) {
       version: update.difference.version,
       strings,
       keysToRemove,
-    });
-  } else if (update instanceof LocalUpdatePremiumFloodWait) { // Local updates
-    sendApiUpdate({
-      '@type': 'updatePremiumFloodWait',
-      isUpload: update.isUpload,
     });
   } else if (update instanceof LocalUpdatePts || update instanceof LocalUpdateChannelPts) {
     // Do nothing, handled on the manager side

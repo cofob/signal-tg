@@ -72,9 +72,6 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   quoteLengthMax: 1024,
   storyViewersExpirePeriod: 86400,
   topicsPinnedLimit: 5,
-  bandwidthPremiumDownloadSpeedup: 10,
-  bandwidthPremiumNotifyPeriod: 3600,
-  bandwidthPremiumUploadSpeedup: 10,
   urlAuthDomains: [],
   webAppAllowedProtocols: [
     'http',

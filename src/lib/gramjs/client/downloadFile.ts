@@ -5,10 +5,9 @@ import type { SizeType } from './TelegramClient';
 import { getDcBandwidthManager } from '../../../util/dcBandwithManager';
 import Deferred from '../../../util/Deferred';
 import { concat } from '../../../util/encoding/buffer';
-import { FloodPremiumWaitError, FloodWaitError, RPCError } from '../errors';
+import { FloodWaitError, RPCError } from '../errors';
 import Api from '../tl/api';
 
-import LocalUpdatePremiumFloodWait from '../../../api/gramjs/updates/UpdatePremiumFloodWait';
 import { sleep } from '../Helpers';
 import { getDownloadPartSize } from '../Utils';
 
@@ -168,9 +167,6 @@ export async function downloadFile(
   let progress = 0;
   progressCallback?.(progress);
 
-  // Limit updates to one per file
-  let isPremiumFloodWaitSent = false;
-
   // Allocate memory
   await fileView.init();
 
@@ -287,10 +283,6 @@ export async function downloadFile(
           } catch (err) {
             if (signal.aborted) throw err;
             if (err instanceof FloodWaitError) {
-              if (err instanceof FloodPremiumWaitError && !isPremiumFloodWaitSent) {
-                sender?._updateCallback(new LocalUpdatePremiumFloodWait(false));
-                isPremiumFloodWaitSent = true;
-              }
               await Promise.race([sleep(err.seconds * 1000), canceled.promise]);
               continue;
             }

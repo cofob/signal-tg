@@ -67,7 +67,6 @@ export interface ApiUserFullInfo {
   personalPhoto?: ApiPhoto;
   noVoiceMessages?: boolean;
   hasPinnedStories?: boolean;
-  isContactRequirePremium?: boolean;
   birthday?: ApiBirthday;
   personalChannelId?: string;
   personalChannelMessageId?: number;

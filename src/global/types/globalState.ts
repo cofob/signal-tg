@@ -434,7 +434,6 @@ export type GlobalState = {
     chatThemes?: ApiChatTheme[];
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
-    lastPremiumBandwithNotificationDate?: number;
     botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
     passkeys?: ApiPasskey[];

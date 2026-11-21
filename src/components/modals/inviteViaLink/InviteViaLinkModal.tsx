@@ -3,24 +3,21 @@ import {
   useEffect,
   useMemo, useState,
 } from '../../../lib/teact/teact';
-import { getActions, getGlobal, withGlobal } from '../../../global';
+import { getActions, withGlobal } from '../../../global';
 
 import type { ApiChat } from '../../../api/types';
 import type { TabState } from '../../../global/types';
 
-import { getHasAdminRight, getUserFullName } from '../../../global/helpers';
-import { selectChat, selectUser } from '../../../global/selectors';
-import { partition } from '../../../util/iteratees';
+import { getHasAdminRight } from '../../../global/helpers';
+import { selectChat } from '../../../global/selectors';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
-import AvatarList from '../../common/AvatarList';
 import PeerPicker from '../../common/pickers/PeerPicker';
 import Button from '../../ui/Button';
 import Modal from '../../ui/Modal';
-import Separator from '../../ui/Separator';
 
 import styles from './InviteViaLinkModal.module.scss';
 
@@ -43,22 +40,9 @@ const InviteViaLinkModal = ({
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
   const userIds = useMemo(() => missingUsers?.map((user) => user.id) || MEMO_EMPTY_ARRAY, [missingUsers]);
-  const [unselectableIds, selectableIds] = useMemo(() => {
-    if (!missingUsers?.length) return [[], []];
-    const [requirePremiumIds, regularIds] = partition(missingUsers, (user) => user.isRequiringPremiumToMessage);
-    return [requirePremiumIds.map((user) => user.id), regularIds.map((user) => user.id)];
-  }, [missingUsers]);
-
-  const invitableWithPremiumPeers = useMemo(() => {
-    const global = getGlobal();
-    return missingUsers?.filter((user) => user.isRequiringPremiumToInvite || user.isRequiringPremiumToMessage)
-      .map((user) => selectUser(global, user.id))
-      .filter(Boolean);
-  }, [missingUsers]);
-
   useEffect(() => {
-    setSelectedMemberIds(selectableIds);
-  }, [selectableIds]);
+    setSelectedMemberIds(userIds);
+  }, [userIds]);
 
   const handleClose = useLastCallback(() => closeInviteViaLinkModal());
 
@@ -82,43 +66,7 @@ const InviteViaLinkModal = ({
       });
   }, [canSendInviteLink, lang, missingUsers?.length]);
 
-  const premiumSectionText = useMemo(() => {
-    if (!invitableWithPremiumPeers?.length) return undefined;
-    if (invitableWithPremiumPeers.length === 1) {
-      return lang('InviteRestrictedPremiumReasonSingle', {
-        user: getUserFullName(lang, invitableWithPremiumPeers[0]),
-      }, {
-        withMarkdown: true,
-        withNodes: true,
-      });
-    }
-
-    if (invitableWithPremiumPeers.length <= 3) {
-      const list = lang.conjunction(
-        invitableWithPremiumPeers.map((peer) => getUserFullName(lang, peer)).filter(Boolean),
-      );
-      return lang('InviteRestrictedPremiumReasonMultiple', { list }, {
-        withMarkdown: true,
-        withNodes: true,
-      });
-    }
-
-    if (invitableWithPremiumPeers.length > 3) {
-      const moreCount = invitableWithPremiumPeers.length - 2;
-      const peers = invitableWithPremiumPeers.slice(0, 2);
-      const list = lang.conjunction(peers.map((peer) => getUserFullName(lang, peer)).filter(Boolean));
-      return lang('InviteRestrictedPremiumReasonMultipleMore', { list, count: moreCount }, {
-        pluralValue: moreCount,
-        withMarkdown: true,
-        withNodes: true,
-      });
-    }
-
-    return undefined;
-  }, [invitableWithPremiumPeers, lang]);
-
-  const hasPremiumSection = Boolean(invitableWithPremiumPeers?.length);
-  const hasSelectableSection = Boolean(selectableIds?.length);
+  const hasSelectableSection = Boolean(userIds.length);
 
   return (
     <Modal
@@ -128,26 +76,6 @@ const InviteViaLinkModal = ({
       onClose={handleClose}
       isSlim
     >
-      {hasPremiumSection && (
-        <>
-          <AvatarList
-            className={styles.avatarList}
-            peers={invitableWithPremiumPeers}
-            size="large"
-          />
-          <h3 className={styles.title}>
-            {canSendInviteLink ? lang('InviteBlockedPremiumTitle') : lang('InviteBlockedNoLinkTitle')}
-          </h3>
-          <p className={styles.contentText}>
-            {premiumSectionText}
-          </p>
-        </>
-      )}
-      {hasPremiumSection && hasSelectableSection && (
-        <Separator className={styles.separator}>
-          {lang('InviteBlockedOr')}
-        </Separator>
-      )}
       {hasSelectableSection && (
         <>
           <h3 className={styles.title}>{lang('InviteBlockedTitle')}</h3>
@@ -158,8 +86,6 @@ const InviteViaLinkModal = ({
             className={styles.userPicker}
             itemIds={userIds}
             selectedIds={selectedMemberIds}
-            lockedUnselectedIds={unselectableIds}
-            lockedUnselectedSubtitle={lang('InviteRestrictedPremiumReason')}
             onSelectedIdsChange={setSelectedMemberIds}
             isViewOnly={!canSendInviteLink}
             allowMultiple

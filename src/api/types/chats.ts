@@ -297,8 +297,6 @@ export interface ApiChatlistExportedInvite {
 
 export interface ApiMissingInvitedUser {
   id: string;
-  isRequiringPremiumToInvite?: boolean;
-  isRequiringPremiumToMessage?: boolean;
 }
 
 export type ApiDraft = {
