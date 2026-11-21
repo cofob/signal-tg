@@ -1721,6 +1721,18 @@ addActionHandler('openTelegramLink', (global, actions, payload): ActionReturnTyp
   if (isDeepLink(url)) processDeepLink(url, linkContext);
 });
 
+/** Opens the chat behind a `signal.me/#eu/` username link or its QR code */
+addActionHandler('openChatByUsernameLink', async (global, actions, payload): Promise<void> => {
+  const { url, tabId = getCurrentTabId() } = payload;
+
+  const username = await callApi('resolveUsernameLink', url);
+  if (!username) {
+    actions.showNotification({ message: { key: 'SignalUsernameLinkInvalid' }, tabId });
+    return;
+  }
+  actions.openChatByUsername({ username, tabId });
+});
+
 addActionHandler('acceptChatInvite', async (global, actions, payload): Promise<void> => {
   const {
     hash, isRequestNeeded, isBroadcast, tabId = getCurrentTabId(),

@@ -299,7 +299,20 @@ export interface ApiMessageActionViewOnce extends ActionMediaType {
   media?: ApiPhoto | ApiVideo;
 }
 
+// Signal: the identity key of the sender (the contact) changed
+export interface ApiMessageActionSafetyNumberChange extends ActionMediaType {
+  type: 'safetyNumberChange';
+}
+
+// Signal: we marked the safety number with the sender (the contact) as verified or cleared it, here or on another device
+export interface ApiMessageActionSafetyNumberVerified extends ActionMediaType {
+  type: 'safetyNumberVerified';
+  isVerified?: true;
+  isFromOtherDevice?: true;
+}
+
 export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
+  | ApiMessageActionSafetyNumberChange | ApiMessageActionSafetyNumberVerified
   | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle | ApiMessageActionGroupUpdate
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate

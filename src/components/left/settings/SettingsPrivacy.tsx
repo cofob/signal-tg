@@ -77,6 +77,7 @@ const SettingsPrivacy = ({
   const {
     openDeleteAccountModal,
     loadPrivacySettings,
+    loadPhoneNumberPrivacy,
     loadBlockedUsers,
     updateContentSettings,
     loadDefaultHistoryTtl,
@@ -96,6 +97,7 @@ const SettingsPrivacy = ({
     if (!isCurrentUserFrozen) {
       loadBlockedUsers();
       loadPrivacySettings({});
+      loadPhoneNumberPrivacy();
       loadWebAuthorizations();
       loadPasskeys();
       loadSignalPinSettings();

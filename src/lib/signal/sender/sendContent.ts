@@ -9,7 +9,7 @@ import type { AccountRecord, SenderKeyDevice } from '../store/SignalStore';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
 import { padMessage } from '../crypto';
-import { createProtocolStores } from '../store/protocolStores';
+import { createProtocolStores, saveIdentity } from '../store/protocolStores';
 import { wasm } from '../wasm';
 import { getAccessKey, getSenderCertificate } from './sealedSender';
 
@@ -359,14 +359,23 @@ async function startSessions(state: SendState, json: PreKeyResponse) {
       wasm.KyberPublicKey_Deserialize(bufferFromBase64(device.pqPreKey.publicKey)),
       bufferFromBase64(device.pqPreKey.signature),
     );
-    await wasm.SessionBuilder_ProcessPreKeyBundle(
-      bundle,
-      wasm.ProtocolAddress_New(destination, device.deviceId),
-      localAddress,
-      stores.session,
-      stores.identity,
-      Date.now(),
-    );
+    try {
+      await wasm.SessionBuilder_ProcessPreKeyBundle(
+        bundle,
+        wasm.ProtocolAddress_New(destination, device.deviceId),
+        localAddress,
+        stores.session,
+        stores.identity,
+        Date.now(),
+      );
+    } catch (err) {
+      // A verified contact has a new key: this send fails, and saving the key clears the verification, so the
+      // contact gets a safety number change notice and a later send uses the new key
+      if ((err as { libsignalName?: string }).libsignalName === 'UntrustedIdentity') {
+        await saveIdentity(state.context.store, destination, bufferFromBase64(json.identityKey));
+      }
+      throw err;
+    }
     deviceIds.push(device.deviceId);
   }
   return deviceIds;

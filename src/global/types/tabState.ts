@@ -456,6 +456,15 @@ export type TabState = {
     error?: string;
   };
 
+  // Signal username screen: the reservation that saving sets, why the last request failed, and our username link
+  usernameEdit?: {
+    reservedUsername?: string;
+    isReserving?: boolean;
+    isSaving?: boolean;
+    error?: string;
+    link?: string;
+  };
+
   notifications: ApiNotification[];
   dialogs: ApiDialog[];
 
@@ -779,6 +788,15 @@ export type TabState = {
 
   qrCodeModal?: {
     peerId: string;
+  };
+
+  // Signal: the safety number with a contact; `isUnavailable` while we do not know their identity key
+  safetyNumberModal?: {
+    userId: string;
+    digits?: string;
+    qrData?: string;
+    isVerified?: boolean;
+    isUnavailable?: boolean;
   };
 
   suggestedStatusModal?: {

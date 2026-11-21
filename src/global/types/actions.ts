@@ -1769,12 +1769,33 @@ export interface ActionPayloads {
   loadCurrentUser: undefined;
   updateProfile: {
     photo?: ApiAvatarUpload;
-    firstName?: string;
+    shouldRemovePhoto?: true;
+    firstName: string;
     lastName?: string;
     bio?: string;
-    username?: string;
-    personalChannelId?: string | false;
   } & WithTabId;
+  reserveUsername: {
+    nickname: string;
+    discriminator?: string;
+  } & WithTabId;
+  confirmUsername: WithTabId | undefined;
+  deleteUsername: WithTabId | undefined;
+  loadUsernameLink: WithTabId | undefined;
+  resetUsernameLink: WithTabId | undefined;
+  resetUsernameEdit: WithTabId | undefined;
+  openChatByUsernameLink: {
+    url: string;
+  } & WithTabId;
+  loadPhoneNumberPrivacy: undefined;
+  updatePhoneNumberPrivacy: {
+    isShared?: boolean;
+    isDiscoverable?: boolean;
+  } & WithTabId;
+  openSafetyNumberModal: {
+    userId: string;
+  } & WithTabId;
+  closeSafetyNumberModal: WithTabId | undefined;
+  toggleSafetyNumberVerified: WithTabId | undefined;
   loadPersonalChannels: undefined;
   updateBirthday: {
     birthday?: ApiBirthday;

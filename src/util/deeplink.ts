@@ -11,9 +11,20 @@ import {
 } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { tryParseDeepLink } from './deepLinkParser';
+import { parseSignalMeLink } from './signalLinks';
 
 export const processDeepLink = (url: string, linkContext?: LinkContext): boolean => {
   const actions = getActions();
+
+  const signalMeLink = parseSignalMeLink(url);
+  if (signalMeLink?.type === 'usernameLink') {
+    actions.openChatByUsernameLink({ url: signalMeLink.url });
+    return true;
+  }
+  if (signalMeLink?.type === 'phoneNumber') {
+    actions.openChatByPhoneNumber({ phoneNumber: signalMeLink.phoneNumber });
+    return true;
+  }
 
   const parsedLink = tryParseDeepLink(url);
   if (parsedLink) {

@@ -91,3 +91,5 @@ addActionHandler('openEditRankModal', (global, actions, payload): ActionReturnTy
 });
 
 addTabStateResetterAction('closeEditRankModal', 'editRankModal');
+
+addTabStateResetterAction('closeSafetyNumberModal', 'safetyNumberModal');

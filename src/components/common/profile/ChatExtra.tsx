@@ -142,6 +142,7 @@ const ChatExtra = ({
     requestNextManagementScreen,
     openQrCodeModal,
     openChatWithInfo,
+    openSafetyNumberModal,
   } = getActions();
 
   const {
@@ -282,6 +283,10 @@ const ChatExtra = ({
     stopEvent(e);
     if (!peerId) return;
     openQrCodeModal({ peerId });
+  });
+
+  const handleOpenSafetyNumber = useLastCallback(() => {
+    openSafetyNumberModal({ userId: userId! });
   });
 
   const handleBotManagerClick = useLastCallback(() => {
@@ -489,6 +494,18 @@ const ChatExtra = ({
               checked={!isMuted}
               className={styles.switch}
             />
+          </ListItem>
+        )}
+        {user && !isSelf && !isOwnProfile && !isInSettings && (
+          <ListItem
+            icon="lock"
+            iconBg="gray"
+            narrow
+            ripple
+            onClick={handleOpenSafetyNumber}
+            style={createVtnStyle('safetyNumber')}
+          >
+            <span>{lang('SafetyNumberView')}</span>
           </ListItem>
         )}
         {shouldRenderNote && (

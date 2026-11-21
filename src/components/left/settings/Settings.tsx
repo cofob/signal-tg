@@ -40,6 +40,7 @@ import SettingsPasskeys from './SettingsPasskeys';
 import SettingsPerformance from './SettingsPerformance';
 import SettingsPrivacy from './SettingsPrivacy';
 import SettingsPrivacyBlockedUsers from './SettingsPrivacyBlockedUsers';
+import SettingsPrivacyPhoneNumber from './SettingsPrivacyPhoneNumber';
 import SettingsPrivacyVisibility from './SettingsPrivacyVisibility';
 import SettingsPrivacyVisibilityExceptionList from './SettingsPrivacyVisibilityExceptionList';
 import SettingsQuickReaction from './SettingsQuickReaction';
@@ -47,6 +48,7 @@ import SettingsSignalPin from './SettingsSignalPin';
 import SettingsSignalPinForm from './SettingsSignalPinForm';
 import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
+import SettingsUsername from './SettingsUsername';
 import SettingsTwoFa from './twoFa/SettingsTwoFa';
 
 import './Settings.scss';
@@ -297,9 +299,13 @@ const Settings = ({
       case SettingsScreens.EditProfile:
         return (
           <SettingsEditProfile
-            isActive={isActive && isScreenActive}
+            isActive={isActive && (isScreenActive || activeScreen === SettingsScreens.Username)}
             onReset={handleReset}
           />
+        );
+      case SettingsScreens.Username:
+        return (
+          <SettingsUsername isActive={isActive && isScreenActive} onReset={handleReset} />
         );
       case SettingsScreens.General:
         return (
@@ -426,6 +432,9 @@ const Settings = ({
           />
         );
       case SettingsScreens.PrivacyPhoneNumber:
+        return (
+          <SettingsPrivacyPhoneNumber isActive={isScreenActive} onReset={handleReset} />
+        );
       case SettingsScreens.PrivacyLastSeen:
       case SettingsScreens.PrivacyProfilePhoto:
       case SettingsScreens.PrivacyBio:

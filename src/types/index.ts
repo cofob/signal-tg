@@ -298,6 +298,7 @@ export enum SettingsScreens {
   Passkeys,
   KeyboardShortcuts,
   SignalProxy,
+  Username,
   SignalPin,
   SignalPinNew,
   SignalPinConfirm,

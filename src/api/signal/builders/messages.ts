@@ -71,6 +71,24 @@ export async function buildApiMessageWithPoll(
       },
     };
   }
+  if (message.kind === 'safetyNumberChange') {
+    return { message: { ...base, content: { action: { mediaType: 'action', type: 'safetyNumberChange' } } } };
+  }
+  if (message.kind === 'verifiedChange') {
+    return {
+      message: {
+        ...base,
+        content: {
+          action: {
+            mediaType: 'action',
+            type: 'safetyNumberVerified',
+            isVerified: message.isVerified || undefined,
+            isFromOtherDevice: message.isFromOtherDevice || undefined,
+          },
+        },
+      },
+    };
+  }
   if (message.kind === 'groupUpdate' && message.groupUpdate) {
     const { action, senderAci: speakerAci } = await buildGroupUpdateAction(message.groupUpdate, conversation, users);
     return {

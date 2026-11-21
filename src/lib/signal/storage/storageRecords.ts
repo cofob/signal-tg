@@ -9,6 +9,7 @@ import type {
   ManifestRecord,
   StorageRecord,
 } from '../proto/generated/StorageService_pb';
+import type { AccountRecord as LocalAccount } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
@@ -16,7 +17,9 @@ import { getRandomBytes } from '../crypto';
 import { uuidToBytes, uuidToString } from '../serviceId';
 
 import {
+  AccountRecord_PhoneNumberSharingMode,
   AccountRecord_PinnedConversationSchema,
+  AccountRecord_UsernameLinkSchema,
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
@@ -24,8 +27,12 @@ import {
 } from '../proto/generated/StorageService_pb';
 
 type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
-type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread';
+export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
+  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber';
 type StorageField = ConversationStorageField | AccountStorageField;
+
+/** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
+export type LocalAccountFields = Pick<LocalAccount, 'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted'>;
 
 /** Record fields changed on this device and not written yet, by conversation id or `ACCOUNT_KEY` */
 export type StorageChanges = Record<string, StorageField[]>;
@@ -41,6 +48,7 @@ type StorageWriteSource = {
   profileKeys: Map<string, Uint8Array>;
   selfAci: string;
   deviceId: number;
+  localAccount: LocalAccountFields;
 };
 
 // Conversation ids are ACIs and base64 group ids, so they never equal this key
@@ -121,7 +129,7 @@ export function getMutedUntil(timestamp: bigint) {
  * the primary device until it exists. Returns `undefined` when nothing changed.
  */
 export function buildStorageWrite({
-  manifest, records, changes, conversations, profileKeys, selfAci, deviceId,
+  manifest, records, changes, conversations, profileKeys, selfAci, deviceId, localAccount,
 }: StorageWriteSource): StorageWrite | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storedRecords = indexRecords(records);
@@ -138,7 +146,7 @@ export function buildStorageWrite({
     let record: StorageRecord;
     if (stored?.record.record.case === 'account') {
       record = stored.record;
-      setAccountFields(stored.record.record.value, fields, conversations, selfAci);
+      setAccountFields(stored.record.record.value, fields, conversations, selfAci, localAccount);
     } else if (conversation) {
       record = stored?.record ?? createConversationRecord(conversation, profileKeys.get(conversation.id));
       const { value } = record.record as { value: ContactRecord | GroupV2Record };
@@ -258,7 +266,11 @@ function setConversationFields(
 }
 
 function setAccountFields(
-  record: AccountRecord, fields: StorageField[], conversations: ConversationRecord[], selfAci: string,
+  record: AccountRecord,
+  fields: StorageField[],
+  conversations: ConversationRecord[],
+  selfAci: string,
+  { usernameLink, isPhoneNumberShared, isPhoneNumberUnlisted }: LocalAccountFields,
 ) {
   const self = conversations.find(({ id }) => id === selfAci);
   for (const field of fields) {
@@ -271,6 +283,27 @@ function setAccountFields(
         break;
       case 'noteToSelfMarkedUnread':
         record.noteToSelfMarkedUnread = Boolean(self?.isMarkedUnread);
+        break;
+      case 'username':
+        record.username = self?.username ?? '';
+        break;
+      case 'usernameLink':
+        if (!usernameLink) {
+          record.usernameLink = undefined;
+          break;
+        }
+        // The link color is a setting of the primary device, so it stays
+        record.usernameLink ??= create(AccountRecord_UsernameLinkSchema);
+        record.usernameLink.entropy = usernameLink.entropy;
+        record.usernameLink.serverId = uuidToBytes(usernameLink.serverId);
+        break;
+      case 'phoneNumberSharingMode':
+        record.phoneNumberSharingMode = isPhoneNumberShared
+          ? AccountRecord_PhoneNumberSharingMode.EVERYBODY
+          : AccountRecord_PhoneNumberSharingMode.NOBODY;
+        break;
+      case 'unlistedPhoneNumber':
+        record.unlistedPhoneNumber = Boolean(isPhoneNumberUnlisted);
         break;
       default:
         break;

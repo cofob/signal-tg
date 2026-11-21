@@ -114,9 +114,19 @@
 
   // Apply custom styles
   input[type="range"] {
+    // The thumb is centered in the input; Firefox and Safari default to a taller input than the thumb,
+    // which moves the thumb below the track drawn at `top: 0.3125rem`
+    height: 0.75rem;
+    margin-top: 0;
+    padding: 0;
+
     // Note that while we're repeating code here, that's
     // necessary as you can't comma-separate these type of selectors.
     // Browsers will drop the entire selector if it doesn't understand a part of it.
+    &::-webkit-slider-runnable-track {
+      height: 0.75rem;
+    }
+
     &::-webkit-slider-thumb {
       @include thumb-styles();
     }

@@ -1,4 +1,6 @@
+import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StorageChanges } from '../storage/storageRecords';
+import type { UsernameLink } from '../usernames/manageUsername';
 
 import { IdbStore } from '../../../util/browser/idb';
 
@@ -28,6 +30,12 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Phone number privacy from the storage service account record: who sees the number on our profile, and whether
+  // people can find us by it
+  isPhoneNumberShared?: boolean;
+  isPhoneNumberUnlisted?: boolean;
+  // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
+  usernameLink?: UsernameLink;
   // Registered primary devices only: the account attribute that lets people find us by phone number
   isDiscoverableByPhoneNumber?: boolean;
   // Registered primary devices only: SVR2 stores the master key under a PIN
@@ -106,7 +114,8 @@ export type NotificationDefaults = {
 
 export type IdentityRecord = {
   publicKey: Uint8Array;
-  isVerified?: boolean;
+  // Whether we compared the safety number (`Verified.State`); a changed key of a verified contact is `UNVERIFIED`
+  verified?: Verified_State;
 };
 
 export type KyberPreKeyEntry = {
@@ -181,6 +190,9 @@ export default class SignalStore {
   private db = new IdbStore(DB_NAME);
 
   private exclusive = Promise.resolve();
+
+  // Called when the identity key of another user replaces the stored one, see `saveIdentity`
+  onIdentityChange?: (serviceId: string) => void;
 
   /**
    * Runs protocol operations one at a time. Session, sender key and prekey records are read and written

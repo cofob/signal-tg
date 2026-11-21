@@ -233,6 +233,10 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.DataStorage });
           return;
 
+        case SettingsScreens.Username:
+          openSettingsScreen({ screen: SettingsScreens.EditProfile });
+          return;
+
         case SettingsScreens.SignalPin:
           openSettingsScreen({ screen: SettingsScreens.Privacy });
           return;

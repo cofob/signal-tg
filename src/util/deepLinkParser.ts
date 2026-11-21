@@ -6,6 +6,7 @@ import { parseTimestampDuration } from './dates/timestamp';
 import { isBase64Url } from './encoding/base64';
 import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
+import { parseSignalMeLink } from './signalLinks';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
@@ -153,13 +154,13 @@ type OAuthLinkBuilderParams = Omit<BuilderParams<OAuthLink>, 'url'> & {
 const RE_TG_SLASHES_PROTOCOL = /^tg:\/\//i;
 const MAX_BOT_START_PARAMETER_LENGTH = 64;
 
-// Only `tg:` links are deep links; links to Telegram websites stay ordinary external links
+// Deep links are `tg:` links and `signal.me` links to users; links to Telegram websites stay ordinary external links
 export function isDeepLink(link: string): boolean {
-  return RE_TG_LINK.test(link);
+  return RE_TG_LINK.test(link) || Boolean(parseSignalMeLink(link));
 }
 
 export function tryParseDeepLink(link: string): DeepLink | undefined {
-  if (!isDeepLink(link)) {
+  if (!RE_TG_LINK.test(link)) {
     return undefined;
   }
   try {

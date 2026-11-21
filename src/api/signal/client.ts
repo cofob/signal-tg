@@ -11,7 +11,7 @@ import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
-import { buildApiUser } from './builders/users';
+import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
   client, db, logError, processor, store,
@@ -179,7 +179,7 @@ export async function startSession(storedAccount: AccountRecord) {
   sendApiUpdate({
     '@type': 'updateCurrentUser',
     currentUser: buildApiUser(self, account.aci),
-    currentUserFullInfo: {},
+    currentUserFullInfo: buildApiUserFullInfo(self, account.aci),
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
   if (hasHistoryTransferFailed) {

@@ -109,6 +109,8 @@ const SINGLE_LINE_ACTIONS = new Set<ApiMessageAction['type']>([
   'unsupported',
   'deleted',
   'viewOnce',
+  'safetyNumberChange',
+  'safetyNumberVerified',
 ]);
 const HIDDEN_TEXT_ACTIONS = new Set<ApiMessageAction['type']>([
   'suggestProfilePhoto', 'suggestBirthday', 'suggestedPostApproval', 'noForwardsRequest',
