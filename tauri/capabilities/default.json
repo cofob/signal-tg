@@ -10,6 +10,7 @@
     "allow-open-new-window-cmd",
     "allow-save-current-url",
     "allow-set-menu-translations",
+    "allow-take-deep-links",
     "allow-signal-connect",
     "allow-signal-send",
     "allow-signal-ack",

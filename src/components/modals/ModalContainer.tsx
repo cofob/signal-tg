@@ -50,6 +50,7 @@ import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
+import SignalLinkModal from './signalLink/SignalLinkModal';
 import SuggestedStatusModal from './suggestedStatus/SuggestedStatusModal.async';
 import TwoFaCheckModal from './twoFaCheck/TwoFaCheckModal.async';
 import UrlAuthModal from './urlAuth/UrlAuthModal.async';
@@ -99,11 +100,12 @@ type ModalKey = keyof Pick<TabState,
   'settingsConfirmation' |
   'mediaAccessModal' |
   'joinGroupCallModal' |
-  'phoneNumberLookupModal'
+  'phoneNumberLookupModal' |
+  'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'mapModal' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
   | 'botCreationModal' | 'settingsConfirmation' | 'mediaAccessModal' | 'joinGroupCallModal'
-  | 'phoneNumberLookupModal';
+  | 'phoneNumberLookupModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
 type ModalStateProps = {
@@ -206,6 +208,7 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   mediaAccessModal: MediaAccessModal,
   joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
+  signalLinkModal: SignalLinkModal,
 };
 
 const LEGACY_MODAL_KEYS = Object.keys(LEGACY_MODALS) as LegacyModalKey[];

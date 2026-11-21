@@ -682,6 +682,12 @@ export type TabState = {
     phoneNumber: string;
   };
 
+  // Signal: a link to something that this app does not do, which the dialog explains; `host` is the proxy's
+  signalLinkModal?: {
+    type: 'proxy' | 'callLink' | 'linkDevice' | 'reRegister';
+    host?: string;
+  };
+
   // Signal: the safety number with a contact; `isUnavailable` while we do not know their identity key
   safetyNumberModal?: {
     userId: string;

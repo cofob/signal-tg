@@ -432,7 +432,7 @@ const ChatExtra = ({
               {
                 renderText(description, [
                   'br',
-                  shouldRenderAllLinks ? 'links' : 'tg_links',
+                  shouldRenderAllLinks ? 'links' : 'app_links',
                   'emoji',
                 ])
               }

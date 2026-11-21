@@ -241,6 +241,15 @@ export interface LangPair {
   'SignalPinErrorSave': undefined;
   'SignalPhoneLookupTitle': undefined;
   'SignalPhoneLookupConfirm': undefined;
+  'SignalLinkInvalid': undefined;
+  'SignalLinkSearchOpen': undefined;
+  'SignalProxyLinkTitle': undefined;
+  'SignalCallLinkTitle': undefined;
+  'SignalCallLinkText': undefined;
+  'SignalDeviceLinkTitle': undefined;
+  'SignalDeviceLinkText': undefined;
+  'SignalReRegisterTitle': undefined;
+  'SignalReRegisterText': undefined;
   'SignalContactDiscovery': undefined;
   'SignalContactDiscoveryAbout': undefined;
   'SignalPinErrorUnavailable': undefined;
@@ -2548,6 +2557,9 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SignalPhoneLookupText': {
     'phone': V;
   };
+  'SignalProxyLinkText': {
+    'host': V;
+  };
   'SpeakingWithVolume': {
     'volume': V;
   };
@@ -4203,6 +4215,11 @@ export interface LangKeyGroups {
       | 'SignalPhoneLookupText'
       | 'UsernameByPhoneNotFound';
     variables: 'phone';
+  };
+  'host': {
+    keys:
+      | 'SignalProxyLinkText';
+    variables: 'host';
   };
   'volume': {
     keys:

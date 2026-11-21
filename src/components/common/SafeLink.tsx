@@ -54,10 +54,12 @@ const SafeLink = ({
     e.preventDefault();
 
     const shouldOpenInNewTab = e.button === MouseButton.Auxiliary || e.ctrlKey || e.metaKey || e.shiftKey;
-    const isTrustedLink = isRegularLink && !isSuspiciousUrl(url);
     const linkContext: LinkContext | undefined = chatId && messageId
       ? { type: 'message', chatId, threadId, messageId }
       : undefined;
+    // An address that the text of a message holds asks before it opens a site, as in Signal Desktop; Signal's own links
+    // open in the app before the question
+    const isTrustedLink = isRegularLink && !isSuspiciousUrl(url) && !linkContext;
     openUrl({
       url,
       shouldSkipModal: shouldSkipModal || isTrustedLink,
