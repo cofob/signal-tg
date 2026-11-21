@@ -1,3 +1,4 @@
+import type { ApiCallLogOutcome, ApiCallLogType } from './callLog';
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
   ApiPhoto, ApiPollAnswer, ApiVideo,
@@ -252,8 +253,17 @@ export interface ApiMessageActionSafetyNumberVerified extends ActionMediaType {
   isFromOtherDevice?: true;
 }
 
+// Signal: a call of the call history. Calls cannot be made or answered here, so the notice only says what happened;
+// `isOutgoing` of the message is the direction.
+export interface ApiMessageActionSignalCall extends ActionMediaType {
+  type: 'signalCall';
+  callType: ApiCallLogType;
+  outcome: ApiCallLogOutcome;
+}
+
 export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
   | ApiMessageActionSafetyNumberChange | ApiMessageActionSafetyNumberVerified
+  | ApiMessageActionSignalCall
   | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle | ApiMessageActionGroupUpdate
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate

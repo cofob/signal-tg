@@ -7,6 +7,7 @@ import type {
 } from '../../lib/vibecalls';
 import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
+import type { ApiCallLogEntry } from './callLog';
 import type {
   ApiGroupCall, ApiPhoneCall,
 } from './calls';
@@ -807,6 +808,12 @@ export type ApiUpdateStory = {
   story: ApiStory | ApiStorySkipped;
 };
 
+// Signal: the call history after a change; the app replaces its list
+export type ApiUpdateCallLog = {
+  '@type': 'updateCallLog';
+  entries: ApiCallLogEntry[];
+};
+
 export type ApiUpdateDeleteStory = {
   '@type': 'deleteStory';
   peerId: string;
@@ -908,6 +915,7 @@ export type ApiUpdate = (
   ApiUpdateDeleteSavedHistory
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities
+  | ApiUpdateCallLog
   | ApiUpdateNotSupportedInFrozenAccountError
 );
 

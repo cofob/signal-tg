@@ -2,7 +2,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { create, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
-import type { ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
+import type { CallRecord, ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db/MessageDb';
 import type { GroupMember, GroupState } from '../groups/fetchGroup';
 import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/generated/SignalService_pb';
 import type SignalStore from '../store/SignalStore';
@@ -562,6 +562,45 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       dataMessage: dataMessage && !record.deletedAt
         ? toBinary(DataMessageSchema, create(DataMessageSchema, { ...dataMessage, timestamp: BigInt(record.sentAt) }))
         : undefined,
+    });
+    lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
+  }
+
+  // Calls of the call history, which show in their chats and the call log
+  const demoCalls: [ConversationRecord, Omit<CallRecord, 'peerId' | 'messageId' | 'mode'>][] = [
+    [aliceChat, {
+      callId: '1001', type: 'audio', direction: 'incoming', status: 'accepted', timestamp: now - 500 * MINUTE,
+    }],
+    [bobChat, {
+      callId: '1002', type: 'audio', direction: 'outgoing', status: 'missed', timestamp: now - 290 * MINUTE,
+    }],
+    [group, {
+      callId: '1003', type: 'group', direction: 'incoming', status: 'joined', timestamp: now - 200 * MINUTE,
+    }],
+    [bobChat, {
+      callId: '1004', type: 'video', direction: 'incoming', status: 'declined', timestamp: now - 100 * MINUTE,
+    }],
+    [aliceChat, {
+      callId: '1005', type: 'video', direction: 'incoming', status: 'missed', timestamp: now - 22 * MINUTE,
+      isUnseen: true,
+    }],
+    [group, {
+      callId: '1006', type: 'group', direction: 'incoming', status: 'genericGroupCall', timestamp: now - 2 * MINUTE,
+      isUnseen: true,
+    }],
+  ];
+  for (const [conversation, call] of demoCalls) {
+    const message = await db.addMessage({
+      conversationId: conversation.id,
+      kind: 'call',
+      authorAci: '',
+      callId: call.callId,
+      sentAt: call.timestamp,
+      receivedAt: call.timestamp,
+      isOutgoing: call.direction === 'outgoing',
+    });
+    await db.putCall({
+      ...call, peerId: conversation.id, mode: call.type === 'group' ? 'group' : 'direct', messageId: message.id,
     });
     lastByConversation.set(conversation.id, { id: message.id, sentAt: message.sentAt });
   }

@@ -14,6 +14,7 @@ import './api/settings';
 import './api/passcode';
 import './api/reactions';
 import './api/stories';
+import './api/callLog';
 import './ui/initial';
 import './ui/animations';
 import './ui/chats';

@@ -57,6 +57,10 @@ const LeftSideMenuDropdown = ({
     openLeftColumnContent({ contentKey: LeftColumnContent.Contacts });
   });
 
+  const handleSelectCalls = useLastCallback(() => {
+    openLeftColumnContent({ contentKey: LeftColumnContent.Calls });
+  });
+
   const handleSelectArchived = useLastCallback(() => {
     openLeftColumnContent({ contentKey: LeftColumnContent.Archived });
     closeForumPanel();
@@ -141,6 +145,7 @@ const LeftSideMenuDropdown = ({
       <LeftSideMenuItems
         onSelectArchived={handleSelectArchived}
         onSelectContacts={handleSelectContacts}
+        onSelectCalls={handleSelectCalls}
         onSelectSettings={handleSelectSettings}
         onSwitchAccount={handleSwitchAccount}
         footer={`${APP_NAME} ${versionString}`}

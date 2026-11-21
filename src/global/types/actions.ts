@@ -1414,6 +1414,8 @@ export interface ActionPayloads {
   };
   loadStorySettings: undefined;
   updateStorySettings: Partial<ApiStorySettings>;
+  loadCallLog: undefined;
+  clearCallLog: WithTabId | undefined;
   loadStoryAlbums: {
     peerId: string;
   };

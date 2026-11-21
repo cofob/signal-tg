@@ -2270,6 +2270,34 @@ export interface LangPair {
   'DesktopMenuSelectAll': undefined;
   'DesktopMenuWindow': undefined;
   'DesktopMenuMinimize': undefined;
+  'ActionCallIncomingAudio': undefined;
+  'ActionCallIncomingVideo': undefined;
+  'ActionCallOutgoingAudio': undefined;
+  'ActionCallOutgoingVideo': undefined;
+  'ActionCallDeclinedAudio': undefined;
+  'ActionCallDeclinedVideo': undefined;
+  'ActionCallMissedAudio': undefined;
+  'ActionCallMissedVideo': undefined;
+  'ActionCallUnansweredAudio': undefined;
+  'ActionCallUnansweredVideo': undefined;
+  'ActionCallGroupStarted': undefined;
+  'ActionCallGroupStartedYou': undefined;
+  'MenuCalls': undefined;
+  'CallLogEmptyTitle': undefined;
+  'CallLogEmptyText': undefined;
+  'CallLogInfo': undefined;
+  'CallLogCannotCall': undefined;
+  'CallLogCallBack': undefined;
+  'CallLogIncoming': undefined;
+  'CallLogOutgoing': undefined;
+  'CallLogMissed': undefined;
+  'CallLogDeclined': undefined;
+  'CallLogGroup': undefined;
+  'CallLogClear': undefined;
+  'CallLogClearTitle': undefined;
+  'CallLogClearText': undefined;
+  'CallLogClearConfirm': undefined;
+  'CallLogCleared': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {

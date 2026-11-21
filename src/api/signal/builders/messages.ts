@@ -29,6 +29,7 @@ import { getCurrentAccount } from '../client';
 import { db, processor } from '../engine';
 import { getPeerId } from '../peers';
 import { buildApiFormattedText, getMentionAci } from './bodyRanges';
+import { getCallOutcome } from './calls';
 import { buildMessageMedia, buildWebPage } from './media';
 import { buildApiUser } from './users';
 
@@ -106,6 +107,20 @@ export async function buildApiMessageWithPoll(
         senderId: speakerAci ? await users.getUserId(speakerAci) : base.senderId,
         isOutgoing: speakerAci ? speakerAci === selfAci : base.isOutgoing,
         content: { action },
+      },
+    };
+  }
+  if (message.kind === 'call') {
+    const call = message.callId ? await db.getCall(conversation.id, message.callId) : undefined;
+    if (!call) return { message: { ...base, content: {} } };
+    return {
+      message: {
+        ...base,
+        content: {
+          action: {
+            mediaType: 'action', type: 'signalCall', callType: call.type, outcome: getCallOutcome(call),
+          },
+        },
       },
     };
   }

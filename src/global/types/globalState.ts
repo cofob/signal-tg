@@ -3,6 +3,7 @@ import type {
   ApiAudio,
   ApiAuthCodeInfo,
   ApiAvailableReaction,
+  ApiCallLogEntry,
   ApiChat,
   ApiChatFolder,
   ApiChatFullInfo,
@@ -154,6 +155,9 @@ export type GlobalState = {
   contactList?: {
     userIds: string[];
   };
+
+  // Signal: the call history, newest first; loaded when the call log opens and replaced on changes
+  callLog?: ApiCallLogEntry[];
 
   blocked: {
     ids: string[];

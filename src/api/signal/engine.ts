@@ -4,6 +4,7 @@ import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
 import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
+import { handleCallChanges } from './updaters/calls';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
 import { handleStickerPacksChange } from './updaters/stickers';
@@ -23,6 +24,7 @@ export const processor = new MessageProcessor(db, client, {
       .then(() => handleMessageChanges(changes))
       .then(() => handleChatChanges(changes))
       .then(() => handleStoryChanges(changes))
+      .then(() => handleCallChanges(changes))
       .catch(logError);
   },
   onTyping: (event) => void handleTyping(event).catch(logError),
