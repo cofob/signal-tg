@@ -1,0 +1,37 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 0.5rem 0.5rem 0.25rem;
+
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.groupTitleFailed,
+.reason :global(.status) {
+  color: var(--color-error);
+}
+
+.notice {
+  margin: 0;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.verify {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-links);
+}

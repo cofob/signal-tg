@@ -136,6 +136,8 @@ type StateProps = {
   canSaveGif?: boolean;
   canRevote?: boolean;
   canClosePoll?: boolean;
+  canViewDetails?: boolean;
+  canResend?: boolean;
   canLoadReadDate?: boolean;
   shouldRenderShowWhen?: boolean;
   activeDownloads: ActiveDownloads;
@@ -208,6 +210,8 @@ const ContextMenuContainer = ({
   activeDownloads,
   noReplies,
   canShowSeenBy,
+  canViewDetails,
+  canResend,
   canScheduleUntilOnline,
   isReactionPickerOpen,
   isInSavedMessages,
@@ -240,6 +244,8 @@ const ContextMenuContainer = ({
     cancelMediaDownload,
     loadSeenBy,
     openSeenByModal,
+    openMessageDetailsModal,
+    resendMessage,
     openReactorListModal,
     loadFullChat,
     loadReactors,
@@ -594,6 +600,16 @@ const ContextMenuContainer = ({
     openSeenByModal({ chatId: message.chatId, messageId: message.id });
   });
 
+  const handleOpenMessageDetails = useLastCallback(() => {
+    closeMenu();
+    openMessageDetailsModal({ chatId: message.chatId, messageId: message.id });
+  });
+
+  const handleResend = useLastCallback(() => {
+    closeMenu();
+    resendMessage({ chatId: message.chatId, messageId: message.id });
+  });
+
   const handleOpenReactorListModal = useLastCallback(() => {
     closeMenu();
     openReactorListModal({ chatId: message.chatId, messageId: message.id });
@@ -717,6 +733,8 @@ const ContextMenuContainer = ({
         canRevote={canRevote}
         canClosePoll={canClosePoll}
         canShowSeenBy={canShowSeenBy}
+        canViewDetails={canViewDetails}
+        canResend={canResend}
         canPlayAnimatedEmojis={canPlayAnimatedEmojis}
         shouldRenderShowWhen={shouldRenderShowWhen}
         canLoadReadDate={canLoadReadDate}
@@ -752,6 +770,8 @@ const ContextMenuContainer = ({
         onCancelVote={handleCancelVote}
         onClosePoll={openClosePollDialog}
         onShowSeenBy={handleOpenSeenByModal}
+        onViewDetails={handleOpenMessageDetails}
+        onResend={handleResend}
         onToggleReaction={handleToggleReaction}
         onShowReactors={handleOpenReactorListModal}
         onReactionPickerOpen={handleReactionPickerOpen}
@@ -809,6 +829,8 @@ export default memo(withGlobal<OwnProps>(
       canSaveGif,
       canRevote,
       canClosePoll,
+      canViewDetails,
+      canResend,
     } = (threadId && selectAllowedMessageActionsSlow(global, message, threadId)) || {};
     const canForward = selectCanForwardMessage(global, message);
 
@@ -901,6 +923,8 @@ export default memo(withGlobal<OwnProps>(
       canSaveGif: !isProtected && canSaveGif,
       canRevote: !message.isEphemeral && canRevote,
       canClosePoll: !message.isEphemeral && !isScheduled && canClosePoll,
+      canViewDetails: !message.isEphemeral && !isScheduled && canViewDetails,
+      canResend: !message.isEphemeral && !isScheduled && canResend,
       activeDownloads,
       canShowSeenBy: !message.isEphemeral && canShowSeenBy,
       canLoadReadDate: !message.isEphemeral && canLoadReadDate,

@@ -369,11 +369,15 @@ export function selectIsMessageUnread<T extends GlobalState>(
 export function selectOutgoingStatus<T extends GlobalState>(
   global: T, chatId: string, threadId: ThreadId, messageId: number, messageListType: MessageListType,
 ): ApiMessageOutgoingStatus {
+  const message = selectChatMessage(global, chatId, messageId);
+  // A message that did not reach everyone keeps showing it, even when a later message was read
+  const sendingState = message && getSendingState(message);
+  if (sendingState === 'failed' || sendingState === 'partial') return sendingState;
+
   if (!selectIsMessageUnread(global, chatId, threadId, messageId, messageListType)) {
     return 'read';
   }
 
-  const message = selectChatMessage(global, chatId, messageId);
   if (!message) {
     return 'failed'; // Should never happen
   }
@@ -752,6 +756,9 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
   const canCopy = !isAction;
   const canCopyLink = !isLocal && !isAction && (isChannel || isSuperGroup) && !isMonoforum;
   const canSelect = !isLocal && !isAction;
+  const sendingState = isOwn ? getSendingState(message) : undefined;
+  const canViewDetails = isOwn && !isLocal && !isAction;
+  const canResend = !isLocal && (sendingState === 'failed' || sendingState === 'partial');
 
   const canDownload = selectMessageDownloadableMedia(global, message) && !hasTtl;
 
@@ -783,6 +790,8 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canSaveGif,
     canRevote,
     canClosePoll,
+    canViewDetails,
+    canResend,
   ].every((ability) => !ability);
 
   return {
@@ -804,6 +813,8 @@ export function selectAllowedMessageActionsSlow<T extends GlobalState>(
     canSaveGif,
     canRevote,
     canClosePoll,
+    canViewDetails,
+    canResend,
   };
 }
 

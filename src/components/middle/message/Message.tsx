@@ -56,6 +56,7 @@ import {
   getMessageSingleCustomEmoji,
   getMessageSingleRegularEmoji,
   getMessageWebPage,
+  getSendErrorKey,
   hasMessageText,
   hasMessageTtl,
   isAnonymousForwardsChat,
@@ -443,6 +444,8 @@ const Message = ({
     markMentionsRead,
     markPollVotesRead,
     openThread,
+    openMessageDetailsModal,
+    showNotification,
   } = getActions();
 
   const ref = useRef<HTMLDivElement>();
@@ -959,6 +962,15 @@ const Message = ({
 
   const contentStyle = buildStyle(peerColorStyle, sizeCalculations);
 
+  // A message that was never stored has no recipients, so its click names the reason
+  const handleOutgoingStatusClick = useLastCallback(() => {
+    if (isLocal) {
+      showNotification({ message: { key: message.sendError ? getSendErrorKey(message.sendError) : 'SendErrorOther' } });
+      return;
+    }
+    openMessageDetailsModal({ chatId, messageId });
+  });
+
   const handleTypingAnimationEnd = useLastCallback(() => {
     if (!isTypingDraft || !previousLocalId) {
       return;
@@ -1052,6 +1064,8 @@ const Message = ({
         }
         availableReactions={availableReactions}
         onClick={handleMetaClick}
+        onOutgoingStatusClick={outgoingStatus === 'failed' || outgoingStatus === 'partial'
+          ? handleOutgoingStatusClick : undefined}
         onOpenThread={handleOpenThread}
       />
     );

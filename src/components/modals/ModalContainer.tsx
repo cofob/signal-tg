@@ -32,6 +32,7 @@ import LeaveGroupModal from './leaveGroup/LeaveGroupModal.async';
 import LocationAccessModal from './locationAccess/LocationAccessModal.async';
 import MapModal from './map/MapModal.async';
 import MediaAccessModal from './mediaAccess/MediaAccessModal.async';
+import MessageDetailsModal from './messageDetails/MessageDetailsModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
 import PasskeyModal from './passkey/PasskeyModal.async';
@@ -83,6 +84,7 @@ type ModalKey = keyof Pick<TabState,
   'qrCodeModal' |
   'safetyNumberModal' |
   'safetyNumberChangeModal' |
+  'messageDetailsModal' |
   'recoveryKeyModal' |
   'quickPreview' |
   'isAudioPlaylistModalOpen' |
@@ -183,6 +185,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   qrCodeModal: QrCodeModal,
   safetyNumberModal: SafetyNumberModal,
   safetyNumberChangeModal: SafetyNumberChangeModal,
+  messageDetailsModal: MessageDetailsModal,
   recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,

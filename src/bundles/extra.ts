@@ -95,6 +95,7 @@ export { default as SafetyNumberModal } from '../components/modals/safetyNumber/
 export {
   default as SafetyNumberChangeModal,
 } from '../components/modals/safetyNumberChange/SafetyNumberChangeModal';
+export { default as MessageDetailsModal } from '../components/modals/messageDetails/MessageDetailsModal';
 export { default as AutoDeleteTimerModal } from '../components/modals/autoDeleteTimer/AutoDeleteTimerModal';
 export { default as SettingsConfirmationModal }
   from '../components/modals/settingsConfirmation/SettingsConfirmationModal';

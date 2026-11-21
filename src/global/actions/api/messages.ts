@@ -2474,6 +2474,39 @@ addActionHandler('loadSeenBy', async (global, actions, payload): Promise<void> =
   setGlobal(global);
 });
 
+addActionHandler('loadMessageDetails', async (global, actions, payload): Promise<void> => {
+  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  const result = await callApi('fetchMessageSendDetails', { chat, messageId });
+  if (!result) return;
+
+  global = getGlobal();
+  const modal = selectTabState(global, tabId).messageDetailsModal;
+  if (modal?.chatId !== chatId || modal.messageId !== messageId) return;
+  global = updateTabState(global, { messageDetailsModal: { ...modal, recipients: result.recipients } }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('resendMessage', async (global, actions, payload): Promise<void> => {
+  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
+  const chat = selectChat(global, chatId);
+  if (!chat) return;
+
+  const result = await callApi('resendMessage', { chat, messageId });
+  if (!result) {
+    actions.showNotification({ message: { key: 'MessageResendFailed' }, tabId });
+    return;
+  }
+
+  global = getGlobal();
+  const modal = selectTabState(global, tabId).messageDetailsModal;
+  if (modal?.chatId === chatId && modal.messageId === messageId) {
+    actions.loadMessageDetails({ chatId, messageId, tabId });
+  }
+});
+
 addActionHandler('saveDefaultSendAs', (global, actions, payload): ActionReturnType => {
   const { chatId, sendAsId } = payload;
   const chat = selectChat(global, chatId);

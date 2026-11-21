@@ -12,6 +12,7 @@ import type {
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
+  ApiMessageRecipient,
   ApiMissingInvitedUser,
   ApiNewPoll,
   ApiNotification,
@@ -696,6 +697,13 @@ export type TabState = {
     chatId: string;
     messageId: number;
     userIds: string[];
+  };
+
+  // Signal: how sending an outgoing message to each recipient went; `recipients` load after the modal opens
+  messageDetailsModal?: {
+    chatId: string;
+    messageId: number;
+    recipients?: ApiMessageRecipient[];
   };
 
   // Signal: the recovery key of the account, shown in the format of Signal; `isUnconfirmed` for a new account

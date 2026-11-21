@@ -35,6 +35,7 @@ type OwnProps = {
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onOutgoingStatusClick?: NoneToVoidFunction;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
 };
@@ -50,6 +51,7 @@ const MessageMeta = ({
   isPinned,
   withFullDate,
   onClick,
+  onOutgoingStatusClick,
   onOpenThread,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
@@ -186,7 +188,7 @@ const MessageMeta = ({
         {date}
       </span>
       {outgoingStatus && (
-        <MessageOutgoingStatus status={outgoingStatus} />
+        <MessageOutgoingStatus status={outgoingStatus} onClick={onOutgoingStatusClick} />
       )}
       {renderQuickReactionButton && renderQuickReactionButton()}
     </span>

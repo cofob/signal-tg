@@ -11,9 +11,11 @@ import type {
   ApiContact,
   ApiFormattedText,
   ApiInputRichMessage,
+  ApiLocalSendError,
   ApiMessage,
   ApiMessageEntity,
   ApiMessagePoll,
+  ApiMessageRecipient,
   ApiOnProgress,
   ApiPeer,
   ApiReaction,
@@ -30,6 +32,7 @@ import { LONG_TEXT_CONTENT_TYPE } from '../../../lib/signal/messages/MessageProc
 import {
   DataMessage_Contact_Phone_Type, DataMessage_Quote_Type, DataMessageSchema,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
+import { getSendErrorKind } from '../../../lib/signal/sender/sendErrors';
 import { uuidToBytes } from '../../../lib/signal/serviceId';
 import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
@@ -192,7 +195,7 @@ export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnP
   try {
     init = await buildDataMessage(params, onProgress);
   } catch (err) {
-    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
+    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err, Boolean(params.attachment));
     return;
   }
   await sendWithLocalMessage(conversation, init, localMessage);
@@ -410,7 +413,7 @@ async function uploadAlbumItem(item: AlbumItem, localMessage: ApiMessage, onProg
   try {
     item.pointer = await uploadMessageAttachment(item.params.attachment!, onProgress);
   } catch (err) {
-    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
+    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err, true);
   }
   await settleAlbumItem(item);
 }
@@ -517,6 +520,36 @@ export async function sendMessageAnyway({ messageId }: { messageId: number }) {
     logError(err);
     return undefined;
   }
+}
+
+/** Sends a message again to the recipients that did not get it; the safety number block can come back for some */
+export async function resendMessage({ messageId }: { chat: ApiChat; messageId: number }) {
+  try {
+    const record = await db.getMessage(messageId);
+    const conversation = record && await db.getConversation(record.conversationId);
+    await processor.resendMessage(messageId);
+    if (conversation) await reportBlockedRecipients(conversation, messageId);
+    return true;
+  } catch (err) {
+    logError(err);
+    return undefined;
+  }
+}
+
+/** The recipients of an outgoing message with how sending to each went, for the message details */
+export async function fetchMessageSendDetails({ chat, messageId }: { chat: ApiChat; messageId: number }) {
+  const conversation = await getConversationByPeerId(chat.id);
+  const record = await db.getMessage(messageId);
+  if (!conversation || record?.conversationId !== conversation.id || !record.isOutgoing) return undefined;
+
+  const users = createUserResolver();
+  const recipients: ApiMessageRecipient[] = [];
+  for (const [aci, status] of Object.entries(record.recipientStatus ?? {})) {
+    recipients.push({ userId: await users.getUserId(aci), status, error: record.recipientErrors?.[aci] });
+  }
+  const apiUsers = await users.buildUsers();
+  if (apiUsers.length) sendApiUpdate({ '@type': 'updateEntities', users: buildCollectionByKey(apiUsers, 'id') });
+  return { recipients };
 }
 
 async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnProgress): Promise<DataMessageInit> {
@@ -744,13 +777,20 @@ async function showLocalMessage(
   return localMessage;
 }
 
-function markLocalMessageFailed(localMessage: ApiMessage, err?: unknown) {
+/** Shows a local message as failed; `isUpload` tells that the error is from uploading an attachment */
+function markLocalMessageFailed(localMessage: ApiMessage, err?: unknown, isUpload?: boolean) {
   if (err) logError(err);
+  let localError: ApiLocalSendError | undefined;
+  if (err) {
+    const kind = getSendErrorKind(err);
+    localError = kind === 'other' && isUpload ? 'upload' : kind;
+  }
   sendApiUpdate({
     '@type': 'updateMessageSendFailed',
     chatId: localMessage.chatId,
     localId: localMessage.id,
     error: SEND_ERROR,
+    sendError: localError,
   });
 }
 

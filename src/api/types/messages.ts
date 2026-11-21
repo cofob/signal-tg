@@ -638,6 +638,10 @@ export interface ApiMessage {
   sendingState?: 'messageSendingStatePending' | 'messageSendingStateFailed';
   // Signal: a recipient's device received the message
   isDelivered?: true;
+  // Signal: some recipients got the message and sending it to others failed
+  isPartiallySent?: true;
+  // Signal: the reason a local message failed to be sent, which has no recipients to tell it by
+  sendError?: ApiLocalSendError;
   forwardInfo?: ApiMessageForwardInfo;
   isDeleting?: boolean;
   previousLocalId?: number;
@@ -811,7 +815,19 @@ export type ApiMessageReportResult = {
   }[];
 };
 
-export type ApiMessageOutgoingStatus = 'read' | 'delivered' | 'succeeded' | 'pending' | 'failed';
+export type ApiMessageOutgoingStatus = 'read' | 'delivered' | 'succeeded' | 'pending' | 'failed' | 'partial';
+
+export type ApiSendErrorKind = 'unregistered' | 'identityChanged' | 'network' | 'rateLimited' | 'other';
+
+// Signal: why a message that was not stored failed; `upload` is an attachment that could not be uploaded
+export type ApiLocalSendError = ApiSendErrorKind | 'upload';
+
+/** Signal: how sending an outgoing message to one recipient went, and for a failure, why */
+export type ApiMessageRecipient = {
+  userId: string;
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'viewed' | 'failed';
+  error?: ApiSendErrorKind;
+};
 
 // KeyboardButtons
 

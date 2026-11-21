@@ -101,6 +101,8 @@ type OwnProps = {
   canClosePoll?: boolean;
   isDownloading?: boolean;
   canShowSeenBy?: boolean;
+  canViewDetails?: boolean;
+  canResend?: boolean;
   seenByRecentPeers?: ApiPeer[];
   noReplies?: boolean;
   hasCustomEmoji?: boolean;
@@ -133,6 +135,8 @@ type OwnProps = {
   onCancelVote?: NoneToVoidFunction;
   onClosePoll?: NoneToVoidFunction;
   onShowSeenBy?: NoneToVoidFunction;
+  onViewDetails?: NoneToVoidFunction;
+  onResend?: NoneToVoidFunction;
   onShowReactors?: NoneToVoidFunction;
   onToggleReaction?: (reaction: ApiReaction) => void;
   onReactionPickerOpen?: (position: IAnchorPosition) => void;
@@ -188,6 +192,8 @@ const MessageContextMenu = ({
   isDownloading,
   repliesThreadInfo,
   canShowSeenBy,
+  canViewDetails,
+  canResend,
   canShowReactionsCount,
   canShowReactionList,
   seenByRecentPeers,
@@ -220,6 +226,8 @@ const MessageContextMenu = ({
   onCancelVote,
   onClosePoll,
   onShowSeenBy,
+  onViewDetails,
+  onResend,
   onShowReactors,
   onToggleReaction,
   onCopyMessages,
@@ -476,6 +484,8 @@ const MessageContextMenu = ({
           </MenuItem>
         )}
         {canForward && <MenuItem icon="forward" onClick={onForward}>{lang('Forward')}</MenuItem>}
+        {canResend && <MenuItem icon="reload" onClick={onResend}>{lang('MessageResend')}</MenuItem>}
+        {canViewDetails && <MenuItem icon="info" onClick={onViewDetails}>{lang('MessageDetails')}</MenuItem>}
         {canSelect && <MenuItem icon="select" onClick={onSelect}>{lang('CommonSelect')}</MenuItem>}
         {canReport && <MenuItem icon="flag" onClick={onReport}>{lang('ReportPeerReport')}</MenuItem>}
         {canDelete && (message.anchorMsgId ? (

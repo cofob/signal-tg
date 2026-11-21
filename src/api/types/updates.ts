@@ -21,6 +21,7 @@ import type {
 } from './chats';
 import type {
   ApiFormattedText,
+  ApiLocalSendError,
   ApiMessage,
   ApiMessagePoll,
   ApiPhoto,
@@ -388,6 +389,7 @@ export type ApiUpdateMessageSendFailed = {
   chatId: string;
   localId: number;
   error: string;
+  sendError?: ApiLocalSendError;
 };
 
 // Signal: a message was not sent to some users because their safety numbers changed, until the user accepts them

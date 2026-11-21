@@ -402,6 +402,24 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       dataMessage: { body: 'Booked for 2pm' },
     }],
     [group, {
+      authorAci: me, sentAt: now - 29 * MINUTE, isOutgoing: true, readAt: now,
+      recipientStatus: { [alice]: 'delivered', [bob]: 'sent', [carol]: 'failed' },
+      recipientErrors: { [carol]: 'unregistered' },
+      dataMessage: { body: 'Carol deleted her account, so the message still looks sent' },
+    }],
+    [group, {
+      authorAci: me, sentAt: now - 28 * MINUTE, isOutgoing: true, readAt: now,
+      recipientStatus: { [alice]: 'read', [bob]: 'failed', [carol]: 'sent' },
+      recipientErrors: { [bob]: 'network' },
+      dataMessage: { body: 'Dinner at 8, who is in? Bob did not get this one' },
+    }],
+    [group, {
+      authorAci: me, sentAt: now - 27 * MINUTE, isOutgoing: true, readAt: now,
+      recipientStatus: { [alice]: 'failed', [bob]: 'failed', [carol]: 'failed' },
+      recipientErrors: { [alice]: 'rateLimited', [bob]: 'rateLimited', [carol]: 'identityChanged' },
+      dataMessage: { body: 'Nobody got this message' },
+    }],
+    [group, {
       authorAci: alice,
       sentAt: now - 25 * MINUTE,
       isOutgoing: false,

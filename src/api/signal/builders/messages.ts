@@ -20,6 +20,7 @@ import type {
 import type { ApiMessageAction, ApiMessageActionGroupUpdate } from '../../types/messageActions';
 import type { MentionedUser } from './bodyRanges';
 
+import { getMessageSendState } from '../../../lib/signal/messages/sendState';
 import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import { uuidToString } from '../../../lib/signal/serviceId';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
@@ -155,7 +156,7 @@ export async function buildApiMessageWithPoll(
       isEdited: message.editedAt ? true : undefined,
       editDate: message.editedAt ? convertToSeconds(message.editedAt) : undefined,
       reactions: await buildApiReactions(message, selfAci, users),
-      sendingState: getSendingState(message),
+      ...getSendingFields(message, conversation),
       isDelivered: getIsDelivered(message) || undefined,
       ttlPeriod: message.expiresAt ? Math.round(message.expiresAt / MS_PER_SECOND) - base.date : undefined,
       isMentioned: isMentioned || undefined,
@@ -403,13 +404,14 @@ async function buildApiPoll(
   };
 }
 
-/** Pending while any recipient waits, failed when any recipient failed, as Signal Desktop shows it */
-function getSendingState({ isOutgoing, recipientStatus }: MessageRecord): ApiMessage['sendingState'] {
-  if (!isOutgoing || !recipientStatus) return undefined;
-  const statuses = Object.values(recipientStatus);
-  if (statuses.includes('pending')) return 'messageSendingStatePending';
-  if (statuses.includes('failed')) return 'messageSendingStateFailed';
-  return undefined;
+/** Pending, failed or partially sent, as Signal Desktop shows it (see `getMessageSendState`) */
+function getSendingFields(message: MessageRecord, conversation: ConversationRecord) {
+  const state = getMessageSendState(message, conversation.type);
+  // The keys are always there, so that a stored message replaces the sending fields of its local message
+  let sendingState: ApiMessage['sendingState'];
+  if (state === 'pending') sendingState = 'messageSendingStatePending';
+  if (state === 'failed') sendingState = 'messageSendingStateFailed';
+  return { sendingState, isPartiallySent: state === 'partial' ? true as const : undefined };
 }
 
 /**

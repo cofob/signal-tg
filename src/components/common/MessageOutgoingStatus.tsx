@@ -11,31 +11,54 @@ import './MessageOutgoingStatus.scss';
 
 type OwnProps = {
   status: ApiMessageOutgoingStatus;
+  // Failed and partially sent messages open their details
+  onClick?: NoneToVoidFunction;
 };
 
 enum Keys {
-  failed, pending, succeeded, delivered, read,
+  failed, pending, succeeded, delivered, read, partial,
 }
 
-const MessageOutgoingStatus = ({ status }: OwnProps) => {
+const MessageOutgoingStatus = ({ status, onClick }: OwnProps) => {
   const className = buildClassName(
-    'MessageOutgoingStatus', status === 'delivered' && 'MessageOutgoingStatus--delivered',
+    'MessageOutgoingStatus',
+    status === 'delivered' && 'MessageOutgoingStatus--delivered',
+    onClick && 'MessageOutgoingStatus--clickable',
   );
 
+  function handleClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    onClick!();
+  }
+
+  function renderIcon() {
+    if (status === 'failed') {
+      return (
+        <div className="MessageOutgoingStatus--failed">
+          <Icon name="message-failed" />
+        </div>
+      );
+    }
+    if (status === 'partial') {
+      return (
+        <div className="MessageOutgoingStatus--partial">
+          <Icon name="warning-filled" />
+        </div>
+      );
+    }
+    return <Icon name={getIconName(status)} />;
+  }
+
   return (
-    <div className={className}>
+    <div className={className} onClick={onClick ? handleClick : undefined}>
       <Transition name="reveal" activeKey={Keys[status]}>
-        {status === 'failed' ? (
-          <div className="MessageOutgoingStatus--failed">
-            <Icon name="message-failed" />
-          </div>
-        ) : <Icon name={getIconName(status)} />}
+        {renderIcon()}
       </Transition>
     </div>
   );
 };
 
-function getIconName(status: Exclude<ApiMessageOutgoingStatus, 'failed'>) {
+function getIconName(status: Exclude<ApiMessageOutgoingStatus, 'failed' | 'partial'>) {
   if (status === 'succeeded') return 'check';
   // Delivered messages show the read checks in the meta color
   if (status === 'delivered') return 'message-read';

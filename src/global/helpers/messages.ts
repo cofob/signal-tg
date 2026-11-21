@@ -1,5 +1,6 @@
 import type {
   ApiAttachment,
+  ApiLocalSendError,
   ApiMessage,
   ApiMessageEntityTextUrl,
   ApiPeer,
@@ -318,11 +319,27 @@ export function isAnonymousOwnMessage(message: ApiMessage) {
 }
 
 export function getSendingState(message: ApiMessage) {
+  if (message.isPartiallySent) return 'partial';
+
   if (!message.sendingState) {
     return message.isDelivered ? 'delivered' : 'succeeded';
   }
 
   return message.sendingState === 'messageSendingStateFailed' ? 'failed' : 'pending';
+}
+
+const SEND_ERROR_KEYS = {
+  unregistered: 'SendErrorUnregistered',
+  identityChanged: 'SendErrorIdentityChanged',
+  network: 'SendErrorNetwork',
+  rateLimited: 'SendErrorRateLimited',
+  other: 'SendErrorOther',
+  upload: 'SendErrorUpload',
+} as const satisfies Record<ApiLocalSendError, string>;
+
+/** The text of the reason a message could not be sent */
+export function getSendErrorKey(error: ApiLocalSendError) {
+  return SEND_ERROR_KEYS[error];
 }
 
 export function isMessageLocal(message: ApiMessage) {

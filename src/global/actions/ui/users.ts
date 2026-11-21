@@ -87,6 +87,13 @@ addActionHandler('openSafetyNumberChangeModal', (global, actions, payload): Acti
 });
 addTabStateResetterAction('closeSafetyNumberChangeModal', 'safetyNumberChangeModal');
 
+addActionHandler('openMessageDetailsModal', (global, actions, payload): ActionReturnType => {
+  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
+  actions.loadMessageDetails({ chatId, messageId, tabId });
+  return updateTabState(global, { messageDetailsModal: { chatId, messageId } }, tabId);
+});
+addTabStateResetterAction('closeMessageDetailsModal', 'messageDetailsModal');
+
 addTabStateResetterAction('closeRecoveryKeyModal', 'recoveryKeyModal');
 
 addActionHandler('openPhoneNumberLookupModal', (global, actions, payload): ActionReturnType => {

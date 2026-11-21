@@ -1695,6 +1695,19 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberChangeModal: WithTabId | undefined;
   sendMessageAnyway: WithTabId | undefined;
+  openMessageDetailsModal: {
+    chatId: string;
+    messageId: number;
+  } & WithTabId;
+  closeMessageDetailsModal: WithTabId | undefined;
+  loadMessageDetails: {
+    chatId: string;
+    messageId: number;
+  } & WithTabId;
+  resendMessage: {
+    chatId: string;
+    messageId: number;
+  } & WithTabId;
   // Settings open it always; the main screen opens it for a recovery key that the user did not confirm yet
   openRecoveryKeyModal: ({ shouldSkipConfirmed?: boolean } & WithTabId) | undefined;
   closeRecoveryKeyModal: WithTabId | undefined;
