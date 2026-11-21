@@ -20,7 +20,7 @@ import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromHex } from '../../../util/encoding/buffer';
 import { getRandomPadding } from '../crypto';
 import { ContentHint, sendContent, sendToEach } from './sendContent';
-import { sendWithSenderKey } from './sendToGroup';
+import { dropFormerMembers, sendWithSenderKey } from './sendToGroup';
 
 import {
   ContentSchema, SyncMessage_StickerPackOperation_Type, SyncMessageSchema, TypingMessage_Action,
@@ -319,7 +319,8 @@ async function sendToRecipients(
   const { results, remaining } = await sendWithSenderKey(
     context, { type: 'group', group }, recipients, content, options,
   );
-  return [...results, ...await sendToEach(context, remaining, content, options)];
+  const { kept, dropped } = await dropFormerMembers(group, remaining);
+  return [...results, ...dropped, ...await sendToEach(context, kept, content, options)];
 }
 
 async function syncToOtherDevices(

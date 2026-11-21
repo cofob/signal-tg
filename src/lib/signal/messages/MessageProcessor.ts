@@ -50,7 +50,9 @@ import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
-import { describeSendError, getSendErrorKind, UnregisteredUserError } from '../sender/sendErrors';
+import {
+  describeSendError, getSendErrorKind, NotGroupMemberError, UnregisteredUserError,
+} from '../sender/sendErrors';
 import {
   sendBlockedSync,
   sendDeleteForMeSync,
@@ -1925,8 +1927,9 @@ export default class MessageProcessor {
   ) {
     const reasons = new Map<string, { kind: SendErrorKind; count: number }>();
     for (const { error } of results) {
-      // Members of a group whose accounts are gone are no failure, and they are skipped without a request for hours
-      if (!error || (conversation.type === 'group' && error instanceof UnregisteredUserError)) continue;
+      // Members of a group whose accounts are gone, or who left it, are no failure
+      if (!error || (conversation.type === 'group'
+        && (error instanceof UnregisteredUserError || error instanceof NotGroupMemberError))) continue;
       const reason = describeSendError(error);
       const entry = reasons.get(reason) ?? { kind: getSendErrorKind(error), count: 0 };
       entry.count++;
@@ -1971,7 +1974,14 @@ export default class MessageProcessor {
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
-    options: { timestamp: number; expirationStartTimestamp?: number; isStory?: boolean; isUrgent?: boolean },
+    options: {
+      timestamp: number;
+      expirationStartTimestamp?: number;
+      isStory?: boolean;
+      isUrgent?: boolean;
+      // A group update also goes to the members it removed
+      shouldIncludeFormerMembers?: boolean;
+    },
   ): Promise<RecipientResult[]> {
     const { store } = this.client;
     const discoveredTimes = await Promise.all(recipients.map(async (serviceId) => (
@@ -1992,7 +2002,7 @@ export default class MessageProcessor {
       const context = this.client.getSenderContext();
       const outcome = await sendMessage(context, sendable, content, {
         ...options,
-        group: this.getGroupTarget(conversation),
+        group: this.getGroupTarget(conversation, options.shouldIncludeFormerMembers),
       });
       results = outcome.results;
       if (outcome.followUpError) {
@@ -2029,7 +2039,9 @@ export default class MessageProcessor {
   }
 
   /** Group sends renew the send endorsements of the group through its state */
-  private getGroupTarget(conversation: ConversationRecord): GroupTarget | undefined {
+  private getGroupTarget(
+    conversation: ConversationRecord, shouldIncludeFormerMembers?: boolean,
+  ): GroupTarget | undefined {
     if (conversation.type !== 'group' || !conversation.masterKey) return undefined;
     const { id, masterKey } = conversation;
     return {
@@ -2038,6 +2050,9 @@ export default class MessageProcessor {
       refresh: async () => {
         await this.refreshGroup(id, masterKey);
       },
+      getMemberAcis: shouldIncludeFormerMembers
+        ? undefined
+        : async () => (await this.db.getConversation(id))?.memberAcis,
     };
   }
 
@@ -2932,13 +2947,14 @@ export default class MessageProcessor {
   private async sendWithRetry(
     conversation: ConversationRecord, recipients: string[], content: OutgoingMessage, timestamp: number,
   ) {
-    const results = await this.sendContentTo(conversation, recipients, content, { timestamp, isUrgent: false });
+    const options = { timestamp, isUrgent: false, shouldIncludeFormerMembers: true };
+    const results = await this.sendContentTo(conversation, recipients, content, options);
     // Users that left the registry do not come back
     const failed = results.filter(({ error }) => error && !(error instanceof UnregisteredUserError))
       .map(({ serviceId }) => serviceId);
     if (failed.length) {
       this.pendingSends.push(async () => {
-        await this.sendContentTo(conversation, failed, content, { timestamp, isUrgent: false });
+        await this.sendContentTo(conversation, failed, content, options);
       });
     }
     return results;
