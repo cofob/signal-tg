@@ -405,18 +405,20 @@ const Main = ({
     }
   }, [isSynced]);
 
-  useTauriEvent<string>('deeplink', (event) => {
+  // The links that launched the app, or reached it before this page could listen, wait in the native app
+  const handleDeepLinks = useLastCallback(async () => {
     try {
-      const url = event.payload || '';
-      const decodedUrl = decodeURIComponent(url);
-      processDeepLink(decodedUrl, { type: 'inner' });
+      const urls = await window.tauri.takeDeepLinks();
+      urls.forEach((url) => processDeepLink(url, { type: 'inner' }));
     } catch (e) {
       if (DEBUG) {
         // eslint-disable-next-line no-console
-        console.error('Failed to process deep link', e);
+        console.error('Failed to process deep links', e);
       }
     }
   });
+
+  useTauriEvent<void>('deeplink', handleDeepLinks, handleDeepLinks);
 
   useEffect(() => {
     const parsedLocationHash = parseLocationHash(currentUserId);

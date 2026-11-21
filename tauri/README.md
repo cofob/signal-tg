@@ -10,10 +10,16 @@ page's worker, in WebAssembly.
   (macOS), the taskbar button (Windows) and the launcher icon (Linux desktops with the Unity launcher API).
 - New messages show system notifications through the Tauri notification plugin when the window is not
   focused and web notifications are on in Settings, Notifications.
-- `sgnl://signal.me/...` and `sgnl://signal.group/...` links open the app and reach the page as
-  `deeplink` events. The page does not act on them yet: opening a chat from a username, phone number or
-  group link needs engine support. The app handles `tg:` links from its own pages internally and never
-  passes them to the system.
+- `sgnl://` links open the app and the page handles them like the links in messages (`src/util/signalLinks.ts`):
+  `signal.me` (username and phone number), `signal.group` and `joingroup` (group), `addstickers` (sticker pack),
+  `signal.tube` (proxy), `signal.link` (call), `linkdevice` and `rereg`. The app forwards only these hosts, so
+  another `sgnl://` link, such as the ones Signal Desktop sends between its own windows, does not bring the
+  window forward. A link waits in the app until the page takes it with `take_deep_links`: the one that
+  launches the app (the command line on Windows and Linux, the open event on macOS), one that arrives while the
+  page loads or shows the link screen, and one from a second launch all reach the page, in order, after it is
+  ready. At most 8 wait, the oldest dropped first. Signal Desktop registers `sgnl` too, so the system may hand the
+  links to it when both are installed. The app handles `tg:` links from its own pages internally and never passes
+  them to the system.
 - The updater is off unless a build configures it; see [Releases](#releases).
 
 ## Building

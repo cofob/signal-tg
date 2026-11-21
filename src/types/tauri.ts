@@ -12,6 +12,8 @@ type TauriApi = {
   checkUpdate: () => Promise<Update | null>;
   getCurrentWindow: () => Promise<TauriWindow>;
   setWindowTitle: (title: string) => Promise<void>;
+  /** The `sgnl:` links that reached the app and that the page has not taken yet, oldest first */
+  takeDeepLinks: () => Promise<string[]>;
 };
 
 declare global {
