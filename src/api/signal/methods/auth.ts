@@ -7,6 +7,7 @@ import {
   submitRegistrationCaptcha,
   submitRegistrationCode,
   submitRegistrationPhoneNumber,
+  submitRegistrationPin,
   submitRegistrationProfile,
 } from '../registration';
 
@@ -34,6 +35,14 @@ export function provideAuthRegistration(registration: {
   isDiscoverableByPhoneNumber?: boolean;
 }) {
   void submitRegistrationProfile(registration).then((account) => {
+    if (account) return startSession(account);
+    return undefined;
+  }).catch(logError);
+}
+
+/** The Signal PIN of a number with Registration Lock, entered on the password screen */
+export function provideAuthPassword(pin: string) {
+  void submitRegistrationPin(pin).then((account) => {
     if (account) return startSession(account);
     return undefined;
   }).catch(logError);

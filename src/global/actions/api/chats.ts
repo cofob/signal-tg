@@ -1668,16 +1668,17 @@ addActionHandler('openChatByPhoneNumber', async (global, actions, payload): Prom
   actions.openChat({ id: TMP_CHAT_ID, tabId });
 
   const chat = await fetchChatByPhoneNumber(global, phoneNumber);
-  if (!chat) {
+  if (!chat || 'error' in chat) {
     actions.openPreviousChat({ tabId });
+    const error = chat?.error ?? 'notFound';
     actions.showNotification({
-      message: {
+      message: error === 'notFound' ? {
         key: 'UsernameByPhoneNotFound',
         variables: {
           phone: phoneNumber,
         },
         options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
+      } : { key: error === 'rateLimited' ? 'ErrorPhoneLookupRateLimited' : 'ErrorPhoneLookupUnavailable' },
       tabId,
     });
     return;
@@ -3709,10 +3710,11 @@ export async function fetchChatByPhoneNumber<T extends GlobalState>(global: T, p
     return selectChat(global, localUser.id);
   }
 
-  const { chat, user } = await callApi('getChatByPhoneNumber', phoneNumber) || {};
-  if (!chat) {
-    return undefined;
-  }
+  // Signal: the contact discovery service finds the user, or tells why it did not
+  const result = await callApi('lookUpPhoneNumber', phoneNumber);
+  if (!result) return undefined;
+  if ('error' in result) return result;
+  const { chat, user } = result;
 
   global = getGlobal();
   global = updateChat(global, chat.id, chat);

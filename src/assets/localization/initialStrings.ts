@@ -14,8 +14,6 @@ export default {
   "WrongNumber": "Wrong number?",
   "SentAppCode": "We've sent the code to the **Telegram** app on your other device.",
   "LoginJustSentSms": "We've sent you a code via SMS. Please enter it above.",
-  "LoginHeaderPassword": "Enter Password",
-  "LoginEnterPasswordDescription": "You have Two-Step Verification enabled, so your account is protected with an additional password.",
   "StartText": "Please confirm your country code\nand enter your phone number.",
   "LoginPhonePlaceholder": "Your phone number",
   "LoginNext": "Next",
@@ -54,10 +52,23 @@ export default {
   "SignalCodeErrorNotRequested": "Request a new code first",
   "SignalProfileDescription": "Enter your name. People you message, your contacts and groups see it.",
   "SignalRegisterErrorSession": "The verification has expired, start again",
-  "SignalRegisterErrorRegLock": "PIN registration lock is not supported yet",
   "SignalRegisterErrorRejected": "Signal rejected the registration",
   "SignalRegisterErrorChallenge": "Signal asks for a check TeleSignal cannot pass",
   "SignalRegisterErrorNetwork": "Cannot reach Signal, check the proxy server",
+  "SignalPinTitle": "Registration Lock",
+  "SignalPinDescription": "This number has Registration Lock. Enter the Signal PIN of the account to register it here.",
+  "SignalPinPlaceholder": "Signal PIN",
+  "SignalPinErrorIncorrect": {
+    "one": "Incorrect PIN, {count} attempt left",
+    "other": "Incorrect PIN, {count} attempts left"
+  },
+  "SignalPinErrorRateLimited": "Too many attempts, try again later",
+  "SignalPinErrorLocked": {
+    "one": "No PIN attempts left. You can register this number without the PIN in {count} day",
+    "other": "No PIN attempts left. You can register this number without the PIN in {count} days"
+  },
+  "SignalPinErrorLockedNoTime": "This number is locked until its Registration Lock expires",
+  "SignalPinErrorUnavailable": "Cannot reach Signal's PIN service. Check that the proxy server allows svr2.signal.org and that the device clock is right, then try again.",
   "LoginPasskey": "Log in with Passkey",
   "YourName": "Your Name",
   "LoginRegisterDesc": "Enter your name and add a profile photo.",

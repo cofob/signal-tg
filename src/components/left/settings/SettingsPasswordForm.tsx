@@ -1,4 +1,3 @@
-import type { FC } from '../../../lib/teact/teact';
 import { memo, useCallback, useState } from '../../../lib/teact/teact';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -15,6 +14,7 @@ type OwnProps = {
   expectedPassword?: string;
   placeholder?: string;
   hint?: string;
+  description?: string;
   submitLabel?: string;
   isActive?: boolean;
   onSubmit: (password: string) => void;
@@ -22,7 +22,7 @@ type OwnProps = {
   onReset: () => void;
 };
 
-const SettingsPasswordForm: FC<OwnProps> = ({
+const SettingsPasswordForm = ({
   isActive,
   error,
   isLoading,
@@ -30,11 +30,12 @@ const SettingsPasswordForm: FC<OwnProps> = ({
   expectedPassword,
   placeholder,
   hint,
+  description,
   submitLabel,
   onSubmit,
   onClearError,
   onReset,
-}) => {
+}: OwnProps) => {
   const [validationError, setValidationError] = useState<string>('');
   const [shouldShowPassword, setShouldShowPassword] = useState(false);
 
@@ -72,6 +73,7 @@ const SettingsPasswordForm: FC<OwnProps> = ({
             shouldShowSubmit
             error={validationError || error}
             hint={hint}
+            description={description}
             placeholder={placeholder || lang('CurrentPasswordPlaceholder')}
             shouldDisablePasswordManager={shouldDisablePasswordManager}
             submitLabel={submitLabel}

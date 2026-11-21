@@ -271,6 +271,22 @@ export interface ActionPayloads {
   removeCustomLanguage: { langCode: string };
 
   loadPasskeys: undefined;
+  loadSignalPinSettings: undefined;
+  setSignalPin: {
+    pin: string;
+  } & WithTabId;
+  removeSignalPin: WithTabId | undefined;
+  setSignalRegistrationLock: {
+    isEnabled: boolean;
+  } & WithTabId;
+  loadSignalContactDiscovery: undefined;
+  setSignalContactDiscovery: {
+    isEnabled: boolean;
+  } & WithTabId;
+  openPhoneNumberLookupModal: {
+    phoneNumber: string;
+  } & WithTabId;
+  closePhoneNumberLookupModal: WithTabId | undefined;
   startPasskeyRegistration: WithTabId | undefined;
   deletePasskey: {
     id: string;

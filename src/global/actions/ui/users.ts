@@ -93,3 +93,10 @@ addActionHandler('openEditRankModal', (global, actions, payload): ActionReturnTy
 addTabStateResetterAction('closeEditRankModal', 'editRankModal');
 
 addTabStateResetterAction('closeSafetyNumberModal', 'safetyNumberModal');
+
+addActionHandler('openPhoneNumberLookupModal', (global, actions, payload): ActionReturnType => {
+  const { phoneNumber, tabId = getCurrentTabId() } = payload;
+  return updateTabState(global, { phoneNumberLookupModal: { phoneNumber } }, tabId);
+});
+
+addTabStateResetterAction('closePhoneNumberLookupModal', 'phoneNumberLookupModal');
