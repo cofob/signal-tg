@@ -1589,6 +1589,10 @@ export interface ActionPayloads {
   } & WithTabId;
   closeSafetyNumberModal: WithTabId | undefined;
   toggleSafetyNumberVerified: WithTabId | undefined;
+  checkKeyTransparency: WithTabId | undefined;
+  cancelKeyTransparencyCheck: WithTabId | undefined;
+  loadKeyTransparencySelfStatus: undefined;
+  runKeyTransparencySelfCheck: undefined;
   openSafetyNumberChangeModal: {
     chatId: string;
     messageId: number;

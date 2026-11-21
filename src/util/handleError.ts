@@ -1,5 +1,6 @@
 import { DEBUG } from '../config';
 import { isCurrentTabMaster } from './establishMultitabRole';
+import { getLoggableError } from './maskSensitiveText';
 import { throttle } from './schedulers';
 
 const DEBUG_ALERT_MSG = 'Shoot!\nSomething went wrong, please see the error details in Dev Tools Console.';
@@ -40,7 +41,7 @@ const throttleError = throttle((err) => {
 
 export function handleError(err: Error) {
   // eslint-disable-next-line no-console
-  console.error(err);
+  console.error(getLoggableError(err));
   if (DEBUG && ARE_ERROR_ALERTS_ENABLED) {
     throttleError(err);
   }

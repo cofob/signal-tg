@@ -161,7 +161,15 @@ type Items = {
   isNotificationProfileSyncDisabled: boolean;
   // Receipts for messages and stories of ours that are not stored yet, oldest first (`MessageProcessor`)
   earlyReceipts: EarlyReceiptRecord[];
+  // Key transparency (`keytrans/KeyTransparency.ts`): the serialized `StoredTreeHead` of the last distinguished tree
+  // head, the result of our last self check, and when it ran by the device clock
+  keyTransparencyDistinguished: Uint8Array<ArrayBuffer>;
+  keyTransparencySelfHealth: KeyTransparencySelfHealth;
+  keyTransparencyLastSelfCheck: number;
 };
+
+/** `intermittent` is a first failed verification, which the self check repeats a day later before it reports `fail` */
+export type KeyTransparencySelfHealth = 'ok' | 'intermittent' | 'fail';
 
 /** A delivery, read or viewed receipt that arrived before the message or story it names */
 export type EarlyReceiptRecord = {
@@ -374,6 +382,15 @@ export default class SignalStore {
 
   removeKyberPreKey(ourServiceId: string, id: number) {
     return this.db.del(`kyberPreKey:${ourServiceId}:${id}`);
+  }
+
+  /** The serialized `StoredAccountData` that key transparency keeps for `aci` */
+  getKeyTransparencyAccountData(aci: string) {
+    return this.db.get<Uint8Array<ArrayBuffer>>(`keyTransparency:${aci}`);
+  }
+
+  setKeyTransparencyAccountData(aci: string, data: Uint8Array<ArrayBuffer>) {
+    return this.db.set(`keyTransparency:${aci}`, data);
   }
 
   getSenderKey(key: string) {

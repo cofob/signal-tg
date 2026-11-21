@@ -7,6 +7,7 @@ members = [
     "rust/core",
     "rust/crypto",
     "rust/debug",
+    "rust/keytrans",
     "rust/message-backup",
     "rust/message-backup/macros",
     "rust/poksho",

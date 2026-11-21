@@ -8,6 +8,7 @@ import { downloadGroupAvatar } from '../../../lib/signal/groups/fetchGroup';
 import { downloadProfileAvatar } from '../../../lib/signal/profiles/fetchProfile';
 import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import * as cacheApi from '../../../util/cacheApi';
+import maskSensitiveText, { getLoggableError } from '../../../util/maskSensitiveText';
 import {
   parseAttachmentMediaId, parseStoryMediaId, PREVIEW_SLOT, STICKER_SLOT,
 } from '../builders/media';
@@ -46,7 +47,7 @@ export async function downloadMedia(params: DownloadMediaParams, onProgress?: Ap
     // Media the CDN no longer has is expected, and the message shows it as unavailable
     if (DEBUG && !(err instanceof AttachmentUnavailableError)) {
       // eslint-disable-next-line no-console
-      console.warn('[signal] Media download failed', params.url, err);
+      console.warn('[signal] Media download failed', maskSensitiveText(params.url), getLoggableError(err));
     }
     return undefined;
   }

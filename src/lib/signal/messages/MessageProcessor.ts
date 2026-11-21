@@ -195,6 +195,8 @@ type MessageProcessorEvents = {
   onStickerPacksChange?(ids: string[]): void;
   // The notification profiles, the one that is on, or the manual override changed
   onNotificationProfilesChange?(state: NotificationProfilesState): void;
+  // Our username or phone number discoverability changed on another device, which key transparency has to learn
+  onOwnIdentifierChange?(identifier: 'username' | 'phoneNumberDiscoverability'): void;
 };
 
 type StickerPackState = { isInstalled: true; position?: number } | { uninstalledAt: number };
@@ -2086,7 +2088,7 @@ export default class MessageProcessor {
             : self.avatarPath,
         });
         const { usernameLink } = accountRecord;
-        await this.client.updateAccount({
+        const updatedAccount = await this.client.updateAccount({
           ...omitAccountChanges({
             isReadReceiptsEnabled: accountRecord.readReceipts,
             isTypingIndicatorsEnabled: accountRecord.typingIndicators,
@@ -2104,6 +2106,9 @@ export default class MessageProcessor {
             isStoryViewReceiptsEnabled: getOptionalBool(accountRecord.storyViewReceiptsEnabled),
           }, accountChanges),
         });
+        if (Boolean(account.isPhoneNumberUnlisted) !== Boolean(updatedAccount.isPhoneNumberUnlisted)) {
+          this.events.onOwnIdentifierChange?.('phoneNumberDiscoverability');
+        }
         if (accountRecord.storiesDisabled && !accountChanges.has('storiesDisabled')) await this.removeAllStories();
         notificationProfileAccount = {
           override: parseNotificationProfileOverride(accountRecord),
@@ -2113,6 +2118,7 @@ export default class MessageProcessor {
         const username = accountRecord.username || undefined;
         if (!accountChanges.has('username') && self.username !== username) {
           await this.putConversation({ ...await this.ensurePrivateConversation(account.aci), username });
+          this.events.onOwnIdentifierChange?.('username');
         }
         // Signal Desktop `mergeAccountRecord`: the primary device rotates the profile key, linked devices follow it
         const { profileKey } = accountRecord;

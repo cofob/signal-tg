@@ -252,3 +252,216 @@ impl Reply {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::server::config::OriginPolicy;
+    use telesignal_tunnel::limits::LimitConfig;
+
+    const KEY: &str = "dGhlIHNhbXBsZSBub25jZQ==";
+    const TARGET: &str = "/tunnel?host=chat.signal.org&port=443";
+
+    fn build_head(target: &str, origins: &[&str]) -> String {
+        let mut head = format!(
+            "GET {target} HTTP/1.1\r\nHost: tunnel.example\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: {KEY}\r\n"
+        );
+        for origin in origins {
+            let _ = write!(head, "Origin: {origin}\r\n");
+        }
+        head.push_str("\r\n");
+        head
+    }
+
+    fn parse(head: &str) -> Request<()> {
+        let parsed = parse_request(head.as_bytes());
+        let (length, request) = parsed.ok().flatten().unwrap();
+        assert_eq!(length, head.len());
+        request
+    }
+
+    fn get_target_of(query: &str) -> Result<&'static str, StatusCode> {
+        get_target(Some(query)).map_err(|reply| reply.status)
+    }
+
+    fn build_config(origins: OriginPolicy, is_no_origin_allowed: bool) -> Config {
+        Config {
+            listen: "127.0.0.1:0".parse().unwrap(),
+            origins,
+            is_no_origin_allowed,
+            upstream_proxy: None,
+            should_trust_proxy: false,
+            should_log_client_ips: false,
+            limits: LimitConfig {
+                max_tunnels: 1,
+                max_tunnels_per_ip: 1,
+                new_tunnels_per_ip_per_minute: 1,
+                bandwidth_per_ip: 1,
+                bandwidth_burst_per_ip: 1,
+                hourly_bytes_per_ip: None,
+                ban_after_violations: None,
+                ban_window: Duration::ZERO,
+                ban_duration: Duration::ZERO,
+                max_tracked_ips: 1,
+            },
+            max_handshakes: 1,
+            max_request_head_bytes: 1,
+            max_message_bytes: 1,
+            handshake_timeout: Duration::ZERO,
+            connect_timeout: Duration::ZERO,
+            idle_timeout: Duration::ZERO,
+        }
+    }
+
+    fn get_status(result: Result<TunnelRequest, Reply>) -> Option<StatusCode> {
+        result.err().map(|reply| reply.status)
+    }
+
+    #[test]
+    fn accepts_allowlisted_targets_on_port_443() {
+        assert_eq!(
+            get_target_of("host=chat.signal.org&port=443"),
+            Ok("chat.signal.org")
+        );
+        assert_eq!(
+            get_target_of("port=443&host=cdn3.signal.org&ignored=1"),
+            Ok("cdn3.signal.org")
+        );
+    }
+
+    #[test]
+    fn refuses_other_targets() {
+        for query in [
+            "",
+            "host=chat.signal.org",
+            "port=443",
+            "host=chat.signal.org&port=80",
+            "host=chat.signal.org&port=8443",
+            "host=chat.signal.org&port=%34%34%33",
+            "host=chat.signal.org&port=+443",
+            "host=chat.signal.org&port=443.0",
+            "host=chat.signal.org&port=",
+            "host=example.com&port=443",
+            "host=127.0.0.1&port=443",
+            "host=%5B::1%5D&port=443",
+            "host=CHAT.SIGNAL.ORG&port=443",
+            "host=chat.signal.org.&port=443",
+            "host=chat.signal.org:443&port=443",
+            "host=chat%2Esignal.org&port=443",
+            "host=chat.signal.org%00&port=443",
+            "host=chat.signal.org&host=example.com&port=443",
+            "host=example.com&host=chat.signal.org&port=443",
+            "host=chat.signal.org&port=443&port=80",
+        ] {
+            assert!(get_target_of(query).is_err(), "accepted {query:?}");
+        }
+        assert!(get_target(None).is_err());
+    }
+
+    #[test]
+    fn routes_only_get_requests_to_known_paths() {
+        let route_of = |line: &str| route(&parse(&format!("{line} HTTP/1.1\r\n\r\n")));
+        assert!(matches!(route_of("GET /tunnel?host=a"), Ok(Route::Tunnel)));
+        assert!(matches!(route_of("GET /health"), Ok(Route::Health)));
+        for line in [
+            "GET /",
+            "GET /tunnel/",
+            "GET //tunnel",
+            "GET /Tunnel",
+            "POST /tunnel",
+            "CONNECT chat.signal.org:443",
+        ] {
+            assert!(route_of(line).is_err(), "routed {line:?}");
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_request_heads() {
+        assert!(matches!(
+            parse_request(b"GET /tunnel HTTP/1.1\r\nHost"),
+            Ok(None)
+        ));
+        assert!(parse_request(b"\x16\x03\x01\x00\x05hello").is_err());
+        assert!(parse_request(b"GET /tunnel HTTP/1.1\r\nBad Header: x\r\n\r\n").is_err());
+        let many = format!("GET /tunnel HTTP/1.1\r\n{}\r\n", "A: b\r\n".repeat(65));
+        assert!(matches!(
+            parse_request(many.as_bytes()),
+            Err(HeadError::TooLarge)
+        ));
+    }
+
+    #[test]
+    fn matches_origins_exactly() {
+        let loopback = OriginPolicy::Loopback;
+        for origin in [
+            "http://localhost",
+            "http://localhost:1234",
+            "http://127.0.0.1:8080",
+            "http://[::1]:5173",
+        ] {
+            assert!(loopback.is_allowed(origin), "refused {origin:?}");
+        }
+        for origin in [
+            "",
+            "null",
+            "https://localhost:1234",
+            "http://localhost.evil.example",
+            "http://localhost:1234@evil.example",
+            "http://localhost:0",
+            "http://localhost:99999",
+            "http://localhostevil",
+            "http://127.0.0.1.evil.example",
+            "http://evil.example/http://localhost",
+            "http://localhost:1234/",
+            "tauri://localhost",
+        ] {
+            assert!(!loopback.is_allowed(origin), "accepted {origin:?}");
+        }
+
+        let exact = OriginPolicy::Exact(["https://app.example".to_owned()].into());
+        assert!(exact.is_allowed("https://app.example"));
+        for origin in [
+            "https://app.example/",
+            "https://app.example:443",
+            "https://APP.example",
+            "http://app.example",
+            "https://app.example.evil.example",
+            "https://evil.example",
+        ] {
+            assert!(!exact.is_allowed(origin), "accepted {origin:?}");
+        }
+    }
+
+    #[test]
+    fn requires_an_allowed_origin_for_the_upgrade() {
+        let strict = build_config(OriginPolicy::Loopback, false);
+        let relaxed = build_config(OriginPolicy::Loopback, true);
+        let check = |config: &Config, target: &str, origins: &[&str]| {
+            check_tunnel_request(&parse(&build_head(target, origins)), config)
+        };
+
+        let tunnel = check(&strict, TARGET, &["http://localhost:1234"]);
+        assert_eq!(
+            tunnel.ok().map(|tunnel| tunnel.host),
+            Some("chat.signal.org")
+        );
+        assert_eq!(
+            get_status(check(&strict, TARGET, &["https://evil.example"])),
+            Some(StatusCode::FORBIDDEN)
+        );
+        assert_eq!(
+            get_status(check(&strict, TARGET, &[])),
+            Some(StatusCode::FORBIDDEN)
+        );
+        // Without `Origin`, only non-browser clients connect: that is opt-in
+        assert!(check(&relaxed, TARGET, &[]).is_ok());
+        assert!(check(&relaxed, TARGET, &["https://evil.example"]).is_err());
+        // Two `Origin` headers are refused even when one of them is allowed
+        let origins = ["http://localhost", "https://evil.example"];
+        assert!(check(&strict, TARGET, &origins).is_err());
+        // A host outside the allowlist is refused even with a good `Origin`
+        let target = "/tunnel?host=example.com&port=443";
+        assert!(check(&strict, target, &["http://localhost:1234"]).is_err());
+    }
+}
