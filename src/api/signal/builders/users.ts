@@ -35,6 +35,7 @@ export function buildApiUser(conversation: ConversationRecord, selfAci: string):
     hasUsername: Boolean(conversation.username),
     avatarPhotoId: getAvatarPhotoId(conversation),
     color: buildAvatarColor(conversation),
+    areStoriesHidden: conversation.isStoryHidden || undefined,
   };
 }
 

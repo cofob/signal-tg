@@ -17,7 +17,7 @@ import { getServerTime } from '../../util/serverTime';
 import { updateReactionCount } from '../helpers';
 import {
   selectIsChatWithSelf,
-  selectPeer, selectPeerStories, selectPeerStory, selectTabState, selectUser,
+  selectPeer, selectPeerStories, selectPeerStory, selectTabState,
 } from '../selectors';
 import { updatePeer } from './peers';
 import { updateTabState } from './tabs';
@@ -120,14 +120,9 @@ export function addStoriesForPeer<T extends GlobalState>(
     },
   };
 
-  if (selectIsChatWithSelf(global, peerId)
-    || selectUser(global, peerId)?.isContact
-    || peerId === global.appConfig.storyChangelogUserId) {
-    global = updatePeerLastUpdatedAt(global, peerId);
-    global = updateOrderedStoriesPeerIds(global, [peerId]);
-  }
-
-  return global;
+  // Signal stores only stories of connections and groups, so every peer with stories joins the ribbon
+  global = updatePeerLastUpdatedAt(global, peerId);
+  return updateOrderedStoriesPeerIds(global, [peerId]);
 }
 
 export function updateStoriesForPeer<T extends GlobalState>(
@@ -570,6 +565,20 @@ function updatePeerLastUpdatedAt<T extends GlobalState>(global: T, peerId: strin
           lastUpdatedAt,
         },
       },
+    },
+  };
+}
+
+/** Signal distribution lists and stories settings */
+export function updateStoriesState<T extends GlobalState>(
+  global: T,
+  update: Partial<Pick<GlobalState['stories'], 'distributionLists' | 'settings'>>,
+): T {
+  return {
+    ...global,
+    stories: {
+      ...global.stories,
+      ...update,
     },
   };
 }

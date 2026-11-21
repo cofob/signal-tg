@@ -20,6 +20,7 @@ import { unique } from '../../../util/iteratees';
 import { parseSearchResultKey, type SearchResultKey } from '../../../util/keys/searchResultKey';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { throttle } from '../../../util/schedulers';
+import { parseSignalLink } from '../../../util/signalLinks';
 import { renderMessageSummary } from '../../common/helpers/renderMessageText';
 import sortChatIds from '../../common/helpers/sortChatIds';
 
@@ -44,6 +45,7 @@ import ChatMessage from './ChatMessage';
 import DateSuggest from './DateSuggest';
 import LeftSearchResultChat from './LeftSearchResultChat';
 import RecentContacts from './RecentContacts';
+import SignalLinkResult from './SignalLinkResult';
 
 import './ChatResults.scss';
 
@@ -300,6 +302,12 @@ const ChatResults: FC<OwnProps & StateProps> = ({
     // eslint-disable-next-line react-hooks-static-deps/exhaustive-deps
   }, [searchContext]);
 
+  // A Signal link that was pasted can be opened from the results
+  const signalLink = useMemo(() => {
+    const link = searchQuery && !isChannelList ? parseSignalLink(searchQuery) : undefined;
+    return link?.type === 'invalid' ? undefined : link;
+  }, [searchQuery, isChannelList]);
+
   const handleClickShowMoreLocal = useCallback(() => {
     setShouldShowMoreLocal(!shouldShowMoreLocal);
   }, [shouldShowMoreLocal]);
@@ -330,7 +338,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
   const actualFoundIds = foundMessages;
 
   const nothingFound = searchContext === 'all' && fetchingStatus && !fetchingStatus.chats && !fetchingStatus.messages
-    && !localResults.length && !globalResults.length && !actualFoundIds.length;
+    && !signalLink && !localResults.length && !globalResults.length && !actualFoundIds.length;
   const isMessagesFetching = fetchingStatus?.messages;
 
   const shouldRenderTopPeers = !searchQuery && !searchDate && !isChannelList;
@@ -359,6 +367,7 @@ const ChatResults: FC<OwnProps & StateProps> = ({
           />
         </div>
       )}
+      {signalLink && <SignalLinkResult link={signalLink} query={searchQuery!} />}
       {nothingFound && (
         <NothingFound
           withSticker

@@ -172,6 +172,8 @@ const SettingsHeader = ({
 
       case SettingsScreens.PrivacyBlockedUsers:
         return <h3>{lang('BlockedUsers')}</h3>;
+      case SettingsScreens.Stories:
+        return <h3>{lang('StoriesSettingTitle')}</h3>;
 
       case SettingsScreens.PasscodeDisabled:
       case SettingsScreens.PasscodeEnabled:

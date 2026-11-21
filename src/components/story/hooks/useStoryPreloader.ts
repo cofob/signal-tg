@@ -92,6 +92,10 @@ function getPreloadMediaHashes(peerId: string, storyId: number) {
     }
 
     const isVideo = Boolean(story.content.video);
+    // Text stories have no media to preload
+    if (!isVideo && !story.content.photo) {
+      return;
+    }
 
     // Media
     mediaHashes.push({

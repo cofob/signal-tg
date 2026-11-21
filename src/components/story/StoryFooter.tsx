@@ -35,7 +35,9 @@ const StoryFooter = ({
   const {
     views, isOut, peerId, id: storyId, sentReaction,
   } = story;
-  const { viewsCount, forwardsCount, reactionsCount } = views || {};
+  const {
+    viewsCount, forwardsCount, reactionsCount, repliesCount,
+  } = views || {};
   const isChannel = !isUserId(peerId);
 
   const isSentStoryReactionHeart = sentReaction && isSameReaction(sentReaction, HEART_REACTION);
@@ -75,7 +77,7 @@ const StoryFooter = ({
     });
   });
 
-  if (!viewsCount) {
+  if (!viewsCount && !reactionsCount && !repliesCount) {
     return (
       <div className={buildClassName(styles.root, className)}>
         {lang('NobodyViewed')}
@@ -109,7 +111,13 @@ const StoryFooter = ({
           </span>
         ) : (
           <span className={styles.views}>
-            {lang('Views', { count: lang.number(viewsCount) }, { pluralValue: viewsCount })}
+            {lang('Views', { count: lang.number(viewsCount ?? 0) }, { pluralValue: viewsCount ?? 0 })}
+          </span>
+        )}
+        {Boolean(repliesCount) && (
+          <span className={styles.reactionCount}>
+            <Icon name="story-reply" className={styles.replyCountIcon} />
+            {repliesCount}
           </span>
         )}
         {Boolean(reactionsCount) && !isChannel && (

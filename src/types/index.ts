@@ -267,6 +267,7 @@ export enum SettingsScreens {
   CustomEmoji,
   KeyboardShortcuts,
   SignalProxy,
+  Stories,
   Username,
   SignalPin,
   SignalPinNew,

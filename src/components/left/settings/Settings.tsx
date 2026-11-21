@@ -43,6 +43,7 @@ import SettingsSignalPin from './SettingsSignalPin';
 import SettingsSignalPinForm from './SettingsSignalPinForm';
 import SettingsSignalProxy from './SettingsSignalProxy';
 import SettingsStickers from './SettingsStickers';
+import SettingsStories from './SettingsStories';
 import SettingsUsername from './SettingsUsername';
 
 import './Settings.scss';
@@ -69,6 +70,7 @@ const FOLDERS_SCREENS = [
 const PRIVACY_SCREENS = [
   SettingsScreens.AutoDeleteMessages,
   SettingsScreens.PrivacyBlockedUsers,
+  SettingsScreens.Stories,
   SettingsScreens.SignalPin,
   SettingsScreens.SignalPinNew,
   SettingsScreens.SignalPinConfirm,
@@ -373,6 +375,13 @@ const Settings = ({
       case SettingsScreens.PrivacyBlockedUsers:
         return (
           <SettingsPrivacyBlockedUsers
+            isActive={isScreenActive}
+            onReset={handleReset}
+          />
+        );
+      case SettingsScreens.Stories:
+        return (
+          <SettingsStories
             isActive={isScreenActive}
             onReset={handleReset}
           />

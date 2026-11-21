@@ -25,6 +25,7 @@ import type {
   ApiMessageEntity,
   ApiMessageReadMetric,
   ApiMessageSearchContext,
+  ApiNewStory,
   ApiNotification,
   ApiNotifyPeerType,
   ApiPhoto,
@@ -40,6 +41,8 @@ import type {
   ApiSticker,
   ApiStickerSet,
   ApiStickerSetInfo,
+  ApiStoryDistributionList,
+  ApiStorySettings,
   ApiTopPeerCategory,
   ApiUpdate,
   ApiVideo,
@@ -237,6 +240,8 @@ export interface ActionPayloads {
     phoneNumber: string;
   } & WithTabId;
   closePhoneNumberLookupModal: WithTabId | undefined;
+  openSignalLinkModal: NonNullable<TabState['signalLinkModal']> & WithTabId;
+  closeSignalLinkModal: WithTabId | undefined;
   openSettingsConfirmation: {
     confirmation: SettingsConfirmation;
   } & WithTabId;
@@ -1385,6 +1390,22 @@ export interface ActionPayloads {
     reaction?: ApiReaction;
     shouldAddToRecent?: boolean;
   } & WithTabId;
+  openStoryComposer: WithTabId | undefined;
+  closeStoryComposer: WithTabId | undefined;
+  sendStory: {
+    story: ApiNewStory;
+    listIds: string[];
+    groupIds: string[];
+  } & WithTabId;
+  loadStoryDistributionLists: undefined;
+  saveStoryDistributionList: {
+    list: Omit<ApiStoryDistributionList, 'id'> & { id?: string };
+  };
+  deleteStoryDistributionList: {
+    id: string;
+  };
+  loadStorySettings: undefined;
+  updateStorySettings: Partial<ApiStorySettings>;
   loadStoryAlbums: {
     peerId: string;
   };

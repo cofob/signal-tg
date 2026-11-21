@@ -31,6 +31,8 @@ import type {
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
+  ApiStoryDistributionList,
+  ApiStorySettings,
   ApiTopPeerCategory,
   ApiUpdateAuthorizationStateType,
   ApiUpdateConnectionStateType,
@@ -245,6 +247,9 @@ export type GlobalState = {
       archived: string[];
     };
     albumsByPeerId: Record<string, ApiStoryAlbum[]>;
+    // Signal: My Story and custom distribution lists, and the stories settings of the account
+    distributionLists?: ApiStoryDistributionList[];
+    settings?: ApiStorySettings;
   };
 
   groupCalls: {

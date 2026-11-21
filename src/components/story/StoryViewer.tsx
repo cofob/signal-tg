@@ -30,7 +30,6 @@ import useStoryProps from './hooks/useStoryProps';
 import Button from '../ui/Button';
 import ShowTransition from '../ui/ShowTransition';
 import StoryDeleteConfirmModal from './StoryDeleteConfirmModal';
-import StorySettings from './StorySettings';
 import StorySlides from './StorySlides';
 import StoryViewModal from './StoryViewModal';
 
@@ -46,7 +45,6 @@ interface StateProps {
   origin?: StoryViewerOrigin;
   shouldSkipHistoryAnimations?: boolean;
   withAnimation?: boolean;
-  isPrivacyModalOpen?: boolean;
 }
 
 function StoryViewer({
@@ -57,9 +55,8 @@ function StoryViewer({
   origin,
   shouldSkipHistoryAnimations,
   withAnimation,
-  isPrivacyModalOpen,
 }: StateProps) {
-  const { closeStoryViewer, closeStoryPrivacyEditor, reportStory } = getActions();
+  const { closeStoryViewer } = getActions();
 
   const lang = useLang();
   const closeLabel = useKeyboardShortcutHint(lang('Close'), 'closeStoryViewer');
@@ -107,11 +104,6 @@ function StoryViewer({
   const handleCloseDeleteModal = useLastCallback(() => {
     closeDeleteModal();
     setStoryToDelete(undefined);
-  });
-
-  const openMessageReport = useLastCallback(() => {
-    if (!storyId) return;
-    reportStory({ storyId, peerId });
   });
 
   useEffect(() => (isOpen ? captureEscKeyListener(() => {
@@ -163,7 +155,6 @@ function StoryViewer({
       <StorySlides
         isOpen={isOpen}
         isDeleteModalOpen={isDeleteModalOpen}
-        onReport={openMessageReport}
         onClose={handleClose}
         onDelete={handleOpenDeleteModal}
       />
@@ -174,7 +165,6 @@ function StoryViewer({
         onClose={handleCloseDeleteModal}
       />
       <StoryViewModal />
-      <StorySettings isOpen={isPrivacyModalOpen} onClose={closeStoryPrivacyEditor} />
     </ShowTransition>
   );
 }
@@ -182,7 +172,7 @@ function StoryViewer({
 export default memo(withGlobal((global): Complete<StateProps> => {
   const {
     shouldSkipHistoryAnimations, storyViewer: {
-      storyId, peerId, isPrivacyModalOpen, origin,
+      storyId, peerId, origin,
     },
   } = selectTabState(global);
   const story = peerId && storyId ? selectPeerStory(global, peerId, storyId) : undefined;
@@ -196,6 +186,5 @@ export default memo(withGlobal((global): Complete<StateProps> => {
     story,
     origin,
     withAnimation,
-    isPrivacyModalOpen,
   };
 })(StoryViewer));

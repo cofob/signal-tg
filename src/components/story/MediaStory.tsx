@@ -21,7 +21,6 @@ import useMedia from '../../hooks/useMedia';
 import Icon from '../common/icons/Icon';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
-import MediaAreaOverlay from './mediaArea/MediaAreaOverlay';
 
 import styles from './MediaStory.module.scss';
 
@@ -158,7 +157,6 @@ function MediaStory({
         {thumbUrl && (
           <img src={thumbUrl} alt="" className={styles.media} draggable={false} />
         )}
-        {isFullyLoaded && <MediaAreaOverlay story={story} />}
         {isProtected && <span className="protector" />}
       </div>
       {contextMenuAnchor !== undefined && (

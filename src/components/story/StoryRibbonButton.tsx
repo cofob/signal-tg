@@ -31,13 +31,14 @@ function StoryRibbonButton({ peer, isArchived }: OwnProps) {
     openChatWithInfo,
     openStoryViewer,
     toggleStoriesHidden,
+    openStoryComposer,
   } = getActions();
 
   const lang = useLang();
   const ref = useRef<HTMLDivElement>();
 
   const isSelf = 'isSelf' in peer && peer.isSelf;
-  const isChannel = !isUserId(peer.id);
+  const isGroup = !isUserId(peer.id);
 
   useStoryPreloader(peer.id);
 
@@ -63,12 +64,8 @@ function StoryRibbonButton({ peer, isArchived }: OwnProps) {
     handleBeforeContextMenu(e);
   });
 
-  const handleSavedStories = useLastCallback(() => {
-    openChatWithInfo({ id: peer.id, shouldReplaceHistory: true, profileTab: 'stories' });
-  });
-
-  const handleArchivedStories = useLastCallback(() => {
-    openChatWithInfo({ id: peer.id, shouldReplaceHistory: true, profileTab: 'storiesArchive' });
+  const handleNewStory = useLastCallback(() => {
+    openStoryComposer();
   });
 
   const handleOpenChat = useLastCallback(() => {
@@ -118,33 +115,20 @@ function StoryRibbonButton({ peer, isArchived }: OwnProps) {
           onCloseAnimationEnd={handleContextMenuHide}
         >
           {isSelf ? (
-            <>
-              <MenuItem onClick={handleSavedStories} icon="play-story">
-                {lang('StoryMenuSavedStories')}
-              </MenuItem>
-              <MenuItem onClick={handleArchivedStories} icon="archive">
-                {lang('StoryMenuArchivedStories')}
-              </MenuItem>
-            </>
+            <MenuItem onClick={handleNewStory} icon="add">
+              {lang('StoryNew')}
+            </MenuItem>
           ) : (
             <>
-              {!isChannel && (
-                <MenuItem onClick={handleOpenChat} icon="message">
-                  {lang('StoryMenuSendMessage')}
-                </MenuItem>
-              )}
-              {isChannel ? (
-                <MenuItem onClick={handleOpenProfile} icon="channel">
-                  {lang('StoryMenuViewChannel')}
-                </MenuItem>
-              ) : (
-                <MenuItem onClick={handleOpenProfile} icon="user">
-                  {lang('StoryMenuViewProfile')}
-                </MenuItem>
-              )}
+              <MenuItem onClick={handleOpenChat} icon="message">
+                {lang('StoryMenuSendMessage')}
+              </MenuItem>
+              <MenuItem onClick={handleOpenProfile} icon={isGroup ? 'group' : 'user'}>
+                {lang(isGroup ? 'StoryMenuViewGroup' : 'StoryMenuViewProfile')}
+              </MenuItem>
               <MenuItem
                 onClick={handleArchivePeer}
-                icon={isArchived ? 'unarchive' : 'archive'}
+                icon={isArchived ? 'eye-outline' : 'eye-crossed-outline'}
               >
                 {lang(isArchived ? 'StoryMenuUnarchivePeer' : 'StoryMenuArchivePeer')}
               </MenuItem>

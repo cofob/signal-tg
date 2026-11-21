@@ -1,6 +1,7 @@
 import type {
   ApiAudio,
   ApiDocument,
+  ApiFormattedText,
   ApiMessage,
   ApiPhoto,
   ApiReaction,
@@ -9,6 +10,7 @@ import type {
   ApiStoryForwardInfo,
   MediaContent,
 } from './messages';
+import type { ApiAttachment } from './misc';
 import type { ApiPrivacySettings } from './settings';
 
 export interface ApiStory {
@@ -33,13 +35,55 @@ export interface ApiStory {
   forwardInfo?: ApiStoryForwardInfo;
   fromId?: string;
   music?: ApiAudio;
+  // Signal text stories: the text on a colored background, shown instead of media
+  textStory?: ApiTextStory;
+  // Signal distribution list stories may forbid replies
+  noReplies?: true;
 }
+
+export type ApiTextStoryStyle = 'default' | 'regular' | 'bold' | 'serif' | 'script' | 'condensed';
+
+export interface ApiTextStory {
+  text?: string;
+  style: ApiTextStoryStyle;
+  // CSS colors and the CSS background (a color or a linear gradient)
+  textColor: string;
+  textBackgroundColor?: string;
+  background: string;
+  linkPreview?: { url: string; title?: string; description?: string };
+}
+
+/** A Signal story distribution list: My Story with its block or allow list, or a custom list */
+export interface ApiStoryDistributionList {
+  id: string;
+  name: string;
+  memberIds: string[];
+  areRepliesAllowed: boolean;
+  isBlockList: boolean;
+  isMyStory?: true;
+}
+
+export interface ApiStorySettings {
+  areStoriesDisabled?: boolean;
+  areViewReceiptsEnabled: boolean;
+}
+
+/** What the story composer sends: a text story with a preset background, or one photo or video with a caption */
+export type ApiNewStory = {
+  text?: ApiFormattedText;
+  textStyle?: ApiTextStoryStyle;
+  backgroundIndex?: number;
+  attachment?: ApiAttachment;
+  caption?: ApiFormattedText;
+};
 
 export interface ApiStoryViews {
   hasViewers?: true;
   viewsCount?: number;
   forwardsCount?: number;
   reactionsCount?: number;
+  // Signal: text replies to our story
+  repliesCount?: number;
   reactions?: ApiReactionCount[];
   recentViewerIds?: string[];
 }
@@ -125,7 +169,18 @@ export type ApiStoryView = {
   areStoriesBlocked?: true;
 };
 
-export type ApiTypeStoryView = ApiStoryView | ApiStoryViewPublicForward | ApiStoryViewPublicRepost;
+/** A reply to our story: text, or a reaction without text */
+export type ApiStoryViewReply = {
+  type: 'reply';
+  peerId: string;
+  date: number;
+  text?: ApiFormattedText;
+  reaction?: ApiReaction;
+  isUserBlocked?: true;
+  areStoriesBlocked?: true;
+};
+
+export type ApiTypeStoryView = ApiStoryView | ApiStoryViewPublicForward | ApiStoryViewPublicRepost | ApiStoryViewReply;
 
 export type ApiMediaAreaCoordinates = {
   x: number;

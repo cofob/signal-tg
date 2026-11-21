@@ -166,6 +166,11 @@ export function sendMessageLocal(params: SendMessageParams) {
  * clients send them; other grouped files go one per message.
  */
 export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnProgress) {
+  if (params.replyInfo?.type === 'story') {
+    await sendStoryReply(params);
+    return;
+  }
+
   // The composer sends the items of an album one after another, so each joins the album before its upload starts
   const albumItem = getIsAlbumItem(params) ? joinAlbum(params) : undefined;
   let localMessage: ApiMessage | undefined;
@@ -493,6 +498,33 @@ async function sendWithLocalMessage(conversation: ConversationRecord, init: Data
 }
 
 /**
+ * Replies to the story open in the story viewer, or reacts to it with the emoji of a reaction message. Private replies
+ * arrive in the chat as stored messages; group story replies stay with the story.
+ */
+async function sendStoryReply({
+  replyInfo, text, entities, isReaction, attachment, attachments, sticker, gif, audio, poll, dice, contact, story,
+  richMessage,
+}: SendMessageParams) {
+  if (replyInfo?.type !== 'story') return;
+  // Signal story replies are text or an emoji reaction
+  const hasOtherContent = Boolean(
+    attachment || attachments?.length || sticker || gif || audio || poll || dice || contact || story || richMessage,
+  );
+  if (!text || hasOtherContent) {
+    sendError(SEND_ERROR);
+    return;
+  }
+
+  try {
+    const reply = isReaction ? { emoji: text } : await buildOutgoingBody({ text, entities });
+    await processor.sendStoryReply(replyInfo.storyId, reply);
+  } catch (err) {
+    logError(err);
+    sendError(SEND_ERROR);
+  }
+}
+
+/**
  * Asks the user about recipients whose new safety number kept the message from being sent, who can then send it
  * anyway (`sendMessageAnyway`) or check the safety number first
  */
@@ -614,7 +646,7 @@ async function buildOutgoingContact({
 }
 
 /** Mention entities of users become Signal mentions by ACI */
-async function buildOutgoingBody(text: ApiFormattedText) {
+export async function buildOutgoingBody(text: ApiFormattedText) {
   const aciByUserId = new Map<string, string>();
   for (const entity of text.entities ?? []) {
     if (entity.type !== ApiMessageEntityTypes.MentionName) continue;

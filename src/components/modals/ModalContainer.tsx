@@ -10,6 +10,7 @@ import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import useShowTransition from '../../hooks/useShowTransition';
 
 import SafeLinkModal from '../main/SafeLinkModal.async';
+import StoryComposerModal from '../story/StoryComposerModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
@@ -36,6 +37,7 @@ import ReportModal from './reportModal/ReportModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
+import SignalLinkModal from './signalLink/SignalLinkModal';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
@@ -56,6 +58,7 @@ type ModalKey = keyof Pick<TabState,
   'safetyNumberChangeModal' |
   'recoveryKeyModal' |
   'quickPreview' |
+  'storyComposerModal' |
   'isAudioPlaylistModalOpen' |
   'birthdaySetupModal' |
   'isQuickChatPickerOpen' |
@@ -65,11 +68,12 @@ type ModalKey = keyof Pick<TabState,
   'autoDeleteTimerModal' |
   'settingsConfirmation' |
   'joinGroupCallModal' |
-  'phoneNumberLookupModal'
+  'phoneNumberLookupModal' |
+  'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
   | 'settingsConfirmation' | 'joinGroupCallModal'
-  | 'phoneNumberLookupModal';
+  | 'phoneNumberLookupModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
 type ModalStateProps = {
@@ -140,6 +144,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   safetyNumberChangeModal: SafetyNumberChangeModal,
   recoveryKeyModal: RecoveryKeyModal,
   quickPreview: QuickPreviewModal,
+  storyComposerModal: StoryComposerModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
   birthdaySetupModal: BirthdaySetupModal,
   isQuickChatPickerOpen: QuickChatPickerModal,
@@ -155,6 +160,7 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   settingsConfirmation: SettingsConfirmationModal,
   joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
+  signalLinkModal: SignalLinkModal,
 };
 
 const LEGACY_MODAL_KEYS = Object.keys(LEGACY_MODALS) as LegacyModalKey[];

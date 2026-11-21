@@ -20,6 +20,7 @@ import {
   updatePeerStoryViews,
   updatePeersWithStories,
   updateSentStoryReaction,
+  updateStoriesState,
   updateStoryViews,
   updateStoryViewsLoading,
 } from '../../reducers';
@@ -186,7 +187,7 @@ addActionHandler('viewStory', async (global, actions, payload): Promise<void> =>
 });
 
 addActionHandler('deleteStory', async (global, actions, payload): Promise<void> => {
-  const { peerId, storyId } = payload;
+  const { peerId, storyId, tabId = getCurrentTabId() } = payload;
 
   const peer = selectPeer(global, peerId);
   if (!peer) {
@@ -196,12 +197,16 @@ addActionHandler('deleteStory', async (global, actions, payload): Promise<void> 
   const result = await callApi('deleteStory', { peer, storyId });
 
   if (!result) {
+    actions.showNotification({ message: { key: 'StoryDeleteFailed' }, tabId });
     return;
   }
 
   global = getGlobal();
   global = removePeerStory(global, peerId, storyId);
   setGlobal(global);
+  if (result.isPartial) {
+    actions.showNotification({ message: { key: 'StoryDeletePartial' }, tabId });
+  }
 });
 
 addActionHandler('toggleStoryInProfile', async (global, actions, payload): Promise<void> => {
@@ -654,6 +659,84 @@ addActionHandler('sendStoryReaction', async (global, actions, payload): Promise<
   if (!result) {
     global = updateSentStoryReaction(global, peerId, storyId, previousReaction);
   }
+  setGlobal(global);
+});
+
+addActionHandler('sendStory', async (global, actions, payload): Promise<void> => {
+  const {
+    story, listIds, groupIds, tabId = getCurrentTabId(),
+  } = payload;
+
+  // The composer stays open until the story went out, so a failed story can be sent again
+  global = updateTabState(global, { storyComposerModal: { isSending: true } }, tabId);
+  setGlobal(global);
+  const result = await callApi('sendStory', { story, listIds, groupIds });
+  if (result) {
+    actions.closeStoryComposer({ tabId });
+  } else {
+    global = getGlobal();
+    // A composer closed meanwhile stays closed
+    if (selectTabState(global, tabId).storyComposerModal) {
+      global = updateTabState(global, { storyComposerModal: { isSending: undefined } }, tabId);
+      setGlobal(global);
+    }
+  }
+  actions.showNotification({ message: { key: result ? 'StorySent' : 'StorySendFailed' }, tabId });
+});
+
+addActionHandler('loadStoryDistributionLists', async (global): Promise<void> => {
+  const distributionLists = await callApi('fetchStoryDistributionLists');
+  if (!distributionLists) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, { distributionLists });
+  setGlobal(global);
+});
+
+addActionHandler('saveStoryDistributionList', async (global, actions, payload): Promise<void> => {
+  const saved = await callApi('saveStoryDistributionList', { list: payload.list });
+  if (!saved) return;
+
+  global = getGlobal();
+  const lists = global.stories.distributionLists ?? [];
+  const isNew = !lists.some(({ id }) => id === saved.id);
+  global = updateStoriesState(global, {
+    distributionLists: isNew ? [...lists, saved] : lists.map((list) => (list.id === saved.id ? saved : list)),
+  });
+  setGlobal(global);
+});
+
+addActionHandler('deleteStoryDistributionList', async (global, actions, payload): Promise<void> => {
+  const { id } = payload;
+  const result = await callApi('deleteStoryDistributionList', { id });
+  if (!result) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, {
+    distributionLists: global.stories.distributionLists?.filter((list) => list.id !== id),
+  });
+  setGlobal(global);
+});
+
+addActionHandler('loadStorySettings', async (global): Promise<void> => {
+  const settings = await callApi('fetchStorySettings');
+  if (!settings) return;
+
+  global = getGlobal();
+  global = updateStoriesState(global, { settings });
+  setGlobal(global);
+});
+
+addActionHandler('updateStorySettings', async (global, actions, payload): Promise<void> => {
+  const previous = global.stories.settings;
+  if (previous) {
+    global = updateStoriesState(global, { settings: { ...previous, ...payload } });
+    setGlobal(global);
+  }
+
+  const settings = await callApi('updateStorySettings', payload);
+  global = getGlobal();
+  global = updateStoriesState(global, { settings: settings ?? previous });
   setGlobal(global);
 });
 

@@ -176,6 +176,12 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsBlockedUsers',
   },
   {
+    screen: SettingsScreens.Stories,
+    parent: SettingsScreens.Privacy,
+    titleKey: 'StoriesSettingTitle',
+    keywordsKey: 'SettingsKeywordsStories',
+  },
+  {
     screen: SettingsScreens.PasscodeDisabled,
     parent: SettingsScreens.Privacy,
     titleKey: 'Passcode',
@@ -334,6 +340,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     requires: 'canDisplayAutoarchiveSetting', keywordsKey: 'SettingsKeywordsArchiveAndMute',
   }),
   ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
+  ...buildEntries(SettingsScreens.Stories, [
+    'StoriesSettingEnable', 'StoriesSettingViewReceipts', 'StoryRibbonMyStory', 'StoriesSettingAllowReplies',
+    'StoriesSettingCustomLists', 'StoriesSettingNewList',
+  ]),
 
   ...PRIVACY_VISIBILITY_SCREENS.flatMap(([screen, titleKey]) => [
     ...buildEntries(screen, [titleKey], { isSectionHeader: true }),

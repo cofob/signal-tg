@@ -5,7 +5,6 @@ import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { parseTimestampDuration } from './dates/timestamp';
 import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
-import { parseSignalMeLink } from './signalLinks';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
@@ -105,9 +104,10 @@ type PublicUsernameOrBotLinkBuilderParams = Omit<BuilderParams<PublicUsernameOrB
 
 const RE_TG_SLASHES_PROTOCOL = /^tg:\/\//i;
 
-// Deep links are `tg:` links and `signal.me` links to users; links to Telegram websites stay ordinary external links
+// Deep links are the app's own `tg:` links; links to Telegram websites stay ordinary external links, and Signal's links
+// are handled by `parseSignalLink`
 export function isDeepLink(link: string): boolean {
-  return RE_TG_LINK.test(link) || Boolean(parseSignalMeLink(link));
+  return RE_TG_LINK.test(link);
 }
 
 export function tryParseDeepLink(link: string): DeepLink | undefined {
