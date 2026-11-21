@@ -43,11 +43,7 @@ export function selectRightColumnContentKey<T extends GlobalState>(
 ) {
   const tabState = selectTabState(global, tabId);
 
-  return tabState.editTopicPanel ? (
-    RightColumnContent.EditTopic
-  ) : tabState.createTopicPanel ? (
-    RightColumnContent.CreateTopic
-  ) : tabState.pollResults.messageId ? (
+  return tabState.pollResults.messageId ? (
     RightColumnContent.PollResults
   ) : selectCurrentManagement(global, tabId) ? (
     RightColumnContent.Management
@@ -171,44 +167,12 @@ export function selectChatWallpaperSettings<T extends GlobalState>(
   return settings;
 }
 
-export function selectIsForumPanelOpen<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const tabState = selectTabState(global, tabId);
-
-  return Boolean(tabState.forumPanelChatId) && (
-    tabState.globalSearch.query === undefined || Boolean(tabState.globalSearch.isClosing)
-  );
-}
-
-export function selectIsForumPanelClosed<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return !selectIsForumPanelOpen(global, tabId);
-}
-
 export function selectIsReactionPickerOpen<T extends GlobalState>(
   global: T,
   ...[tabId = getCurrentTabId()]: TabArgs<T>
 ) {
   const { reactionPicker } = selectTabState(global, tabId);
   return Boolean(reactionPicker?.position);
-}
-
-export function selectCommunityPanelId<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectTabState(global, tabId).communityPanelId;
-}
-
-export function selectIsChatListPanelOpen<T extends GlobalState>(
-  global: T,
-  ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  return selectIsForumPanelOpen(global, tabId) || Boolean(selectCommunityPanelId(global, tabId));
 }
 
 export function selectPerformanceSettings<T extends GlobalState>(global: T) {

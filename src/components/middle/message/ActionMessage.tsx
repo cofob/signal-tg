@@ -17,7 +17,6 @@ import type {
   ThreadId,
 } from '../../../types';
 import type { Signal } from '../../../util/signals';
-import { MAIN_THREAD_ID } from '../../../api/types';
 import { MediaViewerOrigin } from '../../../types';
 
 import { MESSAGE_APPEARANCE_DELAY } from '../../../config';
@@ -25,7 +24,6 @@ import { getMessageHtmlId } from '../../../global/helpers';
 import { getMessageReplyInfo } from '../../../global/helpers/replies';
 import {
   selectActionMessageBg,
-  selectChat,
   selectChatMessage,
   selectIsCurrentUserFrozen,
   selectIsInSelectMode,
@@ -33,7 +31,6 @@ import {
   selectSender,
   selectTabState,
 } from '../../../global/selectors';
-import { selectThreadReadState } from '../../../global/selectors/threads';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_ANDROID, IS_FLUID_BACKGROUND_SUPPORTED } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
@@ -61,7 +58,6 @@ import WallpaperPreview from './actions/WallpaperPreview';
 import ContextMenuContainer from './ContextMenuContainer';
 import InlineButtons from './InlineButtons';
 import Reactions from './reactions/Reactions';
-import SimilarChannels from './SimilarChannels';
 
 import styles from './ActionMessage.module.scss';
 
@@ -83,14 +79,11 @@ type StateProps = {
   actionMessageBg: string;
   sender?: ApiPeer;
   currentUserId?: string;
-  isInsideTopic?: boolean;
   isFocused?: boolean;
   focusDirection?: FocusDirection;
   noFocusHighlight?: boolean;
   replyMessage?: ApiMessage;
   isInSelectMode?: boolean;
-  hasUnreadReaction?: boolean;
-  hasUnreadPollVote?: boolean;
   isResizingContainer?: boolean;
   scrollTargetPosition?: ScrollTargetPosition;
   isAccountFrozen?: boolean;
@@ -127,14 +120,11 @@ const ActionMessage = ({
   isLastInList,
   memoFirstUnreadIdRef,
   getIsMessageListReady,
-  isInsideTopic,
   isFocused,
   focusDirection,
   noFocusHighlight,
   replyMessage,
   isInSelectMode,
-  hasUnreadReaction,
-  hasUnreadPollVote,
   isResizingContainer,
   scrollTargetPosition,
   isAccountFrozen,
@@ -147,10 +137,7 @@ const ActionMessage = ({
   const {
     openMediaViewer,
     showNotification,
-    toggleChannelRecommendations,
-    animateUnreadReaction,
     markMentionsRead,
-    markPollVotesRead,
     toggleNoForwards,
   } = getActions();
 
@@ -175,8 +162,6 @@ const ActionMessage = ({
     && (message.date + noForwardsRequestExpirePeriod) <= getServerTime();
   const shouldRenderNoForwardsButtons = action.type === 'noForwardsRequest'
     && !message.isOutgoing && !action.isExpired && !hasNoForwardsRequestExpired;
-
-  const shouldSkipRender = isInsideTopic && action.type === 'topicCreate';
 
   const lang = useLang();
   const { isTouchScreen } = useAppLayout();
@@ -207,7 +192,7 @@ const ActionMessage = ({
     }
   });
 
-  useOnIntersect(ref, !shouldSkipRender ? observeIntersectionForBottom : undefined);
+  useOnIntersect(ref, observeIntersectionForBottom);
 
   useEnsureMessage(
     replyToPeerId || chatId,
@@ -270,24 +255,12 @@ const ActionMessage = ({
     const bottomMarker = ref.current;
     if (!bottomMarker || !isElementInViewport(bottomMarker)) return;
 
-    if (hasUnreadReaction) {
-      animateUnreadReaction({ chatId, messageIds: [id] });
-    }
-
-    if (hasUnreadPollVote) {
-      markPollVotesRead({ chatId, messageIds: [id] });
-    }
-
     if (message.hasUnreadMention) {
       markMentionsRead({ chatId, messageIds: [id] });
     }
   }, [
-    hasUnreadReaction,
-    hasUnreadPollVote,
     chatId,
     id,
-    animateUnreadReaction,
-    markPollVotesRead,
     message.hasUnreadMention,
   ]);
 
@@ -327,11 +300,6 @@ const ActionMessage = ({
         });
         break;
       }
-
-      case 'channelJoined': {
-        toggleChannelRecommendations({ chatId });
-        break;
-      }
     }
   });
 
@@ -346,7 +314,7 @@ const ActionMessage = ({
               observeIntersection={observeIntersectionForLoading}
             />
             <div className={styles.suggestedText}>
-              <ActionMessageText message={message} isInsideTopic={isInsideTopic} />
+              <ActionMessageText message={message} />
             </div>
           </div>
         );
@@ -380,13 +348,6 @@ const ActionMessage = ({
           />
         );
 
-      case 'channelJoined':
-        return (
-          <SimilarChannels
-            chatId={message.chatId}
-          />
-        );
-
       case 'noForwardsRequest':
         return (
           <NoForwardsRequest
@@ -398,12 +359,8 @@ const ActionMessage = ({
         return undefined;
     }
   }, [
-    action, message, observeIntersectionForLoading, isInsideTopic,
+    action, message, observeIntersectionForLoading,
   ]);
-
-  if ((isInsideTopic && action.type === 'topicCreate') || action.type === 'phoneCall') {
-    return undefined;
-  }
 
   return (
     <div
@@ -424,8 +381,6 @@ const ActionMessage = ({
       data-message-id={message.id}
       data-is-pinned={message.isPinned || undefined}
       data-has-unread-mention={message.hasUnreadMention || undefined}
-      data-has-unread-poll-vote={hasUnreadPollVote || undefined}
-      data-has-unread-reaction={hasUnreadReaction || undefined}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
     >
@@ -434,7 +389,7 @@ const ActionMessage = ({
           {isFluidMultiline && (
             <div className={styles.inlineWrapper}>
               <span className={styles.fluidBackground} style={fluidBackgroundStyle}>
-                <ActionMessageText message={message} isInsideTopic={isInsideTopic} />
+                <ActionMessageText message={message} />
               </span>
             </div>
           )}
@@ -446,7 +401,7 @@ const ActionMessage = ({
               onClick={handleClick}
               onKeyDown={handleKeyDown}
             >
-              <ActionMessageText message={message} isInsideTopic={isInsideTopic} />
+              <ActionMessageText message={message} />
             </span>
           </div>
         </>
@@ -492,11 +447,7 @@ export default memo(withGlobal<OwnProps>(
   (global, { message, threadId }): Complete<StateProps> => {
     const tabState = selectTabState(global);
 
-    const chat = selectChat(global, message.chatId);
-
     const sender = selectSender(global, message);
-
-    const isInsideTopic = chat?.isForum && threadId !== MAIN_THREAD_ID;
 
     const { replyToMsgId, replyToPeerId } = getMessageReplyInfo(message) || {};
     const replyMessage = replyToMsgId
@@ -509,9 +460,6 @@ export default memo(withGlobal<OwnProps>(
       isResizingContainer, scrollTargetPosition,
     } = (isFocused && tabState.focusedMessage) || {};
 
-    const readState = selectThreadReadState(global, message.chatId, threadId);
-    const hasUnreadReaction = readState?.unreadReactions?.includes(message.id);
-    const hasUnreadPollVote = readState?.unreadPollVotes?.includes(message.id);
     const isAccountFrozen = selectIsCurrentUserFrozen(global);
 
     return {
@@ -521,11 +469,8 @@ export default memo(withGlobal<OwnProps>(
       isFocused,
       focusDirection,
       noFocusHighlight,
-      isInsideTopic,
       replyMessage,
       isInSelectMode: selectIsInSelectMode(global),
-      hasUnreadReaction,
-      hasUnreadPollVote,
       isResizingContainer,
       scrollTargetPosition,
       isAccountFrozen,

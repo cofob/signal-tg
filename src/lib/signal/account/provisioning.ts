@@ -42,7 +42,11 @@ const HTTP_OK = 200;
 export async function startDeviceLink(): Promise<DeviceLinkSession> {
   const ephemeralKey = wasm.PrivateKey_Generate();
   const ephemeralPublicKey = wasm.PrivateKey_GetPublicKey(ephemeralKey);
-  const socket = await ResourceSocket.connect(SIGNAL_CHAT_HOST, PROVISIONING_PATH, {}, PROVISIONING_KEEPALIVE_PATH);
+  // The socket has no credentials, but it ends in the request that links the new account, which takes the main
+  // tunnel: through the sealed sender proxy, the proxy's address would be tied to that account
+  const socket = await ResourceSocket.connect(
+    SIGNAL_CHAT_HOST, PROVISIONING_PATH, 'authenticated', {}, PROVISIONING_KEEPALIVE_PATH,
+  );
 
   let resolveUrl: (url: string) => void;
   let rejectUrl: (error: Error) => void;

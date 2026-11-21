@@ -12,7 +12,6 @@ import type {
   ApiCountry,
   ApiCountryCode,
   ApiEmojiGroup,
-  ApiGroupCall,
   ApiHistorySyncProgress,
   ApiMessage,
   ApiMessagePoll,
@@ -22,14 +21,10 @@ import type {
   ApiPeerNotifySettings,
   ApiPeerPhotos,
   ApiPeerStories,
-  ApiPhoneCall,
   ApiPrivacyKey,
   ApiPrivacySettings,
   ApiPromoData,
   ApiReaction,
-  ApiReactionKey,
-  ApiSavedReactionTag,
-  ApiShareThemeBackdrop,
   ApiSticker,
   ApiStickerSet,
   ApiStoryAlbum,
@@ -56,7 +51,6 @@ import type {
   RepeatMode,
   Thread,
   ThreadId,
-  TopicsInfo,
   WebPageMediaSize,
 } from '../../types';
 import type { MediaEditorSettings } from '../../types/mediaEditor';
@@ -71,10 +65,6 @@ export type GlobalState = {
   appConfig: ApiAppConfig;
   promoData?: ApiPromoData;
   peerColors?: ApiPeerColors;
-  shareThemeBackdrops?: {
-    list: ApiShareThemeBackdrop[];
-    hash: number;
-  };
   isCacheApiSupported?: boolean;
   connectionState?: ApiUpdateConnectionStateType;
   currentUserId?: string;
@@ -87,10 +77,6 @@ export type GlobalState = {
   lastIsChatInfoShown?: boolean;
   initialUnreadNotifications?: number;
   shouldShowContextMenuHint?: boolean;
-  reactionPollingPause?: {
-    until: number;
-    chatId: string;
-  };
 
   audioPlayer: {
     volume: number;
@@ -190,41 +176,29 @@ export type GlobalState = {
     listIds: {
       active?: string[];
       archived?: string[];
-      saved?: string[];
     };
     orderedPinnedIds: {
       active?: string[];
       archived?: string[];
-      saved?: string[];
     };
     totalCount: {
       all?: number;
       archived?: number;
-      saved?: number;
     };
     isFullyLoaded: {
       active?: boolean;
       archived?: boolean;
-      saved?: boolean;
     };
     lastMessageIds: {
       all?: Record<string, number>;
-      saved?: Record<string, number>;
     };
-    topicsInfoById: Record<string, TopicsInfo>;
     loadingParameters: Record<ChatListType, {
       nextOffsetId?: number;
       nextOffsetPeerId?: string;
       nextOffsetDate?: number;
     }>;
-    forDiscussionIds?: string[];
     // Obtained from GetFullChat / GetFullChannel
     fullInfoById: Record<string, ApiChatFullInfo>;
-    similarChannelsById: Partial<Record<string, {
-      isExpanded: boolean;
-      similarChannelIds?: string[];
-      count?: number;
-    }>>;
     notifyExceptionById: Record<string, ApiPeerNotifySettings>;
 
     personalChannelIds?: string[];
@@ -260,11 +234,6 @@ export type GlobalState = {
     settings?: ApiStorySettings;
   };
 
-  groupCalls: {
-    byId: Record<string, ApiGroupCall>;
-    activeGroupCallId?: string;
-  };
-
   scheduledMessages: {
     byChatId: Record<string, {
       byId: Record<number, ApiMessage>;
@@ -274,10 +243,7 @@ export type GlobalState = {
   chatFolders: {
     orderedIds?: number[];
     byId: Record<number, ApiChatFolder>;
-    recommended?: ApiChatFolder[];
   };
-
-  phoneCall?: ApiPhoneCall;
 
   fileUploads: {
     byMessageKey: Record<string, {
@@ -354,7 +320,6 @@ export type GlobalState = {
   genericEmojiEffects?: ApiStickerSet;
   birthdayNumbers?: ApiStickerSet;
   restrictedEmoji?: ApiStickerSet;
-  defaultTopicIconsId?: string;
   defaultStatusIconsId?: string;
   emojiKeywords: Record<string, EmojiKeywords | undefined>;
 
@@ -398,11 +363,6 @@ export type GlobalState = {
   archiveSettings: {
     isMinimized: boolean;
     isHidden: boolean;
-  };
-
-  savedReactionTags?: {
-    byKey: Record<ApiReactionKey, ApiSavedReactionTag>;
-    hash: string;
   };
 
 };

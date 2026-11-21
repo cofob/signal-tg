@@ -94,9 +94,7 @@ export async function fetchMessages({
   chat, offsetId, addOffset = 0, limit,
 }: {
   chat: ApiChat;
-  threadId?: ThreadId;
   offsetId?: number;
-  isSavedDialog?: boolean;
   addOffset?: number;
   limit: number;
 }) {
@@ -116,7 +114,6 @@ export async function fetchMessages({
     users,
     chats: [],
     count: await db.countMessages(conversation.id),
-    topics: [],
   };
 }
 

@@ -21,7 +21,6 @@ import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
 import FrozenAccountModal from './frozenAccount/FrozenAccountModal.async';
 import InviteViaLinkModal from './inviteViaLink/InviteViaLinkModal.async';
-import JoinGroupCallModal from './joinGroupCall/JoinGroupCallModal.async';
 import LanguageModal from './language/LanguageModal.async';
 import LinkDeviceModal from './linkDevice/LinkDeviceModal';
 import MessageDetailsModal from './messageDetails/MessageDetailsModal.async';
@@ -35,7 +34,6 @@ import QuickPreviewModal from './quickPreview/QuickPreviewModal.async';
 import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
 import RecoveryKeyModal from './recoveryKey/RecoveryKeyModal.async';
-import ReportModal from './reportModal/ReportModal.async';
 import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SafetyNumberChangeModal from './safetyNumberChange/SafetyNumberChangeModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
@@ -46,7 +44,6 @@ type ModalKey = keyof Pick<TabState,
   'safeLinkModalUrl' |
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
-  'reportModal' |
   'pollModal' |
   'musicPicker' |
   'chatInviteModal' |
@@ -70,13 +67,12 @@ type ModalKey = keyof Pick<TabState,
   'languageModal' |
   'autoDeleteTimerModal' |
   'settingsConfirmation' |
-  'joinGroupCallModal' |
   'phoneNumberLookupModal' |
   'linkDeviceModal' |
   'signalLinkModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
-  | 'settingsConfirmation' | 'joinGroupCallModal'
+  | 'settingsConfirmation'
   | 'phoneNumberLookupModal' | 'linkDeviceModal' | 'signalLinkModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
@@ -136,7 +132,6 @@ const WrappedModalBoundary = <T,>({
 const LEGACY_MODALS: LegacyModalRegistry = {
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
-  reportModal: ReportModal,
   chatInviteModal: ChatInviteModal,
   disableSharingAboutModal: DisableSharingAboutModal,
   isFrozenAccountModalOpen: FrozenAccountModal,
@@ -163,7 +158,6 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   safeLinkModalUrl: SafeLinkModal,
   autoDeleteTimerModal: AutoDeleteTimerModal,
   settingsConfirmation: SettingsConfirmationModal,
-  joinGroupCallModal: JoinGroupCallModal,
   phoneNumberLookupModal: PhoneNumberLookupModal,
   linkDeviceModal: LinkDeviceModal,
   signalLinkModal: SignalLinkModal,

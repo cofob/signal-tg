@@ -31,7 +31,6 @@ import ChatList from './ChatList';
 
 type OwnProps = {
   foldersDispatch: FolderEditDispatch;
-  isForumPanelOpen?: boolean;
   isFoldersSidebarShown?: boolean;
 };
 
@@ -54,7 +53,6 @@ const ChatFolders = ({
   chatFoldersById,
   orderedFolderIds,
   activeChatFolder,
-  isForumPanelOpen,
   animationLevel,
   shouldSkipHistoryAnimations,
   hasArchivedChats,
@@ -140,7 +138,7 @@ const ChatFolders = ({
   }, [activeChatFolder, folderTabs, setActiveChatFolder]);
 
   useEffect(() => {
-    if (!IS_TOUCH_ENV || !folderTabs?.length || isForumPanelOpen) {
+    if (!IS_TOUCH_ENV || !folderTabs?.length) {
       return undefined;
     }
 
@@ -161,7 +159,7 @@ const ChatFolders = ({
         return false;
       },
     });
-  }, [activeChatFolder, folderTabs, isForumPanelOpen, setActiveChatFolder]);
+  }, [activeChatFolder, folderTabs, setActiveChatFolder]);
 
   const isNotInFirstFolderRef = useRef();
   isNotInFirstFolderRef.current = !isInFirstFolder;
@@ -206,7 +204,6 @@ const ChatFolders = ({
         folderType={isFolder ? 'folder' : 'all'}
         folderId={isFolder ? activeFolder.id : undefined}
         isActive={isActive}
-        isForumPanelOpen={isForumPanelOpen}
         foldersDispatch={foldersDispatch}
         isMainList
         canDisplayArchive={(hasArchivedChats || hasArchivedStories) && !archiveSettings.isHidden}

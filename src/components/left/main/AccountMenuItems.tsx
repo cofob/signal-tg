@@ -4,11 +4,10 @@ import type { ApiUser } from '../../../api/types';
 import type { CustomPeer } from '../../../types';
 
 import { temporarilySuspendCacheUpdate } from '../../../global/cache';
-import { getCurrentProdAccountCount } from '../../../global/helpers';
+import { getCurrentAccountCount } from '../../../global/helpers';
 import { IS_SAFARI } from '../../../util/browser/windowEnvironment';
 import { ACCOUNT_SLOT, getAccountSlotUrl } from '../../../util/multiaccount';
 import { LIMITS } from '../../../limits';
-import { REM } from '../../common/helpers/mediaDimensions';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -33,11 +32,10 @@ const AccountMenuItems = ({
   const lang = useLang();
   const accounts = useMultiaccountInfo(currentUser);
 
-  const currentCount = getCurrentProdAccountCount();
+  const currentCount = getCurrentAccountCount();
 
   // Signal user ids are local numbers, so different accounts can share an id: the slot tells the accounts apart
   const currentSlot = ACCOUNT_SLOT || 1;
-  const currentAccountInfo = accounts[currentSlot];
 
   const handleAccountClick = useLastCallback((slot: number, e: React.SyntheticEvent<HTMLElement>) => {
     if (slot === currentSlot) {
@@ -87,12 +85,11 @@ const AccountMenuItems = ({
         .map(([slotKey, account]) => [Number(slotKey), account] as const)
         .sort(([first], [second]) => Number(second === currentSlot) - Number(first === currentSlot) || first - second)
         .map(([slot, account], index, arr) => {
-          const isSameServer = account.isTest === currentAccountInfo?.isTest;
           const mockUser: CustomPeer = {
             title: [account.firstName, account.lastName].filter(Boolean).join(' '),
             isCustomPeer: true,
             peerColorId: account.color,
-            emojiStatusId: isSameServer ? account.emojiStatusId : undefined,
+            emojiStatusId: account.emojiStatusId,
           };
 
           const hasSeparator = slot === currentSlot && (newAccountUrl || arr.length > 1);
@@ -112,8 +109,7 @@ const AccountMenuItems = ({
                 onClick={(e) => handleAccountClick(slot, e)}
                 href={slot !== currentSlot ? getAccountSlotUrl(slot) : undefined}
               >
-                {account.isTest && <span className="account-menu-item-test">T</span>}
-                <FullNameTitle peer={mockUser} withEmojiStatus emojiStatusSize={REM} />
+                <FullNameTitle peer={mockUser} />
               </MenuItem>
               {hasSeparator && <MenuSeparator />}
             </>

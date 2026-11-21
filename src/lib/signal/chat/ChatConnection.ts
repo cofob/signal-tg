@@ -68,7 +68,7 @@ export default class ChatConnection {
   }
 
   static async connect(store: SignalStore, account: AccountRecord, handlers: ChatConnectionHandlers) {
-    const socket = await ResourceSocket.connect(SIGNAL_CHAT_HOST, CHAT_PATH, {
+    const socket = await ResourceSocket.connect(SIGNAL_CHAT_HOST, CHAT_PATH, 'authenticated', {
       Authorization: getBasicAuthorization(getAccountCredentials(account)),
       'X-Signal-Receive-Stories': 'true',
     });

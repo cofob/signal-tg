@@ -1,12 +1,11 @@
 import {
   memo, useMemo,
 } from '../../lib/teact/teact';
-import { getActions, withGlobal } from '../../global';
+import { withGlobal } from '../../global';
 
 import type { ApiChat, ApiChatBannedRights } from '../../api/types';
 
-import { isChatPublic } from '../../global/helpers';
-import { selectChat, selectChatFullInfo } from '../../global/selectors';
+import { selectChat } from '../../global/selectors';
 import buildClassName from '../../util/buildClassName';
 import stopEvent from '../../util/stopEvent';
 
@@ -31,7 +30,6 @@ export type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  hasLinkedChat?: boolean;
 };
 
 const permissionKeyList: (keyof ApiChatBannedRights)[] = [
@@ -44,7 +42,6 @@ export const MEDIA_DROPDOWN_ROW_COUNT = permissionKeyList.length;
 const PermissionCheckboxList = ({
   chat,
   isMediaDropdownOpen,
-  hasLinkedChat,
   permissions,
   className,
   shiftedClassName,
@@ -55,16 +52,7 @@ const PermissionCheckboxList = ({
   handlePermissionChange,
   getControlIsDisabled,
 }: OwnProps & StateProps) => {
-  const {
-    showNotification,
-  } = getActions();
-
-  const { isForum } = chat || {};
-
   const lang = useLang();
-
-  const isPublic = useMemo(() => chat && isChatPublic(chat), [chat]);
-  const shouldDisablePermissionForPublicGroup = hasLinkedChat || isPublic;
 
   const countCheckedPermissions = useMemo(() => {
     return permissionKeyList.reduce((count, key) => {
@@ -78,10 +66,6 @@ const PermissionCheckboxList = ({
   const handleOpenMediaDropdown = useLastCallback((e: React.MouseEvent) => {
     stopEvent(e);
     setIsMediaDropdownOpen(!isMediaDropdownOpen);
-  });
-
-  const handleDisabledClick = useLastCallback(() => {
-    showNotification({ message: lang('ChatPermissionNotAvailable') });
   });
 
   return (
@@ -250,14 +234,12 @@ const PermissionCheckboxList = ({
         </div>
         <div
           className={buildClassName('ListItem', withCheckbox && 'with-checkbox')}
-          onClick={shouldDisablePermissionForPublicGroup ? handleDisabledClick : undefined}
         >
           <Checkbox
             name="pinMessages"
             checked={!permissions.pinMessages}
             label={lang('UserRestrictionsPinMessages')}
-            disabled={getControlIsDisabled ? getControlIsDisabled('pinMessages')
-              : shouldDisablePermissionForPublicGroup}
+            disabled={getControlIsDisabled?.('pinMessages')}
             blocking
             permissionGroup={permissionGroup}
             onChange={handlePermissionChange}
@@ -276,7 +258,6 @@ const PermissionCheckboxList = ({
         </div>
         <div
           className={buildClassName('ListItem', withCheckbox && 'with-checkbox')}
-          onClick={shouldDisablePermissionForPublicGroup ? handleDisabledClick : undefined}
         >
           <Checkbox
             name="changeInfo"
@@ -284,24 +265,10 @@ const PermissionCheckboxList = ({
             label={lang('UserRestrictionsChangeInfo')}
             blocking
             permissionGroup={permissionGroup}
-            disabled={getControlIsDisabled ? getControlIsDisabled('changeInfo')
-              : shouldDisablePermissionForPublicGroup}
+            disabled={getControlIsDisabled?.('changeInfo')}
             onChange={handlePermissionChange}
           />
         </div>
-        {isForum && (
-          <div className={buildClassName('ListItem', withCheckbox && 'with-checkbox')}>
-            <Checkbox
-              name="manageTopics"
-              checked={!permissions.manageTopics}
-              label={lang('UserRestrictionsCreateTopics')}
-              blocking
-              permissionGroup={permissionGroup}
-              onChange={handlePermissionChange}
-              disabled={getControlIsDisabled && getControlIsDisabled('manageTopics')}
-            />
-          </div>
-        )}
       </div>
     </>
   );
@@ -310,12 +277,9 @@ const PermissionCheckboxList = ({
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const chat = chatId ? selectChat(global, chatId) : undefined;
-    const fullInfo = chat && selectChatFullInfo(global, chat.id);
-    const hasLinkedChat = Boolean(fullInfo?.linkedChatId);
 
     return {
       chat,
-      hasLinkedChat,
     };
   },
 )(PermissionCheckboxList));

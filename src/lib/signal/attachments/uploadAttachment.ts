@@ -85,7 +85,9 @@ async function putEncryptedAttachment(
     throw new Error(`Unexpected upload location ${location.origin}`);
   }
 
+  // The form is issued to the account, so the upload takes the main tunnel
   const response = await sendHttpRequest(location.hostname, {
+    trafficClass: 'authenticated',
     method: 'POST',
     path: `${location.pathname}${location.search}`,
     headers: {

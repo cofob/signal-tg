@@ -3,12 +3,10 @@ import { getGlobal } from '../../../global';
 import { selectChat, selectChatLastMessage } from '../../../global/selectors';
 import { orderBy } from '../../../util/iteratees';
 
-const VERIFIED_PRIORITY_BASE = 3e9;
 const PINNED_PRIORITY_BASE = 3e8;
 
 export default function sortChatIds(
   chatIds: string[],
-  shouldPrioritizeVerified = false,
   priorityIds?: string[],
   currentUserId?: string,
 ) {
@@ -30,10 +28,6 @@ export default function sortChatIds(
     const lastMessage = selectChatLastMessage(global, id);
     if (lastMessage) {
       priority += lastMessage.date;
-    }
-
-    if (shouldPrioritizeVerified && chat.isVerified) {
-      priority += VERIFIED_PRIORITY_BASE; // ~100 years in seconds
     }
 
     if (priorityIds && priorityIds.includes(id)) {

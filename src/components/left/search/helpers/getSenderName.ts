@@ -3,7 +3,6 @@ import type { LangFn } from '../../../../util/localization';
 
 import {
   getChatTitle,
-  isChatChannel,
   isChatGroup,
 } from '../../../../global/helpers';
 import { getPeerTitle } from '../../../../global/helpers/peers';
@@ -16,7 +15,7 @@ export function getSenderName(
   const chat = chatsById[chatId];
   const chatTitle = chat ? getChatTitle(lang, chat) : undefined;
 
-  // Private chat messages and channel posts have no sender, so the chat itself is used instead
+  // Private chat messages have no sender, so the chat itself is used instead
   if (!senderId) {
     return isOutgoing && chatTitle ? `${lang('FromYou')} → ${chatTitle}` : chatTitle;
   }
@@ -35,7 +34,7 @@ export function getSenderName(
     return `${lang('FromYou')} → ${chatTitle}`;
   }
 
-  if ((isChatGroup(chat) || isChatChannel(chat)) && sender.id !== chat.id) {
+  if (isChatGroup(chat) && sender.id !== chat.id) {
     return `${senderName} → ${chatTitle}`;
   }
 

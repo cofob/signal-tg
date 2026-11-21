@@ -150,12 +150,6 @@ const MessageListAccountInfo = ({
             {lang('ChatNonContactUserSubtitle')}
           </p>
           <MiniTable keyClassName={styles.textColor} data={tableData} />
-          {!chat?.isVerified && (
-            <div className={buildClassName(styles.chatNotVerified, styles.textColor)}>
-              <Icon name="info-filled" />
-              <p className={styles.verifiedTitle}>{lang('ContactInfoNotVerified')}</p>
-            </div>
-          )}
         </div>
       )}
       {securityNameInfo}

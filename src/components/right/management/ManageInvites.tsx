@@ -7,7 +7,7 @@ import type { ApiChat, ApiExportedInvite } from '../../../api/types';
 import { ManagementScreens } from '../../../types';
 
 import { STICKER_SIZE_INVITES, USERNAME_LINK_PREFIX } from '../../../config';
-import { getMainUsername, isChatChannel } from '../../../global/helpers';
+import { getMainUsername } from '../../../global/helpers';
 import { selectChat, selectTabState } from '../../../global/selectors';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { MILLISECONDS_IN_DAY } from '../../../util/dates/dateMath';
@@ -38,7 +38,6 @@ type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  isChannel?: boolean;
   exportedInvites?: ApiExportedInvite[];
   revokedExportedInvites?: ApiExportedInvite[];
 };
@@ -59,7 +58,6 @@ const ManageInvites = ({
   exportedInvites,
   revokedExportedInvites,
   isActive,
-  isChannel,
   onClose,
   onScreenSelect,
 }: OwnProps & StateProps) => {
@@ -284,7 +282,7 @@ const ManageInvites = ({
             className="section-icon"
           />
           <IslandDescription>
-            {isChannel ? lang('PrimaryLinkHelpChannel') : lang('PrimaryLinkHelp')}
+            {lang('PrimaryLinkHelp')}
           </IslandDescription>
         </Island>
         {primaryInviteLink && (
@@ -391,13 +389,11 @@ export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const { invites, revokedInvites } = selectTabState(global).management.byChatId[chatId] || {};
     const chat = selectChat(global, chatId);
-    const isChannel = chat && isChatChannel(chat);
 
     return {
       exportedInvites: invites,
       revokedExportedInvites: revokedInvites,
       chat,
-      isChannel,
     };
   },
 )(ManageInvites));

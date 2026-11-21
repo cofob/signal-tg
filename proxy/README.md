@@ -28,6 +28,14 @@ It listens on `127.0.0.1:8787`. Set `SIGNAL_TUNNEL_URL=ws://localhost:8787/tunne
 
 Checks: `cargo build --release`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
 
+## Separate tunnel for sealed sender
+
+The web app opens every connection for one traffic class: connections that carry the account's credentials, and
+connections that do not (sealed sender sends, profile and prekey fetches, group requests and downloads). The
+Sealed sender proxy setting names a tunnel for the second class. Each instance of this server relays whatever it is
+given, so run a second instance with its own `UPSTREAM_PROXY` and egress address for that class. Then the main tunnel
+never sees the connections without credentials, and the second never sees the account's.
+
 ## Protocol
 
 - `GET /tunnel?host=<host>&port=443` with a WebSocket upgrade opens a tunnel. `host` must be one of

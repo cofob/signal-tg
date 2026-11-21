@@ -25,14 +25,6 @@ export const CUSTOM_PEER_INCLUDED_CHAT_TYPES: UniqueCustomPeer[] = [
     isAvatarSquare: true,
     peerColorId: 3,
   },
-  {
-    isCustomPeer: true,
-    type: 'channels',
-    titleKey: 'FilterChannels',
-    avatarIcon: 'channel',
-    isAvatarSquare: true,
-    peerColorId: 1,
-  },
 ];
 
 export const CUSTOM_PEER_EXCLUDED_CHAT_TYPES: UniqueCustomPeer[] = [

@@ -65,7 +65,7 @@ export function getFirstLoggedInAccountSlot(accounts = getAccountsInfo()) {
 function getAccountInfo(slot: number): AccountInfo | undefined {
   const sessionData = loadSlotSession(slot);
   const {
-    userId, avatarUri, color, emojiStatusId, firstName, lastName, isTest, phone,
+    userId, avatarUri, color, emojiStatusId, firstName, lastName, phone,
   } = sessionData || {};
 
   if (!userId) return undefined;
@@ -77,7 +77,6 @@ function getAccountInfo(slot: number): AccountInfo | undefined {
     emojiStatusId,
     firstName,
     lastName,
-    isTest,
     phone,
   };
 }
@@ -97,11 +96,11 @@ export function loadSlotSession(slot: number | undefined): SharedSessionData | u
 // Slots saved before the session became a marker hold Telegram data center keys next to the account info
 export function normalizeLegacySlotSession(data: Omit<SharedSessionData, 'isLinked'>): SharedSessionData {
   const {
-    pushKey, date, isTest, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
+    pushKey, date, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
   } = data;
 
   return {
-    isLinked: true, pushKey, date, isTest, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
+    isLinked: true, pushKey, date, userId, firstName, lastName, phone, avatarUri, color, emojiStatusId,
   };
 }
 
@@ -137,18 +136,12 @@ export function updateSessionStorage(update: NoneToVoidFunction) {
   });
 }
 
-export function getAccountSlotUrl(slot: number, forLogin?: boolean, isTest?: boolean) {
+export function getAccountSlotUrl(slot: number, forLogin?: boolean) {
   const url = new URL(globalThis.location.href);
   if (slot !== 1) {
     url.searchParams.set(ACCOUNT_QUERY, String(slot));
   } else {
     url.searchParams.delete(ACCOUNT_QUERY);
-  }
-
-  if (isTest) {
-    url.searchParams.set('test', 'true');
-  } else {
-    url.searchParams.delete('test');
   }
 
   url.hash = forLogin ? 'login' : '';

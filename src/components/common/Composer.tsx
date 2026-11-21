@@ -15,7 +15,6 @@ import type {
   ApiPeer,
   ApiReaction,
   ApiSticker,
-  ApiTopic,
   ApiUser,
   ApiVideo,
   ApiWebPage,
@@ -58,9 +57,6 @@ import {
   getStoryKey,
   hasMessageMedia,
   isChatAdmin,
-  isChatChannel,
-  isChatPublic,
-  isChatSuperGroup,
   isSameReaction,
 } from '../../global/helpers';
 import { getChatNotifySettings } from '../../global/helpers/notifications';
@@ -91,9 +87,7 @@ import {
   selectPeerStory,
   selectRequestedDraft,
   selectRequestedDraftFiles,
-  selectStoppableTypingDraftId,
   selectTabState,
-  selectTopicFromMessage,
   selectUser,
   selectUserFullInfo,
   selectWebPagePreview,
@@ -160,7 +154,6 @@ import useSendMessageAction from '../../hooks/useSendMessageAction';
 import useShowTransition from '../../hooks/useShowTransition';
 import useShowTransitionDeprecated from '../../hooks/useShowTransitionDeprecated';
 import { useStateRef } from '../../hooks/useStateRef';
-import useSyncEffect from '../../hooks/useSyncEffect';
 import useAttachmentModal from '../middle/composer/hooks/useAttachmentModal';
 import useClipboardPaste from '../middle/composer/hooks/useClipboardPaste';
 import useDraft from '../middle/composer/hooks/useDraft';
@@ -179,7 +172,6 @@ import DropArea, { DropAreaState } from '../middle/composer/DropArea.async';
 import MessageInput from '../middle/composer/MessageInput.async';
 import RecordModeMenu, { type RecordMode } from '../middle/composer/RecordModeMenu';
 import RoundVideoRecorder from '../middle/composer/RoundVideoRecorder';
-import SendAsMenu from '../middle/composer/SendAsMenu.async';
 import SymbolMenuButton from '../middle/composer/SymbolMenuButton';
 import VoiceRecordBar from '../middle/composer/VoiceRecordBar';
 import WebPagePreview from '../middle/composer/WebPagePreview';
@@ -189,7 +181,6 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import MediaEditor from '../ui/mediaEditor/MediaEditor.async';
 import TextTimer from '../ui/TextTimer';
 import Transition from '../ui/Transition';
-import Avatar from './Avatar';
 import AutoDeleteOutlinedIcon from './icons/AutoDeleteOutlinedIcon';
 import Icon from './icons/Icon';
 import ReactionAnimatedEmoji from './reactions/ReactionAnimatedEmoji';
@@ -220,7 +211,6 @@ type OwnProps = {
 };
 
 type StateProps = {
-  stoppableTypingDraftId?: string;
   isOnActiveTab: boolean;
   recordMode: RecordMode;
   editingMessage?: ApiMessage;
@@ -228,10 +218,8 @@ type StateProps = {
   user?: ApiUser;
   chatFullInfo?: ApiChatFullInfo;
   draft?: ApiDraft;
-  replyToTopic?: ApiTopic;
   currentMessageList?: MessageList;
   isChatWithSelf?: boolean;
-  isChannel?: boolean;
   isForCurrentMessageList: boolean;
   isRightColumnShown?: boolean;
   isSelectModeActive?: boolean;
@@ -251,8 +239,6 @@ type StateProps = {
   shouldSuggestCustomEmoji?: boolean;
   baseEmojiKeywords?: Record<string, string[]>;
   emojiKeywords?: Record<string, string[]>;
-  sendAsPeer?: ApiPeer;
-  sendAsId?: string;
   editingDraft?: EditingDraft;
   requestedDraft?: ApiFormattedText;
   requestedDraftFiles?: File[];
@@ -299,7 +285,6 @@ const CAN_SWITCH_RECORD_MODE = IS_VOICE_RECORDING_SUPPORTED && IS_VIDEO_RECORDIN
 // When voice recording is active, composer placeholder will hide to prevent overlapping
 const SCREEN_WIDTH_TO_HIDE_PLACEHOLDER = 600; // px
 
-const MOBILE_KEYBOARD_HIDE_DELAY_MS = 100;
 const SELECT_MODE_TRANSITION_MS = 200;
 const SENDING_ANIMATION_DURATION = 350;
 const MOUNT_ANIMATION_DURATION = 430;
@@ -314,7 +299,6 @@ const Composer = ({
   isInScheduledList,
   canScheduleUntilOnline,
   isReady,
-  stoppableTypingDraftId,
   isMobile,
   editingMessage,
   chatId,
@@ -326,11 +310,9 @@ const Composer = ({
   chat,
   chatFullInfo,
   user,
-  replyToTopic,
   isForCurrentMessageList,
   canSendVoiceByPrivacy,
   isChatWithSelf,
-  isChannel,
   isRightColumnShown,
   isSelectModeActive,
   isReactionPickerOpen,
@@ -348,8 +330,6 @@ const Composer = ({
   baseEmojiKeywords,
   emojiKeywords,
   recentEmojis,
-  sendAsPeer,
-  sendAsId,
   editingDraft,
   requestedDraft,
   requestedDraftFiles,
@@ -387,13 +367,11 @@ const Composer = ({
 }: OwnProps & StateProps) => {
   const {
     sendMessage,
-    stopTypingDraft,
     clearDraft,
     showDialog,
     loadScheduledHistory,
-    openThread,
+    openChat,
     addRecentEmoji,
-    loadSendAs,
     resetOpenChatWithDraft,
     resetRichInputMediaRequest,
     addRecentCustomEmoji,
@@ -405,7 +383,6 @@ const Composer = ({
     sendStoryReaction,
     editMessage,
     updateAttachmentSettings,
-    updateChatSilentPosting,
     updateInsertingPeerIdMention,
     updateShouldSaveAttachmentsCompression,
     applyDefaultAttachmentsCompression,
@@ -430,8 +407,6 @@ const Composer = ({
   const isInMessageList = type === 'messageList';
   const isRichInputExpansionActive = Boolean(isInMessageList && isRichInputExpanded);
   const isInStoryViewer = type === 'story';
-  const sendAsPeerIds = isInMessageList ? chat?.sendAsPeerIds : undefined;
-  const canShowSendAs = Boolean(sendAsPeerIds?.length);
   // Prevent Symbol Menu from closing when calendar is open
   const [isSymbolMenuForced, forceShowSymbolMenu, cancelForceShowSymbolMenu] = useFlag();
   const sendMessageAction = useSendMessageAction(chatId, threadId);
@@ -451,11 +426,10 @@ const Composer = ({
 
   const canMediaBeReplaced = isEditingMedia && canEditMedia(editingMessage!);
 
-  const isMonoforum = chat?.isMonoforum;
   const { members: groupChatMembers } = chatFullInfo || {};
 
   const isEphemeralReply = draft?.replyInfo?.type === 'ephemeral';
-  const canSchedule = !isMonoforum && !isEphemeralReply;
+  const canSchedule = !isEphemeralReply;
 
   const {
     canSendStickers, canSendGifs, canAttachMedia, canAttachPolls, canAttachEmbedLinks,
@@ -502,25 +476,10 @@ const Composer = ({
   }, [chatId]);
 
   useEffect(() => {
-    if (isAppConfigLoaded && chatId && isReady && !isInStoryViewer && !isMonoforum) {
+    if (isAppConfigLoaded && chatId && isReady && !isInStoryViewer) {
       loadScheduledHistory({ chatId });
     }
-  }, [isReady, chatId, threadId, isInStoryViewer, isAppConfigLoaded, isMonoforum]);
-
-  useEffect(() => {
-    const isChannelWithProfiles = isChannel && chat?.areProfilesShown;
-    const isChatWithSendAs = chat && isChatSuperGroup(chat)
-      && Boolean(isChatPublic(chat) || chat.isLinkedInDiscussion);
-    if (!sendAsPeerIds && isReady && (isChatWithSendAs || isChannelWithProfiles)) {
-      loadSendAs({ chatId });
-    }
-  }, [chat, chatId, isChannel, isReady, loadSendAs, sendAsPeerIds]);
-
-  const shouldAnimateSendAsButtonRef = useRef(false);
-  useSyncEffect(([prevChatId, prevSendAsPeerIds]) => {
-    // We only animate send-as button if `sendAsPeerIds` was missing when opening the chat
-    shouldAnimateSendAsButtonRef.current = Boolean(chatId === prevChatId && sendAsPeerIds && !prevSendAsPeerIds);
-  }, [chatId, sendAsPeerIds]);
+  }, [isReady, chatId, threadId, isInStoryViewer, isAppConfigLoaded]);
 
   const [attachments, setAttachments] = useState<ApiAttachment[]>([]);
   const {
@@ -758,7 +717,6 @@ const Composer = ({
   }, [mediaEditorMessage, handleSetAttachments]);
 
   const [isSymbolMenuOpen, openSymbolMenu, closeSymbolMenu] = useFlag();
-  const [isSendAsMenuOpen, openSendAsMenu, closeSendAsMenu] = useFlag();
   const [isHoverDisabled, disableHover, enableHover] = useFlag();
 
   const {
@@ -872,7 +830,7 @@ const Composer = ({
     richMessage,
     replaceRichMessage: updateRichMessage,
     editedMessage: editingMessage,
-    isDisabled: isInStoryViewer || Boolean(requestedDraft) || isMonoforum,
+    isDisabled: isInStoryViewer || Boolean(requestedDraft),
     hasUnresolvedMedia: hasRichMediaBlocking,
   });
 
@@ -1017,7 +975,7 @@ const Composer = ({
 
   const isStoryReactionPickerOpen = isInStoryViewer && Boolean(isReactionPickerOpen);
   const isComposerEngaged = isInputHasFocus || isSymbolMenuOpen || isSymbolMenuForced
-    || isSendAsMenuOpen || isStoryReactionPickerOpen || Boolean(activeRecording) || attachments.length > 0;
+    || isStoryReactionPickerOpen || Boolean(activeRecording) || attachments.length > 0;
   const isComposerActive = isComposerEngaged || isAttachMenuOpen;
 
   const mainButtonState = useDerivedState(() => {
@@ -1027,11 +985,6 @@ const Composer = ({
 
     if (editingMessage && shouldForceShowEditing) {
       return MainButtonState.Edit;
-    }
-
-    if (isInMessageList && stoppableTypingDraftId && !editingMessage && !isInScheduledList && !isForwarding
-      && !activeVoiceRecording && !activeVideoRecording) {
-      return MainButtonState.Stop;
     }
 
     // Signal story replies are text only
@@ -1049,7 +1002,7 @@ const Composer = ({
   }, [
     activeVoiceRecording, activeVideoRecording, editingMessage, hasAttachments, isForwarding, isComposerEngaged,
     onForward, shouldForceShowEditing, isInScheduledList, hasInputContent, isRichInputExpansionActive,
-    isInMessageList, stoppableTypingDraftId, isInStoryViewer,
+    isInStoryViewer,
   ]);
   const canShowCustomSendMenu = !isInScheduledList;
 
@@ -1098,7 +1051,7 @@ const Composer = ({
   }, [chatId, handleStoryPickerContextMenuHide, isReactionPickerOpen, storyId, storyReactionPickerAnchor]);
 
   const { className: peerColorClass, style: peerColorStyle } = usePeerColor({
-    peer: sendAsPeer || currentUser,
+    peer: currentUser,
   });
 
   const hasGifFromPicker = attachments.some((a) => a.gif);
@@ -1753,22 +1706,6 @@ const Composer = ({
     }
   });
 
-  const handleSendAsMenuOpen = useLastCallback(() => {
-    const messageInput = document.querySelector<HTMLDivElement>(editableInputCssSelector);
-
-    if (!isMobile || messageInput !== document.activeElement) {
-      closeSymbolMenu();
-      openSendAsMenu();
-      return;
-    }
-
-    messageInput?.blur();
-    setTimeout(() => {
-      closeSymbolMenu();
-      openSendAsMenu();
-    }, MOBILE_KEYBOARD_HIDE_DELAY_MS);
-  });
-
   useEffect(() => {
     if (!isComposerBlocked) return;
 
@@ -1784,25 +1721,12 @@ const Composer = ({
   });
 
   const handleAllScheduledClick = useLastCallback(() => {
-    openThread({
-      chatId, threadId, type: 'scheduled', noForumTopicPanel: true,
-    });
+    openChat({ id: chatId, type: 'scheduled' });
   });
 
   const handleAutoDeleteClick = useLastCallback(() => {
     openAutoDeleteTimerModal({ chatId });
   });
-  const handleToggleSilentPosting = useLastCallback(() => {
-    const newValue = !isSilentPosting;
-    updateChatSilentPosting({ chatId, isEnabled: newValue });
-
-    showNotification({
-      localId: 'silentPosting',
-      icon: newValue ? 'mute' : 'unmute',
-      message: lang(`ComposerSilentPosting${newValue ? 'Enabled' : 'Disabled'}Tootlip`),
-    });
-  });
-
   useEffect(() => {
     if (isRightColumnShown && isMobile) {
       closeSymbolMenu();
@@ -1912,14 +1836,6 @@ const Composer = ({
         return lang('ComposerPlaceholderAnonymous');
       }
 
-      if (chat?.isForum && chat.isForumAsMessages && threadId === MAIN_THREAD_ID) {
-        return replyToTopic
-          ? lang('ComposerPlaceholderTopic', { topic: replyToTopic.title })
-          : lang('ComposerPlaceholderTopicGeneral');
-      }
-      if (isChannel) {
-        return lang(isSilentPosting ? 'ComposerPlaceholderBroadcastSilent' : 'ComposerPlaceholderBroadcast');
-      }
       return lang('ComposerPlaceholder');
     }
 
@@ -1927,8 +1843,8 @@ const Composer = ({
 
     return lang('ComposerPlaceholderNoText');
   }, [
-    activeRecording, chat, inputPlaceholder, isChannel, isComposerBlocked,
-    isInStoryViewer, isSilentPosting, lang, replyToTopic, threadId, windowWidth,
+    activeRecording, chat, inputPlaceholder, isComposerBlocked,
+    isInStoryViewer, lang, windowWidth,
     slowModePlaceholder,
   ]);
 
@@ -1955,9 +1871,6 @@ const Composer = ({
 
   const mainButtonHandler = useLastCallback(() => {
     switch (mainButtonState) {
-      case MainButtonState.Stop:
-        stopTypingDraft({ chatId, threadId, randomId: stoppableTypingDraftId! });
-        break;
       case MainButtonState.Forward:
         onForward?.();
         break;
@@ -2266,13 +2179,6 @@ const Composer = ({
         onClose={handleCloseRichMediaEditor}
         onApply={handleApplyRichMediaEdit}
       />
-      <SendAsMenu
-        isOpen={isSendAsMenuOpen}
-        onClose={closeSendAsMenu}
-        chatId={chatId}
-        selectedSendAsId={sendAsId}
-        sendAsPeerIds={sendAsPeerIds}
-      />
       {isInMessageList && (
         <>
           <ComposerEmbeddedMessage
@@ -2308,28 +2214,6 @@ const Composer = ({
           )}
           style={peerColorStyle}
         >
-          {isInMessageList && !isRichInputExpansionActive && (
-            <>
-              {canShowSendAs && sendAsPeer && (
-                <Button
-                  round
-                  color="translucent"
-                  onClick={isSendAsMenuOpen ? closeSendAsMenu : handleSendAsMenuOpen}
-                  ariaLabel={lang('SendMessageAsTitle')}
-                  className={buildClassName(
-                    'send-as-button',
-                    'composer-action-button',
-                    shouldAnimateSendAsButtonRef.current && 'appear-animation',
-                  )}
-                >
-                  <Avatar
-                    peer={sendAsPeer}
-                    size="tiny"
-                  />
-                </Button>
-              )}
-            </>
-          )}
           <AttachMenu
             chatId={chatId}
             threadId={threadId}
@@ -2439,24 +2323,6 @@ const Composer = ({
               >
                 {!hasInputContent && (
                   <>
-                    {isChannel && (
-                      <Transition
-                        className="composer-action-button"
-                        name="reveal"
-                        activeKey={Number(isSilentPosting)}
-                      >
-                        <Button
-                          round
-                          className="composer-action-button"
-                          color="translucent"
-                          onClick={handleToggleSilentPosting}
-                          ariaLabel={lang(
-                            isSilentPosting ? 'AriaComposerSilentPostingDisable' : 'AriaComposerSilentPostingEnable',
-                          )}
-                          iconName={isSilentPosting ? 'mute' : 'unmute'}
-                        />
-                      </Transition>
-                    )}
                     {withScheduledButton && (
                       <Button
                         round
@@ -2527,7 +2393,6 @@ const Composer = ({
               onCustomEmojiSelect={handleCustomEmojiSelect}
               onRemoveSymbol={removeSymbol}
               onEmojiSelect={insertTextAndUpdateCursor}
-              closeSendAsMenu={closeSendAsMenu}
               isSymbolMenuForced={isSymbolMenuForced}
               canSendPlainText={!isComposerBlocked}
               inputCssSelector={editableInputCssSelector}
@@ -2578,7 +2443,7 @@ const Composer = ({
         disabled={areRecordingsNotAllowed || hasRichMediaBlocking}
         allowDisabledClick
         noFastClick
-        ariaLabel={mainButtonState === MainButtonState.Stop ? lang('BotDraftStop') : sendButtonLabel}
+        ariaLabel={sendButtonLabel}
         onClick={mainButtonHandler}
         onContextMenu={mainButtonContextMenuHandler}
       >
@@ -2664,9 +2529,6 @@ export default memo(withGlobal<OwnProps>(
     const emojiKeywords = language !== BASE_EMOJI_KEYWORD_LANG ? global.emojiKeywords[language] : undefined;
     const { currentUserId } = global;
     const currentUser = selectUser(global, currentUserId!)!;
-    const defaultSendAsId = chatFullInfo ? chatFullInfo?.sendAsId || currentUserId : undefined;
-    const sendAsId = defaultSendAsId;
-    const sendAsPeer = sendAsId ? selectPeer(global, sendAsId) : undefined;
     const requestedDraft = selectRequestedDraft(global, chatId);
     const requestedDraftFiles = selectRequestedDraftFiles(global, chatId);
 
@@ -2689,12 +2551,6 @@ export default memo(withGlobal<OwnProps>(
     const story = storyId && selectPeerStory(global, chatId, storyId);
     const sentStoryReaction = story && 'sentReaction' in story ? story.sentReaction : undefined;
     const draft = selectDraft(global, chatId, threadId);
-    const replyToMessage = draft?.replyInfo
-      ? selectChatMessage(global, chatId, draft.replyInfo.replyToMsgId)
-      : undefined;
-    const replyToTopic = chat?.isForum && chat.isForumAsMessages && threadId === MAIN_THREAD_ID && replyToMessage
-      ? selectTopicFromMessage(global, replyToMessage)
-      : undefined;
     const isInScheduledList = messageListType === 'scheduled';
 
     const noWebPage = selectNoWebPage(global, chatId, threadId);
@@ -2727,7 +2583,6 @@ export default memo(withGlobal<OwnProps>(
       isChatWithSelf,
       isForCurrentMessageList,
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, chatId),
-      isChannel: chat ? isChatChannel(chat) : undefined,
       isRightColumnShown: selectIsRightColumnShown(global, isMobile),
       isSelectModeActive: selectIsInSelectMode(global),
       withScheduledButton: (
@@ -2749,8 +2604,6 @@ export default memo(withGlobal<OwnProps>(
       recentEmojis: global.recentEmojis,
       baseEmojiKeywords: baseEmojiKeywords?.keywords,
       emojiKeywords: emojiKeywords?.keywords,
-      sendAsPeer,
-      sendAsId,
       editingDraft,
       requestedDraft,
       requestedDraftFiles,
@@ -2764,7 +2617,6 @@ export default memo(withGlobal<OwnProps>(
       canSendOneTimeMedia: !isChatWithSelf && isChatWithUser && !isInScheduledList,
       shouldCollectDebugLogs,
       sentStoryReaction,
-      replyToTopic,
       noWebPage,
       webPagePreview,
       richMessageLengthLimit: global.appConfig.richMessageLengthLimit,
@@ -2777,7 +2629,6 @@ export default memo(withGlobal<OwnProps>(
       isAppConfigLoaded,
       insertingPeerIdMention,
       isRichInputExpanded: tabState.isRichInputExpanded,
-      stoppableTypingDraftId: selectStoppableTypingDraftId(global, chatId, threadId),
       mediaEditorMessage,
     };
   },

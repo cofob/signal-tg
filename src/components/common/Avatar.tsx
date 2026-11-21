@@ -21,7 +21,6 @@ import {
   getVideoProfilePhotoMediaHash,
   getVideoProfilePhotoStartTs,
   getWebDocumentHash,
-  isChatCommunity,
   isDeletedUser,
 } from '../../global/helpers';
 import { isApiPeerChat, isApiPeerUser } from '../../global/helpers/peers';
@@ -93,7 +92,6 @@ type OwnProps = {
   loopIndefinitely?: boolean;
   noPersonalPhoto?: boolean;
   forceRound?: boolean;
-  asMessageBubble?: boolean;
   storyCircleStyle?: string;
   observeIntersection?: ObserveFn;
   onClick?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>, hasMedia: boolean) => void;
@@ -127,7 +125,6 @@ const Avatar = ({
   loopIndefinitely,
   noPersonalPhoto,
   forceRound,
-  asMessageBubble,
   storyCircleStyle,
   onClick,
   onContextMenu,
@@ -144,8 +141,6 @@ const Avatar = ({
   const user = realPeer && isApiPeerUser(realPeer) ? realPeer : undefined;
   const chat = realPeer && isApiPeerChat(realPeer) ? realPeer : undefined;
   const isDeleted = user && isDeletedUser(user);
-  const isForum = chat?.isForum;
-  const isCommunity = Boolean(chat && isChatCommunity(chat));
 
   const peerColorKey = getPeerColorKey(peer, true);
   const peerColorClass = peerColorKey !== undefined ? getPeerColorClass(peerColorKey) : undefined;
@@ -302,9 +297,7 @@ const Avatar = ({
     content = getFirstLetters(text, 2);
   }
 
-  const isRoundedRect = (isCustomPeer && peer.isAvatarSquare)
-    || isCommunity
-    || (isForum && !forceRound && !((withStory || withStorySolid) && realPeer?.hasStories));
+  const isRoundedRect = isCustomPeer && peer.isAvatarSquare;
   const customColor = isCustomPeer && peer.customPeerAvatarColor;
 
   const fullClassName = buildClassName(
@@ -316,8 +309,6 @@ const Avatar = ({
     isSavedMessages && 'saved-messages',
     isDeleted && 'deleted-account',
     isRoundedRect && 'forum',
-    isCommunity && 'community',
-    asMessageBubble && 'message-bubble',
     (photo || webPhoto) && styles.forceFit,
     withStory && realPeer?.hasStories && 'with-story-circle',
     withStorySolid && realPeer?.hasStories && 'with-story-solid',

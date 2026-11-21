@@ -1,28 +1,20 @@
 import { memo, useEffect } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiChat, ApiMessage, ApiPeer } from '../../../api/types';
+import type { ApiMessage } from '../../../api/types';
 import type { MessageListType, ThreadId } from '../../../types';
 import type { Signal } from '../../../util/signals';
 import { MAIN_THREAD_ID } from '../../../api/types';
 
-import {
-  getIsSavedDialog,
-  getMessageIsSpoiler,
-} from '../../../global/helpers';
-import { getPeerTitle } from '../../../global/helpers/peers';
+import { getMessageIsSpoiler } from '../../../global/helpers';
 import {
   selectAllowedMessageActionsSlow,
-  selectChat,
-  selectChatMessage,
   selectChatMessages,
-  selectForwardedSender,
   selectPinnedIds,
 } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import cycleRestrict from '../../../util/cycleRestrict';
 import { REM } from '../../common/helpers/mediaDimensions';
-import renderText from '../../common/helpers/renderText';
 
 import useDerivedState from '../../../hooks/useDerivedState';
 import useEnsureMessage from '../../../hooks/useEnsureMessage';
@@ -65,11 +57,9 @@ type OwnProps = {
 };
 
 type StateProps = {
-  chat?: ApiChat;
   pinnedMessageIds?: number[] | number;
   messagesById?: Record<number, ApiMessage>;
   canUnpin?: boolean;
-  topMessageSender?: ApiPeer;
   isSynced?: boolean;
 };
 
@@ -80,17 +70,15 @@ const HeaderPinnedMessage = ({
   getLoadingPinnedId,
   pinnedMessageIds,
   messagesById,
-  topMessageSender,
   getCurrentPinnedIndex,
   className,
-  chat,
   isSynced,
   shouldHide,
   onPaneStateChange,
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
   const {
-    focusMessage, openThread, pinMessage, loadPinnedMessages,
+    focusMessage, openChat, pinMessage, loadPinnedMessages,
   } = getActions();
   const lang = useLang();
 
@@ -100,8 +88,6 @@ const HeaderPinnedMessage = ({
   const pinnedMessagesCount = Array.isArray(pinnedMessageIds)
     ? pinnedMessageIds.length : (pinnedMessageIds ? 1 : 0);
   const pinnedMessageNumber = Math.max(pinnedMessagesCount - currentPinnedIndex, 1);
-
-  const topMessageTitle = topMessageSender ? getPeerTitle(lang, topMessageSender) : undefined;
 
   const isLoading = Boolean(useDerivedState(getLoadingPinnedId));
   const canRenderLoader = useAsyncRendering([isLoading], SHOW_LOADER_DELAY);
@@ -118,7 +104,6 @@ const HeaderPinnedMessage = ({
     pinnedMessagesCount: renderingPinnedMessagesCount,
     pinnedMessageNumber: renderingPinnedMessageNumber,
     currentPinnedIndex: renderingPinnedIndex,
-    topMessageTitle: renderingTopMessageTitle,
     canUnpin: renderingCanUnpin,
   } = useFrozenProps({
     chatId,
@@ -129,7 +114,6 @@ const HeaderPinnedMessage = ({
     pinnedMessagesCount,
     pinnedMessageNumber,
     currentPinnedIndex,
-    topMessageTitle,
     canUnpin,
   }, !isOpen);
   const hasPictogram = Boolean(
@@ -138,10 +122,10 @@ const HeaderPinnedMessage = ({
   const isSpoiler = renderingPinnedMessage && getMessageIsSpoiler(renderingPinnedMessage);
 
   useEffect(() => {
-    if (isSynced && (threadId === MAIN_THREAD_ID || chat?.isForum)) {
+    if (isSynced && threadId === MAIN_THREAD_ID) {
       loadPinnedMessages({ chatId, threadId });
     }
-  }, [chatId, threadId, isSynced, chat?.isForum]);
+  }, [chatId, threadId, isSynced]);
 
   useEnsureMessage(chatId, pinnedMessageId, pinnedMessage);
 
@@ -164,7 +148,7 @@ const HeaderPinnedMessage = ({
   });
 
   const handleAllPinnedClick = useLastCallback(() => {
-    openThread({ chatId: renderingChatId, threadId: renderingThreadId, type: 'pinned' });
+    openChat({ id: renderingChatId, type: 'pinned' });
   });
 
   const handleMessageClick = useLastCallback((e: React.MouseEvent<HTMLElement, MouseEvent>): void => {
@@ -176,7 +160,7 @@ const HeaderPinnedMessage = ({
 
     if (!getLoadingPinnedId()) {
       focusMessage({
-        chatId: renderingChatId, threadId: renderingThreadId, messageId: nextMessageId, noForumTopicPanel: true,
+        chatId: renderingChatId, threadId: renderingThreadId, messageId: nextMessageId,
       });
       onFocusPinnedMessage(nextMessageId);
     }
@@ -258,17 +242,13 @@ const HeaderPinnedMessage = ({
           dir={lang.isRtl ? 'rtl' : undefined}
         >
           <div className={styles.title} dir={lang.isRtl ? 'rtl' : undefined}>
-            {!renderingTopMessageTitle && (
-              <AnimatedCounter
-                text={renderingPinnedMessagesCount === 1
-                  ? lang('PinnedMessageTitleSingle')
-                  : lang('PinnedMessageTitle',
-                    { index: renderingPinnedMessageNumber },
-                    { pluralValue: renderingPinnedMessagesCount })}
-              />
-            )}
-
-            {renderingTopMessageTitle && renderText(renderingTopMessageTitle)}
+            <AnimatedCounter
+              text={renderingPinnedMessagesCount === 1
+                ? lang('PinnedMessageTitleSingle')
+                : lang('PinnedMessageTitle',
+                  { index: renderingPinnedMessageNumber },
+                  { pluralValue: renderingPinnedMessagesCount })}
+            />
           </div>
           <Transition
             activeKey={renderingPinnedMessage.id}
@@ -295,15 +275,11 @@ export default memo(withGlobal<OwnProps>(
   (global, {
     chatId, threadId, messageListType,
   }): Complete<StateProps> => {
-    const chat = selectChat(global, chatId);
-
     const isSynced = global.isSynced;
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, global.currentUserId);
 
     const messagesById = selectChatMessages(global, chatId);
 
     const state = {
-      chat,
       isSynced,
     };
 
@@ -311,21 +287,7 @@ export default memo(withGlobal<OwnProps>(
       return state as Complete<StateProps>;
     }
 
-    if (threadId !== MAIN_THREAD_ID && !isSavedDialog && !chat?.isForum) {
-      const pinnedMessageId = Number(threadId);
-      const message = pinnedMessageId ? selectChatMessage(global, chatId, pinnedMessageId) : undefined;
-      const topMessageSender = message ? selectForwardedSender(global, message) : undefined;
-
-      return {
-        ...state,
-        pinnedMessageIds: pinnedMessageId,
-        messagesById,
-        canUnpin: false,
-        topMessageSender,
-      };
-    }
-
-    const pinnedMessageIds = !isSavedDialog ? selectPinnedIds(global, chatId, threadId) : undefined;
+    const pinnedMessageIds = selectPinnedIds(global, chatId, threadId);
     if (pinnedMessageIds?.length) {
       const firstPinnedMessage = messagesById[pinnedMessageIds[0]];
       const {
@@ -341,7 +303,7 @@ export default memo(withGlobal<OwnProps>(
         pinnedMessageIds,
         messagesById,
         canUnpin,
-      } as Complete<StateProps>;
+      };
     }
 
     return state as Complete<StateProps>;

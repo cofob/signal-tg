@@ -148,8 +148,6 @@ function getStateFromTabType(tabType: ProfileTabType) {
       return ProfileState.MemberList;
     case 'stories':
       return ProfileState.StoryList;
-    case 'dialogs':
-      return ProfileState.SavedDialogs;
     default:
       return ProfileState.SharedMedia;
   }

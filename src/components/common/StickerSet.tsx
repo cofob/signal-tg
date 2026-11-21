@@ -11,7 +11,6 @@ import type { StickerSetOrReactionsSetOrRecent } from '../../types';
 
 import {
   DEFAULT_STATUS_ICON_ID,
-  DEFAULT_TOPIC_ICON_STICKER_ID,
   EMOJI_SIZE_PICKER,
   FAVORITE_SYMBOL_SET_ID,
   POPULAR_SYMBOL_SET_ID,
@@ -37,8 +36,6 @@ import ReactionEmoji from './reactions/ReactionEmoji';
 import SharedCanvas from './SharedCanvas';
 import StickerButton from './StickerButton';
 
-import grey from '../../assets/icons/forumTopic/grey.svg';
-
 type OwnProps = {
   stickerSet: StickerSetOrReactionsSetOrRecent;
   loadAndPlay: boolean;
@@ -52,10 +49,8 @@ type OwnProps = {
   shouldHideHeader?: boolean;
   selectedReactionIds?: string[];
   withSelectionOrder?: boolean;
-  withDefaultTopicIcon?: boolean;
   withDefaultStatusIcon?: boolean;
   isChatEmojiSet?: boolean;
-  isChatStickerSet?: boolean;
   isTranslucent?: boolean;
   withInstantThumbs?: boolean;
   noContextMenus?: boolean;
@@ -91,12 +86,10 @@ const StickerSet = ({
   isStatusPicker,
   isReactionPicker,
   shouldHideHeader,
-  withDefaultTopicIcon,
   selectedReactionIds,
   withSelectionOrder,
   withDefaultStatusIcon,
   isChatEmojiSet,
-  isChatStickerSet,
   isTranslucent,
   withInstantThumbs,
   noContextMenus,
@@ -115,7 +108,6 @@ const StickerSet = ({
   const {
     clearRecentStickers,
     clearRecentCustomEmoji,
-    clearRecentReactions,
     toggleStickerSet,
     loadStickers,
   } = getActions();
@@ -144,9 +136,7 @@ const StickerSet = ({
   const isEmoji = stickerSet.isEmoji;
 
   const handleClearRecent = useLastCallback(() => {
-    if (isReactionPicker) {
-      clearRecentReactions();
-    } else if (isEmoji) {
+    if (isEmoji) {
       clearRecentCustomEmoji();
     } else {
       clearRecentStickers();
@@ -158,18 +148,6 @@ const StickerSet = ({
     toggleStickerSet({
       stickerSetId: stickerSet.id,
     });
-  });
-
-  const handleDefaultTopicIconClick = useLastCallback(() => {
-    onStickerSelect?.({
-      mediaType: 'sticker',
-      id: DEFAULT_TOPIC_ICON_STICKER_ID,
-      isLottie: false,
-      isVideo: false,
-      stickerSetInfo: {
-        shortName: 'dummy',
-      },
-    } satisfies ApiSticker);
   });
 
   const handleDefaultStatusIconClick = useLastCallback(() => {
@@ -221,11 +199,11 @@ const StickerSet = ({
   const isInstalled = getIsStickerSetInstalled(stickerSet) && !stickerSet.isArchived;
 
   const canCut = !isInstalled && stickerSet.id !== RECENT_SYMBOL_SET_ID
-    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && !isChatEmojiSet && !isChatStickerSet;
+    && stickerSet.id !== POPULAR_SYMBOL_SET_ID && !isChatEmojiSet;
 
   const [isCut, , expand] = useFlag(canCut);
   const itemsBeforeCutout = itemsPerRow * 3 - 1;
-  const totalItemsCount = (withDefaultTopicIcon || withDefaultStatusIcon) ? stickerSet.count + 1 : stickerSet.count;
+  const totalItemsCount = withDefaultStatusIcon ? stickerSet.count + 1 : stickerSet.count;
 
   const itemHeight = itemSize + verticalMargin;
   const heightWhenCut = Math.ceil(Math.min(itemsBeforeCutout, totalItemsCount) / itemsPerRow)
@@ -248,8 +226,8 @@ const StickerSet = ({
         <div className="symbol-set-header">
           <p className={buildClassName('symbol-set-title', withAddSetButton && 'symbol-set-title-external')}>
             <span className="symbol-set-name">{stickerSet.title}</span>
-            {(isChatEmojiSet || isChatStickerSet) && (
-              <span className="symbol-set-chat">{lang(isChatEmojiSet ? 'GroupEmoji' : 'GroupStickers')}</span>
+            {isChatEmojiSet && (
+              <span className="symbol-set-chat">{lang('GroupEmoji')}</span>
             )}
             {withAddSetButton && Boolean(stickerSet.stickers) && (
               <span className="symbol-set-amount">
@@ -283,16 +261,6 @@ const StickerSet = ({
         style={`${withInstantThumbs ? 'min-height' : 'height'}: ${height}px;`}
       >
         <SharedCanvas>
-          {withDefaultTopicIcon && (
-            <Button
-              className="StickerButton custom-emoji"
-              color="translucent"
-              onClick={handleDefaultTopicIconClick}
-              key="default-topic-icon"
-            >
-              <img src={grey} alt={lang('Reset')} className="sticker-media" draggable={false} />
-            </Button>
-          )}
           {withDefaultStatusIcon && (
             <Button
               className="StickerButton custom-emoji status-default"
@@ -372,7 +340,7 @@ const StickerSet = ({
 
       {isRecent && (
         <ConfirmDialog
-          text={lang(isReactionPicker ? 'ClearRecentReactionsAlertMessage' : 'ClearRecentStickersAlertMessage')}
+          text={lang('ClearRecentStickersAlertMessage')}
           isOpen={isConfirmModalOpen}
           onClose={closeConfirmModal}
           confirmHandler={handleClearRecent}

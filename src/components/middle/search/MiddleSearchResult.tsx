@@ -70,7 +70,7 @@ const MiddleSearchResult = ({
         />
         <div className={styles.info}>
           <div className={styles.topRow}>
-            <FullNameTitle peer={peer} withEmojiStatus />
+            <FullNameTitle peer={peer} />
           </div>
           {(isApiPeerChat(peer) || username) && (
             <div className={styles.subtitle} dir="auto">
@@ -105,7 +105,7 @@ const MiddleSearchResult = ({
       />
       <div className={styles.info}>
         <div className={styles.topRow}>
-          {(senderPeer && <FullNameTitle peer={senderPeer} withEmojiStatus />) || hiddenForwardTitle}
+          {(senderPeer && <FullNameTitle peer={senderPeer} />) || hiddenForwardTitle}
           <LastMessageMeta className={styles.meta} message={message} />
         </div>
         <div className={styles.subtitle} dir="auto" ref={textRef}>

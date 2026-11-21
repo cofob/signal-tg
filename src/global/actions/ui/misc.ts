@@ -9,7 +9,7 @@ import {
 } from '../../../config';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { IS_WAVE_TRANSFORM_SUPPORTED } from '../../../util/browser/windowEnvironment';
-import { getAllMultitabTokens, getCurrentTabId, reestablishMasterToSelf } from '../../../util/establishMultitabRole';
+import { getAllMultitabTokens, getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getAllNotificationsCount } from '../../../util/folderManager';
 import getIsAppUpdateNeeded from '../../../util/getIsAppUpdateNeeded';
 import { shouldShowErrorDialog } from '../../../util/getReadableErrorText';
@@ -29,11 +29,9 @@ import {
   selectCanAnimateInterface,
   selectChat,
   selectChatMessage,
-  selectCurrentChat,
   selectCurrentMessageList,
   selectIsChatWithSelf,
   selectTabState,
-  selectTopic,
 } from '../../selectors';
 import { selectSharedSettings } from '../../selectors/sharedState';
 
@@ -513,49 +511,6 @@ addActionHandler('updateLastRenderedCustomEmojis', (global, actions, payload): A
   };
 });
 
-addActionHandler('openCreateTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { chatId, tabId = getCurrentTabId() } = payload;
-
-  // Topic panel can be opened only if there is a selected chat
-  const currentChat = selectCurrentChat(global, tabId);
-  if (!currentChat) actions.openChat({ id: chatId, tabId });
-
-  return updateTabState(global, {
-    createTopicPanel: {
-      chatId,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeCreateTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    createTopicPanel: undefined,
-  }, tabId);
-});
-
-addActionHandler('openEditTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { chatId, topicId, tabId = getCurrentTabId() } = payload;
-
-  // Topic panel can be opened only if there is a selected chat
-  const currentChat = selectCurrentChat(global, tabId);
-  if (!currentChat) actions.openChat({ id: chatId, tabId });
-
-  return updateTabState(global, {
-    editTopicPanel: {
-      chatId,
-      topicId,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeEditTopicPanel', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    editTopicPanel: undefined,
-  }, tabId);
-});
-
 addActionHandler('updateArchiveSettings', (global, actions, payload): ActionReturnType => {
   const { archiveSettings } = global;
   const { isHidden = archiveSettings.isHidden, isMinimized = archiveSettings.isMinimized } = payload;
@@ -592,11 +547,6 @@ addActionHandler('checkAppVersion', (global): ActionReturnType => {
     });
 });
 
-addActionHandler('afterHangUp', (global): ActionReturnType => {
-  if (!selectTabState(global, getCurrentTabId()).multitabNextAction) return;
-  reestablishMasterToSelf();
-});
-
 let notificationInterval: number | undefined;
 
 const NOTIFICATION_INTERVAL = 500;
@@ -631,15 +581,13 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
   const { tabId = getCurrentTabId() } = payload || {};
   const { canDisplayChatInTitle } = selectSharedSettings(global);
   const currentUserId = global.currentUserId;
-  const isTestServer = global.config?.isTestServer;
-  const prefix = isTestServer ? '[T] ' : '';
 
   const defaultTitle = IS_TAURI ? PAGE_TITLE_TAURI : PAGE_TITLE;
 
   const lang = getTranslationFn();
   if (selectTabState(global, tabId).inactiveReason) {
     updateIcon(false);
-    setPageTitleInstant(`${prefix}${defaultTitle} ${lang('PageTitleInactive')}`);
+    setPageTitleInstant(`${defaultTitle} ${lang('PageTitleInactive')}`);
     return;
   }
 
@@ -651,7 +599,7 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
 
     if (newUnread > 0) {
       const notificationsTitle = lang('PageTitleNotifications', { count: newUnread }, { pluralValue: newUnread });
-      setPageTitleInstant(`${prefix}${notificationsTitle}`);
+      setPageTitleInstant(notificationsTitle);
       updateIcon(true);
       return;
     }
@@ -662,22 +610,16 @@ addActionHandler('updatePageTitle', (global, actions, payload): ActionReturnType
   const messageList = selectCurrentMessageList(global, tabId);
 
   if (messageList && canDisplayChatInTitle && !global.passcode.isScreenLocked) {
-    const { chatId, threadId } = messageList;
+    const { chatId } = messageList;
     const currentChat = selectChat(global, chatId);
     if (currentChat) {
       const title = getChatTitle(getTranslationFn(), currentChat, chatId === currentUserId);
-      const topic = selectTopic(global, chatId, threadId);
-      if (currentChat.isForum && topic) {
-        setPageTitle(`${prefix}${title} › ${topic.title}`);
-        return;
-      }
-
-      setPageTitle(`${prefix}${title}`);
+      setPageTitle(title);
       return;
     }
   }
 
-  setPageTitleInstant(`${prefix}${defaultTitle}`);
+  setPageTitleInstant(defaultTitle);
 });
 
 addActionHandler('closeInviteViaLinkModal', (global, actions, payload): ActionReturnType => {

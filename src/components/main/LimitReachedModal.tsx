@@ -23,11 +23,6 @@ const LIMIT_DESCRIPTION = {
   uploadMaxFileparts: 'LimitReachedFileSizePremium',
   dialogFilters: 'LimitReachedFoldersPremium',
   dialogFolderPinned: 'LimitReachedPinDialogsPremium',
-  channelsPublic: 'LimitReachedPublicLinksPremium',
-  channels: 'LimitReachedCommunitiesPremium',
-  chatlistInvites: 'LimitReachedFolderLinksPremium',
-  chatlistJoined: 'LimitReachedSharedFoldersPremium',
-  savedDialogsPinned: 'LimitReachedPinDialogsPremium',
 } as const satisfies Record<ApiLimitTypeWithModal, LangKey>;
 
 const LIMIT_ICON: Record<ApiLimitTypeWithModal, IconName> = {
@@ -35,11 +30,6 @@ const LIMIT_ICON: Record<ApiLimitTypeWithModal, IconName> = {
   uploadMaxFileparts: 'file-badge',
   dialogFilters: 'folder-filled',
   dialogFolderPinned: 'pin-filled',
-  channelsPublic: 'link-badge',
-  channels: 'chats-badge',
-  chatlistInvites: 'link-badge',
-  chatlistJoined: 'folder-filled',
-  savedDialogsPinned: 'pin-filled',
 };
 
 // `MAX_UPLOAD_SIZE` falls slightly short of 2 GB, so the limit shows rounded
@@ -64,9 +54,7 @@ const LimitReachedModal = ({ limit }: OwnProps) => {
   }, [isClosing, limit, stopClosing]);
 
   const formattedValue = limit && (LIMIT_VALUE_FORMATTER[limit]?.(lang) || LIMITS[limit].toString());
-  const description = limit && (limit === 'channelsPublic'
-    ? lang(LIMIT_DESCRIPTION[limit])
-    : lang(LIMIT_DESCRIPTION[limit], { limit: formattedValue }));
+  const description = limit && lang(LIMIT_DESCRIPTION[limit], { limit: formattedValue });
   const icon = limit && LIMIT_ICON[limit];
 
   return (

@@ -8,7 +8,6 @@ import type {
   ApiChatAdminRights,
   ApiChatBannedRights,
   ApiChatFolder,
-  ApiChatReactions,
   ApiChatType,
   ApiDraft,
   ApiEmojiStatus,
@@ -23,7 +22,6 @@ import type {
   ApiLimitTypeWithModal,
   ApiMessage,
   ApiMessageEntity,
-  ApiMessageReadMetric,
   ApiMessageSearchContext,
   ApiNewStory,
   ApiNotification,
@@ -32,13 +30,10 @@ import type {
   ApiPhoto,
   ApiPrivacyKey,
   ApiPrivacySettings,
-  ApiProfileTab,
   ApiReaction,
-  ApiReportReason,
   ApiRichText,
   ApiSendMessageAction,
   ApiSessionData,
-  ApiShareThemeEmojiBackdrop,
   ApiSignalMessageSettings,
   ApiSticker,
   ApiStickerSet,
@@ -53,11 +48,9 @@ import type {
 } from '../../api/types';
 import type { FoldersActions } from '../../hooks/reducers/useFoldersReducer';
 import type { ReducerAction } from '../../hooks/useReducer';
-import type { P2pMessage } from '../../lib/vibecalls';
 import type {
   AccountSettings,
   AttachmentCompression,
-  CallSound,
   ChatListType,
   ConfettiParams,
   EditingDraft,
@@ -99,7 +92,7 @@ import type { KeyboardShortcutId } from '../../util/keyboardShortcuts/registry';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { DownloadableMedia } from '../helpers';
 import type { SharedState } from './sharedState';
-import type { ReactionDeletionContext, TabState } from './tabState';
+import type { TabState } from './tabState';
 
 export type WithTabId = { tabId?: number };
 
@@ -150,10 +143,6 @@ export interface ActionPayloads {
   loadEmojiStickerGroups: undefined;
 
   // groups
-  togglePreHistoryHidden: {
-    chatId: string;
-    isEnabled: boolean;
-  } & WithTabId;
   updateChatDefaultBannedRights: {
     chatId: string;
     bannedRights: ApiChatBannedRights;
@@ -185,6 +174,7 @@ export interface ActionPayloads {
   setSettingOption: Partial<AccountSettings> | undefined;
   setSharedSettingOption: Partial<SharedState['settings']> | undefined;
   setSignalProxyUrl: { url?: string };
+  setSignalSealedSenderProxyUrl: { url?: string };
   setKeyboardShortcut: {
     id: KeyboardShortcutId;
     combo: string | false;
@@ -367,10 +357,6 @@ export interface ActionPayloads {
     idsToRemove: number[];
     idsToAdd: number[];
   } & WithTabId;
-  toggleIsProtected: {
-    chatId: string;
-    isProtected: boolean;
-  };
   setChatHistoryTtl: {
     chatId: string;
     period: number;
@@ -380,23 +366,11 @@ export interface ActionPayloads {
     listType: ChatListType;
     whenFirstBatchDone?: () => Promise<void>;
   };
-  loadPinnedDialogs: {
-    listType: ChatListType;
-  };
   openChatWithInfo: ActionPayloads['openChat'] & {
     profileTab?: ProfileTabType;
     forceScrollProfileTab?: boolean;
     isOwnProfile?: boolean;
   } & WithTabId;
-  openThreadWithInfo: ActionPayloads['openThread'] & {
-    profileTab?: ProfileTabType;
-    forceScrollProfileTab?: boolean;
-    isOwnProfile?: boolean;
-  } & WithTabId;
-  openLinkedChat: { id: string } & WithTabId;
-  loadMoreMembers: {
-    chatId: string;
-  };
   setActiveChatFolder: {
     activeChatFolder: number;
   } & WithTabId;
@@ -407,13 +381,9 @@ export interface ActionPayloads {
   joinChannel: {
     chatId: string;
   } & WithTabId;
-  leaveChannel: {
-    chatId: string;
-  } & WithTabId;
   leaveBasicGroup: {
     chatId: string;
   } & WithTabId;
-  deleteChannel: { chatId: string } & WithTabId;
   toggleChatPinned: {
     id: string;
     folderId: number;
@@ -425,7 +395,6 @@ export interface ActionPayloads {
   markChatRead: { id: string };
   markChatMessagesRead: { id: string };
   loadChatFolders: undefined;
-  loadRecommendedChatFolders: undefined;
   editChatFolder: {
     id: number;
     folderUpdate: Omit<ApiChatFolder, 'id' | 'description' | 'emoticon'>;
@@ -443,10 +412,6 @@ export interface ActionPayloads {
   openChatByContactToken: {
     token: string;
   } & WithTabId;
-  toggleSavedDialogPinned: {
-    id: string;
-  } & WithTabId;
-
   // global search
   setGlobalSearchQuery: {
     query?: string;
@@ -528,10 +493,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-  deleteParticipantHistory: {
-    peerId: string;
-    chatId: string;
-  } & WithTabId;
   markMessageListRead: {
     maxId: number;
   } & WithTabId;
@@ -567,18 +528,6 @@ export interface ActionPayloads {
     chatId: string;
     shouldDeleteForAll?: boolean;
   } & WithTabId;
-  deleteSavedHistory: {
-    chatId: string;
-  } & WithTabId;
-  openPreviousReportModal: WithTabId | undefined;
-  closeReportModal: WithTabId | undefined;
-  loadSendAs: {
-    chatId: string;
-  };
-  saveDefaultSendAs: {
-    chatId: string;
-    sendAsId: string;
-  };
   stopActiveEmojiInteraction: {
     id: number;
   } & WithTabId;
@@ -594,42 +543,10 @@ export interface ActionPayloads {
     messageId: number;
     reaction?: ApiReaction;
   };
-  sendEmojiInteraction: {
-    messageId: number;
-    chatId: string;
-    emoji: string;
-    interactions: number[];
-  };
-  sendWatchingEmojiInteraction: {
-    chatId: string;
-    id: number;
-    emoticon: string;
-    x: number;
-    y: number;
-    startSize: number;
-    isReversed?: boolean;
-  } & WithTabId;
-  reportMessages: {
-    chatId: string;
-    messageIds: number[];
-    description?: string;
-    option?: string;
-  } & WithTabId;
-
   sendMessageAction: {
     action: ApiSendMessageAction;
     chatId: string;
     threadId: ThreadId;
-  };
-  stopTypingDraft: {
-    chatId: string;
-    threadId: ThreadId;
-    randomId: string;
-  } & WithTabId;
-  reportChannelSpam: {
-    chatId: string;
-    participantId: string;
-    messageIds: number[];
   };
   loadSeenBy: {
     chatId: string;
@@ -697,15 +614,6 @@ export interface ActionPayloads {
   addChatMemberByPhoneNumber: { chatId: string; phoneNumber: string } & WithTabId;
 
   // chat creation
-  createChannel: {
-    title: string;
-    about?: string;
-    photo?: ApiAvatarUpload;
-    memberIds?: string[];
-    discussionChannelId?: string;
-  } & (
-    { isChannel: true } | { isSuperGroup: true }
-  ) & WithTabId;
   createGroupChat: {
     title: string;
     memberIds: string[];
@@ -761,6 +669,18 @@ export interface ActionPayloads {
   closeHistoryCalendar: WithTabId | undefined;
   disableContextMenuHint: undefined;
   focusNextReply: WithTabId | undefined;
+  focusNextMention: {
+    chatId: string;
+    threadId?: ThreadId;
+  } & WithTabId;
+  markMentionsRead: {
+    chatId: string;
+    messageIds: number[];
+  };
+  readAllMentions: {
+    chatId: string;
+    threadId?: ThreadId;
+  };
 
   // poll result
   openPollResults: {
@@ -844,16 +764,12 @@ export interface ActionPayloads {
     screen?: ManagementScreens;
   } & WithTabId) | undefined;
   closeManagement: WithTabId | undefined;
-  checkPublicLink: { chatId: string; username: string } & WithTabId;
-  updatePublicLink: { username: string; shouldDisableUsernames?: boolean } & WithTabId;
-  updatePrivateLink: WithTabId | undefined;
   resetManagementError: { chatId: string } & WithTabId;
 
   setShouldCloseRightColumn: {
     value?: boolean;
   } & WithTabId;
   requestChatUpdate: { chatId: string };
-  requestSavedDialogUpdate: { chatId: string };
   loadChatJoinRequests: {
     chatId: string;
     offsetDate?: number;
@@ -875,7 +791,6 @@ export interface ActionPayloads {
     replyMessageId?: number;
     isResizingContainer?: boolean;
     shouldReplaceHistory?: boolean;
-    noForumTopicPanel?: boolean;
     quote?: string;
     quoteOffset?: number;
     pollOption?: string;
@@ -906,12 +821,6 @@ export interface ActionPayloads {
   onTabFocusChange: {
     isBlurred: boolean;
   } & WithTabId;
-  afterHangUp: undefined;
-  requestMasterAndCallAction: CallbackAction & WithTabId;
-  clearMultitabNextAction: WithTabId | undefined;
-  requestMasterAndJoinGroupCall: ActionPayloads['joinGroupCall'];
-  requestMasterAndRequestCall: ActionPayloads['requestCall'];
-  requestMasterAndAcceptCall: WithTabId | undefined;
 
   // Initial
   signOut: { forceInitApi?: boolean } | undefined;
@@ -929,17 +838,6 @@ export interface ActionPayloads {
   } & WithTabId) | undefined;
 
   // Accounts
-  reportPeer: {
-    chatId?: string;
-    reason: ApiReportReason;
-    description: string;
-  } & WithTabId;
-  reportProfilePhoto: {
-    chatId?: string;
-    reason: ApiReportReason;
-    description: string;
-    photo?: ApiPhoto;
-  } & WithTabId;
   openFrozenAccountModal: WithTabId | undefined;
   closeFrozenAccountModal: WithTabId | undefined;
   openDeleteAccountModal: {
@@ -960,87 +858,22 @@ export interface ActionPayloads {
   fetchChat: {
     chatId: string;
   };
-  loadChannelRecommendations: {
-    chatId?: string;
-  };
-  toggleChannelRecommendations: {
-    chatId: string;
-  };
-  loadCommunities: undefined;
-  loadFullCommunity: {
-    communityId: string;
-  };
-  toggleCommunityCollapsed: {
-    communityId: string;
-  };
   updateChatMutedState: {
     chatId: string;
     mutedUntil: number;
   };
-  updateChatSilentPosting: {
-    chatId: string;
-    isEnabled: boolean;
-  };
-  setMainProfileTab: {
-    chatId: string;
-    tab: ApiProfileTab;
-  };
-  setPeerShareTheme: {
-    peerId: string;
-    theme?: ApiShareThemeEmojiBackdrop;
-  };
-
   updateChat: {
     chatId: string;
     title: string;
     about: string;
     photo?: ApiAvatarUpload;
   } & WithTabId;
-  toggleSignatures: {
-    chatId: string;
-    areSignaturesEnabled: boolean;
-    areProfilesEnabled: boolean;
-  };
-  loadGroupsForDiscussion: undefined;
-  linkDiscussionGroup: {
-    channelId: string;
-    chatId: string;
-  } & WithTabId;
-  unlinkDiscussionGroup: {
-    channelId: string;
-  };
-
-  openSavedDialog: {
-    chatId: string;
-    shouldReplaceHistory?: boolean;
-    shouldReplaceLast?: boolean;
-    noForumTopicPanel?: boolean;
-  } & WithTabId;
   openChat: {
     id: string | undefined;
     type?: MessageListType;
     shouldReplaceHistory?: boolean;
     shouldReplaceLast?: boolean;
-    noForumTopicPanel?: boolean;
   } & WithTabId;
-  openThread: {
-    type?: MessageListType;
-    shouldReplaceHistory?: boolean;
-    shouldReplaceLast?: boolean;
-    noForumTopicPanel?: boolean;
-    focusMessageId?: number;
-    pollOption?: string;
-  } & ({
-    isComments: true;
-    chatId?: string;
-    originMessageId: number;
-    originChannelId: string;
-    threadId?: never;
-  } | {
-    isComments?: false;
-    chatId: string;
-    threadId: ThreadId;
-  }) & WithTabId;
   // Used by both openThread & openChat
   processOpenChatOrThread: {
     chatId: string | undefined;
@@ -1048,16 +881,6 @@ export interface ActionPayloads {
     type?: MessageListType;
     shouldReplaceHistory?: boolean;
     shouldReplaceLast?: boolean;
-    noForumTopicPanel?: boolean;
-    isComments?: boolean;
-  } & WithTabId;
-  openPrivateChannel: {
-    id: string;
-    threadId?: ThreadId;
-    messageId?: number;
-    commentId?: number;
-    timestamp?: number;
-    linkContext?: LinkContext;
   } & WithTabId;
   loadFullChat: {
     chatId: string;
@@ -1083,10 +906,6 @@ export interface ActionPayloads {
     filter?: ApiChatType[];
   } & WithTabId;
   resetOpenChatWithDraft: WithTabId | undefined;
-  toggleJoinToSend: {
-    chatId: string;
-    isEnabled: boolean;
-  };
   toggleJoinRequest: {
     chatId: string;
     isEnabled: boolean;
@@ -1097,41 +916,12 @@ export interface ActionPayloads {
     shouldScrollTo?: boolean;
   } & WithTabId;
 
-  openForumPanel: {
-    chatId: string;
-  } & WithTabId;
-  closeForumPanel: WithTabId | undefined;
-  openCommunityPanel: {
-    communityId: string;
-  } & WithTabId;
-  closeCommunityPanel: WithTabId | undefined;
-
-  toggleParticipantsHidden: {
-    chatId: string;
-    isEnabled: boolean;
-  };
-
   // Messages
   setEditingDraft: {
     draft?: EditingDraft;
     chatId: string;
     threadId: ThreadId;
     type: MessageListType;
-  };
-  loadUnreadMentions: {
-    chatId: string;
-    threadId?: ThreadId;
-    offsetId?: number;
-  };
-  loadUnreadReactions: {
-    chatId: string;
-    threadId?: ThreadId;
-    offsetId?: number;
-  };
-  loadUnreadPollVotes: {
-    chatId: string;
-    threadId?: ThreadId;
-    offsetId?: number;
   };
   scheduleForViewsIncrement: {
     chatId: string;
@@ -1141,10 +931,6 @@ export interface ActionPayloads {
     chatId: string;
     ids: number[];
     shouldIncrement?: boolean;
-  };
-  scheduleMessageReadMetricsReport: {
-    chatId: string;
-    metrics: ApiMessageReadMetric[];
   };
   loadFactChecks: {
     chatId: string;
@@ -1158,45 +944,6 @@ export interface ActionPayloads {
     chatId: string;
     messageIds: number[];
   } & WithTabId;
-  focusNextReaction: {
-    chatId: string;
-    threadId?: ThreadId;
-  } & WithTabId;
-  focusNextMention: {
-    chatId: string;
-    threadId?: ThreadId;
-  } & WithTabId;
-  focusNextPollVote: {
-    chatId: string;
-    threadId?: ThreadId;
-  } & WithTabId;
-  readAllReactions: {
-    chatId: string;
-    threadId?: ThreadId;
-  };
-  readAllMentions: {
-    chatId: string;
-    threadId?: ThreadId;
-  };
-  readAllPollVotes: {
-    chatId: string;
-    threadId?: ThreadId;
-  };
-  markMentionsRead: {
-    chatId: string;
-    messageIds: number[];
-  };
-  markPollVotesRead: {
-    chatId: string;
-    messageIds: number[];
-  };
-  copyMessageLink: {
-    chatId: string;
-    messageId: number;
-    shouldIncludeThread?: boolean;
-    shouldIncludeGrouped?: boolean;
-  } & WithTabId;
-
   sendPollVote: {
     chatId: string;
     messageId: number;
@@ -1222,22 +969,7 @@ export interface ActionPayloads {
   };
 
   // Reactions
-  loadTopReactions: undefined;
-  loadRecentReactions: undefined;
   loadAvailableReactions: undefined;
-  loadDefaultTagReactions: undefined;
-  clearRecentReactions: undefined;
-  loadSavedReactionTags: undefined;
-  editSavedReactionTag: {
-    reaction: ApiReaction;
-    title?: string;
-  };
-
-  loadMessageReactions: {
-    chatId: string;
-    ids: number[];
-  };
-
   toggleReaction: {
     chatId: string;
     messageId: number;
@@ -1245,19 +977,10 @@ export interface ActionPayloads {
     shouldAddToRecent?: boolean;
   } & WithTabId;
 
-  setDefaultReaction: {
-    reaction: ApiReaction;
-  };
   sendDefaultReaction: {
     chatId: string;
     messageId: number;
   } & WithTabId;
-
-  setChatEnabledReactions: {
-    chatId: string;
-    enabledReactions?: ApiChatReactions;
-    reactionsLimit?: number;
-  };
 
   startActiveReaction: {
     containerId: string;
@@ -1372,12 +1095,6 @@ export interface ActionPayloads {
     peerId: string;
     storyId: number;
   } & WithTabId;
-  reportStory: {
-    peerId: string;
-    option?: string;
-    storyId: number;
-    description?: string;
-  } & WithTabId;
   openStoryPrivacyEditor: WithTabId | undefined;
   closeStoryPrivacyEditor: WithTabId | undefined;
   editStoryPrivacy: {
@@ -1388,9 +1105,6 @@ export interface ActionPayloads {
   toggleStoriesHidden: {
     peerId: string;
     isHidden: boolean;
-  };
-  loadStoriesMaxIds: {
-    peerIds: string[];
   };
   sendStoryReaction: {
     peerId: string;
@@ -1527,7 +1241,6 @@ export interface ActionPayloads {
   loadShufflePlaylist: WithTabId | undefined;
   loadSavedMusicIds: undefined;
   toggleMusicInProfile: { audio: ApiAudio } & WithTabId;
-  reportMusicListen: { audio: ApiAudio; listenedDuration: number; isPageUnload?: boolean };
   reorderSavedMusic: { audioId: string; afterAudioId?: string } & WithTabId;
 
   // Downloads
@@ -1632,10 +1345,6 @@ export interface ActionPayloads {
     isFromSuggestion?: boolean;
   } & WithTabId;
   closeBirthdaySetupModal: WithTabId | undefined;
-  checkUsername: {
-    username: string;
-  } & WithTabId;
-
   deleteContact: { userId: string };
   loadUser: { userId: string };
   loadCommonChats: {
@@ -1732,13 +1441,11 @@ export interface ActionPayloads {
     withMyScore?: boolean;
   } & WithTabId;
   openForwardMenuForSelectedMessages: WithTabId | undefined;
-  setForwardChatOrTopic: {
+  setForwardChat: {
     chatId: string;
-    topicId?: number;
   } & WithTabId;
-  openChatOrTopicWithReplyInDraft: {
+  openChatWithReplyInDraft: {
     chatId: string;
-    topicId?: number;
   } & WithTabId;
   forwardMessages: {
     isSilent?: boolean;
@@ -1865,22 +1572,6 @@ export interface ActionPayloads {
     action: ApiInlineButtonAction;
   } & WithTabId;
 
-  toggleUsername: {
-    username: string;
-    isActive: boolean;
-  };
-  sortUsernames: {
-    usernames: string[];
-  };
-  toggleChatUsername: {
-    chatId: string;
-    username: string;
-    isActive: boolean;
-  };
-  sortChatUsernames: {
-    chatId: string;
-    usernames: string[];
-  };
   openPollModal: {
     chatId: string;
     threadId?: ThreadId;
@@ -1944,68 +1635,6 @@ export interface ActionPayloads {
   } & WithTabId;
   closeQrCodeModal: WithTabId | undefined;
 
-  // Calls
-  joinGroupCall: {
-    chatId?: string;
-    id?: string;
-    accessHash?: string;
-    inviteHash?: string;
-  } & WithTabId;
-  toggleGroupCallMute: {
-    participantId: string;
-    value: boolean;
-  } | undefined;
-  toggleGroupCallPresentation: {
-    value?: boolean;
-  } | undefined;
-  leaveGroupCall: ({
-    isFromLibrary?: boolean;
-    shouldDiscard?: boolean;
-    shouldRemove?: boolean;
-    rejoin?: ActionPayloads['joinGroupCall'];
-    isPageUnload?: boolean;
-  } & WithTabId) | undefined;
-
-  toggleGroupCallVideo: undefined;
-  requestToSpeak: {
-    value: boolean;
-  } | undefined;
-  setGroupCallParticipantVolume: {
-    participantId: string;
-    volume: number;
-  };
-  toggleGroupCallPanel: ({ force?: boolean } & WithTabId) | undefined;
-
-  createGroupCall: {
-    chatId: string;
-  } & WithTabId;
-  joinVoiceChatByLink: {
-    username: string;
-    inviteHash?: string;
-  } & WithTabId;
-  closeJoinGroupCallModal: WithTabId | undefined;
-  createGroupCallInviteLink: WithTabId | undefined;
-
-  loadMoreGroupCallParticipants: undefined;
-  connectToActiveGroupCall: WithTabId | undefined;
-
-  requestCall: {
-    userId: string;
-    isVideo?: boolean;
-  } & WithTabId;
-  sendSignalingData: P2pMessage;
-  hangUp: ({ isPageUnload?: boolean } & WithTabId) | undefined;
-  acceptCall: undefined;
-  setCallRating: {
-    rating: number;
-    comment: string;
-  } & WithTabId;
-  closeCallRatingModal: WithTabId | undefined;
-  playGroupCallSound: {
-    sound: CallSound;
-  };
-  connectToActivePhoneCall: undefined;
-
   // Passcode
   setPasscode: { passcode: string } & WithTabId;
   clearPasscode: undefined;
@@ -2034,7 +1663,6 @@ export interface ActionPayloads {
     suggestion: string;
   } & WithTabId;
   loadPeerColors: undefined;
-  loadShareThemeBackdrops: undefined;
   openLeftColumnContent: {
     contentKey?: LeftColumnContent;
   } & WithTabId;
@@ -2082,7 +1710,6 @@ export interface ActionPayloads {
 
   openQuickPreview: {
     id: string;
-    threadId?: ThreadId;
   } & WithTabId;
   closeQuickPreview: WithTabId | undefined;
 
@@ -2091,7 +1718,6 @@ export interface ActionPayloads {
     messageIds: number[];
     isSchedule?: boolean;
     onConfirm?: NoneToVoidFunction;
-    reactionContext?: ReactionDeletionContext;
   } & WithTabId);
   closeDeleteMessageModal: WithTabId | undefined;
 
@@ -2101,120 +1727,23 @@ export interface ActionPayloads {
   } & WithTabId);
   closeDeleteMemberModal: WithTabId | undefined;
 
-  deleteParticipantReaction: {
-    chatId: string;
-    messageId: number;
-    peerId: string;
-    notificationPluralValue?: number;
-  } & WithTabId;
-  deleteParticipantReactions: {
-    chatId: string;
-    peerId: string;
-    shouldUseNotificationPluralLang?: boolean;
-  } & WithTabId;
-  reportMessageReaction: {
-    chatId: string;
-    messageId: number;
-    peerId: string;
-  };
-
   saveVoiceWaveform: {
     chatId: string;
     messageId: number;
     waveform: number[];
   };
 
-  loadDefaultTopicIcons: undefined;
-
   setEmojiStatus: {
     emojiStatus: ApiEmojiStatus;
   } & WithTabId;
 
   // Forums
-  toggleForum: {
-    chatId: string;
-    isEnabled: boolean;
-  } & WithTabId;
-  createTopic: {
-    chatId: string;
-    title: string;
-    iconColor?: number;
-    iconEmojiId?: string;
-  } & WithTabId;
-  loadTopics: {
-    chatId: string;
-    force?: boolean;
-  };
-  loadTopicById: ({
-    chatId: string;
-    topicId: number;
-  } | {
-    chatId: string;
-    topicId: number;
-    shouldCloseChatOnError?: boolean;
-  } & WithTabId);
-
-  deleteTopic: {
-    chatId: string;
-    topicId: number;
-  };
-
-  editTopic: {
-    chatId: string;
-    topicId: number;
-    title?: string;
-    iconEmojiId?: string;
-    isClosed?: boolean;
-    isHidden?: boolean;
-  } & WithTabId;
-
-  toggleTopicPinned: {
-    chatId: string;
-    topicId: number;
-    isPinned: boolean;
-  } & WithTabId;
-
-  markTopicRead: {
-    chatId: string;
-    topicId: number;
-  };
-
-  updateTopicMutedState: {
-    chatId: string;
-    topicId: number;
-    mutedUntil: number;
-  };
-  setViewForumAsMessages: {
-    chatId: string;
-    isEnabled: boolean;
-  };
-
-  openCreateTopicPanel: {
-    chatId: string;
-  } & WithTabId;
-  closeCreateTopicPanel: WithTabId | undefined;
-
-  openEditTopicPanel: {
-    chatId: string;
-    topicId: number;
-  } & WithTabId;
-  closeEditTopicPanel: WithTabId | undefined;
-
-  loadDiscussion: {
-    chatId: string;
-    threadId: number;
-  };
 
   uploadContactProfilePhoto: {
     userId: string;
     photo?: ApiAvatarUpload;
     isSuggest?: boolean;
   } & WithTabId;
-
-  reportMessageDelivery: {
-    chatId: string;
-    messageId: number;
-  };
 
   requestMessageMediaEditor: {
     chatId: string;

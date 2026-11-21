@@ -56,9 +56,7 @@ type OwnProps = {
   mediaData?: string;
   isVideo: boolean;
   canUpdateMedia?: boolean;
-  canReportAvatar?: boolean;
   activeDownloads?: ActiveDownloads;
-  onReportAvatar: NoneToVoidFunction;
   onBeforeDelete: NoneToVoidFunction;
   onCloseMediaViewer: NoneToVoidFunction;
   onForward: NoneToVoidFunction;
@@ -70,7 +68,6 @@ type StateProps = {
   isChatProtected?: boolean;
   canDelete?: boolean;
   canForward?: boolean;
-  canReportMessage?: boolean;
   canPost?: boolean;
   chat?: ApiChat;
   chatFullInfo?: ApiChatFullInfo;
@@ -89,8 +86,6 @@ const MediaViewerActions = ({
   chatFullInfo,
   isChatProtected,
   isProtected,
-  canReportAvatar,
-  canReportMessage,
   canDelete,
   canForward,
   canPost,
@@ -100,7 +95,6 @@ const MediaViewerActions = ({
   activeDownloads,
   origin,
   viewableMedia,
-  onReportAvatar: onReport,
   onCloseMediaViewer,
   onBeforeDelete,
   onForward,
@@ -114,7 +108,6 @@ const MediaViewerActions = ({
     closeMediaViewer,
     openDeleteMessageModal,
     deleteEphemeralMessage,
-    reportMessages,
     requestMessageMediaEditor,
   } = getActions();
 
@@ -292,14 +285,6 @@ const MediaViewerActions = ({
     }
   });
 
-  const handleReportMessage = useLastCallback(() => {
-    if (!message) return;
-    reportMessages({
-      chatId: message.chatId,
-      messageIds: [message.id],
-    });
-  });
-
   if (isMobile) {
     const menuItems: MenuItemProps[] = [];
     if (isMessage && canForward) {
@@ -326,22 +311,6 @@ const MediaViewerActions = ({
           children: lang('AccActionDownload'),
         });
       }
-    }
-
-    if (canReportAvatar) {
-      menuItems.push({
-        icon: 'flag',
-        onClick: onReport,
-        children: lang('ReportPeerReport'),
-      });
-    }
-
-    if (canReportMessage) {
-      menuItems.push({
-        icon: 'flag',
-        onClick: handleReportMessage,
-        children: lang('ReportPeerReport'),
-      });
     }
 
     if (canUpdate) {
@@ -431,26 +400,6 @@ const MediaViewerActions = ({
         onClick={handleZoomIn}
         iconName="zoom-in"
       />
-      {canReportAvatar && (
-        <Button
-          round
-          size="smaller"
-          color="translucent-white"
-          ariaLabel={lang(isVideo ? 'PeerInfoReportProfileVideo' : 'PeerInfoReportProfilePhoto')}
-          onClick={onReport}
-          iconName="flag"
-        />
-      )}
-      {canReportMessage && (
-        <Button
-          round
-          size="smaller"
-          color="translucent-white"
-          ariaLabel={lang('ReportPeerReport')}
-          onClick={handleReportMessage}
-          iconName="flag"
-        />
-      )}
       {canUpdate && (
         <Button
           round
@@ -525,7 +474,6 @@ export default memo(withGlobal<OwnProps>(
       isChatProtected,
       canDelete,
       canForward,
-      canReportMessage: Boolean(message?.isEphemeral && !message.isOutgoing),
       canPost,
       canUpdate,
       withAnimation,

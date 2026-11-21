@@ -33,7 +33,7 @@ export default function useMessageObservers({
   onIntersectPinnedMessage: OnIntersectPinnedMessage | undefined;
 }) {
   const {
-    markMessageListRead, markMentionsRead, markPollVotesRead, animateUnreadReaction,
+    markMessageListRead, markMentionsRead,
     scheduleForViewsIncrement,
   } = getActions();
 
@@ -61,8 +61,6 @@ export default function useMessageObservers({
 
     let maxId = 0;
     const mentionIds: number[] = [];
-    const pollVoteIds: number[] = [];
-    const reactionIds: number[] = [];
     const scheduledToUpdateViews: number[] = [];
 
     const currentVisibleViewportIds = visibleViewportIdsRef.current;
@@ -96,14 +94,6 @@ export default function useMessageObservers({
         mentionIds.push(messageId);
       }
 
-      if (dataset.hasUnreadPollVote) {
-        pollVoteIds.push(messageId);
-      }
-
-      if (dataset.hasUnreadReaction) {
-        reactionIds.push(messageId);
-      }
-
       if (shouldUpdateViews) {
         scheduledToUpdateViews.push(albumMainId || messageId);
       }
@@ -122,17 +112,9 @@ export default function useMessageObservers({
         markMentionsRead({ chatId, messageIds: mentionIds });
       }
 
-      if (pollVoteIds.length) {
-        markPollVotesRead({ chatId, messageIds: pollVoteIds });
-      }
-
       if (scheduledToUpdateViews.length) {
         scheduleForViewsIncrement({ chatId, ids: scheduledToUpdateViews });
       }
-    }
-
-    if (reactionIds.length) {
-      animateUnreadReaction({ chatId, messageIds: reactionIds });
     }
 
     if (visibleViewportIdsRef.current.length) {

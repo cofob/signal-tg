@@ -24,11 +24,8 @@ export interface LangPair {
   'SendActionUploadFile': undefined;
   'SendActionRecordRound': undefined;
   'SendActionUploadRound': undefined;
-  'SetUrlInUse': undefined;
-  'UsernameInUse': undefined;
   'CreateGroupError': undefined;
   'PasscodeControllerErrorCurrent': undefined;
-  'LimitReachedPublicLinksPremium': undefined;
   'SendMessage': undefined;
   'MessageUnsupported': undefined;
   'PageContentUnsupported': undefined;
@@ -43,7 +40,6 @@ export interface LangPair {
   'AccDescrVoiceMessage': undefined;
   'AccDescrVideoMessage': undefined;
   'ContextCopyImage': undefined;
-  'ContextCopyMessageLink': undefined;
   'ProfileCopyPhone': undefined;
   'ContextCopySelected': undefined;
   'ContextCopyText': undefined;
@@ -53,37 +49,17 @@ export interface LangPair {
   'ContextArchiveCollapse': undefined;
   'ContextArchiveExpand': undefined;
   'ContextArchiveToMenu': undefined;
-  'CallMessageVideoIncomingDeclined': undefined;
-  'CallMessageVideoOutgoingMissed': undefined;
-  'CallMessageVideoIncomingMissed': undefined;
-  'CallMessageVideoOutgoing': undefined;
-  'CallMessageVideoIncoming': undefined;
-  'CallMessageIncomingDeclined': undefined;
-  'CallMessageOutgoingMissed': undefined;
-  'CallMessageIncomingMissed': undefined;
-  'CallMessageOutgoing': undefined;
-  'CallMessageIncoming': undefined;
   'FinalResults': undefined;
   'PublicPoll': undefined;
   'AnonymousPoll': undefined;
-  'AccDescrReactionMentionDown': undefined;
   'AccDescrMentionDown': undefined;
-  'AccDescrPollVoteDown': undefined;
   'AccDescrPageDown': undefined;
-  'ChannelPrivate': undefined;
-  'ChannelPrivateInfo': undefined;
-  'ChannelPublic': undefined;
-  'ChannelPublicInfo': undefined;
   'MegaPrivate': undefined;
   'MegaPrivateInfo': undefined;
   'MegaPublic': undefined;
   'MegaPublicInfo': undefined;
-  'ChannelType': undefined;
   'GroupType': undefined;
-  'ChannelPrivateLinkHelp': undefined;
   'MegaPrivateLinkHelp': undefined;
-  'ChannelUsernameCreatePublicLinkHelp': undefined;
-  'GroupUsernameCreatePublicLinkHelp': undefined;
   'UserRestrictionsNoSend': undefined;
   'UserRestrictionsNoSendMedia': undefined;
   'UserRestrictionsNoSendStickers': undefined;
@@ -93,7 +69,6 @@ export interface LangPair {
   'UserRestrictionsInviteUsers': undefined;
   'UserRestrictionsPinMessages': undefined;
   'UserRestrictionsEditRank': undefined;
-  'ChatPermissionNotAvailable': undefined;
   'StatsMessagePublicShares': undefined;
   'WrongNumber': undefined;
   'SentAppCode': undefined;
@@ -122,6 +97,10 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalSealedProxyTitle': undefined;
+  'SignalSealedProxySame': undefined;
+  'SignalSealedProxyAbout': undefined;
+  'SignalSealedProxyUseMain': undefined;
   'SignalProfileAbout': undefined;
   'SignalProfileAboutHelp': undefined;
   'SignalProfileRemovePhoto': undefined;
@@ -322,52 +301,12 @@ export interface LangPair {
   'LoginSelectCountryTitle': undefined;
   'MenuAddAccount': undefined;
   'CountryNone': undefined;
-  'VoipGroupVoiceChat': undefined;
   'AccDescrMoreOptions': undefined;
   'AccExitFullscreen': undefined;
   'AccSwitchToFullscreen': undefined;
-  'VoipChatStartScreenCapture': undefined;
-  'VoipGroupLeave': undefined;
-  'VoipGroupEndAlertTitle': undefined;
-  'VoipGroupLeaveAlertTitle': undefined;
-  'VoipGroupEndAlertText': undefined;
-  'VoipGroupLeaveAlertText': undefined;
-  'VoipGroupEndChat': undefined;
-  'VoipGroupEnd': undefined;
   'Cancel': undefined;
   'Retry': undefined;
-  'ThisIsYou': undefined;
-  'VoipGroupMutedForMe': undefined;
-  'WantsToSpeak': undefined;
-  'Speaking': undefined;
-  'Listening': undefined;
-  'VoipGroupInviteMember': undefined;
-  'VoipGroupCancelRaiseHand': undefined;
-  'VoipGroupOpenProfile': undefined;
-  'VoipGroupAllowToSpeak': undefined;
-  'VoipMute': undefined;
-  'VoipGroupUnmuteForMe': undefined;
-  'VoipGroupMuteForMe': undefined;
-  'VoipGroupUserRemove': undefined;
   'Back': undefined;
-  'VoipChatJoin': undefined;
-  'CallStatusHanging': undefined;
-  'CallStatusRequesting': undefined;
-  'CallStatusRinging': undefined;
-  'CallStatusIncoming': undefined;
-  'CallStatusWaiting': undefined;
-  'CallStatusExchanging': undefined;
-  'CallMuteAudio': undefined;
-  'CallUnmuteAudio': undefined;
-  'CallStopVideo': undefined;
-  'CallStartVideo': undefined;
-  'VoipFlip': undefined;
-  'CallScreencast': undefined;
-  'CallAccept': undefined;
-  'CallDecline': undefined;
-  'CallEndCall': undefined;
-  'CallRateLabel': undefined;
-  'CallRateComment': undefined;
   'Send': undefined;
   'Close': undefined;
   'Phone': undefined;
@@ -382,20 +321,16 @@ export interface LangPair {
   'ChatNonContactUserSubtitle': undefined;
   'ChatNonContactUserGroups': undefined;
   'ContactInfoRegistration': undefined;
-  'ContactInfoNotVerified': undefined;
   'DeleteForAll': undefined;
   'AreYouSureDeleteSingleMessage': undefined;
   'ConversationDeleteMessagesForEveryone': undefined;
   'ChatListDeleteForCurrentUser': undefined;
   'Delete': undefined;
-  'FakeMessage': undefined;
-  'ScamMessage': undefined;
   'SendWithoutSound': undefined;
   'SetReminder': undefined;
   'ScheduleMessage': undefined;
   'Updating': undefined;
   'SelectChat': undefined;
-  'PinMessageAlertChannel': undefined;
   'PinMessageAlert': undefined;
   'PinMessageAlertChat': undefined;
   'PinMessageAlertTitle': undefined;
@@ -404,16 +339,7 @@ export interface LangPair {
   'NoteToSelf': undefined;
   'SavedMessagesShort': undefined;
   'AccDescrPrevious': undefined;
-  'ReportReasonSpam': undefined;
-  'ReportReasonViolence': undefined;
-  'ReportReasonPornography': undefined;
-  'ReportReasonChildAbuse': undefined;
-  'ReportPeerReasonCopyright': undefined;
-  'ReportReasonOther': undefined;
   'ReportPeerReport': undefined;
-  'ReportReasonDescription': undefined;
-  'ReportButton': undefined;
-  'ReportChatMessagesRequired': undefined;
   'StickersRemoveFromFavorites': undefined;
   'StickersAddToFavorites': undefined;
   'ViewPackPreview': undefined;
@@ -442,14 +368,10 @@ export interface LangPair {
   'ShortcutsControllerOthersLockByPasscode': undefined;
   'GroupAddMembers': undefined;
   'SendMessageTo': undefined;
-  'NewChannel': undefined;
   'NewGroup': undefined;
   'AddPhoto': undefined;
-  'EnterChannelName': undefined;
   'GroupName': undefined;
   'DescriptionOptionalPlaceholder': undefined;
-  'DescriptionInfo': undefined;
-  'ChannelIntroCreateChannel': undefined;
   'NewMessageTitle': undefined;
   'ChatListSearchNoResults': undefined;
   'ChatListSearchNoResultsDescription': undefined;
@@ -473,7 +395,6 @@ export interface LangPair {
   'CreateNewFilterInfo': undefined;
   'CreateNewFilter': undefined;
   'Filters': undefined;
-  'FilterRecommended': undefined;
   'Add': undefined;
   'EnterNewPasscode': undefined;
   'Continue': undefined;
@@ -490,7 +411,6 @@ export interface LangPair {
   'AutoDownloadSettingsContacts': undefined;
   'AutoDownloadSettingsPrivateChats': undefined;
   'AutoDownloadSettingsGroupChats': undefined;
-  'AutoDownloadSettingsChannels': undefined;
   'AutoDownloadPhotosTitle': undefined;
   'AutoDownloadVideosTitle': undefined;
   'AutoDownloadFilesTitle': undefined;
@@ -582,7 +502,6 @@ export interface LangPair {
   'Theme': undefined;
   'ColorTheme': undefined;
   'AccDescrStickers': undefined;
-  'DoubleTapSetting': undefined;
   'SuggestStickers': undefined;
   'UploadImage': undefined;
   'SetColor': undefined;
@@ -624,7 +543,6 @@ export interface LangPair {
   'AutoDeletePopupDescription': undefined;
   'AutoDeleteNever': undefined;
   'ActionTTLYouDisabled': undefined;
-  'ActionTTLChannelDisabled': undefined;
   'LogOutTitle': undefined;
   'AccDescrGoBack': undefined;
   'SureLogout': undefined;
@@ -637,8 +555,6 @@ export interface LangPair {
   'MessagePreview': undefined;
   'FilterGroups': undefined;
   'NotificationsForGroups': undefined;
-  'FilterChannels': undefined;
-  'NotificationsForChannels': undefined;
   'PhoneOther': undefined;
   'ContactJoined': undefined;
   'P2PEverybody': undefined;
@@ -673,7 +589,6 @@ export interface LangPair {
   'FilterDeleteAlert': undefined;
   'RequestToJoinChannelSentDescription': undefined;
   'RequestToJoinGroupSentDescription': undefined;
-  'ChannelJoin': undefined;
   'JoinGroup': undefined;
   'MemberRequestsRequestToJoinChannel': undefined;
   'MemberRequestsRequestToJoinGroup': undefined;
@@ -683,7 +598,6 @@ export interface LangPair {
   'ShareWith': undefined;
   'SelectChats': undefined;
   'JumpToDate': undefined;
-  'FloodWait': undefined;
   'PasscodeWrong': undefined;
   'PasscodeEnterPasscodePlaceholder': undefined;
   'MobileHidden': undefined;
@@ -699,8 +613,6 @@ export interface LangPair {
   'Forward': undefined;
   'MediaZoomOut': undefined;
   'MediaZoomIn': undefined;
-  'PeerInfoReportProfileVideo': undefined;
-  'PeerInfoReportProfilePhoto': undefined;
   'MediaviewProfilePhoto': undefined;
   'AccActionPlay': undefined;
   'AttachAudio': undefined;
@@ -719,7 +631,6 @@ export interface LangPair {
   'Poll': undefined;
   'VideoMessagePermissionDenied': undefined;
   'VideoMessageRecordError': undefined;
-  'SendMessageAsTitle': undefined;
   'Message': undefined;
   'RecentStickers': undefined;
   'PollsChooseQuestion': undefined;
@@ -739,18 +650,11 @@ export interface LangPair {
   'PollAllowVoteChangesDescription': undefined;
   'PollRandomOrder': undefined;
   'PollRandomOrderDescription': undefined;
-  'PollRestrictToSubscribers': undefined;
-  'PollRestrictToSubscribersDescription': undefined;
-  'PollLimitByCountry': undefined;
-  'PollLimitByCountryDescription': undefined;
-  'PollAllowedCountries': undefined;
-  'PollChooseCountry': undefined;
   'PollLimitedDuration': undefined;
   'PollLimitedDurationDescription': undefined;
   'PollDuration': undefined;
   'PollHideResultsUntilClose': undefined;
   'PollSelectCloseDate': undefined;
-  'VoipGroupPersonalAccount': undefined;
   'MenuStickers': undefined;
   'MenuAnimations': undefined;
   'MenuSignalSupport': undefined;
@@ -779,7 +683,6 @@ export interface LangPair {
   'SettingsPerformanceAutoplayGif': undefined;
   'SettingsPerformanceAutoplayVideo': undefined;
   'SettingsPerformanceGranularTitle': undefined;
-  'GroupStickers': undefined;
   'ErrorSendRestrictedStickersAll': undefined;
   'ErrorPhoneNumberInvalid': undefined;
   'ErrorCodeInvalid': undefined;
@@ -807,29 +710,19 @@ export interface LangPair {
   'ConversationEmptyPlaceholder': undefined;
   'ConversationGreetingText': undefined;
   'AreYouSureDeleteFewMessages': undefined;
-  'SavedOpenChat': undefined;
   'ProfileJoinChannel': undefined;
   'ProfileJoinGroup': undefined;
   'ChannelJoinRequest': undefined;
   'BotRestart': undefined;
-  'SubscribeRequests': undefined;
   'MemberRequests': undefined;
   'AddContact': undefined;
   'Call': undefined;
-  'VideoCall': undefined;
   'ChatsUnmute': undefined;
   'ChatsMute': undefined;
-  'StartVoipChat': undefined;
-  'VoipGroupJoinCall': undefined;
-  'ViewDiscussion': undefined;
-  'ProfileViewChannel': undefined;
   'ReportSelectMessages': undefined;
   'EventLogFilterPinnedMessages': undefined;
   'UnpinMessageAlertTitle': undefined;
   'PinnedMessageTitleSingle': undefined;
-  'CommentsTitle': undefined;
-  'RepliesTitle': undefined;
-  'LeaveAComment': undefined;
   'PollsStopWarning': undefined;
   'PollsStopSure': undefined;
   'DiscussChannel': undefined;
@@ -837,16 +730,12 @@ export interface LangPair {
   'MessageScheduleEditTime': undefined;
   'Reply': undefined;
   'Edit': undefined;
-  'AddToFavorites': undefined;
-  'ContextSaveGif': undefined;
   'PollsRetract': undefined;
   'PollsStop': undefined;
   'ContextCancelDownload': undefined;
   'MediaDownload': undefined;
   'CommonSelect': undefined;
   'ConversationContextMenuNoViews': undefined;
-  'CallAgain': undefined;
-  'CallBack': undefined;
   'PollSubmitVotes': undefined;
   'PollViewResults': undefined;
   'PollBackToVote': undefined;
@@ -857,10 +746,8 @@ export interface LangPair {
   'Loading': undefined;
   'NoMessages': undefined;
   'UnreadMessages': undefined;
-  'DiscussionStarted': undefined;
   'MessageScheduledUntilOnline': undefined;
   'ChatForwardActionHeader': undefined;
-  'ConversationReportMessages': undefined;
   'ContextCopySelectedItems': undefined;
   'EditAdminGroupDeleteMessages': undefined;
   'Reminders': undefined;
@@ -880,68 +767,31 @@ export interface LangPair {
   'EmptyGroupInfoLine3': undefined;
   'EmptyGroupInfoLine4': undefined;
   'Reactions': undefined;
-  'DeleteAllMessages': undefined;
-  'DeleteAllReactions': undefined;
-  'DeleteReactionTooltip': undefined;
   'ChatListMarkAllAsRead': undefined;
-  'PaymentCheckoutName': undefined;
   'PaymentReceipt': undefined;
   'ChannelAddUsers': undefined;
   'RemoveMember': undefined;
   'BoxRemove': undefined;
   'NoGIFsFound': undefined;
-  'ChannelAddToChannel': undefined;
   'ChannelAddToGroup': undefined;
   'DismissRequest': undefined;
   'DescriptionPlaceholder': undefined;
-  'TypePublic': undefined;
-  'TypePrivate': undefined;
-  'Discussion': undefined;
-  'DiscussionUnlink': undefined;
   'GroupInfoInviteLinks': undefined;
-  'ChannelSignMessages': undefined;
   'ChannelAdministrators': undefined;
-  'ChannelSubscribers': undefined;
   'ChannelBlockedUsers': undefined;
-  'ChannelDelete': undefined;
-  'ChannelLeave': undefined;
-  'ChannelDeleteAlert': undefined;
-  'ChannelLeaveAlert': undefined;
   'ChannelCreator': undefined;
   'ChannelAdmin': undefined;
   'EventLog': undefined;
-  'EventLogInfoDetailChannel': undefined;
   'EventLogInfoDetail': undefined;
   'ChannelManagementAddModerator': undefined;
-  'ChannelVisibilityForwardingEnabled': undefined;
-  'ChannelVisibilityForwardingDisabled': undefined;
   'RevokeLink': undefined;
   'RevokeAlert': undefined;
   'RevokeButton': undefined;
-  'ChannelVisibilityForwardingChannelTitle': undefined;
-  'ChannelVisibilityForwardingGroupTitle': undefined;
-  'ChannelVisibilityForwardingChannelInfo': undefined;
-  'ChannelVisibilityForwardingGroupInfo': undefined;
   'Unblock': undefined;
-  'NoBlockedChannel2': undefined;
   'NoBlockedGroup2': undefined;
   'ChannelEditAdminPermissionBanUsers': undefined;
-  'DiscussionUnlinkGroup': undefined;
-  'DiscussionUnlinkChannel': undefined;
-  'ChannelDiscussionGroupLinkGroup': undefined;
-  'DiscussionChannelHelp': undefined;
-  'DiscussionCreateGroup': undefined;
-  'DiscussionChannelHelp2': undefined;
-  'DiscussionLinkGroup': undefined;
-  'ChannelSettingsJoinTitle': undefined;
-  'ChannelSettingsJoinToSend': undefined;
-  'ChannelSettingsJoinRequest': undefined;
-  'ChannelSettingsJoinRequestInfo': undefined;
-  'ChannelSettingsJoinToSendInfo': undefined;
-  'LinkedChannel': undefined;
   'ChannelPermissions': undefined;
   'GroupMembers': undefined;
-  'ChatHistory': undefined;
   'DeleteMega': undefined;
   'GroupPendingInvites': undefined;
   'GroupPendingInvitesDescription': undefined;
@@ -951,33 +801,24 @@ export interface LangPair {
   'GroupEndGroup': undefined;
   'GroupEndGroupText': undefined;
   'AreYouSureDeleteAndExit': undefined;
-  'DeleteGroupForAll': undefined;
   'EditAdminWhatCanDo': undefined;
-  'EditAdminChangeChannelInfo': undefined;
   'EditAdminChangeGroupInfo': undefined;
   'EditAdminManageWelcomeMessages': undefined;
-  'EditAdminPostMessages': undefined;
-  'EditAdminEditMessages': undefined;
-  'EditAdminDeleteMessages': undefined;
   'EditAdminBanUsers': undefined;
   'EditAdminPinMessages': undefined;
   'EditAdminAddAdmins': undefined;
-  'EditAdminManageDirect': undefined;
   'EditAdminPostStories': undefined;
   'EditAdminEditStories': undefined;
   'EditAdminDeleteStories': undefined;
-  'EditAdminManageTopics': undefined;
   'EditAdminUnavailable': undefined;
   'EditAdminConfirmDismissText': undefined;
   'EditAdminConfirmDismiss': undefined;
-  'StartVoipChatPermission': undefined;
   'EditAdminSendAnonymously': undefined;
   'EditAdminRank': undefined;
   'EditAdminRemoveAdmin': undefined;
   'ChannelPermissionsHeader': undefined;
   'UserRestrictionsSend': undefined;
   'UserRestrictionsSendMedia': undefined;
-  'UserRestrictionsCreateTopics': undefined;
   'SendMediaPermissionFiles': undefined;
   'SendMediaPermissionPhotos': undefined;
   'SendMediaPermissionVideos': undefined;
@@ -995,14 +836,6 @@ export interface LangPair {
   'UserRestrictionsBlock': undefined;
   'ApproveNewMembers': undefined;
   'ApproveNewMembersDescription': undefined;
-  'ApproveNewMembersPublicUnavailable': undefined;
-  'GuardApproveNewMembers': undefined;
-  'GuardApproveNewChannelSubscribersInfo': undefined;
-  'GuardApproveNewPrivateGroupMembersInfo': undefined;
-  'GuardApproveNewPublicGroupMembersInfo': undefined;
-  'GuardApplyToInvitesTitle': undefined;
-  'GuardApplyToInvitesApply': undefined;
-  'GuardApplyToInvitesDontApply': undefined;
   'Disable': undefined;
   'InviteLinkApprovalRequired': undefined;
   'LinkNameHint': undefined;
@@ -1018,11 +851,6 @@ export interface LangPair {
   'CreateLink': undefined;
   'LinkCopied': undefined;
   'QrCodeTitle': undefined;
-  'QrCodeCopy': undefined;
-  'QrCodeCopied': undefined;
-  'QrCodeColors': undefined;
-  'QrCodeDefaultColor': undefined;
-  'QrCodeEmoji': undefined;
   'NoOneJoined': undefined;
   'NoOneJoinedYet': undefined;
   'CopyLink': undefined;
@@ -1032,7 +860,6 @@ export interface LangPair {
   'LinkLimitReached': undefined;
   'InviteLinkExpired': undefined;
   'DeleteLink': undefined;
-  'PrimaryLinkHelpChannel': undefined;
   'PrimaryLinkHelp': undefined;
   'PublicLink': undefined;
   'CreatePermanentLinkTitle': undefined;
@@ -1044,7 +871,6 @@ export interface LangPair {
   'DeleteAll': undefined;
   'DeleteLinkHelp': undefined;
   'NoMemberRequests': undefined;
-  'NoSubscribeRequestsDescription': undefined;
   'NoMemberRequestsDescription': undefined;
   'UserInfoFirstNamePlaceholder': undefined;
   'UserInfoLastNamePlaceholder': undefined;
@@ -1059,10 +885,6 @@ export interface LangPair {
   'MediaAudioEmpty': undefined;
   'SharedMediaEmptyTitle': undefined;
   'PollResults': undefined;
-  'ChannelAddSubscribers': undefined;
-  'ChannelTypeHeader': undefined;
-  'GroupTypeHeader': undefined;
-  'GroupInfoAdminLog': undefined;
   'EditAdminRights': undefined;
   'SetAsAdmin': undefined;
   'UserRestrictions': undefined;
@@ -1087,7 +909,6 @@ export interface LangPair {
   'StickerPackErrorNotFound': undefined;
   'ContactsPhoneNumberNotRegistred': undefined;
   'NoUsernameFound': undefined;
-  'PrivateChannelInaccessible': undefined;
   'HiddenName': undefined;
   'ChannelPersmissionDeniedSendMessagesForever': undefined;
   'ChannelPersmissionDeniedSendMessagesDefaultRestrictedText': undefined;
@@ -1116,7 +937,6 @@ export interface LangPair {
   'LastSeenJustNow': undefined;
   'Online': undefined;
   'Lately': undefined;
-  'VoipUnmute': undefined;
   'WeekdayToday': undefined;
   'Today': undefined;
   'WeekdayYesterday': undefined;
@@ -1152,29 +972,19 @@ export interface LangPair {
   'WaitingForNetwork': undefined;
   'ScheduleSendWhenOnline': undefined;
   'ScheduleRepeatNever': undefined;
-  'VoipIncoming': undefined;
   'RightNow': undefined;
   'JustNowAgo': undefined;
   'AudioPause': undefined;
   'AudioPlay': undefined;
-  'ChannelInaccessible': undefined;
   'GroupInaccessible': undefined;
   'AriaPasswordToggle': undefined;
   'NothingFound': undefined;
-  'SetUrlShort': undefined;
-  'SetUrlLong': undefined;
-  'SetUrlInvalid': undefined;
-  'UsernameShort': undefined;
-  'UsernameLong': undefined;
-  'UsernameInvalid': undefined;
   'AriaCodeWordWrap': undefined;
   'AriaBackToChatList': undefined;
   'NoContactsFound': undefined;
   'ContactListEmpty': undefined;
-  'AriaNewChannelContinue': undefined;
   'AriaNewGroupContinue': undefined;
   'NewChatTitleEmptyError': undefined;
-  'NewChannelTitleEmptyError': undefined;
   'NewChatTooManyUsers': undefined;
   'AriaCreateGroup': undefined;
   'EditProfileNoFirstName': undefined;
@@ -1243,20 +1053,12 @@ export interface LangPair {
   'AudioSaveToMyProfileUnsaved': undefined;
   'PinnedConfirmUnpin': undefined;
   'RestictionReasonPrivateChat': undefined;
-  'RestictionReasonPrivateChannel': undefined;
   'AriaCloseAttachmentModal': undefined;
   'AriaAddAttachment': undefined;
   'AriaOpenSymbolMenu': undefined;
   'AriaComposerOpenScheduled': undefined;
-  'AriaComposerSilentPostingEnable': undefined;
-  'AriaComposerSilentPostingDisable': undefined;
-  'ComposerSilentPostingEnabledTootlip': undefined;
-  'ComposerSilentPostingDisabledTootlip': undefined;
   'ComposerPlaceholder': undefined;
   'ComposerPlaceholderAnonymous': undefined;
-  'ComposerPlaceholderBroadcast': undefined;
-  'ComposerPlaceholderBroadcastSilent': undefined;
-  'ComposerPlaceholderTopicGeneral': undefined;
   'ComposerStoryPlaceholderLocked': undefined;
   'ComposerPlaceholderNoText': undefined;
   'AriaComposerCancelVoice': undefined;
@@ -1364,11 +1166,7 @@ export interface LangPair {
   'ChatMemberListNoAccess': undefined;
   'NoMembersFound': undefined;
   'Profile': undefined;
-  'ChannelManagementAddAdminDescription': undefined;
   'GroupManagementAddAdminDescription': undefined;
-  'ChannelManagementLinkPrivate': undefined;
-  'NoDiscussionsLinked': undefined;
-  'NoSubscribersFound': undefined;
   'GroupManagementBanUserConfirm': undefined;
   'NoLinksFound': undefined;
   'JoinRequestAcceptAll': undefined;
@@ -1407,8 +1205,6 @@ export interface LangPair {
   'ReplyInPrivateMessage': undefined;
   'ProfileBirthday': undefined;
   'ProfileBirthdayToday': undefined;
-  'ProfileMenuSetMainTab': undefined;
-  'ProfileItemSubscribers': undefined;
   'AriaSearchOlderResult': undefined;
   'AriaSearchNewerResult': undefined;
   'GiftInfoDate': undefined;
@@ -1418,8 +1214,6 @@ export interface LangPair {
   'DeleteAccountIfAwayFor': undefined;
   'SelfDestructTitle': undefined;
   'SelfDestructSessionsDescription': undefined;
-  'VideoConversionTitle': undefined;
-  'VideoConversionText': undefined;
   'VideoConversionDone': undefined;
   'VideoConversionView': undefined;
   'PrivacyMusic': undefined;
@@ -1428,20 +1222,14 @@ export interface LangPair {
   'AllChatsSearchContext': undefined;
   'PrivateChatsSearchContext': undefined;
   'GroupChatsSearchContext': undefined;
-  'ChannelsSearchContext': undefined;
   'SearchFilterFrom': undefined;
   'SearchTabChats': undefined;
-  'SearchTabChannels': undefined;
   'SearchTabMedia': undefined;
   'SearchTabLinks': undefined;
   'SearchTabFiles': undefined;
   'SearchTabMusic': undefined;
   'SearchTabVoice': undefined;
   'SearchTabMessages': undefined;
-  'SearchResultTopics': undefined;
-  'SearchResultMyChannels': undefined;
-  'SearchResultRecommendedChannels': undefined;
-  'ProfileTabSavedDialogs': undefined;
   'ProfileTabStories': undefined;
   'ProfileTabStoriesArchive': undefined;
   'ProfileTabGifts': undefined;
@@ -1459,8 +1247,6 @@ export interface LangPair {
   'ProfileTabPolls': undefined;
   'ProfilePollsEmpty': undefined;
   'ProfileTabSharedGroups': undefined;
-  'ProfileTabSimilarChannels': undefined;
-  'ProfileTabPublicPosts': undefined;
   'ViewButtonRequestJoin': undefined;
   'ViewButtonMessage': undefined;
   'ViewButtonVoiceChat': undefined;
@@ -1476,7 +1262,6 @@ export interface LangPair {
   'PasswordFormPlaceholder': undefined;
   'PasswordFormSubmit': undefined;
   'ActionFallbackUser': undefined;
-  'ActionFallbackChat': undefined;
   'ActionUnsupported': undefined;
   'ActionPinnedNotFoundYou': undefined;
   'PinnedMessagesNotifications': undefined;
@@ -1492,7 +1277,6 @@ export interface LangPair {
   'ActionPinnedMediaStory': undefined;
   'ActionPinnedMediaAlbum': undefined;
   'ActionPinnedMediaPoll': undefined;
-  'ActionGroupCallStartedChannel': undefined;
   'ActionExpiredVoice': undefined;
   'ActionExpiredVideo': undefined;
   'MediaUnavailable': undefined;
@@ -1503,8 +1287,6 @@ export interface LangPair {
   'ActionViewOnceVideo': undefined;
   'ViewOnceViewedToast': undefined;
   'ViewOnceOutgoingToast': undefined;
-  'ActionChannelJoinedYou': undefined;
-  'ActionChannelJoinedByRequestChannelYou': undefined;
   'ActionUserLeftYou': undefined;
   'ActionUserJoinedYou': undefined;
   'ActionJoinedByRequestYou': undefined;
@@ -1523,24 +1305,18 @@ export interface LangPair {
   'ActionGroupAnnouncementsOnYou': undefined;
   'ActionGroupAnnouncementsOffYou': undefined;
   'ActionRemovedPhotoYou': undefined;
-  'ActionRemovedPhotoChannel': undefined;
   'ActionChangedPhotoYou': undefined;
-  'ActionChangedPhotoChannel': undefined;
   'ActionDisabledThemeYou': undefined;
-  'ActionDisabledThemeChannel': undefined;
   'ActionChangedWallpaperYou': undefined;
   'ActionSetSameWallpaperYou': undefined;
   'ActionChangedWallpaperGroup': undefined;
   'ActionChangedWallpaperGroupYou': undefined;
-  'ActionChangedWallpaperChannel': undefined;
-  'ActionCreatedChannel': undefined;
   'ActionScreenshotTakenYou': undefined;
   'ActionSharingDisabledYou': undefined;
   'ActionSharingEnabledYou': undefined;
   'ActionSharingStillDisabled': undefined;
   'ContextMenuNoForwardsYou': undefined;
   'DisableSharing': undefined;
-  'EnableSharing': undefined;
   'NotificationSharingEnabled': undefined;
   'NotificationSharingDisabled': undefined;
   'NoForwardingTitle': undefined;
@@ -1556,24 +1332,8 @@ export interface LangPair {
   'ActionSuggestedPhotoButton': undefined;
   'ActionSuggestedPhotoUpdatedTitle': undefined;
   'ActionSuggestedPhotoUpdatedDescription': undefined;
-  'ActionTopicClosedInside': undefined;
-  'ActionTopicReopenedInside': undefined;
-  'ActionTopicHiddenInside': undefined;
-  'ActionTopicUnhiddenInside': undefined;
-  'ActionTopicPlaceholder': undefined;
   'ActionViewButton': undefined;
   'RichEditorTableCompact': undefined;
-  'BotDraftStop': undefined;
-  'CommunityOpenPanel': undefined;
-  'CommunityShowAsOneChat': undefined;
-  'CommunityShowAsOneChatHint': undefined;
-  'CommunityChatsYouAreIn': undefined;
-  'CommunityChatsYouCanView': undefined;
-  'CommunityChatsYouCanJoin': undefined;
-  'CommunitySearchChats': undefined;
-  'CommunityNoChatsFound': undefined;
-  'CommunityJoinChatConfirm': undefined;
-  'CommunityChatNotAccessible': undefined;
   'ActionHistoryCleared': undefined;
   'PeerChannel': undefined;
   'ContactLinkInvalid': undefined;
@@ -1601,7 +1361,6 @@ export interface LangPair {
   'MonoforumBadge': undefined;
   'MonoforumStatus': undefined;
   'MonoforumComposerPlaceholder': undefined;
-  'ChannelSendMessage': undefined;
   'InputTitle': undefined;
   'TitleTask': undefined;
   'NativeDownloadFailed': undefined;
@@ -1627,7 +1386,6 @@ export interface LangPair {
   'ContextLinkRemovePreview': undefined;
   'AccLinkRemovePreview': undefined;
   'GlobalSearch': undefined;
-  'PublicPosts': undefined;
   'AllStoriesCategory': undefined;
   'ErrorFocusInaccessibleMessage': undefined;
   'ContextMenuHintMouse': undefined;
@@ -1719,13 +1477,9 @@ export interface LangPair {
   'VideoEditingUnsupportedMute': undefined;
   'VideoEditingUnsupportedCoverMute': undefined;
   'QuickPreview': undefined;
-  'HeaderMenuViewGroupInfo': undefined;
-  'HeaderMenuViewTopicInfo': undefined;
   'UserNoteTitle': undefined;
   'UserNoteHint': undefined;
   'EditUserNoteHint': undefined;
-  'BotForumAllTopicTitle': undefined;
-  'BotForumAllTopicDescription': undefined;
   'AriaStoryTogglerOpen': undefined;
   'InviteBlockedTitle': undefined;
   'InviteBlockedOneMessage': undefined;
@@ -1794,10 +1548,7 @@ export interface LangPair {
   'DiceToastSend': undefined;
   'ChatTypePrivate': undefined;
   'ChatTypeGroup': undefined;
-  'ChatTypeChannel': undefined;
-  'ChatTypeCommunity': undefined;
   'ChatTypeFallback': undefined;
-  'ChatInfoNoMessages': undefined;
   'AttachmentMenuSendAsMedia': undefined;
   'AttachmentMenuSendAllAsMedia': undefined;
   'AttachmentMenuSendAsFiles': undefined;
@@ -1876,29 +1627,13 @@ export interface LangPair {
   'RichButtonCenter': undefined;
   'RichButtonRight': undefined;
   'RichEditorButtonCopyText': undefined;
-  'AccDescrCollapsePanel': undefined;
-  'AccDescrExpandPanel': undefined;
   'AccDescrLike': undefined;
-  'AccDescrTopic': undefined;
-  'AllReactions': undefined;
   'AllViewers': undefined;
   'AreYouSure': undefined;
   'AttachMenu': undefined;
   'August': undefined;
-  'AvailableReactions': undefined;
   'BlockUser': undefined;
-  'CallCameraAccessNeeded': undefined;
   'Calls': undefined;
-  'ChannelTitleInfo': undefined;
-  'ChannelHideMembers': undefined;
-  'ChannelPostDeleted': undefined;
-  'ChannelReactionsMaxCountInfo': undefined;
-  'ChannelSignMessagesWithProfile': undefined;
-  'ChannelSignProfilesInfo': undefined;
-  'ChannelTopics': undefined;
-  'ChatContextViewAsTopics': undefined;
-  'ChatEmptyTopicPlaceholderText': undefined;
-  'ChatEmptyTopicPlaceholderTitle': undefined;
   'ChatPlayOnceVoiceMessageTooltip': undefined;
   'ChatAllowedFiles': undefined;
   'ChatAllowedMusic': undefined;
@@ -1910,12 +1645,6 @@ export interface LangPair {
   'ChatAllowedVoices': undefined;
   'ChatSendNotAllowedText': undefined;
   'ChatVoiceSingleDeleteAndClose': undefined;
-  'ChatHistoryHiddenInfo2': undefined;
-  'ChatHistoryVisibleInfo': undefined;
-  'ChatListEmptyTopicsCreate': undefined;
-  'ChatListEmptyTopicsDescription': undefined;
-  'ChatListEmptyTopicsTitle': undefined;
-  'ChatListPeerTypeChannel': undefined;
   'ChatListPeerTypeContact': undefined;
   'ChatListPeerTypeGroup': undefined;
   'ChatListPeerTypeNonContact': undefined;
@@ -1923,10 +1652,6 @@ export interface LangPair {
   'ChatSetPhotoOrVideo': undefined;
   'Checking': undefined;
   'ChooseStickerMyStickerSets': undefined;
-  'ClearHistoryMyNotesMessage': undefined;
-  'ClearHistoryMyNotesTitle': undefined;
-  'ClearHistoryTitleSingle2': undefined;
-  'ClearRecentReactionsAlertMessage': undefined;
   'ClearRecentStickersAlertMessage': undefined;
   'ClearSearchAlert': undefined;
   'StoryPrivacyOptionCloseFriends': undefined;
@@ -1935,44 +1660,25 @@ export interface LangPair {
   'ConversationSearchPlaceholder': undefined;
   'ConversationStoryForwardTooltipSavedMessagesOne': undefined;
   'ConversationSuggestedPhotoTitle': undefined;
-  'CreateGeneralTopicTitle': undefined;
-  'CreateTopic': undefined;
-  'CreateTopicTitle': undefined;
   'DebugMenuEnableLogs': undefined;
   'DebugSendLogs': undefined;
   'December': undefined;
-  'DeleteAdditionalActions': undefined;
-  'DeleteAllFromUsers': undefined;
-  'DeleteBanUsers': undefined;
-  'DeleteProceedBtn': undefined;
-  'DeleteRestrictUsers': undefined;
   'DeleteStorySubtitle': undefined;
   'DeleteStoryTitle': undefined;
-  'DeleteToggleBanUsers': undefined;
-  'DeleteToggleRestrictUsers': undefined;
   'Deleted': undefined;
-  'DisableReactionsInfo': undefined;
   'DoNotReply': undefined;
-  'EditTopic': undefined;
   'Emoji': undefined;
-  'EnableAllReactionsInfo': undefined;
-  'EnableSomeReactionsInfo': undefined;
   'English': undefined;
   'ExpiredStory': undefined;
   'ExpiredStoryMention': undefined;
   'FactCheck': undefined;
   'February': undefined;
   'SearchFilterByUser': undefined;
-  'ForumToggleDescription': undefined;
   'ForwardToAnotherChat': undefined;
   'ForwardedFrom': undefined;
   'Fragment': undefined;
-  'GroupErrorAccessDenied': undefined;
   'GroupEmoji': undefined;
   'GroupInfoTitle': undefined;
-  'GroupMembersMembersHiddenOff': undefined;
-  'GroupMembersMembersHiddenOn': undefined;
-  'GroupPermissionNoManageTopics': undefined;
   'HashtagSearchPlaceholder': undefined;
   'Hide': undefined;
   'HideReadTime': undefined;
@@ -1984,7 +1690,6 @@ export interface LangPair {
   'JoinedViaFolder': undefined;
   'July': undefined;
   'June': undefined;
-  'KickFromSupergroup': undefined;
   'LocalizationInterfaceLanguage': undefined;
   'Map': undefined;
   'March': undefined;
@@ -1994,14 +1699,9 @@ export interface LangPair {
   'MoreSimilar': undefined;
   'MuteForForever': undefined;
   'MyNotes': undefined;
-  'NewTopic': undefined;
-  'NoComments': undefined;
-  'NoReactions': undefined;
-  'NoReplies': undefined;
   'NobodyViewed': undefined;
   'November': undefined;
   'October': undefined;
-  'OnlyAllowThisReactions': undefined;
   'PeerInfoPaneStories': undefined;
   'PhoneCopied': undefined;
   'PmReadShowWhen': undefined;
@@ -2031,31 +1731,16 @@ export interface LangPair {
   'PrivacyVoiceMessages': undefined;
   'PrivacyVoiceMessagesInfo': undefined;
   'PrivacyVoiceMessagesTitle': undefined;
-  'ProfileChannel': undefined;
   'ProfilePhotoSetMainPhoto': undefined;
   'QuotePrivate': undefined;
-  'ReactionsAll': undefined;
-  'ReactionsOff': undefined;
   'RemoveQuote': undefined;
   'Replace': undefined;
   'ReplyPrivate': undefined;
   'ReplyPrivately': undefined;
   'ReplyToAnotherChat': undefined;
   'ReplyToGroupStory': undefined;
-  'Report2Comment': undefined;
-  'Report2CommentOptional': undefined;
-  'ReportSend': undefined;
-  'ReportSpamTitle': undefined;
-  'ReportStory': undefined;
-  'CallMicrophoneAccessNeeded': undefined;
   'Reset': undefined;
   'Saved': undefined;
-  'SavedTagFilterByTag': undefined;
-  'SavedTagLabelTag': undefined;
-  'SavedTagLabelTagText': undefined;
-  'SavedTagReactionsHint2': undefined;
-  'SavedTagRemoveTag': undefined;
-  'SavedTagRenameTag': undefined;
   'SearchAsChat': undefined;
   'SearchAsList': undefined;
   'SearchEmptyViewTitle': undefined;
@@ -2065,7 +1750,6 @@ export interface LangPair {
   'September': undefined;
   'SettingsMyStories': undefined;
   'ShareLinkCopied': undefined;
-  'SomeReactions': undefined;
   'SortBy': undefined;
   'SortByReactions': undefined;
   'SortByTime': undefined;
@@ -2100,7 +1784,6 @@ export interface LangPair {
   'StoryReactionsHint': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
-  'TopicClosedByAdmin': undefined;
   'Unlock': undefined;
   'UserInfoCustomPhoto': undefined;
   'UserInfoCustomVideo': undefined;
@@ -2114,12 +1797,6 @@ export interface LangPair {
   'UserRestrictionsNoSendText': undefined;
   'UserRestrictionsNoSendVideos': undefined;
   'UserRestrictionsNoSendVoice': undefined;
-  'UsernameActivateAlertShow': undefined;
-  'UsernameActivateAlertText': undefined;
-  'UsernameActivateAlertTitle': undefined;
-  'UsernameDeactivateAlertHide': undefined;
-  'UsernameDeactivateAlertText': undefined;
-  'UsernameDeactivateAlertTitle': undefined;
   'UsernameCopied': undefined;
   'VideoUnsupportedDesktop': undefined;
   'VideoUnsupportedMobile': undefined;
@@ -2127,19 +1804,6 @@ export interface LangPair {
   'ContextQuoteAndReply': undefined;
   'CustomEmojiUsedSets': undefined;
   'Edited': undefined;
-  'ForumCreateTopic': undefined;
-  'ForumNoMessages': undefined;
-  'ForumRepliesOnly': undefined;
-  'ForumTopicClose': undefined;
-  'ForumTopicDeleteSure': undefined;
-  'ForumTopicEdit': undefined;
-  'ForumTopicReopen': undefined;
-  'ForumTopicTitle': undefined;
-  'ForumViewAsMessages': undefined;
-  'GroupCallContextPinCamera': undefined;
-  'GroupCallContextUnpinCamera': undefined;
-  'GroupCallScreenShareStop': undefined;
-  'GroupInviteBadLink': undefined;
   'InfoUserTitle': undefined;
   'LaunchExeDontAsk': undefined;
   'LaunchSvgWarning': undefined;
@@ -2148,27 +1812,17 @@ export interface LangPair {
   'MediaviewGroupPhoto': undefined;
   'MediaviewProfilePhotoByYou': undefined;
   'MediaviewProfilePublicPhoto': undefined;
-  'ReportPleaseSelectMessages': undefined;
   'SettingsTitleChatName': undefined;
   'SettingsWindowSystem': undefined;
-  'UsernamesActive': undefined;
-  'UsernamesDescription': undefined;
-  'UsernamesEdit': undefined;
-  'UsernamesNonActive': undefined;
-  'UsernamesSubtitle': undefined;
   'VideoPlayerPictureInPicture': undefined;
   'AriaReplaceAttachment': undefined;
   'GroupTitleEmptyError': undefined;
   'ContactFirstNameRequired': undefined;
-  'ReportChatIllegalDrugs': undefined;
-  'ReportChatPersonalDetails': undefined;
   'UserNameCopied': undefined;
   'ChatNameCopied': undefined;
-  'SettingsTestServerLogin': undefined;
   'SettingsStartWave': undefined;
   'SettingsVaporizeButton': undefined;
   'DebugDownloadLog': undefined;
-  'TestServer': undefined;
   'CodeLanguagePlainText': undefined;
   'ErrorChatRestricted': undefined;
   'ErrorChatSendPollForbidden': undefined;
@@ -2237,11 +1891,6 @@ export interface LangPair {
   'ErrorGroupLastAdmin': undefined;
   'DownloadSizeUnsupported': undefined;
   'DownloadKeepAppOpen': undefined;
-  'ReportSubmitError': undefined;
-  'VoiceChatInactive': undefined;
-  'VoiceChatJoinFailed': undefined;
-  'LiveStreamUnsupported': undefined;
-  'GroupCallsUnsupported': undefined;
   'PageTitleInactive': undefined;
   'SettingsKeywordsChatBackground': undefined;
   'SettingsKeywordsTheme': undefined;
@@ -2251,13 +1900,13 @@ export interface LangPair {
   'SettingsKeywordsNotifications': undefined;
   'SettingsKeywordsPrivateChats': undefined;
   'SettingsKeywordsGroups': undefined;
-  'SettingsKeywordsChannels': undefined;
   'SettingsKeywordsArchiveAndMute': undefined;
   'SettingsKeywordsBlockedUsers': undefined;
   'SettingsKeywordsPasscode': undefined;
   'SettingsKeywordsAutoDelete': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSealedProxy': undefined;
   'SettingsKeywordsSignalDevices': undefined;
   'SettingsKeywordsReadReceipts': undefined;
   'SettingsKeywordsTypingIndicators': undefined;
@@ -2383,9 +2032,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionWatchingAnimations': {
     'emoji': V;
   };
-  'SetUrlAvailable': {
-    'url': V;
-  };
   'UsernameAvailable': {
     'username': V;
   };
@@ -2403,9 +2049,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'limit': V;
   };
   'LimitReachedPinDialogsPremium': {
-    'limit': V;
-  };
-  'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
   'SignalUsernameDeleteConfirm': {
@@ -2465,21 +2108,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SignalDevicesUnlinkTitle': {
     'name': V;
   };
-  'SpeakingWithVolume': {
-    'volume': V;
-  };
-  'CallEmojiKeyTooltip': {
-    'user': V;
-  };
   'ConversationScheduleMessageSendToday': {
     'time': V;
   };
   'ConversationScheduleMessageSendOn': {
     'date': V;
     'time': V;
-  };
-  'ChatListDeleteAndLeaveGroupConfirmation': {
-    'chat': V;
   };
   'ChannelLeaveAlertWithName': {
     'chat': V;
@@ -2563,9 +2197,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionTTLDisabled': {
     'from': V;
   };
-  'ActionTTLChannelChanged': {
-    'time': V;
-  };
   'NewContactPhoneHiddenText': {
     'user': V;
   };
@@ -2593,12 +2224,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'VideoMessagesRestrictedByPrivacy': {
     'user': V;
   };
-  'PollSubscriberRestriction': {
-    'channel': V;
-  };
-  'PollCountryRestriction': {
-    'countries': V;
-  };
   'ErrorFloodTime': {
     'time': V;
   };
@@ -2619,10 +2244,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'EphemeralOnlyVisibleToBot': {
     'bot': V;
-  };
-  'CallMessageWithDuration': {
-    'time': V;
-    'duration': V;
   };
   'PollEndsTime': {
     'time': V;
@@ -2665,12 +2286,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'UserRemovedBy': {
     'user': V;
   };
-  'DiscussionUnlinkChannelAlert': {
-    'chat': V;
-  };
-  'DiscussionUnlinkGroupAlert': {
-    'channel': V;
-  };
   'GroupPhoneInvited': {
     'phone': V;
   };
@@ -2685,9 +2300,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'GroupEndGroupTitle': {
     'group': V;
-  };
-  'AreYouSureDeleteThisChatWithGroup': {
-    'chat': V;
   };
   'LinkExpiresIn': {
     'time': V;
@@ -2706,9 +2318,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'VoipPeerIncompatible': {
     'user': V;
-  };
-  'NewDiscussionChatTitle': {
-    'name': V;
   };
   'LastSeenTodayAt': {
     'time': V;
@@ -2742,15 +2351,8 @@ export interface LangPairWithVariables<V = LangVariable> {
   'MediaViewDownloading': {
     'count': V;
   };
-  'ComposerPlaceholderTopic': {
-    'topic': V;
-  };
   'RichEditorHeadingLevel': {
     'level': V;
-  };
-  'ChannelManagementLinkDiscussion': {
-    'group': V;
-    'channel': V;
   };
   'ProfileBirthdayValue': {
     'date': V;
@@ -2798,23 +2400,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionPinnedMediaYou': {
     'media': V;
   };
-  'ActionGroupCallStartedGroup': {
-    'from': V;
-  };
-  'ActionGroupCallScheduledGroup': {
-    'from': V;
-    'date': V;
-  };
-  'ActionGroupCallScheduledChannel': {
-    'date': V;
-  };
-  'ActionGroupCallFinishedChannel': {
-    'duration': V;
-  };
-  'ActionGroupCallFinishedGroup': {
-    'from': V;
-    'duration': V;
-  };
   'ActionMessageDeleted': {
     'from': V;
   };
@@ -2834,9 +2419,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'ActionAddUsersManyYou': {
     'users': V;
-  };
-  'ActionAddYou': {
-    'from': V;
   };
   'ActionKickUser': {
     'from': V;
@@ -2935,16 +2517,8 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionGroupAnnouncementsOff': {
     'from': V;
   };
-  'ActionVideoInvited': {
-    'from': V;
-    'user': V;
-  };
   'ActionVideoInvitedYou': {
     'user': V;
-  };
-  'ActionVideoInvitedMany': {
-    'from': V;
-    'users': V;
   };
   'ActionVideoInvitedManyYou': {
     'users': V;
@@ -2965,9 +2539,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionChangedThemeYou': {
     'theme': V;
   };
-  'ActionChangedThemeChannel': {
-    'theme': V;
-  };
   'ActionDisabledTheme': {
     'from': V;
   };
@@ -2985,9 +2556,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'title': V;
   };
   'ActionChangedTitleYou': {
-    'title': V;
-  };
-  'ActionChangedTitleChannel': {
     'title': V;
   };
   'ActionCreatedChat': {
@@ -3056,59 +2624,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionSuggestedBirthday': {
     'user': V;
   };
-  'ActionTopicCreated': {
-    'topic': V;
-  };
-  'ActionTopicClosed': {
-    'from': V;
-    'topic': V;
-  };
-  'ActionTopicReopened': {
-    'from': V;
-    'topic': V;
-  };
-  'ActionTopicHidden': {
-    'topic': V;
-  };
-  'ActionTopicUnhidden': {
-    'topic': V;
-  };
-  'ActionTopicRenamed': {
-    'from': V;
-    'link': V;
-    'title': V;
-  };
-  'ActionTopicIconChanged': {
-    'from': V;
-    'link': V;
-    'emoji': V;
-  };
-  'ActionTopicIconRemoved': {
-    'from': V;
-    'link': V;
-  };
-  'ActionTopicIconAndRenamed': {
-    'from': V;
-    'link': V;
-    'topic': V;
-  };
-  'ActionMigratedFrom': {
-    'chat': V;
-  };
-  'ActionMigratedTo': {
-    'chat': V;
-  };
-  'ActionAddedToCommunity': {
-    'from': V;
-    'community': V;
-  };
-  'ActionJoinedViaCommunity': {
-    'from': V;
-    'community': V;
-  };
-  'ActionRemovedFromCommunity': {
-    'from': V;
-  };
   'FrozenAccountAppealSubtitle': {
     'botLink': V;
     'date': V;
@@ -3148,14 +2663,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'EditorMutedGifTooLarge': {
     'size': V;
-  };
-  'ActionNewCreatorPending': {
-    'user': V;
-    'from': V;
-  };
-  'ActionChangeCreator': {
-    'from': V;
-    'user': V;
   };
   'FileTransferProgress': {
     'currentSize': V;
@@ -3208,25 +2715,13 @@ export interface LangPairWithVariables<V = LangVariable> {
   'SettingsLanguageDesc': {
     'language': V;
   };
-  'ChannelVisibilityConfirmMakePrivateChannel': {
-    'currentUsername': V;
-  };
   'ChatPrivateMessageEditTimestampDate': {
     'date': V;
   };
   'ChatSendAllowedContentText': {
     'types': V;
   };
-  'ClearHistoryMessageSingle': {
-    'chat': V;
-  };
   'ConversationShareLinkTooltipChatOne': {
-    'user': V;
-  };
-  'DeleteAllFrom': {
-    'user': V;
-  };
-  'DeleteBan': {
     'user': V;
   };
   'DeleteMessagesOptionAlso': {
@@ -3240,15 +2735,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'FactCheckFooter': {
     'country': V;
-  };
-  'LimitReachedFolderLinksPremium': {
-    'limit': V;
-  };
-  'LimitReachedPinnedTopics': {
-    'limit': V;
-  };
-  'LimitReachedSharedFoldersPremium': {
-    'limit': V;
   };
   'MessageContainsEmojiPack': {
     'pack': V;
@@ -3309,20 +2795,8 @@ export interface LangPairWithVariables<V = LangVariable> {
   'UserInfoSuggestPhoto': {
     'user': V;
   };
-  'UsernameAlso': {
-    'usernames': V;
-  };
-  'UsernamePurchaseAvailable': {
-    'link': V;
-  };
   'PeerPickerUnknownPeer': {
     'id': V;
-  };
-  'VoiceChatJoinConfirm': {
-    'chat': V;
-  };
-  'VoiceChatJoinConfirmChannel': {
-    'chat': V;
   };
   'DesktopMenuOpen': {
     'app': V;
@@ -3364,8 +2838,6 @@ export interface LangPairWithVariables<V = LangVariable> {
 
 export interface LangPairPlural {
   'DeleteForMeChatHint': undefined;
-  'DeleteForEveryoneHint': undefined;
-  'ReactionDeleted': undefined;
   'MediaReplaceInvalidError': undefined;
   'FwdMessagesToNoteToSelf': undefined;
 }
@@ -3411,12 +2883,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'StickerPackStickerCount': {
     'count': V;
   };
-  'PollCountriesCount': {
-    'count': V;
-  };
-  'PollCountriesLimit': {
-    'count': V;
-  };
   'ErrorMessageTooLong': {
     'count': V;
   };
@@ -3428,9 +2894,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   };
   'PinnedMessageTitle': {
     'index': V;
-  };
-  'Comments': {
-    'count': V;
   };
   'Replies': {
     'count': V;
@@ -3453,9 +2916,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ChatPinnedUnpinAll': {
     'count': V;
   };
-  'CommentsCount': {
-    'count': V;
-  };
   'PinnedMessagesCount': {
     'count': V;
   };
@@ -3469,21 +2929,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'MessageTooltipReplies': {
-    'count': V;
-  };
-  'DeleteReactionTitle': {
-    'count': V;
-  };
-  'GuardApplyToInvitesGroup': {
-    'count': V;
-  };
-  'GuardApplyToInvitesChannel': {
-    'count': V;
-  };
-  'GuardDisableInvitesGroup': {
-    'count': V;
-  };
-  'GuardDisableInvitesChannel': {
     'count': V;
   };
   'Hours': {
@@ -3574,12 +3019,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ActionGroupInviteRevokedYou': {
     'count': V;
   };
-  'CommunityChatsCount': {
-    'count': V;
-  };
-  'CommunityWithChats': {
-    'count': V;
-  };
   'TextAgeVerificationModal': {
     'count': V;
   };
@@ -3640,13 +3079,7 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'RichMediaSkippedFiles': {
     'count': V;
   };
-  'Channels': {
-    'count': V;
-  };
   'ChatDeleteMessagesConfirmation': {
-    'count': V;
-  };
-  'ConversationContextViewReplies': {
     'count': V;
   };
   'EmojiCount': {
@@ -3670,9 +3103,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'MuteForHours': {
     'count': V;
   };
-  'PeerInfoAllowedReactionsMaxCountValue': {
-    'count': V;
-  };
   'SetTimeoutForDays': {
     'count': V;
   };
@@ -3686,9 +3116,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'StoryPrivacyOptionPeople': {
-    'count': V;
-  };
-  'UserRestrictionsCanDoUsers': {
     'count': V;
   };
   'Views': {
@@ -3728,7 +3155,6 @@ export interface LangKeyGroups {
       | 'ActionSafetyVerifiedSynced'
       | 'ActionSafetyUnverified'
       | 'ActionSafetyUnverifiedSynced'
-      | 'CallEmojiKeyTooltip'
       | 'ChatListDeleteForEveryone'
       | 'ConversationPinMessagesFor'
       | 'NewContactPhoneHiddenText'
@@ -3756,8 +3182,6 @@ export interface LangKeyGroups {
       | 'BirthdayTitleForPeer'
       | 'RankEditText'
       | 'ConversationShareLinkTooltipChatOne'
-      | 'DeleteAllFrom'
-      | 'DeleteBan'
       | 'DeleteMessagesOptionAlso'
       | 'ExpiredStoryMentioned'
       | 'PremiumLastSeenText1Locked'
@@ -3805,12 +3229,6 @@ export interface LangKeyGroups {
       | 'DiceToast';
     variables: 'emoji';
   };
-  'url': {
-    keys:
-      | 'SetUrlAvailable'
-      | 'OpenUrlText';
-    variables: 'url';
-  };
   'username': {
     keys:
       | 'UsernameAvailable'
@@ -3828,18 +3246,13 @@ export interface LangKeyGroups {
       | 'LimitReachedFileSizePremium'
       | 'LimitReachedFoldersPremium'
       | 'LimitReachedPinDialogsPremium'
-      | 'LimitReachedCommunitiesPremium'
-      | 'AutodownloadSizeLimitUpTo'
-      | 'LimitReachedFolderLinksPremium'
-      | 'LimitReachedPinnedTopics'
-      | 'LimitReachedSharedFoldersPremium';
+      | 'AutodownloadSizeLimitUpTo';
     variables: 'limit';
   };
   'title': {
     keys:
       | 'MessageRequestBlockTitle'
       | 'ActionChangedTitleYou'
-      | 'ActionChangedTitleChannel'
       | 'ActionCreatedChatYou';
     variables: 'title';
   };
@@ -3858,7 +3271,6 @@ export interface LangKeyGroups {
       | 'AutoDeleteIn'
       | 'AutoDeleteGlobalActionFromYou'
       | 'ActionTTLYouChanged'
-      | 'ActionTTLChannelChanged'
       | 'SlowModeHint'
       | 'ErrorFloodTime'
       | 'ErrorPasswordFresh'
@@ -3899,7 +3311,6 @@ export interface LangKeyGroups {
       | 'ChannelPermissionDeniedSendMessagesUntil'
       | 'ProfileBirthdayValue'
       | 'ProfileBirthdayTodayValue'
-      | 'ActionGroupCallScheduledChannel'
       | 'ChatPrivateMessageEditTimestampDate'
       | 'MessageReadAt';
     variables: 'date';
@@ -3907,16 +3318,10 @@ export interface LangKeyGroups {
   'name': {
     keys:
       | 'SignalDevicesUnlinkTitle'
-      | 'NewDiscussionChatTitle'
       | 'ContextMenuNoForwardsPeer'
       | 'StoriesSettingDeleteListInfo'
       | 'NotificationProfileDeleteInfo';
     variables: 'name';
-  };
-  'volume': {
-    keys:
-      | 'SpeakingWithVolume';
-    variables: 'volume';
   };
   'date,time': {
     keys:
@@ -3927,16 +3332,8 @@ export interface LangKeyGroups {
   };
   'chat': {
     keys:
-      | 'ChatListDeleteAndLeaveGroupConfirmation'
       | 'ChannelLeaveAlertWithName'
-      | 'ChatListDeleteChatConfirmation'
-      | 'DiscussionUnlinkChannelAlert'
-      | 'AreYouSureDeleteThisChatWithGroup'
-      | 'ActionMigratedFrom'
-      | 'ActionMigratedTo'
-      | 'ClearHistoryMessageSingle'
-      | 'VoiceChatJoinConfirm'
-      | 'VoiceChatJoinConfirmChannel';
+      | 'ChatListDeleteChatConfirmation';
     variables: 'chat';
   };
   'action': {
@@ -3996,9 +3393,7 @@ export interface LangKeyGroups {
     keys:
       | 'ActionTTLDisabled'
       | 'ActionPinnedNotFound'
-      | 'ActionGroupCallStartedGroup'
       | 'ActionMessageDeleted'
-      | 'ActionAddYou'
       | 'ActionUserLeft'
       | 'ActionUserJoined'
       | 'ActionUserJoinedByLink'
@@ -4023,27 +3418,18 @@ export interface LangKeyGroups {
       | 'ActionSetSameWallpaper'
       | 'ActionScreenshotTaken'
       | 'ActionSharingDisabled'
-      | 'ActionSharingEnabled'
-      | 'ActionRemovedFromCommunity';
+      | 'ActionSharingEnabled';
     variables: 'from';
+  };
+  'url': {
+    keys:
+      | 'OpenUrlText';
+    variables: 'url';
   };
   'timer': {
     keys:
       | 'SlowModePlaceholder';
     variables: 'timer';
-  };
-  'channel': {
-    keys:
-      | 'PollSubscriberRestriction'
-      | 'DiscussionUnlinkGroupAlert'
-      | 'ActionStarGiftUpgradedChannelYou'
-      | 'ActionStarGiftTransferredChannelYou';
-    variables: 'channel';
-  };
-  'countries': {
-    keys:
-      | 'PollCountryRestriction';
-    variables: 'countries';
   };
   'error': {
     keys:
@@ -4067,11 +3453,6 @@ export interface LangKeyGroups {
       | 'EphemeralOnlyVisibleToBot';
     variables: 'bot';
   };
-  'duration,time': {
-    keys:
-      | 'CallMessageWithDuration';
-    variables: 'duration' | 'time';
-  };
   'answer,percent': {
     keys:
       | 'PollResultsAnswerTitle';
@@ -4092,23 +3473,10 @@ export interface LangKeyGroups {
       | 'PasscodeForgotHelp';
     variables: 'logOut';
   };
-  'topic': {
-    keys:
-      | 'ComposerPlaceholderTopic'
-      | 'ActionTopicCreated'
-      | 'ActionTopicHidden'
-      | 'ActionTopicUnhidden';
-    variables: 'topic';
-  };
   'level': {
     keys:
       | 'RichEditorHeadingLevel';
     variables: 'level';
-  };
-  'channel,group': {
-    keys:
-      | 'ChannelManagementLinkDiscussion';
-    variables: 'channel' | 'group';
   };
   'time,user': {
     keys:
@@ -4121,8 +3489,7 @@ export interface LangKeyGroups {
       | 'GiftInfoHidden'
       | 'GiftInfoChannelSaved'
       | 'GiftInfoChannelHidden'
-      | 'BirthdayPrivacySuggestion'
-      | 'UsernamePurchaseAvailable';
+      | 'BirthdayPrivacySuggestion';
     variables: 'link';
   };
   'type': {
@@ -4159,21 +3526,6 @@ export interface LangKeyGroups {
       | 'ActionPinnedMediaYou';
     variables: 'media';
   };
-  'date,from': {
-    keys:
-      | 'ActionGroupCallScheduledGroup';
-    variables: 'date' | 'from';
-  };
-  'duration': {
-    keys:
-      | 'ActionGroupCallFinishedChannel';
-    variables: 'duration';
-  };
-  'duration,from': {
-    keys:
-      | 'ActionGroupCallFinishedGroup';
-    variables: 'duration' | 'from';
-  };
   'admin': {
     keys:
       | 'ActionMessageDeletedByAdmin';
@@ -4185,16 +3537,12 @@ export interface LangKeyGroups {
       | 'ActionKickUser'
       | 'ActionGroupAdminAdded'
       | 'ActionGroupAdminRemoved'
-      | 'ActionGroupJoinDenied'
-      | 'ActionVideoInvited'
-      | 'ActionNewCreatorPending'
-      | 'ActionChangeCreator';
+      | 'ActionGroupJoinDenied';
     variables: 'from' | 'user';
   };
   'from,users': {
     keys:
-      | 'ActionAddUsersMany'
-      | 'ActionVideoInvitedMany';
+      | 'ActionAddUsersMany';
     variables: 'from' | 'users';
   };
   'access,from': {
@@ -4218,8 +3566,7 @@ export interface LangKeyGroups {
   };
   'theme': {
     keys:
-      | 'ActionChangedThemeYou'
-      | 'ActionChangedThemeChannel';
+      | 'ActionChangedThemeYou';
     variables: 'theme';
   };
   'from,title': {
@@ -4243,6 +3590,12 @@ export interface LangKeyGroups {
       | 'ActionGiftTextCostYou';
     variables: 'cost';
   };
+  'channel': {
+    keys:
+      | 'ActionStarGiftUpgradedChannelYou'
+      | 'ActionStarGiftTransferredChannelYou';
+    variables: 'channel';
+  };
   'channel,cost': {
     keys:
       | 'ActionStarGiftSentChannelYou';
@@ -4258,38 +3611,6 @@ export interface LangKeyGroups {
       | 'ActionStarGiftConvertTextYou'
       | 'ActionStarGiftConvertedTextYou';
     variables: 'amount';
-  };
-  'from,topic': {
-    keys:
-      | 'ActionTopicClosed'
-      | 'ActionTopicReopened';
-    variables: 'from' | 'topic';
-  };
-  'from,link,title': {
-    keys:
-      | 'ActionTopicRenamed';
-    variables: 'from' | 'link' | 'title';
-  };
-  'emoji,from,link': {
-    keys:
-      | 'ActionTopicIconChanged';
-    variables: 'emoji' | 'from' | 'link';
-  };
-  'from,link': {
-    keys:
-      | 'ActionTopicIconRemoved';
-    variables: 'from' | 'link';
-  };
-  'from,link,topic': {
-    keys:
-      | 'ActionTopicIconAndRenamed';
-    variables: 'from' | 'link' | 'topic';
-  };
-  'community,from': {
-    keys:
-      | 'ActionAddedToCommunity'
-      | 'ActionJoinedViaCommunity';
-    variables: 'community' | 'from';
   };
   'botLink,date': {
     keys:
@@ -4362,11 +3683,6 @@ export interface LangKeyGroups {
       | 'SettingsLanguageDesc';
     variables: 'language';
   };
-  'currentUsername': {
-    keys:
-      | 'ChannelVisibilityConfirmMakePrivateChannel';
-    variables: 'currentUsername';
-  };
   'types': {
     keys:
       | 'ChatSendAllowedContentText';
@@ -4396,11 +3712,6 @@ export interface LangKeyGroups {
     keys:
       | 'ReplyToQuote';
     variables: 'senderTitle';
-  };
-  'usernames': {
-    keys:
-      | 'UsernameAlso';
-    variables: 'usernames';
   };
   'id': {
     keys:
@@ -4436,12 +3747,9 @@ export interface LangPluralKeyGroups {
       | 'Months'
       | 'Users'
       | 'StickerPackStickerCount'
-      | 'PollCountriesCount'
-      | 'PollCountriesLimit'
       | 'ErrorMessageTooLong'
       | 'ErrorRichMessageTooManyBlocks'
       | 'ErrorRichMessageTooManyMedia'
-      | 'Comments'
       | 'Replies'
       | 'ChatContextReactionCount'
       | 'ConversationContextMenuSeen'
@@ -4449,17 +3757,11 @@ export interface LangPluralKeyGroups {
       | 'VoteCount'
       | 'VoiceOverChatMessagesSelected'
       | 'ChatPinnedUnpinAll'
-      | 'CommentsCount'
       | 'PinnedMessagesCount'
       | 'Messages'
       | 'MessageTooltipForwards'
       | 'MessageTooltipViews'
       | 'MessageTooltipReplies'
-      | 'DeleteReactionTitle'
-      | 'GuardApplyToInvitesGroup'
-      | 'GuardApplyToInvitesChannel'
-      | 'GuardDisableInvitesGroup'
-      | 'GuardDisableInvitesChannel'
       | 'Hours'
       | 'Days'
       | 'PeopleJoined'
@@ -4484,8 +3786,6 @@ export interface LangPluralKeyGroups {
       | 'ChatGroups'
       | 'ActionGroupInvitedYou'
       | 'ActionGroupInviteRevokedYou'
-      | 'CommunityChatsCount'
-      | 'CommunityWithChats'
       | 'TextAgeVerificationModal'
       | 'InviteRestrictedUsers'
       | 'StoryMyStoryExcept'
@@ -4502,9 +3802,7 @@ export interface LangPluralKeyGroups {
       | 'FwdMessagesToChats'
       | 'PollModalAddMoreText'
       | 'RichMediaSkippedFiles'
-      | 'Channels'
       | 'ChatDeleteMessagesConfirmation'
-      | 'ConversationContextViewReplies'
       | 'EmojiCount'
       | 'Files'
       | 'Languages'
@@ -4512,13 +3810,11 @@ export interface LangPluralKeyGroups {
       | 'MessageContainsEmojiPacks'
       | 'MuteForDays'
       | 'MuteForHours'
-      | 'PeerInfoAllowedReactionsMaxCountValue'
       | 'SetTimeoutForDays'
       | 'SetTimeoutForHours'
       | 'StoryKeepInfo'
       | 'StoryPrivacyOptionExcludePeople'
       | 'StoryPrivacyOptionPeople'
-      | 'UserRestrictionsCanDoUsers'
       | 'Views'
       | 'Voice'
       | 'SeenByUsers'

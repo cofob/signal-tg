@@ -33,7 +33,6 @@ import type {
   ApiStorySkipped,
   ApiThemeSettings,
   ApiThreadInfo,
-  ApiTopic,
   ApiTypingStatus,
   ApiVideo,
   ApiVoice,
@@ -57,12 +56,9 @@ export type SessionUserInfo = {
 export type SharedSessionData = {
   pushKey?: string;
   date?: number;
-  isTest?: true;
 } & ApiSessionData & SessionUserInfo;
 
-export type AccountInfo = {
-  isTest?: true;
-} & SessionUserInfo;
+export type AccountInfo = SessionUserInfo;
 
 export enum LoadMoreDirection {
   Backwards,
@@ -100,7 +96,6 @@ export type ThreadId = string | number;
 
 export type ForwardTarget = {
   chatId: string;
-  topicId?: number;
 };
 
 export type ThemeKey = 'light' | 'dark';
@@ -150,15 +145,12 @@ export interface AccountSettings {
   canAutoLoadPhotoFromContacts: boolean;
   canAutoLoadPhotoInPrivateChats: boolean;
   canAutoLoadPhotoInGroups: boolean;
-  canAutoLoadPhotoInChannels: boolean;
   canAutoLoadVideoFromContacts: boolean;
   canAutoLoadVideoInPrivateChats: boolean;
   canAutoLoadVideoInGroups: boolean;
-  canAutoLoadVideoInChannels: boolean;
   canAutoLoadFileFromContacts: boolean;
   canAutoLoadFileInPrivateChats: boolean;
   canAutoLoadFileInGroups: boolean;
-  canAutoLoadFileInChannels: boolean;
   autoLoadFileMaxSizeMb: number;
   shouldSuggestStickers: boolean;
   shouldSuggestCustomEmoji: boolean;
@@ -264,7 +256,6 @@ export enum SettingsScreens {
   PasscodeCongratulations,
   Experimental,
   Stickers,
-  QuickReaction,
   CustomEmoji,
   KeyboardShortcuts,
   SignalProxy,
@@ -275,6 +266,7 @@ export enum SettingsScreens {
   SignalPinConfirm,
   SignalDevices,
   NotificationProfiles,
+  SignalSealedSenderProxy,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
@@ -288,8 +280,6 @@ export enum LeftColumnContent {
   Settings,
   Contacts,
   Archived,
-  NewChannelStep1,
-  NewChannelStep2,
   NewGroupStep1,
   NewGroupStep2,
   Calls,
@@ -297,7 +287,6 @@ export enum LeftColumnContent {
 
 export enum GlobalSearchContent {
   ChatList,
-  ChannelList,
   Media,
   Links,
   Files,
@@ -310,8 +299,6 @@ export enum RightColumnContent {
   Management,
   PollResults,
   AddingMembers,
-  CreateTopic,
-  EditTopic,
   NewGroup,
 }
 
@@ -453,14 +440,11 @@ export type ProfileTabType =
   | 'gif'
   | 'stories'
   | 'storiesArchive'
-  | 'similarChannels'
-  | 'dialogs'
   | 'polls';
 export type SharedMediaType = 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif' | 'polls';
-export type MiddleSearchType = 'chat' | 'myChats' | 'channels';
+export type MiddleSearchType = 'chat' | 'myChats';
 export type MiddleSearchParams = {
   requestedQuery?: string;
-  savedTag?: ApiReaction;
   isHashtag?: boolean;
   fromPeerId?: string;
   fetchingQuery?: string;
@@ -501,38 +485,30 @@ export enum ProfileState {
   SharedMedia,
   MemberList,
   StoryList,
-  SavedDialogs,
 }
 
 export const UPLOADING_WALLPAPER_SLUG = 'UPLOADING_WALLPAPER_SLUG';
 
 export enum ManagementScreens {
   Initial,
-  ChatPrivacyType,
-  Discussion,
-  ChannelSubscribers,
   GroupType,
   GroupPermissions,
   GroupRemovedUsers,
-  ChannelRemovedUsers,
   GroupUserPermissionsCreate,
   GroupUserPermissions,
   ChatAdministrators,
-  GroupRecentActions,
   ChatAdminRights,
   ChatNewAdminRights,
   GroupMembers,
   GroupAddAdmins,
   Invites,
   EditInvite,
-  Reactions,
   InviteInfo,
   JoinRequests,
-  NewDiscussionGroup,
   GroupInvitedUsers,
 }
 
-export type ManagementType = 'user' | 'group' | 'channel';
+export type ManagementType = 'user' | 'group';
 
 export type EmojiKeywords = {
   isLoading?: boolean;
@@ -541,7 +517,7 @@ export type EmojiKeywords = {
 };
 
 export type CustomPeerType = 'contacts' | 'nonContacts'
-  | 'groups' | 'channels' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
+  | 'groups' | 'excludeMuted' | 'excludeArchived' | 'excludeRead' | 'stars';
 
 export type CustomPeer = {
   isCustomPeer: true;
@@ -571,7 +547,7 @@ export type MessageListType =
   | 'pinned'
   | 'scheduled';
 
-export type ChatListType = 'active' | 'archived' | 'saved';
+export type ChatListType = 'active' | 'archived';
 
 export interface MessageList {
   chatId: string;
@@ -620,11 +596,7 @@ export interface TabThread {
 export interface ThreadReadState {
   unreadCount?: number;
   unreadMentionsCount?: number;
-  unreadReactionsCount?: number;
-  unreadPollVotesCount?: number;
-  unreadReactions?: number[];
   unreadMentions?: number[];
-  unreadPollVotes?: number[];
   hasUnreadMark?: boolean;
 
   lastReadOutboxMessageId?: number;
@@ -669,14 +641,6 @@ export interface Thread {
   readState: ThreadReadState;
 }
 
-export interface TopicsInfo {
-  totalCount: number;
-  isCache?: true;
-  topicsById: Record<ThreadId, ApiTopic>;
-  listedTopicIds?: number[];
-  orderedPinnedTopicIds?: number[];
-}
-
 export type ConfettiParams = OptionalCombine<{
   style?: ConfettiStyle;
   withStars?: boolean;
@@ -700,10 +664,6 @@ export interface Point {
 export type WebPageMediaSize = 'large' | 'small';
 
 export type AttachmentCompression = 'compress' | 'original';
-
-export type CallSound = (
-  'join' | 'allowTalk' | 'leave' | 'connecting' | 'incoming' | 'end' | 'connect' | 'busy' | 'ringing'
-);
 
 export type SendMessageParams = {
   chat?: ApiChat;
