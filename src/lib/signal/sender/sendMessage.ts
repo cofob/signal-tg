@@ -7,6 +7,7 @@ import type {
   ReceiptMessage_Type,
   SyncMessage_BlockedSchema,
   SyncMessage_DeleteForMeSchema,
+  SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponseSchema,
 } from '../proto/generated/SignalService_pb';
 import type { RecipientResult, SenderContext, SendOptions, SendResult } from './sendContent';
@@ -152,6 +153,11 @@ export function sendMessageRequestResponseSync(
 /** Sends the whole blocked list to our other devices; the primary device replaces its list with it */
 export function sendBlockedSync(context: SenderContext, blocked: MessageInitShape<typeof SyncMessage_BlockedSchema>) {
   return syncToOtherDevices(context, { content: { case: 'blocked', value: blocked } }, Date.now());
+}
+
+/** Asks our other devices to fetch the latest state of `type`, such as our storage manifest after a write */
+export function sendFetchLatestSync(context: SenderContext, type: SyncMessage_FetchLatest_Type) {
+  return syncToOtherDevices(context, { content: { case: 'fetchLatest', value: { type } } }, Date.now());
 }
 
 /** Tells our other devices which messages and conversations were deleted here (Signal Desktop `getDeleteForMeSyncMessage`) */

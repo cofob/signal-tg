@@ -2,26 +2,31 @@ import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type ChatConnection from '../chat/ChatConnection';
 import type { Credentials } from '../net/rest';
-import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { ManifestRecord } from '../proto/generated/StorageService_pb';
 import type { AccountRecord } from '../store/SignalStore';
 
 import { SIGNAL_STORAGE_HOST } from '../config';
-import { bufferToBase64, concat } from '../../../util/encoding/buffer';
+import { bufferFromBase64, bufferToBase64, concat } from '../../../util/encoding/buffer';
 import {
-  decryptAesGcmWithNonce, deriveSecrets, encodeUtf8, hmacSha256,
+  decryptAesGcmWithNonce, deriveSecrets, encodeUtf8, encryptAesGcmWithNonce, hmacSha256,
 } from '../crypto';
 import { sendHttpRequest } from '../net/http';
 import { getBasicAuthorization } from '../net/rest';
 import { wasm } from '../wasm';
 
 import {
-  ManifestRecordSchema, ReadOperationSchema, StorageItemsSchema, StorageManifestSchema, StorageRecordSchema,
+  ManifestRecordSchema,
+  ReadOperationSchema,
+  StorageItemsSchema,
+  StorageManifestSchema,
+  WriteOperationSchema,
 } from '../proto/generated/StorageService_pb';
 
-export type StorageSnapshot = {
-  version: bigint;
-  // Records keyed by their base64 storage id; unknown fields stay in the records for later writes
-  records: Map<string, StorageRecord>;
+/** A new manifest with the records it adds, serialized `StorageRecord`s by base64 storage id */
+export type StorageWrite = {
+  manifest: ManifestRecord;
+  inserts: Map<string, Uint8Array<ArrayBuffer>>;
+  deleteIds: string[];
 };
 
 const STORAGE_KEY_INFO = 'Storage Service Encryption';
@@ -29,50 +34,13 @@ const ITEM_KEY_INFO_PREFIX = '20240801_SIGNAL_STORAGE_SERVICE_ITEM_';
 const KEY_LENGTH = 32;
 const READ_BATCH_SIZE = 1000;
 const HTTP_OK = 200;
+const HTTP_NO_CONTENT = 204;
 const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 const PROTOBUF_CONTENT_TYPE = 'application/x-protobuf';
 
-/**
- * Reads the whole storage service state: the manifest and every record it lists
- * (Signal Desktop `ts/services/storage.preload.ts`). Returns `undefined` when the account has no manifest yet.
- */
-export async function fetchStorageSnapshot(
-  account: AccountRecord, connection: ChatConnection,
-): Promise<StorageSnapshot | undefined> {
-  const storageKey = await getStorageKey(account);
-  const credentials = await getStorageCredentials(connection);
-
-  const manifestResponse = await sendStorageRequest(credentials, 'GET', '/v1/storage/manifest');
-  if (manifestResponse.status === HTTP_NOT_FOUND) return undefined;
-  if (manifestResponse.status !== HTTP_OK) {
-    throw new Error(`Storage manifest request failed with HTTP ${manifestResponse.status}`);
-  }
-
-  const { version, value } = fromBinary(StorageManifestSchema, manifestResponse.body);
-  const manifestKey = await hmacSha256(storageKey, encodeUtf8(`Manifest_${version}`));
-  const manifestRecord = fromBinary(ManifestRecordSchema, await decryptAesGcmWithNonce(manifestKey, value));
-  const { identifiers } = manifestRecord;
-
-  const records = new Map<string, StorageRecord>();
-  for (let i = 0; i < identifiers.length; i += READ_BATCH_SIZE) {
-    const readKey = identifiers.slice(i, i + READ_BATCH_SIZE).map(({ raw }) => raw);
-    const body = toBinary(ReadOperationSchema, create(ReadOperationSchema, { readKey }));
-    const response = await sendStorageRequest(credentials, 'PUT', '/v1/storage/read', body);
-    if (response.status !== HTTP_OK) throw new Error(`Storage read failed with HTTP ${response.status}`);
-
-    for (const item of fromBinary(StorageItemsSchema, response.body).items) {
-      if (!item.key.length || !item.value.length) continue;
-      const itemKey = await getItemKey(storageKey, item.key, manifestRecord.recordIkm);
-      const plaintext = await decryptAesGcmWithNonce(itemKey, item.value);
-      records.set(bufferToBase64(item.key), fromBinary(StorageRecordSchema, plaintext));
-    }
-  }
-
-  return { version, records };
-}
-
-/** The master key comes from the account entropy pool, or directly from older primary devices */
-async function getStorageKey(account: AccountRecord) {
+/** The storage service key: from the account entropy pool, or the master key of older primary devices */
+export async function getStorageKey(account: AccountRecord) {
   let masterKey = account.masterKey;
   if (!masterKey && account.accountEntropyPool) {
     masterKey = wasm.AccountEntropyPool_DeriveSvrKey(account.accountEntropyPool);
@@ -81,17 +49,96 @@ async function getStorageKey(account: AccountRecord) {
   return hmacSha256(concat(masterKey), encodeUtf8(STORAGE_KEY_INFO));
 }
 
+export async function getStorageCredentials(connection: ChatConnection): Promise<Credentials> {
+  const { status, json } = await connection.sendJsonRequest<Credentials>('GET', '/v1/storage/auth');
+  if (status !== HTTP_OK || !json) throw new Error(`Storage auth request failed with HTTP ${status}`);
+  return json;
+}
+
+/**
+ * Fetches and decrypts the manifest when it is newer than `afterVersion`, or any manifest without one
+ * (Signal Desktop `fetchManifest` in `ts/services/storage.preload.ts`). Returns `undefined` when the manifest is
+ * not newer or the account has none yet.
+ */
+export async function fetchManifest(
+  credentials: Credentials, storageKey: Uint8Array<ArrayBuffer>, afterVersion?: bigint,
+): Promise<ManifestRecord | undefined> {
+  const path = afterVersion === undefined ? '/v1/storage/manifest' : `/v1/storage/manifest/version/${afterVersion}`;
+  const response = await sendStorageRequest(credentials, 'GET', path);
+  if (response.status === HTTP_NO_CONTENT || response.status === HTTP_NOT_FOUND) return undefined;
+  if (response.status !== HTTP_OK) throw new Error(`Storage manifest request failed with HTTP ${response.status}`);
+
+  const { version, value } = fromBinary(StorageManifestSchema, response.body);
+  const manifestKey = await getManifestKey(storageKey, version);
+  return fromBinary(ManifestRecordSchema, await decryptAesGcmWithNonce(manifestKey, value));
+}
+
+/**
+ * Fetches and decrypts the records with `ids` (base64 storage ids). Returns serialized `StorageRecord`s by id;
+ * ids the server has no record for are absent.
+ */
+export async function fetchRecords(
+  credentials: Credentials, storageKey: Uint8Array<ArrayBuffer>, recordIkm: Uint8Array, ids: string[],
+) {
+  const records = new Map<string, Uint8Array<ArrayBuffer>>();
+  for (let i = 0; i < ids.length; i += READ_BATCH_SIZE) {
+    const readKey = ids.slice(i, i + READ_BATCH_SIZE).map(bufferFromBase64);
+    const body = toBinary(ReadOperationSchema, create(ReadOperationSchema, { readKey }));
+    const response = await sendStorageRequest(credentials, 'PUT', '/v1/storage/read', body);
+    if (response.status !== HTTP_OK) throw new Error(`Storage read failed with HTTP ${response.status}`);
+
+    for (const item of fromBinary(StorageItemsSchema, response.body).items) {
+      if (!item.key.length || !item.value.length) continue;
+      const itemKey = await getItemKey(storageKey, item.key, recordIkm);
+      records.set(bufferToBase64(item.key), await decryptAesGcmWithNonce(itemKey, item.value));
+    }
+  }
+  return records;
+}
+
+/**
+ * Uploads a manifest with its new records and the ids of replaced records (Signal Desktop `uploadManifest`).
+ * New records are encrypted with keys from the manifest's `recordIkm`. Returns `false` when another device wrote
+ * a newer manifest first.
+ */
+export async function writeManifest(credentials: Credentials, storageKey: Uint8Array<ArrayBuffer>, {
+  manifest, inserts, deleteIds,
+}: StorageWrite) {
+  const insertItem = [];
+  for (const [id, record] of inserts) {
+    const key = bufferFromBase64(id);
+    const itemKey = await getItemKey(storageKey, key, manifest.recordIkm);
+    insertItem.push({ key, value: await encryptAesGcmWithNonce(itemKey, record) });
+  }
+  const manifestKey = await getManifestKey(storageKey, manifest.version);
+  const value = await encryptAesGcmWithNonce(manifestKey, toBinary(ManifestRecordSchema, manifest));
+  const body = toBinary(WriteOperationSchema, create(WriteOperationSchema, {
+    manifest: { version: manifest.version, value },
+    insertItem,
+    deleteKey: deleteIds.map(bufferFromBase64),
+  }));
+
+  // Signal Android `PushServiceSocket.writeStorageItems`: the manifest is fetched again after a conflict
+  const response = await sendStorageRequest(credentials, 'PUT', '/v1/storage?sendRemoteManifestOnConflict=false', body);
+  if (response.status === HTTP_CONFLICT) return false;
+  if (response.status !== HTTP_OK) throw new Error(`Storage write failed with HTTP ${response.status}`);
+  return true;
+}
+
+/** Signal Desktop `deriveStorageManifestKey` in `ts/Crypto.node.ts` */
+function getManifestKey(storageKey: Uint8Array<ArrayBuffer>, version: bigint) {
+  return hmacSha256(storageKey, encodeUtf8(`Manifest_${version}`));
+}
+
+/**
+ * Signal Desktop `deriveStorageItemKey` in `ts/Crypto.node.ts`: manifests without `recordIkm` come from clients
+ * that derive item keys from the storage key
+ */
 function getItemKey(storageKey: Uint8Array<ArrayBuffer>, key: Uint8Array, recordIkm: Uint8Array) {
   if (!recordIkm.length) {
     return hmacSha256(storageKey, encodeUtf8(`Item_${bufferToBase64(key)}`));
   }
   return Promise.resolve(deriveSecrets(KEY_LENGTH, recordIkm, concat(encodeUtf8(ITEM_KEY_INFO_PREFIX), key)));
-}
-
-async function getStorageCredentials(connection: ChatConnection): Promise<Credentials> {
-  const { status, json } = await connection.sendJsonRequest<Credentials>('GET', '/v1/storage/auth');
-  if (status !== HTTP_OK || !json) throw new Error(`Storage auth request failed with HTTP ${status}`);
-  return json;
 }
 
 function sendStorageRequest(credentials: Credentials, method: string, path: string, body?: Uint8Array) {

@@ -93,7 +93,7 @@ export async function decryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, data:
   return new Uint8Array(plaintext);
 }
 
-/** AES-256-GCM with a random 12-byte nonce prepended to the ciphertext */
+/** AES-256-GCM with a random 12-byte nonce prepended to the ciphertext (Signal Desktop `encryptProfile`) */
 export async function encryptAesGcmWithNonce(key: Uint8Array<ArrayBuffer>, plaintext: Uint8Array<ArrayBuffer>) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['encrypt']);
   const iv = getRandomBytes(AES_GCM_NONCE_LENGTH);

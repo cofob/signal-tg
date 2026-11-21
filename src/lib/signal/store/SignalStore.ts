@@ -1,3 +1,5 @@
+import type { StorageChanges } from '../storage/storageRecords';
+
 import { IdbStore } from '../../../util/browser/idb';
 
 export type KeyPairBytes = {
@@ -79,6 +81,9 @@ type Items = {
   blockedE164s: string[];
   // Notification defaults by chat type; Signal keeps none on the account, so they stay on this device
   notificationDefaults: Partial<Record<'users' | 'groups' | 'channels', NotificationDefaults>>;
+  // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
+  storageManifest: Uint8Array<ArrayBuffer>;
+  storageChanges: StorageChanges;
 };
 
 export type NotificationDefaults = {
@@ -286,6 +291,19 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */
+  getStorageRecords(ids: string[]) {
+    return this.db.getMany<Uint8Array<ArrayBuffer> | undefined>(ids.map((id) => `storageRecord:${id}`));
+  }
+
+  setStorageRecords(records: Map<string, Uint8Array>) {
+    return this.db.setMany([...records].map(([id, record]) => [`storageRecord:${id}`, record]));
+  }
+
+  removeStorageRecords(ids: string[]) {
+    return this.db.delMany(ids.map((id) => `storageRecord:${id}`));
   }
 
   addSentProto(record: SentProtoRecord) {
