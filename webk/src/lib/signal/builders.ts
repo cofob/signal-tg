@@ -26,6 +26,7 @@ import type {
   SignalReadState,
   SignalUser
 } from '@lib/signal/signalApi';
+import {buildSignalMessageMedia} from '@lib/signal/media';
 
 // * Web A's `ARCHIVED_FOLDER_ID`, which Web K's folder of archived chats has too
 const ARCHIVED_FOLDER_ID = 1;
@@ -154,7 +155,8 @@ export function buildMessage(message: SignalMessage, getName: SignalNameResolver
     date: message.date,
     message: text?.text || '',
     entities: text?.entities?.map(buildEntity).filter(Boolean),
-    media: getHasUnsupportedMedia(message) ? {_: 'messageMediaUnsupported'} : undefined,
+    media: buildSignalMessageMedia(message.content, message.date) ??
+      (message.content.pollId ? {_: 'messageMediaUnsupported'} : undefined),
     reply_to: message.replyInfo?.replyToMsgId ? {
       _: 'messageReplyHeader',
       pFlags: {},
@@ -166,11 +168,6 @@ export function buildMessage(message: SignalMessage, getName: SignalNameResolver
     // * Web K shows a message with an error as failed, as it does a send of its own that failed
     error: message.sendingState === 'messageSendingStateFailed' ? {type: 'SIGNAL_SEND_FAILED' as ErrorType, code: 400} : undefined
   };
-}
-
-function getHasUnsupportedMedia(message: SignalMessage) {
-  const {photo, video, document, sticker, voice, audio, contact, pollId} = message.content;
-  return Boolean(photo || video || document || sticker || voice || audio || contact || pollId);
 }
 
 // * Web A's `ApiMessageEntityTypes` are the TL names with an upper-case first letter

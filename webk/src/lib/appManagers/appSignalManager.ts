@@ -21,19 +21,24 @@ import type {
   Peer,
   Update,
   Updates,
+  UploadFile,
   User
 } from '@layer';
 import type {
   SignalApiUpdate,
+  SignalAttachment,
   SignalChat,
   SignalChats,
   SignalInitialArgs,
   SignalMessage,
+  SignalSticker,
   SignalUser
 } from '@lib/signal/signalApi';
 import {AppManager} from '@appManagers/manager';
 import {buildChat, buildDialog, buildMessage, buildPeer, buildUser, isGroupPeerId, toPeerId, toSignalPeerId} from '@lib/signal/builders';
 import makeError from '@helpers/makeError';
+import {getSignalAvatarUrl, getSignalFileUrl, storeSignalWebPages} from '@lib/signal/media';
+import {buildOutgoingMedia, saveUploadPart} from '@lib/signal/outgoingMedia';
 import {ConnectionStatus} from '@lib/mtproto/connectionStatus';
 import tsNow from '@helpers/tsNow';
 import deferredPromise, {CancellablePromise} from '@helpers/cancellablePromise';
@@ -44,7 +49,7 @@ type MethodHandler = (params: any) => Promise<any> | any;
 
 type PendingSend = {
   randomId: string,
-  deferred: CancellablePromise<Updates>
+  deferred: CancellablePromise<Updates.updates>
 };
 
 const UNSUPPORTED_ERROR = 'SIGNAL_METHOD_UNSUPPORTED';
@@ -185,6 +190,13 @@ export default class AppSignalManager extends AppManager {
       'messages.getScheduledHistory': () => ({_: 'messages.messages', messages: [], chats: [], users: [], topics: []}),
       'messages.getSavedDialogs': () => ({_: 'messages.savedDialogs', dialogs: [], messages: [], chats: [], users: []}),
       'messages.getStickerSet': () => Promise.reject(makeError('STICKERSET_INVALID' as ErrorType)),
+      // * every file of Web K's downloads comes from the provider's `downloadMedia`, part by part
+      'upload.getFile': (params) => this.getFile(params),
+      // * the files Web K sends are kept until their message is sent, which the provider does with them
+      'upload.saveFilePart': (params) => this.storeUploadPart(params),
+      'upload.saveBigFilePart': (params) => this.storeUploadPart(params),
+      'messages.sendMedia': (params) => this.sendMedia(params),
+      'messages.sendMultiMedia': (params) => this.sendMultiMedia(params),
       'users.getFullUser': (params) => this.getFullUser(params),
       'users.getUsers': (params) => this.getUsers(params),
       'contacts.getContacts': () => this.getContacts(),
@@ -375,43 +387,114 @@ export default class AppSignalManager extends AppManager {
     return chat ? [chat] : [];
   }
 
-  private sendMessage(params: MethodDeclMap['messages.sendMessage']['req']): Promise<Updates> {
+  private sendMessage(params: MethodDeclMap['messages.sendMessage']['req']): Promise<Updates.updates> {
+    return this.sendLocalMessage({
+      peerId: this.getInputPeerId(params.peer),
+      randomId: params.random_id,
+      text: params.message,
+      entities: params.entities,
+      replyTo: params.reply_to
+    });
+  }
+
+  private async sendMedia(params: MethodDeclMap['messages.sendMedia']['req']): Promise<Updates.updates> {
+    const {attachment, sticker} = await buildOutgoingMedia(params.media).catch(() => {
+      throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
+    });
+    return this.sendLocalMessage({
+      peerId: this.getInputPeerId(params.peer),
+      randomId: params.random_id,
+      text: params.message,
+      entities: params.entities,
+      replyTo: params.reply_to,
+      attachment,
+      sticker
+    });
+  }
+
+  /**
+   * An album goes as one message of the provider with all its items, which the provider sends as the album of their
+   * shared `groupedId`; the items' own sends end with the album's message, as the one that is sent for the first item
+   */
+  private async sendMultiMedia(params: MethodDeclMap['messages.sendMultiMedia']['req']): Promise<Updates.updates> {
     const peerId = this.getInputPeerId(params.peer);
-    const replyTo = params.reply_to?._ === 'inputReplyToMessage' ? params.reply_to.reply_to_msg_id : undefined;
+    const groupedId = String(params.multi_media[0].random_id);
+    const outgoing = await Promise.all(params.multi_media.map(({media}) => buildOutgoingMedia(media).catch(() => {
+      throw makeError('SIGNAL_SEND_FAILED' as ErrorType);
+    })));
+    const sent = await Promise.all(params.multi_media.map((item, index) => this.sendLocalMessage({
+      peerId,
+      randomId: item.random_id,
+      text: item.message,
+      entities: item.entities,
+      replyTo: params.reply_to,
+      attachment: outgoing[index].attachment,
+      groupedId
+    })));
+    return {_: 'updates', updates: sent.flatMap((updates) => updates.updates), users: [], chats: [], date: tsNow(true), seq: 0};
+  }
+
+  /** Sends a text, an attachment or a sticker through the provider; the promise is the update of the sent message */
+  private sendLocalMessage({peerId, randomId, text, entities, replyTo, attachment, sticker, groupedId}: {
+    peerId: PeerId,
+    randomId: number | string,
+    text?: string,
+    entities?: MethodDeclMap['messages.sendMessage']['req']['entities'],
+    replyTo?: MethodDeclMap['messages.sendMessage']['req']['reply_to'],
+    attachment?: SignalAttachment,
+    sticker?: SignalSticker,
+    groupedId?: string
+  }): Promise<Updates.updates> {
+    const replyToMsgId = replyTo?._ === 'inputReplyToMessage' ? replyTo.reply_to_msg_id : undefined;
     const lastMessageId = this.appMessagesManager.getHistoryStorage(peerId.toPeerId()).maxId || 0;
     const localId = lastMessageId + LOCAL_ID_STEP * (++this.localIdCounter % (1 / LOCAL_ID_STEP));
     const chatId = toSignalPeerId(peerId);
-    const entities = (params.entities || []).map((entity) => buildSignalEntity(entity)).filter(Boolean);
+    const signalEntities = (entities || []).map((entity) => buildSignalEntity(entity)).filter(Boolean);
+    const replyInfo: SignalMessage['replyInfo'] = replyToMsgId ? {type: 'message', replyToMsgId} : undefined;
     const localMessage: SignalMessage = {
       id: localId,
       chatId,
-      content: {text: {text: params.message, entities}},
+      content: {text: {text, entities: signalEntities}},
       date: tsNow(true),
       isOutgoing: true,
-      replyInfo: replyTo ? {type: 'message', replyToMsgId: replyTo} : undefined
+      replyInfo
     };
 
-    const deferred = deferredPromise<Updates>();
-    this.pendingSends.set(localId, {randomId: '' + params.random_id, deferred});
+    const deferred = deferredPromise<Updates.updates>();
+    this.pendingSends.set(localId, {randomId: '' + randomId, deferred});
     const timeout = setTimeout(() => {
       this.pendingSends.delete(localId);
       deferred.reject(makeError('SIGNAL_SEND_TIMEOUT' as ErrorType));
     }, SEND_TIMEOUT_MS);
-    deferred.finally(() => clearTimeout(timeout));
+    deferred.finally(() => {
+      clearTimeout(timeout);
+      if(attachment) URL.revokeObjectURL(attachment.blobUrl);
+    });
 
     this.call('sendMessage', {
       chat: {id: chatId},
-      text: params.message,
-      entities,
-      replyInfo: localMessage.replyInfo,
+      text,
+      entities: signalEntities,
+      replyInfo,
       lastMessageId,
-      localMessage
-    }).catch((err) => {
+      localMessage,
+      attachment,
+      sticker,
+      groupedId
+    }).catch(() => {
       this.pendingSends.delete(localId);
-      deferred.reject(err);
+      deferred.reject(makeError('SIGNAL_SEND_FAILED' as ErrorType));
     });
 
     return deferred;
+  }
+
+  /** A local message that the provider drops for an album's message: its temporary bubble goes, and its send ends */
+  private dropPendingSend(localId: number) {
+    const pending = this.pendingSends.get(localId);
+    this.pendingSends.delete(localId);
+    this.appMessagesManager.cancelPendingMessage(pending.randomId);
+    pending.deferred.resolve({_: 'updates', updates: [], users: [], chats: [], date: tsNow(true), seq: 0});
   }
 
   private async readHistory(params: MethodDeclMap['messages.readHistory']['req']) {
@@ -480,6 +563,45 @@ export default class AppSignalManager extends AppManager {
       _: 'messages.chats',
       chats: params.id.map((id) => this.appChatsManager.getChat(id)).filter(Boolean)
     } as MethodDeclMap['messages.getChats']['res'];
+  }
+
+  private storeUploadPart(params: MethodDeclMap['upload.saveFilePart']['req'] | MethodDeclMap['upload.saveBigFilePart']['req']) {
+    saveUploadPart(params.file_id, params.file_part, params.bytes);
+    return true;
+  }
+
+  /** A part of a media of the provider, which Web K's download loop asks for part by part */
+  private async getFile(params: MethodDeclMap['upload.getFile']['req']): Promise<UploadFile.uploadFile> {
+    const {location} = params;
+    let url: string;
+    if(location._ === 'inputPeerPhotoFileLocation') {
+      const peerId = this.getInputPeerId(location.peer);
+      if(!peerId) {
+        throw makeError(UNSUPPORTED_ERROR as ErrorType);
+      }
+
+      url = getSignalAvatarUrl(toSignalPeerId(peerId), String(location.photo_id), location.pFlags?.big);
+    } else {
+      url = getSignalFileUrl(location);
+    }
+
+    if(!url) {
+      throw makeError(UNSUPPORTED_ERROR as ErrorType);
+    }
+
+    const {ApiMediaFormat} = await getProvider();
+    const offset = Number(params.offset);
+    const media: {arrayBuffer: ArrayBuffer} = await this.call('downloadMedia', {
+      url,
+      mediaFormat: ApiMediaFormat.Progressive,
+      start: offset,
+      end: offset + params.limit - 1
+    });
+    if(!media) {
+      throw makeError('SIGNAL_FILE_UNAVAILABLE' as ErrorType);
+    }
+
+    return {_: 'upload.file', type: {_: 'storage.fileUnknown'}, mtime: 0, bytes: new Uint8Array(media.arrayBuffer)};
   }
 
   private async getFullUser(params: MethodDeclMap['users.getFullUser']['req']) {
@@ -566,6 +688,7 @@ export default class AppSignalManager extends AppManager {
         this.onCurrentUser(update.currentUser);
         break;
       case 'updateEntities':
+        storeSignalWebPages(update.webPages);
         if(update.users) {
           this.appUsersManager.saveApiUsers(Object.values(update.users as Record<string, SignalUser>).map(buildUser));
         }
@@ -584,12 +707,14 @@ export default class AppSignalManager extends AppManager {
         }
         break;
       case 'newMessage':
+        storeSignalWebPages(update.webPages);
         // * Web K shows its own message while one is sent: the provider's local one has a fractional id
         if(Number.isInteger(update.message.id)) {
           this.pushUpdates([{_: 'updateNewMessage', message: this.buildMessage(update.message), pts: 0, pts_count: 0}]);
         }
         break;
       case 'updateMessage':
+        storeSignalWebPages(update.webPages);
         if(update.message?.content && update.message.chatId) {
           this.pushUpdates([{_: 'updateEditMessage', message: this.buildMessage(update.message as SignalMessage), pts: 0, pts_count: 0}]);
         }
@@ -600,9 +725,16 @@ export default class AppSignalManager extends AppManager {
       case 'updateMessageSendFailed':
         this.onMessageSendFailed(update.localId);
         break;
-      case 'deleteMessages':
-        this.pushUpdates([{_: 'updateDeleteMessages', messages: update.ids, pts: 0, pts_count: 0}]);
+      case 'deleteMessages': {
+        // * the other items of an album that the provider sends as one message are not messages of their own
+        const droppedIds: number[] = update.ids.filter((id: number) => this.pendingSends.has(id));
+        droppedIds.forEach((id) => this.dropPendingSend(id));
+        const messages = update.ids.filter((id: number) => !droppedIds.includes(id));
+        if(messages.length) {
+          this.pushUpdates([{_: 'updateDeleteMessages', messages, pts: 0, pts_count: 0}]);
+        }
         break;
+      }
       case 'updateThreadReadState':
         this.onReadState(update.chatId, update.readState);
         break;

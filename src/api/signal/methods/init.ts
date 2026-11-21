@@ -8,6 +8,9 @@ import * as methods from './index';
 
 const SIGNAL_METHODS: Partial<Methods> = methods;
 
+// The media formats `downloadMedia` takes, for the frontends that call it
+export { ApiMediaFormat } from '../../types';
+
 export function initApi(onUpdate: OnApiUpdate, initialArgs: ApiInitialArgs) {
   initUpdates(onUpdate);
   return startClient(initialArgs);
