@@ -2,47 +2,36 @@ import { memo, useEffect, useMemo } from '../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
 import type {
-  ApiChat, ApiTopic, ApiTypingStatus, ApiUser,
+  ApiChat, ApiTypingStatus,
 } from '../../api/types';
 import type { IconName } from '../../types/icons';
-import { MediaViewerOrigin, type StoryViewerOrigin, type ThreadId } from '../../types';
+import { MediaViewerOrigin, type StoryViewerOrigin } from '../../types';
 
 import {
   getChatTypeLangKey,
   getGroupStatus,
   getMainUsername,
-  isChatSuperGroup,
 } from '../../global/helpers';
 import {
   selectChat,
   selectChatMessages,
   selectChatOnlineCount,
   selectIsChatRestricted,
-  selectMonoforumChannel,
-  selectTopic,
-  selectUser,
 } from '../../global/selectors';
-import { selectThreadMessagesCount } from '../../global/selectors/threads';
 import buildClassName from '../../util/buildClassName';
-import { REM } from './helpers/mediaDimensions';
 import renderText from './helpers/renderText';
 
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
-import Transition from '../ui/Transition';
 import Avatar from './Avatar';
 import DotAnimation from './DotAnimation';
 import FullNameTitle from './FullNameTitle';
 import Icon from './icons/Icon';
-import TopicIcon from './TopicIcon';
 import TypingStatus from './TypingStatus';
-
-const TOPIC_ICON_SIZE = 2.5 * REM;
 
 type OwnProps = {
   chatId: string;
-  threadId?: ThreadId;
   className?: string;
   statusIcon?: IconName;
   typingStatusByPeerId?: Record<string, ApiTypingStatus>;
@@ -54,28 +43,19 @@ type OwnProps = {
   withFullInfo?: boolean;
   withUpdatingStatus?: boolean;
   withChatType?: boolean;
-  noEmojiStatus?: boolean;
-  emojiStatusSize?: number;
   noRtl?: boolean;
   noAvatar?: boolean;
   forceRoundAvatar?: boolean;
   noStatusOrTyping?: boolean;
   withStory?: boolean;
   storyViewerOrigin?: StoryViewerOrigin;
-  isSavedDialog?: boolean;
-  withMonoforumStatus?: boolean;
   onClick?: VoidFunction;
-  onEmojiStatusClick?: VoidFunction;
 };
 
 type StateProps = {
   chat?: ApiChat;
-  topic?: ApiTopic;
   onlineCount?: number;
   areMessagesLoaded: boolean;
-  messagesCount?: number;
-  self?: ApiUser;
-  monoforumChannel?: ApiChat;
 };
 
 const GroupChatInfo = ({
@@ -93,22 +73,13 @@ const GroupChatInfo = ({
   withUpdatingStatus,
   withChatType,
   noRtl,
-  chat: realChat,
+  chat,
   onlineCount,
   areMessagesLoaded,
-  topic,
-  messagesCount,
   noStatusOrTyping,
   withStory,
   storyViewerOrigin,
-  noEmojiStatus,
-  emojiStatusSize,
-  isSavedDialog,
-  self,
-  withMonoforumStatus,
-  monoforumChannel,
   onClick,
-  onEmojiStatusClick,
 }: OwnProps & StateProps) => {
   const {
     loadFullChat,
@@ -116,12 +87,8 @@ const GroupChatInfo = ({
     loadMoreProfilePhotos,
   } = getActions();
 
-  const chat = !withMonoforumStatus && monoforumChannel ? monoforumChannel : realChat;
-
   const lang = useLang();
 
-  const isSuperGroup = chat && isChatSuperGroup(chat);
-  const isTopic = Boolean(chat?.isForum && topic);
   const { id: chatId, isMin } = chat || {};
   const isRestricted = selectIsChatRestricted(getGlobal(), chatId!);
 
@@ -130,7 +97,7 @@ const GroupChatInfo = ({
       if (withFullInfo) loadFullChat({ chatId });
       if (withMediaViewer) loadMoreProfilePhotos({ peerId: chatId, isPreload: true });
     }
-  }, [chatId, isMin, withFullInfo, isSuperGroup, withMediaViewer]);
+  }, [chatId, isMin, withFullInfo, withMediaViewer]);
 
   const handleAvatarViewerOpen = useLastCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>, hasMedia: boolean) => {
@@ -159,18 +126,6 @@ const GroupChatInfo = ({
       );
     }
 
-    if (withMonoforumStatus) {
-      return (
-        <span className="status" dir="auto">
-          {lang('MonoforumStatus')}
-        </span>
-      );
-    }
-
-    if (realChat?.isMonoforum) {
-      return undefined;
-    }
-
     if (status) {
       return withDots ? (
         <DotAnimation className="status" content={status} />
@@ -188,23 +143,6 @@ const GroupChatInfo = ({
 
     if (typingStatusByPeerId) {
       return <TypingStatus typingStatusByPeerId={typingStatusByPeerId} />;
-    }
-
-    if (isTopic) {
-      return (
-        <span className="status" dir="auto">
-          <Transition
-            name="fade"
-            shouldRestoreHeight
-            activeKey={messagesCount !== undefined ? 1 : 2}
-            className="message-count-transition"
-          >
-            {messagesCount !== undefined
-              ? lang('Messages', { count: messagesCount }, { pluralValue: messagesCount })
-              : lang('ChatInfoNoMessages')}
-          </Transition>
-        </span>
-      );
     }
 
     if (withChatType) {
@@ -237,52 +175,22 @@ const GroupChatInfo = ({
       dir={!noRtl && lang.isRtl ? 'rtl' : undefined}
       onClick={onClick}
     >
-      {!noAvatar && !isTopic && (
+      {!noAvatar && (
         <>
-          {isSavedDialog && self && (
-            <Avatar
-              key="saved-messages"
-              size={avatarSize}
-              peer={self}
-              isSavedMessages
-              className="saved-dialog-avatar"
-            />
-          )}
           <Avatar
             key={chat.id}
-            className={buildClassName(isSavedDialog && 'overlay-avatar')}
             size={avatarSize}
             peer={chat}
             withStory={withStory}
             forceRound={forceRoundAvatar}
-            asMessageBubble={Boolean(monoforumChannel)}
             storyViewerOrigin={storyViewerOrigin}
             storyViewerMode="single-peer"
-            isSavedDialog={isSavedDialog}
             onClick={withMediaViewer ? handleAvatarViewerOpen : undefined}
           />
         </>
       )}
-      {isTopic && (
-        <TopicIcon
-          topic={topic!}
-          className="topic-header-icon"
-          size={TOPIC_ICON_SIZE}
-        />
-      )}
       <div className="info">
-        {topic
-          ? <h3 dir="auto" className="fullName">{renderText(topic.title)}</h3>
-          : (
-            <FullNameTitle
-              peer={chat}
-              isMonoforum={!withMonoforumStatus && Boolean(monoforumChannel)}
-              emojiStatusSize={emojiStatusSize}
-              withEmojiStatus={!noEmojiStatus}
-              isSavedDialog={isSavedDialog}
-              onEmojiStatusClick={onEmojiStatusClick}
-            />
-          )}
+        <FullNameTitle peer={chat} />
         {!noStatusOrTyping && renderStatusOrTyping()}
       </div>
     </div>
@@ -290,27 +198,15 @@ const GroupChatInfo = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global, { chatId, threadId, isSavedDialog }): Complete<StateProps> => {
+  (global, { chatId }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
     const onlineCount = chat ? selectChatOnlineCount(global, chat) : undefined;
-    const areMessagesLoaded = Boolean(
-      isSavedDialog
-        ? selectChatMessages(global, global.currentUserId!)
-        : selectChatMessages(global, chatId),
-    );
-    const topic = threadId ? selectTopic(global, chatId, threadId) : undefined;
-    const messagesCount = topic && selectThreadMessagesCount(global, chatId, threadId!);
-    const self = selectUser(global, global.currentUserId!);
-    const monoforumChannel = selectMonoforumChannel(global, chatId);
+    const areMessagesLoaded = Boolean(selectChatMessages(global, chatId));
 
     return {
       chat,
       onlineCount,
-      topic,
       areMessagesLoaded,
-      messagesCount,
-      self,
-      monoforumChannel,
     };
   },
 )(GroupChatInfo));

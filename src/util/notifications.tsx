@@ -2,7 +2,6 @@ import { getActions, getGlobal, setGlobal } from '../global';
 
 import type {
   ApiChat, ApiMessage, ApiPeer, ApiPeerReaction,
-  ApiPhoneCall, ApiUser,
 } from '../api/types';
 import type { GlobalState } from '../global/types';
 import { ApiMediaFormat } from '../api/types';
@@ -12,26 +11,24 @@ import {
   getChatAvatarHash,
   getChatTitle,
   getMessageRecentReaction,
-  getUserFullName,
 } from '../global/helpers';
 import {
   getIsChatMuted,
   getIsChatSilent,
   getShouldIgnoreNotificationMute,
   getShouldShowMessagePreview,
-  mergeNotifySettings,
 } from '../global/helpers/notifications';
 import { getMessageSenderName } from '../global/helpers/peers';
 import {
   selectCurrentMessageList,
   selectCustomEmoji,
   selectIsChatWithSelf,
+  selectIsMessageSilencedByNotificationProfile,
   selectNotifyDefaults,
   selectNotifyException,
   selectPeer,
   selectSender,
   selectSettingsKeys,
-  selectTopicFromMessage,
 } from '../global/selectors';
 import { callApi } from '../api';
 import { IS_TAURI } from './browser/globalEnvironment';
@@ -43,7 +40,6 @@ import { getTranslationFn } from './localization';
 import * as mediaLoader from './mediaLoader';
 import { getPushIdentity } from './pushNotifications';
 import { debounce } from './schedulers';
-import { getServerTime } from './serverTime';
 
 import MessageSummary from '../components/common/MessageSummary';
 
@@ -182,17 +178,15 @@ function checkIfShouldNotify(chat: ApiChat, message: Partial<ApiMessage>) {
   const global = getGlobal();
   const notifyDefaults = selectNotifyDefaults(global);
   const notifyException = getChatNotifyException(global, chat);
-  const isChatMuted = getIsChatMuted(chat, notifyDefaults, notifyException);
-  const topic = selectTopicFromMessage(global, message as ApiMessage);
-  const topicMutedUntil = topic?.notifySettings.mutedUntil;
-  const isMuted = topicMutedUntil === undefined ? isChatMuted : topicMutedUntil > getServerTime();
+  const isMuted = getIsChatMuted(chat, notifyDefaults, notifyException);
   const shouldNotifyAboutPinnedMessages = global.settings.byKey.shouldNotifyAboutPinnedMessages;
   const shouldIgnoreMute = getShouldIgnoreNotificationMute(message, shouldNotifyAboutPinnedMessages);
 
   const isPinMessage = message.content?.action?.type === 'pinMessage';
   const shouldSkipPinnedMessageNotification = isPinMessage && !shouldNotifyAboutPinnedMessages;
-  const shouldNotifyAboutMessage = message.content?.action?.type !== 'phoneCall';
-  if (shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute) || !shouldNotifyAboutMessage
+  // Signal notification profiles: a profile that is on allows only some chats, and mutes do not lose their effect
+  const isSilencedByProfile = selectIsMessageSilencedByNotificationProfile(global, chat.id, message);
+  if (isSilencedByProfile || shouldSkipPinnedMessageNotification || (isMuted && !shouldIgnoreMute)
     || chat.isNotJoined || !chat.isListed || selectIsChatWithSelf(global, chat.id)) {
     return false;
   }
@@ -270,40 +264,6 @@ function getReactionEmoji(reaction: ApiPeerReaction) {
   return emoji || '❤️';
 }
 
-export async function notifyAboutCall({
-  call, user,
-}: {
-  call: ApiPhoneCall; user: ApiUser;
-}) {
-  const { hasWebNotifications } = selectSettingsKeys(getGlobal());
-  if (document.hasFocus() || !hasWebNotifications) return;
-  const areNotificationsSupported = checkIfNotificationsSupported();
-  if (!areNotificationsSupported) return;
-
-  const icon = await getAvatar(user);
-
-  const options: NotificationOptions = {
-    body: getUserFullName(getTranslationFn(), user),
-    icon,
-    badge: icon,
-    tag: `call_${call.id}`,
-  };
-
-  if ('vibrate' in navigator) {
-    // @ts-ignore
-    options.vibrate = [200, 100, 200];
-  }
-
-  const notification = new Notification(getTranslationFn()('VoipIncoming'), options);
-
-  notification.onclick = () => {
-    notification.close();
-    if (window.focus) {
-      window.focus();
-    }
-  };
-}
-
 export async function notifyAboutMessage({
   chat,
   message,
@@ -312,11 +272,9 @@ export async function notifyAboutMessage({
   const global = getGlobal();
   const { hasWebNotifications } = selectSettingsKeys(global);
   if (!checkIfShouldNotify(chat, message)) return;
-  const isChatSilent = getIsChatSilent(
+  const isSilent = getIsChatSilent(
     chat, selectNotifyDefaults(global), getChatNotifyException(global, chat),
   );
-  const topic = selectTopicFromMessage(global, message as ApiMessage);
-  const isSilent = topic?.notifySettings.hasSound === undefined ? isChatSilent : !topic.notifySettings.hasSound;
 
   const areNotificationsSupported = checkIfNotificationsSupported();
   if (!hasWebNotifications || !areNotificationsSupported) {
@@ -438,12 +396,7 @@ export function closeMessageNotifications(payload: { chatId: string; lastReadInb
 }
 
 function getChatNotifyException(global: GlobalState, chat: ApiChat) {
-  const chatNotifyException = selectNotifyException(global, chat.id);
-  const communityNotifyException = chat.linkedCommunityId
-    ? selectNotifyException(global, chat.linkedCommunityId)
-    : undefined;
-
-  return mergeNotifySettings(communityNotifyException, chatNotifyException);
+  return selectNotifyException(global, chat.id);
 }
 
 // Notify service worker that client is fully loaded

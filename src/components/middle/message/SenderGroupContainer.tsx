@@ -19,7 +19,6 @@ import {
   getMainUsername,
   isAnonymousOwnMessage,
   isChatBasicGroup,
-  isChatChannel,
 } from '../../../global/helpers';
 import { isApiPeerUser } from '../../../global/helpers/peers';
 import {
@@ -59,7 +58,6 @@ type StateProps = {
   canShowSender: boolean;
   originSender?: ApiPeer;
   isChatWithSelf?: boolean;
-  isChannel?: boolean;
   canRemoveSender?: boolean;
   kickedMembers?: ApiChatMember[];
   chatMembers?: ApiChatMember[];
@@ -75,7 +73,6 @@ const SenderGroupContainer = ({
   canShowSender,
   originSender,
   isChatWithSelf,
-  isChannel,
   canPost,
   canRemoveSender,
   kickedMembers,
@@ -179,9 +176,7 @@ const SenderGroupContainer = ({
   const getLayout = useLastCallback(() => ({ withPortal: true }));
 
   const canMention = canPost && avatarPeer && (isAvatarPeerUser || Boolean(getMainUsername(avatarPeer)));
-  const canSearch = !isChannel;
-  const shouldRenderContextMenu = Boolean(contextMenuAnchor)
-    && (isAvatarPeerUser || canMention || canSearch || canBanSender);
+  const shouldRenderContextMenu = Boolean(contextMenuAnchor);
 
   function renderContextMenu() {
     return (
@@ -215,14 +210,12 @@ const SenderGroupContainer = ({
               {lang('ContextMenuItemMention')}
             </MenuItem>
           )}
-          {canSearch && (
-            <MenuItem
-              icon="search"
-              onClick={handleSearchMessages}
-            >
-              {lang('Search')}
-            </MenuItem>
-          )}
+          <MenuItem
+            icon="search"
+            onClick={handleSearchMessages}
+          >
+            {lang('Search')}
+          </MenuItem>
           {canBanSender && (
             <MenuItem
               icon="delete-user"
@@ -289,10 +282,9 @@ export default memo(withGlobal<OwnProps>(
     const canBanUsers = selectCanBanUsers(global, chatId);
     const isSenderAdmin = Boolean(sender && fullInfo?.adminMembersById?.[sender.id]);
     const canBanTarget = chat?.isOwner || (Boolean(fullInfo?.adminMembersById) && !isSenderAdmin);
-    const isSenderRemovable = Boolean(sender && sender.id !== chatId
-      && sender.id !== fullInfo?.linkedChatId && sender.id !== chat?.linkedMonoforumId);
+    const isSenderRemovable = Boolean(sender && sender.id !== chatId);
     const canRemoveSender = Boolean(sender && sender.id !== global.currentUserId &&
-      chat && !isChatChannel(chat) && !isChatWithSelf && isSenderRemovable && canBanUsers && canBanTarget,
+      chat && !isChatWithSelf && isSenderRemovable && canBanUsers && canBanTarget,
     );
 
     const members = fullInfo?.members;
@@ -305,7 +297,6 @@ export default memo(withGlobal<OwnProps>(
       canShowSender,
       originSender,
       isChatWithSelf,
-      isChannel: chat && isChatChannel(chat),
       canRemoveSender,
       kickedMembers: canRemoveSender ? fullInfo?.kickedMembers : undefined,
       chatMembers: canRemoveSender && isMemberListComplete ? members : undefined,

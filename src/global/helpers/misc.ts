@@ -39,6 +39,6 @@ export function buildApiInputPrivacyRules(global: GlobalState, {
   return rules;
 }
 
-export function getCurrentProdAccountCount() {
-  return Object.values(getAccountsInfo()).filter((account) => !account.isTest).length;
+export function getCurrentAccountCount() {
+  return Object.values(getAccountsInfo()).length;
 }

@@ -110,10 +110,6 @@ $service-hover-background: color-mix(in srgb, var(--message-service-background),
     text-wrap: pretty;
 
     box-decoration-break: clone;
-
-    &:has(.topicIcon) {
-      padding-block: clamp(0.1875rem, calc(1.1875rem - var(--message-text-size, 1rem)), 0.25rem);
-    }
   }
 
   .fluidBackground {
@@ -134,22 +130,6 @@ $service-hover-background: color-mix(in srgb, var(--message-service-background),
 
   .textContent {
     background-color: transparent !important;
-  }
-}
-
-.root .topicIcon {
-  --custom-emoji-size: min(1.25rem, calc(var(--message-text-size, 1rem) + 0.3125rem));
-
-  width: var(--custom-emoji-size);
-  height: var(--custom-emoji-size);
-  margin-top: -0.1875rem;
-
-  font-size: var(--custom-emoji-size);
-  vertical-align: middle;
-
-  :global(.topic-icon-letter) {
-    font-family: inherit;
-    font-size: 0.6em;
   }
 }
 

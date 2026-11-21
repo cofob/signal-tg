@@ -16,12 +16,15 @@ import InputText from '../ui/InputText';
 import styles from './SignalProxyForm.module.scss';
 
 type OwnProps = {
+  // Edits the sealed sender proxy instead of the proxy server
+  isSealedSender?: boolean;
   // Runs after saving a URL or restoring the default
   onSave?: NoneToVoidFunction;
 };
 
 type StateProps = {
-  signalProxyUrl?: string;
+  // The saved URL of the proxy that the form edits
+  savedUrl?: string;
 };
 
 type Status = {
@@ -32,20 +35,21 @@ type Status = {
 
 /** The proxy server field with check, save and reset; settings and the link screen share it */
 const SignalProxyForm = ({
-  signalProxyUrl,
+  isSealedSender,
+  savedUrl,
   onSave,
 }: OwnProps & StateProps) => {
-  const { setSignalProxyUrl } = getActions();
+  const { setSignalProxyUrl, setSignalSealedSenderProxyUrl } = getActions();
 
   const lang = useLang();
 
-  const [value, setValue] = useState(signalProxyUrl ?? '');
+  const [value, setValue] = useState(savedUrl ?? '');
   // An error or check result describes the value it was made for, so editing hides it
   const [status, setStatus] = useState<Status>();
   const [isChecking, markIsChecking, unmarkIsChecking] = useFlag();
 
   const trimmedValue = value.trim();
-  const isChanged = trimmedValue !== (signalProxyUrl ?? '');
+  const isChanged = trimmedValue !== (savedUrl ?? '');
   const shownStatus = status?.value === value ? status : undefined;
 
   const handleChange = useLastCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,8 +72,13 @@ const SignalProxyForm = ({
     }
 
     setValue(url);
-    setSignalProxyUrl({ url });
+    saveUrl(url);
     onSave?.();
+  });
+
+  const saveUrl = useLastCallback((url: string | undefined) => {
+    if (isSealedSender) setSignalSealedSenderProxyUrl({ url });
+    else setSignalProxyUrl({ url });
   });
 
   const handleCheck = useLastCallback(async () => {
@@ -92,13 +101,15 @@ const SignalProxyForm = ({
 
   const handleUseDefault = useLastCallback(() => {
     setValue('');
-    setSignalProxyUrl({ url: undefined });
+    saveUrl(undefined);
     onSave?.();
   });
 
   return (
     <form className={styles.root} onSubmit={handleSubmit}>
-      <p className={styles.description} dir="auto">{lang('SignalProxyAbout')}</p>
+      <p className={styles.description} dir="auto">
+        {lang(isSealedSender ? 'SignalSealedProxyAbout' : 'SignalProxyAbout')}
+      </p>
       <InputText
         value={value}
         label={lang('SignalProxyUrl')}
@@ -113,9 +124,9 @@ const SignalProxyForm = ({
       <Button isText isLoading={isChecking} disabled={!trimmedValue} onClick={handleCheck}>
         {lang('SignalProxyCheck')}
       </Button>
-      {signalProxyUrl && (
+      {savedUrl && (
         <Button isText onClick={handleUseDefault}>
-          {lang('SignalProxyUseDefault')}
+          {lang(isSealedSender ? 'SignalSealedProxyUseMain' : 'SignalProxyUseDefault')}
         </Button>
       )}
     </form>
@@ -123,11 +134,11 @@ const SignalProxyForm = ({
 };
 
 export default memo(withGlobal<OwnProps>(
-  (global): Complete<StateProps> => {
-    const { signalProxyUrl } = selectSharedSettings(global);
+  (global, { isSealedSender }): Complete<StateProps> => {
+    const { signalProxyUrl, signalSealedSenderProxyUrl } = selectSharedSettings(global);
 
     return {
-      signalProxyUrl,
+      savedUrl: isSealedSender ? signalSealedSenderProxyUrl : signalProxyUrl,
     };
   },
 )(SignalProxyForm));

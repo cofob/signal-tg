@@ -1,8 +1,9 @@
+import type { TrafficClass } from '../config';
 import type { TunnelTransport, TunnelTransportHandlers } from './TlsTunnel';
 
 /** Messages from the engine's worker to the page, which calls the desktop app's commands (`tauri/src/transport.rs`) */
 export type NativeTransportRequest =
-  | { type: 'connect'; id: number; host: string }
+  | { type: 'connect'; id: number; host: string; trafficClass: TrafficClass }
   | { type: 'send'; id: number; data: ArrayBuffer }
   | { type: 'ack'; id: number; byteLength: number }
   | { type: 'close'; id: number };
@@ -44,9 +45,9 @@ export default class NativeTransport implements TunnelTransport {
 
   private unacknowledged = 0;
 
-  constructor(host: string, private handlers: TunnelTransportHandlers) {
+  constructor(host: string, trafficClass: TrafficClass, private handlers: TunnelTransportHandlers) {
     transports.set(this.id, this);
-    postRequest({ type: 'connect', id: this.id, host });
+    postRequest({ type: 'connect', id: this.id, host, trafficClass });
   }
 
   send(data: Uint8Array<ArrayBuffer>) {

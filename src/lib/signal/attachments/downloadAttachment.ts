@@ -40,6 +40,7 @@ export async function downloadAttachment(
   signal?.addEventListener('abort', () => controller.abort(signal.reason));
 
   const response = await sendHttpRequest(host, {
+    trafficClass: 'unauthenticated',
     method: 'GET',
     path: `/attachments/${encodeURIComponent(id)}`,
     signal: controller.signal,

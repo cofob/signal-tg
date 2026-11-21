@@ -1,7 +1,6 @@
 import type { LangKey } from '../../types/language';
 
 const INITIAL_KEYS: LangKey[] = [
-  'TestServer',
   'PageTitleInactive',
   'AuthTitle',
   'AuthKeepSignedIn',

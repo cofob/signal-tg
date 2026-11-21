@@ -158,6 +158,9 @@ export default class Http2Connection {
 
   private isClosed = false;
 
+  // Set when new requests must go elsewhere; the connection closes once its streams finish
+  private isRetired = false;
+
   private idleTimer?: ReturnType<typeof setTimeout>;
 
   // Wake requests that wait for a stream slot or a send window
@@ -188,7 +191,19 @@ export default class Http2Connection {
 
   /** Whether new requests can use this connection */
   get canOpenStreams() {
-    return !this.isClosed && this.goAwayLastStreamId === undefined && this.nextStreamId <= MAX_STREAM_ID;
+    return !this.isClosed && !this.isRetired
+      && this.goAwayLastStreamId === undefined && this.nextStreamId <= MAX_STREAM_ID;
+  }
+
+  /** Whether new requests of the connection's class still go through its tunnel */
+  get isOnCurrentTunnel() {
+    return this.tunnel.isOnCurrentTunnel;
+  }
+
+  /** Stops new requests; streams in flight finish, and the connection closes after the last one */
+  retire() {
+    this.isRetired = true;
+    this.closeIfIdle();
   }
 
   get isOpen() {
@@ -640,7 +655,7 @@ export default class Http2Connection {
     }
     this.notify();
     if (this.streams.size) return;
-    if (this.goAwayLastStreamId !== undefined) {
+    if (this.goAwayLastStreamId !== undefined || this.isRetired) {
       this.closeGracefully();
     } else {
       this.startIdleTimer();

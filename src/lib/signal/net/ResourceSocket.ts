@@ -1,5 +1,7 @@
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
+import type { TrafficClass } from '../config';
+
 import { WebSocketMessage_Type, WebSocketMessageSchema } from '../proto/generated/WebSocketResources_pb';
 import NetworkError from './NetworkError';
 import WebSocketClient from './WebSocketClient';
@@ -77,8 +79,10 @@ export default class ResourceSocket {
     this.keepaliveTimer = setInterval(() => this.sendKeepalive(), KEEPALIVE_INTERVAL_MS);
   }
 
-  static async connect(host: string, path: string, headers?: Record<string, string>, keepalivePath?: string) {
-    return new ResourceSocket(await WebSocketClient.connect(host, path, headers), keepalivePath);
+  static async connect(
+    host: string, path: string, trafficClass: TrafficClass, headers?: Record<string, string>, keepalivePath?: string,
+  ) {
+    return new ResourceSocket(await WebSocketClient.connect(host, path, trafficClass, headers), keepalivePath);
   }
 
   sendRequest({

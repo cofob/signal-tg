@@ -2,6 +2,9 @@ import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type { ConversationRecord } from '../db/MessageDb';
 import type {
+  NotificationProfile, NotificationProfileOverride,
+} from '../notificationProfiles/notificationProfiles';
+import type {
   AccountRecord,
   AccountRecord_PinnedConversation,
   ContactRecord,
@@ -9,6 +12,8 @@ import type {
   InstalledStickerPackRecord,
   ManifestRecord,
   ManifestRecord_Identifier,
+  NotificationProfile as NotificationProfileRecord,
+  Recipient,
   StorageRecord,
   StoryDistributionListRecord,
 } from '../proto/generated/StorageService_pb';
@@ -16,12 +21,16 @@ import type { StickerPackRecord } from '../stickers/stickerPacks';
 import type { AccountRecord as LocalAccount, StoryDistributionList } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
-import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import {
+  bufferFromBase64, bufferFromHex, buffersEqual, bufferToBase64, bufferToHex,
+} from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
+import { ALL_DAYS, DAY_MONDAY, DEFAULT_PROFILE_COLOR } from '../notificationProfiles/notificationProfiles';
 import { isPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
 import { MY_STORY_ID } from '../stories/storyLists';
 
 import {
+  AccountRecord_NotificationProfileManualOverrideSchema,
   AccountRecord_PhoneNumberSharingMode,
   AccountRecord_PinnedConversationSchema,
   AccountRecord_UsernameLinkSchema,
@@ -30,6 +39,7 @@ import {
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
   OptionalBool,
+  RecipientSchema,
   StorageRecordSchema,
 } from '../proto/generated/StorageService_pb';
 
@@ -40,9 +50,10 @@ type ConversationStorageField = ConversationRecordField | 'profileKey';
 export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
   | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'givenName' | 'familyName' | 'avatarUrlPath'
   | 'storiesDisabled' | 'storyViewReceiptsEnabled' | 'readReceipts' | 'typingIndicators' | 'linkPreviews'
-  | 'sealedSenderIndicators' | 'universalExpireTimer';
-// Sticker pack and story distribution list records are written whole
-type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList';
+  | 'sealedSenderIndicators' | 'universalExpireTimer' | 'notificationProfileManualOverride';
+// Sticker pack, story distribution list and notification profile records are written whole
+type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList'
+  | 'notificationProfile';
 
 /** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
 export type LocalAccountFields = Pick<LocalAccount,
@@ -53,7 +64,8 @@ export type LocalAccountFields = Pick<LocalAccount,
 
 /**
  * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY`, the key of a sticker
- * pack (`getStickerPackStorageKey`) or the key of a story distribution list (`getStoryListKey`)
+ * pack (`getStickerPackStorageKey`), the key of a story distribution list (`getStoryListKey`) or the key of
+ * a notification profile (`getNotificationProfileKey`)
  */
 export type StorageChanges = Record<string, StorageField[]>;
 
@@ -71,14 +83,19 @@ type StorageWriteSource = {
   deviceId: number;
   localAccount: LocalAccountFields;
   storyLists: StoryDistributionList[];
+  notificationProfiles: NotificationProfile[];
+  notificationProfileOverride?: NotificationProfileOverride;
 };
 
 // Conversation ids are ACIs and base64 group ids, so they never equal this key or the story list keys
 export const ACCOUNT_KEY = 'account';
 const STICKER_PACK_KEY_PREFIX = 'stickerPack:';
 const STORY_LIST_KEY_PREFIX = 'storyList:';
+const NOTIFICATION_PROFILE_KEY_PREFIX = 'notificationProfile:';
 
 const ACI_BINARY_LENGTH = 16;
+const NOTIFICATION_PROFILE_ID_LENGTH = 16;
+const ACI_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // PNIs have a prefix byte in binary service id fields and a `PNI:` prefix in strings
 const PNI_BINARY_PREFIX = 1;
 const PNI_STRING_PREFIX_LENGTH = 4;
@@ -155,6 +172,78 @@ export function getStoryListKey(listId: string) {
   return `${STORY_LIST_KEY_PREFIX}${listId}`;
 }
 
+/** The key of a notification profile in `StorageChanges` */
+export function getNotificationProfileKey(profileId: string) {
+  return `${NOTIFICATION_PROFILE_KEY_PREFIX}${profileId}`;
+}
+
+/**
+ * The profile of a notification profile record, or `undefined` for a record without id or name (Signal Desktop
+ * `mergeNotificationProfileRecord` in `ts/services/storageRecordOps.preload.ts`). `getGroupId` maps a group's master
+ * key to its conversation id, and `hasGroupKey` tells whether that conversation is here with its master key; recipients
+ * that name no contact and no such group stay as they are, so that writing the profile keeps them.
+ */
+export function parseNotificationProfile(
+  record: NotificationProfileRecord,
+  getGroupId: (masterKey: Uint8Array) => string,
+  hasGroupKey: (groupId: string) => boolean,
+): NotificationProfile | undefined {
+  if (record.id.length !== NOTIFICATION_PROFILE_ID_LENGTH || !record.name) return undefined;
+
+  const allowedConversationIds: string[] = [];
+  const otherAllowedRecipients: Uint8Array[] = [];
+  for (const recipient of record.allowedMembers) {
+    const { identifier } = recipient;
+    const aci = identifier.case === 'contact'
+      ? getAci(identifier.value.serviceId, identifier.value.serviceIdBinary)
+      : undefined;
+    if (aci) {
+      allowedConversationIds.push(aci);
+    } else if (identifier.case === 'groupMasterKey' && hasGroupKey(getGroupId(identifier.value))) {
+      allowedConversationIds.push(getGroupId(identifier.value));
+    } else {
+      otherAllowedRecipients.push(toBinary(RecipientSchema, recipient));
+    }
+  }
+
+  return {
+    id: bufferToHex(record.id),
+    name: record.name,
+    emoji: record.emoji || undefined,
+    color: record.color || DEFAULT_PROFILE_COLOR,
+    createdAt: Number(record.createdAtMs) || Date.now(),
+    areAllCallsAllowed: record.allowAllCalls,
+    areAllMentionsAllowed: record.allowAllMentions,
+    allowedConversationIds,
+    otherAllowedRecipients: otherAllowedRecipients.length ? otherAllowedRecipients : undefined,
+    isScheduleEnabled: record.scheduleEnabled,
+    scheduleStartTime: record.scheduleEnabled ? record.scheduleStartTime : undefined,
+    scheduleEndTime: record.scheduleEnabled ? record.scheduleEndTime : undefined,
+    // Signal Desktop `fromDayOfWeekArray`: the unknown day is Monday
+    scheduleDays: ALL_DAYS.filter((day) => (
+      record.scheduleDaysEnabled.includes(day) || (day === DAY_MONDAY && record.scheduleDaysEnabled.includes(0))
+    )),
+    deletedAt: record.deletedAtTimestampMs ? Number(record.deletedAtTimestampMs) : undefined,
+  };
+}
+
+/** The manual override of the account record, `undefined` when the record has none */
+export function parseNotificationProfileOverride(account: AccountRecord): NotificationProfileOverride | undefined {
+  const override = account.notificationProfileManualOverride?.override;
+  if (override?.case === 'enabled' && override.value.id.length === NOTIFICATION_PROFILE_ID_LENGTH) {
+    return {
+      enabled: {
+        profileId: bufferToHex(override.value.id),
+        endsAt: override.value.endAtTimestampMs ? Number(override.value.endAtTimestampMs) : undefined,
+      },
+    };
+  }
+  if (override?.case === 'disabledAtTimestampMs' && override.value) {
+    return { disabledAt: Number(override.value) };
+  }
+  return undefined;
+}
+
 /** The local list of a story distribution list record; records without a valid identifier are skipped */
 export function parseStoryDistributionList(record: StoryDistributionListRecord): StoryDistributionList | undefined {
   if (record.identifier.length !== ACI_BINARY_LENGTH) return undefined;
@@ -215,9 +304,13 @@ export function getMutedUntil(timestamp: bigint) {
  */
 export function buildStorageWrite({
   manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount, storyLists,
+  notificationProfiles, notificationProfileOverride,
 }: StorageWriteSource): { write: StorageWrite; writtenKeys: string[] } | undefined {
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storyListsByKey = new Map(storyLists.map((list) => [getStoryListKey(list.id), list]));
+  const profilesByKey = new Map(
+    notificationProfiles.map((profile) => [getNotificationProfileKey(profile.id), profile]),
+  );
   const storedRecords = indexRecords(records);
   const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
   const insertTypes = new Map<string, ItemType>();
@@ -230,7 +323,8 @@ export function buildStorageWrite({
       ? stickerPacks[key.slice(STICKER_PACK_KEY_PREFIX.length)]
       : undefined;
     const storyList = storyListsByKey.get(key);
-    const isWholeRecord = key === ACCOUNT_KEY || stickerPack || storyList;
+    const notificationProfile = profilesByKey.get(key);
+    const isWholeRecord = key === ACCOUNT_KEY || stickerPack || storyList || notificationProfile;
     const recordKey = isWholeRecord ? key : conversation && getRecordKey(conversation);
     if (!recordKey) continue;
     const stored = storedRecords.get(recordKey);
@@ -240,7 +334,15 @@ export function buildStorageWrite({
       record = buildStickerPackRecord(stickerPack, stored?.record);
     } else if (stored?.record.record.case === 'account') {
       record = stored.record;
-      setAccountFields(stored.record.record.value, fields, conversations, selfAci, localAccount);
+      setAccountFields(
+        stored.record.record.value, fields, conversations, selfAci, localAccount, notificationProfileOverride,
+      );
+    } else if (notificationProfile) {
+      record = stored?.record
+        ?? create(StorageRecordSchema, { record: { case: 'notificationProfile', value: {} } });
+      setNotificationProfileFields(
+        record.record.value as NotificationProfileRecord, notificationProfile, conversations,
+      );
     } else if (storyList) {
       record = stored?.record
         ?? create(StorageRecordSchema, { record: { case: 'storyDistributionList', value: {} } });
@@ -363,6 +465,10 @@ function getStoredRecordKey({ record }: StorageRecord) {
       return record.value.identifier.length === ACI_BINARY_LENGTH
         ? getStoryListKey(uuidToString(record.value.identifier))
         : undefined;
+    case 'notificationProfile':
+      return record.value.id.length === NOTIFICATION_PROFILE_ID_LENGTH
+        ? getNotificationProfileKey(bufferToHex(record.value.id))
+        : undefined;
     case 'installedStickerPack':
       return record.value.packId.length ? getStickerPackStorageKey(bufferToHex(record.value.packId)) : undefined;
     default:
@@ -387,6 +493,8 @@ function getItemType({ record }: StorageRecord) {
       return ItemType.GROUPV2;
     case 'storyDistributionList':
       return ItemType.STORY_DISTRIBUTION_LIST;
+    case 'notificationProfile':
+      return ItemType.NOTIFICATION_PROFILE;
     case 'installedStickerPack':
       return ItemType.STICKER_PACK;
     default:
@@ -481,6 +589,55 @@ function setStoryListFields(record: StoryDistributionListRecord, list: StoryDist
   record.recipientServiceIds = [];
 }
 
+/**
+ * Signal Desktop `toNotificationProfileRecord` in `ts/services/storageRecordOps.preload.ts`. A record that exists
+ * keeps its unknown fields; the allowed members are those of the profile, which include the recipients that the
+ * profile keeps as they are.
+ */
+function setNotificationProfileFields(
+  record: NotificationProfileRecord, profile: NotificationProfile, conversations: ConversationRecord[],
+) {
+  record.id = bufferFromHex(profile.id);
+  record.name = profile.name;
+  record.emoji = profile.emoji;
+  record.color = profile.color;
+  record.createdAtMs = BigInt(profile.createdAt);
+  record.allowAllCalls = profile.areAllCallsAllowed;
+  record.allowAllMentions = profile.areAllMentionsAllowed;
+  record.scheduleEnabled = profile.isScheduleEnabled;
+  record.scheduleStartTime = profile.scheduleStartTime ?? 0;
+  record.scheduleEndTime = profile.scheduleEndTime ?? 0;
+  record.scheduleDaysEnabled = profile.scheduleDays;
+  record.deletedAtTimestampMs = BigInt(profile.deletedAt ?? 0);
+
+  const recipients: Recipient[] = [];
+  const groupKeys: Uint8Array[] = [];
+  for (const id of profile.allowedConversationIds) {
+    const conversation = conversations.find((item) => item.id === id);
+    if (conversation?.type === 'group') {
+      if (conversation.masterKey) {
+        groupKeys.push(conversation.masterKey);
+        recipients.push(create(RecipientSchema, {
+          identifier: { case: 'groupMasterKey', value: conversation.masterKey },
+        }));
+      }
+    } else if (ACI_REGEX.test(id)) {
+      recipients.push(create(RecipientSchema, {
+        identifier: { case: 'contact', value: { serviceIdBinary: uuidToBytes(id), e164: conversation?.e164 } },
+      }));
+    }
+  }
+  for (const other of profile.otherAllowedRecipients ?? []) {
+    const recipient = fromBinary(RecipientSchema, other);
+    const { identifier } = recipient;
+    // A group that is a conversation here by now is written from the conversation
+    const isKnownGroup = identifier.case === 'groupMasterKey'
+      && groupKeys.some((key) => buffersEqual(key, identifier.value));
+    if (!isKnownGroup) recipients.push(recipient);
+  }
+  record.allowedMembers = recipients;
+}
+
 function setAccountFields(
   record: AccountRecord,
   fields: StorageField[],
@@ -498,6 +655,7 @@ function setAccountFields(
     isSealedSenderIndicatorsEnabled,
     universalExpireTimer,
   }: LocalAccountFields,
+  notificationProfileOverride?: NotificationProfileOverride,
 ) {
   const self = conversations.find(({ id }) => id === selfAci);
   for (const field of fields) {
@@ -561,6 +719,10 @@ function setAccountFields(
       case 'universalExpireTimer':
         record.universalExpireTimer = universalExpireTimer ?? 0;
         break;
+      // Signal Desktop `toAccountRecord`
+      case 'notificationProfileManualOverride':
+        record.notificationProfileManualOverride = buildNotificationProfileOverride(notificationProfileOverride);
+        break;
       case 'storyViewReceiptsEnabled':
         record.storyViewReceiptsEnabled = isStoryViewReceiptsEnabled === undefined
           ? OptionalBool.UNSET
@@ -570,6 +732,25 @@ function setAccountFields(
         break;
     }
   }
+}
+
+function buildNotificationProfileOverride(override?: NotificationProfileOverride) {
+  if (override?.disabledAt) {
+    return create(AccountRecord_NotificationProfileManualOverrideSchema, {
+      override: { case: 'disabledAtTimestampMs', value: BigInt(override.disabledAt) },
+    });
+  }
+  if (override?.enabled) {
+    return create(AccountRecord_NotificationProfileManualOverrideSchema, {
+      override: {
+        case: 'enabled',
+        value: {
+          id: bufferFromHex(override.enabled.profileId), endAtTimestampMs: BigInt(override.enabled.endsAt ?? 0),
+        },
+      },
+    });
+  }
+  return undefined;
 }
 
 /**

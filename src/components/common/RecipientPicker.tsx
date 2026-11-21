@@ -6,35 +6,19 @@ import { getActions, getGlobal, withGlobal } from '../../global';
 
 import type { ApiChatFolder, ApiChatType } from '../../api/types';
 import type { GlobalState } from '../../global/types';
-import type { ThreadId } from '../../types';
 
 import { ALL_FOLDER_ID, API_CHAT_TYPES } from '../../config';
-import {
-  getCanPostInChat,
-  getChatTitle,
-  getHasAdminRight,
-  isChatChannel,
-  isDeletedUser,
-} from '../../global/helpers';
+import { getCanPostInChat, isDeletedUser } from '../../global/helpers';
 import { filterPeersByQuery } from '../../global/helpers/peers';
 import {
-  filterChatIdsByType, selectCanInviteToChat, selectChat, selectChatFullInfo,
-  selectIsMonoforumAdmin, selectTopic, selectUser,
+  filterChatIdsByType, selectCanInviteToChat, selectChat, selectChatFullInfo, selectUser,
 } from '../../global/selectors';
 import { unique } from '../../util/iteratees';
-import {
-  areChatSelectionKeysEqual,
-  buildChatSelectionKey,
-  type ChatSelectionKey,
-  getChatSelectionKeyHash,
-  includesChatSelectionKey,
-} from '../../util/keys/chatSelectionKey';
 import sortChatIds from './helpers/sortChatIds';
 
 import useCurrentOrPrev from '../../hooks/useCurrentOrPrev';
 import { useFolderManagerForOrderedIds } from '../../hooks/useFolderManager';
 import useFolderTabs from '../../hooks/useFolderTabs';
-import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
 
 import Island from '../gili/layout/Island';
@@ -53,15 +37,14 @@ export type OwnProps = {
   filter?: readonly ApiChatType[];
   isLowStackPriority?: boolean;
   isNativeDialog?: boolean;
-  isForwarding?: boolean;
   shouldFilterInviteable?: boolean;
   isMultiSelect?: boolean;
   withFolders?: boolean;
   footer?: TeactNode;
   viewportFooter?: TeactNode;
   loadMore?: NoneToVoidFunction;
-  onSelectRecipient: (peerId: string, threadId?: ThreadId) => void;
-  onSelectedIdsChange?: (ids: ChatSelectionKey[]) => void;
+  onSelectRecipient: (peerId: string) => void;
+  onSelectedIdsChange?: (ids: string[]) => void;
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd?: NoneToVoidFunction;
 };
@@ -95,7 +78,6 @@ const RecipientPicker = ({
   isNativeDialog,
   chatFoldersById,
   orderedFolderIds,
-  isForwarding,
   shouldFilterInviteable,
   isMultiSelect,
   withFolders,
@@ -108,7 +90,6 @@ const RecipientPicker = ({
   onCloseAnimationEnd,
 }: OwnProps & StateProps) => {
   const { openLimitReachedModal, loadTopPeers } = getActions();
-  const lang = useLang();
 
   useEffect(() => {
     if (isOpen) {
@@ -117,7 +98,7 @@ const RecipientPicker = ({
   }, [isOpen, loadTopPeers]);
 
   const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<ChatSelectionKey[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [activeFolderIndex, setActiveFolderIndex] = useState(0);
   const { displayedFolders, folderTabs } = useFolderTabs({
@@ -146,37 +127,28 @@ const RecipientPicker = ({
     setActiveFolderIndex(index);
   });
 
-  const updateSelectedIds = useLastCallback((newIds: ChatSelectionKey[]) => {
+  const updateSelectedIds = useLastCallback((newIds: string[]) => {
     setSelectedIds(newIds);
     onSelectedIdsChange?.(newIds);
   });
 
-  const handleRemoveSelected = useLastCallback((selectionKey: ChatSelectionKey) => {
-    updateSelectedIds(selectedIds.filter((key) => !areChatSelectionKeysEqual(key, selectionKey)));
+  const handleRemoveSelected = useLastCallback((peerId: string) => {
+    updateSelectedIds(selectedIds.filter((id) => id !== peerId));
   });
 
-  const handleChipClick = useLastCallback((keyHash: string) => {
-    const selectionKey = selectedIds.find((key) => getChatSelectionKeyHash(key) === keyHash);
-    if (selectionKey) {
-      handleRemoveSelected(selectionKey);
-    }
-  });
-
-  const handleToggleSelection = useLastCallback((peerId: string, threadId?: ThreadId) => {
-    const selectionKey = buildChatSelectionKey(peerId, threadId ? Number(threadId) : undefined);
-
-    if (includesChatSelectionKey(selectedIds, selectionKey)) {
-      handleRemoveSelected(selectionKey);
+  const handleToggleSelection = useLastCallback((peerId: string) => {
+    if (selectedIds.includes(peerId)) {
+      handleRemoveSelected(peerId);
     } else {
-      updateSelectedIds([...selectedIds, selectionKey]);
+      updateSelectedIds([...selectedIds, peerId]);
     }
   });
 
-  const handleSelect = useLastCallback((peerId: string, threadId?: ThreadId) => {
+  const handleSelect = useLastCallback((peerId: string) => {
     if (isMultiSelect) {
-      handleToggleSelection(peerId, threadId);
+      handleToggleSelection(peerId);
     } else {
-      onSelectRecipient(peerId, threadId);
+      onSelectRecipient(peerId);
     }
   });
 
@@ -196,7 +168,7 @@ const RecipientPicker = ({
       ...((search && archivedListIds) || []),
     ];
 
-    const peerIds = allIds.filter((id) => getIsRecipientAllowed(global, id, isForwarding, shouldFilterInviteable));
+    const peerIds = allIds.filter((id) => getIsRecipientAllowed(global, id, shouldFilterInviteable));
 
     const idsWithAdditions = shouldRenderFolders ? peerIds : unique([
       ...(currentUserId ? [currentUserId] : []),
@@ -209,7 +181,6 @@ const RecipientPicker = ({
         ids: idsWithAdditions,
         query: search,
       }),
-      undefined,
       priorityIds,
       currentUserId,
     );
@@ -224,7 +195,6 @@ const RecipientPicker = ({
     archivedListIds,
     contactIds,
     filter,
-    isForwarding,
     shouldFilterInviteable,
     orderedChatIds,
     shouldRenderFolders,
@@ -235,32 +205,17 @@ const RecipientPicker = ({
   const recentContactIds = useMemo(() => {
     const global = getGlobal();
     const source = topPeerIds?.length ? topPeerIds : (contactIds || []);
-    const allowed = source.filter((id) => getIsRecipientAllowed(global, id, isForwarding, shouldFilterInviteable));
+    const allowed = source.filter((id) => getIsRecipientAllowed(global, id, shouldFilterInviteable));
     return filterChatIdsByType(global, allowed, filter).slice(0, RECENT_CONTACTS_LIMIT);
-  }, [topPeerIds, contactIds, filter, isForwarding, shouldFilterInviteable]);
+  }, [topPeerIds, contactIds, filter, shouldFilterInviteable]);
 
   const hasSelectedChips = isMultiSelect && selectedIds.length > 0;
 
-  const getChipTitle = useLastCallback((selectionKey: ChatSelectionKey): string | undefined => {
-    const { peerId, topicId } = selectionKey;
-    if (!topicId) return undefined;
-
-    const global = getGlobal();
-    const topic = selectTopic(global, peerId, topicId);
-    const chat = selectChat(global, peerId);
-
-    if (!topic || !chat) return undefined;
-
-    const chatTitle = getChatTitle(lang, chat);
-    return `${topic.title} • ${chatTitle}`;
-  });
-
   const searchChips = useMemo(() => {
     if (!hasSelectedChips) return undefined;
-    return selectedIds.map((selectionKey): PickerSearchChip => ({
-      key: getChatSelectionKeyHash(selectionKey),
-      peerId: selectionKey.peerId,
-      title: getChipTitle(selectionKey),
+    return selectedIds.map((peerId): PickerSearchChip => ({
+      key: peerId,
+      peerId,
       canClose: true,
     }));
   }, [hasSelectedChips, selectedIds]);
@@ -274,12 +229,10 @@ const RecipientPicker = ({
         chips={searchChips}
         onChange={props.onChange}
         onKeyDown={props.onKeyDown}
-        onChipClick={handleChipClick}
+        onChipClick={handleRemoveSelected}
       />
     );
   }, [searchChips]);
-
-  const selectedPeerIds = useMemo(() => selectedIds.map((key) => key.peerId), [selectedIds]);
 
   const subheaderContent = useMemo(() => {
     const hasRecentContacts = recentContactIds.length > 0 && !search;
@@ -294,7 +247,7 @@ const RecipientPicker = ({
             <ListTopPeers
               peerIds={recentContactIds}
               currentUserId={currentUserId}
-              selectedIds={isMultiSelect ? selectedPeerIds : undefined}
+              selectedIds={isMultiSelect ? selectedIds : undefined}
               onPeerClick={handleSelect}
             />
           </Island>
@@ -315,7 +268,7 @@ const RecipientPicker = ({
     currentUserId,
     handleSelect,
     isMultiSelect,
-    selectedPeerIds,
+    selectedIds,
     folderTabs,
     activeFolderIndex,
     handleSwitchFolderIndex,
@@ -350,21 +303,13 @@ const RecipientPicker = ({
 function getIsRecipientAllowed(
   global: GlobalState,
   id: string,
-  isForwarding?: boolean,
   shouldFilterInviteable?: boolean,
 ) {
   const chat = selectChat(global, id);
   const user = selectUser(global, id);
-  const hasAdminRights = chat && getHasAdminRight(chat, 'postMessages');
-  const isChannel = chat && isChatChannel(chat);
-  if (isForwarding && isChannel && !hasAdminRights) return false;
   if (user) return !isDeletedUser(user);
 
   if (!chat) return false;
-
-  if (chat.isMonoforum && selectIsMonoforumAdmin(global, id)) {
-    return false;
-  }
 
   if (shouldFilterInviteable) {
     return selectCanInviteToChat(global, id);

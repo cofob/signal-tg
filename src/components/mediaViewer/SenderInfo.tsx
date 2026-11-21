@@ -4,9 +4,7 @@ import { getActions, withGlobal } from '../../global';
 import type { ApiChat, ApiPeer } from '../../api/types';
 import type { MediaViewerItem } from './helpers/getViewableMedia';
 
-import {
-  isChatChannel, isChatGroup,
-} from '../../global/helpers';
+import { isChatGroup } from '../../global/helpers';
 import { getPeerTitle } from '../../global/helpers/peers';
 import {
   selectSender,
@@ -84,13 +82,11 @@ const SenderInfo = ({
     const parts: string[] = [];
     if (avatar) {
       const chat = !isUserId(avatarOwner!.id) ? avatarOwner as ApiChat : undefined;
-      const isChannel = chat && isChatChannel(chat);
       const isGroup = chat && isChatGroup(chat);
       parts.push(lang(
         isPersonalAvatar ? 'MediaviewProfilePhotoByYou'
           : isFallbackAvatar ? 'MediaviewProfilePublicPhoto'
-            : isChannel ? 'MediaviewChannelPhoto'
-              : isGroup ? 'MediaviewGroupPhoto' : 'MediaviewProfilePhoto',
+            : isGroup ? 'MediaviewGroupPhoto' : 'MediaviewProfilePhoto',
       ));
     }
 

@@ -4,8 +4,7 @@ import { getActions, withGlobal } from '../../../global';
 import type { ApiExportedInvite } from '../../../api/types';
 import { ManagementScreens } from '../../../types';
 
-import { isChatChannel, isChatPublic } from '../../../global/helpers';
-import { selectChat, selectTabState } from '../../../global/selectors';
+import { selectTabState } from '../../../global/selectors';
 import { formatDateTime } from '../../../util/localization/dateFormat';
 import { getServerTime } from '../../../util/serverTime';
 
@@ -39,15 +38,11 @@ type OwnProps = {
 
 type StateProps = {
   editingInvite?: ApiExportedInvite;
-  isPublic: boolean;
-  isChannel: boolean;
 };
 
 const ManageInvite = ({
   chatId,
   editingInvite,
-  isPublic,
-  isChannel,
   isActive,
   onClose,
   onScreenSelect,
@@ -64,7 +59,7 @@ const ManageInvite = ({
   const [selectedUsageOption, setSelectedUsageOption] = useState('0');
   const [isSubmitBlocked, setIsSubmitBlocked] = useState(false);
 
-  const effectiveIsRequestNeeded = !isPublic && isRequestNeeded;
+  const effectiveIsRequestNeeded = isRequestNeeded;
 
   useHistoryBack({
     isActive,
@@ -164,23 +159,14 @@ const ManageInvite = ({
   return (
     <div className="Management ManageInvite">
       <div className="panel-content custom-scroll">
-        {!(isPublic && isChannel) && (
-          <>
-            <Island>
-              <SwitchField
-                checked={effectiveIsRequestNeeded}
-                onChange={handleIsRequestChange}
-                label={lang('ApproveNewMembers')}
-                disabled={isPublic}
-              />
-            </Island>
-            <IslandDescription>
-              {isPublic
-                ? lang('ApproveNewMembersPublicUnavailable')
-                : lang('ApproveNewMembersDescription')}
-            </IslandDescription>
-          </>
-        )}
+        <Island>
+          <SwitchField
+            checked={effectiveIsRequestNeeded}
+            onChange={handleIsRequestChange}
+            label={lang('ApproveNewMembers')}
+          />
+        </Island>
+        <IslandDescription>{lang('ApproveNewMembersDescription')}</IslandDescription>
         <Island>
           <InputText
             className="link-name"
@@ -284,12 +270,9 @@ const ManageInvite = ({
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
     const { editingInvite } = selectTabState(global).management.byChatId[chatId] || {};
-    const chat = selectChat(global, chatId);
 
     return {
       editingInvite,
-      isPublic: Boolean(chat && isChatPublic(chat)),
-      isChannel: Boolean(chat && isChatChannel(chat)),
     };
   },
 )(ManageInvite));

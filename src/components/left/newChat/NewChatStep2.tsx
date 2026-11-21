@@ -22,7 +22,6 @@ import InputText from '../../ui/InputText';
 import ListItem from '../../ui/ListItem';
 
 export type OwnProps = {
-  isChannel?: boolean;
   isActive: boolean;
   memberIds: string[];
   onReset: (forceReturnToChatList?: boolean) => void;
@@ -37,11 +36,9 @@ type StateProps = {
 const MAX_MEMBERS_FOR_GENERATE_CHAT_NAME = 4;
 
 const CHAT_TITLE_EMPTY_ERROR = 'NewChatTitleEmptyError';
-const CHANNEL_TITLE_EMPTY_ERROR = 'NewChannelTitleEmptyError';
 const CHAT_TOO_MANY_USERS_ERROR = 'NewChatTooManyUsers';
 
 const NewChatStep2 = ({
-  isChannel,
   isActive,
   memberIds,
   maxGroupSize,
@@ -49,10 +46,7 @@ const NewChatStep2 = ({
   creationError,
   onReset,
 }: OwnProps & StateProps) => {
-  const {
-    createGroupChat,
-    createChannel,
-  } = getActions();
+  const { createGroupChat } = getActions();
 
   const lang = useLang();
 
@@ -62,16 +56,12 @@ const NewChatStep2 = ({
   });
 
   const [title, setTitle] = useState('');
-  const [about, setAbout] = useState('');
   const [photo, setPhoto] = useState<ApiAvatarUpload | undefined>();
   const [error, setError] = useState<RegularLangKey | undefined>();
 
   const isLoading = creationProgress === ChatCreationProgress.InProgress;
 
   useEffect(() => {
-    if (isChannel) {
-      return;
-    }
     if (!memberIds.length || memberIds.length > MAX_MEMBERS_FOR_GENERATE_CHAT_NAME) {
       setTitle('');
       return;
@@ -83,7 +73,7 @@ const NewChatStep2 = ({
       .filter(Boolean);
     const generatedChatName = lang.conjunction(memberFirstNames);
     setTitle(generatedChatName);
-  }, [isChannel, memberIds, lang]);
+  }, [memberIds, lang]);
 
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.currentTarget;
@@ -94,10 +84,6 @@ const NewChatStep2 = ({
     if (newValue !== value) {
       e.currentTarget.value = newValue;
     }
-  }, []);
-
-  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setAbout(e.currentTarget.value);
   }, []);
 
   const handleCreateGroup = useCallback(() => {
@@ -118,21 +104,6 @@ const NewChatStep2 = ({
     });
   }, [title, memberIds, maxGroupSize, createGroupChat, photo]);
 
-  const handleCreateChannel = useCallback(() => {
-    if (!title.length) {
-      setError(CHANNEL_TITLE_EMPTY_ERROR);
-      return;
-    }
-
-    createChannel({
-      title,
-      about,
-      photo,
-      memberIds,
-      isChannel: true,
-    });
-  }, [title, createChannel, about, photo, memberIds]);
-
   useEffect(() => {
     if (creationProgress === ChatCreationProgress.Complete) {
       onReset(true);
@@ -140,9 +111,7 @@ const NewChatStep2 = ({
   }, [creationProgress, onReset]);
 
   const renderedError = (creationError && lang(creationError)) || (
-    error !== CHAT_TITLE_EMPTY_ERROR && error !== CHANNEL_TITLE_EMPTY_ERROR
-      ? error && lang(error)
-      : undefined
+    error !== CHAT_TITLE_EMPTY_ERROR ? error && lang(error) : undefined
   );
 
   return (
@@ -156,7 +125,7 @@ const NewChatStep2 = ({
           ariaLabel={lang('NewChatReturnBackAria')}
           iconName="arrow-left"
         />
-        <h3>{lang(isChannel ? 'NewChannel' : 'NewGroup')}</h3>
+        <h3>{lang('NewGroup')}</h3>
       </div>
       <div className="NewChat-inner step-2">
         <AvatarEditable
@@ -167,19 +136,9 @@ const NewChatStep2 = ({
         <InputText
           value={title}
           onChange={handleTitleChange}
-          label={lang(isChannel ? 'EnterChannelName' : 'GroupName')}
-          error={error === CHAT_TITLE_EMPTY_ERROR || error === CHANNEL_TITLE_EMPTY_ERROR ? lang(error) : undefined}
+          label={lang('GroupName')}
+          error={error === CHAT_TITLE_EMPTY_ERROR ? lang(error) : undefined}
         />
-        {isChannel && (
-          <>
-            <InputText
-              value={about}
-              onChange={handleDescriptionChange}
-              label={lang('DescriptionOptionalPlaceholder')}
-            />
-            <p className="note">{lang('DescriptionInfo')}</p>
-          </>
-        )}
 
         {renderedError && (
           <p className="error">{renderedError}</p>
@@ -206,9 +165,9 @@ const NewChatStep2 = ({
 
       <FloatingActionButton
         isShown={title.length !== 0}
-        onClick={isChannel ? handleCreateChannel : handleCreateGroup}
+        onClick={handleCreateGroup}
         disabled={isLoading}
-        ariaLabel={lang(isChannel ? 'ChannelIntroCreateChannel' : 'AriaCreateGroup')}
+        ariaLabel={lang('AriaCreateGroup')}
         iconName="arrow-right"
         isLoading={isLoading}
       />

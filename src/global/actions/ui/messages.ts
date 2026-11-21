@@ -430,7 +430,6 @@ addActionHandler('focusNextReply', (global, actions, payload): ActionReturnType 
       threadId,
       messageId: messageId!,
       tabId,
-      noForumTopicPanel: true,
     });
   }
 
@@ -440,7 +439,7 @@ addActionHandler('focusNextReply', (global, actions, payload): ActionReturnType 
 addActionHandler('focusMessage', (global, actions, payload): ActionReturnType => {
   const {
     chatId, threadId = MAIN_THREAD_ID, messageListType = 'thread', noHighlight, groupedId, groupedChatId,
-    replyMessageId, isResizingContainer, shouldReplaceHistory, noForumTopicPanel, quote, quoteOffset,
+    replyMessageId, isResizingContainer, shouldReplaceHistory, quote, quoteOffset,
     scrollTargetPosition, timestamp, pollOption, tabId = getCurrentTabId(),
   } = payload;
 
@@ -506,12 +505,10 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
   const viewportIds = selectViewportIds(global, chatId, threadId, tabId);
   if (viewportIds && viewportIds.includes(messageId)) {
     setGlobal(global, { forceOnHeavyAnimation: true });
-    actions.openThread({
-      chatId,
-      threadId,
+    actions.openChat({
+      id: chatId,
       type: messageListType,
       shouldReplaceHistory,
-      noForumTopicPanel,
       tabId,
     });
     onMessageReady?.();
@@ -533,12 +530,10 @@ addActionHandler('focusMessage', (global, actions, payload): ActionReturnType =>
 
   setGlobal(global, { forceOnHeavyAnimation: true });
 
-  actions.openThread({
-    chatId,
-    threadId,
+  actions.openChat({
+    id: chatId,
     type: messageListType,
     shouldReplaceHistory,
-    noForumTopicPanel,
     tabId,
   });
   actions.loadViewportMessages({
@@ -1008,33 +1003,6 @@ addActionHandler('closeOneTimeMediaModal', (global, actions, payload): ActionRet
   setGlobal(global);
 });
 
-addActionHandler('closeReportModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    reportModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('openPreviousReportModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const reportModal = selectTabState(global, tabId).reportModal;
-  if (!reportModal) {
-    return undefined;
-  }
-
-  if (reportModal.sections.length === 1) {
-    actions.closeReportModal({ tabId });
-    return undefined;
-  }
-
-  return updateTabState(global, {
-    reportModal: {
-      ...reportModal,
-      sections: reportModal.sections.slice(0, -1),
-    },
-  }, tabId);
-});
-
 function copyTextForMessages(
   payload: { request: MessageCopyRequest; shouldNotify?: boolean; textFormat?: ClipboardTextFormat },
   tabId: number,
@@ -1062,7 +1030,7 @@ function copyTextForMessages(
 
 addActionHandler('openDeleteMessageModal', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, messageIds, isSchedule, reactionContext,
+    chatId, messageIds, isSchedule,
     tabId = getCurrentTabId(),
   } = payload;
 
@@ -1072,7 +1040,6 @@ addActionHandler('openDeleteMessageModal', (global, actions, payload): ActionRet
       chatId,
       messageIds,
       isSchedule,
-      reactionContext,
     },
   }, tabId);
   setGlobal(global);
@@ -1087,10 +1054,10 @@ addActionHandler('closeDeleteMessageModal', (global, actions, payload): ActionRe
 });
 
 addActionHandler('openQuickPreview', (global, actions, payload): ActionReturnType => {
-  const { id: chatId, threadId, tabId = getCurrentTabId() } = payload;
+  const { id: chatId, tabId = getCurrentTabId() } = payload;
 
   return updateTabState(global, {
-    quickPreview: { chatId, threadId },
+    quickPreview: { chatId },
   }, tabId);
 });
 

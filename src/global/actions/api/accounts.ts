@@ -8,8 +8,7 @@ import { callApi } from '../../../api';
 import { addActionHandler, getGlobal, setGlobal } from '../../index';
 import { updateUserFullInfo, updateUserSavedMusic } from '../../reducers';
 import { appendShufflePlaylist, removeTrackFromShuffle } from '../../reducers/audioPlayer';
-import {
-  selectChat, selectTabState, selectUserFullInfo, selectUserSavedMusic,
+import { selectTabState, selectUserFullInfo, selectUserSavedMusic,
 } from '../../selectors';
 import {
   selectIsPlaylistFullyLoaded, selectPlaybackSource, selectPlaylistKeys,
@@ -30,12 +29,6 @@ addActionHandler('loadSavedMusicIds', async (global): Promise<void> => {
   global = getGlobal();
   global = updateSavedMusicState(global, savedMusicById, false);
   setGlobal(global);
-});
-
-addActionHandler('reportMusicListen', async (global, actions, payload): Promise<void> => {
-  const { audio, listenedDuration, isPageUnload } = payload;
-
-  await callApi('reportMusicListen', { audio, listenedDuration, isPageUnload });
 });
 
 addActionHandler('toggleMusicInProfile', async (global, actions, payload): Promise<void> => {
@@ -146,74 +139,6 @@ addActionHandler('reorderSavedMusic', async (global, actions, payload): Promise<
   actions.loadSavedMusic({ userId: currentUserId, tabId });
   actions.loadFullUser({ userId: currentUserId });
   actions.showNotification({ message: { key: 'GeneralError' }, tabId });
-});
-
-addActionHandler('reportPeer', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId,
-    reason,
-    description,
-    tabId = getCurrentTabId(),
-  } = payload;
-  if (!chatId) {
-    return;
-  }
-
-  const chat = selectChat(global, chatId)!;
-  if (!chat) {
-    return;
-  }
-
-  const result = await callApi('reportPeer', {
-    peer: chat,
-    reason,
-    description,
-  });
-
-  actions.showNotification({
-    message: result
-      ? {
-        key: 'ReportPeerAlertSuccess',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      }
-      : { key: 'ReportSubmitError' },
-    tabId,
-  });
-});
-
-addActionHandler('reportProfilePhoto', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId,
-    reason,
-    description,
-    photo,
-    tabId = getCurrentTabId(),
-  } = payload;
-  if (!chatId) {
-    return;
-  }
-
-  const chat = selectChat(global, chatId)!;
-  if (!chat || !photo) {
-    return;
-  }
-
-  const result = await callApi('reportProfilePhoto', {
-    peer: chat,
-    photo,
-    reason,
-    description,
-  });
-
-  actions.showNotification({
-    message: result
-      ? {
-        key: 'ReportPeerAlertSuccess',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      }
-      : { key: 'ReportSubmitError' },
-    tabId,
-  });
 });
 
 addActionHandler('loadAccountDaysTtl', async (global, actions, payload): Promise<void> => {

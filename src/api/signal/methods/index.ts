@@ -37,6 +37,7 @@ export {
   importBackupFile,
   setBackupFrequency,
 } from './backups';
+export { clearCallLog, fetchCallLog, markCallLogSeen } from './calls';
 export { destroy, disconnect, reconnectNow } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
@@ -73,6 +74,9 @@ export {
   fetchIsSignalPrimary, fetchSignalDevices, linkSignalDevice, unlinkSignalDevice,
 } from './devices';
 export { downloadMedia } from './media';
+export {
+  deleteNotificationProfile, fetchNotificationProfiles, saveNotificationProfile, setNotificationProfileActive,
+} from './notificationProfiles';
 export {
   fetchSignalContactDiscovery,
   fetchSignalPinSettings,

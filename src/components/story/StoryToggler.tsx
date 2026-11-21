@@ -7,7 +7,7 @@ import type { ApiChat, ApiUser } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 
 import { ANIMATION_END_DELAY, PREVIEW_AVATAR_COUNT } from '../../config';
-import { selectIsForumPanelOpen, selectPerformanceSettingsValue, selectTabState } from '../../global/selectors';
+import { selectPerformanceSettingsValue, selectTabState } from '../../global/selectors';
 import { animateClosing, animateOpening, ANIMATION_DURATION } from './helpers/ribbonAnimation';
 
 import useLang from '../../hooks/useLang';
@@ -27,7 +27,6 @@ interface StateProps {
   currentUserId: string;
   orderedPeerIds: string[];
   isShown: boolean;
-  isForumPanelOpen?: boolean;
   withAnimation?: boolean;
   usersById: Record<string, ApiUser>;
   chatsById: Record<string, ApiChat>;
@@ -43,7 +42,6 @@ function StoryToggler({
   chatsById,
   canShow,
   isShown,
-  isForumPanelOpen,
   isArchived,
   withAnimation,
   peerStories,
@@ -97,7 +95,7 @@ function StoryToggler({
   });
 
   useEffect(() => {
-    if (!withAnimation || isForumPanelOpen) return;
+    if (!withAnimation) return;
     if (isVisible) {
       beginHeavyAnimation(ANIMATION_DURATION + ANIMATION_END_DELAY);
       animateClosing(isArchived);
@@ -105,7 +103,7 @@ function StoryToggler({
       beginHeavyAnimation(ANIMATION_DURATION + ANIMATION_END_DELAY);
       animateOpening(isArchived);
     }
-  }, [isArchived, isVisible, withAnimation, isForumPanelOpen]);
+  }, [isArchived, isVisible, withAnimation]);
 
   if (!shouldRender) {
     return undefined;
@@ -138,14 +136,12 @@ function StoryToggler({
 export default memo(withGlobal<OwnProps>((global, { isArchived }): Complete<StateProps> => {
   const { orderedPeerIds: { archived, active }, byPeerId } = global.stories;
   const { storyViewer: { isRibbonShown, isArchivedRibbonShown } } = selectTabState(global);
-  const isForumPanelOpen = selectIsForumPanelOpen(global);
   const withAnimation = selectPerformanceSettingsValue(global, 'storyRibbonAnimations');
 
   return {
     currentUserId: global.currentUserId!,
     orderedPeerIds: isArchived ? archived : active,
     isShown: isArchived ? !isArchivedRibbonShown : !isRibbonShown,
-    isForumPanelOpen,
     withAnimation,
     usersById: global.users.byId,
     chatsById: global.chats.byId,

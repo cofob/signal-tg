@@ -11,98 +11,10 @@ import {
   updateChat, updateChatFullInfo, updateManagement, updateManagementProgress, updateUserFullInfo,
 } from '../../reducers';
 import {
-  selectChat, selectCurrentMessageList, selectIsCurrentUserFrozen,
+  selectChat, selectIsCurrentUserFrozen,
   selectPeer,
   selectTabState, selectUser,
 } from '../../selectors';
-import { ensureIsSuperGroup } from './chats';
-
-addActionHandler('checkPublicLink', async (global, actions, payload): Promise<void> => {
-  const { chatId, username, tabId = getCurrentTabId() } = payload;
-
-  const chat = selectChat(global, chatId);
-  if (!chat) {
-    return;
-  }
-
-  // No need to check the username if already in progress
-  if (selectTabState(global, tabId).management.progress === ManagementProgress.InProgress) {
-    return;
-  }
-
-  global = updateManagement(
-    global, chatId, { isUsernameAvailable: undefined, checkedUsername: undefined }, tabId,
-  );
-  setGlobal(global);
-
-  const response = await callApi('checkChatUsername', { chat, username });
-
-  global = getGlobal();
-  if (!response) {
-    // Settle the checking state, so the username is checked again once edited
-    global = updateManagementProgress(global, ManagementProgress.Error, tabId);
-    global = updateManagement(global, chatId, { checkedUsername: username }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  const { result, error } = response;
-  global = updateManagementProgress(
-    global, result === true ? ManagementProgress.Complete : ManagementProgress.Error, tabId,
-  );
-  global = updateManagement(global, chatId, {
-    isUsernameAvailable: result === true,
-    checkedUsername: username,
-    error,
-  }, tabId);
-  setGlobal(global);
-
-  if (result === undefined) {
-    actions.openLimitReachedModal({ limit: 'channelsPublic', tabId });
-  }
-});
-
-addActionHandler('updatePublicLink', async (global, actions, payload): Promise<void> => {
-  const { username, shouldDisableUsernames, tabId = getCurrentTabId() } = payload;
-
-  const { chatId } = selectCurrentMessageList(global, tabId) || {};
-  if (!chatId) {
-    return;
-  }
-
-  const chat = await ensureIsSuperGroup(global, actions, chatId, tabId);
-  if (!chat) return;
-
-  global = getGlobal();
-
-  global = updateManagementProgress(global, ManagementProgress.InProgress, tabId);
-  setGlobal(global);
-
-  const result = await callApi('setChatUsername', { chat, username });
-  if (shouldDisableUsernames) {
-    await callApi('deactivateAllUsernames', { chat });
-  }
-
-  global = getGlobal();
-  global = updateManagementProgress(global, result ? ManagementProgress.Complete : ManagementProgress.Error, tabId);
-  global = updateManagement(global, chat.id, {
-    isUsernameAvailable: undefined,
-    checkedUsername: undefined,
-    error: undefined,
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('updatePrivateLink', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const { chatId } = selectCurrentMessageList(global, tabId) || {};
-  const chat = chatId && selectChat(global, chatId);
-  if (!chatId || !chat) {
-    return;
-  }
-
-  callApi('updatePrivateLink', { chat });
-});
 
 addActionHandler('setEditingExportedInvite', (global, actions, payload): ActionReturnType => {
   const { chatId, invite, tabId = getCurrentTabId() } = payload;

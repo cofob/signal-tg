@@ -12,7 +12,6 @@ import type {
   ApiPeer,
   ApiReaction,
   ApiStickerSet,
-  ApiThreadInfo,
   ApiTypeStory,
   ApiUser,
   ApiWebPage,
@@ -26,7 +25,6 @@ import {
   getUserFullName,
   groupStatefulContent,
 } from '../../../global/helpers';
-import { getPeerTitle } from '../../../global/helpers/peers';
 import buildClassName from '../../../util/buildClassName';
 import { isUserId } from '../../../util/entities/ids';
 import { EXTENDED_MENU_KEY } from '../../../util/keyboardShortcuts/registry';
@@ -35,7 +33,6 @@ import { getShowInFolderLangKey } from '../../../util/tauri/nativeFiles';
 import { REM } from '../../common/helpers/mediaDimensions';
 import renderText from '../../common/helpers/renderText';
 import { getMessageCopyOptions } from './helpers/copyOptions';
-import { getPollCountryRestrictionMessage, getPollSubscriberRestrictionMessage } from './poll/helpers';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useFlag from '../../../hooks/useFlag';
@@ -77,24 +74,18 @@ type OwnProps = {
   canReschedule?: boolean;
   canReply?: boolean;
   canQuote?: boolean;
-  repliesThreadInfo?: ApiThreadInfo;
   canPin?: boolean;
   canUnpin?: boolean;
   canDelete?: boolean;
-  canReport?: boolean;
   canShowReactionsCount?: boolean;
   canShowReactionList?: boolean;
   canEdit?: boolean;
   canForward?: boolean;
-  canFaveSticker?: boolean;
-  canUnfaveSticker?: boolean;
   canCopy?: boolean;
-  canCopyLink?: boolean;
   canSelect?: boolean;
   isPrivate?: boolean;
   canDownload?: boolean;
   canOpenSavedFile?: boolean;
-  canSaveGif?: boolean;
   canManageMusicInProfile?: boolean;
   isMusicProfileStatusLoaded?: boolean;
   isMusicProfileActionLoading?: boolean;
@@ -106,7 +97,6 @@ type OwnProps = {
   canViewDetails?: boolean;
   canResend?: boolean;
   seenByRecentPeers?: ApiPeer[];
-  noReplies?: boolean;
   hasCustomEmoji?: boolean;
   customEmojiSets?: ApiStickerSet[];
   canPlayAnimatedEmojis?: boolean;
@@ -114,27 +104,21 @@ type OwnProps = {
   shouldRenderShowWhen?: boolean;
   canLoadReadDate?: boolean;
   onReply?: NoneToVoidFunction;
-  onOpenThread?: VoidFunction;
   onEdit?: NoneToVoidFunction;
   onPin?: NoneToVoidFunction;
   onUnpin?: NoneToVoidFunction;
   onForward?: NoneToVoidFunction;
   onDelete?: NoneToVoidFunction;
-  onFaveSticker?: NoneToVoidFunction;
-  onReport?: NoneToVoidFunction;
-  onUnfaveSticker?: NoneToVoidFunction;
   onSelect?: NoneToVoidFunction;
   onSend?: NoneToVoidFunction;
   onReschedule?: NoneToVoidFunction;
   onClose: NoneToVoidFunction;
   onCloseAnimationEnd?: NoneToVoidFunction;
-  onCopyLink?: NoneToVoidFunction;
   onCopyMessages?: (request: MessageCopyRequest, textFormat?: ClipboardTextFormat) => void;
   onCopyNumber?: NoneToVoidFunction;
   onDownload?: NoneToVoidFunction;
   onOpenSavedFile?: NoneToVoidFunction;
   onShowSavedFileInFolder?: NoneToVoidFunction;
-  onSaveGif?: NoneToVoidFunction;
   onToggleMusicInProfile?: NoneToVoidFunction;
   onCancelVote?: NoneToVoidFunction;
   onClosePoll?: NoneToVoidFunction;
@@ -174,20 +158,14 @@ const MessageContextMenu = ({
   canReply,
   canQuote,
   canEdit,
-  noReplies,
   canPin,
   canUnpin,
   canDelete,
   canForward,
-  canReport,
-  canFaveSticker,
-  canUnfaveSticker,
   canCopy,
-  canCopyLink,
   canSelect,
   canDownload,
   canOpenSavedFile,
-  canSaveGif,
   canManageMusicInProfile,
   isMusicProfileStatusLoaded,
   isMusicProfileActionLoading,
@@ -195,7 +173,6 @@ const MessageContextMenu = ({
   canRevote,
   canClosePoll,
   isDownloading,
-  repliesThreadInfo,
   canShowSeenBy,
   canViewDetails,
   canResend,
@@ -209,26 +186,20 @@ const MessageContextMenu = ({
   shouldRenderShowWhen,
   canLoadReadDate,
   onReply,
-  onOpenThread,
   onEdit,
   onPin,
   onUnpin,
   onForward,
   onDelete,
-  onFaveSticker,
-  onReport,
-  onUnfaveSticker,
   onSelect,
   onSend,
   onReschedule,
   onClose,
   onCloseAnimationEnd,
-  onCopyLink,
   onCopyNumber,
   onDownload,
   onOpenSavedFile,
   onShowSavedFileInFolder,
-  onSaveGif,
   onToggleMusicInProfile,
   onCancelVote,
   onClosePoll,
@@ -254,22 +225,9 @@ const MessageContextMenu = ({
   const withReactions = (canShowReactionList && !noReactions) || areReactionsPossible;
   const isEdited = ('isEdited' in message) && message.isEdited;
   const seenByDates = message.seenByDates;
-  const pollCountryRestrictionMessage = useMemo(
-    () => getPollCountryRestrictionMessage(lang, poll?.summary.allowedCountryCodes),
-    [lang, poll?.summary.allowedCountryCodes],
-  );
-  const pollSubscriberRestrictionChannel = chat && getPeerTitle(lang, chat);
-  const pollSubscriberRestrictionMessage = useMemo(
-    () => getPollSubscriberRestrictionMessage(
-      pollSubscriberRestrictionChannel,
-      poll?.summary.isRestrictedToSubscribers,
-    ),
-    [poll?.summary.isRestrictedToSubscribers, pollSubscriberRestrictionChannel],
-  );
-  const hasPollRestrictionMessage = Boolean(pollSubscriberRestrictionMessage) || Boolean(pollCountryRestrictionMessage);
   const autoDeleteAt = message.ttlPeriod ? message.date + message.ttlPeriod : undefined;
   const shouldRenderInfoSection = Boolean(
-    canLoadReadDate || shouldRenderShowWhen || isEdited || noForwardsNotice || hasPollRestrictionMessage,
+    canLoadReadDate || shouldRenderShowWhen || isEdited || noForwardsNotice,
   );
 
   const [isReady, markIsReady, unmarkIsReady] = useFlag();
@@ -328,7 +286,6 @@ const MessageContextMenu = ({
     targetHref,
     canCopy,
     handleAfterCopy,
-    canCopyLink ? onCopyLink : undefined,
     onCopyMessages,
     onCopyNumber,
   );
@@ -425,20 +382,7 @@ const MessageContextMenu = ({
             {lang(canQuote ? 'ContextQuoteAndReply' : 'Reply')}
           </MenuItem>
         )}
-        {!noReplies && Boolean(repliesThreadInfo?.messagesCount) && (
-          <MenuItem icon="replies" onClick={onOpenThread}>
-            {lang('ConversationContextViewReplies', {
-              count: lang.number(repliesThreadInfo.messagesCount),
-            }, { pluralValue: repliesThreadInfo.messagesCount })}
-          </MenuItem>
-        )}
         {canEdit && <MenuItem icon="edit" onClick={onEdit}>{lang('Edit')}</MenuItem>}
-        {canFaveSticker && (
-          <MenuItem icon="star-regular" onClick={onFaveSticker}>{lang('AddToFavorites')}</MenuItem>
-        )}
-        {canUnfaveSticker && (
-          <MenuItem icon="star-regular" onClick={onUnfaveSticker}>{lang('StickersRemoveFromFavorites')}</MenuItem>
-        )}
         {copyOptions.map((option) => (
           isExtendedMenu && option.canCopyWithFormat ? (
             <NestedMenuItem
@@ -467,7 +411,6 @@ const MessageContextMenu = ({
         ))}
         {canPin && <MenuItem icon="pin" onClick={onPin}>{lang('DialogPin')}</MenuItem>}
         {canUnpin && <MenuItem icon="unpin" onClick={onUnpin}>{lang('DialogUnpin')}</MenuItem>}
-        {canSaveGif && <MenuItem icon="gifs" onClick={onSaveGif}>{lang('ContextSaveGif')}</MenuItem>}
         {canManageMusicInProfile && (
           !isMusicProfileStatusLoaded ? (
             <MenuItem customIcon={<span className="profile-music-menu-icon-placeholder" />} disabled>
@@ -498,7 +441,6 @@ const MessageContextMenu = ({
         {canResend && <MenuItem icon="reload" onClick={onResend}>{lang('MessageResend')}</MenuItem>}
         {canViewDetails && <MenuItem icon="info" onClick={onViewDetails}>{lang('MessageDetails')}</MenuItem>}
         {canSelect && <MenuItem icon="select" onClick={onSelect}>{lang('CommonSelect')}</MenuItem>}
-        {canReport && <MenuItem icon="flag" onClick={onReport}>{lang('ReportPeerReport')}</MenuItem>}
         {canDelete && (message.anchorMsgId ? (
           <MenuItem destructive icon="reload" onClick={onDelete}>
             <MenuItemTitle>{lang('EphemeralRevert')}</MenuItemTitle>
@@ -596,16 +538,6 @@ const MessageContextMenu = ({
           <LastEditTimeMenuItem
             message={message}
           />
-        )}
-        {pollSubscriberRestrictionMessage && (
-          <MenuItem disabled withWrap className="poll-subscriber-restriction-notice">
-            {lang.with(pollSubscriberRestrictionMessage)}
-          </MenuItem>
-        )}
-        {pollCountryRestrictionMessage && (
-          <MenuItem disabled withWrap className="poll-country-restriction-notice">
-            {lang.with(pollCountryRestrictionMessage)}
-          </MenuItem>
         )}
         {noForwardsNotice && (
           <MenuItem disabled withWrap className="no-forwards-notice">

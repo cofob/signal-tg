@@ -25,7 +25,7 @@ use tauri::{
   ipc::{Channel, InvokeBody, InvokeResponseBody, Request},
 };
 use telesignal_tunnel::{
-  get_allowed_host,
+  ClassProxies, TrafficClass, get_allowed_host,
   limits::{LimitConfig, Limits, Refusal},
   relay::{self, ClientError, ClientOutput, End, Tunnel},
   upstream::{self, UpstreamProxy},
@@ -64,7 +64,7 @@ pub enum Event {
 /// Open connections and the limits they share
 pub struct Transport {
   limits: Arc<Limits>,
-  proxy: Option<UpstreamProxy>,
+  proxies: ClassProxies,
   next_id: AtomicU32,
   connections: Mutex<HashMap<u32, Connection>>,
 }
@@ -83,9 +83,9 @@ struct ReceiveWindow {
 }
 
 impl Transport {
-  /// `proxy` routes upstream connections through an HTTP `CONNECT` proxy, which resolves names
-  /// itself, so the public-address check does not apply to it
-  pub fn new(proxy: Option<UpstreamProxy>) -> Self {
+  /// `proxies` route upstream connections through HTTP `CONNECT` proxies, which resolve names
+  /// themselves, so the public-address check does not apply to them
+  pub fn new(proxies: ClassProxies) -> Self {
     Self {
       limits: Limits::new(LimitConfig {
         max_tunnels: MAX_CONNECTIONS,
@@ -100,25 +100,21 @@ impl Transport {
         ban_duration: Duration::ZERO,
         max_tracked_ips: 1,
       }),
-      proxy,
+      proxies,
       next_id: AtomicU32::new(1),
       connections: Mutex::default(),
     }
   }
 
-  /// Reads `UPSTREAM_PROXY`, an `http://[user:password@]host:port` URL, like the WebSocket tunnel
+  /// Reads `UPSTREAM_PROXY`, an `http://[user:password@]host:port` URL, like the WebSocket tunnel,
+  /// and `SEALED_SENDER_UPSTREAM_PROXY` for connections without account credentials. Without the
+  /// second, those use the first. The web app's sealed sender proxy setting, a tunnel URL, takes
+  /// those connections off the native transport instead.
   pub fn from_env() -> Self {
-    let proxy = std::env::var("UPSTREAM_PROXY")
-      .ok()
-      .filter(|url| !url.is_empty())
-      .and_then(|url| match UpstreamProxy::parse(&url) {
-        Ok(proxy) => Some(proxy),
-        Err(err) => {
-          log::error!("Ignoring UPSTREAM_PROXY: {err}");
-          None
-        }
-      });
-    Self::new(proxy)
+    Self::new(ClassProxies {
+      authenticated: read_proxy("UPSTREAM_PROXY"),
+      unauthenticated: read_proxy("SEALED_SENDER_UPSTREAM_PROXY"),
+    })
   }
 
   /// Connects to `host` on port 443 and returns the connection ID. The first bytes sent must be a
@@ -127,6 +123,7 @@ impl Transport {
   pub async fn connect<F>(
     self: &Arc<Self>,
     host: &str,
+    traffic_class: TrafficClass,
     owner: &str,
     on_event: F,
   ) -> Result<u32, String>
@@ -143,7 +140,7 @@ impl Transport {
     })?;
     let upstream = timeout(
       CONNECT_TIMEOUT,
-      upstream::connect(host, self.proxy.as_ref()),
+      upstream::connect(host, self.proxies.get(traffic_class)),
     )
     .await
     .map_err(|_| format!("Connection to {host} timed out"))?
@@ -290,17 +287,34 @@ impl ReceiveWindow {
   }
 }
 
+fn read_proxy(name: &str) -> Option<UpstreamProxy> {
+  std::env::var(name)
+    .ok()
+    .filter(|url| !url.is_empty())
+    .and_then(|url| match UpstreamProxy::parse(&url) {
+      Ok(proxy) => Some(proxy),
+      Err(err) => {
+        log::error!("Ignoring {name}: {err}");
+        None
+      }
+    })
+}
+
 /// Opens a connection to a Signal host; `on_event` receives `ArrayBuffer` data and then
-/// `{ closed: reason }`
+/// `{ closed: reason }`. `traffic_class` is `authenticated` or `unauthenticated`
+/// (`TrafficClass` in `src/lib/signal/config.ts`).
 #[tauri::command]
 pub async fn signal_connect(
   webview: Webview,
   transport: tauri::State<'_, Arc<Transport>>,
   host: String,
+  traffic_class: String,
   on_event: Channel<InvokeResponseBody>,
 ) -> Result<u32, String> {
+  let traffic_class = TrafficClass::parse(&traffic_class)
+    .ok_or_else(|| format!("Unknown traffic class {traffic_class}"))?;
   transport
-    .connect(&host, webview.label(), move |event| {
+    .connect(&host, traffic_class, webview.label(), move |event| {
       let body = match event {
         Event::Data(data) => InvokeResponseBody::Raw(data),
         Event::Closed(reason) => {
@@ -358,9 +372,11 @@ mod tests {
 
   #[tokio::test]
   async fn refuses_hosts_outside_the_allowlist() {
-    let transport = Arc::new(Transport::new(None));
+    let transport = Arc::new(Transport::new(ClassProxies::default()));
     for host in ["example.com", "signal.org", "127.0.0.1", "chat.signal.org."] {
-      let result = transport.connect(host, "test", |_| Ok(())).await;
+      let result = transport
+        .connect(host, TrafficClass::Authenticated, "test", |_| Ok(()))
+        .await;
       assert!(result.is_err(), "{host} was allowed");
     }
   }
@@ -438,7 +454,7 @@ mod tests {
   async fn connect(transport: &Arc<Transport>) -> (u32, mpsc::UnboundedReceiver<Event>) {
     let (sender, events) = mpsc::unbounded_channel();
     let id = transport
-      .connect(HOST, "test", move |event| {
+      .connect(HOST, TrafficClass::Unauthenticated, "test", move |event| {
         sender.send(event).map_err(|_| ())
       })
       .await

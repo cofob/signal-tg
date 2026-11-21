@@ -1,7 +1,6 @@
 import type { ApiPeer } from '../../api/types';
 import type { GlobalState } from '../types';
 
-import { getHasAdminRight, isChatChannel } from '../helpers';
 import { selectChat, selectChatFullInfo } from './chats';
 import { selectPeerProfileColor } from './ui';
 import { selectUser, selectUserFullInfo } from './users';
@@ -34,15 +33,6 @@ export function selectPeerHasProfileBackground<T extends GlobalState>(global: T,
   const profileColor = selectPeerProfileColor(global, peer);
 
   return Boolean(profileColor);
-}
-
-export function selectCanUpdateMainTab<T extends GlobalState>(global: T, peerId: string) {
-  if (global.currentUserId === peerId) {
-    return true;
-  }
-
-  const chat = selectChat(global, peerId);
-  return Boolean(chat && isChatChannel(chat) && getHasAdminRight(chat, 'postMessages'));
 }
 
 // Slow, not to be used in `withGlobal`

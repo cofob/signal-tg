@@ -7,7 +7,6 @@ import { MediaViewerOrigin } from '../../../../types';
 
 import { getMessagePhoto, getWebPagePhoto, getWebPageVideo } from '../../../../global/helpers';
 import { getMessageReplyInfo } from '../../../../global/helpers/replies';
-import { tryParseDeepLink } from '../../../../util/deepLinkParser';
 import { getRichQuoteText } from '../../../../util/text/richQuote';
 
 import useLastCallback from '../../../../hooks/useLastCallback';
@@ -47,7 +46,7 @@ export default function useInnerHandlers({
   const {
     openChat, showNotification, focusMessage, openMediaViewer, openAudioPlayer,
     markMessagesRead, cancelUploadMedia, openForwardMenu,
-    openThread, openStoryViewer, searchChatMediaMessages,
+    openStoryViewer, searchChatMediaMessages,
   } = getActions();
 
   const {
@@ -93,7 +92,6 @@ export default function useInnerHandlers({
       threadId,
       messageId: replyToMsgId,
       replyMessageId: replyToPeerId ? undefined : messageId,
-      noForumTopicPanel: !replyToPeerId, // Open topic panel for cross-chat replies
       quote: isQuote ? quoteRich?.map(getRichQuoteText).join('\n') || quoteText?.text : undefined,
       quoteOffset: isQuote ? quoteOffset : undefined,
       pollOption,
@@ -118,10 +116,7 @@ export default function useInnerHandlers({
       });
     }
 
-    const parsedLink = webPage?.url && tryParseDeepLink(webPage.url);
-
     const videoContent = video || getWebPageVideo(webPage);
-    const webpageTimestamp = parsedLink && 'timestamp' in parsedLink ? parsedLink.timestamp : undefined;
 
     openMediaViewer({
       chatId,
@@ -130,7 +125,7 @@ export default function useInnerHandlers({
       origin: message.isEphemeral
         ? MediaViewerOrigin.Ephemeral
         : isScheduled ? MediaViewerOrigin.ScheduledInline : MediaViewerOrigin.Inline,
-      timestamp: lastPlaybackTimestamp || videoContent?.timestamp || webpageTimestamp,
+      timestamp: lastPlaybackTimestamp || videoContent?.timestamp,
       withDynamicLoading: message.isEphemeral ? false : withDynamicLoading,
     });
   });
@@ -229,13 +224,6 @@ export default function useInnerHandlers({
     selectMessage(e, groupedId);
   });
 
-  const handleOpenThread = useLastCallback(() => {
-    openThread({
-      chatId: message.chatId,
-      threadId: message.id,
-    });
-  });
-
   const handleStoryClick = useLastCallback(() => {
     if (!story) return;
     openStoryViewer({
@@ -255,7 +243,6 @@ export default function useInnerHandlers({
     handlePhotoMediaClick,
     handleVideoMediaClick,
     handleMetaClick: selectWithGroupedId,
-    handleOpenThread,
     handleReadMedia,
     handleCancelUpload,
     handleGroupForward,

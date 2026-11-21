@@ -31,7 +31,6 @@ const DEV_BUNDLE_WARMUP_CLIENT_FILES = [
   'src/bundles/auth.ts',
   'src/bundles/main.ts',
   'src/bundles/extra.ts',
-  'src/bundles/calls.ts',
 ];
 const IMAGE_ASSET_RE = /\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
 const WATCHED_STATIC_COPY_TARGETS: Target[] = [
@@ -282,8 +281,8 @@ function setViteEnv(env: Record<string, string>) {
   });
 }
 
-// The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy setting
-// (`SharedSettings.signalProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
+// The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy settings
+// (`SharedSettings.signalProxyUrl` and `signalSealedSenderProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
 // client terminates with Signal's certificate authority, so a wrong host cannot read traffic, but the policy no longer
 // stops scripts from reaching other `wss:` servers. A local tunnel stays usable through `ws:` on `localhost` and
 // `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `ipc:` and, on Windows,

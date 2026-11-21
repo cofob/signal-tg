@@ -4,7 +4,6 @@ import {
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiChat,
   ApiPeer, ApiStory, ApiTypeStory,
 } from '../../api/types';
 import type { IDimensions } from '../../types';
@@ -13,7 +12,6 @@ import type { Signal } from '../../util/signals';
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import { EDITABLE_STORY_INPUT_CSS_SELECTOR, EDITABLE_STORY_INPUT_ID } from '../../config';
-import { isChatChannel } from '../../global/helpers';
 import { getPeerTitle } from '../../global/helpers/peers';
 import {
   selectChat,
@@ -175,7 +173,6 @@ function Story({
   const isLoadedStory = story && 'content' in story;
   const isUserStory = isUserId(peerId);
   const isChatStory = !isUserStory;
-  const isChannelStory = isChatStory && isChatChannel(peer as ApiChat);
   const isOut = isLoadedStory && story.isOut;
   const textStory = isLoadedStory ? story.textStory : undefined;
   const isUnsupportedStory = isLoadedStory && !textStory && Object.keys(story.content).length === 0;
@@ -193,9 +190,9 @@ function Story({
     ? story.content.video.duration
     : undefined;
 
-  const shouldShowComposer = !(isOut && isUserStory) && !isChannelStory && !isAccountFrozen
+  const shouldShowComposer = !(isOut && isUserStory) && !isAccountFrozen
     && !(isLoadedStory && story.noReplies);
-  const shouldShowFooter = isLoadedStory && !shouldShowComposer && (isOut || isChannelStory);
+  const shouldShowFooter = isLoadedStory && !shouldShowComposer && isOut;
   const headerAnimation = isMobile && withHeaderAnimation ? 'slideFade' : 'none';
 
   const {
@@ -321,11 +318,11 @@ function Story({
   useEffect(() => {
     if (!isLoadedStory || isDeletedStory) return;
 
-    if (!isOut && !isChannelStory) return;
+    if (!isOut) return;
 
     // Refresh counters each time
     loadStoryViews({ peerId, storyId });
-  }, [isDeletedStory, isLoadedStory, peerId, storyId, isOut, isChannelStory]);
+  }, [isDeletedStory, isLoadedStory, peerId, storyId, isOut]);
 
   useEffect(() => {
     if (
@@ -791,12 +788,11 @@ export default memo(withGlobal<OwnProps>((global, {
     },
     forwardMessages: { storyId: forwardedStoryId },
     safeLinkModalUrl,
-    reportModal,
   } = tabState;
   const story = selectPeerStory(global, peerId, storyId);
   const isLoadedStory = story && 'content' in story;
   const shouldForcePause = Boolean(
-    viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || reportModal || isPrivacyModalOpen
+    viewModal || forwardedStoryId || tabState.reactionPicker?.storyId || isPrivacyModalOpen
     || isDeleteModalOpen || safeLinkModalUrl,
   );
 

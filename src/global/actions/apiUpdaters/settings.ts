@@ -5,7 +5,6 @@ import {
   addNotifyException,
   replaceSettings,
   updateNotifyDefaults,
-  updateTopic,
 } from '../../reducers';
 
 addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
@@ -26,17 +25,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
 
     case 'updateBackupSettings': {
       return replaceSettings(global, { backups: update.settings });
-    }
-
-    case 'updateTopicNotifySettings': {
-      const {
-        chatId, topicId, settings,
-      } = update;
-
-      global = updateTopic(global, chatId, topicId, { notifySettings: settings });
-
-      setGlobal(global);
-      break;
     }
   }
 

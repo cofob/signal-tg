@@ -6,15 +6,14 @@ import {
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
 import type {
-  ApiChat, ApiMessage, ApiReaction, ApiReactionKey, ApiSavedReactionTag,
+  ApiChat, ApiMessage,
 } from '../../../api/types';
 import type {
-  CustomPeer, MiddleSearchParams, MiddleSearchType, ThreadId,
+  MiddleSearchParams, MiddleSearchType, ThreadId,
 } from '../../../types';
 
 import { requestMeasure, requestMutation, requestNextMutation } from '../../../lib/fasterdom/fasterdom';
-import {
-  getIsSavedDialog, getReactionKey, isChatGroup, isSameReaction,
+import { isChatGroup,
 } from '../../../global/helpers';
 import {
   selectChat,
@@ -23,7 +22,6 @@ import {
   selectCurrentMiddleSearch,
   selectForwardedSender,
   selectIsChatWithSelf,
-  selectMonoforumChannel,
   selectPeer,
   selectSender,
   selectTabState,
@@ -55,7 +53,6 @@ import Button from '../../ui/Button';
 import InfiniteScroll from '../../ui/InfiniteScroll';
 import Loading from '../../ui/Loading';
 import SearchInput from '../../ui/SearchInput';
-import SavedTagButton from '../message/reactions/SavedTagButton';
 import MiddleSearchResult from './MiddleSearchResult';
 
 import styles from './MiddleSearch.module.scss';
@@ -66,11 +63,8 @@ export type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  monoforumChat?: ApiChat;
   threadId?: ThreadId;
   requestedQuery?: string;
-  savedTags?: Record<ApiReactionKey, ApiSavedReactionTag>;
-  savedTag?: ApiReaction;
   totalCount?: number;
   lastSearchQuery?: string;
   foundIds?: SearchResultKey[];
@@ -84,11 +78,6 @@ type StateProps = {
   isGroupChat?: boolean;
 };
 
-const CHANNELS_PEER: CustomPeer = {
-  isCustomPeer: true,
-  avatarIcon: 'megaphone-filled',
-  titleKey: 'PublicPosts',
-};
 const FOCUSED_SEARCH_TRIGGER_OFFSET = 5;
 const HIDE_TIMEOUT = 200;
 const RESULT_ITEM_CLASS_NAME = 'MiddleSearchResult';
@@ -100,11 +89,8 @@ const runDebouncedForSearch = debounce((cb) => cb(), 200, false);
 const MiddleSearch = ({
   isActive,
   chat,
-  monoforumChat,
   threadId,
   requestedQuery,
-  savedTags,
-  savedTag,
   totalCount,
   lastSearchQuery,
   foundIds,
@@ -124,7 +110,6 @@ const MiddleSearch = ({
     focusMessage,
     closeMiddleSearch,
     openHistoryCalendar,
-    loadSavedReactionTags,
   } = getActions();
 
   const ref = useRef<HTMLDivElement>();
@@ -181,9 +166,9 @@ const MiddleSearch = ({
 
   const hasResultsContainer = Boolean(((query || fromPeerId) && foundIds) || isHashtagQuery);
   const isOnlyHash = isHashtagQuery && !query;
-  const isNonFocusedDropdownForced = searchType === 'myChats' || searchType === 'channels';
+  const isNonFocusedDropdownForced = searchType === 'myChats';
   const hasMemberResults = !isHashtagQuery && Boolean(memberSearchResults?.length);
-  const hasQueryData = Boolean((query && !isOnlyHash) || savedTag || fromPeerId);
+  const hasQueryData = Boolean((query && !isOnlyHash) || fromPeerId);
   const hasNavigationButtons = searchType === 'chat' && Boolean(foundIds?.length);
 
   const handleClose = useLastCallback(() => {
@@ -294,7 +279,7 @@ const MiddleSearch = ({
   }, [isHistoryCalendarOpen, isActive]);
 
   const handleReset = useLastCallback(() => {
-    if (!query?.length && !savedTag && !fromPeerId && !isFromFilterMode) {
+    if (!query?.length && !fromPeerId && !isFromFilterMode) {
       handleClose();
       return;
     }
@@ -308,17 +293,6 @@ const MiddleSearch = ({
   });
 
   useEffect(() => (isActive ? captureEscKeyListener(handleReset) : undefined), [isActive, handleClose]);
-
-  const savedTagsArray = useMemo(() => {
-    if (!savedTags) return undefined;
-    return Object.values(savedTags);
-  }, [savedTags]);
-
-  const hasSavedTags = Boolean(savedTagsArray?.length);
-
-  useEffect(() => {
-    if (isSavedMessages && isActive) loadSavedReactionTags();
-  }, [isSavedMessages, isActive]);
 
   const handleSearch = useLastCallback(() => {
     const chatId = chat?.id;
@@ -436,7 +410,7 @@ const MiddleSearch = ({
     && (hasMemberDropdown ? viewportMemberIds : memberSearchResults.slice(0, INLINE_MEMBER_COUNT))) || undefined;
 
   const viewportResults = useMemo(() => {
-    if ((!query && !savedTag && !fromPeerId) || !viewportIds?.length) {
+    if ((!query && !fromPeerId) || !viewportIds?.length) {
       return MEMO_EMPTY_ARRAY;
     }
     const global = getGlobal();
@@ -461,7 +435,7 @@ const MiddleSearch = ({
         senderPeer,
       };
     }).filter(Boolean);
-  }, [query, savedTag, fromPeerId, viewportIds, isSavedMessages]);
+  }, [query, fromPeerId, viewportIds, isSavedMessages]);
 
   const areResultsEmpty = Boolean(
     (query || fromPeerId) && !isLoading && !viewportResults.length && !isOnlyHash && !hasMemberResults,
@@ -469,7 +443,7 @@ const MiddleSearch = ({
   const hasResultsPlaceholder = areResultsEmpty || isOnlyHash;
   const hasResultsDropdown = isActive && (isViewAsList || !isMobile) && (isFocused || isNonFocusedDropdownForced)
     && Boolean(
-      hasResultsContainer || hasResultsPlaceholder || savedTags || hasMemberResults,
+      hasResultsContainer || hasResultsPlaceholder || hasMemberResults,
     );
 
   const handleMessageClick = useLastCallback((message: ApiMessage) => {
@@ -530,14 +504,6 @@ const MiddleSearch = ({
     handleSearch();
   });
 
-  const activateSearchTag = useLastCallback((tag: ApiReaction) => {
-    updateSearchParams({ savedTag: tag });
-  });
-
-  const removeSearchSavedTag = useLastCallback(() => {
-    updateSearchParams({ savedTag: undefined });
-  });
-
   const handleDeleteTag = useLastCallback(() => {
     if (fromPeerId) {
       updateSearchParams({ fromPeerId: undefined });
@@ -553,11 +519,6 @@ const MiddleSearch = ({
 
     if (isHashtagQuery) {
       updateSearchParams({ isHashtag: false });
-      return;
-    }
-
-    if (savedTag) {
-      removeSearchSavedTag();
     }
   });
 
@@ -627,16 +588,6 @@ const MiddleSearch = ({
             onClick={isForTag ? handleDeleteTag : handleChangeSearchType}
           />
         );
-      case 'channels':
-        return (
-          <PeerChip
-            className={buildClassName(styles.searchType, isSelected && styles.selectedType)}
-            customPeer={CHANNELS_PEER}
-            title={lang('ProfileTabPublicPosts')}
-            clickArg="channels"
-            onClick={isForTag ? handleDeleteTag : handleChangeSearchType}
-          />
-        );
     }
     return undefined;
   }
@@ -659,37 +610,12 @@ const MiddleSearch = ({
     return (
       <div className={buildClassName(styles.dropdown, !hasResultsDropdown && styles.dropdownHidden)}>
         {!isMobile && <div className={styles.separator} />}
-        {hasSavedTags && !isHashtagQuery && !hasMemberDropdown && (
-          <div
-            className={buildClassName(
-              styles.savedTags,
-              !isMobile && styles.wrap,
-              'no-scrollbar',
-            )}
-          >
-            {savedTagsArray.map((tag) => {
-              const isChosen = isSameReaction(tag.reaction, savedTag);
-              return (
-                <SavedTagButton
-                  containerId="local-search"
-                  key={getReactionKey(tag.reaction)}
-                  reaction={tag.reaction}
-                  tag={tag}
-                  withCount
-                  isChosen={isChosen}
-                  onClick={isChosen ? removeSearchSavedTag : activateSearchTag}
-                />
-              );
-            })}
-          </div>
-        )}
         {isHashtagQuery && !hasMemberDropdown && (
           <div
             className={buildClassName(styles.searchTypes, 'no-scrollbar')}
           >
             {renderTypeTag('chat')}
             {renderTypeTag('myChats')}
-            {renderTypeTag('channels')}
           </div>
         )}
         {Boolean(hasResultsContainer || hasMemberResults) && (
@@ -755,7 +681,7 @@ const MiddleSearch = ({
         {!isMobile && (
           <Avatar
             className={styles.avatar}
-            peer={monoforumChat || chat}
+            peer={chat}
             size="medium"
             isSavedMessages={isSavedMessages}
           />
@@ -785,15 +711,6 @@ const MiddleSearch = ({
           onDownClick={canFocusNewer ? handleFocusNewer : undefined}
         >
           <div className={styles.searchTags}>
-            {savedTag && (
-              <SavedTagButton
-                containerId="local-search-tags"
-                className={styles.savedSearchTag}
-                reaction={savedTag}
-                tag={savedTags![getReactionKey(savedTag)]}
-                onClick={removeSearchSavedTag}
-              />
-            )}
             {isHashtagQuery && <div className={styles.hash}>#</div>}
             {(isFromFilterMode || fromPeerId) && (
               <div className={styles.fromTag}>
@@ -913,28 +830,20 @@ export default memo(withGlobal<OwnProps>(
     }
 
     const {
-      requestedQuery, savedTag, results, fetchingQuery, isHashtag, type, fromPeerId,
+      requestedQuery, results, fetchingQuery, isHashtag, type, fromPeerId,
     } = selectCurrentMiddleSearch(global) || {};
     const { totalCount, foundIds, query: lastSearchQuery } = results || {};
 
     const currentUserId = global.currentUserId;
     const isSavedMessages = selectIsChatWithSelf(global, chatId);
-    const isSavedDialog = getIsSavedDialog(chatId, threadId, currentUserId);
-
-    const savedTags = isSavedMessages && !isSavedDialog ? global.savedReactionTags?.byKey : undefined;
-
-    const monoforumChat = selectMonoforumChannel(global, chatId);
 
     return {
       chat,
-      monoforumChat,
       requestedQuery,
       totalCount,
       threadId,
       foundIds,
       isHistoryCalendarOpen: Boolean(selectTabState(global).historyCalendarSelectedAt),
-      savedTags,
-      savedTag,
       isSavedMessages,
       fetchingQuery,
       isHashtagQuery: isHashtag,

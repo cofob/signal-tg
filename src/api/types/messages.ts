@@ -1,9 +1,9 @@
 import type { SendErrorKind } from '../../lib/signal/db/MessageDb';
-import type { ThreadId, ThreadReadState, WebPageMediaSize } from '../../types';
+import type { ThreadId, WebPageMediaSize } from '../../types';
 import type { MediaEditDocument } from '../../types/mediaEditor';
 import type { ApiRichText } from './instantView';
 import type { ApiMessageAction } from './messageActions';
-import type { ApiAttachment, ApiPeerNotifySettings, ApiRestrictionReason } from './misc';
+import type { ApiAttachment, ApiRestrictionReason } from './misc';
 import type { ApiRichMessage } from './richMessage';
 import type {
   ApiMessageStoryData, ApiStory, ApiWebPageStickerData, ApiWebPageStoryData,
@@ -14,15 +14,6 @@ export interface ApiDimensions {
   width: number;
   height: number;
 }
-
-export type ApiMessageReadMetric = {
-  messageId: number;
-  viewId: string;
-  timeInViewMs: number;
-  activeTimeInViewMs: number;
-  heightToViewportRatioPermille: number;
-  seenRangeRatioPermille: number;
-};
 
 export interface ApiPhotoSize extends ApiDimensions {
   type: 's' | 'm' | 'x' | 'y' | 'w';
@@ -322,7 +313,6 @@ export interface ApiMessageReplyInfo {
   replyFrom?: ApiMessageForwardInfo;
   replyMedia?: MediaContent;
   replyToTopId?: number;
-  isForumTopic?: true;
   isQuote?: true;
   pollOption?: string;
   replyOptionText?: ApiFormattedText;
@@ -634,7 +624,6 @@ export interface ApiMessage {
 
 export interface ApiReactions {
   canSeeList?: boolean;
-  areTags?: boolean;
   results: ApiReactionCount[];
   recentReactions?: ApiPeerReaction[];
   topReactors?: ApiMessageReactor[];
@@ -702,12 +691,6 @@ export type ApiReactionCustomEmoji = {
 export type ApiReaction = ApiReactionEmoji | ApiReactionCustomEmoji;
 
 export type ApiReactionKey = `${string}-${string}` | 'unsupported';
-
-export type ApiSavedReactionTag = {
-  reaction: ApiReaction;
-  title?: string;
-  count: number;
-};
 
 export interface ApiBaseThreadInfo {
   chatId: string;
@@ -795,9 +778,8 @@ export type KeyboardButtonNoForwardsRequest = ApiKeyboardButton & {
 
 export type ApiMessageSearchType = 'text' | 'media' | 'documents' | 'links' | 'audio' | 'voice' | 'gif'
   | 'polls' | 'profilePhoto';
-export type ApiGlobalMessageSearchType = 'text' |
-  'channels' | 'media' | 'documents' | 'links' | 'audio' | 'voice';
-export type ApiMessageSearchContext = 'all' | 'users' | 'groups' | 'channels';
+export type ApiGlobalMessageSearchType = 'text' | 'media' | 'documents' | 'links' | 'audio' | 'voice';
+export type ApiMessageSearchContext = 'all' | 'users' | 'groups';
 
 export type ApiReportReason = 'spam' | 'violence' | 'pornography' | 'childAbuse'
   | 'copyright' | 'geoIrrelevant' | 'fake' | 'illegalDrugs' | 'personalDetails' | 'other';
@@ -828,28 +810,6 @@ export type LinkContextInner = {
 };
 
 export type LinkContext = LinkContextMessage | LinkContextInner;
-
-export interface ApiTopic {
-  id: number;
-  isClosed?: boolean;
-  isPinned?: boolean;
-  isHidden?: boolean;
-  isOwner?: boolean;
-  isMin?: boolean;
-  date: number;
-  title: string;
-  iconColor: number;
-  iconEmojiId?: string;
-  fromId: string;
-  notifySettings: ApiPeerNotifySettings;
-  isTitleMissing?: boolean;
-}
-
-export interface ApiTopicWithState {
-  topic: ApiTopic;
-  readState?: ThreadReadState;
-  lastMessageId?: number;
-}
 
 export const MAIN_THREAD_ID = -1;
 

@@ -17,24 +17,21 @@ import buildClassName from '../../util/buildClassName';
 import useFlag from '../../hooks/useFlag';
 import useLang from '../../hooks/useLang';
 import useLastCallback from '../../hooks/useLastCallback';
-import useLeftHeaderButtonRtlForumTransition from '../left/main/hooks/useLeftHeaderButtonRtlForumTransition';
 
 import LeftSideMenuItems from '../left/main/LeftSideMenuItems';
 import DropdownMenu from '../ui/DropdownMenu';
 
 type OwnProps = {
   trigger?: FC<{ onTrigger: () => void; isOpen?: boolean }>;
-  shouldHideSearch?: boolean;
   className?: string;
 };
 
 const LeftSideMenuDropdown = ({
   trigger,
-  shouldHideSearch,
   className,
 }: OwnProps) => {
   const {
-    openLeftColumnContent, closeForumPanel, closeCommunityPanel, openSettingsScreen, setIsUiReady,
+    openLeftColumnContent, openSettingsScreen, setIsUiReady,
   } = getActions();
   const pendingAccountSwitchRef = useRef<VoidFunction>();
   const isSwitchingAccountRef = useRef(false);
@@ -42,12 +39,6 @@ const LeftSideMenuDropdown = ({
   const lang = useLang();
 
   const versionString = IS_BETA ? `${APP_VERSION} Beta (${APP_REVISION})` : (DEBUG ? APP_REVISION : APP_VERSION);
-
-  // Disable dropdown menu RTL animation for resize
-  const {
-    shouldDisableDropdownMenuTransitionRef,
-    handleDropdownMenuTransitionEnd,
-  } = useLeftHeaderButtonRtlForumTransition(shouldHideSearch);
 
   const handleSelectSettings = useLastCallback(() => {
     openSettingsScreen({ screen: SettingsScreens.Main });
@@ -57,10 +48,12 @@ const LeftSideMenuDropdown = ({
     openLeftColumnContent({ contentKey: LeftColumnContent.Contacts });
   });
 
+  const handleSelectCalls = useLastCallback(() => {
+    openLeftColumnContent({ contentKey: LeftColumnContent.Calls });
+  });
+
   const handleSelectArchived = useLastCallback(() => {
     openLeftColumnContent({ contentKey: LeftColumnContent.Archived });
-    closeForumPanel();
-    closeCommunityPanel();
   });
 
   const handleSwitchAccount = useLastCallback((url: string) => {
@@ -126,21 +119,19 @@ const LeftSideMenuDropdown = ({
       className={buildClassName(
         'main-menu',
         lang.isRtl && 'rtl',
-        shouldHideSearch && lang.isRtl && 'right-aligned',
-        shouldDisableDropdownMenuTransitionRef.current && lang.isRtl && 'disable-transition',
         className,
       )}
       forceOpen={isSwitchingAccount}
-      positionX={shouldHideSearch && lang.isRtl ? 'right' : 'left'}
+      positionX="left"
       transformOriginX={90}
       transformOriginY={100}
       withPortal
       onHide={handleMenuHide}
-      onTransitionEnd={lang.isRtl ? handleDropdownMenuTransitionEnd : undefined}
     >
       <LeftSideMenuItems
         onSelectArchived={handleSelectArchived}
         onSelectContacts={handleSelectContacts}
+        onSelectCalls={handleSelectCalls}
         onSelectSettings={handleSelectSettings}
         onSwitchAccount={handleSwitchAccount}
         footer={`${APP_NAME} ${versionString}`}

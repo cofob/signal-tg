@@ -18,6 +18,8 @@ export interface ApiInitialArgs {
   langCode: string;
   // The tunnel for Signal hosts; `undefined` uses the build default
   signalProxyUrl?: string;
+  // The tunnel for connections without account credentials; `undefined` uses `signalProxyUrl`
+  signalSealedSenderProxyUrl?: string;
 }
 
 export type ApiPasskeyOption = {
@@ -302,7 +304,6 @@ export interface ApiConfig {
   gifSearchUsername?: string;
   maxGroupSize: number;
   autologinToken?: string;
-  isTestServer?: boolean;
   maxMessageLength: number;
   editTimeLimit: number;
   maxForwardedCount: number;
@@ -353,12 +354,7 @@ export type ApiLimitType =
   | 'dialogFolderPinned'
   | 'messageLength'
   | 'captionLength'
-  | 'channels'
-  | 'channelsPublic'
   | 'aboutLength'
-  | 'chatlistInvites'
-  | 'chatlistJoined'
-  | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts';
 
@@ -375,7 +371,7 @@ export type ApiPeerNotifySettings = {
   shouldShowPreviews?: boolean;
 };
 
-export type ApiNotifyPeerType = 'users' | 'groups' | 'channels';
+export type ApiNotifyPeerType = 'users' | 'groups';
 
 export interface ApiRestrictionReason {
   reason: string;

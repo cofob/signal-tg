@@ -26,12 +26,7 @@ export const LIMITS = {
   dialogFolderPinned: 4,
   messageLength: 4096,
   captionLength: 1024,
-  channels: 500,
-  channelsPublic: 10,
   aboutLength: 70,
-  chatlistInvites: 3,
-  chatlistJoined: 2,
-  savedDialogsPinned: 5,
   maxReactions: 1,
   moreAccounts: 3,
 } as const satisfies Record<ApiLimitType, number>;

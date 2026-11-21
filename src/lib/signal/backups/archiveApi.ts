@@ -1,4 +1,5 @@
 import type SignalStore from '../store/SignalStore';
+import type { TrafficClass } from '../config';
 import type { AccountRecord, ArchiveCredentialsRecord } from '../store/SignalStore';
 
 import { SIGNAL_BACKUP_SERVER_PUBLIC_PARAMS, SIGNAL_CDN_HOSTS, SIGNAL_CHAT_HOST } from '../config';
@@ -160,7 +161,7 @@ export async function uploadArchive(
   const response = await sendArchiveRequest(auth, {
     method: 'GET', path: `/v1/archives/upload/form?uploadLength=${file.length}`,
   });
-  await putTusUpload(parseJson<UploadForm>(response.body), file, options);
+  await putTusUpload(parseJson<UploadForm>(response.body), file, 'unauthenticated', options);
 }
 
 /** The headers that the backup CDN wants for reading, which last a day (`GET /v1/archives/auth/read`) */
@@ -174,6 +175,7 @@ export async function getArchiveFileInfo(
   { cdn, backupDir, backupName }: ArchiveInfo, readHeaders: Record<string, string>,
 ): Promise<ArchiveFileInfo | undefined> {
   const response = await sendHttpRequest(getCdnHost(cdn), {
+    trafficClass: 'unauthenticated',
     method: 'GET',
     path: getBackupPath(backupDir, backupName),
     headers: { ...readHeaders, Range: 'bytes=0-0' },
@@ -196,6 +198,7 @@ export async function downloadArchive(
   options: { signal?: AbortSignal; onProgress?: OnProgress } = {},
 ) {
   const response = await sendHttpRequest(getCdnHost(cdn), {
+    trafficClass: 'unauthenticated',
     method: 'GET',
     path: getBackupPath(backupDir, backupName),
     headers: readHeaders,
@@ -290,10 +293,11 @@ async function sendArchiveRequest(auth: ArchiveAuth, request: { method: string; 
   const presentation = wasm.BackupAuthCredential_PresentDeterministic(
     auth.credential, serverPublicParams, getRandomBytes(RANDOMNESS_LENGTH),
   );
+  // The presentation does not name the account, so these requests take the tunnel without credentials
   const response = await sendJson(request, {
     'X-Signal-ZK-Auth': bufferToBase64(presentation),
     'X-Signal-ZK-Auth-Signature': bufferToBase64(wasm.PrivateKey_Sign(auth.signingKey, presentation)),
-  });
+  }, 'unauthenticated');
   if (response.status >= HTTP_MULTIPLE_CHOICES) throw buildError(response.status, response.headers);
   return response;
 }
@@ -301,13 +305,16 @@ async function sendArchiveRequest(auth: ArchiveAuth, request: { method: string; 
 function sendAuthenticatedRequest(
   request: { method: string; path: string; json?: unknown }, credentials: { username: string; password: string },
 ) {
-  return sendJson(request, { Authorization: getBasicAuthorization(credentials) });
+  return sendJson(request, { Authorization: getBasicAuthorization(credentials) }, 'authenticated');
 }
 
 function sendJson(
-  { method, path, json }: { method: string; path: string; json?: unknown }, headers: Record<string, string>,
+  { method, path, json }: { method: string; path: string; json?: unknown },
+  headers: Record<string, string>,
+  trafficClass: TrafficClass,
 ) {
   return sendHttpRequest(SIGNAL_CHAT_HOST, {
+    trafficClass,
     method,
     path,
     headers: json === undefined ? headers : { ...headers, 'Content-Type': 'application/json' },

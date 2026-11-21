@@ -2,7 +2,6 @@ import { memo, useEffect, useState } from '../../lib/teact/teact';
 import { getActions, withGlobal } from '../../global';
 
 import type { ApiChat } from '../../api/types';
-import type { TabState } from '../../global/types';
 import type { MessageListType } from '../../types';
 import type { IconName } from '../../types/icons';
 
@@ -10,7 +9,7 @@ import {
   selectCanDeleteSelectedMessages,
   selectCanDownloadSelectedMessages,
   selectCanForwardMessages,
-  selectCanReportSelectedMessages, selectCurrentChat,
+  selectCurrentChat,
   selectCurrentMessageList, selectHasIpRevealingMedia,
   selectHasProtectedMessage,
   selectSelectedMessagesCount,
@@ -29,7 +28,6 @@ import usePreviousDeprecated from '../../hooks/usePreviousDeprecated';
 import useCopySelectedMessages from './hooks/useCopySelectedMessages';
 
 import Icon from '../common/icons/Icon';
-import Button from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
 import ConfirmDialog from '../ui/ConfirmDialog';
 
@@ -46,13 +44,11 @@ type StateProps = {
   isSchedule: boolean;
   selectedMessagesCount?: number;
   canDeleteMessages?: boolean;
-  canReportMessages?: boolean;
   canDownloadMessages?: boolean;
   canForwardMessages?: boolean;
   hasProtectedMessage?: boolean;
   isAnyModalOpen?: boolean;
   selectedMessageIds?: number[];
-  reportContext?: NonNullable<TabState['selectedMessages']>['reportContext'];
   shouldWarnAboutFiles?: boolean;
   hasIpRevealingMedia?: boolean;
 };
@@ -65,13 +61,11 @@ const MessageSelectToolbar = ({
   isSchedule,
   selectedMessagesCount,
   canDeleteMessages,
-  canReportMessages,
   canDownloadMessages,
   canForwardMessages,
   hasProtectedMessage,
   isAnyModalOpen,
   selectedMessageIds,
-  reportContext,
   shouldWarnAboutFiles,
   hasIpRevealingMedia,
 }: OwnProps & StateProps) => {
@@ -80,16 +74,14 @@ const MessageSelectToolbar = ({
     openForwardMenuForSelectedMessages,
     downloadSelectedMessages,
     copySelectedMessages,
-    reportMessages,
     openDeleteMessageModal,
     setSharedSettingOption,
   } = getActions();
   const lang = useLang();
-  const closeLabel = useKeyboardShortcutHint(lang('Close'), 'closeOrGoBack');
   const deleteLabel = useKeyboardShortcutHint(lang('EditAdminGroupDeleteMessages'), 'deleteSelectedMessages');
   const copyLabel = useKeyboardShortcutHint(lang('ContextCopySelectedItems'), 'copySelectedMessages');
 
-  useCopySelectedMessages(Boolean(isActive && !reportContext));
+  useCopySelectedMessages(Boolean(isActive));
 
   const [isFileIpDialogOpen, openFileIpDialog, closeFileIpDialog] = useFlag();
   const [shouldNotWarnAboutFiles, setShouldNotWarnAboutFiles] = useState(false);
@@ -110,14 +102,14 @@ const MessageSelectToolbar = ({
   useEffect(() => {
     return isActive && !isAnyModalOpen
       ? captureKeyboardListeners({
-        onBackspace: !reportContext && canDeleteMessages ? handleDelete : undefined,
-        onDelete: !reportContext && canDeleteMessages ? handleDelete : undefined,
+        onBackspace: canDeleteMessages ? handleDelete : undefined,
+        onDelete: canDeleteMessages ? handleDelete : undefined,
         onEsc: handleExitMessageSelectMode,
       })
       : undefined;
   }, [
     isActive, handleDelete, handleExitMessageSelectMode, isAnyModalOpen,
-    canDeleteMessages, reportContext,
+    canDeleteMessages,
   ]);
 
   const handleCopy = useLastCallback(() => {
@@ -155,36 +147,11 @@ const MessageSelectToolbar = ({
   const rendering = useFrozenProps({
     selectedMessagesCount,
     canDeleteMessages,
-    canReportMessages,
     canDownloadMessages,
     canForwardMessages,
     hasProtectedMessage,
     messageListType,
-    reportContext,
   }, !isActive);
-  const reportTitle = rendering.reportContext?.title || lang('ReportPeerReport');
-  const reportSubtitle = rendering.selectedMessagesCount
-    ? formattedMessagesCount
-    : lang('ReportChatMessagesRequired');
-
-  const openMessageReport = useLastCallback(() => {
-    if (!selectedMessageIds || !chat) return;
-    reportMessages({
-      chatId: chat.id,
-      messageIds: selectedMessageIds,
-    });
-    exitMessageSelectMode();
-  });
-
-  const submitMessageReport = useLastCallback(() => {
-    if (!selectedMessageIds?.length || !chat || !reportContext) return;
-    reportMessages({
-      chatId: chat.id,
-      messageIds: selectedMessageIds,
-      description: reportContext.description,
-      option: reportContext.option,
-    });
-  });
 
   const className = buildClassName(
     'MessageSelectToolbar',
@@ -217,59 +184,27 @@ const MessageSelectToolbar = ({
     <>
       <div className={className}>
         <div className="MessageSelectToolbar-inner">
-          {rendering.reportContext ? (
-            <>
-              {renderButton('close', closeLabel, handleExitMessageSelectMode)}
-              <div className="MessageSelectToolbar-reportText">
-                <span
-                  className="MessageSelectToolbar-reportTitle"
-                  title={reportTitle}
-                >
-                  {reportTitle}
-                </span>
-                <span className="MessageSelectToolbar-reportSubtitle" title={reportSubtitle}>
-                  {reportSubtitle}
-                </span>
-              </div>
-              <Button
-                size="smaller"
-                color="primary"
-                className="MessageSelectToolbar-reportButton"
-                disabled={!rendering.selectedMessagesCount || rendering.reportContext.isSubmitting}
-                onClick={submitMessageReport}
-                noForcedUpperCase
-              >
-                {lang('ReportButton')}
-              </Button>
-            </>
-          ) : (
-            <>
-              {Boolean(rendering.selectedMessagesCount) && rendering.canDeleteMessages && (
-                renderButton('delete', deleteLabel, handleDelete, true)
-              )}
-              <span className="MessageSelectToolbar-count" title={formattedMessagesCount}>
-                {formattedMessagesCount}
-              </span>
+          {Boolean(rendering.selectedMessagesCount) && rendering.canDeleteMessages && (
+            renderButton('delete', deleteLabel, handleDelete, true)
+          )}
+          <span className="MessageSelectToolbar-count" title={formattedMessagesCount}>
+            {formattedMessagesCount}
+          </span>
 
-              {Boolean(rendering.selectedMessagesCount) && (
-                <div className="MessageSelectToolbar-actions">
-                  {rendering.canReportMessages && (
-                    renderButton('flag', lang('ConversationReportMessages'), openMessageReport)
-                  )}
-                  {rendering.canDownloadMessages && !rendering.hasProtectedMessage && (
-                    renderButton('download', lang('AccActionDownload'), handleMessageDownload)
-                  )}
-                  {!rendering.hasProtectedMessage && (
-                    renderButton('copy', copyLabel, handleCopy)
-                  )}
-                  {rendering.messageListType !== 'scheduled' && rendering.canForwardMessages && (
-                    renderButton(
-                      'forward', lang('ChatForwardActionHeader'), openForwardMenuForSelectedMessages,
-                    )
-                  )}
-                </div>
+          {Boolean(rendering.selectedMessagesCount) && (
+            <div className="MessageSelectToolbar-actions">
+              {rendering.canDownloadMessages && !rendering.hasProtectedMessage && (
+                renderButton('download', lang('AccActionDownload'), handleMessageDownload)
               )}
-            </>
+              {!rendering.hasProtectedMessage && (
+                renderButton('copy', copyLabel, handleCopy)
+              )}
+              {rendering.messageListType !== 'scheduled' && rendering.canForwardMessages && (
+                renderButton(
+                  'forward', lang('ChatForwardActionHeader'), openForwardMenuForSelectedMessages,
+                )
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -299,27 +234,24 @@ export default memo(withGlobal<OwnProps>(
     const { type: messageListType, chatId } = selectCurrentMessageList(global) || {};
     const isSchedule = messageListType === 'scheduled';
     const { canDelete } = selectCanDeleteSelectedMessages(global);
-    const canReport = Boolean(!isSchedule && selectCanReportSelectedMessages(global));
     const canDownload = selectCanDownloadSelectedMessages(global);
-    const { messageIds: selectedMessageIds, reportContext } = tabState.selectedMessages || {};
+    const { messageIds: selectedMessageIds } = tabState.selectedMessages || {};
     const hasProtectedMessage = chatId ? selectHasProtectedMessage(global, chatId, selectedMessageIds) : false;
     const canForward = !isSchedule && chatId ? selectCanForwardMessages(global, chatId, selectedMessageIds) : false;
     const hasIpRevealingMedia = selectedMessageIds && chatId
       ? selectHasIpRevealingMedia(global, chatId, selectedMessageIds) : false;
     const isShareMessageModalOpen = tabState.isShareMessageModalShown;
     const isAnyModalOpen = Boolean(isShareMessageModalOpen || tabState.requestedDraft
-      || tabState.reportModal || tabState.deleteMessageModal);
+      || tabState.deleteMessageModal);
 
     return {
       chat,
       isSchedule,
       selectedMessagesCount: selectSelectedMessagesCount(global),
       canDeleteMessages: canDelete,
-      canReportMessages: canReport,
       canDownloadMessages: canDownload,
       canForwardMessages: canForward,
       selectedMessageIds,
-      reportContext,
       hasProtectedMessage,
       isAnyModalOpen,
       shouldWarnAboutFiles,

@@ -169,16 +169,22 @@ export const SETTINGS_SEARCH_SECTIONS: SettingsSearchSection[] = [
     keywordsKey: 'SettingsKeywordsUsername',
   },
   {
+    screen: SettingsScreens.NotificationProfiles,
+    parent: SettingsScreens.Notifications,
+    titleKey: 'NotificationProfiles',
+    keywordsKey: 'SettingsKeywordsNotificationProfiles',
+  },
+  {
     screen: SettingsScreens.SignalProxy,
     parent: SettingsScreens.DataStorage,
     titleKey: 'SignalProxyTitle',
     keywordsKey: 'SettingsKeywordsSignalProxy',
   },
   {
-    screen: SettingsScreens.QuickReaction,
-    parent: SettingsScreens.Stickers,
-    titleKey: 'DoubleTapSetting',
-    requires: 'isQuickReactionAvailable',
+    screen: SettingsScreens.SignalSealedSenderProxy,
+    parent: SettingsScreens.DataStorage,
+    titleKey: 'SignalSealedProxyTitle',
+    keywordsKey: 'SettingsKeywordsSealedProxy',
   },
   {
     screen: SettingsScreens.CustomEmoji,
@@ -310,7 +316,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
 
   ...buildEntries(SettingsScreens.Notifications, [
     'NotificationsWeb', 'NotificationsForPrivateChats', 'MessagePreview',
-    'NotificationsForGroups', 'NotificationsForChannels', 'ContactJoined', 'PinnedMessagesNotifications',
+    'NotificationsForGroups', 'ContactJoined', 'PinnedMessagesNotifications',
   ]),
   ...buildEntries(SettingsScreens.Notifications, IS_IOS ? [] : ['NotificationsSound']),
   ...buildEntries(SettingsScreens.Notifications, ['PushPreviewsWhenLocked'], { requires: 'hasPasscode' }),
@@ -318,11 +324,10 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
     keywordsKey: 'SettingsKeywordsPrivateChats',
   }),
   ...buildEntries(SettingsScreens.Notifications, ['FilterGroups'], { keywordsKey: 'SettingsKeywordsGroups' }),
-  ...buildEntries(SettingsScreens.Notifications, ['FilterChannels'], { keywordsKey: 'SettingsKeywordsChannels' }),
 
   ...buildEntries(SettingsScreens.DataStorage, [
     'AutoDownloadPhotosTitle', 'AutoDownloadVideosTitle', 'AutoDownloadFilesTitle', 'AutoDownloadSettingsContacts',
-    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats', 'AutoDownloadSettingsChannels',
+    'AutoDownloadSettingsPrivateChats', 'AutoDownloadSettingsGroupChats',
     'AutoDownloadMaxFileSize', 'SettingsDataClearMediaCache',
   ]),
   ...buildEntries(SettingsScreens.DataStorage, IS_TAURI ? ['SettingsAskWhereToSave'] : []),
@@ -369,6 +374,7 @@ export const SETTINGS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   }),
   ...buildEntries(SettingsScreens.Privacy, ['SignalLinkPreviews'], { keywordsKey: 'SettingsKeywordsLinkPreviews' }),
   ...buildEntries(SettingsScreens.Privacy, ['RecoveryKey']),
+  ...buildEntries(SettingsScreens.NotificationProfiles, ['NotificationProfileNew']),
   ...buildEntries(SettingsScreens.Privacy, ['KeyTransTitle'], {
     requires: 'hasKeyTransparency', keywordsKey: 'SettingsKeywordsKeyTrans',
   }),

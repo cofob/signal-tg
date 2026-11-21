@@ -1,6 +1,7 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
 
 import type ChatConnection from '../chat/ChatConnection';
+import type { TrafficClass } from '../config';
 import type { AttachmentPointerSchema } from '../proto/generated/SignalService_pb';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
@@ -79,7 +80,8 @@ async function putEncryptedAttachment(
   if (status === HTTP_PAYLOAD_TOO_LARGE) throw new Error('Attachment is too large');
   if (status !== HTTP_OK || !form) throw new SendHttpError(status, `Upload form request failed with HTTP ${status}`);
 
-  await putTusUpload(form, encrypted, options);
+  // The form is issued to the account, so the upload takes the main tunnel
+  await putTusUpload(form, encrypted, 'authenticated', options);
   return form.key;
 }
 
@@ -88,7 +90,7 @@ async function putEncryptedAttachment(
  * has to be CDN 3. The attachment forms and the forms of the backup service (`GET /v1/archives/upload/form`) take it.
  */
 export async function putTusUpload(
-  form: UploadForm, data: Uint8Array, { signal, onProgress }: UploadAttachmentOptions = {},
+  form: UploadForm, data: Uint8Array, trafficClass: TrafficClass, { signal, onProgress }: UploadAttachmentOptions = {},
 ) {
   if (form.cdn !== TUS_CDN_NUMBER) throw new Error(`Uploads to CDN ${form.cdn} are not supported`);
 
@@ -98,6 +100,7 @@ export async function putTusUpload(
   }
 
   const response = await sendHttpRequest(location.hostname, {
+    trafficClass,
     method: 'POST',
     path: `${location.pathname}${location.search}`,
     headers: {

@@ -11,6 +11,7 @@ import type { ChatItemContext } from './backupChatItems';
 
 import { buffersEqual } from '../../../util/encoding/buffer';
 import { getServerTime } from '../../../util/serverTime';
+import { buildChatStyleRecord, buildCustomChatColors } from '../chatStyle/chatStyle';
 import { saveProfileKey } from '../sender/sealedSender';
 import { uuidToString } from '../serviceId';
 import { convertChatItem } from './backupChatItems';
@@ -158,6 +159,8 @@ class BackupImporter {
       isReadReceiptsEnabled: settings ? settings.readReceipts : account.isReadReceiptsEnabled,
       isTypingIndicatorsEnabled: settings ? settings.typingIndicators : account.isTypingIndicatorsEnabled,
       isLinkPreviewsEnabled: settings ? settings.linkPreviews : account.isLinkPreviewsEnabled,
+      defaultChatStyle: buildChatStyleRecord(settings?.defaultChatStyle),
+      customChatColors: buildCustomChatColors(settings?.customChatColors ?? []),
     });
     this.patchConversation({
       id: account.aci,
@@ -278,6 +281,7 @@ class BackupImporter {
       expireTimerVersion: chat.expireTimerVersion || undefined,
       mutedUntil: chat.muteUntilMs ? Number(chat.muteUntilMs) : undefined,
       isMarkedUnread: chat.markedUnread,
+      chatStyle: buildChatStyleRecord(chat.style),
     });
   }
 
