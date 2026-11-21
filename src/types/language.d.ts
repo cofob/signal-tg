@@ -455,7 +455,6 @@ export interface LangPair {
   'EditFolder': undefined;
   'FilterEditFolders': undefined;
   'FilterMenuDelete': undefined;
-  'FilterShare': undefined;
   'AutoDeleteMessages': undefined;
   'AutoDeleteSettingsInfo': undefined;
   'SetAutoDeleteTimer': undefined;
@@ -1293,9 +1292,6 @@ export interface LangPair {
   'GroupChatsSearchContext': undefined;
   'ChannelsSearchContext': undefined;
   'SearchFilterFrom': undefined;
-  'FolderLinkSubtitleNew': undefined;
-  'FolderLinkSubtitleAlready': undefined;
-  'FolderLinkAddFolder': undefined;
   'SearchTabChats': undefined;
   'SearchTabChannels': undefined;
   'SearchTabMedia': undefined;
@@ -1335,7 +1331,6 @@ export interface LangPair {
   'ViewButtonGroup': undefined;
   'ViewButtonChannel': undefined;
   'ViewButtonUser': undefined;
-  'ViewChatList': undefined;
   'ViewButtonStory': undefined;
   'ViewButtonStickerset': undefined;
   'ViewButtonEmojiset': undefined;
@@ -1453,7 +1448,6 @@ export interface LangPair {
   'PushPreviewsWhenLocked': undefined;
   'PushPreviewsWhenLockedInfo': undefined;
   'ContextMenuItemMention': undefined;
-  'ContextMenuItemSelectAll': undefined;
   'SendInStandardQuality': undefined;
   'SendInHighQuality': undefined;
   'MonoforumBadge': undefined;
@@ -1877,13 +1871,11 @@ export interface LangPair {
   'ChatListEmptyTopicsCreate': undefined;
   'ChatListEmptyTopicsDescription': undefined;
   'ChatListEmptyTopicsTitle': undefined;
-  'ChatListFilterInviteLinkIncludeExcludeError': undefined;
   'ChatListPeerTypeChannel': undefined;
   'ChatListPeerTypeContact': undefined;
   'ChatListPeerTypeGroup': undefined;
   'ChatListPeerTypeNonContact': undefined;
   'ChatListPeerTypeNonContactUser': undefined;
-  'ChatListFilterCreateLinkNew': undefined;
   'ChatSetPhotoOrVideo': undefined;
   'Checking': undefined;
   'ChooseStickerMyStickerSets': undefined;
@@ -1916,7 +1908,6 @@ export interface LangPair {
   'DeleteToggleBanUsers': undefined;
   'DeleteToggleRestrictUsers': undefined;
   'Deleted': undefined;
-  'DeselectAll': undefined;
   'DisableReactionsInfo': undefined;
   'DoNotReply': undefined;
   'DownloadSpeedLimited': undefined;
@@ -1932,20 +1923,6 @@ export interface LangPair {
   'FactCheck': undefined;
   'February': undefined;
   'SearchFilterByUser': undefined;
-  'FilterDeleteAlertLinks': undefined;
-  'FolderLinkButtonRemove': undefined;
-  'FolderLinkButtonRemoveChats': undefined;
-  'FolderLinkHeaderAlready': undefined;
-  'FolderLinkPreviewLeft': undefined;
-  'FolderLinkPreviewRight': undefined;
-  'FolderLinkScreenAlertTextUnavailablePublicChannel': undefined;
-  'FolderLinkScreenAlertTextUnavailablePublicGroup': undefined;
-  'FolderLinkScreenAlertTextUnavailableUser': undefined;
-  'FolderLinkScreenTitle': undefined;
-  'FolderLinkSubtitleRemove': undefined;
-  'FolderLinkTitleAddChats': undefined;
-  'FolderLinkTitleAlready': undefined;
-  'FolderLinkTitleRemove': undefined;
   'ForumToggleDescription': undefined;
   'ForwardToAnotherChat': undefined;
   'ForwardedFrom': undefined;
@@ -2653,23 +2630,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SearchContextCaption': {
     'type': V;
-  };
-  'FolderLinkTitleDescription': {
-    'folder': V;
-    'chats': V;
-  };
-  'FolderLinkSubtitleAdd': {
-    'chats': V;
-    'title': V;
-  };
-  'FolderLinkNotificationDeletedTitle': {
-    'title': V;
-  };
-  'FolderLinkNotificationAddedTitle': {
-    'title': V;
-  };
-  'FolderLinkNotificationUpdatedTitle': {
-    'title': V;
   };
   'PlaylistTitle': {
     'peer': V;
@@ -3382,7 +3342,6 @@ export interface LangPairPlural {
   'ReactionDeleted': undefined;
   'MediaReplaceInvalidError': undefined;
   'FwdMessagesToNoteToSelf': undefined;
-  'FolderLinkButtonJoinPlural': undefined;
 }
 
 export interface LangPairPluralWithVariables<V = LangVariable> {
@@ -3590,21 +3549,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'StarsAmountText': {
     'amount': V;
   };
-  'FolderLinkTitleDescriptionChats': {
-    'count': V;
-  };
-  'FolderLinkSubtitleAddCount': {
-    'count': V;
-  };
-  'FolderLinkNotificationDeletedSubtitle': {
-    'count': V;
-  };
-  'FolderLinkNotificationAddedSubtitle': {
-    'count': V;
-  };
-  'FolderLinkNotificationUpdatedSubtitle': {
-    'count': V;
-  };
   'GramAmountText': {
     'amount': V;
   };
@@ -3700,9 +3644,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ChatDeleteMessagesConfirmation': {
     'count': V;
   };
-  'ChatListFilterLinkLabelChatCount': {
-    'count': V;
-  };
   'ConversationContextViewReplies': {
     'count': V;
   };
@@ -3710,12 +3651,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'count': V;
   };
   'Files': {
-    'count': V;
-  };
-  'FolderLinkHeaderChatsJoin': {
-    'count': V;
-  };
-  'FolderLinkHeaderChatsQuit': {
     'count': V;
   };
   'Languages': {
@@ -3886,9 +3821,6 @@ export interface LangKeyGroups {
   'title': {
     keys:
       | 'MessageRequestBlockTitle'
-      | 'FolderLinkNotificationDeletedTitle'
-      | 'FolderLinkNotificationAddedTitle'
-      | 'FolderLinkNotificationUpdatedTitle'
       | 'ActionChangedTitleYou'
       | 'ActionChangedTitleChannel'
       | 'ActionCreatedChatYou'
@@ -4177,16 +4109,6 @@ export interface LangKeyGroups {
     keys:
       | 'SearchContextCaption';
     variables: 'type';
-  };
-  'chats,folder': {
-    keys:
-      | 'FolderLinkTitleDescription';
-    variables: 'chats' | 'folder';
-  };
-  'chats,title': {
-    keys:
-      | 'FolderLinkSubtitleAdd';
-    variables: 'chats' | 'title';
   };
   'peer': {
     keys:
@@ -4660,11 +4582,6 @@ export interface LangPluralKeyGroups {
       | 'ShowMoreChats'
       | 'ShowMoreVoters'
       | 'ChatGroups'
-      | 'FolderLinkTitleDescriptionChats'
-      | 'FolderLinkSubtitleAddCount'
-      | 'FolderLinkNotificationDeletedSubtitle'
-      | 'FolderLinkNotificationAddedSubtitle'
-      | 'FolderLinkNotificationUpdatedSubtitle'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
       | 'MessageActionTodoTaskCount'
@@ -4687,12 +4604,9 @@ export interface LangPluralKeyGroups {
       | 'RichMediaSkippedFiles'
       | 'Channels'
       | 'ChatDeleteMessagesConfirmation'
-      | 'ChatListFilterLinkLabelChatCount'
       | 'ConversationContextViewReplies'
       | 'EmojiCount'
       | 'Files'
-      | 'FolderLinkHeaderChatsJoin'
-      | 'FolderLinkHeaderChatsQuit'
       | 'Languages'
       | 'Media'
       | 'MessageContainsEmojiPacks'

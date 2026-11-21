@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef } from '@teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiChatFolder, ApiChatlistExportedInvite } from '../../../api/types';
+import type { ApiChatFolder } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { FolderEditDispatch } from '../../../hooks/reducers/useFoldersReducer';
 import type { AnimationLevel } from '../../../types';
@@ -37,7 +37,6 @@ type OwnProps = {
 
 type StateProps = {
   chatFoldersById: Record<number, ApiChatFolder>;
-  folderInvitesById: Record<number, ApiChatlistExportedInvite[]>;
   orderedFolderIds?: number[];
   activeChatFolder: number;
   animationLevel: AnimationLevel;
@@ -58,7 +57,6 @@ const ChatFolders = ({
   isForumPanelOpen,
   animationLevel,
   shouldSkipHistoryAnimations,
-  folderInvitesById,
   hasArchivedChats,
   hasArchivedStories,
   archiveSettings,
@@ -109,7 +107,6 @@ const ChatFolders = ({
     noEmoticons: true,
     orderedFolderIds,
     chatFoldersById,
-    folderInvitesById,
   });
 
   const allChatsFolderIndex = displayedFolders?.findIndex((folder) => folder.id === ALL_FOLDER_ID);
@@ -270,7 +267,6 @@ export default memo(withGlobal<OwnProps>(
       chatFolders: {
         byId: chatFoldersById,
         orderedIds: orderedFolderIds,
-        invites: folderInvitesById,
       },
       chats: {
         listIds: {
@@ -290,7 +286,6 @@ export default memo(withGlobal<OwnProps>(
 
     return {
       chatFoldersById,
-      folderInvitesById,
       orderedFolderIds,
       activeChatFolder,
       animationLevel,

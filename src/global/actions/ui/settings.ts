@@ -301,13 +301,13 @@ addActionHandler('removeRecentlyFoundSettingId', (global, actions, payload): Act
 });
 
 addActionHandler('openEditChatFolder', (global, actions, payload): ActionReturnType => {
-  const { folderId, isOnlyInvites, tabId = getCurrentTabId() } = payload;
+  const { folderId, tabId = getCurrentTabId() } = payload;
 
   const chatFolder = selectChatFolder(global, folderId);
   if (!chatFolder) return;
 
   actions.openSettingsScreen({
-    screen: isOnlyInvites ? SettingsScreens.FoldersEditFolderInvites : SettingsScreens.FoldersEditFolderFromChatList,
+    screen: SettingsScreens.FoldersEditFolderFromChatList,
     tabId,
   });
   actions.requestNextFoldersAction({
@@ -317,39 +317,6 @@ addActionHandler('openEditChatFolder', (global, actions, payload): ActionReturnT
     },
     tabId,
   });
-});
-
-addActionHandler('openShareChatFolderModal', (global, actions, payload): ActionReturnType => {
-  const {
-    folderId, url, noRequestNextScreen, tabId = getCurrentTabId(),
-  } = payload;
-
-  const chatFolder = selectChatFolder(global, folderId);
-  const isChatList = chatFolder?.isChatList;
-  if (isChatList && !noRequestNextScreen) {
-    actions.openEditChatFolder({ folderId, isOnlyInvites: true, tabId });
-    return undefined;
-  }
-
-  if (!noRequestNextScreen) actions.openSettingsScreen({ screen: SettingsScreens.FoldersShare, tabId });
-
-  return updateTabState(global, {
-    shareFolderScreen: {
-      folderId,
-      isFromSettings: Boolean(noRequestNextScreen),
-      url,
-    },
-  }, tabId);
-});
-
-addActionHandler('closeShareChatFolderModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  actions.openSettingsScreen({ screen: undefined, tabId });
-
-  return updateTabState(global, {
-    shareFolderScreen: undefined,
-  }, tabId);
 });
 
 addActionHandler('openSettingsConfirmation', (global, actions, payload): ActionReturnType => {

@@ -356,19 +356,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     ? excludedChatIds.map(buildInputPeerFromLocalDb).filter(Boolean)
     : [];
 
-  if (folder.isChatList) {
-    return new GramJs.DialogFilterChatlist({
-      id: folder.id,
-      title: buildInputTextWithEntities(folder.title),
-      color,
-      emoticon: emoticon || undefined,
-      pinnedPeers,
-      includePeers,
-      hasMyInvites: folder.hasMyInvites,
-      titleNoanimate: noTitleAnimations,
-    });
-  }
-
   return new GramJs.DialogFilter({
     id: folder.id,
     title: buildInputTextWithEntities(folder.title),

@@ -9,8 +9,6 @@ import {
   type ApiChatFolder,
   type ApiChatInviteImporter,
   type ApiChatInviteInfo,
-  type ApiChatlistExportedInvite,
-  type ApiChatlistInvite,
   type ApiChatMember,
   type ApiChatReactions,
   type ApiExportedInvite,
@@ -454,8 +452,6 @@ export function buildApiChatFolder(filter: GramJs.DialogFilter | GramJs.DialogFi
       excludedChatIds: [],
       includedChatIds: filter.includePeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
       pinnedChatIds: filter.pinnedPeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-      hasMyInvites: filter.hasMyInvites,
-      isChatList: true,
       noTitleAnimations: filter.titleNoanimate,
       color: filter.color,
       title: buildApiFormattedText(filter.title),
@@ -559,49 +555,6 @@ export function buildApiSendAsPeerId(sendAs: GramJs.SendAsPeer): ApiSendAsPeerId
   return {
     id: getApiChatIdFromMtpPeer(sendAs.peer),
     isPremium: sendAs.premiumRequired,
-  };
-}
-
-export function buildApiChatlistInvite(
-  invite: GramJs.chatlists.TypeChatlistInvite | undefined, slug: string,
-): ApiChatlistInvite | undefined {
-  if (invite instanceof GramJs.chatlists.ChatlistInvite) {
-    return {
-      slug,
-      title: buildApiFormattedText(invite.title),
-      noTitleAnimations: invite.titleNoanimate,
-      emoticon: invite.emoticon,
-      peerIds: invite.peers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-    };
-  }
-
-  if (invite instanceof GramJs.chatlists.ChatlistInviteAlready) {
-    return {
-      slug,
-      folderId: invite.filterId,
-      missingPeerIds: invite.missingPeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-      alreadyPeerIds: invite.alreadyPeers.map(getApiChatIdFromMtpPeer).filter(Boolean),
-    };
-  }
-
-  return undefined;
-}
-
-export function buildApiChatlistExportedInvite(
-  invite: GramJs.TypeExportedChatlistInvite | undefined,
-): ApiChatlistExportedInvite | undefined {
-  if (!(invite instanceof GramJs.ExportedChatlistInvite)) return undefined;
-
-  const {
-    title,
-    url,
-    peers,
-  } = invite;
-
-  return {
-    title,
-    url,
-    peerIds: peers.map(getApiChatIdFromMtpPeer).filter(Boolean),
   };
 }
 

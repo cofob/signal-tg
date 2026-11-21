@@ -8,7 +8,7 @@ import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
   'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
-  'msg' | 'msg_url' | 'addlist' | 'contact';
+  'msg' | 'msg_url' | 'contact';
 
 interface PublicMessageLink {
   type: 'publicMessageLink';
@@ -34,11 +34,6 @@ interface ShareLink {
   type: 'shareLink';
   url: string;
   text?: string;
-}
-
-interface ChatFolderLink {
-  type: 'chatFolderLink';
-  slug: string;
 }
 
 interface LoginCodeLink {
@@ -87,7 +82,6 @@ type DeepLink =
   PublicMessageLink |
   PrivateMessageLink |
   ShareLink |
-  ChatFolderLink |
   PublicUsernameOrBotLink |
   GroupCallLink |
   PrivateChannelLink |
@@ -171,8 +165,6 @@ function parseTgLink(url: URL) {
     }
     case 'shareLink':
       return buildShareLink({ text: queryParams.text, url: queryParams.url });
-    case 'chatFolderLink':
-      return buildChatFolderLink({ slug: queryParams.slug });
     case 'loginCodeLink':
       return buildLoginCodeLink({ code: queryParams.code });
     case 'publicUsernameOrBotLink':
@@ -226,8 +218,6 @@ function getTgDeepLinkType(
     }
     case 'msg_url':
       return 'shareLink';
-    case 'addlist':
-      return 'chatFolderLink';
     case 'login':
       return 'loginCodeLink';
     case 'contact':
@@ -304,19 +294,6 @@ function buildPrivateMessageLink(params: PrivateMessageLinkBuilderParams): Build
     threadId: threadId ? Number(threadId) : undefined,
     commentId: commentId ? Number(commentId) : undefined,
     timestamp: timestamp ? parseTimestampDuration(timestamp) : undefined,
-  };
-}
-
-function buildChatFolderLink(params: BuilderParams<ChatFolderLink>): BuilderReturnType<ChatFolderLink> {
-  const {
-    slug,
-  } = params;
-  if (!slug) {
-    return undefined;
-  }
-  return {
-    type: 'chatFolderLink',
-    slug,
   };
 }
 

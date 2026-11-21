@@ -1,5 +1,5 @@
 import type {
-  ApiChat, ApiChatFolder, ApiChatFullInfo, ApiChatlistExportedInvite,
+  ApiChat, ApiChatFullInfo,
   ApiChatMember, ApiDraft, ApiError, ApiMissingInvitedUser,
   ApiTopic,
   LinkContext,
@@ -15,7 +15,6 @@ import {
   LeftColumnContent,
   ManagementProgress,
   NewChatMembersProgress,
-  SettingsScreens,
   type ThreadId,
 } from '../../../types';
 
@@ -38,7 +37,7 @@ import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getOrderedIds, getPinnedChatsCount } from '../../../util/folderManager';
 import {
-  buildCollectionByKey, omit, unique,
+  buildCollectionByKey, omit,
 } from '../../../util/iteratees';
 import { isLocalMessageId } from '../../../util/keys/messageKey';
 import { notifyAboutMessage } from '../../../util/notifications';
@@ -144,12 +143,6 @@ import {
 
 const TOP_CHAT_MESSAGES_PRELOAD_INTERVAL = 100;
 const INFINITE_LOOP_MARKER = 100;
-
-const CHATLIST_LIMIT_ERROR_LIST = new Set([
-  'FILTERS_TOO_MUCH',
-  'CHATLISTS_TOO_MUCH',
-  'INVITES_TOO_MUCH',
-]);
 
 const runThrottledForLoadTopChats = throttle((cb) => cb(), 3000, true);
 const runDebouncedForLoadFullChat = debounce((cb) => cb(), 500, false, true);
@@ -2587,326 +2580,14 @@ addActionHandler('toggleTopicPinned', (global, actions, payload): ActionReturnTy
   void callApi('togglePinnedTopic', { chat, topicId, isPinned });
 });
 
-addActionHandler('checkChatlistInvite', async (global, actions, payload): Promise<void> => {
-  const { slug, tabId = getCurrentTabId() } = payload;
-
-  const result = await callApi('checkChatlistInvite', { slug });
-  if (!result) {
-    actions.showNotification({
-      message: {
-        key: 'GroupInviteBadLink',
-        options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
-      },
-      tabId,
-    });
-    return;
-  }
-
-  global = getGlobal();
-
-  global = updateTabState(global, {
-    chatlistModal: {
-      invite: result.invite,
-    },
-  }, tabId);
-
-  setGlobal(global);
-});
-
-addActionHandler('joinChatlistInvite', async (global, actions, payload): Promise<void> => {
-  const { invite, peerIds, tabId = getCurrentTabId() } = payload;
-
-  const peers = peerIds.map((peerId) => selectChat(global, peerId)).filter(Boolean);
-  const currentNotJoinedCount = peers.filter((peer) => peer.isNotJoined).length;
-
-  const existingFolder = 'folderId' in invite ? selectChatFolder(global, invite.folderId) : undefined;
-  const folderTitle = ('title' in invite ? invite.title : existingFolder?.title)!;
-
-  try {
-    const result = await callApi('joinChatlistInvite', { slug: invite.slug, peers });
-    if (!result) return;
-
-    if (existingFolder) {
-      actions.showNotification({
-        title: {
-          key: 'FolderLinkNotificationUpdatedTitle',
-          variables: {
-            title: folderTitle.text,
-          },
-        },
-        message: {
-          key: 'FolderLinkNotificationUpdatedSubtitle',
-          variables: {
-            count: currentNotJoinedCount,
-          },
-          options: {
-            pluralValue: currentNotJoinedCount,
-          },
-        },
-        tabId,
-      });
-
-      return;
-    }
-
-    actions.showNotification({
-      title: {
-        key: 'FolderLinkNotificationAddedTitle',
-        variables: {
-          title: folderTitle.text,
-        },
-      },
-      message: {
-        key: 'FolderLinkNotificationAddedSubtitle',
-        variables: {
-          count: currentNotJoinedCount,
-        },
-        options: {
-          pluralValue: currentNotJoinedCount,
-        },
-      },
-      tabId,
-    });
-  } catch (error) {
-    if ((error as ApiError).message === 'CHATLISTS_TOO_MUCH') {
-      actions.openLimitReachedModal({ limit: 'chatlistJoined', tabId });
-    } else {
-      actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-    }
-  }
-});
-
-addActionHandler('leaveChatlist', async (global, actions, payload): Promise<void> => {
-  const { folderId, peerIds, tabId = getCurrentTabId() } = payload;
-
-  const folder = selectChatFolder(global, folderId);
-
-  const peers = peerIds?.map((peerId) => selectChat(global, peerId)).filter(Boolean) || [];
-
-  const result = await callApi('leaveChatlist', { folderId, peers });
-
-  if (!result) return;
-  if (!folder) return;
-
-  actions.showNotification({
-    title: {
-      key: 'FolderLinkNotificationDeletedTitle',
-      variables: {
-        title: folder.title.text,
-      },
-    },
-    message: {
-      key: 'FolderLinkNotificationDeletedSubtitle',
-      variables: {
-        count: peers.length,
-      },
-      options: {
-        pluralValue: peers.length,
-      },
-    },
-    tabId,
-  });
-});
-
-addActionHandler('loadChatlistInvites', async (global, actions, payload): Promise<void> => {
-  const { folderId } = payload;
-
-  const result = await callApi('fetchChatlistInvites', { folderId });
-
-  if (!result) return;
-
-  global = getGlobal();
-
-  global = {
-    ...global,
-    chatFolders: {
-      ...global.chatFolders,
-      invites: {
-        ...global.chatFolders.invites,
-        [folderId]: result.invites,
-      },
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('createChatlistInvite', async (global, actions, payload): Promise<void> => {
+addActionHandler('openDeleteChatFolderModal', (global, actions, payload): ActionReturnType => {
   const { folderId, tabId = getCurrentTabId() } = payload;
-
   const folder = selectChatFolder(global, folderId);
-  if (!folder) return;
+  if (!folder) return undefined;
 
-  global = updateTabState(global, {
-    shareFolderScreen: {
-      ...selectTabState(global, tabId).shareFolderScreen!,
-      isLoading: true,
-    },
-  }, tabId);
-  setGlobal(global);
-
-  let result: { filter: ApiChatFolder; invite: ApiChatlistExportedInvite | undefined } | undefined;
-
-  try {
-    result = await callApi('createChalistInvite', {
-      folderId,
-      peers: folder.includedChatIds.concat(folder.pinnedChatIds || [])
-        .map((chatId) => selectChat(global, chatId) || selectUser(global, chatId)).filter(Boolean),
-    });
-  } catch (error) {
-    if (CHATLIST_LIMIT_ERROR_LIST.has((error as ApiError).message)) {
-      actions.openLimitReachedModal({ limit: 'chatlistInvites', tabId });
-      actions.openSettingsScreen({ screen: SettingsScreens.Folders, tabId });
-    } else {
-      actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-    }
-  }
-
-  if (!result || !result.invite) return;
-
-  const { shareFolderScreen } = selectTabState(global, tabId);
-
-  if (!shareFolderScreen) return;
-
-  global = getGlobal();
-  global = {
-    ...global,
-    chatFolders: {
-      ...global.chatFolders,
-      byId: {
-        ...global.chatFolders.byId,
-        [folderId]: {
-          ...global.chatFolders.byId[folderId],
-          ...result.filter,
-        },
-      },
-      invites: {
-        ...global.chatFolders.invites,
-        [folderId]: [
-          ...(global.chatFolders.invites[folderId] || []),
-          result.invite,
-        ],
-      },
-    },
-  };
-  global = updateTabState(global, {
-    shareFolderScreen: {
-      ...shareFolderScreen,
-      url: result.invite.url,
-      isLoading: false,
-    },
-  }, tabId);
-  setGlobal(global);
-});
-
-addActionHandler('editChatlistInvite', async (global, actions, payload): Promise<void> => {
-  const {
-    folderId, peerIds, url, tabId = getCurrentTabId(),
-  } = payload;
-
-  const slug = url.split('/').pop();
-  if (!slug) return;
-
-  const peers = peerIds
-    .map((chatId) => selectChat(global, chatId) || selectUser(global, chatId)).filter(Boolean);
-
-  global = updateTabState(global, {
-    shareFolderScreen: {
-      ...selectTabState(global, tabId).shareFolderScreen!,
-      isLoading: true,
-    },
-  }, tabId);
-  setGlobal(global);
-
-  try {
-    const result = await callApi('editChatlistInvite', { folderId, slug, peers });
-
-    if (!result) {
-      return;
-    }
-
-    global = getGlobal();
-    global = {
-      ...global,
-      chatFolders: {
-        ...global.chatFolders,
-        invites: {
-          ...global.chatFolders.invites,
-          [folderId]: global.chatFolders.invites[folderId]?.map((invite) => {
-            if (invite.url === url) {
-              return result;
-            }
-            return invite;
-          }),
-        },
-      },
-    };
-    setGlobal(global);
-  } catch (error) {
-    actions.showDialog({ data: { type: 'error', ...(error as ApiError), hasErrorKey: true }, tabId });
-  } finally {
-    global = getGlobal();
-
-    global = updateTabState(global, {
-      shareFolderScreen: {
-        ...selectTabState(global, tabId).shareFolderScreen!,
-        isLoading: false,
-      },
-    }, tabId);
-    setGlobal(global);
-  }
-});
-
-addActionHandler('deleteChatlistInvite', async (global, actions, payload): Promise<void> => {
-  const { folderId, url } = payload;
-
-  const slug = url.split('/').pop();
-
-  if (!slug) return;
-
-  const result = await callApi('deleteChatlistInvite', { folderId, slug });
-
-  if (!result) return;
-
-  global = getGlobal();
-  global = {
-    ...global,
-    chatFolders: {
-      ...global.chatFolders,
-      invites: {
-        ...global.chatFolders.invites,
-        [folderId]: global.chatFolders.invites[folderId]?.filter((invite) => invite.url !== url),
-      },
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('openDeleteChatFolderModal', async (global, actions, payload): Promise<void> => {
-  const { folderId, isConfirmedForChatlist, tabId = getCurrentTabId() } = payload;
-  const folder = selectChatFolder(global, folderId);
-  if (!folder) return;
-
-  if (folder.isChatList && (!folder.hasMyInvites || isConfirmedForChatlist)) {
-    const currentIds = getOrderedIds(folderId);
-    const suggestions = await callApi('fetchLeaveChatlistSuggestions', { folderId });
-    global = getGlobal();
-    global = updateTabState(global, {
-      chatlistModal: {
-        removal: {
-          folderId,
-          suggestedPeerIds: unique([...(suggestions || []), ...(currentIds || [])]),
-        },
-      },
-    }, tabId);
-    setGlobal(global);
-    return;
-  }
-
-  global = updateTabState(global, {
+  return updateTabState(global, {
     deleteFolderDialogModal: folderId,
   }, tabId);
-
-  setGlobal(global);
 });
 
 addActionHandler('setViewForumAsMessages', (global, actions, payload): ActionReturnType => {

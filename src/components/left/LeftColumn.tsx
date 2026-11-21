@@ -324,17 +324,12 @@ function LeftColumn({
           openSettingsScreen({ screen: SettingsScreens.Folders });
           return;
 
-        case SettingsScreens.FoldersShare:
-          openSettingsScreen({ screen: SettingsScreens.FoldersEditFolder });
-          return;
-
         case SettingsScreens.FoldersIncludedChatsFromChatList:
         case SettingsScreens.FoldersExcludedChatsFromChatList:
           openSettingsScreen({ screen: SettingsScreens.FoldersEditFolderFromChatList });
           return;
 
         case SettingsScreens.FoldersEditFolderFromChatList:
-        case SettingsScreens.FoldersEditFolderInvites:
           openLeftColumnContent({ contentKey: LeftColumnContent.ChatList });
           openSettingsScreen({ screen: SettingsScreens.Main });
           return;

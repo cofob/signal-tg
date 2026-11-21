@@ -4,7 +4,6 @@ import type {
   ApiAudio,
   ApiBirthday,
   ApiChatInviteInfo,
-  ApiChatlistInvite,
   ApiChatType,
   ApiDialog,
   ApiFormattedText,
@@ -165,12 +164,6 @@ export type TabState = {
     isOwnProfile?: boolean;
   };
   nextFoldersAction?: ReducerAction<FoldersActions>;
-  shareFolderScreen?: {
-    folderId: number;
-    isFromSettings?: boolean;
-    url?: string;
-    isLoading?: boolean;
-  };
 
   isCallPanelVisible?: boolean;
   multitabNextAction?: CallbackAction;
@@ -612,14 +605,6 @@ export type TabState = {
     chatId: string;
     messageId?: number;
     activeLanguage?: string;
-  };
-
-  chatlistModal?: {
-    invite?: ApiChatlistInvite;
-    removal?: {
-      folderId: number;
-      suggestedPeerIds?: string[];
-    };
   };
 
   deleteAccountModal?: {

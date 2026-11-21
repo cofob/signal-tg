@@ -6,7 +6,6 @@ import type {
   ApiChat,
   ApiChatFolder,
   ApiChatFullInfo,
-  ApiChatlistExportedInvite,
   ApiChatTheme,
   ApiConfig,
   ApiCountry,
@@ -272,7 +271,6 @@ export type GlobalState = {
   chatFolders: {
     orderedIds?: number[];
     byId: Record<number, ApiChatFolder>;
-    invites: Record<number, ApiChatlistExportedInvite[]>;
     recommended?: ApiChatFolder[];
     areTagsEnabled?: boolean;
   };

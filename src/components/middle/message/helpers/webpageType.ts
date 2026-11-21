@@ -20,8 +20,6 @@ export function getWebpageButtonLangKey(type: string | undefined): RegularLangKe
       return 'ViewButtonChannel';
     case 'telegram_user':
       return 'ViewButtonUser';
-    case 'telegram_chatlist':
-      return 'ViewChatList';
     case 'telegram_story':
       return 'ViewButtonStory';
     case 'telegram_stickerset':

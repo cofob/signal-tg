@@ -248,7 +248,6 @@ export enum SettingsScreens {
   FoldersCreateFolder,
   FoldersEditFolder,
   FoldersEditFolderFromChatList,
-  FoldersEditFolderInvites,
   FoldersIncludedChats,
   FoldersIncludedChatsFromChatList,
   FoldersExcludedChats,
@@ -268,7 +267,6 @@ export enum SettingsScreens {
   Stickers,
   QuickReaction,
   CustomEmoji,
-  FoldersShare,
   KeyboardShortcuts,
   SignalProxy,
 }

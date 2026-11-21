@@ -249,31 +249,6 @@ export interface ApiChatFolder {
   pinnedChatIds?: string[];
   includedChatIds: string[];
   excludedChatIds: string[];
-  isChatList?: true;
-  hasMyInvites?: true;
-}
-
-export interface ApiChatlistInviteNew {
-  title: ApiFormattedText;
-  noTitleAnimations?: true;
-  emoticon?: string;
-  peerIds: string[];
-  slug: string;
-}
-
-export interface ApiChatlistInviteAlready {
-  folderId: number;
-  missingPeerIds: string[];
-  alreadyPeerIds: string[];
-  slug: string;
-}
-
-export type ApiChatlistInvite = ApiChatlistInviteNew | ApiChatlistInviteAlready;
-
-export interface ApiChatlistExportedInvite {
-  title: string;
-  url: string;
-  peerIds: string[];
 }
 
 export interface ApiMissingInvitedUser {

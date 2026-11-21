@@ -213,7 +213,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
 
   chatFolders: {
     byId: {},
-    invites: {},
     areTagsEnabled: false,
   },
 

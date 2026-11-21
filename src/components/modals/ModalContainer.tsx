@@ -17,7 +17,6 @@ import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
 import BirthdaySetupModal from './birthday/BirthdaySetupModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
-import ChatlistModal from './chatlist/ChatlistModal.async';
 import CocoonModal from './cocoon/CocoonModal.async';
 import DeleteAccountModal from './deleteAccount/DeleteAccountModal.async';
 import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
@@ -44,7 +43,6 @@ import SuggestMessageModal from './suggestMessage/SuggestMessageModal.async';
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
   'aiMessageEditorModal' |
-  'chatlistModal' |
   'safeLinkModalUrl' |
   'oneTimeMediaModal' |
   'inviteViaLinkModal' |
@@ -134,7 +132,6 @@ const WrappedModalBoundary = <T,>({
 
 const LEGACY_MODALS: LegacyModalRegistry = {
   aiMessageEditorModal: AiMessageEditorModal,
-  chatlistModal: ChatlistModal,
   oneTimeMediaModal: OneTimeMediaModal,
   inviteViaLinkModal: InviteViaLinkModal,
   reportModal: ReportModal,

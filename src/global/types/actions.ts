@@ -8,7 +8,6 @@ import type {
   ApiChatAdminRights,
   ApiChatBannedRights,
   ApiChatFolder,
-  ApiChatlistInvite,
   ApiChatReactions,
   ApiChatType,
   ApiDraft,
@@ -1134,34 +1133,6 @@ export interface ActionPayloads {
     isEnabled: boolean;
   };
 
-  checkChatlistInvite: {
-    slug: string;
-  } & WithTabId;
-  joinChatlistInvite: {
-    invite: ApiChatlistInvite;
-    peerIds: string[];
-  } & WithTabId;
-  leaveChatlist: {
-    folderId: number;
-    peerIds?: string[];
-  } & WithTabId;
-  closeChatlistModal: WithTabId | undefined;
-  loadChatlistInvites: {
-    folderId: number;
-  };
-  createChatlistInvite: {
-    folderId: number;
-  } & WithTabId;
-  editChatlistInvite: {
-    folderId: number;
-    url: string;
-    peerIds: string[];
-  } & WithTabId;
-  deleteChatlistInvite: {
-    folderId: number;
-    url: string;
-  } & WithTabId;
-
   requestChatTranslation: {
     chatId: string;
     toLanguageCode?: string;
@@ -2102,18 +2073,10 @@ export interface ActionPayloads {
   closeDeleteChatFolderModal: WithTabId | undefined;
   openDeleteChatFolderModal: {
     folderId: number;
-    isConfirmedForChatlist?: boolean;
-  } & WithTabId;
-  openShareChatFolderModal: {
-    folderId: number;
-    url?: string;
-    noRequestNextScreen?: boolean;
   } & WithTabId;
   openEditChatFolder: {
     folderId: number;
-    isOnlyInvites?: boolean;
   } & WithTabId;
-  closeShareChatFolderModal: undefined | WithTabId;
   loadDefaultHistoryTtl: undefined;
   setDefaultHistoryTtl: { period: number };
   loadGlobalPrivacySettings: undefined;

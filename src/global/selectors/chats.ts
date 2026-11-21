@@ -230,23 +230,6 @@ export function selectCanBanUsers<T extends GlobalState>(global: T, chatId: stri
   return getHasAdminRight(chat, 'banUsers');
 }
 
-export function selectCanShareFolder<T extends GlobalState>(global: T, folderId: number) {
-  const folder = selectChatFolder(global, folderId);
-  if (!folder) return false;
-
-  const {
-    groups, channels, contacts, nonContacts, includedChatIds, pinnedChatIds,
-    excludeArchived, excludeMuted, excludeRead, excludedChatIds,
-  } = folder;
-
-  return !groups && !channels && !contacts && !nonContacts
-    && !excludeArchived && !excludeMuted && !excludeRead && !excludedChatIds?.length
-    && (pinnedChatIds?.length || includedChatIds.length)
-    && folder.includedChatIds.concat(folder.pinnedChatIds || []).some((chatId) => {
-      return selectCanInviteToChat(global, chatId);
-    });
-}
-
 export function selectRequestedChatTranslationLanguage<T extends GlobalState>(
   global: T, chatId: string,
   ...[tabId = getCurrentTabId()]: TabArgs<T>

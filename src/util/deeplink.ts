@@ -98,7 +98,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
     openChatByPhoneNumber,
     openStickerSet,
     openChatWithDraft,
-    checkChatlistInvite,
     openStoryViewerByUsername,
   } = actions;
 
@@ -163,11 +162,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       openChatWithDraft({ text: formatShareText(urlParam, text) });
       break;
     }
-    case 'addlist': {
-      checkChatlistInvite({ slug: params.slug });
-      break;
-    }
-
     case 'login': {
       // const { code, token } = params;
       break;

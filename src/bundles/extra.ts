@@ -12,7 +12,6 @@ export { default as LimitReachedModal } from '../components/main/LimitReachedMod
 export { default as StatusPickerMenu } from '../components/left/main/StatusPickerMenu';
 export { default as DeleteAccountModal } from '../components/modals/deleteAccount/DeleteAccountModal';
 export { default as AgeVerificationModal } from '../components/modals/ageVerification/AgeVerificationModal';
-export { default as ChatlistModal } from '../components/modals/chatlist/ChatlistModal';
 export { default as ChatInviteModal } from '../components/modals/chatInvite/ChatInviteModal';
 export { default as BirthdaySetupModal } from '../components/modals/birthday/BirthdaySetupModal';
 

@@ -242,13 +242,6 @@ addActionHandler('closeDeleteChatFolderModal', (global, actions, payload): Actio
   }, tabId);
 });
 
-addActionHandler('closeChatlistModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  return updateTabState(global, {
-    chatlistModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('requestChatTranslation', (global, actions, payload): ActionReturnType => {
   const { chatId, toLanguageCode, tabId = getCurrentTabId() } = payload;
   const tabState = selectTabState(global, tabId);

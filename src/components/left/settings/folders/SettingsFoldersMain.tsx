@@ -159,7 +159,6 @@ const SettingsFoldersMain = ({
         id: folder.id,
         title: folder.title,
         subtitle: getFolderDescriptionText(lang, folder, chatsCountByFolderId[folder.id]),
-        isChatList: folder.isChatList,
         color: folder.color,
         noTitleAnimations: folder.noTitleAnimations,
       };
@@ -340,7 +339,6 @@ const SettingsFoldersMain = ({
                     {isBlocked && <Icon name="lock-filled" className="settings-folders-blocked-icon" />}
                   </span>
                   <span className="subtitle">
-                    {folder.isChatList && <Icon name="link" className="mr-1" />}
                     {folder.subtitle}
                   </span>
 

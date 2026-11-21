@@ -523,6 +523,12 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
     delete untypedCached.settings.byKey.hasPassword;
     delete untypedCached.appConfig?.arePasskeysAvailable;
     delete untypedCached.appConfig?.passkeysMaxCount;
+    // Shareable folders
+    delete untypedCached.chatFolders.invites;
+    Object.values(cached.chatFolders.byId).forEach((folder) => {
+      delete (folder as AnyLiteral).isChatList;
+      delete (folder as AnyLiteral).hasMyInvites;
+    });
     cached.cacheVersion = 10;
   }
 

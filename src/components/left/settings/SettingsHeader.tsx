@@ -190,11 +190,8 @@ const SettingsHeader = ({
         return <h3>{lang('Filters')}</h3>;
       case SettingsScreens.FoldersCreateFolder:
         return <h3>{lang('FilterNew')}</h3>;
-      case SettingsScreens.FoldersShare:
-        return <h3>{lang('FolderLinkScreenTitle')}</h3>;
       case SettingsScreens.FoldersEditFolder:
       case SettingsScreens.FoldersEditFolderFromChatList:
-      case SettingsScreens.FoldersEditFolderInvites:
         return (
           <div className="settings-main-header">
             <h3>{lang('EditFolder')}</h3>

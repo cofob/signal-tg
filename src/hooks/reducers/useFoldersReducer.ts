@@ -114,7 +114,7 @@ export type FoldersState = {
 export type FoldersActions = (
   'setTitle' | 'saveFilters' | 'editFolder' | 'reset' | 'setChatFilter' | 'setIsLoading' | 'setError' |
   'editIncludeFilters' | 'editExcludeFilters' | 'setIncludeFilters' | 'setExcludeFilters' | 'setIsTouched' |
-  'setFolderId' | 'setIsChatlist' | 'setColor' | 'setEmoticon'
+  'setFolderId' | 'setColor' | 'setEmoticon'
 );
 export type FolderEditDispatch = Dispatch<FoldersState, FoldersActions>;
 
@@ -240,14 +240,6 @@ const foldersReducer: StateReducer<FoldersState, FoldersActions> = (
         error: action.payload,
       };
     }
-    case 'setIsChatlist':
-      return {
-        ...state,
-        folder: {
-          ...state.folder,
-          isChatList: action.payload,
-        },
-      };
     case 'setColor':
       return {
         ...state,
