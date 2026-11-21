@@ -48,6 +48,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       });
       break;
 
+    case 'updateStaleSession':
+      // A slot that the app lists as logged in has no account in the engine, such as a copy of another account's
+      // slot: logging out removes it from the menu
+      if (hasStoredSession()) actions.signOut({ forceInitApi: true });
+      break;
+
     case 'updateSession':
       onUpdateSession(global, actions, update);
       break;
@@ -137,9 +143,6 @@ function onUpdateAuthorizationState<T extends GlobalState>(global: T, update: Ap
         historySync: update.historySync,
       });
       setGlobal(global);
-      // The engine has no account for a slot that the app still lists as logged in, such as a slot that an
-      // earlier version opened as a copy of the first account: log the slot out, which also removes it from the menu
-      if (hasStoredSession()) getActions().signOut({ forceInitApi: true });
       break;
     case 'authorizationStateReady': {
       getActions().loadChatThemes();

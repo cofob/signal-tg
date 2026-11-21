@@ -143,6 +143,8 @@ type Items = {
   storageChanges: StorageChanges;
   // A registration whose request went out; `resumePendingRegistration` finds out what became of it
   pendingRegistration: PendingRegistration;
+  // Not written any more; removed when the link screen starts
+  unlinkedAci: string;
   // Merges of stored storage records that this device has done after learning to read more of them
   // (`MessageProcessor`)
   storageMergedRecordTypes: string[];

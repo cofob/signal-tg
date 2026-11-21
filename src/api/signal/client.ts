@@ -76,8 +76,12 @@ export async function startClient(args: ApiInitialArgs) {
     await startSession(account);
     return;
   }
-  // Data without an account is a leftover of a version that kept the messages after an unlink
-  await discardOrphanedData();
+  // A registration that cannot be resumed yet keeps its keys, and with them the slot's data
+  if (!await store.getItem('pendingRegistration')) {
+    await discardOrphanedData();
+    // Only here the engine knows that the storage was read and holds no account
+    sendApiUpdate({ '@type': 'updateStaleSession' });
+  }
   void runDeviceLink(args.platform).catch(logError);
 }
 
@@ -236,9 +240,15 @@ export async function startSession(storedAccount: AccountRecord) {
   await connect();
 }
 
+/** Messages and attachments exist only together with an account, so any that remain without one belong to none */
 async function discardOrphanedData() {
-  await db.clear();
-  await clearAttachmentCache();
+  try {
+    await db.clear();
+    await clearAttachmentCache();
+    await store.removeItem('unlinkedAci');
+  } catch (err) {
+    logError(err);
+  }
 }
 
 /**
@@ -412,6 +422,8 @@ async function handleUnauthorized() {
     return;
   }
 
+  // The engine stopped, or started another account, while the server was asked
+  if (isDestroyed || currentAccount !== account) return;
   await handleDeauthorized(account);
 }
 
@@ -422,6 +434,11 @@ async function handleUnauthorized() {
  */
 async function handleDeauthorized(account: AccountRecord) {
   pendingDeauthorization = account.deviceId === SIGNAL_PRIMARY_DEVICE_ID ? 'deregistered' : 'unlinked';
-  await stopClient(true);
+  try {
+    await stopClient(true);
+  } catch (err) {
+    // The logout of the app wipes the data again
+    logError(err);
+  }
   sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateBroken' });
 }

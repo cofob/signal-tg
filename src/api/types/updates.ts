@@ -101,6 +101,11 @@ export type ApiUpdateDeviceDeauthorized = {
   reason: 'unlinked' | 'deregistered';
 };
 
+// Signal: the engine read its storage and found no account, so a session that the app stores for the slot is stale
+export type ApiUpdateStaleSession = {
+  '@type': 'updateStaleSession';
+};
+
 export type ApiUpdateConnectionState = {
   '@type': 'updateConnectionState';
   connectionState: ApiUpdateConnectionStateType;
@@ -554,8 +559,8 @@ export type ApiUpdateWebPage = {
 
 export type ApiUpdate = (
   ApiUpdateReady | ApiUpdateSession | ApiUpdateRequestUserUpdate | ApiUpdateAuthorizationState |
-  ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateDeviceDeauthorized | ApiUpdateCurrentUser |
-  ApiUpdateChat |
+  ApiUpdateAuthorizationError | ApiUpdateConnectionState | ApiUpdateDeviceDeauthorized | ApiUpdateStaleSession |
+  ApiUpdateCurrentUser | ApiUpdateChat |
   ApiUpdateChatTypingStatus | ApiUpdateChatFullInfo | ApiUpdatePinnedChatIds | ApiUpdateChatMembers |
   ApiUpdateChatParticipantRank | ApiUpdateChatJoin | ApiUpdateChatLeave | ApiUpdateChatPinned |
   ApiUpdatePinnedMessageIds | ApiUpdateChatListType | ApiUpdateChatFolder | ApiUpdateChatFoldersOrder |
