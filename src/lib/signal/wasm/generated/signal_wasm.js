@@ -51,6 +51,24 @@ export function BackupKey_DeriveBackupId(backup_key_bytes, aci_bytes) {
     return v3;
 }
 
+/**
+ * @param {Uint8Array} mrenclave
+ * @param {Uint8Array} attestation_msg
+ * @param {number} current_timestamp
+ * @returns {SgxClientState}
+ */
+export function Cds2ClientState_New(mrenclave, attestation_msg, current_timestamp) {
+    const ptr0 = passArray8ToWasm0(mrenclave, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(attestation_msg, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.Cds2ClientState_New(ptr0, len0, ptr1, len1, current_timestamp);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return SgxClientState.__wrap(ret[0]);
+}
+
 export class CiphertextMessage {
     static __wrap(ptr) {
         const obj = Object.create(CiphertextMessage.prototype);
@@ -1140,6 +1158,97 @@ export function MessageBackupKey_GetHmacKey(key) {
     var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v1;
+}
+
+export class PinHash {
+    static __wrap(ptr) {
+        const obj = Object.create(PinHash.prototype);
+        obj.__wbg_ptr = ptr;
+        PinHashFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        PinHashFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_pinhash_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) PinHash.prototype[Symbol.dispose] = PinHash.prototype.free;
+
+/**
+ * @param {PinHash} ph
+ * @returns {Uint8Array}
+ */
+export function PinHash_AccessKey(ph) {
+    _assertClass(ph, PinHash);
+    const ret = wasm.PinHash_AccessKey(ph.__wbg_ptr);
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
+/**
+ * Decrypts the master key that SVR2 restored, as libsignal-net `Svr2_RestoreMasterKey` does
+ * @param {PinHash} ph
+ * @param {Uint8Array} encoded
+ * @returns {Uint8Array}
+ */
+export function PinHash_DecodeMasterKey(ph, encoded) {
+    _assertClass(ph, PinHash);
+    const ptr0 = passArray8ToWasm0(encoded, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.PinHash_DecodeMasterKey(ph.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Encrypts the master key for SVR2 storage as libsignal-net `Svr2_StartMasterKeyBackup` does
+ * @param {PinHash} ph
+ * @param {Uint8Array} master_key
+ * @returns {Uint8Array}
+ */
+export function PinHash_EncodeMasterKey(ph, master_key) {
+    _assertClass(ph, PinHash);
+    const ptr0 = passArray8ToWasm0(master_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.PinHash_EncodeMasterKey(ph.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * Hashes a normalized PIN with the salt of the SVR2 enclave's group and the SVR2 username
+ * @param {Uint8Array} pin
+ * @param {string} username
+ * @param {Uint8Array} mrenclave
+ * @returns {PinHash}
+ */
+export function PinHash_FromUsernameMrenclave(pin, username, mrenclave) {
+    const ptr0 = passArray8ToWasm0(pin, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(username, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(mrenclave, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.PinHash_FromUsernameMrenclave(ptr0, len0, ptr1, len1, ptr2, len2);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return PinHash.__wrap(ret[0]);
 }
 
 export class PlaintextContent {
@@ -3022,6 +3131,94 @@ export function SessionRecord_Serialize(obj) {
     return v1;
 }
 
+/**
+ * The client side of an attested connection, from the enclave's attestation message to an established session
+ */
+export class SgxClientState {
+    static __wrap(ptr) {
+        const obj = Object.create(SgxClientState.prototype);
+        obj.__wbg_ptr = ptr;
+        SgxClientStateFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        SgxClientStateFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_sgxclientstate_free(ptr, 0);
+    }
+}
+if (Symbol.dispose) SgxClientState.prototype[Symbol.dispose] = SgxClientState.prototype.free;
+
+/**
+ * @param {SgxClientState} cli
+ * @param {Uint8Array} handshake_received
+ */
+export function SgxClientState_CompleteHandshake(cli, handshake_received) {
+    _assertClass(cli, SgxClientState);
+    const ptr0 = passArray8ToWasm0(handshake_received, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SgxClientState_CompleteHandshake(cli.__wbg_ptr, ptr0, len0);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @param {SgxClientState} cli
+ * @param {Uint8Array} received_ciphertext
+ * @returns {Uint8Array}
+ */
+export function SgxClientState_EstablishedRecv(cli, received_ciphertext) {
+    _assertClass(cli, SgxClientState);
+    const ptr0 = passArray8ToWasm0(received_ciphertext, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SgxClientState_EstablishedRecv(cli.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {SgxClientState} cli
+ * @param {Uint8Array} plaintext_to_send
+ * @returns {Uint8Array}
+ */
+export function SgxClientState_EstablishedSend(cli, plaintext_to_send) {
+    _assertClass(cli, SgxClientState);
+    const ptr0 = passArray8ToWasm0(plaintext_to_send, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SgxClientState_EstablishedSend(cli.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * @param {SgxClientState} obj
+ * @returns {Uint8Array}
+ */
+export function SgxClientState_InitialRequest(obj) {
+    _assertClass(obj, SgxClientState);
+    const ret = wasm.SgxClientState_InitialRequest(obj.__wbg_ptr);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v1;
+}
+
 export class SignalMessage {
     static __wrap(ptr) {
         const obj = Object.create(SignalMessage.prototype);
@@ -3247,6 +3444,40 @@ export function SignedPreKeyRecord_Serialize(obj) {
     var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v1;
+}
+
+/**
+ * @param {Uint8Array} mrenclave
+ * @param {Uint8Array} attestation_msg
+ * @param {number} current_timestamp
+ * @returns {SgxClientState}
+ */
+export function Svr2Client_New(mrenclave, attestation_msg, current_timestamp) {
+    const ptr0 = passArray8ToWasm0(mrenclave, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(attestation_msg, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.Svr2Client_New(ptr0, len0, ptr1, len1, current_timestamp);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return SgxClientState.__wrap(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} svr_key
+ * @returns {Uint8Array}
+ */
+export function SvrKey_DeriveRegistrationLock(svr_key) {
+    const ptr0 = passArray8ToWasm0(svr_key, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.SvrKey_DeriveRegistrationLock(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
 }
 
 /**
@@ -3506,6 +3737,26 @@ export function UnidentifiedSenderMessageContent_Serialize(obj) {
 }
 
 /**
+ * Returns the 32 bytes of entropy followed by the encrypted username
+ * @param {string} username
+ * @param {Uint8Array | null} [entropy]
+ * @returns {Uint8Array}
+ */
+export function UsernameLink_Create(username, entropy) {
+    const ptr0 = passStringToWasm0(username, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(entropy) ? 0 : passArray8ToWasm0(entropy, wasm.__wbindgen_malloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.UsernameLink_Create(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
  * @param {Uint8Array} entropy
  * @param {Uint8Array} encrypted_username
  * @returns {string}
@@ -3534,6 +3785,24 @@ export function UsernameLink_DecryptUsername(entropy, encrypted_username) {
 }
 
 /**
+ * @param {string} nickname
+ * @param {number} min_len
+ * @param {number} max_len
+ * @returns {string[]}
+ */
+export function Username_CandidatesFrom(nickname, min_len, max_len) {
+    const ptr0 = passStringToWasm0(nickname, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.Username_CandidatesFrom(ptr0, len0, min_len, max_len);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+}
+
+/**
  * @param {string} username
  * @returns {Uint8Array}
  */
@@ -3547,6 +3816,46 @@ export function Username_Hash(username) {
     var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v2;
+}
+
+/**
+ * @param {string} nickname
+ * @param {string} discriminator
+ * @param {number} min_len
+ * @param {number} max_len
+ * @returns {Uint8Array}
+ */
+export function Username_HashFromParts(nickname, discriminator, min_len, max_len) {
+    const ptr0 = passStringToWasm0(nickname, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(discriminator, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.Username_HashFromParts(ptr0, len0, ptr1, len1, min_len, max_len);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
+}
+
+/**
+ * @param {string} username
+ * @param {Uint8Array} randomness
+ * @returns {Uint8Array}
+ */
+export function Username_Proof(username, randomness) {
+    const ptr0 = passStringToWasm0(username, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(randomness, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.Username_Proof(ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v3;
 }
 function __wbg_get_imports() {
     const import0 = {
@@ -3804,7 +4113,7 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 89, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 190, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_97461482e016b7d2___convert__closures_____invoke___wasm_bindgen_97461482e016b7d2___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_97461482e016b7d2___JsError___true_);
             return ret;
         },
@@ -3874,6 +4183,9 @@ const KyberSecretKeyFinalization = (typeof FinalizationRegistry === 'undefined')
 const MessageBackupKeyFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_messagebackupkey_free(ptr, 1));
+const PinHashFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_pinhash_free(ptr, 1));
 const PlaintextContentFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_plaintextcontent_free(ptr, 1));
@@ -3916,6 +4228,9 @@ const ServerPublicParamsFinalization = (typeof FinalizationRegistry === 'undefin
 const SessionRecordFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_sessionrecord_free(ptr, 1));
+const SgxClientStateFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_sgxclientstate_free(ptr, 1));
 const SignalMessageFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_signalmessage_free(ptr, 1));

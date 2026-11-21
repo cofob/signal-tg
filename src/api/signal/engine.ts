@@ -1,10 +1,12 @@
 import MessageDb from '../../lib/signal/db/MessageDb';
 import GroupManager from '../../lib/signal/groups/GroupManager';
 import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
+import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
+import { handleStickerPacksChange } from './updaters/stickers';
 import { handleStoryChanges } from './updaters/stories';
 
 /** The Signal engine of this worker: protocol store, message database, connections and processing */
@@ -25,9 +27,15 @@ export const processor = new MessageProcessor(db, client, {
   },
   onTyping: (event) => void handleTyping(event).catch(logError),
   onError: logError,
+  onStickerPacksChange: (ids) => void handleStickerPacksChange(ids).catch(logError),
 });
 
 export const groups = new GroupManager(client, db, processor);
+
+// Safety number change notices; PNI identities belong to phone numbers, which have no conversation of their own
+store.onIdentityChange = (serviceId) => {
+  if (!isPniServiceId(serviceId)) void processor.addSafetyNumberChange(serviceId).catch(logError);
+};
 
 export function logError(error: unknown) {
   // eslint-disable-next-line no-console

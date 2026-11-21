@@ -6,19 +6,23 @@ import type {
   AccountRecord_PinnedConversation,
   ContactRecord,
   GroupV2Record,
+  InstalledStickerPackRecord,
   ManifestRecord,
   StorageRecord,
   StoryDistributionListRecord,
 } from '../proto/generated/StorageService_pb';
+import type { StickerPackRecord } from '../stickers/stickerPacks';
 import type { AccountRecord as LocalAccount, StoryDistributionList } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
-import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
+import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
 import { uuidToBytes, uuidToString } from '../serviceId';
 
 import {
+  AccountRecord_PhoneNumberSharingMode,
   AccountRecord_PinnedConversationSchema,
+  AccountRecord_UsernameLinkSchema,
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
@@ -28,15 +32,19 @@ import {
 
 type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted'
   | 'hideStory';
-type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread'
-  | 'storiesDisabled' | 'storyViewReceiptsEnabled';
-// A story distribution list record is written whole from the local list
-type StoryListStorageField = 'storyDistributionList';
-type StorageField = ConversationStorageField | AccountStorageField | StoryListStorageField;
+export type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread' | 'username'
+  | 'usernameLink' | 'phoneNumberSharingMode' | 'unlistedPhoneNumber' | 'storiesDisabled' | 'storyViewReceiptsEnabled';
+// Sticker pack and story distribution list records are written whole
+type StorageField = ConversationStorageField | AccountStorageField | 'stickerPack' | 'storyDistributionList';
+
+/** Account record fields that this device keeps on its account (`SignalStore`), not on a conversation */
+export type LocalAccountFields = Pick<LocalAccount,
+  'usernameLink' | 'isPhoneNumberShared' | 'isPhoneNumberUnlisted' | 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'
+>;
 
 /**
- * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY` or a story list key
- * (`getStoryListKey`)
+ * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY`, the key of a sticker
+ * pack (`getStickerPackStorageKey`) or the key of a story distribution list (`getStoryListKey`)
  */
 export type StorageChanges = Record<string, StorageField[]>;
 
@@ -47,14 +55,18 @@ type StorageWriteSource = {
   records: Map<string, Uint8Array>;
   changes: StorageChanges;
   conversations: ConversationRecord[];
+  stickerPacks: Record<string, StickerPackRecord>;
   // Profile keys of private conversations that get their first record
   profileKeys: Map<string, Uint8Array>;
+  selfAci: string;
+  deviceId: number;
+  localAccount: LocalAccountFields;
   storyLists: StoryDistributionList[];
-  account: Pick<LocalAccount, 'aci' | 'deviceId' | 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'>;
 };
 
 // Conversation ids are ACIs and base64 group ids, so they never equal this key or the story list keys
 export const ACCOUNT_KEY = 'account';
+const STICKER_PACK_KEY_PREFIX = 'stickerPack:';
 const STORY_LIST_KEY_PREFIX = 'storyList:';
 
 const ACI_BINARY_LENGTH = 16;
@@ -96,6 +108,11 @@ export function getStorageChanges(previous: ConversationRecord, next: Conversati
     if ((previous[key] || undefined) !== (next[key] || undefined)) add(next.id, field);
   }
   return changes;
+}
+
+/** The `StorageChanges` key of a sticker pack's record */
+export function getStickerPackStorageKey(packId: string) {
+  return `${STICKER_PACK_KEY_PREFIX}${packId}`;
 }
 
 export function mergeStorageChanges(changes: StorageChanges, added: StorageChanges) {
@@ -161,9 +178,8 @@ export function getMutedUntil(timestamp: bigint) {
  * the primary device until it exists. Returns `undefined` when nothing changed.
  */
 export function buildStorageWrite({
-  manifest, records, changes, conversations, profileKeys, storyLists, account,
+  manifest, records, changes, conversations, stickerPacks, profileKeys, selfAci, deviceId, localAccount, storyLists,
 }: StorageWriteSource): StorageWrite | undefined {
-  const { deviceId } = account;
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
   const storyListsByKey = new Map(storyLists.map((list) => [getStoryListKey(list.id), list]));
   const storedRecords = indexRecords(records);
@@ -173,15 +189,21 @@ export function buildStorageWrite({
 
   for (const [key, fields] of Object.entries(changes)) {
     const conversation = conversationsById.get(key);
+    const stickerPack = key.startsWith(STICKER_PACK_KEY_PREFIX)
+      ? stickerPacks[key.slice(STICKER_PACK_KEY_PREFIX.length)]
+      : undefined;
     const storyList = storyListsByKey.get(key);
-    const recordKey = key === ACCOUNT_KEY || storyList ? key : conversation && getRecordKey(conversation);
+    const isWholeRecord = key === ACCOUNT_KEY || stickerPack || storyList;
+    const recordKey = isWholeRecord ? key : conversation && getRecordKey(conversation);
     if (!recordKey) continue;
     const stored = storedRecords.get(recordKey);
 
     let record: StorageRecord;
-    if (stored?.record.record.case === 'account') {
+    if (stickerPack) {
+      record = buildStickerPackRecord(stickerPack, stored?.record);
+    } else if (stored?.record.record.case === 'account') {
       record = stored.record;
-      setAccountFields(stored.record.record.value, fields, conversations, account);
+      setAccountFields(stored.record.record.value, fields, conversations, selfAci, localAccount);
     } else if (storyList) {
       record = stored?.record
         ?? create(StorageRecordSchema, { record: { case: 'storyDistributionList', value: {} } });
@@ -235,6 +257,8 @@ function getStoredRecordKey({ record }: StorageRecord) {
       return record.value.identifier.length === ACI_BINARY_LENGTH
         ? getStoryListKey(uuidToString(record.value.identifier))
         : undefined;
+    case 'installedStickerPack':
+      return record.value.packId.length ? getStickerPackStorageKey(bufferToHex(record.value.packId)) : undefined;
     default:
       return undefined;
   }
@@ -257,6 +281,8 @@ function getItemType({ record }: StorageRecord) {
       return ItemType.GROUPV2;
     case 'storyDistributionList':
       return ItemType.STORY_DISTRIBUTION_LIST;
+    case 'installedStickerPack':
+      return ItemType.STICKER_PACK;
     default:
       return ItemType.ACCOUNT;
   }
@@ -279,6 +305,24 @@ function createConversationRecord(conversation: ConversationRecord, profileKey?:
       },
     },
   });
+}
+
+/**
+ * The record of an installed pack, or of a removed one with its removal time and without key and position
+ * (Signal Desktop `toInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`). Unknown fields of
+ * the stored record stay.
+ */
+function buildStickerPackRecord(pack: StickerPackRecord, stored?: StorageRecord) {
+  const record = stored?.record.case === 'installedStickerPack'
+    ? stored
+    : create(StorageRecordSchema, { record: { case: 'installedStickerPack', value: {} } });
+  const value = record.record.value as InstalledStickerPackRecord;
+  const isInstalled = pack.installedAt !== undefined;
+  value.packId = bufferFromHex(pack.id);
+  value.packKey = isInstalled ? bufferFromHex(pack.key) : new Uint8Array();
+  value.position = isInstalled ? pack.position ?? 0 : 0;
+  value.deletedAtTimestamp = isInstalled ? 0n : BigInt(pack.uninstalledAt ?? Date.now());
+  return record;
 }
 
 function setConversationFields(
@@ -328,9 +372,12 @@ function setAccountFields(
   record: AccountRecord,
   fields: StorageField[],
   conversations: ConversationRecord[],
-  account: StorageWriteSource['account'],
+  selfAci: string,
+  {
+    usernameLink, isPhoneNumberShared, isPhoneNumberUnlisted, isStoriesDisabled, isStoryViewReceiptsEnabled,
+  }: LocalAccountFields,
 ) {
-  const self = conversations.find(({ id }) => id === account.aci);
+  const self = conversations.find(({ id }) => id === selfAci);
   for (const field of fields) {
     switch (field) {
       case 'pinnedConversations':
@@ -342,13 +389,34 @@ function setAccountFields(
       case 'noteToSelfMarkedUnread':
         record.noteToSelfMarkedUnread = Boolean(self?.isMarkedUnread);
         break;
+      case 'username':
+        record.username = self?.username ?? '';
+        break;
+      case 'usernameLink':
+        if (!usernameLink) {
+          record.usernameLink = undefined;
+          break;
+        }
+        // The link color is a setting of the primary device, so it stays
+        record.usernameLink ??= create(AccountRecord_UsernameLinkSchema);
+        record.usernameLink.entropy = usernameLink.entropy;
+        record.usernameLink.serverId = uuidToBytes(usernameLink.serverId);
+        break;
+      case 'phoneNumberSharingMode':
+        record.phoneNumberSharingMode = isPhoneNumberShared
+          ? AccountRecord_PhoneNumberSharingMode.EVERYBODY
+          : AccountRecord_PhoneNumberSharingMode.NOBODY;
+        break;
+      case 'unlistedPhoneNumber':
+        record.unlistedPhoneNumber = Boolean(isPhoneNumberUnlisted);
+        break;
       case 'storiesDisabled':
-        record.storiesDisabled = Boolean(account.isStoriesDisabled);
+        record.storiesDisabled = Boolean(isStoriesDisabled);
         break;
       case 'storyViewReceiptsEnabled':
-        record.storyViewReceiptsEnabled = account.isStoryViewReceiptsEnabled === undefined
+        record.storyViewReceiptsEnabled = isStoryViewReceiptsEnabled === undefined
           ? OptionalBool.UNSET
-          : account.isStoryViewReceiptsEnabled ? OptionalBool.ENABLED : OptionalBool.DISABLED;
+          : isStoryViewReceiptsEnabled ? OptionalBool.ENABLED : OptionalBool.DISABLED;
         break;
       default:
         break;

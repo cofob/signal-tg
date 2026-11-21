@@ -31,3 +31,10 @@ pub fn SvrKey_DeriveRegistrationRecoveryPassword(svr_key: &[u8]) -> JsResult<Vec
         })
         .or_throw_generic("SvrKey_DeriveRegistrationRecoveryPassword")
 }
+
+#[wasm_bindgen]
+pub fn SvrKey_DeriveRegistrationLock(svr_key: &[u8]) -> JsResult<Vec<u8>> {
+    <[u8; SVR_KEY_LEN]>::try_from(svr_key)
+        .map(|key| SvrKey::new(key).derive_registration_lock().to_vec())
+        .or_throw_generic("SvrKey_DeriveRegistrationLock")
+}

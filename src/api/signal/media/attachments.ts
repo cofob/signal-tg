@@ -8,7 +8,9 @@ import { AttachmentUnavailableError, downloadAttachment } from '../../../lib/sig
 import { DataMessageSchema, StoryMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
 import * as cacheApi from '../../../util/cacheApi';
 import { getSafeMimeType } from '../../../util/media/safeMimeType';
-import { parseAttachmentMediaId, parseStoryMediaId, STICKER_SLOT } from '../builders/media';
+import {
+  parseAttachmentMediaId, parseStoryMediaId, PREVIEW_SLOT, STICKER_SLOT,
+} from '../builders/media';
 import { db } from '../engine';
 
 type DownloadState = {
@@ -45,13 +47,15 @@ export async function getAttachmentPointer(mediaId: string) {
   if (!parsed) return undefined;
   const message = await db.getMessage(parsed.messageId);
   if (!message?.dataMessage) return undefined;
-  const isUnavailable = parsed.slot === STICKER_SLOT
+  const { slot } = parsed;
+  const isUnavailable = slot === STICKER_SLOT
     ? message.isStickerUnavailable
-    : message.unavailableAttachmentIndexes?.includes(parsed.slot);
+    : typeof slot === 'number' && message.unavailableAttachmentIndexes?.includes(slot);
   if (isUnavailable) throw new AttachmentUnavailableError();
 
-  const { attachments, sticker } = fromBinary(DataMessageSchema, message.dataMessage);
-  return parsed.slot === STICKER_SLOT ? sticker?.data : attachments[parsed.slot];
+  const { attachments, sticker, preview } = fromBinary(DataMessageSchema, message.dataMessage);
+  if (slot === STICKER_SLOT) return sticker?.data;
+  return slot === PREVIEW_SLOT ? preview[0]?.image : attachments[slot];
 }
 
 /**

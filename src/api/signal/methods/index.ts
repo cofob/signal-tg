@@ -1,6 +1,7 @@
 export {
   provideAuthCaptcha,
   provideAuthCode,
+  provideAuthPassword,
   provideAuthPhoneNumber,
   provideAuthRegistration,
   requestAuthCode,
@@ -15,6 +16,7 @@ export {
   fetchFullChat,
   fetchPeerSettings,
   hidePeerSettingsBar,
+  lookUpPhoneNumber,
   requestChatUpdate,
   searchChats,
   toggleChatArchived,
@@ -52,6 +54,14 @@ export {
 } from './groups';
 export { downloadMedia } from './media';
 export {
+  fetchSignalContactDiscovery,
+  fetchSignalPinSettings,
+  removeSignalPin,
+  setSignalContactDiscovery,
+  setSignalPin,
+  setSignalRegistrationLock,
+} from './pin';
+export {
   closePoll,
   deleteMessages,
   editMessage,
@@ -72,6 +82,20 @@ export {
   sendReaction,
 } from './messages';
 export {
+  confirmUsername,
+  deleteUsername,
+  fetchPhoneNumberPrivacy,
+  fetchSafetyNumber,
+  fetchUsernameLink,
+  getChatByUsername,
+  reserveUsername,
+  resetUsernameLink,
+  resolveUsernameLink,
+  updateOwnProfile,
+  updatePhoneNumberPrivacy,
+  updateSafetyNumberVerified,
+} from './profile';
+export {
   blockUser,
   fetchBlockedUsers,
   fetchConfig,
@@ -80,6 +104,16 @@ export {
   unblockUser,
   updateNotificationSettings,
 } from './settings';
+export {
+  clearRecentStickers,
+  fetchFeaturedStickers,
+  fetchRecentStickers,
+  fetchStickers,
+  fetchStickerSets,
+  installStickerSet,
+  removeRecentSticker,
+  uninstallStickerSet,
+} from './stickers';
 export {
   deleteStory,
   deleteStoryDistributionList,
@@ -98,5 +132,5 @@ export {
   updateStorySettings,
 } from './stories';
 export {
-  fetchCommonChats, fetchContactList, fetchFullUser, fetchUsers, reportSpam,
+  fetchCommonChats, fetchContactList, fetchFullUser, fetchProfilePhotos, fetchUsers, getChatByAci, reportSpam,
 } from './users';

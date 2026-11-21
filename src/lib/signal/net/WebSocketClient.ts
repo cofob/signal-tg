@@ -46,7 +46,21 @@ export default class WebSocketClient {
     messages.forEach((message) => handler(message));
   }
 
-  onClose?: CloseHandler;
+  // A close before the handler is set reaches it once it is set
+  private closeHandler?: CloseHandler;
+
+  private closeEvent?: { code: number; reason: string };
+
+  set onClose(handler: CloseHandler | undefined) {
+    this.closeHandler = handler;
+    const { closeEvent } = this;
+    if (!handler || !closeEvent) return;
+    this.closeEvent = undefined;
+    handler(closeEvent.code, closeEvent.reason);
+  }
+
+  // Every frame from the server, pings included: a sign of life while a reply takes long
+  onActivity?: NoneToVoidFunction;
 
   private isClosed = false;
 
@@ -124,6 +138,7 @@ export default class WebSocketClient {
           length = Number(new DataView(extended.buffer).getBigUint64(0));
         }
         const payload = length ? await this.reader.readExactly(length) : new Uint8Array(0);
+        this.onActivity?.();
 
         switch (opcode) {
           case OPCODE_TEXT:
@@ -188,7 +203,11 @@ export default class WebSocketClient {
     if (this.isClosed) return;
     this.isClosed = true;
     this.tunnel.close();
-    this.onClose?.(code, reason);
+    if (this.closeHandler) {
+      this.closeHandler(code, reason);
+    } else {
+      this.closeEvent = { code, reason };
+    }
   }
 }
 

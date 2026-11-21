@@ -1,4 +1,8 @@
+import type { Verified_State } from '../proto/generated/SignalService_pb';
+import type { StorageRecord } from '../proto/generated/StorageService_pb';
+import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
+import type { UsernameLink } from '../usernames/manageUsername';
 
 import { IdbStore } from '../../../util/browser/idb';
 
@@ -31,8 +35,20 @@ export type AccountRecord = {
   // Stories settings of the account record; view receipts follow read receipts until set
   isStoriesDisabled?: boolean;
   isStoryViewReceiptsEnabled?: boolean;
+  // Phone number privacy from the storage service account record: who sees the number on our profile, and whether
+  // people can find us by it
+  isPhoneNumberShared?: boolean;
+  isPhoneNumberUnlisted?: boolean;
+  // Our username link (`AccountRecord.usernameLink`); the username is on our private conversation
+  usernameLink?: UsernameLink;
   // Registered primary devices only: the account attribute that lets people find us by phone number
   isDiscoverableByPhoneNumber?: boolean;
+  // Registered primary devices only: SVR2 stores the master key under a PIN
+  hasSvrPin?: boolean;
+  // Registered primary devices only: registering the number again needs the PIN
+  isRegistrationLockEnabled?: boolean;
+  // Registered primary devices only: storage service contacts with only a number are looked up with CDSI
+  isContactDiscoveryEnabled?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
   isRegistrationPending?: boolean;
   // The sync requests to the primary device after linking went out
@@ -89,7 +105,20 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  // Storage record types this device has merged from records it stored before supporting them (`MessageProcessor`)
+  storageMergedRecordTypes: NonNullable<StorageRecord['record']['case']>[];
+  // Installed and removed sticker packs by hex pack id; `MessageProcessor` changes them
+  stickerPacks: Record<string, StickerPackRecord>;
+  // Recently sent stickers, newest first, as `<pack id>:<sticker id>`
+  recentStickers: string[];
+  cdsiToken: CdsiToken;
   storyDistributionLists: StoryDistributionList[];
+};
+
+/** The contact discovery token for the numbers of earlier contact refreshes, which later refreshes send again */
+export type CdsiToken = {
+  token: Uint8Array;
+  e164s: string[];
 };
 
 /** A story distribution list of the storage service; My Story has `MY_STORY_ID` (`stories/storyLists.ts`) */
@@ -112,7 +141,8 @@ export type NotificationDefaults = {
 
 export type IdentityRecord = {
   publicKey: Uint8Array;
-  isVerified?: boolean;
+  // Whether we compared the safety number (`Verified.State`); a changed key of a verified contact is `UNVERIFIED`
+  verified?: Verified_State;
 };
 
 export type KyberPreKeyEntry = {
@@ -187,6 +217,9 @@ export default class SignalStore {
   private db = new IdbStore(DB_NAME);
 
   private exclusive = Promise.resolve();
+
+  // Called when the identity key of another user replaces the stored one, see `saveIdentity`
+  onIdentityChange?: (serviceId: string) => void;
 
   /**
    * Runs protocol operations one at a time. Session, sender key and prekey records are read and written
@@ -310,6 +343,15 @@ export default class SignalStore {
 
   removeGroupSendEndorsements(groupId: string) {
     return this.db.del(`groupSendEndorsements:${groupId}`);
+  }
+
+  /** Decrypted manifests of sticker packs by hex pack id; they never change, so they are kept for any pack seen */
+  getStickerPackManifest(id: string) {
+    return this.db.get<StickerPackManifest>(`stickerPackManifest:${id}`);
+  }
+
+  setStickerPackManifest(id: string, manifest: StickerPackManifest) {
+    return this.db.set(`stickerPackManifest:${id}`, manifest);
   }
 
   /** Serialized `StorageRecord`s of the storage manifest by base64 storage id, kept to write them back */

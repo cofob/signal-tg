@@ -1,0 +1,14 @@
+# Pure-Rust stand-in for the part of `boring` (BoringSSL bindings) that libsignal's `attest` crate uses.
+# `rust/signal-wasm` patches `boring` with it because BoringSSL does not build for wasm32-unknown-unknown.
+[package]
+name = "boring"
+version = "5.4.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+publish = false
+
+[dependencies]
+asn1 = "0.24.1"
+base64 = "0.22.1"
+p256 = { version = "0.14", default-features = false, features = ["ecdsa"] }
+sha2 = "0.11"

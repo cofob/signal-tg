@@ -147,7 +147,7 @@ const LeftSideMenuItems = ({
       </MenuItem>
       {!areStoriesDisabled && (
         <MenuItem
-          icon="story"
+          icon="play-story"
           onClick={() => openStoryComposer()}
         >
           {lang('StoryNew')}

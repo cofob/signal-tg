@@ -29,6 +29,8 @@ type QrCodeStylingOptions = {
   };
   qrOptions?: {
     errorCorrectionLevel?: string;
+    // Detected from the data when absent; binary data needs `Byte`
+    mode?: 'Numeric' | 'Alphanumeric' | 'Byte' | 'Kanji';
   };
 };
 

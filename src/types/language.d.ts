@@ -138,6 +138,40 @@ export interface LangPair {
   'SignalProxyErrorInvalid': undefined;
   'SignalProxyErrorProtocol': undefined;
   'SignalProxyErrorCredentials': undefined;
+  'SignalProfileAbout': undefined;
+  'SignalProfileAboutHelp': undefined;
+  'SignalProfileRemovePhoto': undefined;
+  'SignalProfileSaveFailed': undefined;
+  'SignalProfileUsernameHelp': undefined;
+  'SignalUsernameSet': undefined;
+  'SignalUsernameNumber': undefined;
+  'SignalUsernameHelp': undefined;
+  'SignalUsernameTaken': undefined;
+  'SignalUsernameExpired': undefined;
+  'SignalUsernameRateLimited': undefined;
+  'SignalUsernameTooShort': undefined;
+  'SignalUsernameTooLong': undefined;
+  'SignalUsernameStartsWithDigit': undefined;
+  'SignalUsernameCharacters': undefined;
+  'SignalUsernameNumberInvalid': undefined;
+  'SignalUsernameFailed': undefined;
+  'SignalUsernameLink': undefined;
+  'SignalUsernameLinkHelp': undefined;
+  'SignalUsernameLinkReset': undefined;
+  'SignalUsernameResetConfirm': undefined;
+  'SignalUsernameLinkResetDone': undefined;
+  'SignalUsernameLinkInvalid': undefined;
+  'SignalUsernameDelete': undefined;
+  'SignalPhoneSharedInfo': undefined;
+  'SignalPhoneHiddenInfo': undefined;
+  'SignalPhoneDiscoverableInfo': undefined;
+  'SignalPhoneUnlistedInfo': undefined;
+  'SettingsKeywordsUsername': undefined;
+  'SafetyNumber': undefined;
+  'SafetyNumberView': undefined;
+  'SafetyNumberMarkVerified': undefined;
+  'SafetyNumberClearVerification': undefined;
+  'SafetyNumberVerified': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -176,10 +210,36 @@ export interface LangPair {
   'SignalCodeErrorNotRequested': undefined;
   'SignalProfileDescription': undefined;
   'SignalRegisterErrorSession': undefined;
-  'SignalRegisterErrorRegLock': undefined;
   'SignalRegisterErrorRejected': undefined;
   'SignalRegisterErrorChallenge': undefined;
   'SignalRegisterErrorNetwork': undefined;
+  'SignalPinTitle': undefined;
+  'SignalPinDescription': undefined;
+  'SignalPinPlaceholder': undefined;
+  'SignalPinErrorRateLimited': undefined;
+  'SignalPinErrorLockedNoTime': undefined;
+  'SignalPinSettings': undefined;
+  'SignalPinAbout': undefined;
+  'SignalPinCreate': undefined;
+  'SignalPinChange': undefined;
+  'SignalPinRemove': undefined;
+  'SignalPinRemoveText': undefined;
+  'SignalPinRegistrationLock': undefined;
+  'SignalPinRegistrationLockAbout': undefined;
+  'SignalPinNew': undefined;
+  'SignalPinNewDescription': undefined;
+  'SignalPinConfirm': undefined;
+  'SignalPinErrorShort': undefined;
+  'SignalPinErrorMismatch': undefined;
+  'SignalPinErrorSave': undefined;
+  'SignalPhoneLookupTitle': undefined;
+  'SignalPhoneLookupConfirm': undefined;
+  'SignalContactDiscovery': undefined;
+  'SignalContactDiscoveryAbout': undefined;
+  'SignalPinErrorUnavailable': undefined;
+  'SignalPinErrorResetFailed': undefined;
+  'ErrorPhoneLookupRateLimited': undefined;
+  'ErrorPhoneLookupUnavailable': undefined;
   'LoginPasskey': undefined;
   'YourName': undefined;
   'LoginRegisterDesc': undefined;
@@ -749,7 +809,6 @@ export interface LangPair {
   'SettingsPerformanceAutoplayGif': undefined;
   'SettingsPerformanceAutoplayVideo': undefined;
   'SettingsPerformanceGranularTitle': undefined;
-  'FavoriteStickers': undefined;
   'GroupStickers': undefined;
   'ErrorSendRestrictedStickersAll': undefined;
   'ErrorPhoneNumberInvalid': undefined;
@@ -1058,8 +1117,7 @@ export interface LangPair {
   'StickerSearchResult': undefined;
   'StickerSearchGlobalResult': undefined;
   'NoStickersFound': undefined;
-  'TrendingStickers': undefined;
-  'TrendingPremiumStickers': undefined;
+  'StickersArtistSeries': undefined;
   'AccDescrCloseTrendingStickers': undefined;
   'SearchGifsTitle': undefined;
   'SharedMedia': undefined;
@@ -2558,6 +2616,7 @@ export interface LangPair {
   'SettingsKeywordsSessions': undefined;
   'SettingsKeywordsDataStorage': undefined;
   'SettingsKeywordsSignalProxy': undefined;
+  'SettingsKeywordsSignalPin': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -2636,6 +2695,30 @@ export interface LangPairWithVariables<V = LangVariable> {
   'LimitReachedCommunitiesPremium': {
     'limit': V;
   };
+  'SignalUsernameDeleteConfirm': {
+    'username': V;
+  };
+  'SafetyNumberHint': {
+    'user': V;
+  };
+  'SafetyNumberUnavailable': {
+    'user': V;
+  };
+  'ActionSafetyChanged': {
+    'user': V;
+  };
+  'ActionSafetyVerified': {
+    'user': V;
+  };
+  'ActionSafetyVerifiedSynced': {
+    'user': V;
+  };
+  'ActionSafetyUnverified': {
+    'user': V;
+  };
+  'ActionSafetyUnverifiedSynced': {
+    'user': V;
+  };
   'MessageRequestBlockTitle': {
     'title': V;
   };
@@ -2650,6 +2733,12 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'SignalCodeCallIn': {
     'time': V;
+  };
+  'SignalPhoneSearch': {
+    'phone': V;
+  };
+  'SignalPhoneLookupText': {
+    'phone': V;
   };
   'SpeakingWithVolume': {
     'volume': V;
@@ -3964,6 +4053,12 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
     'user': V;
     'count': V;
   };
+  'SignalPinErrorIncorrect': {
+    'count': V;
+  };
+  'SignalPinErrorLocked': {
+    'count': V;
+  };
   'Participants': {
     'count': V;
   };
@@ -4409,6 +4504,13 @@ export interface LangKeyGroups {
       | 'UserPlayingGame'
       | 'UserActionRecordRound'
       | 'UserActionUploadRound'
+      | 'SafetyNumberHint'
+      | 'SafetyNumberUnavailable'
+      | 'ActionSafetyChanged'
+      | 'ActionSafetyVerified'
+      | 'ActionSafetyVerifiedSynced'
+      | 'ActionSafetyUnverified'
+      | 'ActionSafetyUnverifiedSynced'
       | 'CallEmojiKeyTooltip'
       | 'ChatListDeleteForEveryone'
       | 'ConversationPinMessagesFor'
@@ -4497,6 +4599,7 @@ export interface LangKeyGroups {
   'username': {
     keys:
       | 'UsernameAvailable'
+      | 'SignalUsernameDeleteConfirm'
       | 'CocoonFeature1Text';
     variables: 'username';
   };
@@ -4564,6 +4667,13 @@ export interface LangKeyGroups {
       | 'UnlockTimerPublicPostsSearch'
       | 'LiveLocationUpdatedYesterdayAt';
     variables: 'time';
+  };
+  'phone': {
+    keys:
+      | 'SignalPhoneSearch'
+      | 'SignalPhoneLookupText'
+      | 'UsernameByPhoneNotFound';
+    variables: 'phone';
   };
   'volume': {
     keys:
@@ -4840,11 +4950,6 @@ export interface LangKeyGroups {
     keys:
       | 'GuardManagedByDescription';
     variables: 'approvalInfo' | 'managedBy';
-  };
-  'phone': {
-    keys:
-      | 'UsernameByPhoneNotFound';
-    variables: 'phone';
   };
   'query': {
     keys:
@@ -5410,6 +5515,8 @@ export interface LangPluralKeyGroups {
   };
   'count': {
     keys:
+      | 'SignalPinErrorIncorrect'
+      | 'SignalPinErrorLocked'
       | 'Participants'
       | 'RequestPeerSelectLimit'
       | 'CreateBotLimitText'

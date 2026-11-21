@@ -1,4 +1,4 @@
-import type { ApiPrivacySettings, ApiUsername } from '../../../api/types';
+import type { ApiPrivacySettings, ApiSignalPinSettings, ApiUsername } from '../../../api/types';
 import type { ThemeKey } from '../../../types';
 import type { ActionReturnType } from '../../types';
 import {
@@ -26,11 +26,14 @@ import { resolveSettingsLink } from '../../../util/settingsLinks';
 import { getChatThemeEntry, RESET_WALLPAPER_SETTINGS } from '../../../util/wallpaper';
 import { callApi } from '../../../api/gramjs';
 import { buildApiInputPrivacyRules } from '../../helpers';
-import { addActionHandler, getGlobal, getPromiseActions, setGlobal } from '../../index';
+import {
+  addActionHandler, getActions, getGlobal, getPromiseActions, setGlobal,
+} from '../../index';
 import {
   addBlockedUser, addNotifyExceptions, deletePeerPhoto,
-  removeBlockedUser, replacePersonalChannelIds, replaceSettings, updateChat,
+  removeBlockedUser, replacePersonalChannelIds, replacePrivacySettings, replaceSettings, updateChat,
   updateNotifyDefaults, updateSharedSettings, updateThemeSettings, updateUser, updateUserFullInfo,
+  updateUsernameEdit,
 } from '../../reducers';
 import { updateTabState } from '../../reducers/tabs';
 import {
@@ -46,14 +49,8 @@ let languageModalRequestId = 0;
 
 addActionHandler('updateProfile', async (global, actions, payload): Promise<void> => {
   const {
-    photo, firstName, lastName, bio: about, username, personalChannelId,
-    tabId = getCurrentTabId(),
+    photo, shouldRemovePhoto, firstName, lastName, bio, tabId = getCurrentTabId(),
   } = payload;
-
-  const { currentUserId } = global;
-  if (!currentUserId) {
-    return;
-  }
 
   global = updateTabState(global, {
     profileEdit: {
@@ -62,74 +59,126 @@ addActionHandler('updateProfile', async (global, actions, payload): Promise<void
   }, tabId);
   setGlobal(global);
 
-  if (photo) {
-    await callApi('uploadProfilePhoto', { photo });
-  }
-
-  if (firstName || lastName || about) {
-    const result = await callApi('updateProfile', { firstName, lastName, about });
-    if (result) {
-      global = getGlobal();
-      const currentUser = currentUserId && selectUser(global, currentUserId);
-
-      if (currentUser) {
-        global = updateUser(
-          global,
-          currentUser.id,
-          {
-            firstName,
-            lastName,
-          },
-        );
-        global = updateUserFullInfo(global, currentUser.id, { bio: about });
-        setGlobal(global);
-      }
-    }
-  }
-
-  if (username !== undefined) {
-    const result = await callApi('updateUsername', username);
-    global = getGlobal();
-    const currentUser = currentUserId && selectUser(global, currentUserId);
-
-    if (result && currentUser) {
-      const shouldUsernameUpdate = currentUser.usernames?.find((u) => u.isEditable);
-      const usernames = shouldUsernameUpdate
-        ? currentUser.usernames?.map((u) => (u.isEditable ? { ...u, username } : u))
-        : [{ username, isEditable: true, isActive: true } as ApiUsername, ...currentUser.usernames || []];
-      global = updateUser(global, currentUserId, { usernames });
-      setGlobal(global);
-    }
-  }
-
-  let isPersonalChannelUpdated = false;
-  if (personalChannelId !== undefined) {
-    global = getGlobal();
-    const personalChannel = personalChannelId ? selectChat(global, personalChannelId)! : undefined;
-    const result = await callApi('updatePersonalChannel', personalChannel);
-    if (result) {
-      global = getGlobal();
-      global = updateUserFullInfo(global, currentUserId, {
-        personalChannelId: personalChannelId || undefined,
-        personalChannelMessageId: undefined,
-      });
-      setGlobal(global);
-
-      isPersonalChannelUpdated = true;
-    }
-  }
+  const result = await callApi('updateOwnProfile', {
+    firstName, lastName, bio, photo: photo?.file, shouldRemovePhoto,
+  });
+  if (!result) actions.showNotification({ message: { key: 'SignalProfileSaveFailed' }, tabId });
 
   global = getGlobal();
   global = updateTabState(global, {
     profileEdit: {
-      progress: ProfileEditProgress.Complete,
+      progress: result ? ProfileEditProgress.Complete : ProfileEditProgress.Idle,
     },
   }, tabId);
   setGlobal(global);
+});
 
-  if (photo || isPersonalChannelUpdated) {
-    actions.loadFullUser({ userId: currentUserId, withPhotos: photo ? true : undefined });
+// Results of earlier reservations that arrive late are dropped, so the screen shows the latest input's
+let usernameReservationRequestId = 0;
+
+addActionHandler('reserveUsername', async (global, actions, payload): Promise<void> => {
+  const { nickname, discriminator, tabId = getCurrentTabId() } = payload;
+  const requestId = ++usernameReservationRequestId;
+
+  global = updateUsernameEdit(global, { reservedUsername: undefined, isReserving: true, error: undefined }, tabId);
+  setGlobal(global);
+
+  const result = await callApi('reserveUsername', { nickname, discriminator });
+  if (requestId !== usernameReservationRequestId) return;
+
+  global = getGlobal();
+  global = updateUsernameEdit(global, {
+    isReserving: undefined,
+    reservedUsername: result && 'username' in result ? result.username : undefined,
+    error: result && 'error' in result ? result.error : undefined,
+  }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('confirmUsername', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const username = selectTabState(global, tabId).usernameEdit?.reservedUsername;
+  if (!username) return;
+
+  global = updateUsernameEdit(global, { isSaving: true }, tabId);
+  setGlobal(global);
+
+  const result = await callApi('confirmUsername', { username });
+  const isSaved = Boolean(result && 'username' in result);
+  const link = isSaved ? await callApi('fetchUsernameLink') : undefined;
+
+  global = getGlobal();
+  global = updateUsernameEdit(global, {
+    isSaving: undefined,
+    reservedUsername: isSaved ? undefined : username,
+    error: result && 'error' in result ? result.error : undefined,
+    link: isSaved ? link : selectTabState(global, tabId).usernameEdit?.link,
+  }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('deleteUsername', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const result = await callApi('deleteUsername');
+  if (!result) {
+    actions.showNotification({ message: { key: 'SignalUsernameFailed' }, tabId });
+    return;
   }
+
+  global = getGlobal();
+  global = updateTabState(global, { usernameEdit: {} }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('loadUsernameLink', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const link = await callApi('fetchUsernameLink');
+
+  global = getGlobal();
+  global = updateUsernameEdit(global, { link }, tabId);
+  setGlobal(global);
+});
+
+addActionHandler('resetUsernameLink', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const link = await callApi('resetUsernameLink');
+  if (!link) {
+    actions.showNotification({ message: { key: 'SignalUsernameFailed' }, tabId });
+    return;
+  }
+
+  global = getGlobal();
+  global = updateUsernameEdit(global, { link }, tabId);
+  setGlobal(global);
+  actions.showNotification({ message: { key: 'SignalUsernameLinkResetDone' }, tabId });
+});
+
+addActionHandler('resetUsernameEdit', (global, actions, payload): ActionReturnType => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const { link } = selectTabState(global, tabId).usernameEdit || {};
+  return updateTabState(global, { usernameEdit: { link } }, tabId);
+});
+
+addActionHandler('loadPhoneNumberPrivacy', async (global): Promise<void> => {
+  const result = await callApi('fetchPhoneNumberPrivacy');
+  if (!result) return;
+
+  global = getGlobal();
+  global = replacePrivacySettings(global, result);
+  setGlobal(global);
+});
+
+addActionHandler('updatePhoneNumberPrivacy', async (global, actions, payload): Promise<void> => {
+  const { isShared, isDiscoverable, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('updatePhoneNumberPrivacy', { isShared, isDiscoverable });
+  if (!result) {
+    actions.showNotification({ message: { key: 'SignalProfileSaveFailed' }, tabId });
+    return;
+  }
+
+  global = getGlobal();
+  global = replacePrivacySettings(global, result);
+  setGlobal(global);
 });
 
 addActionHandler('loadPersonalChannels', async (global): Promise<void> => {
@@ -1043,6 +1092,47 @@ addActionHandler('sortChatUsernames', async (global, actions, payload): Promise<
   }
 });
 
+addActionHandler('loadSignalPinSettings', async (global): Promise<void> => {
+  const signalPin = await callApi('fetchSignalPinSettings');
+  global = getGlobal();
+  global = replaceSettings(global, { signalPin });
+  setGlobal(global);
+});
+
+addActionHandler('setSignalPin', async (global, actions, payload): Promise<void> => {
+  const { pin, tabId = getCurrentTabId() } = payload;
+  await applySignalPinChange(await callApi('setSignalPin', pin), tabId);
+});
+
+addActionHandler('removeSignalPin', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  await applySignalPinChange(await callApi('removeSignalPin'), tabId);
+});
+
+addActionHandler('setSignalRegistrationLock', async (global, actions, payload): Promise<void> => {
+  const { isEnabled, tabId = getCurrentTabId() } = payload;
+  await applySignalPinChange(await callApi('setSignalRegistrationLock', isEnabled), tabId);
+});
+
+addActionHandler('loadSignalContactDiscovery', async (global): Promise<void> => {
+  const isSignalContactDiscoveryEnabled = await callApi('fetchSignalContactDiscovery');
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled });
+  setGlobal(global);
+});
+
+addActionHandler('setSignalContactDiscovery', async (global, actions, payload): Promise<void> => {
+  const { isEnabled, tabId = getCurrentTabId() } = payload;
+  const result = await callApi('setSignalContactDiscovery', isEnabled);
+  if (result === undefined) {
+    actions.showNotification({ message: { key: 'ErrorUnexpected' }, tabId });
+    return;
+  }
+  global = getGlobal();
+  global = replaceSettings(global, { isSignalContactDiscoveryEnabled: result });
+  setGlobal(global);
+});
+
 addActionHandler('loadPasskeys', async (global): Promise<void> => {
   const result = await callApi('fetchPasskeys');
   if (!result) {
@@ -1123,10 +1213,10 @@ addActionHandler('deletePasskey', async (global, actions, payload): Promise<void
 addActionHandler('loadNestedSettingsData', async (global): Promise<void> => {
   const {
     loadPasswordInfo, loadAuthorizations, loadBlockedUsers, loadWebAuthorizations, loadPasskeys, loadDefaultHistoryTtl,
-    loadGlobalPrivacySettings,
+    loadGlobalPrivacySettings, loadSignalPinSettings, loadSignalContactDiscovery,
   } = getPromiseActions();
 
-  const requests = [loadPasswordInfo(), loadAuthorizations()];
+  const requests = [loadPasswordInfo(), loadAuthorizations(), loadSignalPinSettings(), loadSignalContactDiscovery()];
   if (!selectIsCurrentUserFrozen(global)) {
     requests.push(
       loadBlockedUsers(), loadWebAuthorizations(), loadPasskeys(), loadDefaultHistoryTtl(),
@@ -1169,3 +1259,15 @@ addActionHandler('openSettingsLink', async (global, actions, payload): Promise<v
 
   actions.openSettingsScreen({ screen: loadedTarget.screen, highlight: loadedTarget.highlight, tabId });
 });
+
+/** Stores the PIN settings after a change, or reloads them and tells that the change failed */
+async function applySignalPinChange(signalPin: ApiSignalPinSettings | undefined, tabId: number) {
+  if (!signalPin) {
+    getActions().showNotification({ message: { key: 'SignalPinErrorSave' }, tabId });
+    await getPromiseActions().loadSignalPinSettings();
+    return;
+  }
+  let global = getGlobal();
+  global = replaceSettings(global, { signalPin });
+  setGlobal(global);
+}

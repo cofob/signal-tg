@@ -8,6 +8,7 @@ import type { MethodResponse } from '../../gramjs/methods/types';
 import type {
   ApiAttachment,
   ApiChat,
+  ApiContact,
   ApiFormattedText,
   ApiInputRichMessage,
   ApiMessage,
@@ -18,27 +19,37 @@ import type {
   ApiReaction,
   ApiReplyInfo,
   ApiSendMessageAction,
+  ApiSticker,
+  ApiWebPage,
   MediaContent,
 } from '../../types';
 import { ApiMessageEntityTypes, MESSAGE_DELETED } from '../../types';
 
 import { LOCAL_MESSAGES_LIMIT, SEND_MESSAGE_ACTION_INTERVAL } from '../../../config';
 import { LONG_TEXT_CONTENT_TYPE } from '../../../lib/signal/messages/MessageProcessor';
-import { DataMessage_Quote_Type, DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
+import {
+  DataMessage_Contact_Phone_Type, DataMessage_Quote_Type, DataMessageSchema,
+} from '../../../lib/signal/proto/generated/SignalService_pb';
+import { uuidToBytes } from '../../../lib/signal/serviceId';
+import { fetchStickerImage } from '../../../lib/signal/stickers/stickerPacks';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
 import buildUploadingMedia from '../../../util/buildUploadingMedia';
+import { bufferFromHex } from '../../../util/encoding/buffer';
 import { buildCollectionByKey, omit, omitUndefined } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { buildBodyRanges } from '../builders/bodyRanges';
+import { parseAttachmentMediaId } from '../builders/media';
 import {
   buildApiMessageWithPoll, createUserResolver, getIsMessageHidden,
 } from '../builders/messages';
+import { parsePackStickerId, STICKER_SIZE } from '../builders/stickers';
 import { getCurrentAccount } from '../client';
 import { db, logError, processor } from '../engine';
 import { uploadMessageAttachment } from '../media';
 import { getConversationByPeerId, getUserPeerId } from '../peers';
 import { trackLocalMessage } from '../updaters/messages';
 import { sendApiUpdate } from '../updates';
+import { addRecentSticker } from './stickers';
 
 type DataMessageInit = MessageInitShape<typeof DataMessageSchema>;
 type LocalMessage = NonNullable<Awaited<MethodResponse<'sendMessageLocal'>>>;
@@ -46,6 +57,16 @@ type LocalMessage = NonNullable<Awaited<MethodResponse<'sendMessageLocal'>>>;
 type OutgoingTyping = {
   refreshTimer: ReturnType<typeof setInterval>;
   pauseTimer: ReturnType<typeof setTimeout>;
+};
+
+type AttachmentPointerInit = NonNullable<DataMessageInit['attachments']>[number];
+
+/** A photo or video of an album, which the composer sends as one call per item with a shared `groupedId` */
+type AlbumItem = {
+  params: SendMessageParams;
+  localMessage?: ApiMessage;
+  pointer?: AttachmentPointerInit;
+  isSettled?: true;
 };
 
 // Signal Desktop `ts/util/longAttachment.std.ts`: longer bodies travel whole in a text attachment
@@ -61,6 +82,8 @@ const DELETE_ERROR = 'MESSAGE_DELETE_FORBIDDEN';
 
 let localMessageCounter = 0;
 const outgoingTypingByConversationId = new Map<string, OutgoingTyping>();
+// Items of albums being uploaded, by `groupedId`
+const albumItemsByGroupedId = new Map<string, AlbumItem[]>();
 
 /**
  * History pages with the paging of Telegram's `messages.getHistory`: messages before `offsetId`, newest first,
@@ -118,12 +141,12 @@ export async function fetchMessagesById({ chat, messageIds }: { chat: ApiChat; m
 /** Shows the message being sent until the stored message replaces it */
 export function sendMessageLocal(params: SendMessageParams) {
   const {
-    chat, lastMessageId, text, entities, replyInfo, attachment, poll, wasDrafted,
+    chat, lastMessageId, text, entities, replyInfo, attachment, sticker, contact, poll, groupedId, wasDrafted,
   } = params;
   if (!chat) return undefined;
 
   const localPoll: ApiMessagePoll | undefined = poll && { mediaType: 'poll', summary: poll.summary, results: {} };
-  const media = attachment ? buildUploadingMedia(attachment) : {};
+  const media = attachment ? buildUploadingMedia(attachment) : { sticker, contact };
   // The GramJS result type is the literal type of its local message builder, which the app reads as `ApiMessage`
   return showLocalMessage(chat, lastMessageId, {
     ...media,
@@ -132,13 +155,15 @@ export function sendMessageLocal(params: SendMessageParams) {
   }, {
     replyInfo: replyInfo?.type === 'message' ? { type: 'message', replyToMsgId: replyInfo.replyToMsgId } : undefined,
     poll: localPoll,
+    groupedId: getIsAlbumItem(params) ? groupedId : undefined,
     wasDrafted,
   }) as Promise<LocalMessage>;
 }
 
 /**
- * Sends text with formatting and mentions, a reply, one attachment or a poll. Albums go as one message per
- * attachment, and content Signal has no counterpart for fails.
+ * Sends text with formatting and mentions, a reply, an attachment, a sticker, a shared contact or a poll; content
+ * Signal has no counterpart for fails. The photos and videos of an album go as one message with all of them, as Signal
+ * clients send them; other grouped files go one per message.
  */
 export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnProgress) {
   if (params.replyInfo?.type === 'story') {
@@ -146,8 +171,20 @@ export async function sendMessage(params: SendMessageParams, onProgress?: ApiOnP
     return;
   }
 
-  const localMessage = params.localMessage ?? await sendMessageLocal(params);
+  // The composer sends the items of an album one after another, so each joins the album before its upload starts
+  const albumItem = getIsAlbumItem(params) ? joinAlbum(params) : undefined;
+  let localMessage: ApiMessage | undefined;
+  try {
+    localMessage = params.localMessage ?? await sendMessageLocal(params);
+  } finally {
+    // An item without a local message leaves the album, so the others are not held back
+    if (albumItem && !localMessage) await settleAlbumItem(albumItem);
+  }
   if (!localMessage) return;
+  if (albumItem) {
+    await uploadAlbumItem(albumItem, localMessage, onProgress);
+    return;
+  }
 
   const conversation = await getConversationByPeerId(localMessage.chatId);
   if (!conversation) {
@@ -373,6 +410,89 @@ export async function forwardMessages(params: ForwardMessagesParams) {
   });
 }
 
+function getIsAlbumItem({ groupedId, attachment }: SendMessageParams) {
+  if (!groupedId || !attachment) return false;
+  const { photo, video } = buildUploadingMedia(attachment);
+  return Boolean(photo || video);
+}
+
+function joinAlbum(params: SendMessageParams) {
+  const item: AlbumItem = { params };
+  const groupedId = params.groupedId!;
+  albumItemsByGroupedId.set(groupedId, [...albumItemsByGroupedId.get(groupedId) ?? [], item]);
+  return item;
+}
+
+/** Uploads a photo or video of an album; the last upload to finish sends the album */
+async function uploadAlbumItem(item: AlbumItem, localMessage: ApiMessage, onProgress?: ApiOnProgress) {
+  item.localMessage = localMessage;
+  try {
+    item.pointer = await uploadMessageAttachment(item.params.attachment!, onProgress);
+  } catch (err) {
+    if (!onProgress?.isCanceled) markLocalMessageFailed(localMessage, err);
+  }
+  await settleAlbumItem(item);
+}
+
+/** Marks an item uploaded or failed; the last item of an album to settle sends it */
+async function settleAlbumItem(item: AlbumItem) {
+  item.isSettled = true;
+  const groupedId = item.params.groupedId!;
+  const items = albumItemsByGroupedId.get(groupedId)!;
+  if (items.some(({ isSettled }) => !isSettled)) return;
+  albumItemsByGroupedId.delete(groupedId);
+  await sendAlbum(items.filter(({ pointer }) => pointer));
+}
+
+/**
+ * Sends the uploaded items of an album as one message with the caption and reply of its items. The stored message
+ * replaces the first local message, and the other local messages go away.
+ */
+async function sendAlbum(items: AlbumItem[]) {
+  if (!items.length) return;
+  const [first] = items;
+  const localMessages = items.map(({ localMessage }) => localMessage!);
+  const conversation = await getConversationByPeerId(first.localMessage!.chatId);
+  if (!conversation) {
+    localMessages.forEach((localMessage) => markLocalMessageFailed(localMessage));
+    return;
+  }
+  clearOutgoingTyping(conversation.id);
+
+  let isStored = false;
+  try {
+    const caption = items.find(({ params }) => params.text)?.params;
+    const { body, bodyRanges } = caption
+      ? await buildOutgoingBody({ text: caption.text!, entities: caption.entities })
+      : { body: '', bodyRanges: [] };
+    const { body: inlineBody, bodyAttachment } = await prepareLongBody(body);
+    const { replyInfo } = first.params;
+    const attachments = items.map(({ pointer }) => pointer!);
+    if (bodyAttachment) attachments.push(bodyAttachment);
+
+    await processor.sendDataMessage(conversation.id, {
+      body: inlineBody,
+      bodyRanges,
+      attachments,
+      quote: replyInfo?.type === 'message' ? await buildQuote(replyInfo.replyToMsgId) : undefined,
+    }, (stored) => {
+      isStored = true;
+      trackLocalMessage(stored.id, localMessages[0]);
+      if (localMessages.length > 1) {
+        sendApiUpdate({
+          '@type': 'deleteMessages', chatId: localMessages[0].chatId, ids: localMessages.slice(1).map(({ id }) => id),
+        });
+      }
+    });
+  } catch (err) {
+    if (isStored) {
+      logError(err);
+    } else {
+      localMessages.forEach((localMessage) => markLocalMessageFailed(localMessage, err));
+    }
+  }
+}
+
 /**
  * Stores and sends a message in place of a local one; the message updater swaps them once the message is
  * stored, and recipient statuses follow as message updates
@@ -409,12 +529,14 @@ async function sendStoryReply({
 
 async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnProgress): Promise<DataMessageInit> {
   const {
-    text, entities, replyInfo, attachment, poll,
+    text, entities, replyInfo, attachment, sticker, contact, poll,
   } = params;
-  const hasSupportedContent = Boolean(text || attachment || poll);
-  const hasUnsupportedContent = Boolean(params.richMessage || params.sticker || params.gif || params.audio
-    || params.contact || params.story || params.todo || params.dice);
+  const hasSupportedContent = Boolean(text || attachment || sticker || contact || poll);
+  const hasUnsupportedContent = Boolean(params.richMessage || params.gif || params.audio
+    || params.story || params.todo || params.dice);
   if (!hasSupportedContent || hasUnsupportedContent) throw new Error('Signal has no counterpart for this content');
+  if (sticker) return { sticker: await buildOutgoingSticker(sticker, onProgress) };
+  if (contact) return { contact: [await buildOutgoingContact(contact)] };
 
   // A Signal poll has no description
   const { body, bodyRanges } = text && !poll
@@ -435,6 +557,67 @@ async function buildDataMessage(params: SendMessageParams, onProgress?: ApiOnPro
       allowMultiple: poll.summary.isMultipleChoice,
       options: poll.summary.answers.map((answer) => answer.text.text),
     } : undefined,
+  };
+}
+
+/**
+ * A sticker of a pack goes with its pack id and key and the image uploaded as an attachment, as Signal Desktop
+ * `sendStickerMessage` sends it; a received sticker is sent again with its pack and attachment pointer
+ */
+async function buildOutgoingSticker(
+  sticker: ApiSticker, onProgress?: ApiOnProgress,
+): Promise<NonNullable<DataMessageInit['sticker']>> {
+  const packSticker = parsePackStickerId(sticker.id);
+  if (!packSticker) {
+    const parsed = parseAttachmentMediaId(sticker.id);
+    const record = parsed && await db.getMessage(parsed.messageId);
+    const original = record?.dataMessage && fromBinary(DataMessageSchema, record.dataMessage).sticker;
+    if (!original) throw new Error('The sticker has no pack');
+    return original;
+  }
+
+  const { packId, packKey, stickerId } = packSticker;
+  const blob = await fetchStickerImage(packId, packKey, stickerId);
+  const blobUrl = URL.createObjectURL(blob);
+  try {
+    const data = await uploadMessageAttachment({
+      blob,
+      blobUrl,
+      filename: '',
+      mimeType: blob.type,
+      size: blob.size,
+      uniqueId: crypto.randomUUID(),
+      quick: { width: STICKER_SIZE, height: STICKER_SIZE },
+    }, onProgress);
+    await addRecentSticker(packId, stickerId);
+    return {
+      packId: bufferFromHex(packId),
+      packKey: bufferFromHex(packKey),
+      stickerId,
+      emoji: sticker.emoji,
+      data,
+    };
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
+/**
+ * A shared contact with its name, number and, for a Signal user, ACI (Signal Desktop `EmbeddedContact`); a user
+ * without a known number goes by name and ACI
+ */
+async function buildOutgoingContact({
+  firstName, lastName, phoneNumber, userId,
+}: ApiContact): Promise<NonNullable<DataMessageInit['contact']>[number]> {
+  const conversation = await getConversationByPeerId(userId);
+  const aci = conversation?.type === 'private' ? conversation.id : undefined;
+  const number = phoneNumber || conversation?.e164;
+  return {
+    name: { givenName: firstName || undefined, familyName: lastName || undefined },
+    number: number
+      ? [{ value: number.startsWith('+') ? number : `+${number}`, type: DataMessage_Contact_Phone_Type.MOBILE }]
+      : [],
+    aciBinary: aci ? uuidToBytes(aci) : undefined,
   };
 }
 
@@ -497,23 +680,26 @@ async function buildQuote(messageId: number): Promise<MessageInitShape<typeof Da
   };
 }
 
-/** Builds messages of one conversation and sends the users and polls they refer to */
+/** Builds messages of one conversation and sends the users, polls and link previews they refer to */
 async function buildMessages(records: MessageRecord[], conversation: ConversationRecord) {
   const users = createUserResolver();
   const messages: ApiMessage[] = [];
   const polls: ApiMessagePoll[] = [];
+  const webPages: ApiWebPage[] = [];
   for (const record of records) {
-    const { message, poll } = await buildApiMessageWithPoll(record, conversation, users);
+    const { message, poll, webPage } = await buildApiMessageWithPoll(record, conversation, users);
     messages.push(message);
     if (poll) polls.push(poll);
+    if (webPage) webPages.push(webPage);
   }
 
   const apiUsers = await users.buildUsers();
-  if (apiUsers.length || polls.length) {
+  if (apiUsers.length || polls.length || webPages.length) {
     sendApiUpdate({
       '@type': 'updateEntities',
       users: buildCollectionByKey(apiUsers, 'id'),
       polls: polls.length ? polls : undefined,
+      webPages: webPages.length ? webPages : undefined,
     });
   }
   return { messages, users: apiUsers };
@@ -539,7 +725,7 @@ async function showLocalMessage(
   chat: ApiChat,
   lastMessageId: number | undefined,
   content: MediaContent,
-  options: { replyInfo?: ApiReplyInfo; poll?: ApiMessagePoll; wasDrafted?: boolean },
+  options: { replyInfo?: ApiReplyInfo; poll?: ApiMessagePoll; groupedId?: string; wasDrafted?: boolean },
 ) {
   const cleanContent = omitUndefined(content);
   if (cleanContent.text) cleanContent.text.emojiOnlyCount = getEmojiOnlyCountForMessage(cleanContent);
@@ -551,6 +737,8 @@ async function showLocalMessage(
     isOutgoing: true,
     senderId: await getUserPeerId(getCurrentAccount()!.aci),
     replyInfo: options.replyInfo,
+    groupedId: options.groupedId,
+    isInAlbum: options.groupedId ? true : undefined,
     isForwardingAllowed: true,
   };
   sendApiUpdate({

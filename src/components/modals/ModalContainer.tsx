@@ -39,6 +39,7 @@ import MediaAccessModal from './mediaAccess/MediaAccessModal.async';
 import MusicPickerModal from './musicPicker/MusicPickerModal.async';
 import OneTimeMediaModal from './oneTimeMedia/OneTimeMediaModal.async';
 import PasskeyModal from './passkey/PasskeyModal.async';
+import PhoneNumberLookupModal from './phoneNumberLookup/PhoneNumberLookupModal';
 import PollModal from './poll/PollModal.async';
 import PreparedMessageModal from './preparedMessage/PreparedMessageModal.async';
 import ProfileRatingModal from './profileRating/ProfileRatingModal.async';
@@ -49,6 +50,7 @@ import EditRankModal from './rank/EditRankModal.async';
 import RankModal from './rank/RankModal.async';
 import ReportModal from './reportModal/ReportModal.async';
 import RequestPeerModal from './requestPeer/RequestPeerModal.async';
+import SafetyNumberModal from './safetyNumber/SafetyNumberModal.async';
 import SettingsConfirmationModal from './settingsConfirmation/SettingsConfirmationModal.async';
 import SharePreparedMessageModal from './sharePreparedMessage/SharePreparedMessageModal.async';
 import SuggestedPostApprovalModal from './suggestedPostApproval/SuggestedPostApprovalModal.async';
@@ -88,6 +90,7 @@ type ModalKey = keyof Pick<TabState,
   'isAgeVerificationModalOpen' |
   'profileRatingModal' |
   'qrCodeModal' |
+  'safetyNumberModal' |
   'quickPreview' |
   'storyComposerModal' |
   'isAudioPlaylistModalOpen' |
@@ -105,10 +108,12 @@ type ModalKey = keyof Pick<TabState,
   'botCreationModal' |
   'settingsConfirmation' |
   'mediaAccessModal' |
-  'joinGroupCallModal'
+  'joinGroupCallModal' |
+  'phoneNumberLookupModal'
 >;
 type WrappedModalKey = 'pollModal' | 'musicPicker' | 'mapModal' | 'safeLinkModalUrl' | 'autoDeleteTimerModal'
-  | 'botCreationModal' | 'settingsConfirmation' | 'mediaAccessModal' | 'joinGroupCallModal';
+  | 'botCreationModal' | 'settingsConfirmation' | 'mediaAccessModal' | 'joinGroupCallModal'
+  | 'phoneNumberLookupModal';
 type LegacyModalKey = Exclude<ModalKey, WrappedModalKey>;
 
 type ModalStateProps = {
@@ -190,6 +195,7 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   isAgeVerificationModalOpen: AgeVerificationModal,
   profileRatingModal: ProfileRatingModal,
   qrCodeModal: QrCodeModal,
+  safetyNumberModal: SafetyNumberModal,
   quickPreview: QuickPreviewModal,
   storyComposerModal: StoryComposerModal,
   isAudioPlaylistModalOpen: AudioPlaylistModal,
@@ -214,6 +220,7 @@ const WRAPPED_MODALS: WrappedModalRegistry = {
   settingsConfirmation: SettingsConfirmationModal,
   mediaAccessModal: MediaAccessModal,
   joinGroupCallModal: JoinGroupCallModal,
+  phoneNumberLookupModal: PhoneNumberLookupModal,
 };
 
 const LEGACY_MODAL_KEYS = Object.keys(LEGACY_MODALS) as LegacyModalKey[];

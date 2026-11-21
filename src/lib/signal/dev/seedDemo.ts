@@ -6,17 +6,22 @@ import type { ConversationRecord, NewMessageRecord, NewStoryRecord } from '../db
 import type { StoryMessageSchema as StoryMessageSchemaType } from '../proto/generated/SignalService_pb';
 import type SignalStore from '../store/SignalStore';
 
+import { bufferFromHex } from '../../../util/encoding/buffer';
 import { STORY_BACKGROUNDS } from '../../../util/storyBackgrounds';
 import { saveAttachmentBlob } from '../attachments/attachmentCache';
 import { getRandomBytes } from '../crypto';
+import { getKnownStickerPacks } from '../stickers/stickerPacks';
 import { MY_STORY_ID, STORY_LIFETIME_MS } from '../stories/storyLists';
+import { wasm } from '../wasm';
 
 import {
   AttachmentPointerSchema,
   BodyRange_Style,
+  DataMessage_Contact_Phone_Type,
   DataMessageSchema,
   StoryMessageSchema,
   TextAttachment_Style,
+  Verified_State,
 } from '../proto/generated/SignalService_pb';
 
 const MINUTE = 60 * 1000;
@@ -32,6 +37,16 @@ const SUN_CENTER_Y = 0.7 * PHOTO_HEIGHT;
 const STORY_PHOTO_WIDTH = 720;
 const STORY_PHOTO_HEIGHT = 1280;
 const PEAKS = [[0, 0.75], [0.3, 0.4], [0.5, 0.6], [0.75, 0.3], [1, 0.7]];
+const LAKE_TOP = 0.55 * PHOTO_HEIGHT;
+// Zozo the French Bulldog, from Signal's artist series
+const DEMO_STICKER_PACK_INDEX = 2;
+const DEMO_STICKER_ID = 0;
+const STICKER_SIZE = 512;
+const STICKER_MIME_TYPE = 'image/webp';
+const SMILEY_RADIUS = 220;
+const SMILEY_EYE_OFFSET = 70;
+const SMILEY_EYE_RADIUS = 28;
+const SMILEY_MOUTH_RADIUS = 120;
 
 type DemoMessage = Omit<NewMessageRecord, 'conversationId' | 'receivedAt' | 'body' | 'dataMessage' | 'kind'> & {
   kind?: NewMessageRecord['kind'];
@@ -44,8 +59,9 @@ type DemoStory = Omit<NewStoryRecord, 'conversationId' | 'receivedAt' | 'expires
 
 /**
  * Fills the stores with a fake account, contacts, a group, messages and stories, so the UI can be checked without
- * a phone. The account has `isDemo`, so the client never connects, and attachments are either cached
- * locally or marked unavailable, so they are never downloaded; reload the page afterwards.
+ * a phone. The account has `isDemo`, so the client never connects. Attachments, the sticker included, are drawn and
+ * cached locally or marked unavailable, so seeding makes no requests; the sticker's pack downloads only when it is
+ * opened. Reload the page afterwards.
  */
 export async function seedDemo(store: SignalStore, db: MessageDb) {
   await store.clear();
@@ -57,6 +73,13 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     'demo-story-mountains', drawMountains, STORY_PHOTO_WIDTH, STORY_PHOTO_HEIGHT,
   );
   const lakePhoto = await createDemoPhoto('demo-story-lake', drawSunset, STORY_PHOTO_WIDTH, STORY_PHOTO_HEIGHT);
+  const albumPhotos = [
+    await createDemoPhoto('demo-album-trail', drawTrailMap),
+    await createDemoPhoto('demo-album-sunset', drawSunset),
+    await createDemoPhoto('demo-album-lake', drawLake),
+  ];
+  const previewPhoto = await createDemoPhoto('demo-preview', drawLake);
+  const sticker = await createDemoSticker();
 
   const me = crypto.randomUUID();
   const alice = crypto.randomUUID();
@@ -76,6 +99,7 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
     pniRegistrationId: 1,
     profileKey: getRandomBytes(32),
     isReadReceiptsEnabled: true,
+    usernameLink: { entropy: getRandomBytes(32), serverId: crypto.randomUUID() },
     isStoryViewReceiptsEnabled: true,
     isDemo: true,
   });
@@ -91,10 +115,22 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       isBlockList: false,
     },
   ]);
+  // Identity keys give safety numbers; Alice's is verified
+  await store.setItem('aciIdentityKeyPair', generateKeyPair());
+  await store.setIdentity(alice, { publicKey: generateKeyPair().publicKey, verified: Verified_State.VERIFIED });
+  await store.setIdentity(bob, { publicKey: generateKeyPair().publicKey });
 
   const conversations: ConversationRecord[] = [
     {
-      id: me, localId: 1, type: 'private', profileName: 'Demo', profileFamilyName: 'User', unreadCount: 0,
+      id: me,
+      localId: 1,
+      type: 'private',
+      profileName: 'Demo',
+      profileFamilyName: 'User',
+      username: 'demo.01',
+      about: 'Testing TeleSignal',
+      aboutEmoji: '🧪',
+      unreadCount: 0,
     },
     {
       id: alice,
@@ -206,6 +242,10 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       deletedAt: now - 72 * MINUTE,
     }],
     [aliceChat, {
+      kind: 'verifiedChange', authorAci: '', actorAci: alice, sentAt: now - 65 * MINUTE, isOutgoing: false, readAt: now,
+      isVerified: true,
+    }],
+    [aliceChat, {
       kind: 'timerUpdate', authorAci: '', actorAci: me, sentAt: now - 60 * MINUTE, isOutgoing: true, readAt: now,
       expireTimer: 7 * 24 * 60 * 60,
     }],
@@ -230,9 +270,57 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       readAt: now - 44 * MINUTE,
       dataMessage: { isViewOnce: true, attachments: [viewOncePhoto] },
     }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 40 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 39 * MINUTE,
+      dataMessage: { body: 'Photos from our last trip', attachments: albumPhotos },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 38 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 37 * MINUTE,
+      ...sticker,
+    }],
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },
       dataMessage: { body: 'Found you by username 👋' },
+    }],
+    [bobChat, {
+      kind: 'safetyNumberChange',
+      authorAci: '',
+      actorAci: bob,
+      sentAt: now - 295 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+    }],
+    [bobChat, {
+      authorAci: bob,
+      sentAt: now - 295 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      dataMessage: {
+        contact: [{
+          name: { givenName: 'Alice', familyName: 'Johnson' },
+          number: [{ value: '+15550100001', type: DataMessage_Contact_Phone_Type.MOBILE }],
+        }],
+      },
+    }],
+    [bobChat, {
+      authorAci: bob,
+      sentAt: now - 294 * MINUTE,
+      isOutgoing: false,
+      readAt: now,
+      dataMessage: {
+        contact: [{
+          name: { givenName: 'Grace', familyName: 'Hopper' },
+          number: [{ value: '+15550109999', type: DataMessage_Contact_Phone_Type.HOME }],
+          email: [{ value: 'grace@example.com' }],
+          organization: 'Navy',
+        }],
+      },
     }],
     [bobChat, {
       authorAci: bob,
@@ -253,7 +341,22 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       authorAci: carol, sentAt: now - 20 * MINUTE, isOutgoing: false, dataMessage: { body: 'Did you see the photos?' },
     }],
     [carolChat, {
-      authorAci: carol, sentAt: now - 19 * MINUTE, isOutgoing: false, dataMessage: { body: 'Call me when you can' },
+      authorAci: carol,
+      sentAt: now - 19 * MINUTE,
+      isOutgoing: false,
+      dataMessage: {
+        body: 'Trail guide: https://en.wikipedia.org/wiki/Hiking',
+        preview: [{
+          url: 'https://en.wikipedia.org/wiki/Hiking',
+          title: 'Hiking - Wikipedia',
+          description: 'Hiking is a long, vigorous walk, usually on trails or footpaths in the countryside',
+          image: previewPhoto,
+          date: BigInt(now - 3 * 24 * 60 * MINUTE),
+        }],
+      },
+    }],
+    [carolChat, {
+      authorAci: carol, sentAt: now - 18 * MINUTE, isOutgoing: false, dataMessage: { body: 'Call me when you can' },
     }],
     [daveChat, {
       authorAci: dave,
@@ -480,6 +583,34 @@ function createTextAttachment(text: string, backgroundIndex: number, textStyle: 
   };
 }
 
+/**
+ * A sticker drawn here and cached as its attachment, so it shows without a connection. It names a pack of Signal's
+ * artist series, which opens from the sticker.
+ */
+async function createDemoSticker(): Promise<Pick<DemoMessage, 'dataMessage'>> {
+  const { id, key } = getKnownStickerPacks()[DEMO_STICKER_PACK_INDEX];
+  const canvas = new OffscreenCanvas(STICKER_SIZE, STICKER_SIZE);
+  drawSmiley(canvas.getContext('2d')!);
+  const blob = await canvas.convertToBlob({ type: STICKER_MIME_TYPE });
+  const data = create(AttachmentPointerSchema, {
+    attachmentIdentifier: { case: 'cdnKey', value: 'demo-sticker' },
+    cdnNumber: 3,
+    contentType: blob.type,
+    key: getRandomBytes(64),
+    size: blob.size,
+    width: STICKER_SIZE,
+    height: STICKER_SIZE,
+  });
+  await saveAttachmentBlob(data, blob);
+  return {
+    dataMessage: {
+      sticker: {
+        packId: bufferFromHex(id), packKey: bufferFromHex(key), stickerId: DEMO_STICKER_ID, emoji: '😊', data,
+      },
+    },
+  };
+}
+
 /** A photo attachment whose bytes are cached, so it shows without a download */
 async function createDemoPhoto(
   cdnKey: string,
@@ -518,6 +649,33 @@ function drawTrailMap(context: OffscreenCanvasRenderingContext2D) {
   context.stroke();
 }
 
+function drawSmiley(context: OffscreenCanvasRenderingContext2D) {
+  const center = STICKER_SIZE / 2;
+  context.fillStyle = '#ffd56b';
+  context.beginPath();
+  context.arc(center, center, SMILEY_RADIUS, 0, 2 * Math.PI);
+  context.fill();
+  context.fillStyle = '#3b2f2f';
+  for (const eyeX of [center - SMILEY_EYE_OFFSET, center + SMILEY_EYE_OFFSET]) {
+    context.beginPath();
+    context.arc(eyeX, center - SMILEY_EYE_OFFSET, SMILEY_EYE_RADIUS, 0, 2 * Math.PI);
+    context.fill();
+  }
+  context.strokeStyle = '#3b2f2f';
+  context.lineWidth = TRAIL_WIDTH;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.arc(center, center, SMILEY_MOUTH_RADIUS, 0.2 * Math.PI, 0.8 * Math.PI);
+  context.stroke();
+}
+
+function drawLake(context: OffscreenCanvasRenderingContext2D) {
+  context.fillStyle = '#9fd3f0';
+  context.fillRect(0, 0, PHOTO_WIDTH, LAKE_TOP);
+  context.fillStyle = '#2e7fb8';
+  context.fillRect(0, LAKE_TOP, PHOTO_WIDTH, PHOTO_HEIGHT - LAKE_TOP);
+}
+
 function drawSunset(context: OffscreenCanvasRenderingContext2D, width: number, height: number) {
   const gradient = context.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, '#2c3e70');
@@ -544,4 +702,12 @@ function drawMountains(context: OffscreenCanvasRenderingContext2D, width: number
   PEAKS.forEach(([x, y]) => context.lineTo(x * width, y * height));
   context.lineTo(width, height);
   context.fill();
+}
+
+function generateKeyPair() {
+  const privateKey = wasm.PrivateKey_Generate();
+  return {
+    privateKey: wasm.PrivateKey_Serialize(privateKey),
+    publicKey: wasm.PublicKey_Serialize(wasm.PrivateKey_GetPublicKey(privateKey)),
+  };
 }

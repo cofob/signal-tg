@@ -5,13 +5,14 @@ import type { ApiInitialArgs } from '../types';
 import { DEBUG } from '../../config';
 import { linkDevice, unlinkDevice } from '../../lib/signal/account/linkDevice';
 import { startDeviceLink } from '../../lib/signal/account/provisioning';
+import { resetCdsiState } from '../../lib/signal/cdsi/cdsiLookup';
 import { getSignalTunnelUrl, setSignalProxyUrl } from '../../lib/signal/config';
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { pause } from '../../util/schedulers';
-import { buildApiUser } from './builders/users';
+import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
 import {
   client, db, logError, processor, store,
@@ -97,6 +98,7 @@ export async function stopClient(shouldForget: boolean) {
   historyTransferController?.abort();
   processor.stop();
   client.close();
+  resetCdsiState();
   currentAccount = undefined;
   if (shouldForget) {
     await store.clear();
@@ -179,7 +181,7 @@ export async function startSession(storedAccount: AccountRecord) {
   sendApiUpdate({
     '@type': 'updateCurrentUser',
     currentUser: buildApiUser(self, account.aci),
-    currentUserFullInfo: {},
+    currentUserFullInfo: buildApiUserFullInfo(self, account.aci),
   });
   sendApiUpdate({ '@type': 'updateAuthorizationState', authorizationState: 'authorizationStateReady' });
   if (hasHistoryTransferFailed) {
@@ -243,7 +245,7 @@ async function handleRelinkRequested(account: AccountRecord) {
 
 /**
  * Runs once per session after the first connection: the sync requests to the primary device until they
- * succeed once for the account, then our profile and a storage service sync
+ * succeed once for the account, then our profile, a storage service sync and missing or stale contact profiles
  */
 async function syncAfterConnect() {
   if (hasSyncedThisSession) return;
@@ -256,6 +258,7 @@ async function syncAfterConnect() {
   }
   void processor.refreshProfile(context.account.aci).catch(logError);
   await processor.syncStorage();
+  void processor.refreshStaleProfiles().catch(logError);
 }
 
 async function connect() {
