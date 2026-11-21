@@ -1,14 +1,11 @@
 import type {
   ApiAudio,
-  ApiInstantViewPage,
   ApiPageBlock,
   ApiPageBlockAudio,
   ApiPageBlockDocument,
   ApiPageBlockPhoto,
   ApiPageBlockVideo,
 } from '../../api/types';
-
-import { buildCollectionByKey } from '../../util/iteratees';
 
 export type PageBlockWithMedia = ApiPageBlockPhoto | ApiPageBlockVideo | ApiPageBlockAudio | ApiPageBlockDocument;
 
@@ -36,10 +33,4 @@ export function getPageBlocksWithMedia(blocks: ApiPageBlock[]): PageBlockWithMed
 
 export function getPageBlocksAudios(blocks: ApiPageBlock[]): ApiAudio[] {
   return getPageBlocksWithMedia(blocks).flatMap((block) => (block.type === 'audio' ? [block.audio] : []));
-}
-
-export function buildPageAudioById(page: ApiInstantViewPage): Record<string, ApiAudio> | undefined {
-  const audios = getPageBlocksAudios(page.blocks);
-
-  return audios.length ? buildCollectionByKey(audios, 'id') : undefined;
 }

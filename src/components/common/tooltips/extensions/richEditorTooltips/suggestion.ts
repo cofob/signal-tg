@@ -15,16 +15,9 @@ export const PLUGIN_KEYS = {
   customEmoji: new PluginKey('richEditorCustomEmojiSuggestion'),
   mention: new PluginKey('richEditorMentionSuggestion'),
   sticker: new PluginKey('richEditorStickerSuggestion'),
-  command: new PluginKey('richEditorCommandSuggestion'),
-  inlineBot: new PluginKey('richEditorInlineBotSuggestion'),
 };
 
 export type GetTooltipController = () => RichEditorTooltipsController | undefined;
-
-export function parseInlineBotQuery(text?: string) {
-  const match = text?.match(/^@([a-z0-9_]{1,32})[\u00A0\u0020]+(.*)$/is);
-  return match ? { username: match[1], query: match[2] } : undefined;
-}
 
 export function buildSuggestionRenderer(
   surface: RichEditorTooltipSurface,
@@ -65,25 +58,4 @@ export function buildBlockMatch($position: ResolvedPos, text: string, query: str
     query,
     text,
   };
-}
-
-export function getSolePlainTextAtCaret($position: ResolvedPos, allowLeadingMention = false) {
-  if (
-    $position.depth !== 1
-    || !$position.parent.isTextblock
-    || $position.parentOffset !== $position.parent.content.size
-    || $position.node(0).childCount !== 1
-    || hasUnsuitableContext($position)
-  ) {
-    return undefined;
-  }
-
-  let isPlainText = true;
-  $position.parent.forEach((node, offset, index) => {
-    // The mention picker inserts `@username` as a mention node, which still works as an inline bot prefix
-    const isLeadingMention = allowLeadingMention && index === 0
-      && node.type.name === 'mention' && Boolean(node.attrs.username);
-    isPlainText &&= (node.isText || isLeadingMention) && !node.marks.length;
-  });
-  return isPlainText ? $position.parent.textContent : undefined;
 }

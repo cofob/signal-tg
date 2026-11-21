@@ -1,15 +1,13 @@
 import {
-  memo, useLayoutEffect, useMemo, useRef, useSignal, useUnmountCleanup,
+  memo, useLayoutEffect, useRef, useSignal, useUnmountCleanup,
 } from '@teact';
 import { addExtraClass } from '@teact/teact-dom';
 import { withGlobal } from '../../../../global';
 
-import type { ApiPromoData, ApiSession } from '../../../../api/types';
+import type { ApiPromoData } from '../../../../api/types';
 
-import { FRESH_AUTH_PERIOD } from '../../../../config';
 import { selectIsCurrentUserFrozen, selectIsForumPanelOpen } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
-import { getServerTime } from '../../../../util/serverTime';
 import { REM } from '../../../common/helpers/mediaDimensions';
 
 import useAppLayout from '../../../../hooks/useAppLayout';
@@ -22,7 +20,6 @@ import {
 import AudioPlayer from '../../../middle/panes/AudioPlayer';
 import FrozenAccountPane from './FrozenAccountPane';
 import SuggestionPane from './SuggestionPane';
-import UnconfirmedSessionPane from './UnconfirmedSessionPane';
 
 import styles from './ChatListPanes.module.scss';
 
@@ -33,7 +30,6 @@ type OwnProps = {
 };
 
 type StateProps = {
-  sessions: Record<string, ApiSession>;
   promoData?: ApiPromoData;
   isAccountFrozen?: boolean;
   isForumPanelOpen?: boolean;
@@ -45,7 +41,6 @@ const FALLBACK_PANE_STATE = { height: 0 };
 const ChatListPanes = ({
   className,
   noBanners,
-  sessions,
   promoData,
   isAccountFrozen,
   isForumPanelOpen,
@@ -53,7 +48,6 @@ const ChatListPanes = ({
 }: OwnProps & StateProps) => {
   const [getPlayerState, setPlayerState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getFrozenAccountState, setFrozenAccountState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
-  const [getUnconfirmedSessionState, setUnconfirmedSessionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
   const [getSuggestionState, setSuggestionState] = useSignal<PaneState>(FALLBACK_PANE_STATE);
 
   const ref = useRef<HTMLDivElement>();
@@ -69,23 +63,13 @@ const ChatListPanes = ({
   // Cancel any in-flight deferred writes when the component unmounts
   useUnmountCleanup(invalidateVisualToken);
 
-  const unconfirmedSession = useMemo(() => {
-    const sessionsArray = Object.values(sessions || {});
-    const current = sessionsArray.find((session) => session.isCurrent);
-    if (!current || getServerTime() - current.dateCreated < FRESH_AUTH_PERIOD) return undefined;
-
-    return sessionsArray.find((session) => session.isUnconfirmed);
-  }, [sessions]);
-
-  const canShowUnconfirmedSession = !isAccountFrozen && !isForumPanelOpen && unconfirmedSession;
-  const canShowSuggestions = !isAccountFrozen && !isForumPanelOpen && !unconfirmedSession && promoData;
+  const canShowSuggestions = !isAccountFrozen && !isForumPanelOpen && promoData;
 
   useSignalEffect(() => {
     // Keep in sync with the order of the panes in the DOM
     const stateArray = [
       getPlayerState(),
       getFrozenAccountState(),
-      getUnconfirmedSessionState(),
       getSuggestionState(),
     ];
 
@@ -114,7 +98,7 @@ const ChatListPanes = ({
       }
     });
   }, [
-    getPlayerState, getFrozenAccountState, getUnconfirmedSessionState, getSuggestionState,
+    getPlayerState, getFrozenAccountState, getSuggestionState,
   ]);
 
   return (
@@ -141,10 +125,6 @@ const ChatListPanes = ({
             isAccountFrozen={isAccountFrozen}
             onPaneStateChange={setFrozenAccountState}
           />
-          <UnconfirmedSessionPane
-            unconfirmedSession={canShowUnconfirmedSession ? unconfirmedSession : undefined}
-            onPaneStateChange={setUnconfirmedSessionState}
-          />
           <SuggestionPane
             promoData={canShowSuggestions ? promoData : undefined}
             onPaneStateChange={setSuggestionState}
@@ -159,7 +139,6 @@ export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     return {
       isForumPanelOpen: selectIsForumPanelOpen(global),
-      sessions: global.activeSessions.byHash,
       promoData: global.promoData,
       isAccountFrozen: selectIsCurrentUserFrozen(global),
     };

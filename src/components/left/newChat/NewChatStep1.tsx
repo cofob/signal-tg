@@ -1,7 +1,6 @@
 import { memo, useCallback, useMemo } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
-import { isUserBot } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import { selectTabState } from '../../../global/selectors';
 import { unique } from '../../../util/iteratees';
@@ -73,7 +72,7 @@ const NewChatStep1 = ({
       ]).filter((contactId) => {
         const user = usersById[contactId];
 
-        return user && !user.isSelf && (user.canBotBeInvitedToGroup || !isUserBot(user));
+        return user && !user.isSelf;
       }),
       false,
       selectedMemberIds,

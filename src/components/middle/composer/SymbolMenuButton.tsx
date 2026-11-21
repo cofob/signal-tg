@@ -45,11 +45,8 @@ type OwnProps = {
   onGifAddCaption?: (gif: ApiVideo) => void;
   onRemoveSymbol: VoidFunction;
   onEmojiSelect: (emoji: string) => void;
-  closeBotCommandMenu?: VoidFunction;
   closeSendAsMenu?: VoidFunction;
-  onLoad?: NoneToVoidFunction;
   isSymbolMenuForced?: boolean;
-  keyboardSlotElement?: HTMLElement;
   isAttachmentModal?: boolean;
   canSendPlainText?: boolean;
   className?: string;
@@ -69,7 +66,6 @@ const SymbolMenuButton = ({
   isAttachmentModal,
   canSendPlainText,
   isSymbolMenuForced,
-  keyboardSlotElement,
   className,
   forceDarkTheme,
   inputCssSelector = EDITABLE_INPUT_CSS_SELECTOR,
@@ -81,9 +77,7 @@ const SymbolMenuButton = ({
   onGifAddCaption,
   onRemoveSymbol,
   onEmojiSelect,
-  closeBotCommandMenu,
   closeSendAsMenu,
-  onLoad,
 }: OwnProps) => {
   const {
     addRecentEmoji,
@@ -96,11 +90,6 @@ const SymbolMenuButton = ({
   const [contextMenuAnchor, setContextMenuAnchor] = useState<IAnchorPosition | undefined>(undefined);
 
   const lang = useLang();
-
-  const handleSymbolMenuLoad = useLastCallback(() => {
-    onSymbolMenuLoadingComplete();
-    onLoad?.();
-  });
 
   const isMenuOpen = isSymbolMenuOpen || Boolean(isSymbolMenuForced);
   const [handleMouseEnter, handleMouseLeave, markMouseInside] = useMouseInside(
@@ -122,7 +111,6 @@ const SymbolMenuButton = ({
   );
 
   const handleActivateSymbolMenu = useLastCallback(() => {
-    closeBotCommandMenu?.();
     closeSendAsMenu?.();
     openSymbolMenu();
     const triggerEl = triggerRef.current;
@@ -143,7 +131,6 @@ const SymbolMenuButton = ({
 
     messageInput?.blur();
     setTimeout(() => {
-      closeBotCommandMenu?.();
       openSymbolMenu();
     }, MOBILE_KEYBOARD_HIDE_DELAY_MS);
   });
@@ -163,7 +150,7 @@ const SymbolMenuButton = ({
         canSendStickers={canSendStickers}
         isMessageComposer={isMessageComposer}
         idPrefix={idPrefix}
-        onLoad={handleSymbolMenuLoad}
+        onLoad={onSymbolMenuLoadingComplete}
         onClose={closeSymbolMenu}
         onEmojiSelect={onEmojiSelect}
         onStickerSelect={onStickerSelect}
@@ -174,7 +161,6 @@ const SymbolMenuButton = ({
         addRecentEmoji={addRecentEmoji}
         addRecentCustomEmoji={addRecentCustomEmoji}
         isAttachmentModal={isAttachmentModal}
-        keyboardSlotElement={keyboardSlotElement}
         canSendPlainText={canSendPlainText}
         className={buildClassName(className, forceDarkTheme && 'component-theme-dark')}
         anchor={isAttachmentModal ? contextMenuAnchor : undefined}

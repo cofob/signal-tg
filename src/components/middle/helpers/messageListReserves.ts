@@ -14,7 +14,7 @@ const MESSAGE_LIST_COMPOSER_GAP = 0.5 * REM; // Mirrors `--message-list-composer
 const NO_FOOTER_CLASS = 'no-footer';
 const SELECT_MODE_CLASS = 'select-mode-active';
 const BOTTOM_SNAP_CLASS = 'with-bottom-snap';
-export const AT_BOTTOM_THRESHOLD = 4;
+const AT_BOTTOM_THRESHOLD = 4;
 export const AT_TOP_THRESHOLD = 4;
 export const SCROLL_BOTTOM_SENTINEL = 1e7;
 const SCROLL_POSITION_TOLERANCE = 1;
@@ -39,7 +39,7 @@ export function consumePendingTopGrowth(scroller: HTMLElement) {
 function getMessageListBottomReserve(scroller: HTMLElement) {
   const footer = scroller.parentElement?.querySelector<HTMLElement>(':scope > .middle-column-footer');
   if (scroller.classList.contains(SELECT_MODE_CLASS)) {
-    return getSettledBottomReserve() + (footer ? measureBotKeyboardExtraHeight(footer) : 0);
+    return getSettledBottomReserve();
   }
   if (scroller.classList.contains(NO_FOOTER_CLASS)) return 0;
   if (!footer) return 0;
@@ -50,11 +50,6 @@ function getMessageListBottomReserve(scroller: HTMLElement) {
 export function measureFooterContentHeight(footer: HTMLElement) {
   const actionBar = footer.querySelector<HTMLElement>('[data-footer-action-bar]');
   return Math.max(footer.offsetHeight, actionBar?.offsetHeight ?? 0);
-}
-
-function measureBotKeyboardExtraHeight(footer: HTMLElement) {
-  const botKeyboard = footer.querySelector<HTMLElement>('[data-bot-keyboard]');
-  return botKeyboard ? botKeyboard.offsetHeight - parseFloat(getComputedStyle(botKeyboard).minHeight) : 0;
 }
 
 // While armed, the reserve stays latched at the settled value for the whole composer collapse

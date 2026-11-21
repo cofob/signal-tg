@@ -9,7 +9,6 @@ import {
 } from '../../../config';
 import { updateAppBadge } from '../../../util/appBadge';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
-import { toCredentialRequestOptions } from '../../../util/browser/passkeys';
 import {
   IS_WEBAUTHN_SUPPORTED,
   IS_WEBM_SUPPORTED, MAX_BUFFER_SIZE, PLATFORM_ENV,
@@ -162,41 +161,23 @@ addActionHandler('setAuthPassword', (global, actions, payload): ActionReturnType
   });
 });
 
-addActionHandler('loginWithPasskey', async (global, actions, payload): Promise<void> => {
-  const passkeyOption = global.auth.passkeyOption;
-  if (!passkeyOption) return;
-
-  const credential = await navigator.credentials.get(toCredentialRequestOptions(passkeyOption)).catch((e: unknown) => {
-    actions.showNotification({
-      message: {
-        key: 'PasskeyLoginError',
-      },
-      tabId: getCurrentTabId(),
-    });
-  });
-  if (!credential) return;
-
-  const publicKeyCredential = credential as PublicKeyCredential;
-  callApi('restartAuthWithPasskey', publicKeyCredential.toJSON() as AuthenticationResponseJSON);
-});
-
 addActionHandler('uploadProfilePhoto', async (global, actions, payload): Promise<void> => {
   const {
-    photo, isFallback, bot,
+    photo, isFallback,
     tabId = getCurrentTabId(),
   } = payload;
 
   global = updateManagementProgress(global, ManagementProgress.InProgress, tabId);
   setGlobal(global);
 
-  const result = await callApi('uploadProfilePhoto', { photo, isFallback, bot });
+  const result = await callApi('uploadProfilePhoto', { photo, isFallback });
   if (!result) return;
 
   global = getGlobal();
   global = updateManagementProgress(global, ManagementProgress.Complete, tabId);
   setGlobal(global);
 
-  const userId = bot?.id ?? global.currentUserId;
+  const userId = global.currentUserId;
   if (!userId) return;
 
   actions.loadFullUser({ userId });
@@ -279,8 +260,6 @@ addActionHandler('requestChannelDifference', (global, actions, payload): ActionR
 });
 
 addActionHandler('reset', async (global, actions): Promise<void> => {
-  global = { ...global, messageWidgetStorage: {} };
-  setGlobal(global);
   void cacheApi.clear(MEDIA_CACHE_NAME);
   void cacheApi.clear(MEDIA_CACHE_NAME_AVATARS);
   void cacheApi.clear(MEDIA_PROGRESSIVE_CACHE_NAME);

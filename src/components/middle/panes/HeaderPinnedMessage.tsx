@@ -9,7 +9,6 @@ import { MAIN_THREAD_ID } from '../../../api/types';
 import {
   getIsSavedDialog,
   getMessageIsSpoiler,
-  getMessageSingleInlineButton,
 } from '../../../global/helpers';
 import { getPeerTitle } from '../../../global/helpers/peers';
 import {
@@ -20,12 +19,10 @@ import {
   selectForwardedSender,
   selectPinnedIds,
 } from '../../../global/selectors';
-import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
 import buildClassName from '../../../util/buildClassName';
 import cycleRestrict from '../../../util/cycleRestrict';
 import { REM } from '../../common/helpers/mediaDimensions';
 import renderText from '../../common/helpers/renderText';
-import renderKeyboardButtonText from '../composer/helpers/renderKeyboardButtonText';
 
 import useDerivedState from '../../../hooks/useDerivedState';
 import useEnsureMessage from '../../../hooks/useEnsureMessage';
@@ -93,7 +90,7 @@ const HeaderPinnedMessage = ({
   onFocusPinnedMessage,
 }: OwnProps & StateProps) => {
   const {
-    clickBotInlineButton, focusMessage, openThread, pinMessage, loadPinnedMessages,
+    focusMessage, openThread, pinMessage, loadPinnedMessages,
   } = getActions();
   const lang = useLang();
 
@@ -166,16 +163,6 @@ const HeaderPinnedMessage = ({
     pinMessage({ chatId: renderingChatId, messageId: renderingPinnedMessage!.id, isUnpin: true });
   });
 
-  const inlineButton = renderingPinnedMessage && getMessageSingleInlineButton(renderingPinnedMessage);
-
-  const handleInlineButtonClick = useLastCallback(() => {
-    if (inlineButton) {
-      clickBotInlineButton({
-        chatId: renderingPinnedMessage.chatId, messageId: renderingPinnedMessage.id, button: inlineButton,
-      });
-    }
-  });
-
   const handleAllPinnedClick = useLastCallback(() => {
     openThread({ chatId: renderingChatId, threadId: renderingThreadId, type: 'pinned' });
   });
@@ -194,8 +181,6 @@ const HeaderPinnedMessage = ({
       onFocusPinnedMessage(nextMessageId);
     }
   });
-
-  const [noHoverColor, markNoHoverColor, unmarkNoHoverColor] = useFlag();
 
   const { handleClick, handleMouseDown } = useFastClick(handleMessageClick);
 
@@ -251,7 +236,7 @@ const HeaderPinnedMessage = ({
         confirmHandler={handleUnpinMessage}
       />
       <div
-        className={buildClassName(styles.pinnedMessage, noHoverColor && styles.noHover)}
+        className={styles.pinnedMessage}
         onClick={handleClick}
         onMouseDown={handleMouseDown}
         dir={lang.isRtl ? 'rtl' : undefined}
@@ -301,18 +286,6 @@ const HeaderPinnedMessage = ({
           </Transition>
         </div>
         <RippleEffect />
-        {inlineButton && (
-          <Button
-            size="tiny"
-            className={styles.inlineButton}
-            onClick={handleInlineButtonClick}
-            shouldStopPropagation
-            onMouseEnter={!IS_TOUCH_ENV ? markNoHoverColor : undefined}
-            onMouseLeave={!IS_TOUCH_ENV ? unmarkNoHoverColor : undefined}
-          >
-            {renderKeyboardButtonText(lang, inlineButton)}
-          </Button>
-        )}
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import { ManagementScreens, ProfileState, SettingsScreens } from '../../types';
 
 import { ANIMATION_END_DELAY, SAVED_FOLDER_ID } from '../../config';
 import {
-  getCanAddContact, getCanManageTopic, isChatChannel, isUserBot,
+  getCanAddContact, getCanManageTopic, isChatChannel,
 } from '../../global/helpers';
 import {
   selectCanManage,
@@ -64,8 +64,6 @@ type StateProps = {
   isEditingInvite?: boolean;
   currentInviteInfo?: ApiExportedInvite;
   shouldSkipHistoryAnimations?: boolean;
-  isBot?: boolean;
-  canEditBot?: boolean;
   isInsideTopic?: boolean;
   canEditTopic?: boolean;
   isSavedMessages?: boolean;
@@ -130,11 +128,9 @@ const RightHeader = ({
   isEditingInvite,
   currentInviteInfo,
   shouldSkipHistoryAnimations,
-  isBot,
   isInsideTopic,
   canEditTopic,
   isSavedMessages,
-  canEditBot,
   isOwnProfile,
   onClose,
   onScreenSelect,
@@ -283,7 +279,7 @@ const RightHeader = ({
     }
 
     if (userId) {
-      return lang(isBot ? 'BotInfoImageAlt' : 'InfoUserTitle');
+      return lang('InfoUserTitle');
     }
 
     return lang('GroupInfoTitle');
@@ -298,7 +294,7 @@ const RightHeader = ({
       onClick={toggleEditTopic}
       iconName="edit"
     />
-  ) : (canManage || canEditBot) ? (
+  ) : canManage ? (
     <Button
       round
       color="translucent"
@@ -504,10 +500,8 @@ export default withGlobal<OwnProps>(
     const isInsideTopic = chat?.isForum && Boolean(threadId && threadId !== MAIN_THREAD_ID);
     const topic = isInsideTopic ? selectTopic(global, chatId!, threadId!) : undefined;
     const canEditTopic = isInsideTopic && topic && getCanManageTopic(chat, topic);
-    const isBot = user && isUserBot(user);
     const isOwnProfile = tabState.chatInfo?.isOwnProfile;
     const isSavedMessages = chatId && !isOwnProfile ? selectIsChatWithSelf(global, chatId) : undefined;
-    const canEditBot = isBot && user?.canEditBot;
 
     const canAddContact = user && getCanAddContact(user);
     const canManage = Boolean(!isManagement && isProfile && chatId && selectCanManage(global, chatId));
@@ -520,7 +514,6 @@ export default withGlobal<OwnProps>(
       canManage,
       canAddContact,
       isChannel,
-      isBot,
       isInsideTopic,
       canEditTopic,
       userId: user?.id,
@@ -529,7 +522,6 @@ export default withGlobal<OwnProps>(
       currentInviteInfo,
       isSavedMessages,
       shouldSkipHistoryAnimations: tabState.shouldSkipHistoryAnimations,
-      canEditBot,
       isOwnProfile,
     };
   },

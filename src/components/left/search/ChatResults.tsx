@@ -411,7 +411,6 @@ const ChatResults: FC<OwnProps & StateProps> = ({
 
             return (
               <LeftSearchResultChat
-                withOpenAppButton
                 chatId={id}
                 onClick={handleChatClick}
               />

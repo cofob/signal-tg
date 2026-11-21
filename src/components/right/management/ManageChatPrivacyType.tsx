@@ -3,14 +3,14 @@ import {
 } from '../../../lib/teact/teact';
 import { getActions, getGlobal, withGlobal } from '../../../global';
 
-import type { ApiChat, ApiUser } from '../../../api/types';
+import type { ApiChat } from '../../../api/types';
 import { ManagementProgress } from '../../../types';
 
 import { PURCHASE_USERNAME, USERNAME_LINK_PREFIX, USERNAME_PURCHASE_ERROR } from '../../../config';
-import { getMainUsername, isChatChannel, isChatPublic } from '../../../global/helpers';
+import { isChatChannel, isChatPublic } from '../../../global/helpers';
 import {
   selectChat, selectChatFullInfo,
-  selectManagement, selectTabState, selectUser,
+  selectManagement, selectTabState,
 } from '../../../global/selectors';
 import { LIMITS } from '../../../limits';
 
@@ -51,7 +51,6 @@ type StateProps = {
   error?: string;
   isProtected?: boolean;
   isJoinRequest?: boolean;
-  guardBot?: ApiUser;
   invitesCount?: number;
   areInvitesLoaded?: boolean;
   privateInviteLink?: string;
@@ -67,7 +66,6 @@ const ManageChatPrivacyType = ({
   error,
   isProtected,
   isJoinRequest,
-  guardBot,
   invitesCount,
   areInvitesLoaded,
   privateInviteLink,
@@ -171,7 +169,7 @@ const ManageChatPrivacyType = ({
   const commitJoinRequest = useLastCallback((isEnabled: boolean, shouldApplyToInvites: boolean) => {
     setIsJoinRequestEnabled(isEnabled);
     toggleJoinRequest({
-      chatId: chat.id, isEnabled, shouldApplyToInvites, guardBotId: guardBot?.id,
+      chatId: chat.id, isEnabled, shouldApplyToInvites,
     });
   });
 
@@ -213,10 +211,6 @@ const ManageChatPrivacyType = ({
     updatePrivateLink();
   }, [closeRevokeConfirmDialog, updatePrivateLink]);
 
-  const guardBotUsername = guardBot && getMainUsername(guardBot);
-  const guardBotLink = guardBotUsername
-    ? <SafeLink url={`${USERNAME_LINK_PREFIX}${guardBotUsername}`} text={`@${guardBotUsername}`} />
-    : guardBot?.firstName;
   const approvalInfo = lang(getApprovalInfoKey(isChannel, Boolean(isPublic)));
 
   const options = [
@@ -338,12 +332,7 @@ const ManageChatPrivacyType = ({
               />
             </Island>
             <IslandDescription dir={lang.isRtl ? 'rtl' : undefined}>
-              {guardBot
-                ? lang('GuardManagedByDescription', {
-                  approvalInfo,
-                  managedBy: lang('GuardManagedBy', { bot: guardBotLink }, { withNodes: true }),
-                }, { withNodes: true })
-                : approvalInfo}
+              {approvalInfo}
             </IslandDescription>
           </>
         )}
@@ -426,7 +415,6 @@ export default memo(withGlobal<OwnProps>(
     const chat = selectChat(global, chatId)!;
     const { isUsernameAvailable, checkedUsername, error } = selectManagement(global, chatId);
     const fullInfo = selectChatFullInfo(global, chatId);
-    const guardBotId = fullInfo?.guardBotId;
 
     return {
       chat,
@@ -437,7 +425,6 @@ export default memo(withGlobal<OwnProps>(
       checkedUsername,
       isProtected: chat?.isProtected,
       isJoinRequest: chat?.isJoinRequest,
-      guardBot: guardBotId ? selectUser(global, guardBotId) : undefined,
       invitesCount: selectTabState(global).management.byChatId[chatId]?.invites?.length,
       areInvitesLoaded: selectTabState(global).management.byChatId[chatId]?.invites !== undefined,
       privateInviteLink: fullInfo?.inviteLink,

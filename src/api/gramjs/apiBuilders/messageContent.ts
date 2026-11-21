@@ -1,4 +1,3 @@
-import { unzlibSync } from 'fflate';
 import { Api as GramJs } from '../../../lib/gramjs';
 
 import type {
@@ -6,8 +5,6 @@ import type {
   ApiContact,
   ApiDice,
   ApiFormattedText,
-  ApiGame,
-  ApiLocation,
   ApiMessagePoll,
   ApiMessageStoryData,
   ApiMessageWebPage,
@@ -19,16 +16,13 @@ import type {
   ApiSticker,
   ApiVideo,
   ApiVoice,
-  ApiWebDocument,
   ApiWebPage,
   ApiWebPageStickerData,
   ApiWebPageStoryData,
-  ApiWidget,
   MediaContent,
 } from '../../types';
 import type { UniversalMessage } from './messages';
 
-import { buildPageAudioById } from '../../../global/helpers/buildPageAudioById';
 import { addTimestampEntities } from '../../../util/dates/timestamp';
 import { buildCollectionByKey, pick } from '../../../util/iteratees';
 import {
@@ -41,7 +35,6 @@ import {
   buildApiPhoto,
 } from './common';
 import {
-  buildApiInstantViewPage,
   buildApiPageBlock,
   buildApiPageMediaContext,
 } from './instantView';
@@ -55,8 +48,6 @@ import { buildApiPeerId, getApiChatIdFromMtpPeer } from './peers';
 import { buildStickerFromDocument, processStickerResult } from './symbols';
 
 export { buildApiDocument };
-
-const WIDGET_TEXT_DECODER = new TextDecoder('utf-8', { fatal: true });
 
 export function buildMessageContent(
   mtpMessage: UniversalMessage | GramJs.UpdateServiceNotification,
@@ -192,17 +183,8 @@ export function buildMessageMediaContent(
   const pollId = buildPollIdFromMedia(media);
   if (pollId) return { pollId };
 
-  const widget = buildWidgetFromMedia(media);
-  if (widget) return { widget };
-
   const webPage = buildMessageWebPageFromMedia(media);
   if (webPage) return { webPage };
-
-  const location = buildLocationFromMedia(media);
-  if (location) return { location };
-
-  const game = buildGameFromMedia(media);
-  if (game) return { game };
 
   const dice = buildDiceFromMedia(media);
   if (dice) return { dice };
@@ -211,52 +193,6 @@ export function buildMessageMediaContent(
   if (storyData) return { storyData };
 
   return undefined;
-}
-
-function buildWidgetFromMedia(media: GramJs.TypeMessageMedia): ApiWidget | undefined {
-  if (!(media instanceof GramJs.MessageMediaWidget)) {
-    return undefined;
-  }
-
-  return {
-    ...buildApiWidget(media),
-    isCopy: media.isCopy,
-    canQuery: media.canQuery,
-    canBackgroundQuery: media.backgroundQuery,
-  };
-}
-
-export function buildApiWidget(
-  widget: GramJs.MessageMediaWidget | GramJs.BotInlineMessageWidget,
-): ApiWidget {
-  return {
-    mediaType: 'widget',
-    width: widget.width,
-    height: widget.height,
-    html: decodeWidgetHtml(widget.payload),
-    chatData: widget.chatData,
-    publicData: widget.publicData,
-    publicDataHash: widget.publicDataHash?.toString(),
-    widgetId: widget.widgetId?.toString(),
-  };
-}
-
-export function decodeWidgetHtml(payload: Uint8Array): string | undefined {
-  if (!payload.length) {
-    return undefined;
-  }
-
-  try {
-    // The server enforces the size limits and may move them, so the client adds none of its own
-    const bytes = unzlibSync(payload);
-    if (!bytes.length) {
-      return undefined;
-    }
-
-    return WIDGET_TEXT_DECODER.decode(bytes);
-  } catch {
-    return undefined;
-  }
 }
 
 function buildSticker(media: GramJs.TypeMessageMedia): ApiSticker | undefined {
@@ -287,7 +223,7 @@ export function buildVideoFromDocument(document: GramJs.Document, altDocuments?:
   return buildApiVideoFromDocument(document, altDocuments, params);
 }
 
-export function buildAudioFromDocument(document: GramJs.Document): ApiAudio | undefined {
+function buildAudioFromDocument(document: GramJs.Document): ApiAudio | undefined {
   return buildApiAudioFromDocument(document, true);
 }
 
@@ -411,95 +347,6 @@ export function buildWebPagesFromPoll(
   addWebPagesFromPoll(webPages, poll, pollResults);
 
   return webPages.length ? webPages : undefined;
-}
-
-function buildLocationFromMedia(media: GramJs.TypeMessageMedia): ApiLocation | undefined {
-  if (media instanceof GramJs.MessageMediaGeo) {
-    return buildGeo(media);
-  }
-
-  if (media instanceof GramJs.MessageMediaVenue) {
-    return buildVenue(media);
-  }
-
-  if (media instanceof GramJs.MessageMediaGeoLive) {
-    return buildGeoLive(media);
-  }
-
-  return undefined;
-}
-
-function buildGeo(media: GramJs.MessageMediaGeo): ApiLocation | undefined {
-  const point = buildGeoPoint(media.geo);
-  return point && { mediaType: 'geo', geo: point };
-}
-
-function buildVenue(media: GramJs.MessageMediaVenue): ApiLocation | undefined {
-  const {
-    geo, title, provider, address, venueId, venueType,
-  } = media;
-  const point = buildGeoPoint(geo);
-  return point && {
-    mediaType: 'venue',
-    geo: point,
-    title,
-    provider,
-    address,
-    venueId,
-    venueType,
-  };
-}
-
-function buildGeoLive(media: GramJs.MessageMediaGeoLive): ApiLocation | undefined {
-  const { geo, period, heading } = media;
-  const point = buildGeoPoint(geo);
-  return point && {
-    mediaType: 'geoLive',
-    geo: point,
-    period,
-    heading,
-  };
-}
-
-export function buildGeoPoint(geo: GramJs.TypeGeoPoint): ApiLocation['geo'] | undefined {
-  if (geo instanceof GramJs.GeoPointEmpty) return undefined;
-  const {
-    long, lat, accuracyRadius, accessHash,
-  } = geo;
-  return {
-    long,
-    lat,
-    accessHash: accessHash.toString(),
-    accuracyRadius,
-  };
-}
-
-function buildGameFromMedia(media: GramJs.TypeMessageMedia): ApiGame | undefined {
-  if (!(media instanceof GramJs.MessageMediaGame)) {
-    return undefined;
-  }
-
-  return buildGame(media);
-}
-
-function buildGame(media: GramJs.MessageMediaGame): ApiGame | undefined {
-  const {
-    id, accessHash, shortName, title, description, photo: apiPhoto, document: apiDocument,
-  } = media.game;
-
-  const photo = apiPhoto instanceof GramJs.Photo ? buildApiPhoto(apiPhoto) : undefined;
-  const document = apiDocument instanceof GramJs.Document ? buildApiDocument(apiDocument) : undefined;
-
-  return {
-    mediaType: 'game',
-    id: id.toString(),
-    accessHash: accessHash.toString(),
-    shortName,
-    title,
-    description,
-    photo,
-    document,
-  };
 }
 
 function buildDiceFromMedia(media: GramJs.TypeMessageMedia): ApiDice | undefined {
@@ -676,7 +523,7 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
 
   if (webPage instanceof GramJs.WebPage) {
     const {
-      id, photo, document, attributes, cachedPage,
+      id, photo, document, attributes,
     } = webPage;
 
     const video = document instanceof GramJs.Document
@@ -710,9 +557,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       };
     }
 
-    const builtCachedPage = cachedPage instanceof GramJs.Page
-      ? buildApiInstantViewPage(cachedPage, webPage) : undefined;
-
     return {
       mediaType: 'webpage',
       webpageType: 'full',
@@ -734,32 +578,8 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       audio,
       story,
       stickers,
-      cachedPage: builtCachedPage,
-      cachedPageAudioById: builtCachedPage ? buildPageAudioById(builtCachedPage) : undefined,
     };
   }
 
   return undefined;
-}
-
-export function buildApiWebDocument(document?: GramJs.TypeWebDocument): ApiWebDocument | undefined {
-  if (!document) return undefined;
-
-  const {
-    url, size, mimeType,
-  } = document;
-  const accessHash = document instanceof GramJs.WebDocument ? document.accessHash.toString() : undefined;
-  const sizeAttr = document.attributes.find((attr): attr is GramJs.DocumentAttributeImageSize => (
-    attr instanceof GramJs.DocumentAttributeImageSize
-  ));
-  const dimensions = sizeAttr && { width: sizeAttr.w, height: sizeAttr.h };
-
-  return {
-    mediaType: 'webDocument',
-    url,
-    accessHash,
-    size,
-    mimeType,
-    dimensions,
-  };
 }

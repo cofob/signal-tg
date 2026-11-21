@@ -8,7 +8,7 @@ import { ManagementScreens, NewChatMembersProgress } from '../../../types';
 
 import {
   getHasAdminRight, isChatBasicGroup,
-  isChatChannel, isUserBot, isUserRightBanned, sortUserIds,
+  isChatChannel, isUserRightBanned, sortUserIds,
 } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
 import {
@@ -116,8 +116,6 @@ const ManageGroupMembers = ({
   usePeerStoriesPolling(memberIds);
 
   const displayedIds = useMemo(() => {
-    // No need for expensive global updates on users, so we avoid them
-    const usersById = getGlobal().users.byId;
     const shouldUseSearchResults = Boolean(searchQuery);
     const listedIds = !shouldUseSearchResults
       ? memberIds
@@ -128,17 +126,11 @@ const ManageGroupMembers = ({
         ...listedIds,
         ...(relevantFoundIds || []),
       ]).filter((contactId) => {
-        const user = usersById[contactId];
-        if (!user) {
-          return true;
-        }
-
-        return (isChannel || user.canBotBeInvitedToGroup || !isUserBot(user))
-          && (!noAdmins || !adminIds.includes(contactId));
+        return !noAdmins || !adminIds.includes(contactId);
       }),
       true,
     );
-  }, [memberIds, localContactIds, searchQuery, relevantFoundIds, isChannel, noAdmins, adminIds]);
+  }, [memberIds, localContactIds, searchQuery, relevantFoundIds, noAdmins, adminIds]);
 
   const [viewportIds, getMore] = useInfiniteScroll(undefined, displayedIds, Boolean(searchQuery));
 

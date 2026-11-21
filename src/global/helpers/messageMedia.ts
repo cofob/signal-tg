@@ -3,8 +3,6 @@ import type {
   ApiAudio,
   ApiDimensions,
   ApiDocument,
-  ApiGame,
-  ApiLocation,
   ApiMessage,
   ApiMessageSearchType,
   ApiPhoto,
@@ -41,8 +39,6 @@ export type MediaWithThumbs = ApiPhoto | ApiVideo | ApiDocument | ApiSticker;
 export type DownloadableMedia = ApiPhoto | ApiVideo | ApiDocument | ApiSticker | ApiAudio | ApiVoice | ApiWebDocument;
 export type SharedMediaKey = number | string;
 
-const MIN_STATIC_MAP_ZOOM = 13;
-const MAX_STATIC_MAP_ZOOM = 20;
 const FALLBACK_MEDIA_DIMENSIONS: ApiDimensions = { width: 100, height: 100 };
 const RICH_MEDIA_KEY_SEPARATOR = ':';
 const MEDIA_BLOCKS_BY_RICH_MESSAGE = new WeakMap<ApiRichMessage, PageBlockWithMedia[]>();
@@ -63,7 +59,6 @@ export function hasMessageMedia(message: MediaContainer) {
     || getMessageAction(message)
     || getMessageAudio(message)
     || getMessageVoice(message)
-    || message.content.widget
   ));
 }
 
@@ -142,10 +137,6 @@ export function getMessagePollId(message: MediaContainer) {
   return message.content.pollId;
 }
 
-export function getMessageLocation(message: MediaContainer) {
-  return message.content.location;
-}
-
 export function getMessageWebPage(message: MediaContainer) {
   return message.content.webPage;
 }
@@ -198,30 +189,6 @@ export function getMessageIsSpoiler(message: MediaContainer) {
     || getMessageVideo(message);
 
   return Boolean(media?.isSpoiler);
-}
-
-export function buildStaticMapHash(
-  geo: ApiLocation['geo'],
-  width: number,
-  height: number,
-  zoom: number,
-  scale: number,
-) {
-  const {
-    long, lat, accessHash, accuracyRadius,
-  } = geo;
-  const staticMapZoom = Math.min(Math.max(zoom, MIN_STATIC_MAP_ZOOM), MAX_STATIC_MAP_ZOOM);
-
-  const urlParams = new URLSearchParams();
-  urlParams.set('lat', lat.toString());
-  urlParams.set('long', long.toString());
-  urlParams.set('w', width.toString());
-  urlParams.set('h', height.toString());
-  urlParams.set('zoom', staticMapZoom.toString());
-  urlParams.set('scale', scale.toString());
-  if (accuracyRadius) urlParams.set('accuracyRadius', accuracyRadius.toString());
-
-  return `staticMap:${accessHash}?${urlParams.toString()}`;
 }
 
 export function getPhotoMediaHash(photo: ApiPhoto | ApiDocument, target: SizeTarget, isAction?: boolean) {
@@ -374,26 +341,6 @@ export function getMediaHash(media: DownloadableMedia, target: SizeTarget) {
     default:
       return undefined;
   }
-}
-
-export function getGamePreviewPhotoHash(game: ApiGame) {
-  const { photo } = game;
-
-  if (photo) {
-    return `photo${photo.id}?size=x`;
-  }
-
-  return undefined;
-}
-
-export function getGamePreviewVideoHash(game: ApiGame) {
-  const { document } = game;
-
-  if (document) {
-    return `document${document.id}`;
-  }
-
-  return undefined;
 }
 
 export function appendProgressiveQueryParameters(

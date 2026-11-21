@@ -8,7 +8,7 @@ export const MAX_RICH_QUOTE_FRAGMENTS = 32;
 const QUOTABLE_BLOCK_TYPES = new Set<ApiPageBlock['type']>([
   'paragraph', 'heading1', 'heading2', 'heading3', 'heading4', 'heading5', 'heading6', 'footer', 'thinking',
   'preformatted', 'math', 'blockquote', 'blockquoteBlocks', 'pullquote', 'list', 'orderedList', 'table', 'details',
-  'photo', 'video', 'audio', 'map', 'collage', 'slideshow',
+  'photo', 'video', 'audio', 'collage', 'slideshow',
 ]);
 
 export type RichQuoteRange = { first: number; last: number };

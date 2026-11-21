@@ -3,15 +3,10 @@ import { memo, useMemo } from '../../../lib/teact/teact';
 
 import type { ApiKeyboardButton } from '../../../api/types';
 
-import { RE_TG_LINK } from '../../../config';
-import { isButtonUnsupported, isKeyboardButtonUnsupportedForEphemeral } from '../../../global/helpers';
 import buildClassName from '../../../util/buildClassName';
-import renderKeyboardButtonText from '../composer/helpers/renderKeyboardButtonText';
-
-import useLang from '../../../hooks/useLang';
+import renderText from '../../common/helpers/renderText';
 
 import CustomEmoji from '../../common/CustomEmoji';
-import Icon from '../../common/icons/Icon';
 import Button from '../../ui/Button';
 
 import styles from './InlineButtons.module.scss';
@@ -19,53 +14,19 @@ import styles from './InlineButtons.module.scss';
 type OwnProps = {
   className?: string;
   inlineButtons: ApiKeyboardButton[][];
-  isEphemeral?: boolean;
   onClick: (payload: ApiKeyboardButton) => void;
 };
 
 const ICON_SIZE = 16;
 
-const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnProps) => {
-  const lang = useLang();
-
-  const renderIcon = (button: ApiKeyboardButton) => {
-    const { type } = button.action;
-    switch (type) {
-      case 'url': {
-        const { url } = button.action;
-        const isTelegramLink = RE_TG_LINK.test(url);
-
-        if (isTelegramLink && url.includes('?startapp')) {
-          return <Icon className={styles.cornerIcon} name="webapp" />;
-        } else if (!isTelegramLink) {
-          return <Icon className={styles.cornerIcon} name="arrow-right" />;
-        }
-
-        return;
-      }
-      case 'urlAuth':
-        return <Icon className={styles.cornerIcon} name="arrow-right" />;
-      case 'buy':
-        return <Icon className={styles.cornerIcon} name="card" />;
-      case 'switchBotInline':
-        return <Icon className={styles.cornerIcon} name="share-filled" />;
-      case 'webView':
-      case 'simpleWebView':
-        return <Icon className={styles.cornerIcon} name="webapp" />;
-      case 'copy':
-        return <Icon className={styles.cornerIcon} name="copy" />;
-    }
-
-    return;
-  };
-
+const InlineButtons = ({ className, inlineButtons, onClick }: OwnProps) => {
   const buttonTexts = useMemo(() => {
     const texts: TeactNode[][] = [];
     inlineButtons.forEach((row) => {
-      texts.push(row.map((button) => renderKeyboardButtonText(lang, button)));
+      texts.push(row.map((button) => renderText(button.text)));
     });
     return texts;
-  }, [lang, inlineButtons]);
+  }, [inlineButtons]);
 
   return (
     <div className={buildClassName(styles.root, className)}>
@@ -79,11 +40,8 @@ const InlineButtons = ({ className, inlineButtons, isEphemeral, onClick }: OwnPr
               size="tiny"
               ripple
               noForcedUpperCase
-              disabled={isButtonUnsupported(button.action)
-                || (isEphemeral && isKeyboardButtonUnsupportedForEphemeral(button))}
               onClick={() => onClick(button)}
             >
-              {renderIcon(button)}
               <span className={styles.inlineButtonText}>
                 {button.style?.iconId && (
                   <CustomEmoji

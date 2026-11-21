@@ -419,7 +419,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
           ...global.chatFolders,
           byId: newChatFoldersById,
           orderedIds: newOrderedIds,
-          invites: omit(global.chatFolders.invites, [id]),
         },
       };
     }

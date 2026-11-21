@@ -56,10 +56,6 @@ if (typeof self !== 'undefined') {
   onFullyIdle(initializeScriptPatternCache);
 }
 
-function normalizeProtocol(protocol: string) {
-  return protocol.replace(/:$/, '').trim().toLowerCase();
-}
-
 export function ensureProtocol(url: string) {
   try {
     const parsedUrl = new URL(url);
@@ -219,18 +215,4 @@ function buildIncompatibleScriptPattern(scripts: readonly Script[]) {
 
   // The unanchored lookaheads find any significant character outside the compatible scripts
   return new RegExp(`(?=${LETTER_OR_MARK_SOURCE})(?!${SCRIPT_NEUTRAL_SOURCE})(?!${scriptSource})`, 'u');
-}
-
-export function isValidProtocol(url: string, allowedProtocols: string[]) {
-  if (typeof url !== 'string') {
-    return false;
-  }
-
-  try {
-    const parsedUrl = new URL(url);
-
-    return allowedProtocols.includes(normalizeProtocol(parsedUrl.protocol));
-  } catch (err) {
-    return false;
-  }
 }

@@ -13,7 +13,7 @@ import { getNestedRichText, getRichTextPlainText } from '../../global/helpers/ri
 import buildClassName from '../../util/buildClassName';
 import { getRichQuoteText } from '../../util/text/richQuote';
 import renderText from '../common/helpers/renderText';
-import { handleBotCommandClick, handleHashtagClick } from '../common/helpers/renderTextWithEntities';
+import { handleHashtagClick } from '../common/helpers/renderTextWithEntities';
 
 import CustomEmoji from '../common/CustomEmoji';
 import FormattedDate from '../common/FormattedDate';
@@ -132,8 +132,6 @@ const RichText = ({
           chatId={chatId}
           messageId={messageId}
           threadId={threadId}
-          previewId={text.webPageId}
-          tryInstantView
           entityType={ApiMessageEntityTypes.TextUrl}
         >
           {renderLinkText()}
@@ -240,17 +238,6 @@ const RichText = ({
         </a>
       );
     }
-    case 'botCommand':
-      if (!chatId) return renderNestedText();
-      return (
-        <a
-          onClick={(e) => handleBotCommandClick(e, chatId, threadId, messageId)}
-          className="text-entity-link"
-          dir="auto"
-        >
-          {renderNestedText()}
-        </a>
-      );
     case 'bankCard':
       return renderNestedText();
     case 'math':

@@ -20,7 +20,6 @@ export function buildContentClassName(
     hasBottomCommentButton,
     hasActionButton,
     hasReactions,
-    isGeoLiveActive,
     peerColorClass,
     hasOutsideReactions,
   }: {
@@ -36,7 +35,6 @@ export function buildContentClassName(
     hasBottomCommentButton?: boolean;
     hasActionButton?: boolean;
     hasReactions?: boolean;
-    isGeoLiveActive?: boolean;
     peerColorClass?: string;
     hasOutsideReactions?: boolean;
   } = {},
@@ -44,8 +42,8 @@ export function buildContentClassName(
   const content = getMessageContent(message);
   const {
     photo, video,
-    audio, voice, document, contact, location, storyData,
-    richMessage, widget,
+    audio, voice, document, contact, storyData,
+    richMessage,
   } = content;
   const hasRichMessageAudio = Boolean(richMessage && getRichMessageAudios(richMessage).ids.length);
   const text = album?.hasMultipleCaptions ? undefined : getMessageContent(album?.captionMessage || message).text;
@@ -57,12 +55,9 @@ export function buildContentClassName(
 
   const classNames = [MESSAGE_CONTENT_CLASS_NAME];
   const pollMedia = poll?.attachedMedia;
-  const isMedia = storyData || photo || video || location
-    || pollMedia?.photo || pollMedia?.video || pollMedia?.location;
-  const hasText = text || location?.mediaType === 'venue' || isGeoLiveActive || hasFactCheck || poll;
+  const isMedia = storyData || photo || video || pollMedia?.photo || pollMedia?.video;
+  const hasText = text || hasFactCheck || poll;
   const isMediaWithNoText = isMedia && !hasText;
-  const hasInlineKeyboard = Boolean(message.inlineButtons);
-  const isViaBot = Boolean(message.viaBotId || message.guestChatViaId);
 
   const hasFooter = (() => {
     if (isInvertedMedia && isInvertibleMedia) {
@@ -78,7 +73,7 @@ export function buildContentClassName(
     classNames.push(peerColorClass);
   }
 
-  if (!isMedia && !widget && text?.emojiOnlyCount) {
+  if (!isMedia && text?.emojiOnlyCount) {
     classNames.push('emoji-only');
     if (text.emojiOnlyCount <= EMOJI_SIZES) {
       classNames.push(`emoji-only-${text.emojiOnlyCount}`);
@@ -140,10 +135,6 @@ export function buildContentClassName(
     classNames.push('poll');
   }
 
-  if (widget) {
-    classNames.push('has-widget');
-  }
-
   if (storyData) {
     classNames.push('story');
   }
@@ -168,10 +159,6 @@ export function buildContentClassName(
     classNames.push('has-outside-reactions');
   }
 
-  if (isViaBot) {
-    classNames.push('is-via-bot');
-  }
-
   if (forceSenderName) {
     classNames.push('force-sender-name');
   }
@@ -183,7 +170,7 @@ export function buildContentClassName(
       classNames.push('has-background');
     }
 
-    if (hasSubheader || asForwarded || isViaBot || !isMediaWithNoText
+    if (hasSubheader || asForwarded || !isMediaWithNoText
       || forceSenderName || hasFactCheck) {
       classNames.push('has-solid-background');
     }
@@ -192,7 +179,7 @@ export function buildContentClassName(
       classNames.push('has-fact-check');
     }
 
-    if (isLastInGroup && !hasInlineKeyboard && !widget
+    if (isLastInGroup
       && (photo || !isMediaWithNoText || hasBottomCommentButton)) {
       classNames.push('has-appendix');
     }

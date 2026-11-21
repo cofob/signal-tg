@@ -19,14 +19,12 @@ import {
   isOwnMessage,
   isServiceNotificationMessage,
 } from '../../global/helpers';
-import { getMessageForumTopicId, isMessageInForumTopic } from '../../global/helpers/replies';
+import { getMessageForumTopicId } from '../../global/helpers/replies';
 import buildClassName from '../../util/buildClassName';
-import { isUserId } from '../../util/entities/ids';
 import { compact } from '../../util/iteratees';
 import { formatCalendarDate, formatMessageListDate } from '../../util/localization/dateFormat';
 import { isAlbum, isDocumentGroup } from './helpers/groupMessages';
 import { consumePendingTopGrowth } from './helpers/messageListReserves';
-import { consumeMessageWidgetResize } from './helpers/messageWidgetResize';
 import { preventMessageInputBlur } from './helpers/preventMessageInputBlur';
 
 import useDerivedSignal from '../../hooks/useDerivedSignal';
@@ -36,15 +34,12 @@ import useResizeObserver from '../../hooks/useResizeObserver';
 import useMessageObservers from './hooks/useMessageObservers';
 import useScrollHooks from './hooks/useScrollHooks';
 
-import Icon from '../common/icons/Icon';
 import ActionMessage from './message/ActionMessage';
 import Message from './message/Message';
 import SenderGroupContainer from './message/SenderGroupContainer';
 import TopicSeparator from './message/TopicSeparator';
 import MessageListAccountInfo from './MessageListAccountInfo';
 import MessageListBottomMarker from './MessageListBottomMarker';
-
-import actionMessageStyles from './message/ActionMessage.module.scss';
 
 interface OwnProps {
   chatId: string;
@@ -58,9 +53,7 @@ interface OwnProps {
   withUsers: boolean;
   isChannelChat: boolean | undefined;
   isChatMonoforum?: boolean;
-  canManageBotForumTopics?: boolean;
   withTopicSeparators?: boolean;
-  isBotForum?: boolean;
   isEmptyThread?: boolean;
   isComments?: boolean;
   noAvatars: boolean;
@@ -103,8 +96,8 @@ type TopicSection = {
   children: TeactNode[];
 };
 
-function getSectionTopicId(message: ApiMessage, currentTopicId: number | undefined, isBotForum?: boolean) {
-  return isBotForum && !isMessageInForumTopic(message) ? currentTopicId : getMessageForumTopicId(message);
+function getSectionTopicId(message: ApiMessage) {
+  return getMessageForumTopicId(message);
 }
 
 function getSenderGroupFirstMessage(senderGroup: (ApiMessage | IAlbum | IDocumentGroup)[]) {
@@ -143,9 +136,7 @@ const MessageListContent = ({
   withUsers,
   isChannelChat,
   isChatMonoforum,
-  canManageBotForumTopics,
   withTopicSeparators,
-  isBotForum,
   noAvatars,
   containerRef,
   bubbleCanvasRef,
@@ -186,13 +177,12 @@ const MessageListContent = ({
     const newHeight = entry.contentRect.height;
     const prevHeight = prevContentHeightRef.current;
     prevContentHeightRef.current = newHeight;
-    const widgetGrowth = consumeMessageWidgetResize(entry.target);
     if (prevHeight === undefined) {
       consumePendingTopGrowth(entry.target.closest<HTMLElement>('.MessageList')!);
       return;
     }
 
-    const growth = newHeight - prevHeight - widgetGrowth;
+    const growth = newHeight - prevHeight;
     onContentResize?.(growth);
   });
 
@@ -202,7 +192,6 @@ const MessageListContent = ({
   const getIsReady = useDerivedSignal(() => isReady && !getIsHeavyAnimating2(), [isReady, getIsHeavyAnimating2]);
 
   const areDatesClickable = !isSavedDialog && !isSchedule;
-  const isPrivate = isUserId(chatId);
   const shouldHideComments = hasLinkedChat === false || !isChannelChat || Boolean(isChatMonoforum);
 
   const {
@@ -244,20 +233,6 @@ const MessageListContent = ({
       <span>{lang('UnreadMessages')}</span>
     </div>
   );
-
-  const renderBotForumTopicAction = () => {
-    if (!canManageBotForumTopics || threadId !== MAIN_THREAD_ID) return undefined;
-    return (
-      <div className={buildClassName('local-action-message', actionMessageStyles.root)} key="botforum-new-topic">
-        <div className={actionMessageStyles.contentBox}>
-          <Icon className={actionMessageStyles.botForumTopicIcon} name="topic-new" />
-          <h3 className={actionMessageStyles.botForumTopicTitle}>{lang('BotForumActionNew')}</h3>
-          <span className={actionMessageStyles.botForumTopicDescription}>{lang('BotForumActionNewDescription')}</span>
-          <Icon className={actionMessageStyles.botForumTopicArrow} name="down" />
-        </div>
-      </div>
-    );
-  };
 
   const messageCountToAnimate = noAppearanceAnimation ? 0 : messageGroups.reduce((acc, messageGroup) => {
     return acc + messageGroup.senderGroups.flat().reduce((innerAcc, messageOrAlbum) => {
@@ -330,7 +305,6 @@ const MessageListContent = ({
           const isInLiveTail = liveTailStartOriginalId !== undefined && originalId >= liveTailStartOriginalId;
           const key = isServiceNotificationMessage(message)
             ? `${message.date}_${originalId}` : originalId;
-          const shouldShowGuestAvatar = isPrivate && !withUsers && Boolean(message.guestChatViaId);
           const isJustAdded = addedMessageIdSet?.has(message.id)
             || Boolean(album?.messages.some(({ id }) => addedMessageIdSet?.has(id)));
 
@@ -345,10 +319,10 @@ const MessageListContent = ({
               observeIntersectionForPlaying={observeIntersectionForPlaying}
               album={album}
               documentGroup={documentGroup}
-              noAvatars={noAvatars && !shouldShowGuestAvatar}
-              withAvatar={position.isLastInGroup && (withUsers || shouldShowGuestAvatar)
+              noAvatars={noAvatars}
+              withAvatar={position.isLastInGroup && withUsers
                 && !isOwn && (!isThreadTopMessage || !isComments)}
-              withSenderName={position.isFirstInGroup && (withUsers || shouldShowGuestAvatar) && !isOwn}
+              withSenderName={position.isFirstInGroup && withUsers && !isOwn}
               threadId={threadId}
               messageListType={type}
               noComments={shouldHideComments}
@@ -449,14 +423,13 @@ const MessageListContent = ({
       const isThreadTopMessage = lastMessage.id === threadId
         || (firstMessage.id === threadId && Boolean(firstMessage.groupedId));
 
-      const shouldShowGuestAvatar = isPrivate && !withUsers && Boolean(lastMessage.guestChatViaId);
-      if (!withUsers && !shouldShowGuestAvatar) return senderGroupElements;
+      if (!withUsers) return senderGroupElements;
 
       const key = `${firstMessageId}-${lastMessageId}`;
       const id = (firstMessageId === lastMessageId) ? `message-group-${firstMessageId}`
         : `message-group-${firstMessageId}-${lastMessageId}`;
 
-      const withAvatar = (withUsers || shouldShowGuestAvatar) && !isOwn && (!isThreadTopMessage || !isComments);
+      const withAvatar = withUsers && !isOwn && (!isThreadTopMessage || !isComments);
       return compact([
         <SenderGroupContainer
           key={key}
@@ -584,9 +557,7 @@ const MessageListContent = ({
       }
 
       const prevTopicId = currentTopicId;
-      const topicId = getSectionTopicId(
-        getSenderGroupFirstMessage(dateGroup.senderGroups[senderGroupIndex]), currentTopicId, isBotForum,
-      );
+      const topicId = getSectionTopicId(getSenderGroupFirstMessage(dateGroup.senderGroups[senderGroupIndex]));
       currentTopicId = topicId;
       if (topicId === undefined) {
         target.push(...senderGroupElements);
@@ -617,9 +588,7 @@ const MessageListContent = ({
     const lastSection = topicSections[topicSections.length - 1];
     const nextDateGroup = dateGroupsArray[dateGroupIndex + 1];
     if (lastSection && nextDateGroup) {
-      const nextTopicId = getSectionTopicId(
-        getSenderGroupFirstMessage(nextDateGroup.senderGroups[0]), currentTopicId, isBotForum,
-      );
+      const nextTopicId = getSectionTopicId(getSenderGroupFirstMessage(nextDateGroup.senderGroups[0]));
       lastSection.isBeforeDate = true;
       lastSection.isBeforeContinuation = nextTopicId === lastSection.topicId;
     }
@@ -656,14 +625,13 @@ const MessageListContent = ({
       )}
       {withHistoryTriggers && <div ref={backwardsTriggerRef} key="backwards-trigger" className="backwards-trigger" />}
       {shouldRenderAccountInfo
-        && <MessageListAccountInfo key={`account_info_${chatId}`} chatId={chatId} hasMessages />}
+        && <MessageListAccountInfo key={`account_info_${chatId}`} chatId={chatId} />}
       {dateGroups}
       {Boolean(liveTailDateGroups.length) && (
         <div className="live-tail" key="live-tail" teactFastList>
           {liveTailDateGroups}
         </div>
       )}
-      {isViewportNewest && renderBotForumTopicAction()}
       {withHistoryTriggers && (
         <div
           ref={forwardsTriggerRef}

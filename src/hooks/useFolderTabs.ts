@@ -1,11 +1,10 @@
 import { type TeactNode, useMemo } from '../lib/teact/teact';
-import { getActions, getGlobal } from '../global';
+import { getActions } from '../global';
 
 import type { MenuItemContextAction } from '../components/ui/ListItem';
 import type { TabWithProperties } from '../components/ui/SquareTabList';
 import {
   type ApiChatFolder,
-  type ApiChatlistExportedInvite,
   type ApiMessageEntity,
   type ApiMessageEntityCustomEmoji,
   ApiMessageEntityTypes,
@@ -13,10 +12,9 @@ import {
 import { SettingsScreens } from '../types';
 
 import { ALL_FOLDER_ID } from '../config';
-import { selectCanShareFolder } from '../global/selectors';
 import { MEMO_EMPTY_ARRAY } from '../util/memo';
 import { renderTextWithEntities } from '../components/common/helpers/renderTextWithEntities';
-import { LIMITS, MAX_FOLDERS } from '../limits';
+import { MAX_FOLDERS } from '../limits';
 import useAppLayout from './useAppLayout';
 import { useFolderManagerForUnreadChatsByFolder, useFolderManagerForUnreadCounters } from './useFolderManager';
 import useLang from './useLang';
@@ -34,12 +32,8 @@ type Params = {
   orderedFolderIds?: number[];
   chatFoldersById: Record<number, ApiChatFolder>;
   noEmoticons?: boolean;
-} & ({
-  isReadOnly?: false;
-  folderInvitesById: Record<number, ApiChatlistExportedInvite[]>;
-} | {
-  isReadOnly: true;
-});
+  isReadOnly?: boolean;
+};
 
 const useFolderTabs = (params: Params) => {
   const {
@@ -50,16 +44,12 @@ const useFolderTabs = (params: Params) => {
     isReadOnly,
   } = params;
 
-  const { folderInvitesById } = !isReadOnly ? params : {};
-
   const lang = useLang();
   const { isMobile } = useAppLayout();
 
   const {
-    openShareChatFolderModal,
     openDeleteChatFolderModal,
     openEditChatFolder,
-    openLimitReachedModal,
     markChatMessagesRead,
     openSettingsScreen,
     setSharedSettingOption,
@@ -106,38 +96,9 @@ const useFolderTabs = (params: Params) => {
     return displayedFolders.map((folder, i) => {
       const { id, title } = folder;
       const isBlocked = id !== ALL_FOLDER_ID && i > MAX_FOLDERS - 1;
-      const canShareFolder = selectCanShareFolder(getGlobal(), id);
       const contextActions: MenuItemContextAction[] = [];
 
       if (!isReadOnly) {
-        if (canShareFolder) {
-          contextActions.push({
-            title: lang('FilterShare'),
-            icon: 'link',
-            handler: () => {
-              const chatListCount = Object.values(chatFoldersById)
-                .reduce((acc, el) => acc + (el.isChatList ? 1 : 0), 0);
-              if (chatListCount >= LIMITS.chatlistJoined && !folder.isChatList) {
-                openLimitReachedModal({
-                  limit: 'chatlistJoined',
-                });
-                return;
-              }
-
-              if (folderInvitesById![id]?.length >= LIMITS.chatlistInvites) {
-                openLimitReachedModal({
-                  limit: 'chatlistInvites',
-                });
-                return;
-              }
-
-              openShareChatFolderModal({
-                folderId: id,
-              });
-            },
-          });
-        }
-
         if (id === ALL_FOLDER_ID) {
           contextActions.push({
             title: lang('FilterEditFolders'),
@@ -235,7 +196,7 @@ const useFolderTabs = (params: Params) => {
       } satisfies TabWithProperties;
     });
   }, [
-    displayedFolders, folderCountersById, lang, chatFoldersById, folderInvitesById,
+    displayedFolders, folderCountersById, lang,
     folderUnreadChatsCountersById, isReadOnly, sidebarMode, isMobile, noEmoticons,
   ]);
 

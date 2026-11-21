@@ -7,8 +7,6 @@ import type { SettingsConfirmation } from '../../../types';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import SignOutDialog from './SignOutDialog';
-import TerminateAllSessionsDialog from './TerminateAllSessionsDialog';
-import TerminateAllWebSessionsDialog from './TerminateAllWebSessionsDialog';
 
 export type OwnProps = {
   modal: NonNullable<TabState['settingsConfirmation']>;
@@ -17,8 +15,6 @@ export type OwnProps = {
 
 const DIALOGS = {
   logOut: SignOutDialog,
-  terminateAllSessions: TerminateAllSessionsDialog,
-  terminateAllWebSessions: TerminateAllWebSessionsDialog,
 } satisfies Record<SettingsConfirmation, unknown>;
 
 const SettingsConfirmationModal = ({ modal, isOpen }: OwnProps) => {

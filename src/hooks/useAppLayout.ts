@@ -29,10 +29,6 @@ export function getIsTablet() {
   return isTablet;
 }
 
-export function getIsWebAppsFullscreenSupported() {
-  return !getIsMobile();
-}
-
 function handleMediaQueryChange() {
   isMobile = mediaQueryCache.get('mobile')?.matches || false;
   isTablet = !isMobile && (mediaQueryCache.get('tablet')?.matches || false);

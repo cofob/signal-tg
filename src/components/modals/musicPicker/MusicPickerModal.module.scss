@@ -1,18 +1,11 @@
 .dialog {
   --music-picker-title-height: 3.5rem;
-  --music-picker-search-height: 3.25rem;
 }
 
 .content {
-  --modal-header-height: calc(var(--music-picker-title-height) + var(--music-picker-search-height));
+  --modal-header-height: var(--music-picker-title-height);
 
   height: var(--modal-max-height);
-}
-
-.search {
-  box-sizing: border-box;
-  height: var(--music-picker-search-height);
-  padding: 0 0.75rem 0.75rem;
 }
 
 .island {

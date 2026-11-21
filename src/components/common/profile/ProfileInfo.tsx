@@ -15,9 +15,9 @@ import type {
 import type { AnimationLevel, ThemeKey } from '../../../types/index';
 import { MediaViewerOrigin } from '../../../types/index';
 
-import { SERVICE_NOTIFICATIONS_USER_ID } from '../../../config.ts';
+import { REPLIES_USER_ID, SERVICE_NOTIFICATIONS_USER_ID } from '../../../config';
 import {
-  getUserStatus, isAnonymousForwardsChat, isChatChannel, isSystemBot, isUserOnline,
+  getUserStatus, isAnonymousForwardsChat, isChatChannel, isUserOnline,
 } from '../../../global/helpers/index';
 import { getActions, withGlobal } from '../../../global/index';
 import {
@@ -334,8 +334,7 @@ const ProfileInfo = ({
 
   function renderStatus() {
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
-    const isSystemBotChat = isSystemBot(peerId);
-    if (isAnonymousForwards || isSystemBotChat) return undefined;
+    if (isAnonymousForwards || peerId === REPLIES_USER_ID) return undefined;
 
     if (isForMonoforum) {
       return (
@@ -554,7 +553,8 @@ export default memo(withGlobal<OwnProps>(
     const hasAvatar = Boolean(peer?.avatarPhotoId);
 
     const isAnonymousForwards = isAnonymousForwardsChat(peerId);
-    const isSystemAccount = isSystemBot(peerId) || isAnonymousForwards || peer?.id === SERVICE_NOTIFICATIONS_USER_ID;
+    const isSystemAccount = peerId === REPLIES_USER_ID || isAnonymousForwards
+      || peer?.id === SERVICE_NOTIFICATIONS_USER_ID;
 
     return {
       user,

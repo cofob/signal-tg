@@ -3,7 +3,6 @@ import { Api as GramJs } from '../../../lib/gramjs';
 import type {
   ApiAudio,
   ApiBirthday,
-  ApiBotApp,
   ApiChatAdminRights,
   ApiChatBannedRights,
   ApiChatFolder,
@@ -14,7 +13,6 @@ import type {
   ApiGroupCall,
   ApiInputPrivacyRules,
   ApiInputReplyInfo,
-  ApiLocation,
   ApiMessageEntity,
   ApiMessagePoll,
   ApiNewPoll,
@@ -28,7 +26,6 @@ import type {
   ApiSticker,
   ApiStory,
   ApiStorySkipped,
-  ApiThemeParameters,
   ApiVideo,
   MediaContent,
 } from '../../types';
@@ -275,10 +272,6 @@ function buildInputMediaFromContent(content?: MediaContent) {
     return buildInputMediaDocument(content.document);
   }
 
-  if (content.location) {
-    return buildInputLocationMedia(content.location);
-  }
-
   if (content.sticker) {
     return buildInputMediaDocument(content.sticker);
   }
@@ -290,43 +283,6 @@ function buildInputMediaFromContent(content?: MediaContent) {
   return undefined;
 }
 
-function buildInputLocationMedia(location: ApiLocation) {
-  const geoPoint = buildInputGeoPoint(location.geo);
-
-  if (!geoPoint) {
-    return undefined;
-  }
-
-  if (location.mediaType === 'venue') {
-    return new GramJs.InputMediaVenue({
-      geoPoint,
-      title: location.title,
-      address: location.address,
-      provider: location.provider,
-      venueId: location.venueId,
-      venueType: location.venueType,
-    });
-  }
-
-  if (location.mediaType === 'geoLive') {
-    return new GramJs.InputMediaGeoLive({
-      geoPoint,
-      heading: location.heading,
-      period: location.period,
-    });
-  }
-
-  return new GramJs.InputMediaGeoPoint({ geoPoint });
-}
-
-function buildInputGeoPoint(geo: ApiLocation['geo']) {
-  return new GramJs.InputGeoPoint({
-    lat: geo.lat,
-    long: geo.long,
-    accuracyRadius: geo.accuracyRadius,
-  });
-}
-
 export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFilter | GramJs.DialogFilterChatlist {
   const {
     emoticon,
@@ -334,7 +290,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     nonContacts,
     groups,
     channels,
-    bots,
     excludeArchived,
     excludeMuted,
     excludeRead,
@@ -356,18 +311,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     ? excludedChatIds.map(buildInputPeerFromLocalDb).filter(Boolean)
     : [];
 
-  if (folder.isChatList) {
-    return new GramJs.DialogFilterChatlist({
-      id: folder.id,
-      title: buildInputTextWithEntities(folder.title),
-      emoticon: emoticon || undefined,
-      pinnedPeers,
-      includePeers,
-      hasMyInvites: folder.hasMyInvites,
-      titleNoanimate: noTitleAnimations,
-    });
-  }
-
   return new GramJs.DialogFilter({
     id: folder.id,
     title: buildInputTextWithEntities(folder.title),
@@ -375,7 +318,6 @@ export function buildFilterFromApiFolder(folder: ApiChatFolder): GramJs.DialogFi
     contacts: contacts || undefined,
     nonContacts: nonContacts || undefined,
     groups: groups || undefined,
-    bots: bots || undefined,
     excludeArchived: excludeArchived || undefined,
     excludeMuted: excludeMuted || undefined,
     excludeRead: excludeRead || undefined,
@@ -604,16 +546,8 @@ export function buildSendMessageAction(action: ApiSendMessageAction) {
       return new GramJs.SendMessageRecordRoundAction();
     case 'chooseSticker':
       return new GramJs.SendMessageChooseStickerAction();
-    case 'playingGame':
-      return new GramJs.SendMessageGamePlayAction();
   }
   return undefined;
-}
-
-export function buildInputThemeParams(params: ApiThemeParameters) {
-  return new GramJs.DataJSON({
-    data: JSON.stringify(params),
-  });
 }
 
 export function buildMtpPeerId(id: string, type: 'user' | 'chat' | 'channel') {
@@ -692,13 +626,6 @@ export function buildInputTextWithEntities(formatted: ApiFormattedText) {
   });
 }
 
-export function buildInputBotApp(app: ApiBotApp) {
-  return new GramJs.InputBotAppID({
-    id: BigInt(app.id),
-    accessHash: BigInt(app.accessHash),
-  });
-}
-
 export function buildInputReplyTo(replyInfo: ApiInputReplyInfo) {
   if (replyInfo.type === 'story') {
     return new GramJs.InputReplyToStory({
@@ -766,14 +693,6 @@ export function buildInputPrivacyRules(
       )),
     }));
   }
-  if (rules.botsPrivacy === 'allow') {
-    privacyRules.push(new GramJs.InputPrivacyValueAllowBots());
-  }
-
-  if (rules.botsPrivacy === 'disallow') {
-    privacyRules.push(new GramJs.InputPrivacyValueDisallowBots());
-  }
-
   if (!rules.isUnspecified) {
     switch (rules.visibility) {
       case 'everybody':

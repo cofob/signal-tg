@@ -177,7 +177,6 @@ const AudioPlayer = ({
     setAudioPlayerMuted,
     loadSavedMusicIds,
     toggleMusicInProfile,
-    openBrowserTab,
     focusMessage,
     closeAudioPlayer,
     playNextTrack,
@@ -344,10 +343,6 @@ const AudioPlayer = ({
 
   const handleClick = useLastCallback(() => {
     if (!renderingMessage) {
-      if (item?.type === 'instantView') {
-        openBrowserTab({ tab: { type: 'instantView', webPageId: item.webPageId } });
-        return;
-      }
       if (hasPlaybackModes) {
         ensureAudioContext();
         openAudioPlaylistModal();
@@ -623,7 +618,7 @@ const AudioPlayer = ({
       </div>
 
       <ShowTransition
-        isOpen={Boolean(audio && renderingItem?.type !== 'instantView'
+        isOpen={Boolean(audio
           && !isLocalMessage && !isRenderingMessageProtected && savedMusicById)}
         className={styles.profileMusicButtonWrapper}
         noCloseTransition

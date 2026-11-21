@@ -3,11 +3,8 @@ import { getActions, withGlobal } from '../../../global';
 
 import type { TabState } from '../../../global/types';
 
-import { getMainUsername } from '../../../global/helpers';
-import { selectUser } from '../../../global/selectors';
 import { formatDateTime } from '../../../util/localization/dateFormat';
 import { LOCAL_TGS_URLS } from '../../common/helpers/animatedAssets';
-import formatUsername from '../../common/helpers/formatUsername';
 
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -25,7 +22,6 @@ export type OwnProps = {
 
 type StateProps = {
   freezeAppealUrl?: string;
-  botFreezeAppealUsername?: string;
   freezeUntilDate?: number;
 };
 
@@ -35,7 +31,6 @@ const FrozenAccountModal = ({
   modal,
   freezeUntilDate,
   freezeAppealUrl,
-  botFreezeAppealUsername,
 }: OwnProps & StateProps) => {
   const {
     closeFrozenAccountModal,
@@ -92,13 +87,13 @@ const FrozenAccountModal = ({
   }, [lang, isOpen]);
 
   const listItemData = useMemo(() => {
-    if (!freezeUntilDate || !botFreezeAppealUsername) return undefined;
+    if (!freezeUntilDate) return undefined;
 
     const date = new Date(freezeUntilDate * 1000);
 
     const botLink = (
       <Link onClick={handleAppeal} isPrimary>
-        {formatUsername(botFreezeAppealUsername)}
+        {lang('ButtonAppeal')}
       </Link>
     );
 
@@ -113,7 +108,7 @@ const FrozenAccountModal = ({
           withNodes: true,
         })],
     ] satisfies TableAboutData;
-  }, [lang, botFreezeAppealUsername, freezeUntilDate]);
+  }, [lang, freezeUntilDate]);
 
   if (!listItemData) return undefined;
 
@@ -132,13 +127,10 @@ export default memo(withGlobal<OwnProps>(
   (global): Complete<StateProps> => {
     const freezeUntilDate = global.appConfig.freezeUntilDate;
     const freezeAppealUrl = global.appConfig.freezeAppealUrl;
-    const botFreezeAppeal = global.botFreezeAppealId ? selectUser(global, global.botFreezeAppealId) : undefined;
-    const botFreezeAppealUsername = botFreezeAppeal && getMainUsername(botFreezeAppeal);
 
     return {
       freezeUntilDate,
       freezeAppealUrl,
-      botFreezeAppealUsername,
     };
   },
 )(FrozenAccountModal));

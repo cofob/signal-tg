@@ -15,7 +15,6 @@ import { SettingsScreens } from '../../../types';
 import { selectCanPlayAnimatedEmojis } from '../../../global/selectors';
 import { pick } from '../../../util/iteratees';
 import { REM } from '../../common/helpers/mediaDimensions';
-import renderText from '../../common/helpers/renderText';
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import { useIntersectionObserver } from '../../../hooks/useIntersectionObserver';
@@ -156,9 +155,6 @@ const SettingsStickers = ({
               ))}
             </div>
           </Island>
-          <IslandDescription dir="auto">
-            {renderText(lang('StickersBotInfo'), ['links'])}
-          </IslandDescription>
         </>
       )}
     </div>

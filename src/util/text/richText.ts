@@ -125,7 +125,6 @@ function forEachPageBlockRichText(
     case 'audio':
     case 'document':
     case 'embed':
-    case 'map':
       visitCaption(block.caption);
       break;
     case 'cover':

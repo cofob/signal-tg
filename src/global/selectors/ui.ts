@@ -9,7 +9,6 @@ import { buildThemePalette } from '../../util/theme';
 import {
   buildThemeSettingsFromWallpaper, getActionMessageBg, getChatThemeEntry, getThemeWallpaper,
 } from '../../util/wallpaper';
-import { selectTabBrowserState } from '../helpers/browser';
 import { getMessageVideo, getWebPageVideo } from '../helpers/messageMedia';
 import { selectPeerFullInfo } from './chats';
 import { selectCurrentManagement } from './management';
@@ -260,22 +259,6 @@ export function selectIsContextMenuTranslucent<T extends GlobalState>(global: T)
 
 export function selectIsSynced<T extends GlobalState>(global: T) {
   return global.isSynced;
-}
-
-export function selectWebApp<T extends GlobalState>(
-  global: T, key: string, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const tab = selectTabBrowserState(selectTabState(global, tabId)).openedTabs[key];
-  return tab?.type === 'webApp' ? tab.webApp : undefined;
-}
-
-export function selectActiveWebApp<T extends GlobalState>(
-  global: T, ...[tabId = getCurrentTabId()]: TabArgs<T>
-) {
-  const { activeTabKey } = selectTabBrowserState(selectTabState(global, tabId));
-  if (!activeTabKey) return undefined;
-
-  return selectWebApp(global, activeTabKey, tabId);
 }
 
 export function selectLeftColumnContentKey<T extends GlobalState>(

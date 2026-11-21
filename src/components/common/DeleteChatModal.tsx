@@ -10,7 +10,6 @@ import {
   isChatBasicGroup,
   isChatChannel,
   isChatSuperGroup,
-  isUserBot,
 } from '../../global/helpers';
 import { selectIsChatWithSelf, selectUser } from '../../global/selectors';
 import { isUserId } from '../../util/entities/ids';
@@ -36,7 +35,6 @@ export type OwnProps = {
 type StateProps = {
   isChannel: boolean;
   isChatWithSelf?: boolean;
-  isBot?: boolean;
   isPrivateChat: boolean;
   isBasicGroup: boolean;
   isSuperGroup: boolean;
@@ -51,7 +49,6 @@ const DeleteChatModal = ({
   isChannel,
   isPrivateChat,
   isChatWithSelf,
-  isBot,
   isBasicGroup,
   isSuperGroup,
   canDeleteForAll,
@@ -65,7 +62,6 @@ const DeleteChatModal = ({
     deleteHistory,
     deleteSavedHistory,
     deleteChannel,
-    blockUser,
     deleteChat,
   } = getActions();
 
@@ -75,13 +71,6 @@ const DeleteChatModal = ({
 
   const handleDeleteForAll = useLastCallback(() => {
     deleteHistory({ chatId: chat.id, shouldDeleteForAll: true });
-
-    onClose();
-  });
-
-  const handleDeleteAndStop = useLastCallback(() => {
-    deleteHistory({ chatId: chat.id, shouldDeleteForAll: true });
-    blockUser({ userId: chat.id });
 
     onClose();
   });
@@ -212,11 +201,6 @@ const DeleteChatModal = ({
     >
       {renderContent()}
       <div className="dialog-buttons-column">
-        {isBot && !isSavedDialog && (
-          <Button color="danger" className="confirm-dialog-button" isText onClick={handleDeleteAndStop}>
-            {lang('DeleteAndStop')}
-          </Button>
-        )}
         {canDeleteForAll && (
           <Button color="danger" className="confirm-dialog-button" isText onClick={handleDeleteForAll}>
             {contactName ? renderText(lang('ChatListDeleteForEveryone', { user: contactName })) : lang('DeleteForAll')}
@@ -246,14 +230,12 @@ export default memo(withGlobal<OwnProps>(
     const isPrivateChat = isUserId(chat.id);
     const isChatWithSelf = selectIsChatWithSelf(global, chat.id);
     const user = selectUser(global, chat.id);
-    const isBot = user && isUserBot(user) && !chat.isSupport;
-    const canDeleteForAll = (isPrivateChat && !isChatWithSelf && !isBot && !isSavedDialog);
+    const canDeleteForAll = (isPrivateChat && !isChatWithSelf && !isSavedDialog);
     const contactUser = isPrivateChat ? user : undefined;
 
     return {
       isPrivateChat,
       isChatWithSelf,
-      isBot,
       isChannel: isChatChannel(chat),
       isBasicGroup: isChatBasicGroup(chat),
       isSuperGroup: isChatSuperGroup(chat),

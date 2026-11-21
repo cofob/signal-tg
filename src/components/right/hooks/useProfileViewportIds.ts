@@ -36,7 +36,6 @@ export default function useProfileViewportIds({
   pinnedStoryIds,
   archiveStoryIds,
   similarChannels,
-  similarBots,
   scrollToTopKey,
 }: {
   loadMoreMembers: AnyToVoidFunction;
@@ -58,7 +57,6 @@ export default function useProfileViewportIds({
   pinnedStoryIds?: number[];
   archiveStoryIds?: number[];
   similarChannels?: string[];
-  similarBots?: string[];
   scrollToTopKey: number;
 }) {
   const resultType = mediaSearchType && SHARED_MEDIA_TYPES.includes(tabType as SharedMediaType)
@@ -194,9 +192,6 @@ export default function useProfileViewportIds({
       break;
     case 'similarChannels':
       viewportIds = similarChannels;
-      break;
-    case 'similarBots':
-      viewportIds = similarBots;
       break;
   }
 

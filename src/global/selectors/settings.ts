@@ -42,14 +42,6 @@ export function selectAvailableSettingsScreen<T extends GlobalState>(global: T, 
     case SettingsScreens.PasscodeEnabled:
       if (!selectCanSetPasscode(global)) return undefined;
       return global.passcode.hasPasscode ? SettingsScreens.PasscodeEnabled : SettingsScreens.PasscodeDisabled;
-    case SettingsScreens.TwoFaDisabled:
-    case SettingsScreens.TwoFaEnabled: {
-      const { hasPassword } = global.settings.byKey;
-      if (hasPassword === undefined) return undefined;
-      return hasPassword ? SettingsScreens.TwoFaEnabled : SettingsScreens.TwoFaDisabled;
-    }
-    case SettingsScreens.ActiveWebsites:
-      return global.activeWebSessions.orderedHashes.length ? screen : undefined;
     case SettingsScreens.AutoDeleteMessages:
       if (selectIsCurrentUserFrozen(global) || global.settings.byKey.defaultHistoryTtl === undefined) return undefined;
       return screen;
@@ -66,24 +58,16 @@ export function selectIsWallpaperUploading<T extends GlobalState>(global: T) {
 
 export function selectSettingsSearchFlags<T extends GlobalState>(global: T) {
   const {
-    settings: { byKey: { hasPassword, canChangeSensitive, signalPin }, passkeys, privacy }, appConfig,
+    settings: { byKey: { canChangeSensitive, signalPin }, privacy }, appConfig,
   } = global;
   const hasPasscode = Boolean(global.passcode.hasPasscode);
-  const sessionsCount = global.activeSessions.orderedHashes.length;
   const lastSeenVisibility = privacy.lastSeen?.visibility;
 
   return {
-    isPasswordStateKnown: hasPassword !== undefined,
-    hasPassword,
     hasSignalPinSettings: Boolean(signalPin),
     hasPasscode,
     canSetPasscode: selectCanSetPasscode(global),
     canUnlockWithPasskey: hasPasscode && Boolean(IS_WEBAUTHN_SUPPORTED),
-    areSessionsLoaded: sessionsCount > 0,
-    hasOtherSessions: sessionsCount > 1,
-    hasWebSessions: global.activeWebSessions.orderedHashes.length > 0,
-    arePasskeysAvailable: appConfig.arePasskeysAvailable,
-    hasPasskeys: Boolean(appConfig.arePasskeysAvailable && passkeys?.length),
     canSetAutoDelete: selectAvailableSettingsScreen(global, SettingsScreens.AutoDeleteMessages) !== undefined,
     canChangeSensitive,
     canDisplayAutoarchiveSetting: Boolean(appConfig.canDisplayAutoarchiveSetting),

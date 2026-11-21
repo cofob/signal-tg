@@ -1,14 +1,13 @@
 import {
   memo, useCallback, useEffect, useMemo, useState,
 } from '../../../../lib/teact/teact';
-import { getActions, getGlobal, withGlobal } from '../../../../global';
+import { getGlobal, withGlobal } from '../../../../global';
 
 import type {
   FolderEditDispatch,
   FoldersState,
 } from '../../../../hooks/reducers/useFoldersReducer';
 import {
-  type ApiChatlistExportedInvite,
   type ApiMessageEntity,
   type ApiMessageEntityCustomEmoji,
   ApiMessageEntityTypes,
@@ -16,13 +15,11 @@ import {
 } from '../../../../api/types';
 
 import { FOLDER_TITLE_MAX_LENGTH, STICKER_SIZE_FOLDER_SETTINGS } from '../../../../config';
-import { selectCanShareFolder, selectCustomEmoji } from '../../../../global/selectors';
+import { selectCustomEmoji } from '../../../../global/selectors';
 import buildClassName from '../../../../util/buildClassName';
 import { isUserId } from '../../../../util/entities/ids';
 import { findIntersectionWithSet } from '../../../../util/iteratees';
-import { MEMO_EMPTY_ARRAY } from '../../../../util/memo';
 import { CUSTOM_PEER_EXCLUDED_CHAT_TYPES, CUSTOM_PEER_INCLUDED_CHAT_TYPES } from '../../../../util/objects/customPeer';
-import { LIMITS } from '../../../../limits';
 import { LOCAL_TGS_URLS } from '../../../common/helpers/animatedAssets';
 
 import { selectChatFilters } from '../../../../hooks/reducers/useFoldersReducer';
@@ -46,10 +43,7 @@ type OwnProps = {
   dispatch: FolderEditDispatch;
   onAddIncludedChats: VoidFunction;
   onAddExcludedChats: VoidFunction;
-  onShareFolder: VoidFunction;
-  onOpenInvite: (url: string) => void;
   isActive?: boolean;
-  isOnlyInvites?: boolean;
   onReset: () => void;
   onBack: () => void;
   onSaveFolder: (cb?: VoidFunction) => void;
@@ -59,9 +53,7 @@ type OwnProps = {
 type StateProps = {
   loadedActiveChatIds?: string[];
   loadedArchivedChatIds?: string[];
-  invites?: ApiChatlistExportedInvite[];
   isRemoved?: boolean;
-  chatListCount: number;
 };
 
 const SUBMIT_TIMEOUT = 500;
@@ -78,28 +70,16 @@ const SettingsFoldersEdit = ({
   dispatch,
   onAddIncludedChats,
   onAddExcludedChats,
-  onShareFolder,
-  onOpenInvite,
   isActive,
   onReset,
   isRemoved,
   onBack,
   loadedActiveChatIds,
-  isOnlyInvites,
   loadedArchivedChatIds,
-  invites,
-  chatListCount,
   onSaveFolder,
   isMobile,
 }: OwnProps & StateProps) => {
-  const {
-    loadChatlistInvites,
-    openLimitReachedModal,
-    showNotification,
-  } = getActions();
-
   const isCreating = state.mode === 'create';
-  const isEditingChatList = state.folder.isChatList;
 
   const [isIncludedChatsListExpanded, setIsIncludedChatsListExpanded] = useState(false);
   const [isExcludedChatsListExpanded, setIsExcludedChatsListExpanded] = useState(false);
@@ -110,12 +90,6 @@ const SettingsFoldersEdit = ({
       onReset();
     }
   }, [isRemoved, onReset]);
-
-  useEffect(() => {
-    if (isActive && state.folderId && state.folder.isChatList) {
-      loadChatlistInvites({ folderId: state.folderId });
-    }
-  }, [isActive, state.folder.isChatList, state.folderId]);
 
   const {
     selectedChatIds: includedChatIds,
@@ -230,52 +204,6 @@ const SettingsFoldersEdit = ({
       }, SUBMIT_TIMEOUT);
     });
   }, [dispatch, onSaveFolder, onReset]);
-
-  const handleCreateInviteClick = useCallback(() => {
-    if (!invites) {
-      if (isCreating) {
-        onSaveFolder(onShareFolder);
-      }
-      return;
-    }
-
-    // Ignoring global updates is a known drawback here
-    if (!selectCanShareFolder(getGlobal(), state.folderId!)) {
-      showNotification({ message: lang('ChatListFilterInviteLinkIncludeExcludeError') });
-      return;
-    }
-
-    if (chatListCount >= LIMITS.chatlistJoined && !state.folder.isChatList) {
-      openLimitReachedModal({
-        limit: 'chatlistJoined',
-      });
-      return;
-    }
-
-    if (invites.length < LIMITS.chatlistInvites) {
-      if (state.isTouched) {
-        onSaveFolder(onShareFolder);
-      } else {
-        onShareFolder();
-      }
-      return;
-    }
-
-    openLimitReachedModal({
-      limit: 'chatlistInvites',
-    });
-  }, [
-    invites, state.folderId, state.isTouched, chatListCount, isCreating, onSaveFolder,
-    onShareFolder, lang, state.folder.isChatList,
-  ]);
-
-  const handleEditInviteClick = useCallback((e: React.MouseEvent<HTMLElement>, url: string) => {
-    if (state.isTouched) {
-      onSaveFolder(() => onOpenInvite(url));
-    } else {
-      onOpenInvite(url);
-    }
-  }, [onSaveFolder, onOpenInvite, state.isTouched]);
 
   function renderChatType(key: string, mode: 'included' | 'excluded') {
     const chatType = mode === 'included'
@@ -413,79 +341,40 @@ const SettingsFoldersEdit = ({
           </Island>
         </IslandOutside>
 
-        {!isOnlyInvites && (
-          <>
-            {state.error && state.error === ERROR_NO_CHATS && (
-              <IslandDescription className="color-danger" dir={lang.isRtl ? 'rtl' : undefined}>
-                {lang(state.error)}
-              </IslandDescription>
-            )}
-
-            <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('FilterInclude')}</IslandTitle>
-            <Island>
-              <ListItem
-                className="settings-folders-list-item color-primary"
-                icon="add"
-                narrow
-                onClick={onAddIncludedChats}
-              >
-                {lang('FilterAddChats')}
-              </ListItem>
-
-              {renderChats('included')}
-            </Island>
-          </>
+        {state.error && state.error === ERROR_NO_CHATS && (
+          <IslandDescription className="color-danger" dir={lang.isRtl ? 'rtl' : undefined}>
+            {lang(state.error)}
+          </IslandDescription>
         )}
 
-        {!isOnlyInvites && !isEditingChatList && (
-          <>
-            <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('FilterExclude')}</IslandTitle>
-            <Island>
-              <ListItem
-                className="settings-folders-list-item color-primary"
-                icon="add"
-                narrow
-                onClick={onAddExcludedChats}
-              >
-                {lang('FilterAddChats')}
-              </ListItem>
-
-              {renderChats('excluded')}
-            </Island>
-          </>
-        )}
-
-        <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>
-          {lang('FolderLinkScreenTitle')}
-        </IslandTitle>
+        <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('FilterInclude')}</IslandTitle>
         <Island>
           <ListItem
             className="settings-folders-list-item color-primary"
             icon="add"
             narrow
-            onClick={handleCreateInviteClick}
+            onClick={onAddIncludedChats}
           >
-            {lang('ChatListFilterCreateLinkNew')}
+            {lang('FilterAddChats')}
           </ListItem>
 
-          {invites?.map((invite) => (
-            <ListItem
-              className="settings-folders-list-item"
-              icon="link"
-              narrow
-              multiline
-              onClick={handleEditInviteClick}
-              clickArg={invite.url}
-            >
-              <span className="title" dir="auto">{invite.title || invite.url}</span>
-              <span className="subtitle">
-                {lang('ChatListFilterLinkLabelChatCount', {
-                  count: lang.number(invite.peerIds.length),
-                }, { pluralValue: invite.peerIds.length })}
-              </span>
-            </ListItem>
-          ))}
+          {renderChats('included')}
         </Island>
+
+        <IslandTitle dir={lang.isRtl ? 'rtl' : undefined}>{lang('FilterExclude')}</IslandTitle>
+        <Island>
+          <ListItem
+            className="settings-folders-list-item color-primary"
+            icon="add"
+            narrow
+            onClick={onAddExcludedChats}
+          >
+            {lang('FilterAddChats')}
+          </ListItem>
+
+          {renderChats('excluded')}
+        </Island>
+
       </Surface>
 
       <FloatingActionButton
@@ -503,15 +392,12 @@ const SettingsFoldersEdit = ({
 export default memo(withGlobal<OwnProps>(
   (global, { state }): Complete<StateProps> => {
     const { listIds } = global.chats;
-    const { byId, invites } = global.chatFolders;
-    const chatListCount = Object.values(byId).reduce((acc, el) => acc + (el.isChatList ? 1 : 0), 0);
+    const { byId } = global.chatFolders;
 
     return {
       loadedActiveChatIds: listIds.active,
       loadedArchivedChatIds: listIds.archived,
-      invites: state.folderId ? (invites[state.folderId] || MEMO_EMPTY_ARRAY) : undefined,
       isRemoved: state.folderId !== undefined && !byId[state.folderId],
-      chatListCount,
     };
   },
 )(SettingsFoldersEdit));

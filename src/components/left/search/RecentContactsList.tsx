@@ -49,7 +49,6 @@ const RecentContactsList = ({
         <LeftSearchResultChat
           key={id}
           chatId={id}
-          withOpenAppButton
           onClick={onChatClick}
         />
       ))}

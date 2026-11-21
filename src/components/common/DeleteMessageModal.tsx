@@ -15,16 +15,13 @@ import {
   getUserFirstOrLastName, isChatBasicGroup,
   isChatChannel,
   isChatSuperGroup,
-  isSystemBot,
 } from '../../global/helpers';
 import { getPeerFullTitle, getPeerTitle } from '../../global/helpers/peers';
 import {
   getSendersFromSelectedMessages,
-  selectBot,
   selectCanDeleteSelectedMessages,
   selectChat,
   selectChatFullInfo,
-  selectIsChatWithBot,
   selectPeer,
   selectSenderFromMessage,
   selectTabState,
@@ -68,7 +65,6 @@ type StateProps = {
   willDeleteForCurrentUserOnly?: boolean;
   willDeleteForAll?: boolean;
   adminMembersById?: Record<string, ApiChatMember>;
-  chatBot?: boolean;
   isSchedule?: boolean;
   onConfirm?: NoneToVoidFunction;
   canBanUsers?: boolean;
@@ -98,7 +94,6 @@ const DeleteMessageModal = ({
   contactUser,
   willDeleteForCurrentUserOnly,
   willDeleteForAll,
-  chatBot,
   adminMembersById,
   canBanUsers,
   linkedChatId,
@@ -540,7 +535,7 @@ const DeleteMessageModal = ({
             ) : setIsAdditionalOptionsVisible(false)}
           </>
         )}
-        {!reactionContext && (canDeleteForAll || chatBot || !shouldShowOption) && (
+        {!reactionContext && (canDeleteForAll || !shouldShowOption) && (
           <>
             <p>
               {messageIds && messageIds.length > 1
@@ -596,12 +591,10 @@ export default memo(withGlobal<OwnProps>(
     const contactUser = chatId && isUserId(chatId)
       ? selectUser(global, chatId)
       : undefined;
-    const chatBot = Boolean(chat && !isSystemBot(chat.id) && selectBot(global, chat.id));
     const adminMembersById = chatFullInfo?.adminMembersById;
     const canBanUsers = chat && getHasAdminRight(chat, 'banUsers') && !chat.isMonoforum; // TODO: Ban in channel in case of monoforum
     const isOwner = chat?.isOwner;
-    const isChatWithBot = chatId ? selectIsChatWithBot(global, chatId) : undefined;
-    const willDeleteForCurrentUserOnly = (chat && isChatBasicGroup(chat) && !canDeleteForAll) || isChatWithBot;
+    const willDeleteForCurrentUserOnly = chat && isChatBasicGroup(chat) && !canDeleteForAll;
     const willDeleteForAll = chat && (isChatSuperGroup(chat) || isChannel);
 
     return {
@@ -615,7 +608,6 @@ export default memo(withGlobal<OwnProps>(
       willDeleteForCurrentUserOnly,
       willDeleteForAll,
       adminMembersById,
-      chatBot,
       canBanUsers,
       linkedChatId,
       isSchedule,

@@ -1,5 +1,4 @@
 import type {
-  ApiAttachBot,
   ApiAttachment,
   ApiAudio,
   ApiAuthCodeTransport,
@@ -9,19 +8,17 @@ import type {
   ApiChatAdminRights,
   ApiChatBannedRights,
   ApiChatFolder,
-  ApiChatlistInvite,
   ApiChatReactions,
   ApiChatType,
   ApiDraft,
   ApiEmojiStatus,
   ApiExportedInvite,
   ApiFormattedText,
-  ApiGeoPoint,
   ApiGlobalMessageSearchType,
+  ApiInlineButtonAction,
   ApiInputEphemeralReplyInfo,
   ApiInputMessageReplyInfo,
   ApiInputRichMessage,
-  ApiKeyboardButton,
   ApiLanguage,
   ApiLimitTypeWithModal,
   ApiMessage,
@@ -31,15 +28,12 @@ import type {
   ApiNewStory,
   ApiNotification,
   ApiNotifyPeerType,
-  ApiPeer,
   ApiPhoto,
-  ApiPreparedInlineMessage,
   ApiPrivacyKey,
   ApiPrivacySettings,
   ApiProfileTab,
   ApiReaction,
   ApiReportReason,
-  ApiRequestPeerType,
   ApiRichText,
   ApiSendMessageAction,
   ApiSessionData,
@@ -49,12 +43,9 @@ import type {
   ApiStickerSetInfo,
   ApiStoryDistributionList,
   ApiStorySettings,
-  ApiThemeParameters,
   ApiTopPeerCategory,
   ApiUpdate,
-  ApiUser,
   ApiVideo,
-  BotsPrivacyType,
   LinkContext,
   PrivacyVisibility,
 } from '../../api/types';
@@ -86,7 +77,6 @@ import type {
   PerformanceType,
   PlaybackItemRef,
   PlaybackSource,
-  Point,
   ProfileTabType,
   RepeatMode,
   RoundVideoMode,
@@ -96,16 +86,13 @@ import type {
   SettingsHighlight,
   SettingsScreens,
   SharedMediaType,
-  Size,
   StoryViewerOrigin,
   ThemeKey,
   ThreadId,
   WebPageMediaSize,
 } from '../../types';
-import type { BrowserModalStateType, BrowserTab } from '../../types/browser';
 import type { MediaEditorSettings } from '../../types/mediaEditor';
 import type { ClipboardTextFormat, MessageCopyRequest } from '../../types/messageCopy';
-import type { WebApp, WebAppMediaKind, WebAppOutboundEvent } from '../../types/webapp';
 import type { KeyboardShortcutId } from '../../util/keyboardShortcuts/registry';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { DownloadableMedia } from '../helpers';
@@ -145,10 +132,8 @@ export interface ActionPayloads {
   uploadProfilePhoto: {
     photo: ApiAvatarUpload;
     isFallback?: boolean;
-    bot?: ApiUser;
   } & WithTabId;
   goToAuthQrCode: undefined;
-  loginWithPasskey: undefined;
 
   // stickers & GIFs
   saveGif: {
@@ -181,7 +166,6 @@ export interface ActionPayloads {
     userId: string;
     adminRights: ApiChatAdminRights;
     rank?: string;
-    processJoinRequests?: boolean;
   } & WithTabId;
   editChatParticipantRank: {
     chatId: string;
@@ -207,31 +191,6 @@ export interface ActionPayloads {
     id: KeyboardShortcutId;
   } | undefined;
   updatePerformanceSettings: Partial<PerformanceType>;
-  loadPasswordInfo: undefined;
-  clearTwoFaError: undefined;
-  updatePassword: {
-    currentPassword: string;
-    password: string;
-    hint?: string;
-    email?: string;
-    onSuccess: VoidFunction;
-  };
-  updateRecoveryEmail: {
-    currentPassword: string;
-    email: string;
-    onSuccess: VoidFunction;
-  } & WithTabId;
-  clearPassword: {
-    currentPassword: string;
-    onSuccess: VoidFunction;
-  };
-  provideTwoFaEmailCode: {
-    code: string;
-  };
-  checkPassword: {
-    currentPassword: string;
-    onSuccess: VoidFunction;
-  };
   loadBlockedUsers: {
     isOnlyStories?: boolean;
   } | undefined;
@@ -265,7 +224,6 @@ export interface ActionPayloads {
   applyLanguage: { language: ApiLanguage } & WithTabId;
   removeCustomLanguage: { langCode: string };
 
-  loadPasskeys: undefined;
   loadSignalPinSettings: undefined;
   setSignalPin: {
     pin: string;
@@ -284,12 +242,6 @@ export interface ActionPayloads {
   closePhoneNumberLookupModal: WithTabId | undefined;
   openSignalLinkModal: NonNullable<TabState['signalLinkModal']> & WithTabId;
   closeSignalLinkModal: WithTabId | undefined;
-  startPasskeyRegistration: WithTabId | undefined;
-  deletePasskey: {
-    id: string;
-  };
-  openPasskeyModal: WithTabId | undefined;
-  closePasskeyModal: WithTabId | undefined;
   openSettingsConfirmation: {
     confirmation: SettingsConfirmation;
   } & WithTabId;
@@ -308,7 +260,6 @@ export interface ActionPayloads {
     privacyKey: ApiPrivacyKey;
     isAllowList: boolean;
     updatedIds: string[];
-    botsPrivacy: BotsPrivacyType;
   };
   loadNotificationExceptions: undefined;
   setThemeSettings: { theme: ThemeKey } & Partial<IThemeSettings>;
@@ -347,9 +298,6 @@ export interface ActionPayloads {
   };
   saveCloseFriends: {
     userIds: string[];
-  };
-  markBotVerificationInfoShown: {
-    peerId: string;
   };
   toggleNoForwards: {
     userId: string;
@@ -454,11 +402,9 @@ export interface ActionPayloads {
   } & WithTabId;
   leaveChannel: {
     chatId: string;
-    shouldSkipOwnershipCheck?: boolean;
   } & WithTabId;
   leaveBasicGroup: {
     chatId: string;
-    shouldSkipOwnershipCheck?: boolean;
   } & WithTabId;
   deleteChannel: { chatId: string } & WithTabId;
   toggleChatPinned: {
@@ -485,8 +431,6 @@ export interface ActionPayloads {
   };
   openChatByPhoneNumber: {
     phoneNumber: string;
-    startAttach?: string | boolean;
-    attach?: string;
     text?: string;
   } & WithTabId;
   openChatByContactToken: {
@@ -506,7 +450,6 @@ export interface ActionPayloads {
     shouldResetResultsByType?: boolean;
     shouldCheckFetchingMessagesStatus?: boolean;
   } & WithTabId;
-  searchPopularBotApps: WithTabId | undefined;
   addRecentlyFoundChatId: {
     id: string;
   };
@@ -578,31 +521,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-  setMessageWidgetStorage: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-    area: 'local' | 'session';
-    values: Record<string, string>;
-  };
-  clearMessageWidgetStorage: undefined;
-  markMessageWidgetSeen: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-  };
-  setMessageWidgetHeight: {
-    accountId: string;
-    chatId: string;
-    messageId: number;
-    height: number;
-    resizeAnchor: 'top' | 'bottom';
-  };
-  setMessagesWidgetPublicData: {
-    messages: { chatId: string; messageId: number }[];
-    publicData: string;
-    publicDataHash: string;
-  };
   deleteParticipantHistory: {
     peerId: string;
     chatId: string;
@@ -645,17 +563,6 @@ export interface ActionPayloads {
   deleteSavedHistory: {
     chatId: string;
   } & WithTabId;
-  openPreparedInlineMessageModal: {
-    botId: string;
-    messageId: string;
-    webAppKey: string;
-  } & WithTabId;
-  closePreparedInlineMessageModal: WithTabId | undefined;
-  openSharePreparedMessageModal: {
-    webAppKey: string;
-    message: ApiPreparedInlineMessage;
-  } & WithTabId;
-  closeSharePreparedMessageModal: WithTabId | undefined;
   openPreviousReportModal: WithTabId | undefined;
   closeReportModal: WithTabId | undefined;
   loadSendAs: {
@@ -730,19 +637,7 @@ export interface ActionPayloads {
     threadId?: ThreadId;
     messageId?: number;
     commentId?: number;
-    startParam?: string;
-    // Sends the start parameter at once; only for links the client itself opens
-    shouldStartBot?: boolean;
-    startGroup?: string;
-    ref?: string;
-    startAttach?: string;
-    attach?: string;
-    startApp?: string;
-    shouldStartMainApp?: boolean;
-    mode?: string;
-    choose?: ApiChatType[];
     text?: string;
-    originalParts?: (string | undefined)[];
     timestamp?: number;
     onChatChanged?: CallbackAction;
     linkContext?: LinkContext;
@@ -752,11 +647,6 @@ export interface ActionPayloads {
     chatId: string;
     threadId: ThreadId;
     scrollOffset: number;
-  } & WithTabId;
-  setHiddenBotKeyboardId: {
-    chatId: string;
-    threadId: ThreadId;
-    messageId?: number;
   } & WithTabId;
   unpinAllMessages: {
     chatId: string;
@@ -1041,15 +931,6 @@ export interface ActionPayloads {
     description: string;
     photo?: ApiPhoto;
   } & WithTabId;
-  changeSessionSettings: {
-    hash: string;
-    areCallsEnabled?: boolean;
-    areSecretChatsEnabled?: boolean;
-    isConfirmed?: boolean;
-  };
-  changeSessionTtl: {
-    days: number;
-  };
   openFrozenAccountModal: WithTabId | undefined;
   closeFrozenAccountModal: WithTabId | undefined;
   openDeleteAccountModal: {
@@ -1058,7 +939,6 @@ export interface ActionPayloads {
   closeDeleteAccountModal: WithTabId | undefined;
   openAgeVerificationModal: WithTabId | undefined;
   closeAgeVerificationModal: WithTabId | undefined;
-  requestAgeVerification: WithTabId | undefined;
   setAccountTTL: {
     days: number;
   } & WithTabId | undefined;
@@ -1073,9 +953,6 @@ export interface ActionPayloads {
   };
   loadChannelRecommendations: {
     chatId?: string;
-  };
-  loadBotRecommendations: {
-    userId: string;
   };
   toggleChannelRecommendations: {
     chatId: string;
@@ -1204,8 +1081,6 @@ export interface ActionPayloads {
   toggleJoinRequest: {
     chatId: string;
     isEnabled: boolean;
-    guardBotId?: string;
-    shouldClearGuardBot?: boolean;
     shouldApplyToInvites?: boolean;
   } & WithTabId;
   changeProfileTab: {
@@ -1226,34 +1101,6 @@ export interface ActionPayloads {
     chatId: string;
     isEnabled: boolean;
   };
-
-  checkChatlistInvite: {
-    slug: string;
-  } & WithTabId;
-  joinChatlistInvite: {
-    invite: ApiChatlistInvite;
-    peerIds: string[];
-  } & WithTabId;
-  leaveChatlist: {
-    folderId: number;
-    peerIds?: string[];
-  } & WithTabId;
-  closeChatlistModal: WithTabId | undefined;
-  loadChatlistInvites: {
-    folderId: number;
-  };
-  createChatlistInvite: {
-    folderId: number;
-  } & WithTabId;
-  editChatlistInvite: {
-    folderId: number;
-    url: string;
-    peerIds: string[];
-  } & WithTabId;
-  deleteChatlistInvite: {
-    folderId: number;
-    url: string;
-  } & WithTabId;
 
   // Messages
   setEditingDraft: {
@@ -1747,17 +1594,6 @@ export interface ActionPayloads {
     isFromSuggestion?: boolean;
   } & WithTabId;
   closeBirthdaySetupModal: WithTabId | undefined;
-  setBotInfo: {
-    bot?: ApiUser | undefined;
-    langCode?: string;
-    name?: string | undefined;
-    about?: string | undefined;
-    description?: string | undefined;
-  } & WithTabId;
-  startBotFatherConversation: {
-    param: string;
-  } & WithTabId;
-  loadBotFreezeAppeal: undefined;
   checkUsername: {
     username: string;
   } & WithTabId;
@@ -1970,13 +1806,6 @@ export interface ActionPayloads {
   loadDefaultStatusIcons: undefined;
   loadRecentEmojiStatuses: undefined;
 
-  // Bots
-  sendBotCommand: {
-    command: string;
-    chatId: string;
-    threadId: ThreadId;
-    botId?: string;
-  } & WithTabId;
   loadTopPeers: {
     category: ApiTopPeerCategory;
     force?: boolean;
@@ -1990,234 +1819,14 @@ export interface ActionPayloads {
     peerId: string;
     date?: number;
   };
-  queryInlineBot: {
-    chatId: string;
-    username: string;
-    query: string;
-    offset?: string;
-  } & WithTabId;
-  sendInlineBotResult: {
-    id: string;
-    queryId: string;
-    botId?: string;
-    chatId: string;
-    threadId: ThreadId;
-    isSilent?: boolean;
-    scheduledAt?: number;
-  } & WithTabId;
-  sendInlineBotApiResult: {
-    chat: ApiChat;
-    id: string;
-    queryId: string;
-    botId?: string;
-    replyInfo?: ApiInputMessageReplyInfo;
-    sendAs?: ApiPeer;
-    isSilent?: boolean;
-    scheduledAt?: number;
-  };
-  resetInlineBot: {
-    username: string;
-    force?: boolean;
-  } & WithTabId;
-  resetAllInlineBots: WithTabId | undefined;
-  startBot: {
-    botId: string;
-    chatId?: string;
-    param?: string;
-  } & WithTabId;
-  restartBot: {
-    chatId: string;
-  } & WithTabId;
-  sharePhoneWithBot: {
-    botId: string;
-  };
 
-  clickBotInlineButton: {
+  clickRichButton: {
     chatId?: string;
     messageId?: number;
     threadId?: ThreadId;
-    button: ApiKeyboardButton;
+    action: ApiInlineButtonAction;
   } & WithTabId;
 
-  switchBotInline: {
-    messageId?: number;
-    botId?: string;
-    query: string;
-    isSamePeer?: boolean;
-    filter?: ApiChatType[];
-  } & WithTabId;
-
-  openGame: {
-    url: string;
-    chatId: string;
-    messageId: number;
-  } & WithTabId;
-  closeGame: WithTabId | undefined;
-
-  requestWebView: {
-    url?: string;
-    botId: string;
-    peerId: string;
-    threadId: ThreadId;
-    theme?: ApiThemeParameters;
-    isSilent?: boolean;
-    buttonText: string;
-    isFromBotMenu?: boolean;
-    startParam?: string;
-    isFullscreen?: boolean;
-  } & WithTabId;
-  updateWebApp: {
-    key: string;
-    update: Partial<WebApp>;
-  } & WithTabId;
-  requestMainWebView: {
-    botId: string;
-    peerId: string;
-    theme?: ApiThemeParameters;
-    startParam?: string;
-    mode?: string;
-    shouldMarkBotTrusted?: boolean;
-  } & WithTabId;
-  prolongWebView: {
-    key: string;
-    botId: string;
-    peerId: string;
-    queryId: string;
-    isSilent?: boolean;
-    replyInfo?: ApiInputMessageReplyInfo;
-    threadId?: ThreadId;
-  } & WithTabId;
-  requestSimpleWebView: {
-    url?: string;
-    botId: string;
-    buttonText: string;
-    theme?: ApiThemeParameters;
-    startParam?: string;
-    isFromSwitchWebView?: boolean;
-    isFromSideMenu?: boolean;
-  } & WithTabId;
-  requestAppWebView: {
-    botId: string;
-    appName: string;
-    theme?: ApiThemeParameters;
-    startApp?: string;
-    mode?: string;
-    isWriteAllowed?: boolean;
-    isFromConfirm?: boolean;
-    shouldSkipBotTrustRequest?: boolean;
-  } & WithTabId;
-  openBrowserTab: {
-    tab?: BrowserTab;
-  } & WithTabId;
-  openChatInviteWebView: {
-    botId: string;
-    url: string;
-    queryId?: string;
-    peerId?: string;
-    isFullscreen?: boolean;
-    isSameOrigin?: true;
-    isBroadcast?: boolean;
-  } & WithTabId;
-  loadPreviewMedias: {
-    botId: string;
-  };
-
-  cancelBotTrustRequest: WithTabId | undefined;
-  markBotTrusted: {
-    botId: string;
-    isWriteAllowed?: boolean;
-  } & WithTabId;
-
-  cancelAttachBotInstall: WithTabId | undefined;
-  confirmAttachBotInstall: {
-    isWriteAllowed: boolean;
-  } & WithTabId;
-
-  processAttachBotParameters: {
-    username: string;
-    filter?: ApiChatType[];
-    startParam?: string;
-  } & WithTabId;
-  requestAttachBotInChat: {
-    bot: ApiAttachBot;
-    filter: ApiChatType[];
-    startParam?: string;
-  } & WithTabId;
-  cancelAttachBotInChat: WithTabId | undefined;
-
-  requestBotStartGroup: {
-    bot: ApiUser;
-    startParam?: string;
-  } & WithTabId;
-  cancelBotStartGroup: WithTabId | undefined;
-
-  sendWebViewData: {
-    bot: ApiUser;
-    data: string;
-    buttonText: string;
-  };
-
-  loadAttachBots: undefined;
-
-  toggleAttachBot: {
-    botId: string;
-    isWriteAllowed?: boolean;
-    isEnabled: boolean;
-  };
-
-  callAttachBot: ({
-    chatId: string;
-    threadId?: ThreadId;
-    url?: string;
-  } | {
-    isFromSideMenu: true;
-  }) & {
-    startParam?: string;
-    bot?: ApiAttachBot;
-    isFromConfirm?: boolean;
-  } & WithTabId;
-
-  requestBotUrlAuth: {
-    chatId: string;
-    messageId: number;
-    buttonId: number;
-    url: string;
-  } & WithTabId;
-
-  acceptBotUrlAuth: {
-    isWriteAllowed?: boolean;
-    wasPhoneShared?: boolean;
-    matchCode?: string;
-  } & WithTabId;
-
-  requestLinkUrlAuth: {
-    url: string;
-  } & WithTabId;
-
-  acceptLinkUrlAuth: {
-    isWriteAllowed?: boolean;
-    wasPhoneShared?: boolean;
-    matchCode?: string;
-  } & WithTabId;
-
-  checkUrlAuthMatchCode: {
-    matchCode: string;
-  } & WithTabId;
-
-  declineUrlAuth: WithTabId | undefined;
-
-  // Settings
-  loadAuthorizations: undefined;
-  terminateAuthorization: {
-    hash: string;
-  };
-  terminateAllAuthorizations: undefined;
-
-  loadWebAuthorizations: undefined;
-  terminateWebAuthorization: {
-    hash: string;
-  };
-  terminateAllWebAuthorizations: undefined;
   toggleUsername: {
     username: string;
     isActive: boolean;
@@ -2234,54 +1843,6 @@ export interface ActionPayloads {
     chatId: string;
     usernames: string[];
   };
-  openMoreAppsTab: WithTabId | undefined;
-  closeMoreAppsTab: WithTabId | undefined;
-  closeBrowserTab: {
-    key: string;
-    skipClosingConfirmation?: boolean;
-  } & WithTabId;
-  sendWebAppEvent: {
-    webAppKey: string;
-    event: WebAppOutboundEvent;
-  } & WithTabId;
-  closeBrowserModal: ({
-    shouldSkipConfirmation?: boolean;
-  } & WithTabId) | undefined;
-  changeBrowserModalState: {
-    state: BrowserModalStateType;
-  } & WithTabId;
-  updateBrowserCachedPosition: {
-    position: Point;
-  };
-  updateBrowserCachedSize: {
-    size: Size;
-  };
-  // Misc
-  openRequestPeerModal: {
-    botId: string;
-    chatId: string;
-    messageId: number;
-    buttonId: number;
-    maxQuantity: number;
-    peerType: ApiRequestPeerType;
-  } & WithTabId;
-  closeRequestPeerModal: WithTabId | undefined;
-  openBotCreationModal: {
-    managerUsername: string;
-    suggestedName?: string;
-    suggestedUsername?: string;
-  } & WithTabId;
-  closeBotCreationModal: WithTabId | undefined;
-  createBot: {
-    name: string;
-    username: string;
-  } & WithTabId;
-  sendBotRequestedPeer: {
-    chatId: string;
-    messageId: number;
-    buttonId: number;
-    requestedPeerIds: string[];
-  } & WithTabId;
   openPollModal: {
     chatId: string;
     threadId?: ThreadId;
@@ -2296,9 +1857,6 @@ export interface ActionPayloads {
   } & WithTabId;
   closeMusicPicker: WithTabId | undefined;
   loadMusicPickerShared: WithTabId | undefined;
-  loadMusicPickerGlobal: {
-    query: string;
-  } & WithTabId;
   requestConfetti: (ConfettiParams & WithTabId) | WithTabId;
   requestWave: {
     startX: number;
@@ -2326,20 +1884,11 @@ export interface ActionPayloads {
     url: string;
     shouldSkipModal?: boolean;
     ignoreDeepLinks?: boolean;
-    tryInstant?: boolean;
-    previewId?: string;
     linkContext?: LinkContext;
   } & WithTabId;
-  openMapModal: {
-    geoPoint: ApiGeoPoint;
-    zoom?: number;
-  } & WithTabId;
-  closeMapModal: WithTabId | undefined;
   toggleSafeLinkModal: {
     url?: string;
-    isWidget?: boolean;
   } & WithTabId;
-  closeUrlAuthModal: WithTabId | undefined;
   showNotification: Omit<ApiNotification, 'localId'> & { localId?: string } & WithTabId;
   showAllowedMessageTypesNotification: {
     chatId: string;
@@ -2474,18 +2023,10 @@ export interface ActionPayloads {
   closeDeleteChatFolderModal: WithTabId | undefined;
   openDeleteChatFolderModal: {
     folderId: number;
-    isConfirmedForChatlist?: boolean;
-  } & WithTabId;
-  openShareChatFolderModal: {
-    folderId: number;
-    url?: string;
-    noRequestNextScreen?: boolean;
   } & WithTabId;
   openEditChatFolder: {
     folderId: number;
-    isOnlyInvites?: boolean;
   } & WithTabId;
-  closeShareChatFolderModal: undefined | WithTabId;
   loadDefaultHistoryTtl: undefined;
   setDefaultHistoryTtl: { period: number };
   loadGlobalPrivacySettings: undefined;
@@ -2494,42 +2035,13 @@ export interface ActionPayloads {
     shouldHideReadMarks?: boolean;
   };
 
-  openLeaveGroupModal: {
-    chatId: string;
-    nextOwnerId?: string;
-  } & WithTabId;
-  closeLeaveGroupModal: WithTabId | undefined;
-
   openAutoDeleteTimerModal: {
     chatId: string;
   } & WithTabId;
   closeAutoDeleteTimerModal: WithTabId | undefined;
 
-  openTwoFaCheckModal: WithTabId | undefined;
-  closeTwoFaCheckModal: WithTabId | undefined;
-
-  verifyTransferOwnership: {
-    chatId: string;
-    userId: string;
-    onSuccess?: VoidFunction;
-    onPasswordMissing?: VoidFunction;
-    onPasswordTooFresh?: VoidFunction;
-    onSessionTooFresh?: VoidFunction;
-  };
-  transferChatOwnership: {
-    chatId: string;
-    userId: string;
-    password: string;
-    onSuccess?: VoidFunction;
-  } & WithTabId;
   openQuickChatPicker: WithTabId | undefined;
   closeQuickChatPicker: WithTabId | undefined;
-
-  openBrowserCloseConfirmationModal: WithTabId | undefined;
-
-  closeBrowserCloseConfirmationModal: ({
-    shouldSkipInFuture?: boolean;
-  } & WithTabId);
 
   openQuickPreview: {
     id: string;
@@ -2579,15 +2091,7 @@ export interface ActionPayloads {
 
   setEmojiStatus: {
     emojiStatus: ApiEmojiStatus;
-    referrerWebAppKey?: string;
   } & WithTabId;
-  openSuggestedStatusModal: {
-    botId: string;
-    webAppKey?: string;
-    customEmojiId: string;
-    duration?: number;
-  } & WithTabId;
-  closeSuggestedStatusModal: WithTabId | undefined;
 
   // Forums
   toggleForum: {
@@ -2669,44 +2173,6 @@ export interface ActionPayloads {
     photo?: ApiAvatarUpload;
     isSuggest?: boolean;
   } & WithTabId;
-
-  openEmojiStatusAccessModal: {
-    bot?: ApiUser;
-    webAppKey?: string;
-  } & WithTabId;
-  closeEmojiStatusAccessModal: WithTabId | undefined;
-
-  openLocationAccessModal: {
-    bot?: ApiUser;
-    webAppKey?: string;
-  } & WithTabId;
-  closeLocationAccessModal: WithTabId | undefined;
-
-  openMediaAccessModal: {
-    bot: ApiUser;
-    webAppKey: string;
-    kinds: WebAppMediaKind[];
-  } & WithTabId;
-  closeMediaAccessModal: {
-    isAccessGranted: boolean;
-  } & WithTabId;
-
-  toggleUserEmojiStatusPermission: {
-    botId: string;
-    isEnabled: boolean;
-    isBotAccessEmojiGranted?: boolean;
-  };
-
-  toggleUserLocationPermission: {
-    botId: string;
-    isAccessGranted: boolean;
-  };
-
-  toggleUserMediaPermission: {
-    botId: string;
-    kind: WebAppMediaKind;
-    isAccessGranted: boolean;
-  };
 
   reportMessageDelivery: {
     chatId: string;

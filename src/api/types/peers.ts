@@ -11,12 +11,6 @@ export interface ApiPeerPhotos {
 
 export type ApiFakeType = 'fake' | 'scam';
 
-export interface ApiBotVerification {
-  botId: string;
-  iconId: string;
-  description: string;
-}
-
 export interface ApiEmojiStatus {
   type: 'regular';
   documentId: string;

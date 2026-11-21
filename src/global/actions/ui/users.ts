@@ -41,14 +41,6 @@ addActionHandler('closeNewContactDialog', (global, actions, payload): ActionRetu
   return closeNewContactDialog(global, tabId);
 });
 
-addActionHandler('closeSuggestedStatusModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    suggestedStatusModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('openDisableSharingAboutModal', (global, actions, payload): ActionReturnType => {
   const { userId, tabId = getCurrentTabId() } = payload;
 

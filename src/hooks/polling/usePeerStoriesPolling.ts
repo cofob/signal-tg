@@ -3,7 +3,7 @@ import { getActions, getGlobal } from '../../global';
 
 import type { ApiChat, ApiUser } from '../../api/types';
 
-import { isChatChannel, isUserBot } from '../../global/helpers';
+import { isChatChannel } from '../../global/helpers';
 import { selectIsChatRestricted, selectPeer, selectUserStatus } from '../../global/selectors';
 import { isUserId } from '../../util/entities/ids';
 import { throttle } from '../../util/schedulers';
@@ -51,7 +51,7 @@ export default function usePeerStoriesPolling(ids?: string[]) {
         const user = peer as ApiUser;
         const status = selectUserStatus(global, user.id);
         const isStatusAvailable = status && status.type !== 'userStatusEmpty';
-        return !user.isContact && !user.isSelf && !isUserBot(user) && !peer.isSupport && isStatusAvailable;
+        return !user.isContact && !user.isSelf && !peer.isSupport && isStatusAvailable;
       } else {
         const chat = peer as ApiChat;
         const isRestricted = selectIsChatRestricted(global, chat.id);

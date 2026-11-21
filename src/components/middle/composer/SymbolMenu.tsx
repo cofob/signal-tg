@@ -59,7 +59,6 @@ export type OwnProps = {
   addRecentCustomEmoji: GlobalActions['addRecentCustomEmoji'];
   className?: string;
   isAttachmentModal?: boolean;
-  keyboardSlotElement?: HTMLElement;
   canSendPlainText?: boolean;
   onMouseEnter?: NoneToVoidFunction;
   onMouseLeave?: NoneToVoidFunction;
@@ -83,7 +82,6 @@ const SymbolMenu = ({
   isMessageComposer,
   idPrefix,
   isAttachmentModal,
-  keyboardSlotElement,
   canSendPlainText,
   className,
   onLoad,
@@ -113,7 +111,6 @@ const SymbolMenu = ({
   const {
     shouldRender, transitionClassNames, hasOpenClass,
   } = useShowTransitionDeprecated(isOpen, onClose, false, false);
-  const isInKeyboardSlot = Boolean(keyboardSlotElement);
 
   const lang = useLang();
 
@@ -144,8 +141,7 @@ const SymbolMenu = ({
     }
 
     document.body.classList.add('enable-symbol-menu-transforms');
-    document.body.classList.add('is-symbol-menu-open');
-    document.body.classList.toggle('has-symbol-menu-shift', !isInKeyboardSlot);
+    document.body.classList.add('is-symbol-menu-open', 'has-symbol-menu-shift');
 
     return () => {
       document.body.classList.remove('is-symbol-menu-open', 'has-symbol-menu-shift');
@@ -156,7 +152,7 @@ const SymbolMenu = ({
         });
       }, ANIMATION_DURATION);
     };
-  }, [isAttachmentModal, isMobile, hasOpenClass, isInKeyboardSlot]);
+  }, [isAttachmentModal, isMobile, hasOpenClass]);
 
   const recentEmojisRef = useRef(recentEmojis);
   recentEmojisRef.current = recentEmojis;
@@ -298,10 +294,9 @@ const SymbolMenu = ({
     const mobileClassName = buildClassName(
       'SymbolMenu mobile-menu',
       transitionClassNames,
-      isLeftColumnShown && !isInKeyboardSlot && 'left-column-open',
+      isLeftColumnShown && 'left-column-open',
       isAttachmentModal && 'in-attachment-modal',
       isMessageComposer && 'in-middle-column',
-      isInKeyboardSlot && 'in-keyboard-slot',
     );
 
     if (isAttachmentModal) {
@@ -313,7 +308,7 @@ const SymbolMenu = ({
     }
 
     return (
-      <Portal containerElement={keyboardSlotElement}>
+      <Portal>
         <div className={mobileClassName}>
           {content}
         </div>

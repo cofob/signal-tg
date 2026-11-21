@@ -315,6 +315,5 @@ function buildPrivacySettings(visibility: PrivacyVisibility): ApiPrivacySettings
     allowChatIds: [],
     blockUserIds: [],
     blockChatIds: [],
-    botsPrivacy: 'none',
   };
 }

@@ -12,7 +12,6 @@ import {
 } from '../../util/iteratees';
 import { selectChatFullInfo } from '../selectors';
 import { clearEphemeralMessages } from './messages';
-import { deleteMessageWidgetStorage } from './messageWidgetStorage';
 import { updateThreadInfoLastMessageId } from './threads';
 import { addUnreadCount, removeUnreadCount } from './unreadCounters';
 
@@ -385,7 +384,6 @@ export function updateChatListSecondaryInfo<T extends GlobalState>(
 }
 
 export function leaveChat<T extends GlobalState>(global: T, leftChatId: string): T {
-  global = deleteMessageWidgetStorage(global, leftChatId);
   global = removeChatFromChatLists(global, leftChatId);
 
   global = updateChat(global, leftChatId, { isNotJoined: true });
@@ -512,27 +510,6 @@ export function toggleSimilarChannels<T extends GlobalState>(
         [chatId]: {
           ...similarChannels,
           isExpanded: !similarChannels?.isExpanded,
-        },
-      },
-    },
-  };
-}
-
-export function addSimilarBots<T extends GlobalState>(
-  global: T,
-  chatId: string,
-  similarBotsIds: string[],
-  count?: number,
-) {
-  return {
-    ...global,
-    chats: {
-      ...global.chats,
-      similarBotsById: {
-        ...global.chats.similarBotsById,
-        [chatId]: {
-          similarBotsIds,
-          count,
         },
       },
     },

@@ -8,7 +8,7 @@ import {
 import { addExtraClass, setExtraStyles } from '../../lib/teact/teact-dom';
 import { getActions, getGlobal, withGlobal } from '../../global';
 
-import type { ApiChatFolder, ApiLimitTypeWithModal, ApiUser } from '../../api/types';
+import type { ApiChatFolder, ApiLimitTypeWithModal } from '../../api/types';
 import type { TabState } from '../../global/types';
 
 import { BASE_EMOJI_KEYWORD_LANG, DEBUG, FOLDERS_POSITION_LEFT } from '../../config';
@@ -17,7 +17,6 @@ import {
   selectAreFoldersPresent,
   selectCanAnimateInterface,
   selectChatFolder,
-  selectChatMessage,
   selectCurrentMessageList,
   selectIsCurrentUserFrozen,
   selectIsForwardModalOpen,
@@ -76,15 +75,12 @@ import FloatingRoundVideo from '../middle/panes/FloatingRoundVideo';
 import ModalContainer from '../modals/ModalContainer';
 import RightColumn from '../right/RightColumn';
 import StoryViewer from '../story/StoryViewer.async';
-import AttachBotRecipientPicker from './AttachBotRecipientPicker.async';
-import BotTrustModal from './BotTrustModal.async';
 import DeleteFolderDialog from './DeleteFolderDialog.async';
 import Dialogs from './Dialogs';
 import DownloadManager from './DownloadManager';
 import DraftRecipientPicker from './DraftRecipientPicker.async';
 import FoldersSidebar from './FoldersSidebar';
 import ForwardRecipientPicker from './ForwardRecipientPicker.async';
-import GameModal from './GameModal';
 import HistoryCalendar from './HistoryCalendar.async';
 import LimitReachedModal from './LimitReachedModal.async';
 import NewContactModal from './NewContactModal.async';
@@ -119,13 +115,7 @@ type StateProps = {
   addedSetIds?: string[];
   newContactUserId?: string;
   newContactByPhoneNumber?: boolean;
-  openedGame?: TabState['openedGame'];
-  gameTitle?: string;
   isRatePhoneCallModalOpen?: boolean;
-  botTrustRequest?: TabState['botTrustRequest'];
-  botTrustRequestBot?: ApiUser;
-  requestedAttachBotInChat?: TabState['requestedAttachBotInChat'];
-  requestedBotStartGroup?: TabState['requestedBotStartGroup'];
   requestedDraft?: TabState['requestedDraft'];
   limitReached?: ApiLimitTypeWithModal;
   deleteFolderDialog?: ApiChatFolder;
@@ -167,13 +157,7 @@ const Main = ({
   isPhoneCallActive,
   newContactUserId,
   newContactByPhoneNumber,
-  openedGame,
-  gameTitle,
   isRatePhoneCallModalOpen,
-  botTrustRequest,
-  botTrustRequestBot,
-  requestedAttachBotInChat,
-  requestedBotStartGroup,
   requestedDraft,
   isDeleteMessageModalOpen,
   isReactionPickerOpen,
@@ -197,7 +181,6 @@ const Main = ({
     loadNotificationExceptions,
     updateIsOnline,
     onTabFocusChange,
-    loadTopPeers,
     loadEmojiKeywords,
     loadCountryList,
     loadAvailableReactions,
@@ -210,7 +193,6 @@ const Main = ({
     closeCustomEmojiSets,
     loadConfig,
     loadAppConfig,
-    loadAttachBots,
     loadContactList,
     loadCustomEmojis,
     loadGenericEmojiEffects,
@@ -222,12 +204,9 @@ const Main = ({
     loadRecentReactions,
     loadDefaultTagReactions,
     loadFeaturedEmojiStickers,
-    loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
     openRecoveryKeyModal,
-    loadPasswordInfo,
-    loadBotFreezeAppeal,
     loadAllChats,
     loadAllStories,
     loadAllHiddenStories,
@@ -295,8 +274,6 @@ const Main = ({
       initMain();
       loadContactList();
       checkAppVersion();
-      loadAuthorizations();
-      loadPasswordInfo();
       loadNotificationSettings();
       loadNotificationExceptions();
       // Signal stories come from the local database and need no app config
@@ -313,15 +290,10 @@ const Main = ({
       loadContentSettings();
       loadRecentReactions();
       loadDefaultTagReactions();
-      loadAttachBots();
-
-      loadTopPeers({ category: 'botsInline' });
       loadTopReactions();
       loadEmojiKeywords({ language: BASE_EMOJI_KEYWORD_LANG });
       loadFeaturedEmojiStickers();
       loadSavedReactionTags();
-      loadTopPeers({ category: 'botsApp' });
-      loadTopPeers({ category: 'botsGuestChat' });
       loadDefaultTopicIcons();
       loadAnimatedEmojis();
       loadAvailableReactions();
@@ -374,10 +346,6 @@ const Main = ({
       loadDiceStickers();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen, diceEmojies]);
-
-  useEffect(() => {
-    loadBotFreezeAppeal();
-  }, [isAppConfigLoaded]);
 
   // Ensure time format
   useEffect(() => {
@@ -618,22 +586,12 @@ const Main = ({
         userId={newContactUserId}
         isByPhoneNumber={newContactByPhoneNumber}
       />
-      <GameModal openedGame={openedGame} gameTitle={gameTitle} />
       <DownloadManager />
       <ConfettiContainer />
       {IS_WAVE_TRANSFORM_SUPPORTED && <WaveContainer />}
       <PhoneCall isActive={isPhoneCallActive} />
       <UnreadCount isForAppBadge />
       <RatePhoneCallModal isOpen={isRatePhoneCallModalOpen} />
-      <BotTrustModal
-        bot={botTrustRequestBot}
-        type={botTrustRequest?.type}
-        shouldRequestWriteAccess={botTrustRequest?.shouldRequestWriteAccess}
-      />
-      <AttachBotRecipientPicker
-        requestedAttachBotInChat={requestedAttachBotInChat}
-        requestedBotStartGroup={requestedBotStartGroup}
-      />
       <MessageListHistoryHandler />
       <LimitReachedModal limit={limitReached} />
       <DeleteFolderDialog folder={deleteFolderDialog} />
@@ -650,14 +608,10 @@ export default memo(withGlobal<OwnProps>(
     } = global;
 
     const {
-      botTrustRequest,
-      requestedAttachBotInChat,
-      requestedBotStartGroup,
       requestedDraft,
       openedStickerSetShortName,
       openedCustomEmojiSetIds,
       shouldSkipHistoryAnimations,
-      openedGame,
       isLeftColumnShown,
       historyCalendarSelectedAt,
       newContact,
@@ -670,8 +624,6 @@ export default memo(withGlobal<OwnProps>(
 
     const { wasTimeFormatSetManually, foldersPosition } = selectSharedSettings(global);
 
-    const gameMessage = openedGame && selectChatMessage(global, openedGame.chatId, openedGame.messageId);
-    const gameTitle = gameMessage?.content.game?.title;
     const { chatId } = selectCurrentMessageList(global) || {};
     const noRightColumnAnimation = !selectPerformanceSettingsValue(global, 'rightColumnAnimations')
       || !selectCanAnimateInterface(global);
@@ -701,13 +653,7 @@ export default memo(withGlobal<OwnProps>(
       addedSetIds: global.stickers.added.setIds,
       newContactUserId: newContact?.userId,
       newContactByPhoneNumber: newContact?.isByPhoneNumber,
-      openedGame,
-      gameTitle,
       isRatePhoneCallModalOpen: Boolean(ratingPhoneCall),
-      botTrustRequest,
-      botTrustRequestBot: botTrustRequest && selectUser(global, botTrustRequest.botId),
-      requestedAttachBotInChat,
-      requestedBotStartGroup,
       isDeleteMessageModalOpen: Boolean(deleteMessageModal),
       limitReached: limitReachedModal?.limit,
       deleteFolderDialog,

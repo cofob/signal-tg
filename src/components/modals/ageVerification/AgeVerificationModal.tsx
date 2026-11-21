@@ -26,13 +26,9 @@ const AgeVerificationModal = ({
   modal,
   verifyAgeMin,
 }: OwnProps & StateProps) => {
-  const { closeAgeVerificationModal, requestAgeVerification } = getActions();
+  const { closeAgeVerificationModal } = getActions();
   const lang = useLang();
   const isOpen = Boolean(modal);
-
-  const handleVerifyAge = useLastCallback(() => {
-    requestAgeVerification();
-  });
 
   const handleClose = useLastCallback(() => {
     closeAgeVerificationModal();
@@ -65,10 +61,8 @@ const AgeVerificationModal = ({
         </p>
       </div>
       <div className="dialog-buttons mt-2">
-        <Button
-          onClick={handleVerifyAge}
-        >
-          {lang('ButtonAgeVerification')}
+        <Button onClick={handleClose}>
+          {lang('Close')}
         </Button>
       </div>
     </Modal>

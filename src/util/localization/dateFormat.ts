@@ -41,7 +41,7 @@ interface AnchorDateOptions {
 }
 
 interface FormatRecentTimestampOptions extends AnchorDateOptions {
-  context?: 'generic' | 'lastSeen' | 'location';
+  context?: 'generic' | 'lastSeen';
 }
 
 interface FormatCompactTimestampOptions extends AnchorDateOptions {
@@ -150,24 +150,21 @@ export function formatRecentTimestamp(lang: LangFn, date: Date, options: FormatR
   const { context = 'generic' } = options;
   const seconds = getPastSeconds(date, anchorDate);
   if (seconds < MINUTE) {
-    return lang(context === 'lastSeen' ? 'LastSeenJustNow'
-      : context === 'location' ? 'LiveLocationUpdatedJustNow' : 'JustNowAgo');
+    return lang(context === 'lastSeen' ? 'LastSeenJustNow' : 'JustNowAgo');
   }
   if (seconds < HOUR) {
     const count = Math.floor(seconds / MINUTE);
     if (context === 'generic') {
       return getRelativeTimeFormatter(lang.code, 'numeric').format(-count, 'minute');
     }
-    return lang(context === 'lastSeen' ? 'LastSeenMinutesAgo' : 'LiveLocationUpdatedMinutesAgo',
-      { count }, { pluralValue: count });
+    return lang('LastSeenMinutesAgo', { count }, { pluralValue: count });
   }
   if (seconds < RECENT_HOURS * HOUR) {
     const count = Math.floor(seconds / HOUR);
     if (context === 'generic') {
       return getRelativeTimeFormatter(lang.code, 'numeric').format(-count, 'hour');
     }
-    return lang(context === 'lastSeen' ? 'LastSeenHoursAgo' : 'LiveLocationUpdatedHoursAgo',
-      { count }, { pluralValue: count });
+    return lang('LastSeenHoursAgo', { count }, { pluralValue: count });
   }
 
   const calendarDayDiff = getCalendarDayDiff(date, anchorDate);
@@ -177,17 +174,13 @@ export function formatRecentTimestamp(lang: LangFn, date: Date, options: FormatR
     if (context === 'lastSeen') {
       return lang(calendarDayDiff === 0 ? 'LastSeenTodayAt' : 'LastSeenYesterdayAt', { time });
     }
-    if (context === 'location') {
-      return lang(calendarDayDiff === 0 ? 'LiveLocationUpdatedTodayAt' : 'LiveLocationUpdatedYesterdayAt', { time });
-    }
     return lang('FormatDateAtTime', {
       date: getRelativeTimeFormatter(lang.code, 'auto').format(calendarDayDiff, 'day'), time,
     });
   }
 
   const dateTime = formatDateTime(lang, date, { date: 'short', time: 'short', includeYear: !isSameYear });
-  return context === 'generic' ? dateTime
-    : lang(context === 'lastSeen' ? 'LastSeenAtDate' : 'LiveLocationUpdatedAtDate', { date: dateTime });
+  return context === 'generic' ? dateTime : lang('LastSeenAtDate', { date: dateTime });
 }
 
 export function formatCompactTimestamp(lang: LangFn, date: Date, options: FormatCompactTimestampOptions = {}) {

@@ -1,14 +1,11 @@
 import type {
   ApiAppConfig,
-  ApiAttachBot,
   ApiAudio,
   ApiAuthCodeInfo,
   ApiAvailableReaction,
-  ApiBotPreviewMedia,
   ApiChat,
   ApiChatFolder,
   ApiChatFullInfo,
-  ApiChatlistExportedInvite,
   ApiChatTheme,
   ApiConfig,
   ApiCountry,
@@ -19,8 +16,6 @@ import type {
   ApiMessage,
   ApiMessagePoll,
   ApiNotifyPeerType,
-  ApiPasskey,
-  ApiPasskeyOption,
   ApiPeerColors,
   ApiPeerNotifySettings,
   ApiPeerPhotos,
@@ -32,7 +27,6 @@ import type {
   ApiReaction,
   ApiReactionKey,
   ApiSavedReactionTag,
-  ApiSession,
   ApiShareThemeBackdrop,
   ApiSticker,
   ApiStickerSet,
@@ -50,18 +44,15 @@ import type {
   ApiVideo,
   ApiWallpaper,
   ApiWebPage,
-  ApiWebSession,
 } from '../../api/types';
 import type {
   AccountSettings,
   AttachmentCompression,
-  BotAppPermissions,
   ChatListType,
   EmojiKeywords,
   OrderMode,
   RepeatMode,
   ServiceNotification,
-  SimilarBotsInfo,
   Thread,
   ThreadId,
   TopicsInfo,
@@ -86,19 +77,6 @@ export type GlobalState = {
   isCacheApiSupported?: boolean;
   connectionState?: ApiUpdateConnectionStateType;
   currentUserId?: string;
-  messageWidgetStorage: Record<string, Record<number, {
-    senderId: string;
-    threadId: ThreadId;
-    storage: {
-      local?: Record<string, string>;
-      session?: Record<string, string>;
-    };
-    // When the widget was last shown or wrote `local` (`Date.now()`), for the cap on stored widgets
-    lastSeenAt?: number;
-    // The last content height the widget reported and its resize anchor, so the bubble opens at its size
-    height?: number;
-    resizeAnchor?: 'top' | 'bottom';
-  }>>;
   isSyncing?: boolean;
   isAppConfigLoaded?: boolean;
   isAppUpdateAvailable?: boolean;
@@ -108,7 +86,6 @@ export type GlobalState = {
   lastIsChatInfoShown?: boolean;
   initialUnreadNotifications?: number;
   shouldShowContextMenuHint?: boolean;
-  botFreezeAppealId?: string;
   reactionPollingPause?: {
     until: number;
     chatId: string;
@@ -129,13 +106,6 @@ export type GlobalState = {
   recentlyFoundChatIds?: string[];
   recentlyFoundSettingIds?: string[];
 
-  twoFaSettings: {
-    hint?: string;
-    isLoading?: boolean;
-    errorKey?: RegularLangFnParameters;
-    waitingEmailCodeLength?: number;
-  };
-
   attachmentSettings: {
     shouldCompress: boolean;
     defaultAttachmentCompression: AttachmentCompression;
@@ -146,11 +116,6 @@ export type GlobalState = {
   };
 
   mediaEditorSettings?: MediaEditorSettings;
-
-  attachMenu: {
-    hash?: string;
-    bots: Record<string, ApiAttachBot>;
-  };
 
   passcode: {
     isScreenLocked?: boolean;
@@ -175,13 +140,11 @@ export type GlobalState = {
     nearestCountry?: string;
     isCodeViaApp?: boolean;
     codeInfo?: ApiAuthCodeInfo;
-    hint?: string;
     qrCode?: {
       token: string;
       expires: number;
     };
     historySync?: ApiHistorySyncProgress;
-    passkeyOption?: ApiPasskeyOption;
 
   };
   countryList: {
@@ -206,9 +169,7 @@ export type GlobalState = {
     savedMusicByPeerId: Record<string, ApiUserSavedMusic>;
     // Obtained from GetFullUser / UserFullInfo
     fullInfoById: Record<string, ApiUserFullInfo>;
-    previewMediaByBotId: Record<string, ApiBotPreviewMedia[]>;
     commonChatsById: Record<string, ApiUserCommonChats>;
-    botAppPermissionsById: Record<string, BotAppPermissions>;
   };
 
   peers: {
@@ -258,8 +219,6 @@ export type GlobalState = {
     }>>;
     notifyExceptionById: Record<string, ApiPeerNotifySettings>;
 
-    similarBotsById: Record<string, SimilarBotsInfo>;
-
     personalChannelIds?: string[];
   };
 
@@ -307,7 +266,6 @@ export type GlobalState = {
   chatFolders: {
     orderedIds?: number[];
     byId: Record<number, ApiChatFolder>;
-    invites: Record<number, ApiChatlistExportedInvite[]>;
     recommended?: ApiChatFolder[];
   };
 
@@ -417,29 +375,14 @@ export type GlobalState = {
     isDisabled?: boolean;
   }>>;
 
-  activeSessions: {
-    byHash: Record<string, ApiSession>;
-    orderedHashes: string[];
-    ttlDays?: number;
-  };
-
-  activeWebSessions: {
-    byHash: Record<string, ApiWebSession>;
-    orderedHashes: string[];
-  };
-
   settings: {
     byKey: AccountSettings;
     loadedWallpapers?: ApiWallpaper[];
     chatThemes?: ApiChatTheme[];
     privacy: Partial<Record<ApiPrivacyKey, ApiPrivacySettings>>;
     notifyDefaults?: Record<ApiNotifyPeerType, ApiPeerNotifySettings>;
-    botVerificationShownPeerIds: string[];
     accountDaysTtl: number;
-    passkeys?: ApiPasskey[];
   };
-
-  trustedBotIds: string[];
 
   serviceNotifications: ServiceNotification[];
 

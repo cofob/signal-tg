@@ -8,12 +8,12 @@ import {
   getCanAddContact,
   getHasAdminRight,
   isAnonymousForwardsChat,
-  isChatAdmin, isChatGroup, isDeletedUser, isSystemBot, isUserBot, isUserRightBanned,
+  isChatAdmin, isChatGroup, isDeletedUser, isUserRightBanned,
 } from '../helpers';
 import { selectChat, selectIsChatRestricted, selectIsChatWithSelf } from './chats';
 import { selectCurrentMessageList } from './messages';
 import { selectTabState } from './tabs';
-import { selectBot, selectUser } from './users';
+import { selectUser } from './users';
 
 export function selectManagement<T extends GlobalState>(
   global: T, chatId: string,
@@ -49,11 +49,6 @@ export function selectCurrentManagementType<T extends GlobalState>(
     return undefined;
   }
 
-  const chatBot = selectBot(global, chatId);
-  if (chatBot) {
-    return 'bot';
-  }
-
   if (isUserId(chatId)) {
     return 'user';
   }
@@ -82,14 +77,12 @@ export function selectCanManage<T extends GlobalState>(
   const user = isPrivate ? selectUser(global, chatId) : undefined;
   const canAddContact = user && getCanAddContact(user);
 
-  const isBot = user && isUserBot(user);
   return Boolean(
     !canAddContact
     && chat
     && !selectIsChatWithSelf(global, chat.id)
     && !isAnonymousForwardsChat(chat.id)
-    && (isUserId(chat.id) || (isChatAdmin(chat) && !chat.isNotJoined))
-    && !isBot,
+    && (isUserId(chat.id) || (isChatAdmin(chat) && !chat.isNotJoined)),
   );
 }
 
@@ -102,7 +95,6 @@ export function selectCanManageAutoDelete<T extends GlobalState>(
 
   if (
     selectIsChatWithSelf(global, chatId)
-    || isSystemBot(chatId)
     || isAnonymousForwardsChat(chatId)
     || chatId === SERVICE_NOTIFICATIONS_USER_ID
   ) {

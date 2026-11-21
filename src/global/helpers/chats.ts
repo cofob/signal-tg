@@ -6,7 +6,6 @@ import type {
   ApiChatInviteInfo,
   ApiMessage,
   ApiPeer,
-  ApiPreparedInlineMessage,
   ApiThreadInfo,
   ApiTopic,
 } from '../../api/types';
@@ -20,14 +19,11 @@ import { MAIN_THREAD_ID } from '../../api/types';
 import {
   ANONYMOUS_USER_ID,
   ARCHIVED_FOLDER_ID, GENERAL_TOPIC_ID, REPLIES_USER_ID, USERNAME_LINK_PREFIX,
-  VERIFICATION_CODES_USER_ID,
 } from '../../config';
 import { getPeerIdDividend, isUserId } from '../../util/entities/ids';
 import { formatDateTime, secondsToDate } from '../../util/localization/dateFormat';
-import { getServerTime } from '../../util/serverTime';
 import { selectIsChatRestricted } from '../selectors';
 import { getGlobal } from '..';
-import { isSystemBot } from './bots';
 import { getMainUsername } from './users';
 
 type AdminPermissionContainer = {
@@ -67,10 +63,6 @@ export function isCommonBoxChat(chat: ApiChat) {
 
 export function isChatWithRepliesBot(chatId: string) {
   return chatId === REPLIES_USER_ID;
-}
-
-export function isChatWithVerificationCodesBot(chatId: string) {
-  return chatId === VERIFICATION_CODES_USER_ID;
 }
 
 export function isAnonymousForwardsChat(chatId: string) {
@@ -161,7 +153,7 @@ export function getCanPostInChat(chat: ApiChat, topic?: ApiTopic, isMessageThrea
   const isRestricted = selectIsChatRestricted(global, chat.id);
   if (isRestricted || chat.isForbidden || chat.migratedTo
     || (chat.isNotJoined && !isChatMonoforum(chat) && !isMessageThread)
-    || isSystemBot(chat.id) || isAnonymousForwardsChat(chat.id)) {
+    || isAnonymousForwardsChat(chat.id)) {
     return false;
   }
 
@@ -193,7 +185,6 @@ export interface IAllowedAttachmentOptions {
 
 export function getAllowedAttachmentOptions(
   chat?: ApiChat,
-  isChatWithBot = false,
   isSavedMessages = false,
   isStoryReply = false,
   isEphemeral = false,
@@ -221,7 +212,7 @@ export function getAllowedAttachmentOptions(
     canAttachMedia: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendMedia'),
     canAttachPolls: !isEphemeral && !isStoryReply && !chat.isMonoforum
       && (isAdmin || !isUserRightBanned(chat, 'sendPolls'))
-      && (!isUserId(chat.id) || isChatWithBot || isSavedMessages),
+      && (!isUserId(chat.id) || isSavedMessages),
     canSendStickers: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendStickers'),
     canSendGifs: isAdmin || isStoryReply || !isUserRightBanned(chat, 'sendGifs'),
     canAttachEmbedLinks: !isStoryReply && (isAdmin || !isUserRightBanned(chat, 'embedLinks')),
@@ -296,10 +287,10 @@ export function getCanDeleteChat(chat: ApiChat) {
 export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, chatsCount?: number) {
   const {
     excludedChatIds, includedChatIds,
-    bots, groups, contacts, nonContacts, channels,
+    groups, contacts, nonContacts, channels,
   } = folder;
 
-  const filters = [bots, groups, contacts, nonContacts, channels];
+  const filters = [groups, contacts, nonContacts, channels];
 
   // If folder has multiple additive filters or uses include/exclude lists,
   // we display folder chats count
@@ -313,9 +304,7 @@ export function getFolderDescriptionText(lang: LangFn, folder: ApiChatFolder, ch
   }
 
   // Otherwise, we return a short description of a single filter
-  if (bots) {
-    return lang('FilterBots');
-  } else if (groups) {
+  if (groups) {
     return lang('FilterGroups');
   } else if (channels) {
     return lang('FilterChannels');
@@ -417,22 +406,6 @@ export function getCustomPeerFromInvite(invite: ApiChatInviteInfo): CustomPeer {
     isVerified,
     fakeType: isFake ? 'fake' : isScam ? 'scam' : undefined,
   };
-}
-
-export function getMockPreparedMessageFromResult(botId: string, preparedMessage: ApiPreparedInlineMessage) {
-  const { result } = preparedMessage;
-
-  const inlineButtons = result?.sendMessage?.replyMarkup?.inlineButtons;
-
-  return {
-    chatId: botId,
-    content: result.sendMessage.content,
-    date: getServerTime(),
-    id: 0,
-    isOutgoing: true,
-    viaBotId: botId,
-    inlineButtons,
-  } satisfies ApiMessage;
 }
 
 export function getIsCommunityPeerJoined(peer: ApiChat, lastMessage?: ApiMessage) {

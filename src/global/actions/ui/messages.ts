@@ -14,7 +14,7 @@ import { cancelScrollBlockingAnimation, isAnimatingScroll } from '../../../util/
 import { areDeepEqual } from '../../../util/areDeepEqual';
 import { getState as getPlaybackState, stop as stopPlayback } from '../../../util/audioPlayback/playbackController';
 import { IS_TOUCH_ENV } from '../../../util/browser/windowEnvironment';
-import { copyTextToClipboardFromPromise } from '../../../util/clipboard';
+import { copyTextToClipboard, copyTextToClipboardFromPromise } from '../../../util/clipboard';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { compact } from '../../../util/iteratees';
 import { clearMediaSession } from '../../../util/mediaSession';
@@ -33,13 +33,9 @@ import {
   cancelMessageMediaDownload,
   enterMessageSelectMode,
   exitMessageSelectMode,
-  markMessageWidgetSeen,
   toggleMessageSelection,
   updateChatMessage,
   updateFocusedMessage,
-  updateMessageWidgetData,
-  updateMessageWidgetHeight,
-  updateMessageWidgetStorage,
 } from '../../reducers';
 import { pushPlayedTrack } from '../../reducers/audioPlayer';
 import { updateTabState } from '../../reducers/tabs';
@@ -77,49 +73,6 @@ const SERVICE_NOTIFICATIONS_MAX_AMOUNT = 1e3;
 
 let blurTimeout: number | undefined;
 
-addActionHandler('setMessageWidgetStorage', (global, actions, payload): ActionReturnType => {
-  const {
-    accountId, chatId, messageId, area, values,
-  } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (accountId !== global.currentUserId || global.passcode.isScreenLocked || global.auth.isLoggingOut
-    || !message?.content.widget || message.isDeleting) return;
-
-  return updateMessageWidgetStorage(global, message, area, values);
-});
-
-addActionHandler('markMessageWidgetSeen', (global, actions, payload): ActionReturnType => {
-  const { accountId, chatId, messageId } = payload;
-  if (accountId !== global.currentUserId || global.passcode.isScreenLocked) return undefined;
-
-  return markMessageWidgetSeen(global, chatId, messageId);
-});
-
-addActionHandler('clearMessageWidgetStorage', (global): ActionReturnType => {
-  return { ...global, messageWidgetStorage: {} };
-});
-
-addActionHandler('setMessageWidgetHeight', (global, actions, payload): ActionReturnType => {
-  const {
-    accountId, chatId, messageId, height, resizeAnchor,
-  } = payload;
-  const message = selectChatMessage(global, chatId, messageId);
-  if (accountId !== global.currentUserId || global.passcode.isScreenLocked || global.auth.isLoggingOut
-    || !message?.content.widget || message.isDeleting) return;
-
-  return updateMessageWidgetHeight(global, message, height, resizeAnchor);
-});
-
-addActionHandler('setMessagesWidgetPublicData', (global, actions, payload): ActionReturnType => {
-  const { messages, publicData, publicDataHash } = payload;
-
-  messages.forEach(({ chatId, messageId }) => {
-    global = updateMessageWidgetData(global, chatId, messageId, { publicData, publicDataHash });
-  });
-
-  return global;
-});
-
 addActionHandler('setScrollOffset', (global, actions, payload): ActionReturnType => {
   const {
     chatId, threadId, scrollOffset, tabId = getCurrentTabId(),
@@ -130,12 +83,34 @@ addActionHandler('setScrollOffset', (global, actions, payload): ActionReturnType
   return replaceTabThreadParam(global, chatId, threadId, 'scrollOffset', scrollOffset, tabId);
 });
 
-addActionHandler('setHiddenBotKeyboardId', (global, actions, payload): ActionReturnType => {
+addActionHandler('clickRichButton', (global, actions, payload): ActionReturnType => {
   const {
-    chatId, threadId, messageId, tabId = getCurrentTabId(),
+    chatId, messageId, threadId, action, tabId = getCurrentTabId(),
   } = payload;
 
-  return replaceTabThreadParam(global, chatId, threadId, 'hiddenBotKeyboardId', messageId, tabId);
+  switch (action.type) {
+    case 'url':
+      actions.openUrl({
+        url: action.url,
+        linkContext: chatId && messageId !== undefined ? { type: 'message', chatId, messageId, threadId } : undefined,
+        tabId,
+      });
+      break;
+    case 'copy':
+      copyTextToClipboard(action.copyText);
+      actions.showNotification({
+        message: {
+          key: 'ExactTextCopied',
+          variables: { text: action.copyText },
+          options: { withNodes: true, withMarkdown: true, renderTextFilters: ['br', 'links'] },
+        },
+        tabId,
+      });
+      break;
+    case 'userProfile':
+      actions.openChatWithInfo({ id: action.userId, tabId });
+      break;
+  }
 });
 
 addActionHandler('setEditingId', (global, actions, payload): ActionReturnType => {
@@ -1128,22 +1103,6 @@ addActionHandler('closeDeleteMessageModal', (global, actions, payload): ActionRe
 
   return updateTabState(global, {
     deleteMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('closePreparedInlineMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    preparedMessageModal: undefined,
-  }, tabId);
-});
-
-addActionHandler('closeSharePreparedMessageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    sharePreparedMessageModal: undefined,
   }, tabId);
 });
 

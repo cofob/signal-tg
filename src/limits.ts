@@ -34,7 +34,6 @@ export const LIMITS = {
   savedDialogsPinned: 5,
   maxReactions: 1,
   moreAccounts: 3,
-  botsCreate: 20,
 } as const satisfies Record<ApiLimitType, number>;
 
 // The "All chats" folder does not count toward `LIMITS.dialogFilters`
@@ -69,16 +68,9 @@ export const DEFAULT_APP_CONFIG: ApiAppConfig = {
   quoteLengthMax: 1024,
   storyViewersExpirePeriod: 86400,
   topicsPinnedLimit: 5,
-  urlAuthDomains: [],
-  webAppAllowedProtocols: [
-    'http',
-    'https',
-  ],
   whitelistedDomains: [],
   typingDraftTtl: 10,
   isMessagePrimaryEditedDateEnabled: false,
-  arePasskeysAvailable: true,
-  passkeysMaxCount: 5,
   diceEmojies: [],
   diceEmojiesSuccess: {},
 };

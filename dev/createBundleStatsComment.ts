@@ -102,7 +102,6 @@ const ENTRY_ORDER = [
   'video-processing-worker',
   'shared-state-worker',
   'latex-worker',
-  'widget-sandbox-worker',
   'service-worker',
 ];
 const MANUAL_BUNDLES: BundleDefinition[] = [
@@ -127,7 +126,6 @@ const KNOWN_WORKERS = [
   },
   { pattern: /^sharedState\.worker-[\w-]+\.js$/, key: 'shared-state-worker', label: '🔄 Shared state worker' },
   { pattern: /^latex\.worker-[\w-]+\.js$/, key: 'latex-worker', label: '🧮 LaTeX worker' },
-  { pattern: /^widgetSandbox\.worker-[\w-]+\.js$/, key: 'widget-sandbox-worker', label: '🧩 Widget sandbox worker' },
 ];
 // Other workers get entries named after their files, such as `gpuCanvas.worker-<hash>.js`
 // or `assets/encoderWorker.min-<hash>.js` of a dependency

@@ -8,14 +8,13 @@ import type { ApiChatFolder, ApiChatType } from '../../api/types';
 import type { GlobalState } from '../../global/types';
 import type { ThreadId } from '../../types';
 
-import { ALL_FOLDER_ID, API_CHAT_TYPES } from '../../config';
+import { ALL_FOLDER_ID, API_CHAT_TYPES, REPLIES_USER_ID } from '../../config';
 import {
   getCanPostInChat,
   getChatTitle,
   getHasAdminRight,
   isChatChannel,
   isDeletedUser,
-  isSystemBot,
 } from '../../global/helpers';
 import { filterPeersByQuery } from '../../global/helpers/peers';
 import {
@@ -354,7 +353,7 @@ function getIsRecipientAllowed(
   isForwarding?: boolean,
   shouldFilterInviteable?: boolean,
 ) {
-  if (isSystemBot(id)) return false;
+  if (id === REPLIES_USER_ID) return false;
 
   const chat = selectChat(global, id);
   const user = selectUser(global, id);

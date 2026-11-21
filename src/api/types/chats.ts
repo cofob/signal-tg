@@ -1,10 +1,8 @@
-import type { ApiBotCommand } from './bots';
 import type {
   ApiChatReactions, ApiFormattedText, ApiInputDraftReplyInfo, ApiPhoto, ApiStickerSet,
 } from './messages';
 import type { ApiChatInviteImporter, ApiPeerTheme, ApiRestrictionReason, ApiWallpaper } from './misc';
 import type {
-  ApiBotVerification,
   ApiEmojiStatus,
   ApiFakeType,
   ApiPeerSettings,
@@ -26,15 +24,6 @@ type ApiChatType = (
 
 export type ApiPeer = ApiChat | ApiUser;
 
-export type ApiChatInviteJoinWebView = {
-  type: 'webView';
-  botId: string;
-  url: string;
-  queryId?: string;
-  isFullscreen: boolean;
-  isSameOrigin?: true;
-};
-
 // Signal: the join request of a group link that needs admin approval was sent
 export type ApiChatInviteJoinRequested = {
   type: 'requested';
@@ -49,7 +38,6 @@ export interface ApiChat {
   areSignaturesShown?: boolean;
   areProfilesShown?: boolean;
   isLinkedInDiscussion?: boolean;
-  hasGeo?: boolean;
   accessHash?: string;
   isMin?: boolean;
   hasVideoAvatar?: boolean;
@@ -67,14 +55,12 @@ export interface ApiChat {
   isForum?: boolean;
   isForumAsMessages?: true;
   isMonoforum?: boolean;
-  isBotForum?: boolean;
   withForumTabs?: boolean;
   withForumSidebar?: boolean;
   linkedMonoforumId?: string;
   linkedCommunityId?: string;
   isCollapsedInDialogs?: boolean;
   areChannelMessagesAllowed?: boolean;
-  botVerificationIconId?: string;
   level?: number;
 
   // Calls
@@ -119,8 +105,8 @@ type ApiTypingStatusBase = {
 
 type ApiTypingStatusSimple = ApiTypingStatusBase & {
   type: 'typing' | 'recordVideo' | 'uploadVideo' | 'recordAudio' | 'uploadAudio'
-    | 'uploadPhoto' | 'uploadFile' | 'playingGame' | 'recordRound' | 'uploadRound'
-    | 'chooseSticker' | 'chooseLocation' | 'chooseContact';
+    | 'uploadPhoto' | 'uploadFile' | 'recordRound' | 'uploadRound'
+    | 'chooseSticker' | 'chooseContact';
 };
 
 type ApiTypingStatusWatchingAnimations = ApiTypingStatusBase & {
@@ -167,8 +153,6 @@ export interface ApiChatFullInfo {
     isViaRequest?: boolean;
   };
   linkedChatId?: string;
-  botCommands?: ApiBotCommand[];
-  botIds?: string[];
   enabledReactions?: ApiChatReactions;
   reactionsLimit?: number;
   sendAsId?: string;
@@ -181,9 +165,7 @@ export interface ApiChatFullInfo {
   hasPinnedStories?: boolean;
   hasScheduledMessages?: boolean;
 
-  botVerification?: ApiBotVerification;
   mainTab?: ApiProfileTab;
-  guardBotId?: string;
   shareTheme?: ApiShareTheme;
 
   // Community
@@ -265,38 +247,12 @@ export interface ApiChatFolder {
   nonContacts?: true;
   groups?: true;
   channels?: true;
-  bots?: true;
   excludeMuted?: true;
   excludeRead?: true;
   excludeArchived?: true;
   pinnedChatIds?: string[];
   includedChatIds: string[];
   excludedChatIds: string[];
-  isChatList?: true;
-  hasMyInvites?: true;
-}
-
-export interface ApiChatlistInviteNew {
-  title: ApiFormattedText;
-  noTitleAnimations?: true;
-  emoticon?: string;
-  peerIds: string[];
-  slug: string;
-}
-
-export interface ApiChatlistInviteAlready {
-  folderId: number;
-  missingPeerIds: string[];
-  alreadyPeerIds: string[];
-  slug: string;
-}
-
-export type ApiChatlistInvite = ApiChatlistInviteNew | ApiChatlistInviteAlready;
-
-export interface ApiChatlistExportedInvite {
-  title: string;
-  url: string;
-  peerIds: string[];
 }
 
 export interface ApiMissingInvitedUser {

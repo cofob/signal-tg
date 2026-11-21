@@ -4,7 +4,6 @@ import type { ActionReturnType } from '../../types';
 import {
   LeftColumnContent,
   ProfileEditProgress,
-  SettingsScreens,
   UPLOADING_WALLPAPER_SLUG,
 } from '../../../types';
 
@@ -14,7 +13,6 @@ import {
   MUTE_INDEFINITE_TIMESTAMP,
   UNMUTE_TIMESTAMP,
 } from '../../../config';
-import { signalUnknownPasskey, toCredentialCreationOptions } from '../../../util/browser/passkeys';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { fetchBuiltInLanguages, getTranslationFn, loadAndChangeLanguage } from '../../../util/localization';
 import { requestPermission } from '../../../util/notifications';
@@ -694,7 +692,6 @@ addActionHandler('setPrivacyVisibility', async (global, actions, payload): Promi
     visibility,
     allowedIds: [...settings.allowUserIds, ...settings.allowChatIds],
     blockedIds: [...settings.blockUserIds, ...settings.blockChatIds],
-    botsPrivacy: settings.botsPrivacy,
   });
 
   const result = await callApi('setPrivacySettings', privacyKey, rules);
@@ -720,7 +717,7 @@ addActionHandler('setPrivacyVisibility', async (global, actions, payload): Promi
 
 addActionHandler('setPrivacySettings', async (global, actions, payload): Promise<void> => {
   const {
-    privacyKey, isAllowList, updatedIds, botsPrivacy,
+    privacyKey, isAllowList, updatedIds,
   } = payload;
   const {
     privacy: { [privacyKey]: settings },
@@ -735,7 +732,6 @@ addActionHandler('setPrivacySettings', async (global, actions, payload): Promise
     isUnspecified: settings.isUnspecified,
     allowedIds: isAllowList ? updatedIds : [...settings.allowUserIds, ...settings.allowChatIds],
     blockedIds: !isAllowList ? updatedIds : [...settings.blockUserIds, ...settings.blockChatIds],
-    botsPrivacy,
   });
 
   const result = await callApi('setPrivacySettings', privacyKey, rules);
@@ -1131,96 +1127,15 @@ addActionHandler('setSignalContactDiscovery', async (global, actions, payload): 
   global = replaceSettings(global, { isSignalContactDiscoveryEnabled: result });
   setGlobal(global);
 });
-
-addActionHandler('loadPasskeys', async (global): Promise<void> => {
-  const result = await callApi('fetchPasskeys');
-  if (!result) {
-    global = getGlobal();
-    global = {
-      ...global,
-      settings: {
-        ...global.settings,
-        passkeys: undefined,
-      },
-    };
-    setGlobal(global);
-    return;
-  }
-
-  global = getGlobal();
-  global = {
-    ...global,
-    settings: {
-      ...global.settings,
-      passkeys: result.passkeys,
-    },
-  };
-  setGlobal(global);
-});
-
-addActionHandler('startPasskeyRegistration', async (global, actions, payload): Promise<void> => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  const preparedOptions = await callApi('initPasskeyRegistration');
-  if (!preparedOptions) return;
-
-  const options = toCredentialCreationOptions(preparedOptions);
-  const credential = await navigator.credentials.create(options).catch((e: unknown) => {
-    if (e instanceof DOMException && e.name === 'NotAllowedError') {
-      actions.showNotification({
-        message: {
-          key: 'PasskeyCreateError',
-        },
-        tabId,
-      });
-      return undefined;
-    }
-    throw e;
-  });
-  if (!credential) return;
-  const publicKeyCredential = credential as PublicKeyCredential;
-
-  const result = await callApi('registerPasskey', publicKeyCredential.toJSON() as RegistrationResponseJSON);
-  if (!result) return;
-
-  await getPromiseActions().loadPasskeys();
-  actions.openSettingsScreen({ screen: SettingsScreens.Passkeys, tabId });
-});
-
-addActionHandler('deletePasskey', async (global, actions, payload): Promise<void> => {
-  const { id } = payload;
-
-  const passkeys = global.settings.passkeys;
-  if (passkeys?.length) {
-    const filteredPasskeys = passkeys.filter((passkey) => passkey.id !== id);
-    global = {
-      ...global,
-      settings: {
-        ...global.settings,
-        passkeys: filteredPasskeys,
-      },
-    };
-    setGlobal(global);
-  }
-
-  const isDeleted = await callApi('deletePasskey', { id });
-  if (isDeleted) signalUnknownPasskey(id);
-
-  actions.loadPasskeys();
-});
-
 addActionHandler('loadNestedSettingsData', async (global): Promise<void> => {
   const {
-    loadPasswordInfo, loadAuthorizations, loadBlockedUsers, loadWebAuthorizations, loadPasskeys, loadDefaultHistoryTtl,
-    loadGlobalPrivacySettings, loadSignalPinSettings, loadSignalContactDiscovery,
+    loadBlockedUsers, loadDefaultHistoryTtl, loadGlobalPrivacySettings, loadSignalPinSettings,
+    loadSignalContactDiscovery,
   } = getPromiseActions();
 
-  const requests = [loadPasswordInfo(), loadAuthorizations(), loadSignalPinSettings(), loadSignalContactDiscovery()];
+  const requests = [loadSignalPinSettings(), loadSignalContactDiscovery()];
   if (!selectIsCurrentUserFrozen(global)) {
-    requests.push(
-      loadBlockedUsers(), loadWebAuthorizations(), loadPasskeys(), loadDefaultHistoryTtl(),
-      loadGlobalPrivacySettings(),
-    );
+    requests.push(loadBlockedUsers(), loadDefaultHistoryTtl(), loadGlobalPrivacySettings());
   }
 
   await Promise.all(requests);

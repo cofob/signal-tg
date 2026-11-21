@@ -293,7 +293,6 @@ const MiddleHeader = ({
             <PrivateChatInfo
               key={displayChatId}
               userId={displayChatId}
-              threadId={!isSavedDialog ? threadId : undefined}
               typingStatusByPeerId={typingStatusByPeerId}
               status={connectionStatusText || savedMessagesStatus}
               withDots={Boolean(connectionStatusText)}

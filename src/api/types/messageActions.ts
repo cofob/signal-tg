@@ -1,6 +1,6 @@
 import type { ApiGroupCall, ApiPhoneCallDiscardReason } from './calls';
 import type {
-  ApiBotApp, ApiPhoto, ApiPollAnswer, ApiVideo,
+  ApiPhoto, ApiPollAnswer, ApiVideo,
 } from './messages';
 import type { ApiWallpaper } from './misc';
 import type { ApiBirthday } from './users';
@@ -96,12 +96,6 @@ export interface ApiMessageActionSetChatWallpaper extends ActionMediaType {
   wallpaper?: ApiWallpaper;
 }
 
-export interface ApiMessageActionGameScore extends ActionMediaType {
-  type: 'gameScore';
-  gameId: string;
-  score: number;
-}
-
 export interface ApiMessageActionPhoneCall extends ActionMediaType {
   type: 'phoneCall';
   isVideo?: true;
@@ -117,24 +111,6 @@ export interface ApiMessageActionScreenshotTaken extends ActionMediaType {
 export interface ApiMessageActionCustomAction extends ActionMediaType {
   type: 'customAction';
   message: string;
-}
-
-export interface ApiMessageActionBotAllowed extends ActionMediaType {
-  type: 'botAllowed';
-  isAttachMenu?: true;
-  isFromRequest?: true;
-  domain?: string;
-  app?: ApiBotApp;
-}
-
-export interface ApiMessageActionRequestedPeer extends ActionMediaType {
-  type: 'requestedPeer';
-  peerIds: string[];
-}
-
-export interface ApiMessageActionManagedBotCreated extends ActionMediaType {
-  type: 'managedBotCreated';
-  botId: string;
 }
 
 export interface ApiMessageActionContactSignUp extends ActionMediaType {
@@ -161,11 +137,6 @@ export interface ApiMessageActionGroupCallScheduled extends ActionMediaType {
 
 export interface ApiMessageActionChatJoinedByRequest extends ActionMediaType {
   type: 'chatJoinedByRequest';
-}
-
-export interface ApiMessageActionWebViewDataSent extends ActionMediaType {
-  type: 'webViewDataSent';
-  text: string;
 }
 
 export interface ApiMessageActionTopicCreate extends ActionMediaType {
@@ -288,13 +259,11 @@ export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDel
   | ApiMessageActionChatMigrateTo | ApiMessageActionChannelMigrateFrom | ApiMessageActionPinMessage
   | ApiMessageActionHistoryClear | ApiMessageActionSetMessagesTtl
   | ApiMessageActionSetChatTheme | ApiMessageActionSetChatWallpaper
-  | ApiMessageActionGameScore | ApiMessageActionPhoneCall
-  | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction | ApiMessageActionBotAllowed
+  | ApiMessageActionPhoneCall
+  | ApiMessageActionScreenshotTaken | ApiMessageActionCustomAction
   | ApiMessageActionContactSignUp | ApiMessageActionExpiredContent
-  | ApiMessageActionRequestedPeer | ApiMessageActionManagedBotCreated
   | ApiMessageActionGroupCall | ApiMessageActionInviteToGroupCall | ApiMessageActionGroupCallScheduled
   | ApiMessageActionChatJoinedByRequest | ApiMessageActionChatJoinedViaCommunity
-  | ApiMessageActionWebViewDataSent
   | ApiMessageActionTopicCreate | ApiMessageActionTopicEdit | ApiMessageActionSuggestProfilePhoto
   | ApiMessageActionSuggestBirthday
   | ApiMessageActionChannelJoined

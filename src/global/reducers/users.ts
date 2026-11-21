@@ -6,7 +6,6 @@ import type {
   ApiUserSavedMusic,
   ApiUserStatus,
 } from '../../api/types';
-import type { BotAppPermissions } from '../../types';
 import type { GlobalState, TabArgs } from '../types';
 
 import { areDeepEqual } from '../../util/areDeepEqual';
@@ -304,26 +303,4 @@ export function updateMissingInvitedUsers<T extends GlobalState>(
       chatId,
     },
   }, tabId);
-}
-
-export function updateBotAppPermissions<T extends GlobalState>(
-  global: T,
-  botId: string,
-  permissions: BotAppPermissions,
-): T {
-  const { botAppPermissionsById } = global.users;
-
-  return {
-    ...global,
-    users: {
-      ...global.users,
-      botAppPermissionsById: {
-        ...botAppPermissionsById,
-        [botId]: {
-          ...botAppPermissionsById[botId],
-          ...permissions,
-        },
-      },
-    },
-  };
 }

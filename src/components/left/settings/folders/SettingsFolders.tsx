@@ -1,4 +1,3 @@
-import type { FC } from '../../../../lib/teact/teact';
 import { memo, useCallback } from '../../../../lib/teact/teact';
 import { getActions } from '../../../../global';
 
@@ -12,7 +11,6 @@ import useAppLayout from '../../../../hooks/useAppLayout';
 import SettingsFoldersChatFilters from './SettingsFoldersChatFilters';
 import SettingsFoldersEdit, { ERROR_NO_CHATS, ERROR_NO_TITLE } from './SettingsFoldersEdit';
 import SettingsFoldersMain from './SettingsFoldersMain';
-import SettingsShareChatlist from './SettingsShareChatlist';
 
 import './SettingsFolders.scss';
 
@@ -27,29 +25,27 @@ export type OwnProps = {
   onReset: () => void;
 };
 
-const SettingsFolders: FC<OwnProps> = ({
+const SettingsFolders = ({
   currentScreen,
   shownScreen,
   state,
   dispatch,
   isActive,
   onReset,
-}) => {
-  const { isMobile } = useAppLayout();
-
+}: OwnProps) => {
   const {
-    openShareChatFolderModal,
     editChatFolder,
     addChatFolder,
     openSettingsScreen,
   } = getActions();
+
+  const { isMobile } = useAppLayout();
 
   const handleReset = useCallback(() => {
     if (
       currentScreen === SettingsScreens.FoldersCreateFolder
       || currentScreen === SettingsScreens.FoldersEditFolder
       || currentScreen === SettingsScreens.FoldersEditFolderFromChatList
-      || currentScreen === SettingsScreens.FoldersEditFolderInvites
     ) {
       setTimeout(() => {
         dispatch({ type: 'reset' });
@@ -143,17 +139,6 @@ const SettingsFolders: FC<OwnProps> = ({
     });
   }, [currentScreen, dispatch]);
 
-  const handleShareFolder = useCallback(() => {
-    openShareChatFolderModal({ folderId: state.folderId!, noRequestNextScreen: true });
-    dispatch({ type: 'setIsChatlist', payload: true });
-    openSettingsScreen({ screen: SettingsScreens.FoldersShare });
-  }, [dispatch, state.folderId]);
-
-  const handleOpenInvite = useCallback((url: string) => {
-    openShareChatFolderModal({ folderId: state.folderId!, url, noRequestNextScreen: true });
-    openSettingsScreen({ screen: SettingsScreens.FoldersShare });
-  }, [state.folderId]);
-
   switch (currentScreen) {
     case SettingsScreens.Folders:
       return (
@@ -173,21 +158,17 @@ const SettingsFolders: FC<OwnProps> = ({
     case SettingsScreens.FoldersCreateFolder:
     case SettingsScreens.FoldersEditFolder:
     case SettingsScreens.FoldersEditFolderFromChatList:
-    case SettingsScreens.FoldersEditFolderInvites:
       return (
         <SettingsFoldersEdit
           state={state}
           dispatch={dispatch}
           onAddIncludedChats={handleAddIncludedChats}
           onAddExcludedChats={handleAddExcludedChats}
-          onShareFolder={handleShareFolder}
-          onOpenInvite={handleOpenInvite}
           onReset={handleReset}
           isActive={isActive || [
             SettingsScreens.FoldersIncludedChats,
             SettingsScreens.FoldersExcludedChats,
           ].includes(shownScreen)}
-          isOnlyInvites={currentScreen === SettingsScreens.FoldersEditFolderInvites}
           onBack={onReset}
           onSaveFolder={handleSaveFolder}
           isMobile={isMobile}
@@ -215,14 +196,6 @@ const SettingsFolders: FC<OwnProps> = ({
           onReset={handleReset}
           onSaveFilter={handleSaveFilter}
           isActive={isActive}
-        />
-      );
-
-    case SettingsScreens.FoldersShare:
-      return (
-        <SettingsShareChatlist
-          isActive={isActive}
-          onReset={handleReset}
         />
       );
 

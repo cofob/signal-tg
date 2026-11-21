@@ -4,7 +4,6 @@ import { addCallback, removeCallback } from '../lib/teact/teactn';
 import type {
   ApiAvailableReaction,
   ApiDocument,
-  ApiKeyboardButton,
   ApiMessage,
   ApiPhoto,
   ApiVideo,
@@ -27,7 +26,6 @@ import {
   GLOBAL_STATE_CACHE_DISABLED,
   GLOBAL_STATE_CACHE_PREFIX,
   GLOBAL_STATE_CACHE_USER_LIST_LIMIT,
-  INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT,
   IS_SCREEN_LOCKED_CACHE_KEY,
   SAVED_FOLDER_ID,
   SHARED_STATE_CACHE_KEY,
@@ -48,7 +46,6 @@ import { hasStoredSession } from '../util/sessions';
 import { getSystemTheme } from '../util/systemTheme';
 import { getDefaultPatternColor, getThemeWallpaper } from '../util/wallpaper';
 import { migrateLegacyWallpaperBlobs, prefetchWallpaperUrl } from '../util/wallpaper/storage';
-import { buildPageAudioById } from './helpers/buildPageAudioById';
 import { selectSharedSettings } from './selectors/sharedState';
 import { selectThreadInfo } from './selectors/threads';
 import { addActionHandler, getGlobal } from './index';
@@ -69,6 +66,13 @@ import { getIsMobile } from '../hooks/useAppLayout';
 
 const UPDATE_THROTTLE = 5000;
 
+// Message and message content fields of removed Telegram features
+const REMOVED_MESSAGE_FIELDS = [
+  'inlineButtons', 'keyboardButtons', 'keyboardPlaceholder', 'isKeyboardSingleUse', 'isKeyboardSelective',
+  'isKeyboardFullHeight', 'shouldHideKeyboardButtons', 'isHideKeyboardSelective', 'viaBotId', 'guestChatViaId',
+];
+const REMOVED_MESSAGE_CONTENT_FIELDS = ['game', 'location', 'widget'];
+
 // `patternColor` values the cache migration recognizes as defaults and replaces with the
 // wallpaper-derived ones
 const LEGACY_DEFAULT_PATTERN_COLOR = '#4A8E3A8C';
@@ -79,6 +83,7 @@ const SHARED_STATE_PATTERN_COLORS_CACHE_VERSION = 3;
 const SHARED_STATE_V1_LIGHT_PATTERN_COLOR = '#77854b66';
 const SHARED_STATE_V1_DARK_PATTERN_COLOR = '#27308a66';
 const SHARED_STATE_HEX_PATTERN_COLORS_CACHE_VERSION = 5;
+const SHARED_STATE_REMOVED_SETTINGS_CACHE_VERSION = 6;
 const updateCacheThrottled = throttle(() => onFullyIdle(() => updateCache()), UPDATE_THROTTLE, false);
 const updateCacheForced = () => updateCache(true);
 
@@ -346,6 +351,18 @@ export function migrateSharedCache(
     };
   }
 
+  if (cacheVersion < SHARED_STATE_REMOVED_SETTINGS_CACHE_VERSION) {
+    // Settings of the removed Instant View and browser tabs
+    const {
+      instantViewFontSizeAdjust, shouldSkipBrowserCloseConfirmation, ...settingsWithoutRemoved
+    } = migrated.settings as AnyLiteral;
+
+    migrated = {
+      ...migrated,
+      settings: settingsWithoutRemoved as SharedState['settings'],
+    };
+  }
+
   return migrated;
 }
 
@@ -385,7 +402,12 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   delete untypedCached.push;
   removeTelegramOnlyFields(untypedCached);
 
-  cached.messageWidgetStorage ||= {};
+  // Older caches can hold message widget storage and bot state
+  delete untypedCached.messageWidgetStorage;
+  delete untypedCached.attachMenu;
+  delete untypedCached.trustedBotIds;
+  delete untypedCached.users.botAppPermissionsById;
+  delete untypedCached.settings.botVerificationShownPeerIds;
   Object.values(cached.chats.fullInfoById).forEach((fullInfo) => {
     fullInfo.isCache = true;
   });
@@ -393,12 +415,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   Object.values(cached.messages.byChatId).forEach((messageStore) => {
     messageStore.ephemeralById ||= {};
     messageStore.anchoredById = {};
-  });
-
-  Object.values(cached.messages.webPageById).forEach((webPage) => {
-    if (webPage.webpageType === 'full' && webPage.cachedPage && !webPage.cachedPageAudioById) {
-      webPage.cachedPageAudioById = buildPageAudioById(webPage.cachedPage);
-    }
   });
 
   // Pre-fill settings with defaults
@@ -424,10 +440,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   }
 
   const cachedSharedSettings = cached.sharedState.settings;
-  if (cachedSharedSettings.instantViewFontSizeAdjust === undefined) {
-    cachedSharedSettings.instantViewFontSizeAdjust = INSTANT_VIEW_FONT_SIZE_ADJUST_DEFAULT;
-  }
-
   if (cachedSharedSettings.performance.textStreaming === undefined) {
     cachedSharedSettings.performance.textStreaming = true;
   }
@@ -442,10 +454,6 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
 
   if (!cachedSharedSettings.keyboardShortcuts) {
     cachedSharedSettings.keyboardShortcuts = {};
-  }
-
-  if (cached.appConfig.webAppAllowedProtocols === undefined) {
-    cached.appConfig.webAppAllowedProtocols = initialState.appConfig.webAppAllowedProtocols;
   }
 
   if (cached.appConfig.isMessagePrimaryEditedDateEnabled === undefined) {
@@ -501,12 +509,33 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   }
 
   if (cached.cacheVersion < 7) {
-    migrateButtonActions(cached);
     cached.cacheVersion = 7;
   }
 
   if (cached.cacheVersion < 8) {
     cached.cacheVersion = 8;
+  }
+
+  if (cached.cacheVersion < 10) {
+    stripRemovedMessageFields(cached);
+    Object.values(cached.messages.webPageById).forEach((webPage) => {
+      // Instant View pages
+      delete (webPage as AnyLiteral).cachedPage;
+      delete (webPage as AnyLiteral).cachedPageAudioById;
+    });
+    // Cloud password and Telegram passkeys
+    delete untypedCached.auth?.hint;
+    delete untypedCached.auth?.passkeyOption;
+    delete untypedCached.settings.byKey.hasPassword;
+    delete untypedCached.appConfig?.arePasskeysAvailable;
+    delete untypedCached.appConfig?.passkeysMaxCount;
+    // Shareable folders
+    delete untypedCached.chatFolders.invites;
+    Object.values(cached.chatFolders.byId).forEach((folder) => {
+      delete (folder as AnyLiteral).isChatList;
+      delete (folder as AnyLiteral).hasMyInvites;
+    });
+    cached.cacheVersion = 10;
   }
 
   if (!cached.auth) {
@@ -625,7 +654,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'appConfig',
       'config',
       'auth',
-      'attachMenu',
       'currentUserId',
       'contactList',
       'topPeerCategories',
@@ -640,7 +668,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
       'mediaViewer',
       'audioPlayer',
       'shouldShowContextMenuHint',
-      'trustedBotIds',
       'recentlyFoundChatIds',
       'recentlyFoundSettingIds',
       'peerColors',
@@ -653,7 +680,6 @@ function reduceGlobal<T extends GlobalState>(global: T) {
     users: reduceUsers(global),
     chats: reduceChats(global),
     messages: reduceMessages(global),
-    messageWidgetStorage: reduceMessageWidgetStorage(global),
     settings: reduceSettings(global),
     chatFolders: reduceChatFolders(global),
     groupCalls: reduceGroupCalls(global),
@@ -688,25 +714,6 @@ function reduceSharedState(sharedState: SharedState): SharedState {
     },
     isInitial: undefined,
   };
-}
-
-function reduceMessageWidgetStorage(global: GlobalState): GlobalState['messageWidgetStorage'] {
-  const result: GlobalState['messageWidgetStorage'] = {};
-  Object.entries(global.messageWidgetStorage).forEach(([chatId, byId]) => {
-    Object.entries(byId).forEach(([messageId, {
-      senderId, threadId, storage: { local }, lastSeenAt, height, resizeAnchor,
-    }]) => {
-      const hasLocal = Boolean(local && Object.keys(local).length);
-      const isLoaded = Boolean(global.messages.byChatId[chatId]?.byId[Number(messageId)]);
-      if (!hasLocal && (!height || !isLoaded)) return;
-      result[chatId] ||= {};
-      result[chatId][Number(messageId)] = {
-        senderId, threadId, storage: hasLocal ? { local } : {}, lastSeenAt: hasLocal ? lastSeenAt : undefined,
-        height, resizeAnchor,
-      };
-    });
-  });
-  return result;
 }
 
 export function serializeGlobal<T extends GlobalState>(global: T) {
@@ -748,7 +755,7 @@ function reduceCustomEmojis<T extends GlobalState>(global: T): GlobalState['cust
 function reduceUsers<T extends GlobalState>(global: T): GlobalState['users'] {
   const {
     users: {
-      byId, statusesById, fullInfoById, botAppPermissionsById,
+      byId, statusesById, fullInfoById,
     }, currentUserId,
   } = global;
   const currentChatIds = compact(
@@ -767,7 +774,6 @@ function reduceUsers<T extends GlobalState>(global: T): GlobalState['users'] {
     })
     .filter((id): id is string => Boolean(id) && isUserId(id));
 
-  const attachBotIds = Object.keys(global.attachMenu?.bots || {});
   const topPeerIds = getTopPeerIds(global);
 
   const idsToSave = unique([
@@ -775,7 +781,6 @@ function reduceUsers<T extends GlobalState>(global: T): GlobalState['users'] {
     ...currentChatIds,
     ...chatStoriesUserIds,
     ...visibleUserIds || [],
-    ...attachBotIds,
     ...topPeerIds.filter(isUserId),
     ...global.recentlyFoundChatIds?.filter(isUserId) || [],
     ...getOrderedIds(ARCHIVED_FOLDER_ID)?.slice(0, GLOBAL_STATE_CACHE_ARCHIVED_CHAT_LIST_LIMIT).filter(isUserId) || [],
@@ -789,7 +794,6 @@ function reduceUsers<T extends GlobalState>(global: T): GlobalState['users'] {
     byId: pickTruthy(byId, idsToSave),
     statusesById: pickTruthy(statusesById, idsToSave),
     fullInfoById: pickTruthy(fullInfoById, idsToSave),
-    botAppPermissionsById,
   };
 }
 
@@ -849,7 +853,6 @@ function reduceChats<T extends GlobalState>(global: T): GlobalState['chats'] {
   return {
     ...global.chats,
     similarChannelsById: {},
-    similarBotsById: {},
     isFullyLoaded: {},
     notifyExceptionById: pickTruthy(global.chats.notifyExceptionById, idsToSave),
     loadingParameters: INITIAL_GLOBAL_STATE.chats.loadingParameters,
@@ -1054,14 +1057,13 @@ function omitLocalDocument(document: ApiDocument): ApiDocument {
 
 function reduceSettings<T extends GlobalState>(global: T): GlobalState['settings'] {
   const {
-    byKey, botVerificationShownPeerIds, notifyDefaults, accountDaysTtl, chatThemes,
+    byKey, notifyDefaults, accountDaysTtl, chatThemes,
   } = global.settings;
 
   // Cached palettes remain usable offline; the catalog refresh restores wallpaper documents in the worker
   return {
     byKey,
     privacy: {},
-    botVerificationShownPeerIds,
     notifyDefaults,
     accountDaysTtl,
     chatThemes,
@@ -1089,21 +1091,17 @@ function reduceAvailableReactions(
     ?.map((r) => ({ ...pick(r, ['reaction', 'staticIcon', 'title', 'isInactive']), isLocalCache: true }));
 }
 
-function migrateButtonActions(cached: GlobalState) {
+// Bot reply markup and inline bot attribution on cached messages
+function stripRemovedMessageFields(cached: GlobalState) {
   Object.values(cached.messages.byChatId).forEach(({ byId, ephemeralById }) => {
     [...Object.values(byId), ...Object.values(ephemeralById)].forEach((message) => {
-      [message.inlineButtons, message.keyboardButtons].forEach((rows) => {
-        rows?.forEach((row) => row.forEach((button, index) => {
-          if ('action' in button) return;
-          const legacyButton = button as { type: string; text?: string; receiptMessageId?: number };
-          const { text, type, receiptMessageId, ...fields } = legacyButton;
-          const { style, ...actionFields } = fields as { style?: ApiKeyboardButton['style'] };
-          row[index] = {
-            text: text || '',
-            style,
-            action: { ...actionFields, type: type === 'receipt' ? 'buy' : type } as ApiKeyboardButton['action'],
-          };
-        }));
+      const untypedMessage = message as AnyLiteral;
+      const untypedContent = message.content as AnyLiteral;
+      REMOVED_MESSAGE_FIELDS.forEach((field) => {
+        delete untypedMessage[field];
+      });
+      REMOVED_MESSAGE_CONTENT_FIELDS.forEach((field) => {
+        delete untypedContent[field];
       });
     });
   });

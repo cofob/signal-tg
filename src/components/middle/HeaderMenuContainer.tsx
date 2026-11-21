@@ -4,11 +4,9 @@ import {
 import { getActions, withGlobal } from '../../global';
 
 import type {
-  ApiBotCommand, ApiChat,
+  ApiChat,
 } from '../../api/types';
 import type { IAnchorPosition, ThreadId } from '../../types';
-import type { IconName } from '../../types/icons';
-import type { RegularLangKey } from '../../types/language';
 import { MAIN_THREAD_ID } from '../../api/types';
 
 import { UNMUTE_TIMESTAMP } from '../../config';
@@ -21,12 +19,10 @@ import {
   isChatAdmin,
   isChatChannel,
   isChatGroup,
-  isSystemBot,
   isUserRightBanned,
 } from '../../global/helpers';
 import { getIsChatMuted } from '../../global/helpers/notifications';
 import {
-  selectBot,
   selectCanManage,
   selectCanManageAutoDelete,
   selectChat,
@@ -57,7 +53,6 @@ import useShowTransitionDeprecated from '../../hooks/useShowTransitionDeprecated
 
 import DeleteChatModal from '../common/DeleteChatModal';
 import AutoDeleteOutlinedIcon from '../common/icons/AutoDeleteOutlinedIcon';
-import Icon from '../common/icons/Icon';
 import MuteChatModal from '../left/MuteChatModal.async';
 import Menu from '../ui/Menu';
 import MenuItem from '../ui/MenuItem';
@@ -66,17 +61,6 @@ import NestedMenuItem from '../ui/NestedMenuItem';
 import Portal from '../ui/Portal';
 
 import './HeaderMenuContainer.scss';
-
-const BOT_BUTTONS: Record<string, { icon: IconName; label: RegularLangKey }> = {
-  settings: {
-    icon: 'bots',
-    label: 'BotSettings',
-  },
-  help: {
-    icon: 'help',
-    label: 'BotHelp',
-  },
-};
 
 export type OwnProps = {
   chatId: string;
@@ -103,13 +87,10 @@ export type OwnProps = {
 
 type StateProps = {
   chat?: ApiChat;
-  botCommands?: ApiBotCommand[];
-  botPrivacyPolicyUrl?: string;
   isPrivate?: boolean;
   isMuted?: boolean;
   isTopic?: boolean;
   isForum?: boolean;
-  isBotForum?: boolean;
   isForumAsMessages?: true;
   canAddContact?: boolean;
   canDeleteChat?: boolean;
@@ -121,7 +102,6 @@ type StateProps = {
   isRightColumnShown?: boolean;
   canManage?: boolean;
   isBlocked?: boolean;
-  isBot?: boolean;
   isChatWithSelf?: boolean;
   savedDialog?: ApiChat;
   isAccountFrozen?: boolean;
@@ -140,12 +120,9 @@ const HeaderMenuContainer = ({
   anchor,
   isChannel,
   canSubscribe,
-  botCommands,
-  botPrivacyPolicyUrl,
   withForumActions,
   isTopic,
   isForum,
-  isBotForum,
   isForumAsMessages,
   isChatInfoShown,
   canReportChat,
@@ -167,7 +144,6 @@ const HeaderMenuContainer = ({
   canManage,
   isRightColumnShown,
   isBlocked,
-  isBot,
   isChatWithSelf,
   savedDialog,
   isAccountFrozen,
@@ -185,8 +161,6 @@ const HeaderMenuContainer = ({
   const {
     updateChatMutedState,
     enterMessageSelectMode,
-    sendBotCommand,
-    restartBot,
     requestMasterAndJoinGroupCall,
     createGroupCall,
     joinChannel,
@@ -198,7 +172,6 @@ const HeaderMenuContainer = ({
     openCreateTopicPanel,
     openEditTopicPanel,
     openChat,
-    openUrl,
     toggleManagement,
     blockUser,
     unblockUser,
@@ -224,7 +197,7 @@ const HeaderMenuContainer = ({
   const isViewGroupInfoShown = usePrevDuringAnimation(
     (!isChatInfoShown && isForum) ? true : undefined, CLOSE_MENU_ANIMATION_DURATION,
   );
-  const viewInfoLangKey = getViewInfoLangKey(isTopic, isBotForum);
+  const viewInfoLangKey = isTopic ? 'HeaderMenuViewTopicInfo' : 'HeaderMenuViewGroupInfo';
 
   const closeMuteModal = useLastCallback(() => {
     setIsMuteModalOpen(false);
@@ -265,14 +238,6 @@ const HeaderMenuContainer = ({
   const closeDeleteModal = useLastCallback(() => {
     setIsDeleteModalOpen(false);
     onClose();
-  });
-
-  const handleRestartBot = useLastCallback(() => {
-    if (isAccountFrozen) {
-      openFrozenAccountModal();
-    } else {
-      restartBot({ chatId });
-    }
   });
 
   const handleUnmuteClick = useLastCallback(() => {
@@ -471,65 +436,6 @@ const HeaderMenuContainer = ({
     return buildAutoDeletePeriodOptions(lang, DEFAULT_AUTO_DELETE_PERIODS, historyTtl, lang('AutoDeleteNever'));
   }, [canManageAutoDelete, historyTtl, lang]);
 
-  const botButtons = useMemo(() => {
-    const commandButtons = botCommands?.map((botCommand) => {
-      const { command } = botCommand;
-      const cmd = BOT_BUTTONS[command];
-      if (!cmd) return undefined;
-
-      const handleClick = () => {
-        sendBotCommand({
-          command: `/${command}`,
-          chatId,
-          threadId,
-          botId: botCommand.botId,
-        });
-        closeMenu();
-      };
-
-      return (
-        <MenuItem
-          key={command}
-          icon={cmd.icon}
-
-          onClick={handleClick}
-        >
-          <span className="ephemeral-command-label">
-            {lang(cmd.label)}
-            {botCommand.isEphemeral && (
-              <Icon
-                name="eye-outline"
-                className="ephemeral-command-icon"
-                ariaLabel={lang('EphemeralOnlyVisible')}
-              />
-            )}
-          </span>
-        </MenuItem>
-      );
-    });
-
-    const hasPrivacyCommand = botCommands?.some(({ command }) => command === 'privacy');
-
-    const privacyButton = isBot && (
-      <MenuItem
-        icon="privacy-policy"
-
-        onClick={() => {
-          if (hasPrivacyCommand && !botPrivacyPolicyUrl) {
-            sendBotCommand({ command: '/privacy', chatId, threadId });
-          } else if (botPrivacyPolicyUrl) {
-            openUrl({ url: botPrivacyPolicyUrl });
-          }
-          closeMenu();
-        }}
-      >
-        {lang('MenuPrivacyPolicy')}
-      </MenuItem>
-    );
-
-    return [...commandButtons || [], privacyButton].filter(Boolean);
-  }, [botCommands, lang, botPrivacyPolicyUrl, isBot, chatId, threadId]);
-
   const deleteTitle = useMemo(() => {
     if (!chat) return undefined;
 
@@ -621,7 +527,7 @@ const HeaderMenuContainer = ({
               {lang('ForumTopicEdit')}
             </MenuItem>
           )}
-          {isMobile && !withForumActions && isForum && !isBotForum && !isTopic && (
+          {isMobile && !withForumActions && isForum && !isTopic && (
             <MenuItem
               icon="forums"
               onClick={handleViewAsTopicsClick}
@@ -638,7 +544,7 @@ const HeaderMenuContainer = ({
               <div className="right-badge">{pendingJoinRequests}</div>
             </MenuItem>
           )}
-          {withForumActions && !isTopic && !isBotForum && !isForumAsMessages && (
+          {withForumActions && !isTopic && !isForumAsMessages && (
             <MenuItem
               icon="message"
               onClick={handleOpenAsMessages}
@@ -750,16 +656,7 @@ const HeaderMenuContainer = ({
               {lang('ReportPeerReport')}
             </MenuItem>
           )}
-          {botButtons}
-          {isBot && (
-            <MenuItem
-              icon={isBlocked ? 'bots' : 'hand-stop'}
-              onClick={isBlocked ? handleRestartBot : handleBlock}
-            >
-              {isBlocked ? lang('BotRestart') : lang('BotStop')}
-            </MenuItem>
-          )}
-          {isPrivate && !isChatWithSelf && !isBot && (
+          {isPrivate && !isChatWithSelf && (
             <MenuItem
               icon={noForwardsMyEnabled || noForwardsPeerEnabled ? 'allow-share' : 'no-share'}
               onClick={handleToggleNoForwards}
@@ -767,7 +664,7 @@ const HeaderMenuContainer = ({
               {noForwardsMyEnabled || noForwardsPeerEnabled ? lang('EnableSharing') : lang('DisableSharing')}
             </MenuItem>
           )}
-          {isPrivate && !isChatWithSelf && !isBot && (
+          {isPrivate && !isChatWithSelf && (
             <MenuItem
               icon={isBlocked ? 'user' : 'hand-stop'}
               onClick={isBlocked ? handleUnblock : handleBlock}
@@ -809,18 +706,6 @@ const HeaderMenuContainer = ({
   );
 };
 
-function getViewInfoLangKey(isTopic: boolean | undefined, isBotForum: boolean | undefined) {
-  if (isTopic) {
-    return 'HeaderMenuViewTopicInfo';
-  }
-
-  if (isBotForum) {
-    return 'HeaderMenuViewProfile';
-  }
-
-  return 'HeaderMenuViewGroupInfo';
-}
-
 export default memo(withGlobal<OwnProps>(
   (global, { chatId, threadId }): Complete<StateProps> => {
     const chat = selectChat(global, chatId);
@@ -836,13 +721,11 @@ export default memo(withGlobal<OwnProps>(
     const { chatId: currentChatId, threadId: currentThreadId } = selectCurrentMessageList(global) || {};
     const canReportChat = isMainThread && !user && (isChatChannel(chat) || isChatGroup(chat)) && !isChatAdmin(chat);
 
-    const chatBot = !isSystemBot(chatId) ? selectBot(global, chatId) : undefined;
     const userFullInfo = isPrivate ? selectUserFullInfo(global, chatId) : undefined;
     const chatFullInfo = !isPrivate ? selectChatFullInfo(global, chatId) : undefined;
 
     const topic = selectTopic(global, chatId, threadId);
-    // Disable manual creation for bot forums
-    const canCreateTopic = chat.isForum && !chat.isBotForum && (
+    const canCreateTopic = chat.isForum && (
       !isUserRightBanned(chat, 'manageTopics') || getHasAdminRight(chat, 'manageTopics')
     );
     const canEditTopic = topic && getCanManageTopic(chat, topic);
@@ -860,21 +743,17 @@ export default memo(withGlobal<OwnProps>(
       isPrivate,
       isTopic: chat?.isForum && !isMainThread,
       isForum: chat?.isForum,
-      isBotForum: chat?.isBotForum,
       isForumAsMessages: chat?.isForumAsMessages,
       canAddContact,
       canDeleteChat: getCanDeleteChat(chat),
       canReportChat,
       hasLinkedChat: Boolean(chatFullInfo?.linkedChatId),
-      botCommands: chatBot ? userFullInfo?.botInfo?.commands : undefined,
-      botPrivacyPolicyUrl: chatBot ? userFullInfo?.botInfo?.privacyPolicyUrl : undefined,
       isChatInfoShown: chatInfo.isOpen && currentChatId === chatId && currentThreadId === threadId,
       canCreateTopic,
       canEditTopic,
       canManage,
       isRightColumnShown: selectIsRightColumnShown(global),
       isBlocked: userFullInfo?.isBlocked,
-      isBot: Boolean(chatBot),
       isChatWithSelf,
       savedDialog,
       isAccountFrozen,

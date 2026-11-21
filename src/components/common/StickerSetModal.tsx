@@ -9,7 +9,6 @@ import type { MessageList } from '../../types';
 import { EMOJI_SIZE_MODAL, STICKER_SIZE_MODAL } from '../../config';
 import { getAllowedAttachmentOptions, getCanPostInChat, getIsStickerSetInstalled } from '../../global/helpers';
 import {
-  selectBot,
   selectCanScheduleUntilOnline,
   selectChat,
   selectCurrentMessageList,
@@ -256,11 +255,10 @@ export default memo(withGlobal<OwnProps>(
     const currentMessageList = selectCurrentMessageList(global);
     const { chatId, threadId } = currentMessageList || {};
     const chat = chatId && selectChat(global, chatId);
-    const chatBot = chatId && selectBot(global, chatId);
     const isSavedMessages = chatId ? selectIsChatWithSelf(global, chatId) : undefined;
 
     const sendOptions = chat
-      ? getAllowedAttachmentOptions(chat, Boolean(chatBot), isSavedMessages)
+      ? getAllowedAttachmentOptions(chat, isSavedMessages)
       : undefined;
     const threadInfo = chatId && threadId ? selectThreadInfo(global, chatId, threadId) : undefined;
     const isMessageThread = Boolean(!threadInfo?.isCommentsInfo && threadInfo?.fromChannelId);

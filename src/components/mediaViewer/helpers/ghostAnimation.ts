@@ -698,11 +698,6 @@ function getNodes(origin: MediaViewerOrigin, message?: ApiMessage, index?: numbe
       mediaSelector = '.full-media';
       break;
 
-    case MediaViewerOrigin.PreviewMedia:
-      containerSelector = `#preview-media${index}`;
-      mediaSelector = 'img';
-      break;
-
     case MediaViewerOrigin.PollPreview:
       containerSelector = `#poll-media${getMessageHtmlId(message!.id, index)}`;
       mediaSelector = 'img.full-media, video.full-media, img.thumbnail:not(.blurred-bg), img, video';
@@ -775,7 +770,6 @@ function applyShape(ghost: HTMLDivElement, origin: MediaViewerOrigin) {
     case MediaViewerOrigin.ScheduledAlbum:
     case MediaViewerOrigin.Inline:
     case MediaViewerOrigin.ScheduledInline:
-    case MediaViewerOrigin.PreviewMedia:
     case MediaViewerOrigin.PollPreview:
       ghost.classList.add('rounded-corners');
       break;

@@ -49,7 +49,7 @@ export default function useTopicContextActions({
       openQuickPreview,
     } = getActions();
 
-    const canToggleClosed = getCanManageTopic(chat, topic) && !chat.isBotForum;
+    const canToggleClosed = getCanManageTopic(chat, topic);
     const canTogglePinned = getHasAdminRight(chat, 'manageTopics');
 
     const actionOpenInNewTab = IS_OPEN_IN_NEW_TAB_SUPPORTED && {
