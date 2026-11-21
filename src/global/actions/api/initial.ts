@@ -9,10 +9,7 @@ import {
 } from '../../../config';
 import { updateAppBadge } from '../../../util/appBadge';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
-import {
-  IS_WEBAUTHN_SUPPORTED,
-  IS_WEBM_SUPPORTED, MAX_BUFFER_SIZE, PLATFORM_ENV,
-} from '../../../util/browser/windowEnvironment';
+import { PLATFORM_ENV } from '../../../util/browser/windowEnvironment';
 import * as cacheApi from '../../../util/cacheApi';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import {
@@ -29,7 +26,6 @@ import {
   checkSessionLocked,
   clearAllStoredSessions,
   clearStoredSession,
-  loadStoredSession,
   storeSession,
 } from '../../../util/sessions';
 import { clearWallpaperBlobs } from '../../../util/wallpaper/storage';
@@ -57,37 +53,12 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
   if (global.passcode.isScreenLocked || checkSessionLocked()
     || !selectTabState(global, getCurrentTabId()).isMasterTab) return;
 
-  const {
-    shouldAllowHttpTransport,
-    shouldForceHttpTransport,
-    shouldDebugExportedSenders,
-    shouldCollectDebugLogs,
-    language,
-    signalProxyUrl,
-  } = selectSharedSettings(global);
-
-  const hasTestParam = window.location.search.includes('test');
-
-  const isTestServer = global.config?.isTestServer ?? hasTestParam;
-  const accountsInfo = getAccountsInfo();
-  const accountIds = Object.values(accountsInfo)
-    .filter((info) => Boolean(info.isTest) === isTestServer)
-    .map(({ userId }) => userId)
-    .filter(Boolean);
+  const { shouldCollectDebugLogs, language, signalProxyUrl } = selectSharedSettings(global);
 
   void initApi(actions.apiUpdate, {
     userAgent: navigator.userAgent,
     platform: PLATFORM_ENV,
-    sessionData: loadStoredSession(),
-    isWebmSupported: IS_WEBM_SUPPORTED,
-    maxBufferSize: MAX_BUFFER_SIZE,
-    shouldAllowHttpTransport,
-    shouldForceHttpTransport,
-    shouldDebugExportedSenders,
     langCode: language,
-    isTestServerRequested: hasTestParam,
-    accountIds,
-    hasPasskeySupport: IS_WEBAUTHN_SUPPORTED,
     signalProxyUrl,
   });
 

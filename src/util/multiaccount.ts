@@ -85,7 +85,7 @@ function getAccountInfo(slot: number): AccountInfo | undefined {
 export function loadSlotSession(slot: number | undefined): SharedSessionData | undefined {
   try {
     const data = JSON.parse(readSessionValue(`${SESSION_ACCOUNT_PREFIX}${slot || 1}`) || '{}') as SharedSessionData;
-    if (!data.dcId) return undefined;
+    if (!data.isLinked) return undefined;
     return data;
   } catch (e) {
     return undefined;

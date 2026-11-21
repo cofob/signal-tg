@@ -176,7 +176,6 @@ export default defineConfig(({ mode }): UserConfig => {
     TG_CSP: csp,
     TG_APPLE_ICON: appleIcon,
     TG_SOCIAL_IMAGE_URL: socialImageUrl,
-    TG_TEST_SESSION: env.TEST_SESSION || '',
     TG_SIGNAL_TUNNEL_URL: env.SIGNAL_TUNNEL_URL || '',
   });
 

@@ -35,14 +35,11 @@ import type {
   ApiVideo,
   ApiVoice,
 } from '../api/types';
-import type { DC_IDS } from '../config';
 import type { SearchResultKey } from '../util/keys/searchResultKey';
 import type { IconName } from './icons';
 import type { RegularLangKey } from './language';
 
 export type TextPart = TeactNode;
-
-export type DcId = typeof DC_IDS[number];
 
 export type SessionUserInfo = {
   userId?: string;
@@ -57,11 +54,8 @@ export type SessionUserInfo = {
 export type SharedSessionData = {
   pushKey?: string;
   date?: number;
-  dcId: number;
-  authKeyCreatedAt?: ApiSessionData['authKeyCreatedAt'];
-  tempAuthKey?: ApiSessionData['tempAuthKey'];
   isTest?: true;
-} & Partial<Record<`dc${DcId}_${'auth_key' | 'server_salt'}`, string>> & SessionUserInfo;
+} & ApiSessionData & SessionUserInfo;
 
 export type AccountInfo = {
   isTest?: true;
@@ -662,13 +656,6 @@ export interface Thread {
   localState: ThreadLocalState;
   threadInfo: ApiThreadInfo;
   readState: ThreadReadState;
-}
-
-export interface ServiceNotification {
-  id: number;
-  message: ApiMessage;
-  isUnread?: boolean;
-  isDeleted?: boolean;
 }
 
 export interface TopicsInfo {

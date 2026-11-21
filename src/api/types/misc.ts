@@ -15,29 +15,10 @@ import type {
 export interface ApiInitialArgs {
   userAgent: string;
   platform?: string;
-  sessionData?: ApiSessionData;
-  isTest?: boolean;
-  isWebmSupported?: boolean;
-  maxBufferSize?: number;
-  webAuthToken?: string;
-  webAuthUserId?: string;
-  dcId?: number;
-  shouldAllowHttpTransport?: boolean;
-  shouldForceHttpTransport?: boolean;
-  shouldDebugExportedSenders?: boolean;
   langCode: string;
-  isTestServerRequested?: boolean;
-  accountIds?: string[];
-  hasPasskeySupport?: boolean;
   // The tunnel for Signal hosts; `undefined` uses the build default
   signalProxyUrl?: string;
 }
-
-export type ApiAccountConnection = Pick<ApiInitialArgs,
-  'platform' | 'langCode' | 'shouldAllowHttpTransport' | 'shouldForceHttpTransport'
-> & {
-  sessionData: ApiSessionData;
-};
 
 export type ApiPasskeyOption = {
   publicKey: PublicKeyCredentialRequestOptionsJSON;
@@ -155,15 +136,9 @@ export type ApiPeerTheme = {
   emoticon: string;
 };
 
+// The engine keeps its keys in its own store, so the session only marks the account slot as linked
 export interface ApiSessionData {
-  mainDcId: number;
-  keys: Record<number, string>;
-  authKeyCreatedAt?: Record<number, number>;
-  tempAuthKey?: {
-    key: string;
-    expiresAt: number;
-  };
-  isTest?: true;
+  isLinked: true;
 }
 
 export type ApiNotification = {
@@ -290,7 +265,6 @@ export interface ApiAppConfig {
   richMessageMaxTableColumns: number;
   canDisplayAutoarchiveSetting?: boolean;
   storyViewersExpirePeriod: number;
-  storyChangelogUserId: string;
   maxPinnedStoriesCount: number;
   starsUsdWithdrawRateX1000: number;
   starsUsdSellRateX1000?: number;
