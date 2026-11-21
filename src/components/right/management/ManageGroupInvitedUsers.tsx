@@ -1,12 +1,15 @@
-import { memo } from '../../../lib/teact/teact';
+import { memo, useMemo } from '../../../lib/teact/teact';
 import { getActions, withGlobal } from '../../../global';
 
-import type { ApiChatPendingInvite, ApiUser } from '../../../api/types';
+import type { ApiChatPendingInvite } from '../../../api/types';
+import type { GlobalState } from '../../../global/types';
 
 import { getUserFullName } from '../../../global/helpers';
-import { selectChatFullInfo } from '../../../global/selectors';
+import { selectChatFullInfo, selectUser } from '../../../global/selectors';
+import { buildCollectionByKey, unique } from '../../../util/iteratees';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 
+import { useShallowSelector } from '../../../hooks/data/useSelector';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 
@@ -21,13 +24,11 @@ type OwnProps = {
 };
 
 type StateProps = {
-  usersById: Record<string, ApiUser>;
   invites: ApiChatPendingInvite[];
 };
 
 const ManageGroupInvitedUsers = ({
   chatId,
-  usersById,
   invites,
   onClose,
   isActive,
@@ -35,6 +36,15 @@ const ManageGroupInvitedUsers = ({
   const { revokeChatInvite } = getActions();
 
   const lang = useLang();
+
+  // Only the users that invited are read from the global state
+  const selectInviters = useMemo(() => {
+    const inviterIds = unique(invites.map(({ inviterId }) => inviterId).filter(Boolean));
+    return (global: GlobalState) => buildCollectionByKey(
+      inviterIds.map((id) => selectUser(global, id)).filter(Boolean), 'id',
+    );
+  }, [invites]);
+  const usersById = useShallowSelector(selectInviters);
 
   useHistoryBack({
     isActive,
@@ -89,10 +99,7 @@ const ManageGroupInvitedUsers = ({
 
 export default memo(withGlobal<OwnProps>(
   (global, { chatId }): Complete<StateProps> => {
-    const { byId: usersById } = global.users;
-
     return {
-      usersById,
       invites: selectChatFullInfo(global, chatId)?.pendingInvites || MEMO_EMPTY_ARRAY,
     };
   },

@@ -106,6 +106,8 @@ const LinkDeviceModal = ({ modal, isOpen }: OwnProps) => {
   const handleKeyDown = useLastCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
+    // A link that came from outside needs a click: Enter must not link a device the user has not looked at
+    if (link === modal.url) return;
     handleSubmit();
   });
 
@@ -118,6 +120,7 @@ const LinkDeviceModal = ({ modal, isOpen }: OwnProps) => {
       onClose={handleClose}
     >
       <p className={styles.description}>{lang('SignalDeviceLinkPromptText')}</p>
+      <p className={styles.description}>{lang('SignalDeviceLinkWarning')}</p>
       {isScanning && <video ref={videoRef} className={styles.video} muted playsInline />}
       <InputText
         id="link-device-url"

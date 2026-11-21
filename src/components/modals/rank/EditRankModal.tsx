@@ -168,8 +168,6 @@ export default memo(withGlobal<OwnProps>(
       canEditRank: modal && selectCanEditRank(global, {
         chatId: modal.chatId,
         userId: modal.userId,
-        isAdmin: modal.isAdmin,
-        isOwner: modal.isOwner,
       }),
       isOwn: modal && modal.userId === global.currentUserId,
     };

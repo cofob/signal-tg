@@ -141,6 +141,7 @@ export async function addChatMemberByPhoneNumber({ chat, phoneNumber }: { chat: 
     const serviceId = resolved?.conversation?.id ?? resolved?.pniServiceId;
     if (!serviceId) return { error: 'notFound' as const };
     const isChanged = await changeGroup(chat, buildAddMembersChange([serviceId]));
+    if (isChanged && resolved?.pniServiceId) await processor.saveInvitedNumber(resolved.pniServiceId, e164);
     return isChanged ? { status: isPniServiceId(serviceId) ? 'invited' as const : 'added' as const } : undefined;
   } catch (err) {
     if (err instanceof CdsiError && err.reason === 'rateLimited') return { error: 'rateLimited' as const };

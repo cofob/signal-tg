@@ -50,7 +50,9 @@ import { buildGroupNotices } from '../groups/groupUpdates';
 import { fetchProfile, fetchProfileIdentityKey, ProfileNotFoundError } from '../profiles/fetchProfile';
 import { MAX_SPAM_REPORT_MESSAGES, reportSpam } from '../sender/reportSpam';
 import { saveProfileKey } from '../sender/sealedSender';
-import { describeSendError, getSendErrorKind, UnregisteredUserError } from '../sender/sendErrors';
+import {
+  describeSendError, getSendErrorKind, GroupTerminatedError, UnregisteredUserError,
+} from '../sender/sendErrors';
 import {
   sendBlockedSync,
   sendConfigurationSync,
@@ -229,8 +231,6 @@ const OWN_ACCOUNT_FIELDS: Record<keyof OwnAccountUpdate, AccountStorageField> = 
 };
 
 const DELIVERY_RECEIPT_DELAY_MS = 1000;
-// How many of the latest messages tell whether a chat has any message of a person
-const USER_MESSAGE_SCAN_LIMIT = 50;
 // Signal Desktop `ts/util/expirationTimer.std.ts` and `ts/models/conversations.preload.ts`
 const INITIAL_EXPIRE_TIMER_VERSION = 1;
 const MAX_EXPIRE_TIMER_VERSION = 0xffffffff;
@@ -367,38 +367,45 @@ export default class MessageProcessor {
     onStored?: (message: MessageRecord) => void,
   ) {
     const account = await this.getAccount();
-    await this.maybeApplyUniversalTimer(conversationId, account);
-    const sentAt = this.allocateTimestamp();
 
-    const { conversation, message, dataMessage } = await this.runSerial(async () => {
+    const {
+      conversation, message, dataMessage, sentAt, startedTimer,
+    } = await this.runSerial(async () => {
       // An ACI that has no conversation yet starts one
-      const found = await this.db.getConversation(conversationId)
+      const existing = await this.db.getConversation(conversationId)
         ?? (ACI_PATTERN.test(conversationId) ? await this.ensurePrivateConversation(conversationId) : undefined);
-      if (!found) throw new Error(`Unknown conversation ${conversationId}`);
+      if (!existing) throw new Error(`Unknown conversation ${conversationId}`);
+      assertGroupIsOpen(existing);
+      const universalTimer = await this.maybeStartUniversalTimer(existing, account);
+      const found = universalTimer?.conversation ?? existing;
+      const messageAt = this.allocateTimestamp();
       // Writing accepts the message request, so the message carries our profile key
       const accepted = found.isAccepted
         ? found
         : await this.putLocalConversation(found, { ...found, isAccepted: true });
-      const outgoing = createOutgoingDataMessage(account, accepted, init, sentAt);
+      const outgoing = createOutgoingDataMessage(account, accepted, init, messageAt);
       const { message: added } = await this.addMessage(accepted, {
         conversationId,
         kind: 'message',
         authorAci: account.aci,
         authorDeviceId: account.deviceId,
-        sentAt,
-        receivedAt: sentAt,
+        sentAt: messageAt,
+        receivedAt: messageAt,
         isOutgoing: true,
         dataMessage: toBinary(DataMessageSchema, outgoing),
         body: outgoing.body || undefined,
         expireTimer: accepted.expireTimer || undefined,
-        expiresAt: accepted.expireTimer ? sentAt + accepted.expireTimer * 1000 : undefined,
-        readAt: sentAt,
+        expiresAt: accepted.expireTimer ? messageAt + accepted.expireTimer * 1000 : undefined,
+        readAt: messageAt,
         recipientStatus: buildPendingStatus(getRecipientAcis(accepted, account.aci)),
       });
       onStored?.(added);
-      return { conversation: accepted, message: added, dataMessage: outgoing };
+      return {
+        conversation: accepted, message: added, dataMessage: outgoing, sentAt: messageAt, startedTimer: universalTimer,
+      };
     });
 
+    if (startedTimer) await this.sendExpireTimerUpdate(account, startedTimer.conversation, startedTimer.timestamp);
     return this.sendStoredMessage(conversation, message, { case: 'dataMessage', value: dataMessage }, {
       timestamp: sentAt,
       expirationStartTimestamp: conversation.expireTimer ? sentAt : undefined,
@@ -406,20 +413,23 @@ export default class MessageProcessor {
   }
 
   /**
-   * The first message of a private chat that has no messages and no timer starts the timer that the account sets for
-   * new chats (Signal Desktop `maybeApplyUniversalTimer` in `ts/models/conversations.preload.ts`, called before a
-   * message is queued). Note to Self keeps messages for good, as in Signal Android.
+   * The first message of a private chat in which we never sent or received a message and that has no timer starts
+   * the timer that the account sets for new chats (Signal Desktop `maybeApplyUniversalTimer` in
+   * `ts/models/conversations.preload.ts`, called before a message is queued). Note to Self keeps messages for good,
+   * as in Signal Android. Runs in the serial queue; the timer update goes out afterwards.
    */
-  private async maybeApplyUniversalTimer(conversationId: string, { aci, universalExpireTimer }: AccountRecord) {
-    if (!universalExpireTimer || conversationId === aci || !ACI_PATTERN.test(conversationId)) return;
+  private async maybeStartUniversalTimer(conversation: ConversationRecord, account: AccountRecord) {
+    const { universalExpireTimer, aci } = account;
+    if (!universalExpireTimer || conversation.id === aci || conversation.type !== 'private'
+      || conversation.expireTimer) {
+      return undefined;
+    }
+    const [firstMessage] = await this.db.findLatestMessages(conversation.id, 1, ({ kind }) => kind === 'message');
+    if (firstMessage) return undefined;
 
-    const conversation = await this.db.getConversation(conversationId);
-    if (conversation && (conversation.type !== 'private' || conversation.expireTimer)) return;
-    if (conversation && (await this.db.getMessages(conversationId, USER_MESSAGE_SCAN_LIMIT))
-      .some(({ kind }) => kind === 'message')) return;
-
-    await this.getOrCreatePrivateConversation(conversationId);
-    await this.setExpireTimer(conversationId, universalExpireTimer);
+    const timestamp = this.allocateTimestamp();
+    const updated = await this.storeExpireTimer(conversation.id, universalExpireTimer, account, timestamp);
+    return updated && { conversation: updated, timestamp };
   }
 
   /**
@@ -431,36 +441,41 @@ export default class MessageProcessor {
   async setExpireTimer(conversationId: string, seconds: number) {
     const account = await this.getAccount();
     const timestamp = this.allocateTimestamp();
+
+    const updated = await this.runSerial(() => this.storeExpireTimer(conversationId, seconds, account, timestamp));
+    if (updated) await this.sendExpireTimerUpdate(account, updated, timestamp);
+  }
+
+  /** Stores the timer and its notice; resolves with the conversation, or `undefined` when the timer is the same */
+  private async storeExpireTimer(conversationId: string, seconds: number, account: AccountRecord, timestamp: number) {
     const timer = seconds || undefined;
+    const found = await this.db.getConversation(conversationId);
+    if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
+    if (found.expireTimer === timer) return undefined;
 
-    const updated = await this.runSerial(async () => {
-      const found = await this.db.getConversation(conversationId);
-      if (found?.type !== 'private') throw new Error(`Unknown private conversation ${conversationId}`);
-      if (found.expireTimer === timer) return undefined;
-
-      const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
-      const withTimer = await this.putConversation({
-        ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
-      });
-      const { conversation } = await this.addMessage(withTimer, {
-        conversationId,
-        kind: 'timerUpdate',
-        authorAci: '',
-        actorAci: account.aci,
-        sentAt: timestamp,
-        receivedAt: timestamp,
-        isOutgoing: true,
-        expireTimer: timer,
-        readAt: timestamp,
-      });
-      return conversation;
+    const previousVersion = found.expireTimerVersion ?? INITIAL_EXPIRE_TIMER_VERSION;
+    const withTimer = await this.putConversation({
+      ...found, expireTimer: timer, expireTimerVersion: Math.min(previousVersion + 1, MAX_EXPIRE_TIMER_VERSION),
     });
-    if (!updated) return;
+    const { conversation } = await this.addMessage(withTimer, {
+      conversationId,
+      kind: 'timerUpdate',
+      authorAci: '',
+      actorAci: account.aci,
+      sentAt: timestamp,
+      receivedAt: timestamp,
+      isOutgoing: true,
+      expireTimer: timer,
+      readAt: timestamp,
+    });
+    return conversation;
+  }
 
+  private async sendExpireTimerUpdate(account: AccountRecord, conversation: ConversationRecord, timestamp: number) {
     const message = createOutgoingDataMessage(
-      account, updated, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
+      account, conversation, { flags: DataMessage_Flags.EXPIRATION_TIMER_UPDATE }, timestamp,
     );
-    await this.sendWithRetry(updated, [conversationId], { case: 'dataMessage', value: message }, timestamp);
+    await this.sendWithRetry(conversation, [conversation.id], { case: 'dataMessage', value: message }, timestamp);
   }
 
   /**
@@ -478,6 +493,7 @@ export default class MessageProcessor {
       if (!target?.dataMessage || !found || target.authorAci !== account.aci || target.deletedAt) {
         throw new Error('The message cannot be edited');
       }
+      assertGroupIsOpen(found);
       const isNoteToSelf = found.id === account.aci;
       const isTooOld = editedAt - target.sentAt > EDIT_MAX_AGE_MS;
       if (!isNoteToSelf && (isTooOld || (target.revisions?.length ?? 0) >= MAX_EDIT_COUNT)) {
@@ -527,6 +543,7 @@ export default class MessageProcessor {
       if (!target || !found || target.kind !== 'message' || !target.dataMessage) {
         throw new Error('The message cannot have reactions');
       }
+      assertGroupIsOpen(found);
       const previous = target.reactions?.find(({ authorAci }) => authorAci === account.aci);
       if (!emoji && !previous) return undefined;
       await this.putReaction(target, account.aci, emoji ? { emoji, authorAci: account.aci, sentAt } : undefined);
@@ -732,6 +749,7 @@ export default class MessageProcessor {
       const message = await this.db.getMessage(messageId);
       const found = message && await this.db.getConversation(message.conversationId);
       if (!message || !found || message.isPollEnded) throw new Error('The poll does not accept votes');
+      assertGroupIsOpen(found);
       const count = (message.pollVotes?.find(({ authorAci }) => authorAci === account.aci)?.voteCount ?? 0) + 1;
       await this.putMessage({
         ...message,
@@ -840,7 +858,7 @@ export default class MessageProcessor {
   async sendTyping(conversationId: string, isTyping: boolean) {
     const conversation = await this.db.getConversation(conversationId);
     const context = this.client.getSenderContext();
-    if (!conversation || context.account.isTypingIndicatorsEnabled === false
+    if (!conversation || conversation.groupState?.isTerminated || context.account.isTypingIndicatorsEnabled === false
       || !getIsConversationAccepted(conversation, context.account.aci)) {
       return;
     }
@@ -948,7 +966,7 @@ export default class MessageProcessor {
       // Signal Desktop `sendStoryMessage` skips groups where only admins may send. Stories carry our profile key, so
       // they do not go to groups that are blocked or that we have not accepted.
       if (group.isAnnouncementsOnly && !group.adminAcis?.includes(account.aci)) continue;
-      if (group.isBlocked || !getIsConversationAccepted(group, account.aci)) continue;
+      if (group.isBlocked || group.groupState?.isTerminated || !getIsConversationAccepted(group, account.aci)) continue;
       sent.push(await this.sendGroupStory(account, story, group));
     }
 
@@ -2784,6 +2802,26 @@ export default class MessageProcessor {
     return (await this.resolvePhoneNumber(e164))?.conversation;
   }
 
+  /** Keeps the number behind an invitation by PNI, which the group state does not have */
+  saveInvitedNumber(pniServiceId: string, e164: string) {
+    return this.runSerial(async () => {
+      await this.client.store.setItem('invitedNumbers', { ...await this.getInvitedNumbers(), [pniServiceId]: e164 });
+    });
+  }
+
+  /** Forgets the numbers of invitations that no group has any more, because they were accepted or revoked */
+  private async pruneInvitedNumbers() {
+    const numbers = await this.getInvitedNumbers();
+    const pniServiceIds = Object.keys(numbers);
+    if (!pniServiceIds.length) return;
+
+    const pending = new Set((await this.db.getConversations())
+      .flatMap(({ groupState }) => groupState?.pendingMembers.map(({ serviceId }) => serviceId) ?? []));
+    const kept = pniServiceIds.filter((serviceId) => pending.has(serviceId));
+    if (kept.length === pniServiceIds.length) return;
+    await this.client.store.setItem('invitedNumbers', Object.fromEntries(kept.map((id) => [id, numbers[id]])));
+  }
+
   /** The numbers of users invited to groups by PNI, by PNI service id */
   async getInvitedNumbers() {
     return await this.client.store.getItem('invitedNumbers') ?? {};
@@ -2792,8 +2830,8 @@ export default class MessageProcessor {
   /**
    * Like `lookUpPhoneNumber`, but a number whose account the enclave knows by PNI only, because the user does not
    * share the ACI, comes back as `pniServiceId`. Such a user can be invited to a group (Signal Desktop
-   * `lookupConversationWithoutServiceId`, which keeps such a user as a conversation with a PNI). The number is
-   * kept for the invitation, since the group lists the PNI alone.
+   * `lookupConversationWithoutServiceId`, which keeps such a user as a conversation with a PNI). The group lists
+   * the PNI alone, so `saveInvitedNumber` keeps the number once the invitation went through.
    */
   async resolvePhoneNumber(
     e164: string,
@@ -2808,9 +2846,7 @@ export default class MessageProcessor {
     const { aci, pni } = records.get(e164) ?? {};
     if (!aci) {
       if (!pni) return undefined;
-      const pniServiceId = toPniServiceId(pni);
-      await this.client.store.setItem('invitedNumbers', { ...await this.getInvitedNumbers(), [pniServiceId]: e164 });
-      return { pniServiceId };
+      return { pniServiceId: toPniServiceId(pni) };
     }
     const conversation = await this.runSerial(async () => {
       const existing = await this.ensurePrivateConversation(aci);
@@ -3203,6 +3239,7 @@ export default class MessageProcessor {
       avatarPath: state.avatarUrl,
       groupState: state,
     });
+    await this.pruneInvitedNumbers();
     if (!applied) return updated;
 
     const { change, isOutgoing, sentAt } = applied;
@@ -3715,6 +3752,11 @@ function setOutgoingFields(
   message.groupV2 = conversation.masterKey
     ? create(GroupContextV2Schema, { masterKey: conversation.masterKey, revision: conversation.revision })
     : undefined;
+}
+
+/** Refuses a send to a group that an admin ended */
+function assertGroupIsOpen({ id, groupState }: ConversationRecord) {
+  if (groupState?.isTerminated) throw new GroupTerminatedError(id);
 }
 
 /** Members who receive our messages in a conversation; Note to Self has only us, which sends a sync alone */

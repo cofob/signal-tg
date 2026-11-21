@@ -478,8 +478,6 @@ export default memo(withGlobal<OwnProps>(
     const canEditRank = selectedAdminMember && selectCanEditRank(global, {
       chatId,
       userId: selectedAdminMember.userId,
-      isAdmin: selectedAdminMember.isAdmin,
-      isOwner: selectedAdminMember.isOwner,
     });
 
     return {

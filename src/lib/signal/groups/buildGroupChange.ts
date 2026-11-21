@@ -210,7 +210,8 @@ export function buildRoleChange(aci: string, isAdmin: boolean): GroupChangeBuild
     if (!member || member.role === role) return undefined;
 
     const userId = encryptGroupServiceId(secretParams, aci);
-    // Labels that only admins may set go with the admin role (Signal Desktop `buildModifyMemberRoleChange`)
+    // A demoted admin loses the label when only admins may set labels, in the same change (Signal Desktop
+    // `buildModifyMemberRoleChange`: the member was an admin, because the role differs from the new one)
     const shouldDropLabel = !isAdmin && member.label
       && state.accessControl.memberLabel === AccessControl_AccessRequired.ADMINISTRATOR;
     return {
@@ -222,8 +223,8 @@ export function buildRoleChange(aci: string, isAdmin: boolean): GroupChangeBuild
 
 /**
  * Who may edit the title, avatar, description and timer, who may add members, and who may set member labels.
- * Labels of members who are no admins go when only admins may set labels (Signal Desktop
- * `buildAccessControlMemberLabelChange`).
+ * Labels of members who are no admins go in the same change, but only when the access turns into admins only and
+ * only for members that have a label (Signal Desktop `buildAccessControlMemberLabelChange`).
  */
 export function buildAccessChange(
   { isInfoAdminOnly, isMembersAdminOnly, isLabelAdminOnly }:
@@ -269,11 +270,13 @@ export type MemberLabel = { emoji?: string; text: string };
  */
 export function buildMemberLabelChange(aci: string, label?: MemberLabel): GroupChangeBuilder {
   const text = label?.text.trim() ?? '';
-  const emoji = text ? label?.emoji : undefined;
+  const emoji = label?.emoji;
   return (state, { secretParams }) => {
     const member = state.members.find((current) => current.aci === aci);
     if (!member || ((member.label ?? '') === text && member.labelEmoji === emoji)) return undefined;
 
+    // `buildModifyMemberLabelChange`: an emoji needs the text it goes with
+    if (emoji && !text) throw new Error('A member label emoji needs a label text');
     checkMemberLabel(text, emoji);
     const encryptedText = text ? encryptGroupText(secretParams, text) : undefined;
     const encryptedEmoji = emoji ? encryptGroupText(secretParams, emoji) : undefined;

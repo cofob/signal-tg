@@ -246,7 +246,6 @@ export enum SettingsScreens {
   PrivacyGroupChatsDeniedContacts,
   PrivacyBlockedUsers,
   Performance,
-  SignalDevices,
   Folders,
   FoldersCreateFolder,
   FoldersEditFolder,
@@ -277,6 +276,7 @@ export enum SettingsScreens {
   SignalPin,
   SignalPinNew,
   SignalPinConfirm,
+  SignalDevices,
 }
 
 export type StickerSetOrReactionsSetOrRecent = Pick<ApiStickerSet, (
@@ -515,7 +515,6 @@ export enum ManagementScreens {
   GroupType,
   GroupPermissions,
   GroupRemovedUsers,
-  GroupInvitedUsers,
   ChannelRemovedUsers,
   GroupUserPermissionsCreate,
   GroupUserPermissions,
@@ -531,6 +530,7 @@ export enum ManagementScreens {
   InviteInfo,
   JoinRequests,
   NewDiscussionGroup,
+  GroupInvitedUsers,
 }
 
 export type ManagementType = 'user' | 'group' | 'channel';

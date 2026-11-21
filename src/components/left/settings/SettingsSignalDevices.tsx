@@ -6,6 +6,7 @@ import type { ApiSignalDevice, ApiSignalDevices } from '../../../api/types';
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
 import { formatDateTime } from '../../../util/localization/dateFormat';
 
+import useFlag from '../../../hooks/useFlag';
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
@@ -33,7 +34,7 @@ const SettingsSignalDevices = ({
   const lang = useLang();
 
   const [deviceToUnlink, setDeviceToUnlink] = useState<ApiSignalDevice | undefined>();
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUpdating, startUpdating, stopUpdating] = useFlag();
 
   useHistoryBack({
     isActive,
@@ -51,9 +52,9 @@ const SettingsSignalDevices = ({
   const handleUnlink = useLastCallback(async () => {
     const device = deviceToUnlink!;
     setDeviceToUnlink(undefined);
-    setIsUpdating(true);
+    startUpdating();
     await getPromiseActions().unlinkSignalDevice({ deviceId: device.id });
-    setIsUpdating(false);
+    stopUpdating();
   });
 
   const handleUnlinkClose = useLastCallback(() => {

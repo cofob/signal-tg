@@ -41,6 +41,12 @@ export async function fetchSignalDevices(): Promise<ApiSignalDevices | undefined
   }
 }
 
+/** Whether this is the primary device, from the local account, so that it needs no connection */
+export async function fetchIsSignalPrimary() {
+  const account = await store.getItem('account');
+  return account?.deviceId === SIGNAL_PRIMARY_DEVICE_ID;
+}
+
 /**
  * Links the device of a `sgnl://linkdevice` QR code to this account; only a primary device can. Resolves with the
  * new device once it registered, `{ isPending }` when it did not in time, or the reason it failed.

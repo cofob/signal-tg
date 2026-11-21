@@ -318,6 +318,7 @@
 "SignalDevicesLinkedAbout" = "These devices are linked to your account. Link and unlink devices in Signal on your phone.";
 "SignalDeviceLinkPrompt" = "Link a New Device";
 "SignalDeviceLinkPromptText" = "Open Signal on the new device, such as Signal Desktop, and scan its QR code, or paste the link of the QR code.";
+"SignalDeviceLinkWarning" = "The new device gets full access to your messages and your account. Only link a device that you own.";
 "SignalDeviceLinkField" = "Link";
 "SignalDeviceLinkScan" = "Scan QR Code";
 "SignalDeviceLinkStopScan" = "Stop Scanning";

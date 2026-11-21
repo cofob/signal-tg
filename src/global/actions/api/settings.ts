@@ -1161,8 +1161,8 @@ addActionHandler('unlinkSignalDevice', async (global, actions, payload): Promise
 // A link of a device that wants to be linked: a primary device offers to link it, a linked device cannot
 addActionHandler('openSignalLinkDevice', async (global, actions, payload): Promise<void> => {
   const { url, tabId = getCurrentTabId() } = payload;
-  const signalDevices = await callApi('fetchSignalDevices');
-  if (signalDevices?.isPrimary) {
+  const isPrimary = await callApi('fetchIsSignalPrimary');
+  if (isPrimary) {
     actions.openLinkDeviceModal({ url, tabId });
   } else {
     actions.openSignalLinkModal({ type: 'linkDevice', tabId });

@@ -180,8 +180,6 @@ export default memo(withGlobal<OwnProps>(
       canEditRank: modal && selectCanEditRank(global, {
         chatId: modal.chatId,
         userId: modal.userId,
-        isAdmin: modal.isAdmin,
-        isOwner: modal.isOwner,
       }),
       canEditOwnRank: modal && selectCanEditOwnRank(global, modal.chatId),
       currentUserMember,

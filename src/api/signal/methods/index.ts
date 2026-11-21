@@ -56,7 +56,9 @@ export {
   updateChatMemberBannedRights,
   updateChatTitle,
 } from './groups';
-export { fetchSignalDevices, linkSignalDevice, unlinkSignalDevice } from './devices';
+export {
+  fetchIsSignalPrimary, fetchSignalDevices, linkSignalDevice, unlinkSignalDevice,
+} from './devices';
 export { downloadMedia } from './media';
 export {
   fetchSignalContactDiscovery,

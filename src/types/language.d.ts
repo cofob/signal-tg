@@ -276,6 +276,7 @@ export interface LangPair {
   'SignalDevicesLinkedAbout': undefined;
   'SignalDeviceLinkPrompt': undefined;
   'SignalDeviceLinkPromptText': undefined;
+  'SignalDeviceLinkWarning': undefined;
   'SignalDeviceLinkField': undefined;
   'SignalDeviceLinkScan': undefined;
   'SignalDeviceLinkStopScan': undefined;

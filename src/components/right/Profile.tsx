@@ -692,8 +692,6 @@ const Profile = ({
     const canEditRank = member && selectCanEditRank(global, {
       chatId,
       userId: memberId,
-      isAdmin: member?.isAdmin,
-      isOwner: member?.isOwner,
     });
 
     const actions: MenuItemContextAction[] = [];

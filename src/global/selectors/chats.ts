@@ -332,8 +332,6 @@ export function selectCanEditRank<T extends GlobalState>(global: T, {
 }: {
   chatId: string;
   userId: string;
-  isAdmin?: boolean;
-  isOwner?: boolean;
 }) {
   const chat = selectChat(global, chatId);
   if (!chat || chat.isNotJoined || chat.isRestricted) return false;
