@@ -208,20 +208,23 @@ start stays hidden.
 
 ### Notifications
 
-The page asks for a notification with `show_notification(title, body, chatId?, messageId?)` (`src/notifications.rs`,
-`notify-rust`, which the notification plugin already pulls in). The command shows it and waits for the user on a
-thread of its own (at most 16 at once; the others are shown without waiting): the D-Bus `ActionInvoked` signal of the
-`default` action on Linux, the toast activation on Windows and the notification center on macOS. A click brings the
-window forward (`bring_window_forward`) and emits `notification-clicked` with `{ chatId, messageId }`, which
-`setupTauriListeners.ts` turns into `focusMessage`. The page passes no chat while the screen is locked, and the
-title and body already follow the "message preview" setting, so a click reveals nothing that the notification did
-not. The notification plugin remains for the permission check only.
+The page asks for a notification with `show_notification(title, body, openLabel, chatId?, messageId?)`
+(`src/notifications.rs`, `notify-rust`, which the notification plugin already pulls in). The command shows it and waits
+for the user on a thread of its own (at most 64 at once; the others are shown without opening their chat, and a warning
+says so): the D-Bus `ActionInvoked` signal of the `default` action on Linux, the toast activation on Windows and the
+notification center on macOS. A click brings the window forward (`bring_window_forward`) and emits
+`notification-clicked` with `{ chatId, messageId }`, which `setupTauriListeners.ts` turns into `focusMessage`.
+
+On Linux the text is escaped (`&`, `<`, `>`) when the server has `body-markup`, so a sender cannot inject links or
+images, and the default action goes only to a server with `actions`; its label is the page's word for "Open". The page
+passes no chat while the screen is locked, and the title and body already follow the "message preview" setting, so a
+click reveals nothing that the notification did not. The notification plugin remains for the permission check only.
 
 ### Menus and shortcuts
 
 - macOS: the menu bar (`src/menu.rs`) has the app menu (Settings, Cmd+,; Hide; Quit), Edit (undo, redo, cut, copy,
-  paste, select all) and Window (minimize; Close, Cmd+W, which hides the last window like the close button). A click
-  on the Dock icon (`RunEvent::Reopen`) shows the window. The page sends the labels with `set_menu_translations`
+  paste, select all) and Window (minimize; Close, Cmd+W, which closes the window like the close button, so it follows
+  "Close to tray"). A click on the Dock icon (`RunEvent::Reopen`) shows the window. The page sends the labels with `set_menu_translations`
   when its language changes; the tray menu takes them too.
 - Windows and Linux: no menu bar. Ctrl+Q quits through `quit_app`; the shortcut is `quitApp` in the page's
   keyboard shortcut registry.

@@ -4,8 +4,8 @@
 //! system's own record (`tauri-plugin-autostart`), so it is read from the system.
 
 use std::{
-  fs,
-  path::PathBuf,
+  fs, io,
+  path::{Path, PathBuf},
   sync::{Mutex, MutexGuard, PoisonError},
 };
 
@@ -24,6 +24,15 @@ pub const AUTOSTART_ARG: &str = "--autostart";
 pub struct StoredSettings {
   pub should_close_to_tray: bool,
   pub is_content_protected: bool,
+}
+
+impl StoredSettings {
+  fn unreadable() -> Self {
+    Self {
+      is_content_protected: true,
+      ..Self::default()
+    }
+  }
 }
 
 impl Default for StoredSettings {
@@ -45,9 +54,7 @@ impl DesktopSettings {
   pub fn load(storage_path: Option<PathBuf>) -> Self {
     let stored = storage_path
       .as_deref()
-      .and_then(|path| fs::read(path).ok())
-      .and_then(|bytes| serde_json::from_slice(&bytes).ok())
-      .unwrap_or_default();
+      .map_or_else(Default::default, read_stored);
     Self {
       storage_path,
       stored: Mutex::new(stored),
@@ -71,6 +78,22 @@ impl DesktopSettings {
 
   fn lock(&self) -> MutexGuard<'_, StoredSettings> {
     self.stored.lock().unwrap_or_else(PoisonError::into_inner)
+  }
+}
+
+/// A missing file means the defaults. A file that cannot be read or parsed keeps the content hidden from screenshots,
+/// which is the safe side when the user may have turned it on.
+fn read_stored(path: &Path) -> StoredSettings {
+  match fs::read(path) {
+    Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_else(|err| {
+      log::error!("Failed to parse the desktop settings: {err}");
+      StoredSettings::unreadable()
+    }),
+    Err(err) if err.kind() == io::ErrorKind::NotFound => StoredSettings::default(),
+    Err(err) => {
+      log::error!("Failed to read the desktop settings: {err}");
+      StoredSettings::unreadable()
+    }
   }
 }
 
@@ -123,12 +146,13 @@ pub fn set_desktop_settings(
   }
 
   if let Some(is_content_protected) = patch.is_content_protected {
-    settings.update(|stored| stored.is_content_protected = is_content_protected);
+    // Applied first, so that a window that refuses leaves the stored value as it was
     for window in app.webview_windows().values() {
       window
         .set_content_protected(is_content_protected)
         .map_err(|err| err.to_string())?;
     }
+    settings.update(|stored| stored.is_content_protected = is_content_protected);
   }
 
   if let Some(should_launch_at_login) = patch.should_launch_at_login {

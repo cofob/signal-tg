@@ -37,6 +37,15 @@ no underline and the context menu had no suggestions, though the system may lack
 `tauri/Cargo.toml` does not list. Whether WKWebView (macOS) and WebView2 (Windows) spell-check the composer is not
 tried.
 
+## A launch at login on Linux hides the window even when no tray host runs
+
+`tauri/src/lib.rs` opens the first window hidden for `--autostart` (`SHOULD_START_HIDDEN`), and the tray icon is how a
+hidden window comes back. On a Linux desktop without a StatusNotifier host (GNOME without the AppIndicator extension,
+for example) nobody can show the window except by launching the app a second time. Verified by reading the code; the
+hidden start itself was tried under Xvfb, a missing tray host was not. Detecting the host means asking the session bus
+whether `org.kde.StatusNotifierWatcher` has an owner, which needs `zbus` (in the tree through `notify-rust`) as a
+direct dependency; the start could then stay visible without one.
+
 ## The demo account has no downloadable document and no file with a risky name
 
 `seedDemo` (`src/lib/signal/dev/seedDemo.ts`) draws its photos into the attachment cache, but the one document in it,

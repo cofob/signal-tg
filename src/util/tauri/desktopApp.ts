@@ -4,6 +4,7 @@ import type { LangFn } from '../localization';
 
 import { APP_NAME } from '../../config';
 import { IS_MAC_OS, IS_WINDOWS } from '../browser/windowEnvironment';
+import { getTranslationFn } from '../localization';
 
 export type DesktopSettings = {
   shouldCloseToTray: boolean;
@@ -33,7 +34,7 @@ export function quitApp() {
  */
 export function showDesktopNotification(title: string, body: string, chatId?: string, messageId?: number) {
   return invoke<void>('show_notification', {
-    title, body, chatId, messageId,
+    title, body, openLabel: getTranslationFn()('Open'), chatId, messageId,
   });
 }
 

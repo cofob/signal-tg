@@ -522,9 +522,11 @@ pub(crate) fn hide_to_tray(window: &tauri::Window) {
   window.hide().unwrap_or_default();
 }
 
-/// Hides the last window to the tray and closes any other
+/// Closes the window as its close button does: the last window hides to the tray with "Close to tray" on, and
+/// quits the app with it off
 pub(crate) fn hide_or_close_window(window: &tauri::Window) {
-  if window.app_handle().windows().len() == 1 {
+  let app = window.app_handle();
+  if app.windows().len() == 1 && app.state::<DesktopSettings>().get().should_close_to_tray {
     hide_to_tray(window);
     return;
   }
