@@ -398,6 +398,14 @@ impl SavedFiles {
     evicted
   }
 
+  /// Drops every record and returns their keys
+  fn clear(&self) -> Vec<String> {
+    let mut data = lock(&self.data);
+    let keys = data.files.drain().map(|(key, _)| key).collect();
+    self.persist(&data);
+    keys
+  }
+
   fn remove(&self, key: &str) {
     let mut data = lock(&self.data);
     if data.files.remove(key).is_some() {
@@ -569,7 +577,8 @@ fn discard_temp_file(save: &mut PendingSave) {
   // Windows cannot remove an open file
   drop(save.file.take());
   if let Err(err) = fs::remove_file(&save.temp_path) {
-    log::warn!("Failed to remove {}: {err}", save.temp_path.display());
+    // File names come from messages, so logs name no file
+    log::warn!("Failed to remove a temporary file: {err}");
   }
 }
 
@@ -776,6 +785,20 @@ pub async fn list_saved_files(
   Ok(kept)
 }
 
+/// Drops the records of every saved file, as logging out does: they hold the paths and the keys of attachments that the
+/// account received. The files themselves stay where the user saved them.
+#[tauri::command]
+pub async fn forget_saved_files(
+  app: AppHandle,
+  files: tauri::State<'_, Files>,
+) -> Result<(), String> {
+  let removed = files.saved.clear();
+  if !removed.is_empty() {
+    emit_change(&app, Vec::new(), removed);
+  }
+  Ok(())
+}
+
 /// Opens a saved file with the default app, after a confirmation when its type is dangerous
 #[tauri::command]
 pub async fn open_saved_file(
@@ -819,7 +842,7 @@ pub async fn reveal_saved_file(
     .reveal_item_in_dir(&path)
     .or_else(|err| {
       // Without a file manager that implements `FileManager1` (Linux), opening the folder is the best left
-      log::warn!("Failed to reveal {}: {err}", path.display());
+      log::warn!("Failed to reveal a file: {err}");
       let dir = path.parent().ok_or(err)?;
       opener.open_path(dir.to_string_lossy(), None::<&str>)
     })
@@ -940,7 +963,7 @@ fn mark_as_downloaded(path: &Path) {
       .arg(path)
       .status();
     if !result.is_ok_and(|status| status.success()) {
-      log::warn!("Failed to quarantine {}", path.display());
+      log::warn!("Failed to quarantine a file");
     }
   }
   #[cfg(windows)]
@@ -949,7 +972,7 @@ fn mark_as_downloaded(path: &Path) {
     let mut stream = path.as_os_str().to_owned();
     stream.push(":Zone.Identifier");
     if let Err(err) = fs::write(&stream, "[ZoneTransfer]\r\nZoneId=3\r\n") {
-      log::warn!("Failed to mark {}: {err}", path.display());
+      log::warn!("Failed to mark a file: {err}");
     }
   }
   #[cfg(not(any(target_os = "macos", windows)))]
@@ -1188,6 +1211,30 @@ mod tests {
       SavedFiles::load(Some(dir.join(SAVED_FILES_FILE_NAME))).get_path("gone"),
       None
     );
+
+    fs::remove_dir_all(&dir).unwrap();
+  }
+
+  #[test]
+  fn clearing_drops_every_record_from_storage() {
+    let dir = make_temp_dir();
+    let file = dir.join("secret.txt");
+    fs::write(&file, "a").unwrap();
+    let storage = dir.join(SAVED_FILES_FILE_NAME);
+
+    let saved = SavedFiles::load(Some(storage.clone()));
+    saved.insert("one".to_string(), file.clone());
+    saved.insert("two".to_string(), file.clone());
+    let mut keys = saved.clear();
+    keys.sort();
+    assert_eq!(keys, vec!["one".to_string(), "two".to_string()]);
+    assert_eq!(saved.get_path("one"), None);
+
+    // The stored list holds neither the keys nor the path, and the file stays
+    let stored = fs::read_to_string(&storage).unwrap();
+    assert!(!stored.contains("secret.txt") && !stored.contains("one"));
+    assert_eq!(SavedFiles::load(Some(storage)).get_path("two"), None);
+    assert!(file.exists());
 
     fs::remove_dir_all(&dir).unwrap();
   }

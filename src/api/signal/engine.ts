@@ -4,6 +4,7 @@ import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
 import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
 import SignalStore from '../../lib/signal/store/SignalStore';
+import { getLoggableError } from '../../util/maskSensitiveText';
 import { handleChatChanges } from './updaters/chats';
 import { handleMessageChanges, handleTyping } from './updaters/messages';
 import { handleStickerPacksChange } from './updaters/stickers';
@@ -39,5 +40,5 @@ store.onIdentityChange = (serviceId) => {
 
 export function logError(error: unknown) {
   // eslint-disable-next-line no-console
-  console.error('[signal]', error);
+  console.error('[signal]', getLoggableError(error));
 }

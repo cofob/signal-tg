@@ -108,6 +108,11 @@ export async function loadSavedFiles() {
   getActions().updateSavedFiles({ added: keys });
 }
 
+/** Drops the app's records of saved files, which hold their paths, when the account is forgotten; the files stay */
+export function forgetSavedFiles() {
+  return invoke<void>('forget_saved_files');
+}
+
 export function getShowInFolderLangKey(): RegularLangKey {
   if (IS_MAC_OS) return 'FileShowInFinder';
   return IS_WINDOWS ? 'FileShowInExplorer' : 'FileShowInFolder';

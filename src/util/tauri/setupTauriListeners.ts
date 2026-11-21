@@ -5,7 +5,9 @@ import { SettingsScreens } from '../../types';
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
+import { getLoggableError } from '../maskSensitiveText';
 import { isSgnlLink, parseSignalLink } from '../signalLinks';
+import { openExternalUrl } from './desktopApp';
 
 const NOTIFICATION_CLICKED_EVENT = 'notification-clicked';
 const OPEN_SETTINGS_EVENT = 'open-settings';
@@ -105,7 +107,7 @@ async function listenToNativeEvents() {
     });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('Failed to listen to native events:', err);
+    console.error('Failed to listen to native events:', getLoggableError(err));
   }
 }
 
@@ -125,11 +127,10 @@ async function openLink(url: string | URL, shouldOpenInBrowser?: boolean) {
     if (window.location.origin === urlObject.origin && window.location.pathname === urlObject.pathname) {
       await window.tauri.openNewWindow(urlObject.toString());
     } else {
-      const shellPlugin = await import('@tauri-apps/plugin-shell');
-      await shellPlugin.open(urlObject.toString());
+      await openExternalUrl(urlObject.toString());
     }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error('Failed to open link:', url, e);
+    console.error('Failed to open link:', getLoggableError(e));
   }
 }

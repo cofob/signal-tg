@@ -29,12 +29,14 @@ const IV_LENGTH = 12;
 const KDF_SALT_LENGTH = 16;
 const KDF_ITERATIONS = 600000;
 const DEK_LENGTH = 32;
+const ENGINE_KEY_LENGTH = 32;
 const META_VERSION = 3;
 const WALLPAPER_TYPE_LENGTH_BYTES = 4;
 
 const SESSIONS_VAULT_KEY_PREFIX = 'sessionsVault_';
 const GLOBALS_VAULT_KEY_PREFIX = 'globalsVault_';
 const WALLPAPERS_VAULT_KEY_PREFIX = 'wallpapersVault_';
+const ENGINE_KEY_VAULT_KEY_PREFIX = 'engineKeyVault_';
 const PASSCODE_SESSION_LOCK_NAME = 'tt-passcode-session';
 const PASSCODE_GLOBALS_LOCK_NAME = 'tt-passcode-globals';
 
@@ -206,6 +208,12 @@ async function changePasscodeNow(passcode: string) {
   const sessionSnapshot = await decryptSessionsVault();
   const globalSnapshots = await readGlobalSnapshots(currentContext);
   const wallpaperBlobs = await readWallpaperBlobs(currentContext);
+  const engineKey = await readEngineKey(currentContext).catch((err) => {
+    // A key that cannot be read must not block changing the passcode; the next use creates a new one
+    // eslint-disable-next-line no-console
+    console.warn('[passcode] Engine key is corrupted and will be replaced', err);
+    return undefined;
+  });
 
   const { dek, generation, meta } = await createPasscodeContext(
     passcode,
@@ -213,7 +221,7 @@ async function changePasscodeNow(passcode: string) {
     currentContext.meta.autolockDuration,
   );
   const entries = await encryptVaultEntries(
-    dek, generation, sessionSnapshot, globalSnapshots, wallpaperBlobs,
+    dek, generation, sessionSnapshot, globalSnapshots, wallpaperBlobs, engineKey,
   );
 
   const latestMeta = await loadPasscodeMeta();
@@ -391,6 +399,30 @@ export async function restoreMissingSessionsFromVault() {
 export async function restoreSessionsToPersistentStorage(expectedGeneration: string) {
   await restoreSessionsFromVault(expectedGeneration);
   disableEncryptedSessionStore(getSessionStorageKeys());
+}
+
+/**
+ * The key that encrypts the Signal engine's stores at rest (`docs/signal/PLAN.md`, "Encryption at rest"). It is random,
+ * created at first use and kept in the vault under the data key, so a passcode change wraps it again and never
+ * re-encrypts the stores. Needs the unlocked passcode.
+ */
+export function getEngineKey() {
+  return navigator.locks.request(PASSCODE_SESSION_LOCK_NAME, async () => {
+    const context = await loadCurrentDekContext();
+    if (context.meta.isLocked || context.meta.isDisabling) {
+      throw new PasscodeDataCorruptedError('[passcode] Engine key is not available');
+    }
+
+    const existing = await readEngineKey(context);
+    if (existing) return existing;
+
+    const { dek, generation } = context;
+    const engineKey = crypto.getRandomValues(new Uint8Array(ENGINE_KEY_LENGTH)).buffer;
+    const storageKey = getEngineKeyVaultKey(generation);
+    const wrapped = await encryptVaultData(engineKey, await importAesKey(dek), generation, storageKey);
+    await PASSCODE_IDB_STORE.set(storageKey, wrapped);
+    return engineKey;
+  });
 }
 
 export async function writeGlobalsVaultForSlot(slot: number | undefined, globalJson: string) {
@@ -668,6 +700,10 @@ function getGlobalsVaultKeyPrefix(generation?: string) {
   return generation ? `${GLOBALS_VAULT_KEY_PREFIX}${generation}_` : GLOBALS_VAULT_KEY_PREFIX;
 }
 
+function getEngineKeyVaultKey(generation: string) {
+  return `${ENGINE_KEY_VAULT_KEY_PREFIX}${generation}`;
+}
+
 function getWallpaperVaultKeyPrefix(generation?: string) {
   return generation ? `${WALLPAPERS_VAULT_KEY_PREFIX}${generation}_` : WALLPAPERS_VAULT_KEY_PREFIX;
 }
@@ -717,6 +753,19 @@ async function readGlobalSnapshots({ dek, generation }: Awaited<ReturnType<typeo
   return snapshots;
 }
 
+async function readEngineKey({ dek, generation }: Awaited<ReturnType<typeof loadCurrentDekContext>>) {
+  const storageKey = getEngineKeyVaultKey(generation);
+  const stored = await PASSCODE_IDB_STORE.get<ArrayBuffer>(storageKey);
+  if (!stored) return undefined;
+
+  try {
+    return await decryptVaultData(stored, await importAesKey(dek), generation, storageKey);
+  } catch (err) {
+    // The stores cannot be read without it, so a lost key is not replaced silently
+    throw new PasscodeDataCorruptedError('[passcode] Failed to restore engine key');
+  }
+}
+
 async function readWallpaperBlobs({ dek, generation }: Awaited<ReturnType<typeof loadCurrentDekContext>>) {
   const storageKeys = await getWallpaperVaultKeys(generation);
   const entries = await PASSCODE_IDB_STORE.getMany<ArrayBuffer>(storageKeys);
@@ -746,6 +795,7 @@ async function encryptVaultEntries(
   sessionSnapshot: Record<string, string>,
   globalSnapshots: GlobalSnapshot[],
   wallpaperBlobs: Array<[string, Blob]>,
+  engineKey?: ArrayBuffer,
 ) {
   const key = await importAesKey(dek);
   const sessionsStorageKey = getSessionsVaultKey(generation);
@@ -770,6 +820,11 @@ async function encryptVaultEntries(
     ]);
   }
 
+  if (engineKey) {
+    const storageKey = getEngineKeyVaultKey(generation);
+    entries.push([storageKey, await encryptVaultData(engineKey, key, generation, storageKey)]);
+  }
+
   return entries;
 }
 
@@ -780,6 +835,7 @@ async function removeVaultGeneration(generation: string) {
 
     await PASSCODE_IDB_STORE.delMany([
       getSessionsVaultKey(generation),
+      getEngineKeyVaultKey(generation),
       ...globalVaultKeys,
       ...wallpaperVaultKeys,
     ]);

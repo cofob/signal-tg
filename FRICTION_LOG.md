@@ -73,3 +73,7 @@ every screenshot with a focused `input` adds two such errors (verified on the de
 opening a chat and after typing; 2 more after each default screenshot, none with `caret: 'initial'`). The error text
 names no element, so these reports look like a component bug. Browser verification scripts should pass
 `caret: 'initial'`; `stricterdom` could name the target element and ignore `caret-color`.
+
+## The API connector drops `destroy` and `reconnectNow` while the engine is not started
+
+`NO_QUEUE_BEFORE_INIT` in `src/api/worker/connector.ts` makes `callApi` and `callApiLocal` resolve these two calls to `undefined` when the worker is not initialized, which is the case on the lock screen of a passcode and in the first seconds after a load. That suited GramJS, which had nothing at rest in the worker. The Signal engine keeps the account, keys and messages in IndexedDB and the Cache API, so a `destroy` that never arrives leaves them (reproduced in Chrome on the demo account; the logout actions now clear the stores from the page with `clearSignalLocalData()`, see S-01 in `docs/signal/SECURITY.md`). A new method that has to act on the stores without a started engine needs the same page-side route, and nothing in the connector says so; whether `destroy` should start the worker and run, or the stores' clearing should be reachable from the page only, is undecided.

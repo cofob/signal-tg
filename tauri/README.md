@@ -133,8 +133,13 @@ The commands reuse the policy of the WebSocket tunnel from `proxy/src/lib.rs`:
 
 Only the app's own page can call the commands: the capability in `capabilities/default.json` is
 `local`, the app serves its bundled frontend (`tauri://localhost`, `http://tauri.localhost` on
-Windows), navigation stays on that page, and other links open in the system browser. The CSP
-(`buildCsp` in `vite.config.ts`) allows `ipc:` and `http://ipc.localhost` for Tauri's IPC.
+Windows), navigation stays on that page, a window that the page opens with `window.open` is refused, and other
+links open in the system browser through `open_external_url`, which takes only `http`, `https`, `mailto` and `tel`
+URLs (a `file:` or app-scheme link would run something else). The capability holds the app's own commands and the
+event, window, notification, process and updater permissions that the page uses: `process` only for `restart`,
+and no `shell`, `fs`, `opener` or `dialog` permissions. The updater runs only when the build sets an endpoint
+and a public key, and it verifies the signature of every update. The CSP (`buildCsp` in `vite.config.ts`) allows
+`ipc:` and `http://ipc.localhost` for Tauri's IPC.
 
 A tunnel named in the Proxy server setting sees the app's page as the origin `tauri://localhost`
 (`http://tauri.localhost` on Windows), so its `ALLOWED_ORIGINS` must list those (`proxy/README.md`).
@@ -159,6 +164,7 @@ request bodies, one at a time, so a large video builds no JSON array and does no
 | `list_saved_files` | Returns the keys of the recorded files that still exist and drops the records of the others |
 | `open_saved_file(key, langCode)` | Opens a recorded file with the default app, after a confirmation in the language that `langCode` names when its type is dangerous |
 | `reveal_saved_file(key)` | Shows a recorded file in Finder, Explorer or the file manager |
+| `forget_saved_files` | Drops every record, as logging out does, because they hold paths and attachment keys of the account. The files stay where the user saved them |
 
 The page names a file by a key, the media hash for an attachment, and keeps the keys that `saved-files-changed` and
 `list_saved_files` report in tab state, so that the toast after a save, the message context menu and a click on a
@@ -183,7 +189,7 @@ the page says so.
   each shipped language (English, Russian), and the page passes only its language code (`langCode` of
   `open_saved_file`), which picks a set, English for an unknown one. The page passes no text for it and cannot skip it.
 - The `dialog` and `opener` plugins are registered without permissions for the page; only the commands above are in
-  `capabilities/default.json`. The opener's reveal uses Finder on macOS, `SHOpenFolderAndSelectItems` on Windows and the
+  `capabilities/default.json`. Log lines name no saved file, because file names come from messages. The opener's reveal uses Finder on macOS, `SHOpenFolderAndSelectItems` on Windows and the
   `org.freedesktop.FileManager1` D-Bus interface on Linux; when that fails, the app opens the folder with the default
   app (`xdg-open`).
 
