@@ -54,3 +54,13 @@ Settings > Privacy row "Recovery key" therefore shows on every device and a link
 Verified by reading the code: `AccountRecord.deviceId` lives only in `SignalStore`, behind the API layer. A flag that
 the API sends with the current user, or an app config field that follows the account, would let the row and its search
 entry follow `requires` like `arePasskeysAvailable`.
+
+## Playwright screenshots of a focused input make `stricterdom` report `style` mutations
+
+In development builds `src/lib/fasterdom/stricterdom.ts` logs "Unexpected mutation detected: `style`" for each
+attribute change outside the mutation phase. `page.screenshot()` of Playwright hides the caret by default, which sets
+`caret-color: transparent !important` in the `style` attribute of the focused element and removes it afterwards, so
+every screenshot with a focused `input` adds two such errors (verified on the demo account: 0 errors after load, after
+opening a chat and after typing; 2 more after each default screenshot, none with `caret: 'initial'`). The error text
+names no element, so these reports look like a component bug. Browser verification scripts should pass
+`caret: 'initial'`; `stricterdom` could name the target element and ignore `caret-color`.
