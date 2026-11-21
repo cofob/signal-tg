@@ -107,17 +107,34 @@ async function clearCallsUpTo(host: CallHistoryHost, target: CallLogEventTarget)
   for (const conversationId of conversationIds) await host.updateLastMessage(conversationId);
 }
 
-/** Marks the unseen calls up to the target call as seen, in its conversation only if `isInConversation` */
+/**
+ * Marks the unseen calls up to the target call as seen, in its conversation only if `isInConversation`. A target call
+ * that is not stored here is marked by the time of the event.
+ */
 async function markCallsSeen(host: CallHistoryHost, target: CallLogEventTarget, isInConversation: boolean) {
   const calls = await host.db.getCalls();
   const targetCall = findCallForLogEvent(calls, target);
-  if (!targetCall) return;
+  const timestamp = targetCall?.timestamp ?? target.timestamp;
+  const peerId = targetCall?.peerId ?? target.peerId;
+  if (isInConversation && !peerId) return;
 
   for (const call of calls) {
-    if (!call.isUnseen || call.timestamp > targetCall.timestamp) continue;
-    if (isInConversation && call.peerId !== targetCall.peerId) continue;
+    if (!call.isUnseen || call.timestamp > timestamp) continue;
+    if (isInConversation && call.peerId !== peerId) continue;
     await putCall(host, { ...call, isUnseen: undefined });
   }
+}
+
+/**
+ * Marks every call of the log as seen, as Desktop does when the calls list opens (`markAllCallHistoryReadAndSync` in
+ * `ts/util/callDisposition.preload.ts`); returns the newest call, which the sync names, or `undefined` when no call
+ * was unseen
+ */
+export async function markCallLogSeen(host: CallHistoryHost) {
+  const [newest] = await host.db.getCallLog(1);
+  if (!newest || !(await host.db.getCalls()).some(({ isUnseen }) => isUnseen)) return undefined;
+  await markCallsSeen(host, { peerId: newest.peerId, callId: newest.callId, timestamp: newest.timestamp }, false);
+  return newest;
 }
 
 /**

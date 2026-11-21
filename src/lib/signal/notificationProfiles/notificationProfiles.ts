@@ -64,9 +64,6 @@ export type NotificationProfileState = {
   isOverrideCleared?: boolean;
 };
 
-const MINUTE = 60 * 1000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 const MAX_CLEARS = 3;
 const TIME_BASE = 100;
 
@@ -151,8 +148,7 @@ export function findNextProfileEvent({ override, profiles, time }: {
 
   if (override?.enabled) {
     const profile = getProfileById(override.enabled.profileId, profiles);
-    const isEnabled = isProfileEnabledBySchedule(time, time - DAY, profile)
-      || isProfileEnabledBySchedule(time, time, profile);
+    const isEnabled = isProfileEnabledBySchedule(time, -1, profile) || isProfileEnabledBySchedule(time, 0, profile);
     if (isEnabled) {
       const willDisableAt = findNextScheduledDisable(profile, time);
       if (!willDisableAt) throw new Error('A profile on by its schedule does not turn off');
@@ -202,30 +198,34 @@ export function findNextProfileEvent({ override, profiles, time }: {
   return { type: 'noChange' };
 }
 
-/** Whether the schedule of the day of `timeForSchedule` has `time` in it; overnight schedules end the next day */
-function isProfileEnabledBySchedule(time: number, timeForSchedule: number, profile: NotificationProfile) {
+/**
+ * Whether the schedule of the day `dayOffset` days from the day of `time` has `time` in it; overnight schedules end the
+ * next day. Days are calendar days, which are not always 24 hours long.
+ */
+function isProfileEnabledBySchedule(time: number, dayOffset: number, profile: NotificationProfile) {
   const {
     isScheduleEnabled, scheduleDays, scheduleStartTime, scheduleEndTime,
   } = profile;
   if (!isScheduleEnabled || scheduleStartTime === undefined || scheduleEndTime === undefined) return false;
-  if (!scheduleDays.includes(getDayOfWeek(timeForSchedule))) return false;
+  const midnight = getMidnight(time, dayOffset);
+  if (!scheduleDays.includes(getDayOfWeek(midnight))) return false;
 
-  const midnight = getMidnight(timeForSchedule);
   const start = scheduleToTime(midnight, scheduleStartTime);
   const end = getEndTime(midnight, scheduleStartTime, scheduleEndTime);
   return time >= start && time <= end;
 }
 
 function getEndTime(midnight: number, scheduleStartTime: number, scheduleEndTime: number) {
-  const start = scheduleToTime(midnight, scheduleStartTime);
-  const end = scheduleToTime(midnight, scheduleEndTime);
-  return end > start ? end : end + DAY;
+  // The end of an overnight schedule is on the next day
+  return scheduleEndTime > scheduleStartTime
+    ? scheduleToTime(midnight, scheduleEndTime)
+    : scheduleToTime(getMidnight(midnight, 1), scheduleEndTime);
 }
 
 /** The newest profile whose schedule is on at `time` */
 function findProfileEnabledBySchedule(profiles: NotificationProfile[], time: number) {
   return profiles.find((profile) => (
-    isProfileEnabledBySchedule(time, time - DAY, profile) || isProfileEnabledBySchedule(time, time, profile)
+    isProfileEnabledBySchedule(time, -1, profile) || isProfileEnabledBySchedule(time, 0, profile)
   ));
 }
 
@@ -265,13 +265,9 @@ function findNextScheduledEnableForAll(profiles: NotificationProfile[], time: nu
 
 /** The first result for the days from yesterday through the next six, in order */
 function loopThroughWeek(time: number, check: (startOfDay: number, day: DayOfWeek) => number | undefined) {
-  const todayAtMidnight = getMidnight(time);
-  const startingDay = getDayOfWeek(time);
   for (let index = -1; index < DAY_SUNDAY; index++) {
-    let day = startingDay + index;
-    if (day <= 0) day += DAY_SUNDAY;
-    if (day > DAY_SUNDAY) day -= DAY_SUNDAY;
-    const result = check(todayAtMidnight + DAY * index, day as DayOfWeek);
+    const startOfDay = getMidnight(time, index);
+    const result = check(startOfDay, getDayOfWeek(startOfDay));
     if (result !== undefined) return result;
   }
   return undefined;
@@ -283,16 +279,17 @@ export function getDayOfWeek(time: number): DayOfWeek {
   return (day === 0 ? DAY_SUNDAY : day) as DayOfWeek;
 }
 
-/** 2200 on the day of `midnight` */
+/** 2200 on the day of `midnight`, in local time */
 export function scheduleToTime(midnight: number, scheduleTime: number) {
-  const hours = Math.floor(scheduleTime / TIME_BASE);
-  const minutes = scheduleTime % TIME_BASE;
-  return midnight + hours * HOUR + minutes * MINUTE;
+  const date = new Date(midnight);
+  date.setHours(Math.floor(scheduleTime / TIME_BASE), scheduleTime % TIME_BASE, 0, 0);
+  return date.getTime();
 }
 
-function getMidnight(time: number) {
+/** The start of the day `dayOffset` days from the day of `time`; a calendar day is 23 or 25 hours long when the clock changes */
+function getMidnight(time: number, dayOffset = 0) {
   const date = new Date(time);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset).getTime();
 }
 
 function getProfileById(id: string, profiles: NotificationProfile[]) {

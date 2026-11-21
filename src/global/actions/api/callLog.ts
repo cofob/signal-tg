@@ -11,6 +11,11 @@ addActionHandler('loadCallLog', async (global): Promise<void> => {
   setGlobal(global);
 });
 
+// The calls list opened; the engine sends the call log again with the calls as seen
+addActionHandler('markCallLogSeen', async (): Promise<void> => {
+  await callApi('markCallLogSeen');
+});
+
 addActionHandler('clearCallLog', async (global, actions, payload): Promise<void> => {
   const { tabId = getCurrentTabId() } = payload || {};
   const result = await callApi('clearCallLog');

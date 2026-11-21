@@ -21,7 +21,9 @@ import type { StickerPackRecord } from '../stickers/stickerPacks';
 import type { AccountRecord as LocalAccount, StoryDistributionList } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
-import { bufferFromBase64, bufferFromHex, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
+import {
+  bufferFromBase64, bufferFromHex, buffersEqual, bufferToBase64, bufferToHex,
+} from '../../../util/encoding/buffer';
 import { getRandomBytes } from '../crypto';
 import { ALL_DAYS, DAY_MONDAY, DEFAULT_PROFILE_COLOR } from '../notificationProfiles/notificationProfiles';
 import { isPniServiceId, uuidToBytes, uuidToString } from '../serviceId';
@@ -93,6 +95,7 @@ const NOTIFICATION_PROFILE_KEY_PREFIX = 'notificationProfile:';
 
 const ACI_BINARY_LENGTH = 16;
 const NOTIFICATION_PROFILE_ID_LENGTH = 16;
+const ACI_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // PNIs have a prefix byte in binary service id fields and a `PNI:` prefix in strings
 const PNI_BINARY_PREFIX = 1;
 const PNI_STRING_PREFIX_LENGTH = 4;
@@ -177,10 +180,13 @@ export function getNotificationProfileKey(profileId: string) {
 /**
  * The profile of a notification profile record, or `undefined` for a record without id or name (Signal Desktop
  * `mergeNotificationProfileRecord` in `ts/services/storageRecordOps.preload.ts`). `getGroupId` maps a group's master
- * key to its conversation id; recipients that name no contact or group stay as they are.
+ * key to its conversation id, and `hasGroupKey` tells whether that conversation is here with its master key; recipients
+ * that name no contact and no such group stay as they are, so that writing the profile keeps them.
  */
 export function parseNotificationProfile(
-  record: NotificationProfileRecord, getGroupId: (masterKey: Uint8Array) => string,
+  record: NotificationProfileRecord,
+  getGroupId: (masterKey: Uint8Array) => string,
+  hasGroupKey: (groupId: string) => boolean,
 ): NotificationProfile | undefined {
   if (record.id.length !== NOTIFICATION_PROFILE_ID_LENGTH || !record.name) return undefined;
 
@@ -193,7 +199,7 @@ export function parseNotificationProfile(
       : undefined;
     if (aci) {
       allowedConversationIds.push(aci);
-    } else if (identifier.case === 'groupMasterKey') {
+    } else if (identifier.case === 'groupMasterKey' && hasGroupKey(getGroupId(identifier.value))) {
       allowedConversationIds.push(getGroupId(identifier.value));
     } else {
       otherAllowedRecipients.push(toBinary(RecipientSchema, recipient));
@@ -605,21 +611,30 @@ function setNotificationProfileFields(
   record.deletedAtTimestampMs = BigInt(profile.deletedAt ?? 0);
 
   const recipients: Recipient[] = [];
+  const groupKeys: Uint8Array[] = [];
   for (const id of profile.allowedConversationIds) {
     const conversation = conversations.find((item) => item.id === id);
     if (conversation?.type === 'group') {
       if (conversation.masterKey) {
+        groupKeys.push(conversation.masterKey);
         recipients.push(create(RecipientSchema, {
           identifier: { case: 'groupMasterKey', value: conversation.masterKey },
         }));
       }
-    } else {
+    } else if (ACI_REGEX.test(id)) {
       recipients.push(create(RecipientSchema, {
         identifier: { case: 'contact', value: { serviceIdBinary: uuidToBytes(id), e164: conversation?.e164 } },
       }));
     }
   }
-  for (const other of profile.otherAllowedRecipients ?? []) recipients.push(fromBinary(RecipientSchema, other));
+  for (const other of profile.otherAllowedRecipients ?? []) {
+    const recipient = fromBinary(RecipientSchema, other);
+    const { identifier } = recipient;
+    // A group that is a conversation here by now is written from the conversation
+    const isKnownGroup = identifier.case === 'groupMasterKey'
+      && groupKeys.some((key) => buffersEqual(key, identifier.value));
+    if (!isKnownGroup) recipients.push(recipient);
+  }
   record.allowedMembers = recipients;
 }
 

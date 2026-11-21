@@ -42,7 +42,7 @@ import type { AccountRecord, EarlyReceiptRecord, StoryDistributionList } from '.
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../config';
 import { bufferFromBase64, buffersEqual, bufferToBase64, bufferToHex } from '../../../util/encoding/buffer';
 import { applyBackfillResponse, ATTACHMENT_BACKFILL_TIMEOUT_MS } from '../attachments/attachmentBackfill';
-import { getAttachmentCacheKey, removeAttachmentBlob } from '../attachments/attachmentCache';
+import { getAttachmentCacheKey, getIsAttachmentCached, removeAttachmentBlob } from '../attachments/attachmentCache';
 import { downloadAttachment } from '../attachments/downloadAttachment';
 import { getCallEvent, getCallLogEvent } from '../calls/callDisposition';
 import { lookUpE164s, refreshE164s } from '../cdsi/cdsiLookup';
@@ -110,7 +110,9 @@ import { getIsConversationAccepted } from './messageRequests';
 import { getNextSendRetry, getRetryRecipients, SEND_RETRY_MAX_AGE_MS } from './sendRetry';
 import { getFailedRecipients } from './sendState';
 
-import { applyCallEvent, applyCallLogEvent, applyGroupCallUpdate, clearCallLog } from '../calls/CallHistory';
+import {
+  applyCallEvent, applyCallLogEvent, applyGroupCallUpdate, clearCallLog, markCallLogSeen,
+} from '../calls/CallHistory';
 import NotificationProfileManager from '../notificationProfiles/NotificationProfileManager';
 import { GroupChange_ActionsSchema, GroupChangeSchema, Member_Role } from '../proto/generated/Groups_pb';
 import {
@@ -889,19 +891,30 @@ export default class MessageProcessor {
     // A primary device keeps the attachments itself, and only addressable messages can be named to it
     if (deviceId === SIGNAL_PRIMARY_DEVICE_ID || !isAddressableMessage(message) || !message.dataMessage) return;
     if (message.isBackfillFailed || this.backfillRequests.has(message.id) || message.deletedAt) return;
+    // Pointers that the phone sent failed too: it has nothing better, so this is the end
+    if (message.isBackfilled) {
+      await this.putMessage({ ...message, isBackfillFailed: true });
+      return;
+    }
     const conversation = await this.db.getConversation(message.conversationId);
     if (!conversation) return;
 
-    this.backfillRequests.set(message.id, setTimeout(() => {
-      this.backfillRequests.delete(message.id);
-      void this.runSerial(() => this.failAttachmentBackfill(message.id)).catch(this.events.onError);
-    }, ATTACHMENT_BACKFILL_TIMEOUT_MS));
+    this.armBackfillTimeout(message.id);
     void this.sendWhenConnected(async (context) => {
       await sendAttachmentBackfillRequestSync(context, {
         targetMessage: buildAddressableMessage(message),
         targetConversation: buildConversationIdentifier(conversation),
       });
     }).catch(this.events.onError);
+  }
+
+  /** Ends the request for the attachments of a message if the primary device does not answer in time */
+  private armBackfillTimeout(messageId: number) {
+    clearTimeout(this.backfillRequests.get(messageId));
+    this.backfillRequests.set(messageId, setTimeout(() => {
+      this.backfillRequests.delete(messageId);
+      void this.runSerial(() => this.failAttachmentBackfill(messageId)).catch(this.events.onError);
+    }, ATTACHMENT_BACKFILL_TIMEOUT_MS));
   }
 
   /** The request ran out of time, or the phone gave up: the attachments stay unavailable and are not asked for again */
@@ -934,8 +947,18 @@ export default class MessageProcessor {
       return;
     }
 
+    const dataMessage = fromBinary(DataMessageSchema, message.dataMessage);
+    const downloadedAttachmentIndexes = new Set<number>();
+    for (const [index, pointer] of dataMessage.attachments.entries()) {
+      if (!message.unavailableAttachmentIndexes?.includes(index) && await getIsAttachmentCached(pointer)) {
+        downloadedAttachmentIndexes.add(index);
+      }
+    }
     const result = applyBackfillResponse({
-      dataMessage: fromBinary(DataMessageSchema, message.dataMessage),
+      dataMessage,
+      downloadedAttachmentIndexes,
+      isStickerDownloaded: Boolean(dataMessage.sticker?.data && !message.isStickerUnavailable
+        && await getIsAttachmentCached(dataMessage.sticker.data)),
       unavailableAttachmentIndexes: message.unavailableAttachmentIndexes ?? [],
       isStickerUnavailable: Boolean(message.isStickerUnavailable),
       isRequested,
@@ -943,8 +966,8 @@ export default class MessageProcessor {
       longTextContentType: LONG_TEXT_CONTENT_TYPE,
     });
     if (isRequested) {
-      // The phone is working on what it has not sent yet, and sends it when it has it
-      if (result.pendingCount) this.backfillRequests.set(message.id, undefined);
+      // The phone is working on what it has not sent yet; it gets another time to send it
+      if (result.pendingCount) this.armBackfillTimeout(message.id);
       else this.backfillRequests.delete(message.id);
     }
     await this.putMessage({
@@ -955,6 +978,7 @@ export default class MessageProcessor {
         : undefined,
       isStickerUnavailable: result.isStickerUnavailable || undefined,
       // Attachments that the phone could not get stay unavailable
+      isBackfilled: result.isChanged ? true : message.isBackfilled,
       isBackfillFailed: result.failedCount ? true : message.isBackfillFailed,
     });
   }
@@ -1092,6 +1116,22 @@ export default class MessageProcessor {
   /** The calls of the call history that were not cleared, newest first */
   getCallLog(limit: number) {
     return this.db.getCallLog(limit);
+  }
+
+  /** Marks the calls as seen here and on our other devices, as Desktop does when the calls list opens */
+  markCallLogSeen() {
+    return this.runSerial(async () => {
+      const newest = await markCallLogSeen(this.callHistory);
+      if (!newest) return;
+      await this.sendWhenConnected(async (context) => {
+        await sendCallLogEventSync(context, {
+          type: SyncMessage_CallLogEvent_Type.MARKED_AS_READ,
+          timestamp: BigInt(newest.timestamp),
+          conversationId: newest.mode === 'group' ? bufferFromBase64(newest.peerId) : uuidToBytes(newest.peerId),
+          callId: BigInt(newest.callId),
+        });
+      }).catch(this.events.onError);
+    });
   }
 
   /**
@@ -2000,6 +2040,10 @@ export default class MessageProcessor {
     const remoteStoryLists: StoryDistributionList[] = [];
     // The same for notification profiles; the account record brings the manual override and the sync setting
     const remoteNotificationProfiles: NotificationProfile[] = [];
+    // Groups of notification profiles are allowed by their conversations, which have to be here with their master key
+    const groupIdsWithKey = new Set(
+      (await this.db.getConversations()).filter(({ masterKey }) => masterKey).map(({ id }) => id),
+    );
     let notificationProfileAccount: Parameters<NotificationProfileManager['mergeRemote']>[1];
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
@@ -2133,7 +2177,7 @@ export default class MessageProcessor {
         const list = parseStoryDistributionList(record.value);
         if (list && !changes[getStoryListKey(list.id)]) remoteStoryLists.push(list);
       } else if (record.case === 'notificationProfile') {
-        const profile = parseNotificationProfile(record.value, getGroupId);
+        const profile = parseNotificationProfile(record.value, getGroupId, (id) => groupIdsWithKey.has(id));
         if (profile && !changes[getNotificationProfileKey(profile.id)]) remoteNotificationProfiles.push(profile);
       } else if (record.case === 'installedStickerPack' && record.value.packId.length) {
         // Signal Desktop `mergeInstalledStickerPackRecord` in `ts/services/storageRecordOps.preload.ts`
@@ -4067,7 +4111,9 @@ export default class MessageProcessor {
     const updated = await this.putConversation({
       ...conversation,
       lastMessageId: message.id,
-      lastMessageAt: record.sentAt,
+      // A call notice has the time of the call, which can be older than the messages that came since (Desktop keeps the
+      // latest time)
+      lastMessageAt: record.kind === 'call' ? Math.max(conversation.lastMessageAt ?? 0, record.sentAt) : record.sentAt,
       unreadCount: conversation.unreadCount + (isIncoming ? 1 : 0),
       // New messages bring archived conversations back unless they are muted
       isArchived: conversation.isArchived && isIncoming && !isMuted(conversation) ? false : conversation.isArchived,

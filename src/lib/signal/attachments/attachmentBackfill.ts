@@ -32,10 +32,12 @@ export type BackfillResult = {
  * `AttachmentBackfill.handleResponse` in `ts/jobs/helpers/attachmentBackfill.preload.ts`). The response lists the
  * sticker first, if the message has one, then the attachments in order without the long text, which has an entry of
  * its own; the long text is the attachment of `longTextContentType` here, where it is part of the list. A new pointer
- * replaces the old one of an attachment that is unavailable, or that the request was for.
+ * replaces the old one of an attachment that is unavailable, or that the request was for, unless the attachment is
+ * downloaded already (Desktop `isDownloaded`): its cached copy is found by its pointer.
  */
 export function applyBackfillResponse({
   dataMessage, unavailableAttachmentIndexes, isStickerUnavailable, isRequested, response, longTextContentType,
+  downloadedAttachmentIndexes, isStickerDownloaded,
 }: {
   dataMessage: DataMessage;
   unavailableAttachmentIndexes: number[];
@@ -43,6 +45,9 @@ export function applyBackfillResponse({
   isRequested: boolean;
   response: AttachmentDataList;
   longTextContentType: string;
+  // Indexes in `DataMessage.attachments` that are downloaded, and whether the sticker is
+  downloadedAttachmentIndexes: Set<number>;
+  isStickerDownloaded: boolean;
 }): BackfillResult {
   const message = clone(DataMessageSchema, dataMessage);
   const unavailable = new Set(unavailableAttachmentIndexes);
@@ -58,7 +63,7 @@ export function applyBackfillResponse({
   const remote = [...response.attachments];
   if (message.sticker?.data) {
     const entry = remote.shift();
-    if (entry) {
+    if (entry && !isStickerDownloaded) {
       const pointer = readEntry(entry, result);
       if (pointer && (isStickerUnavailable || isRequested)) {
         message.sticker.data = pointer;
@@ -70,6 +75,7 @@ export function applyBackfillResponse({
 
   const bodyIndex = message.attachments.findIndex(({ contentType }) => contentType === longTextContentType);
   const replace = (index: number, entry: AttachmentData) => {
+    if (downloadedAttachmentIndexes.has(index)) return;
     const pointer = readEntry(entry, result);
     if (!pointer || !(unavailable.has(index) || isRequested)) return;
     message.attachments[index] = pointer;

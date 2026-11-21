@@ -24,7 +24,7 @@ export {
   toggleDialogUnread,
   updateChatNotifySettings,
 } from './chats';
-export { clearCallLog, fetchCallLog } from './calls';
+export { clearCallLog, fetchCallLog, markCallLogSeen } from './calls';
 export { destroy, disconnect, reconnectNow } from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {

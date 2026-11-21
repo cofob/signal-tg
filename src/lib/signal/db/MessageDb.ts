@@ -116,6 +116,8 @@ export type MessageRecord = {
   // Indexes in `DataMessage.attachments` that the CDN no longer has
   unavailableAttachmentIndexes?: number[];
   isStickerUnavailable?: true;
+  // The primary device sent new pointers for attachments that the CDN no longer had; a second failure is final
+  isBackfilled?: true;
   // The primary device could not get the attachments that the CDN no longer has, or did not answer; this device does
   // not ask for them again
   isBackfillFailed?: true;

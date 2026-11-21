@@ -10,6 +10,7 @@ import { checkIfNotificationsSupported, playNotifySound } from '../../../util/no
 
 import useHistoryBack from '../../../hooks/useHistoryBack';
 import useLang from '../../../hooks/useLang';
+import useLastCallback from '../../../hooks/useLastCallback';
 import useRunDebounced from '../../../hooks/useRunDebounced';
 
 import Island, { IslandTitle } from '../../gili/layout/Island';
@@ -122,6 +123,10 @@ const SettingsNotifications = ({
     setSettingOption({ shouldNotifyAboutPinnedMessages: e.target.checked });
   }, [setSettingOption]);
 
+  const handleOpenProfiles = useLastCallback(() => {
+    openSettingsScreen({ screen: SettingsScreens.NotificationProfiles });
+  });
+
   const handleVolumeChange = useCallback((volume: number) => {
     updateWebNotificationSettings({
       notificationSoundVolume: volume,
@@ -141,7 +146,7 @@ const SettingsNotifications = ({
           icon="mute"
           iconBg="purple"
           narrow
-          onClick={() => openSettingsScreen({ screen: SettingsScreens.NotificationProfiles })}
+          onClick={handleOpenProfiles}
         >
           {lang('NotificationProfiles')}
         </ListItem>

@@ -1416,6 +1416,7 @@ export interface ActionPayloads {
   loadStorySettings: undefined;
   updateStorySettings: Partial<ApiStorySettings>;
   loadCallLog: undefined;
+  markCallLogSeen: undefined;
   loadNotificationProfiles: undefined;
   saveNotificationProfile: {
     profile: Omit<ApiNotificationProfile, 'id'> & { id?: string };

@@ -2832,7 +2832,6 @@
 "CallLogEmptyText" = "Recent calls will appear here.";
 "CallLogInfo" = "Calls cannot be made or answered in this app. Here are the calls of your phone.";
 "CallLogCannotCall" = "Calls cannot be made from this device. Use your phone.";
-"CallLogCallBack" = "Call";
 "CallLogIncoming" = "Incoming";
 "CallLogOutgoing" = "Outgoing";
 "CallLogMissed" = "Missed";

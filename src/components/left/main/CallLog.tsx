@@ -30,7 +30,9 @@ type StateProps = {
  * the app, so the buttons that would call are disabled and say so; a call opens its chat.
  */
 const CallLog = ({ isActive, entries, onReset }: OwnProps & StateProps) => {
-  const { loadCallLog, clearCallLog, openChat } = getActions();
+  const {
+    loadCallLog, markCallLogSeen, clearCallLog, openChat,
+  } = getActions();
 
   const lang = useLang();
   const [isClearing, openClearDialog, closeClearDialog] = useFlag();
@@ -38,7 +40,9 @@ const CallLog = ({ isActive, entries, onReset }: OwnProps & StateProps) => {
   useHistoryBack({ isActive, onBack: onReset });
 
   useEffect(() => {
-    if (isActive) loadCallLog();
+    if (!isActive) return;
+    loadCallLog();
+    markCallLogSeen();
   }, [isActive]);
 
   const handleOpenChat = useLastCallback((chatId: string) => {

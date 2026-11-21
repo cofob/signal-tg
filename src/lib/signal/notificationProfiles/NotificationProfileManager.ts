@@ -63,17 +63,19 @@ export default class NotificationProfileManager {
     const override = await store.getItem('notificationProfileOverride');
 
     const state = resolveNotificationProfileState(profiles, override, Date.now());
-    if (state.isOverrideCleared) await this.storeOverride(state.override);
+    // Without profiles here, the override belongs to the profiles of the primary device and stays as it is
+    const isOverrideCleared = state.isOverrideCleared && !isSyncDisabled;
+    if (isOverrideCleared) await this.storeOverride(state.override);
 
     this.scheduleRefresh(state.nextChangeAt);
     const result: NotificationProfilesState = {
       profiles: [...profiles].sort((a, b) => a.createdAt - b.createdAt),
       activeProfileId: state.activeProfile?.id,
       nextChangeAt: state.nextChangeAt,
-      override: state.override,
+      override: isSyncDisabled ? override : state.override,
       isSyncDisabled: isSyncDisabled || undefined,
     };
-    if (isForced || state.isOverrideCleared) this.host.onChange(result);
+    if (isForced || isOverrideCleared) this.host.onChange(result);
     return result;
   }
 
@@ -142,7 +144,8 @@ export default class NotificationProfileManager {
     }
     if (account) {
       await store.setItem('isNotificationProfileSyncDisabled', account.isSyncDisabled);
-      if (!account.isOverrideChanged) {
+      // With profiles kept on the primary device only, the override of the record is theirs, not ours
+      if (!account.isOverrideChanged && !account.isSyncDisabled) {
         if (account.override) await store.setItem('notificationProfileOverride', account.override);
         else await store.removeItem('notificationProfileOverride');
       }

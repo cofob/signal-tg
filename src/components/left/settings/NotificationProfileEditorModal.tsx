@@ -56,8 +56,8 @@ const NotificationProfileEditorModal = ({
   const [endTime, setEndTime] = useState(DEFAULT_END_TIME);
   const [days, setDays] = useState<number[]>(WEEKDAYS);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  // The form starts again when the editor opens or shows another profile, not when the profile changes meanwhile
+  const resetForm = useLastCallback(() => {
     setName(profile?.name ?? '');
     setEmoji(profile?.emoji ?? '');
     setChatIds(profile?.allowedChatIds ?? []);
@@ -67,7 +67,11 @@ const NotificationProfileEditorModal = ({
     setStartTime(profile?.scheduleStartTime ?? DEFAULT_START_TIME);
     setEndTime(profile?.scheduleEndTime ?? DEFAULT_END_TIME);
     setDays(profile?.scheduleDays.length ? profile.scheduleDays : WEEKDAYS);
-  }, [isOpen, profile]);
+  });
+
+  useEffect(() => {
+    if (isOpen) resetForm();
+  }, [isOpen, profile?.id]);
 
   const handleNameChange = useLastCallback((e: ChangeEvent<HTMLInputElement>) => {
     setName(e.currentTarget.value);

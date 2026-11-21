@@ -2303,7 +2303,6 @@ export interface LangPair {
   'CallLogEmptyText': undefined;
   'CallLogInfo': undefined;
   'CallLogCannotCall': undefined;
-  'CallLogCallBack': undefined;
   'CallLogIncoming': undefined;
   'CallLogOutgoing': undefined;
   'CallLogMissed': undefined;
