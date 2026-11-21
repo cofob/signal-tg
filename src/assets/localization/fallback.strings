@@ -226,7 +226,10 @@
 "SignalHistorySyncNote" = "This may take a few minutes";
 "SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
 "SignalPinnedLimit" = "You have reached the limit of pinned chats. Unpin a chat to pin another one.";
-"SignalStorageLocked" = "Your local data is encrypted with the passcode and cannot be opened right now. Reload the app and unlock it with the passcode.";
+"SignalStartupFailed" = "TeleSignal could not start. Reload the app to try again.";
+"SignalStorageLockedTitle" = "Local data cannot be opened";
+"SignalStorageLocked" = "Your local data is encrypted, and this app does not have the key that opens it. If the passcode was just changed or turned off in another tab, reload the app. Otherwise the data cannot be recovered, and you can erase it and link this device again.";
+"SignalStorageErase" = "Erase this account's data and link again";
 "SignalDeviceUnlinked" = "This device was unlinked from your Signal account. Its data was removed.";
 "SignalDeviceDeregistered" = "Your number was registered on another device. This device's data was removed.";
 "SignalRegisterLink" = "Register with a phone number";

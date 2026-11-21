@@ -2,36 +2,37 @@
 // in use, such as the one that decrypts the stores of every slot before the passcode goes away
 const LOCK_PREFIX = 'ts-signal-engine-';
 
-let isHeld = false;
-let resolveLock: NoneToVoidFunction | undefined;
-let isReleaseRequested = false;
+type Hold = { isReleased: boolean; resolve?: NoneToVoidFunction };
+
+let currentHold: Hold | undefined;
 
 /** Marks the engine of this slot as running, until `releaseEngineLock` */
 export function holdEngineLock(slot: number) {
-  if (isHeld || !navigator.locks) return;
+  if (currentHold || !navigator.locks) return;
 
-  isHeld = true;
-  isReleaseRequested = false;
+  const hold: Hold = { isReleased: false };
+  currentHold = hold;
   void navigator.locks.request(`${LOCK_PREFIX}${slot}`, { mode: 'shared' }, () => new Promise<void>((resolve) => {
-    if (isReleaseRequested) {
+    if (hold.isReleased) {
       resolve();
       return;
     }
-    resolveLock = resolve;
-  })).finally(() => {
-    isHeld = false;
-    resolveLock = undefined;
-  });
+    hold.resolve = resolve;
+  }));
 }
 
+/** Frees the lock, so that an engine started again in the same worker takes it anew */
 export function releaseEngineLock() {
-  isReleaseRequested = true;
-  resolveLock?.();
+  if (!currentHold) return;
+
+  currentHold.isReleased = true;
+  currentHold.resolve?.();
+  currentHold = undefined;
 }
 
-/** The slots whose engine is running in some context of this browser */
+/** The slots whose engine is running in some context of this browser; `undefined` where the browser cannot tell */
 export async function getRunningEngineSlots() {
-  if (!navigator.locks?.query) return [];
+  if (!navigator.locks?.query) return undefined;
 
   const { held = [] } = await navigator.locks.query();
   return held

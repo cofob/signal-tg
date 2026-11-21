@@ -83,28 +83,47 @@ locks (the API closes), when the account is forgotten and when the connection is
 
 Lifecycle, as built after the review of the first version:
 
-- **Turning on** encrypts this slot's stores and those of the other slots whose engine is not running, then counts: the
+- **Turning on** encrypts this slot's stores and those of the other slots whose engine is not running (the page names
+  its slots, including those of the stored sessions, which the engine cannot see), then counts: the
   call answers `true` only when a count finds nothing in the clear, and the page requires `=== true` (an answer of
   `undefined`, which a reset of the API produces for pending calls, fails the setup, which locks the passcode and the
   next start finishes it). A running engine of another slot encrypts its own stores when it next starts with the key
   (until then it works without one, as it did before the passcode existed); the same holds for a slot opened later.
 - **Turning off** decrypts the stores of every slot that has data, the cached files of every slot, repeats until a count
-  finds no encrypted record, and only then drops the key. It answers `true` only then. If another slot's engine is
-  running (each engine holds the Web Lock `ts-signal-engine-<slot>`), it refuses and the page says to close the other
-  accounts. If a record cannot be decrypted, it keeps the key, goes back to writing encrypted records, and the page keeps
-  the passcode and says so. The records that the key does not open are erased only by the explicit engine call
-  `eraseUnreadableStorageRecords`, which has no screen yet. It decrypts even when the marker is missing.
+  finds no encrypted record, and only then answers `true`. If another slot's engine is running (each engine holds the
+  Web Lock `ts-signal-engine-<slot>`), it refuses and the page says to close the other accounts. A browser that cannot
+  list the locks (`navigator.locks.query` is missing) fails closed: it refuses whenever another slot has data. If a
+  record cannot be decrypted, it keeps the key, goes back to writing encrypted records, and the page keeps the passcode
+  and says so. The records that the key does not open are erased only by the explicit engine call
+  `eraseUnreadableStorageRecords`, which has no screen yet. It decrypts even when the marker is missing. The page does
+  not take the answer for granted: it passes its own slot list (including the stored sessions' slots), and before it
+  deletes the key it runs `hasEncryptedEngineData()` itself; an encrypted record that is still there (or a failed check)
+  fails the disable and rolls it back. A running engine takes its lock again after a stop, so a restart in the same
+  worker is seen as running.
 - **Writes never fail open.** Once a key was set, a write without it throws `StorageLockedError` and stores nothing; the
-  requirement ends only when the stores are plain or wiped. `stopClient(true)` re-applies the key after the wipe, so an
-  account linked in the same session is encrypted.
+  requirement ends only when the stores are plain or wiped. The engine keeps the raw key that it was given (set when the
+  passcode is turned on or the engine starts with one, dropped when the passcode is turned off or the engine forgets
+  it), and `stopClient(true)` re-applies that key after the wipe, so an account linked in the same session is encrypted
+  even when the passcode was turned on after the engine started. With no key the requirement is cleared, so the link is
+  not refused.
 - **Start.** With a key, a count of the clear records (all of the small `ts-signal`, the newest 100 of each message,
-  story and call store and every conversation) runs on the fast path and finds a record that a write left. Only a
-  missing key stops the engine with `SignalStorageLocked`; any other failure of the encryption is logged, the engine
-  starts, and the next start retries. Without a key: if the page has no passcode but the stores are marked encrypted (or
-  an encrypted record is read), nothing can open them, so that slot is wiped and the link screen follows. The page clears
-  the passcode store only when no engine store holds an encrypted record, so a failed wipe can be tried again, and a
-  failure of `getEngineKey` shows `SignalStorageLocked`. A corrupted key blob fails a passcode change when any slot's
-  stores are encrypted, instead of replacing the key.
+  story and call store and every conversation) runs on the fast path and finds a record that a write left. Any failure
+  of the encryption other than an unusable key is logged, the engine starts, and the next start retries.
+  **Nothing is wiped automatically** when the stores are encrypted and the key is missing: no passcode meta, no marker
+  with an encrypted record read, a key that cannot be applied (`setAtRestKey` fails, which throws `StorageLockedError`),
+  a key that does not open the data (`OperationError`), or a race with another tab that turns the passcode on or off.
+  In each case the engine stops (it forgets any key it was given, marks the stores as requiring one, so late calls fail
+  instead of adding records, and releases its engine lock) and the page shows a dialog that explains the state (it is
+  mounted in `App`, with the dialog actions in the initial bundle, so it shows on the link screen too). Its
+  destructive button, "Erase this account's data and link again", runs the ordinary logout, which wipes the slot (even
+  without a running engine) and shows the link screen; closing the dialog keeps the data, and a reload with the right
+  key opens it. A failure of `initApi` in the worker (`worker.ts`) is reported to the page the same way (the dialog for
+  a key error, an error dialog otherwise) and rejects the call instead of leaving the page waiting. The page clears the
+  passcode store only when no engine store holds an encrypted record (a failed check counts as holding one), so a
+  failed wipe can be tried again, and a failure of `getEngineKey` shows the same dialog. A corrupted key blob fails a
+  passcode change when any slot's stores are encrypted, instead of replacing the key.
+- **Cached files.** A file that cannot be decrypted because the key is missing stays (`StorageLockedError` is rethrown
+  by the rewrite); only a file that the key cannot open is deleted as a damaged cache entry.
 - **Reads skip damage.** A message, story, call or conversation that cannot be decrypted is logged (first five only) and
   left out of the result, so one damaged record does not fail a chat.
 

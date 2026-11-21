@@ -1,6 +1,5 @@
-import * as cacheApi from '../../../util/cacheApi';
 import { ACCOUNT_SLOT } from '../../../util/multiaccount';
-import { ATTACHMENT_CACHE_NAME, convertCachedBlobs, countCachedBlobs } from '../attachments/attachmentCache';
+import { convertCachedBlobs, countCachedBlobs } from '../attachments/attachmentCache';
 import { getEngineSlots } from '../engineSlots';
 import {
   clearAtRestRequirement, forgetAtRestKey, setAtRestKey, setAtRestWriting, StorageLockedError,
@@ -12,9 +11,6 @@ import SignalStore from './SignalStore';
 
 type Engine = { store: SignalStore; db: MessageDb };
 
-/** How the engine's stores stand after the start with the page's key */
-export type StartOutcome = 'ready' | 'wiped';
-
 // A pass converts what the previous one missed, such as a record that the engine wrote meanwhile
 const MAX_PASSES = 3;
 // Records per store that the start looks at for one that a write left in the clear
@@ -22,6 +18,9 @@ const RECENT_SAMPLE_SIZE = 100;
 
 // One change at a time: enabling and disabling rewrite the same records
 let queue: Promise<unknown> = Promise.resolve();
+// The key that this engine has been given and that has not been taken away since, kept so that a wipe in the middle of
+// a session (such as a relink) can set it again
+let activeRawKey: ArrayBuffer | undefined;
 
 /**
  * Gives the engine the key of the stores and encrypts what is stored in the clear, in place: this slot's stores and
@@ -29,14 +28,22 @@ let queue: Promise<unknown> = Promise.resolve();
  * key). New records are encrypted from the moment the key is set, so the rewrite only has the old ones to do, and an
  * interrupted one resumes at the next start. Returns `true` once a count finds nothing in the clear any more.
  */
-export function enableEncryptionAtRest(rawKey: ArrayBuffer, store: SignalStore, db: MessageDb) {
+export function enableEncryptionAtRest(
+  rawKey: ArrayBuffer, store: SignalStore, db: MessageDb, slots?: number[],
+) {
   return runOne(async () => {
-    await setAtRestKey(rawKey, true);
+    try {
+      await setAtRestKey(rawKey, true);
+    } catch (err) {
+      // A key that cannot be used is no key: the stores that it should open stay closed
+      throw new StorageLockedError();
+    }
+    activeRawKey = rawKey.slice(0);
     const engine = { store, db };
     const state = await store.getEncryptionState();
     if (state?.state === 'on' && state.isMigrated && !await hasPlainRecordsAtStart(engine)) return true;
 
-    const engines = [engine, ...await getIdleEngines()];
+    const engines = [engine, ...await getIdleEngines(slots)];
     for (const { store: slotStore } of engines) {
       await slotStore.setEncryptionState({ state: 'on', isMigrated: false });
     }
@@ -68,15 +75,18 @@ export function enableEncryptionAtRest(rawKey: ArrayBuffer, store: SignalStore, 
  * and returns `false`: a record that the key does not open (`eraseUnreadableRecords` removes those on request), or
  * another slot whose engine is running, which would keep writing encrypted records.
  */
-export function disableEncryptionAtRest(store: SignalStore, db: MessageDb) {
+export function disableEncryptionAtRest(store: SignalStore, db: MessageDb, slots?: number[]) {
   return runOne(async () => {
-    if ((await getRunningEngineSlots()).some((slot) => slot !== (ACCOUNT_SLOT || 1))) {
+    const otherSlots = (slots ?? [...await getEngineSlots()]).filter((slot) => slot !== getOwnSlot());
+    const running = await getRunningEngineSlots();
+    // A browser that cannot tell which engines run is trusted only when there is no other slot to be wrong about
+    if (running ? running.some((slot) => slot !== getOwnSlot()) : otherSlots.length > 0) {
       // eslint-disable-next-line no-console
-      console.error('[signal] The engine of another account is running, so the stores cannot be decrypted');
+      console.error('[signal] The engine of another account may be running, so the stores cannot be decrypted');
       return false;
     }
 
-    const engines = [{ store, db }, ...await getIdleEngines()];
+    const engines = [{ store, db }, ...await getIdleEngines(slots)];
     // New records are written in the clear from here on, and the key reads the others
     setAtRestWriting(false);
     for (const { store: slotStore } of engines) {
@@ -108,6 +118,7 @@ export function disableEncryptionAtRest(store: SignalStore, db: MessageDb) {
 
     for (const { store: slotStore } of engines) await slotStore.removeEncryptionState();
     await setAtRestKey(undefined);
+    activeRawKey = undefined;
     return true;
   });
 }
@@ -127,16 +138,17 @@ export function eraseUnreadableRecords(store: SignalStore, db: MessageDb) {
 
 /**
  * What the engine does at start with the key that the page has. With one, it encrypts the stores if that is not done
- * yet; a failure other than a missing key goes to `onError`, and the engine starts anyway: the records stay readable
- * and the next start tries again. Without one there is no passcode, so encrypted stores cannot be opened any more
- * and are wiped, which shows the link screen; plain stores need no key.
+ * yet; a key that cannot be used throws `StorageLockedError`, and any other failure goes to `onError`, so that the
+ * engine starts and the next start tries again. Without one, a store that is marked encrypted cannot be opened:
+ * that throws `StorageLockedError` too, and the engine does not start. Nothing is wiped here, since a missing key can
+ * be a race with a tab that is turning the passcode on or off; the user decides what happens to the data.
  */
 export async function applyStorageKey(
   rawKey: ArrayBuffer | undefined,
   store: SignalStore,
   db: MessageDb,
   onError: (error: unknown) => void,
-): Promise<StartOutcome> {
+) {
   if (rawKey) {
     try {
       await enableEncryptionAtRest(rawKey, store, db);
@@ -144,26 +156,29 @@ export async function applyStorageKey(
       if (err instanceof StorageLockedError) throw err;
       onError(err);
     }
-    return 'ready';
+    return;
   }
 
-  if (await store.getEncryptionState()) {
-    await wipeStores(store, db);
-    return 'wiped';
-  }
-  clearAtRestRequirement();
-  return 'ready';
-}
-
-/** Removes the records that nothing can read any more, and the marker that says they are encrypted */
-export async function wipeStores(store: SignalStore, db: MessageDb) {
-  await Promise.all([store.clear(), db.clear(), cacheApi.clear(ATTACHMENT_CACHE_NAME)]);
+  if (await store.getEncryptionState()) throw new StorageLockedError();
   clearAtRestRequirement();
 }
 
 /** The engine drops the key when it stops, but stays unable to write records in the clear */
 export function forgetStorageKey() {
   forgetAtRestKey();
+  activeRawKey = undefined;
+}
+
+/**
+ * After a wipe in the middle of a session, such as a relink: the account that is stored next is encrypted with the
+ * key that the engine had, or, with none, written in the clear, which the next start with a key encrypts
+ */
+export async function reapplyStorageKey(store: SignalStore, db: MessageDb) {
+  if (activeRawKey) {
+    await enableEncryptionAtRest(activeRawKey, store, db);
+  } else {
+    clearAtRestRequirement();
+  }
 }
 
 /** Whether any slot's stores hold an encrypted record, which only the passcode's key opens; needs no key */
@@ -180,12 +195,15 @@ async function hasPlainRecordsAtStart({ store, db }: Engine) {
   return (await store.countRecords()).plain > 0 || db.hasRecentPlainRecords(RECENT_SAMPLE_SIZE);
 }
 
-/** The stores of the other slots whose engine does not run */
-async function getIdleEngines(): Promise<Engine[]> {
+function getOwnSlot() {
+  return ACCOUNT_SLOT || 1;
+}
+
+/** The stores of the other slots whose engine does not run; `slots` is the page's list, which knows the sessions */
+async function getIdleEngines(slots?: number[]): Promise<Engine[]> {
   const running = new Set(await getRunningEngineSlots());
-  const own = ACCOUNT_SLOT || 1;
-  return [...await getEngineSlots()]
-    .filter((slot) => slot !== own && !running.has(slot))
+  return [...new Set([...slots ?? [], ...await getEngineSlots()])]
+    .filter((slot) => slot !== getOwnSlot() && !running.has(slot))
     .map((slot) => ({ store: new SignalStore(slot), db: new MessageDb(slot) }));
 }
 

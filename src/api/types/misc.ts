@@ -186,7 +186,12 @@ export type ApiDialogLocalizedMessage = {
   text: AdvancedLangFnParameters;
 };
 
-export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogLocalizedMessage;
+/** The engine's stored data is encrypted and its key is missing or wrong; the user may erase the data to start over */
+export type ApiDialogStorageLocked = {
+  type: 'storageLocked';
+};
+
+export type ApiDialog = ApiDialogError | ApiDialogMessage | ApiDialogLocalizedMessage | ApiDialogStorageLocked;
 
 export type ApiError = {
   message: string;

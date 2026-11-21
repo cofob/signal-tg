@@ -11,6 +11,9 @@ import { startDeviceLink } from '../../lib/signal/account/provisioning';
 import { transferHistory } from '../../lib/signal/backups/transferHistory';
 import { HttpError, sendJsonRequest } from '../../lib/signal/net/rest';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
+import { isEncryptedValue, setAtRestKey, StorageLockedError } from '../../lib/signal/store/atRest';
+import { enableEncryptionAtRest, forgetStorageKey } from '../../lib/signal/store/atRestMigration';
+import { IdbStore } from '../../util/browser/idb';
 import { clearAttachmentCache } from './media/attachments';
 import { startClient, stopClient } from './client';
 import { client, db, store } from './engine';
@@ -29,6 +32,8 @@ const ACI = '3d0c8e0f-6c1f-4f3a-9d7e-1f2a3b4c5d6e';
 const ARGS: ApiInitialArgs = { userAgent: 'test', langCode: 'en' };
 const LINKED_DEVICE_ID = 2;
 const PRIMARY_DEVICE_ID = 1;
+const KEY = new Uint8Array(32).fill(7).buffer;
+const OTHER_KEY = new Uint8Array(32).fill(9).buffer;
 
 let updates: ApiUpdate[];
 
@@ -59,15 +64,22 @@ function getUpdateTypes() {
   return updates.map((update) => update['@type']);
 }
 
+async function resetStorageKey() {
+  forgetStorageKey();
+  await setAtRestKey(undefined);
+}
+
 beforeEach(async () => {
   updates = [];
   initUpdates((update) => updates.push(update));
+  await resetStorageKey();
   await store.clear();
   await db.clear();
 });
 
 afterEach(async () => {
   await stopClient(false);
+  await resetStorageKey();
   vi.restoreAllMocks();
   vi.clearAllMocks();
 });
@@ -208,6 +220,85 @@ describe('the engine without an account', () => {
     expect(await store.getItem('pendingRegistration')).toBeDefined();
     expect(await db.getConversations()).toHaveLength(1);
     expect(getUpdateTypes()).not.toContain('updateStaleSession');
+  });
+});
+
+describe('encrypted stores without a usable key', () => {
+  beforeEach(async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(startDeviceLink).mockResolvedValue({
+      url: 'sgnl://linkdevice', provisionMessage: new Promise(() => undefined), cancel: vi.fn(),
+    } as never);
+    await seedAccount(LINKED_DEVICE_ID);
+    await enableEncryptionAtRest(KEY, store, db);
+    await resetStorageKey();
+  });
+
+  async function expectDataKept() {
+    expect(getUpdateTypes()).toContain('updateStorageLocked');
+    expect(getUpdateTypes()).not.toContain('updateAuthorizationState');
+    expect(clearAttachmentCache).not.toHaveBeenCalled();
+    expect((await new IdbStore('ts-signal').values()).some(isEncryptedValue)).toBe(true);
+    // Writes stay closed instead of adding records in the clear to the encrypted stores
+    await expect(store.setSession('late', new Uint8Array([2]))).rejects.toBeInstanceOf(StorageLockedError);
+    // The right key opens everything that was there
+    await enableEncryptionAtRest(KEY, store, db);
+    expect((await store.getItem('account'))?.aci).toBe(ACI);
+    expect(await db.countMessages('peer')).toBe(1);
+  }
+
+  test('asks the user instead of wiping when there is no key at all', async () => {
+    await startClient(ARGS);
+
+    await expectDataKept();
+  });
+
+  test('asks the user instead of wiping when the key cannot be applied', async () => {
+    await startClient({ ...ARGS, storageKey: new ArrayBuffer(5) });
+
+    await expectDataKept();
+  });
+
+  test('asks the user instead of wiping when the key is the wrong one', async () => {
+    await startClient({ ...ARGS, storageKey: OTHER_KEY });
+
+    await expectDataKept();
+  });
+
+  test('asks the user when the marker is gone but the records are encrypted', async () => {
+    await store.removeEncryptionState();
+
+    await startClient(ARGS);
+
+    await expectDataKept();
+  });
+});
+
+describe('a link after a logout in the same session', () => {
+  test('is stored encrypted when the passcode was turned on meanwhile', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await seedAccount(LINKED_DEVICE_ID);
+    // The page gives the running engine the key when the passcode is set, after the engine started without one
+    await enableEncryptionAtRest(KEY, store, db);
+
+    await stopClient(true);
+    await store.setItem('account', {
+      aci: ACI, deviceId: 2, password: 'new', registrationId: 1, pniRegistrationId: 2,
+    });
+
+    expect((await new IdbStore('ts-signal').values()).some(isEncryptedValue)).toBe(true);
+    expect((await store.getItem('account'))?.password).toBe('new');
+  });
+
+  test('is stored in the clear without a key, and not refused', async () => {
+    await seedAccount(LINKED_DEVICE_ID);
+
+    await stopClient(true);
+    await store.setItem('account', {
+      aci: ACI, deviceId: 2, password: 'new', registrationId: 1, pniRegistrationId: 2,
+    });
+
+    expect((await store.getItem('account'))?.password).toBe('new');
   });
 });
 

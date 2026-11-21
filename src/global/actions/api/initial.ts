@@ -53,8 +53,6 @@ import { destroySharedStatePort, resetSharedStatePort } from '../../shared/share
 let resetStoragePromise: Promise<boolean> | undefined;
 
 const API_DESTROY_TIMEOUT_MS = 3000;
-// The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
-const STORAGE_LOCKED_ERROR = 'SIGNAL_STORAGE_LOCKED';
 
 addActionHandler('initApi', (global, actions): ActionReturnType => {
   if (global.passcode.isScreenLocked || checkSessionLocked()
@@ -72,11 +70,15 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
     signalProxyUrl,
     signalSealedSenderProxyUrl,
     storageKey,
-  })).catch((err) => {
+  }), (err) => {
+    // Without the key the engine does not start: the data is encrypted, and the app says so instead of waiting
+    // eslint-disable-next-line no-console
+    console.error('Failed to load the storage key', getLoggableError(err));
+    actions.apiUpdate({ '@type': 'updateStorageLocked' });
+  }).catch((err) => {
+    // The engine reports a failed start by itself
     // eslint-disable-next-line no-console
     console.error('Failed to start the API', getLoggableError(err));
-    // Without the key the engine does not start: the data is encrypted, and the app says so instead of waiting
-    actions.apiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
   });
 
   void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
@@ -276,7 +278,7 @@ addActionHandler('reset', async (global, actions): Promise<void> => {
 
   if (!hasAccounts) {
     // The key stays while stores that it opens are left, so that a failed wipe can be tried again
-    if (!await hasEncryptedEngineData()) await clearPasscodeStore();
+    if (!await hasEncryptedEngineData().catch(() => true)) await clearPasscodeStore();
     localStorage.removeItem(IS_SCREEN_LOCKED_CACHE_KEY);
     await clearWallpaperBlobs();
     if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);

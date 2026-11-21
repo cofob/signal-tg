@@ -194,30 +194,47 @@ describe('Writes without the key', () => {
 });
 
 describe('Starting the engine', () => {
-  test('goes on after an encryption that failed for another reason than a missing key', async () => {
-    const onError = vi.fn();
-
-    const outcome = await applyStorageKey(new ArrayBuffer(5), new SignalStore(), new MessageDb(), onError);
-
-    expect(outcome).toBe('ready');
-
-    expect(onError).toHaveBeenCalledTimes(1);
-  });
-
-  test('wipes encrypted stores when there is no passcode any more', async () => {
+  async function fillEncrypted() {
     const store = new SignalStore();
     const db = new MessageDb();
-    await setAtRestKey(KEY);
     await store.setSession('x', new Uint8Array([1]));
     await db.addMessage(buildMessage(1));
     await enableEncryptionAtRest(KEY, store, db);
+    return { store, db };
+  }
+
+  test('stops when a key that is given cannot be applied, and wipes nothing', async () => {
+    const { store, db } = await fillEncrypted();
+    await setAtRestKey(undefined);
+    const onError = vi.fn();
+
+    await expect(applyStorageKey(new ArrayBuffer(5), store, db, onError)).rejects.toBeInstanceOf(StorageLockedError);
+
+    expect(onError).not.toHaveBeenCalled();
+    expect((await readAll('ts-signal', 'store')).some(isEncryptedValue)).toBe(true);
+    expect((await readAll('ts-signal-messages', 'messages'))[0].enc).toBeDefined();
+  });
+
+  test('stops without a key while the stores are marked encrypted, and wipes nothing', async () => {
+    const { store, db } = await fillEncrypted();
     await setAtRestKey(undefined);
 
-    expect(await applyStorageKey(undefined, store, db, ignore)).toBe('wiped');
+    await expect(applyStorageKey(undefined, store, db, ignore)).rejects.toBeInstanceOf(StorageLockedError);
 
-    expect(await readAll('ts-signal', 'store')).toEqual([]);
-    expect(await readAll('ts-signal-messages', 'messages')).toEqual([]);
-    // The slot is plain from here on
+    expect(await store.getEncryptionState()).toEqual({ state: 'on', isMigrated: true });
+    expect((await readAll('ts-signal', 'store')).some(isEncryptedValue)).toBe(true);
+    expect((await readAll('ts-signal-messages', 'messages'))[0].enc).toBeDefined();
+    // The key that comes late opens the data
+    await enableEncryptionAtRest(KEY, store, db);
+    expect(Array.from((await store.getSession('x'))!)).toEqual([1]);
+  });
+
+  test('starts without a key when the stores are plain', async () => {
+    const store = new SignalStore();
+    await store.setSession('x', new Uint8Array([1]));
+
+    await applyStorageKey(undefined, store, new MessageDb(), ignore);
+
     await store.setSession('y', new Uint8Array([2]));
     expect(Array.from((await store.getSession('y'))!)).toEqual([2]);
   });
@@ -250,6 +267,11 @@ describe('Engine in a worker', () => {
 });
 
 describe('Turning encryption off', () => {
+  // The browser tells that no other engine runs
+  beforeEach(() => {
+    vi.stubGlobal('navigator', { ...navigator, locks: { query: () => Promise.resolve({ held: [] }) } });
+  });
+
   async function fill(slot: number) {
     const store = new SignalStore(slot);
     const db = new MessageDb(slot);
@@ -290,6 +312,33 @@ describe('Turning encryption off', () => {
     expect(await disableEncryptionAtRest(first.store, first.db)).toBe(false);
 
     expect(await hasEncryptedEngineData()).toBe(true);
+  });
+
+  test('refuses when the browser cannot tell which engines run and another slot has data', async () => {
+    const first = await fill(1);
+    await fill(2);
+    await enableEncryptionAtRest(KEY, first.store, first.db);
+    vi.stubGlobal('navigator', { ...navigator, locks: undefined });
+    const failed = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    expect(await disableEncryptionAtRest(first.store, first.db)).toBe(false);
+
+    expect(await hasEncryptedEngineData()).toBe(true);
+    failed.mockRestore();
+  });
+
+  test('decrypts the slots that the page names, which the browser may not list', async () => {
+    const first = await fill(1);
+    const second = await fill(2);
+    const databases = vi.spyOn(indexedDB, 'databases').mockResolvedValue([]);
+    expect(await enableEncryptionAtRest(KEY, first.store, first.db, [1, 2])).toBe(true);
+    expect((await second.store.getEncryptionState())?.state).toBe('on');
+
+    expect(await disableEncryptionAtRest(first.store, first.db, [1, 2])).toBe(true);
+
+    databases.mockRestore();
+    expect(await hasEncryptedEngineData()).toBe(false);
+    expect(await second.store.getEncryptionState()).toBeUndefined();
   });
 
   test('answers `false`, keeps the key and writes encrypted while a record cannot be decrypted', async () => {

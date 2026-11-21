@@ -11,6 +11,7 @@ import {
 } from '../../../util/browser/windowEnvironment';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import generateUniqueId from '../../../util/generateUniqueId';
+import { shouldShowErrorDialog } from '../../../util/getReadableErrorText';
 import { setTimeFormat } from '../../../util/localization';
 import { ensureNotificationPermission } from '../../../util/notifications';
 import { applyPerformanceSettings } from '../../../util/perfomanceSettings';
@@ -250,6 +251,45 @@ addActionHandler('showNotification', (global, actions, payload): ActionReturnTyp
 
   return updateTabState(global, {
     notifications: newNotifications,
+  }, tabId);
+});
+
+addActionHandler('showDialog', (global, actions, payload): ActionReturnType => {
+  const { data, tabId = getCurrentTabId() } = payload;
+
+  // Filter out errors that we don't want to show to the user
+  if (data.type === 'error' && !shouldShowErrorDialog(data)) {
+    return global;
+  }
+
+  const newDialogs = [...selectTabState(global, tabId).dialogs];
+  if (data.type === 'storageLocked' && newDialogs.some((dialog) => dialog.type === 'storageLocked')) {
+    return global;
+  }
+  if (data.type === 'error') {
+    const existingErrorIndex = newDialogs.findIndex((dialog) => {
+      return dialog.type === 'error' && dialog.message === data.message;
+    });
+    if (existingErrorIndex !== -1) {
+      newDialogs.splice(existingErrorIndex, 1);
+    }
+  }
+
+  newDialogs.push(data);
+
+  return updateTabState(global, {
+    dialogs: newDialogs,
+  }, tabId);
+});
+
+addActionHandler('dismissDialog', (global, actions, payload): ActionReturnType => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const newDialogs = [...selectTabState(global, tabId).dialogs];
+
+  newDialogs.pop();
+
+  return updateTabState(global, {
+    dialogs: newDialogs,
   }, tabId);
 });
 

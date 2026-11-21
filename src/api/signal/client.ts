@@ -13,10 +13,8 @@ import {
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
-import { StorageLockedError } from '../../lib/signal/store/atRest';
-import {
-  applyStorageKey, enableEncryptionAtRest, forgetStorageKey, wipeStores,
-} from '../../lib/signal/store/atRestMigration';
+import { isStorageKeyError, requireAtRestKey } from '../../lib/signal/store/atRest';
+import { applyStorageKey, forgetStorageKey, reapplyStorageKey } from '../../lib/signal/store/atRestMigration';
 import { holdEngineLock, releaseEngineLock } from '../../lib/signal/store/engineLock';
 import { initSignalWasm } from '../../lib/signal/wasm';
 import { ACCOUNT_SLOT } from '../../util/multiaccount';
@@ -39,7 +37,6 @@ const HTTP_FORBIDDEN = 403;
 const PERCENT = 100;
 // The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
 const HISTORY_TRANSFER_FAILED_ERROR = 'SIGNAL_HISTORY_TRANSFER_FAILED';
-const STORAGE_LOCKED_ERROR = 'SIGNAL_STORAGE_LOCKED';
 const SIGNAL_SESSION_DATA: ApiSessionData = { isLinked: true };
 
 let currentAccount: AccountRecord | undefined;
@@ -72,16 +69,22 @@ export async function startClient(args: ApiInitialArgs) {
   applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
   holdEngineLock(ACCOUNT_SLOT || 1);
   try {
-    await applyStorageKey(args.storageKey, store, db, logError);
+    await startEngine(args);
   } catch (err) {
+    if (!isStorageKeyError(err)) throw err;
+    // The data is encrypted and its key is missing or wrong. Nothing is wiped, since the key may be only late, such as
+    // while another tab changes the passcode: the engine stops, and the page asks the user what to do
     logError(err);
-    // Only a missing key stops the start, which keeps the link screen from replacing data that the key can still
-    // read; any other failure of the encryption is tried again at the next start
-    if (err instanceof StorageLockedError) {
-      sendApiUpdate({ '@type': 'error', error: { message: STORAGE_LOCKED_ERROR, hasErrorKey: true } });
-      return;
-    }
+    // A key that did not open the data must not encrypt new records either
+    forgetStorageKey();
+    requireAtRestKey();
+    releaseEngineLock();
+    sendApiUpdate({ '@type': 'updateStorageLocked' });
   }
+}
+
+async function startEngine(args: ApiInitialArgs) {
+  await applyStorageKey(args.storageKey, store, db, logError);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
@@ -104,17 +107,9 @@ export async function startClient(args: ApiInitialArgs) {
   void runDeviceLink(args.platform).catch(logError);
 }
 
-/** The stored account, or one that a registration created. Records that the engine cannot open are wiped. */
+/** The stored account, or one that a registration created; a record that the key does not open throws */
 async function readStoredAccount() {
-  try {
-    return await store.getItem('account') ?? await resumeInterruptedRegistration();
-  } catch (err) {
-    if (!(err instanceof StorageLockedError)) throw err;
-    // Encrypted data without a key, and no passcode that has one: nothing can read it, and the link screen follows
-    logError(err);
-    await wipeStores(store, db);
-    return undefined;
-  }
+  return await store.getItem('account') ?? await resumeInterruptedRegistration();
 }
 
 /** The account that a registration created before the app stopped, when the server has it */
@@ -168,12 +163,8 @@ export async function stopClient(shouldForget: boolean) {
     await store.clear();
     await db.clear();
     await clearAttachmentCache();
-    // A link that follows in this session stores its account encrypted too; a logout drops the key with the engine
-    if (initialArgs?.storageKey) {
-      await enableEncryptionAtRest(initialArgs.storageKey, store, db).catch(logError);
-    } else {
-      forgetStorageKey();
-    }
+    // A link that follows in this session stores its account encrypted too, with the key that the engine has now
+    await reapplyStorageKey(store, db).catch(logError);
   }
 }
 

@@ -34,6 +34,12 @@ export class StorageLockedError extends Error {
   }
 }
 
+/** Whether the error says that the stored data cannot be opened: the key is missing (`StorageLockedError`) or wrong */
+export function isStorageKeyError(err: unknown) {
+  // The name check covers `DOMException`s from another realm, and `OperationError` is what a wrong AES-GCM key throws
+  return err instanceof StorageLockedError || (err as Error | undefined)?.name === 'OperationError';
+}
+
 let cryptoKey: CryptoKey | undefined;
 // Whether new records are encrypted; it is off while the stores are decrypted again, when the key is still needed
 let isWriting = false;
@@ -63,6 +69,11 @@ export async function setAtRestKey(rawKey: ArrayBuffer | undefined, shouldEncryp
 export function forgetAtRestKey() {
   cryptoKey = undefined;
   isWriting = false;
+}
+
+/** The stores hold encrypted records that this engine cannot open: writes fail instead of adding records in the clear */
+export function requireAtRestKey() {
+  isRequired = true;
 }
 
 /** The stores are plain, or empty: nothing needs the key, and writes may store records in the clear */

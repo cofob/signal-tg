@@ -34,16 +34,16 @@ async function unlinkLinkedDevice() {
  * Encrypts the engine's stores with `key`, which the page keeps in the passcode vault; used when a passcode is set.
  * Resolves with `true` only when a count found nothing in the clear; the page treats anything else as a failure.
  */
-export function enableStorageEncryption(key: ArrayBuffer) {
-  return enableEncryptionAtRest(key, store, db);
+export function enableStorageEncryption(key: ArrayBuffer, slots: number[]) {
+  return enableEncryptionAtRest(key, store, db, slots);
 }
 
 /**
- * Decrypts the stores of every account slot in place; the page calls it before it drops the passcode and with it the
- * key. Resolves with `true` only when a count found no encrypted record left.
+ * Decrypts the stores of the page's account slots in place; the page calls it before it drops the passcode and with it
+ * the key. Resolves with `true` only when a count found no encrypted record left.
  */
-export function disableStorageEncryption() {
-  return disableEncryptionAtRest(store, db);
+export function disableStorageEncryption(slots: number[]) {
+  return disableEncryptionAtRest(store, db, slots);
 }
 
 /** Deletes the records that the key does not open, when the user asks for it; resolves with their number */

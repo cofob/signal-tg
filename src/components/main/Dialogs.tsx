@@ -16,8 +16,10 @@ import { renderTextWithEntities } from '../common/helpers/renderTextWithEntities
 
 import useFlag from '../../hooks/useFlag';
 import useLang from '../../hooks/useLang';
+import useLastCallback from '../../hooks/useLastCallback';
 
 import Button from '../ui/Button';
+import ConfirmDialog from '../ui/ConfirmDialog';
 import Modal from '../ui/Modal';
 
 type StateProps = {
@@ -25,10 +27,15 @@ type StateProps = {
 };
 
 const Dialogs = ({ dialogs }: StateProps) => {
-  const { dismissDialog } = getActions();
+  const { dismissDialog, signOut } = getActions();
   const [isModalOpen, openModal, closeModal] = useFlag();
 
   const lang = useLang();
+
+  const handleEraseStorage = useLastCallback(() => {
+    closeModal();
+    signOut({ forceInitApi: true });
+  });
 
   useEffect(() => {
     if (dialogs.length > 0) {
@@ -78,7 +85,29 @@ const Dialogs = ({ dialogs }: StateProps) => {
     return renderTextDialog(renderedErrorMessage, getErrorHeader(lang, error));
   };
 
+  // Erasing is the only way on when the stored data cannot be opened: the logout removes this account's data, and the
+  // link screen follows
+  const renderStorageLockedDialog = () => {
+    return (
+      <ConfirmDialog
+        isOpen={isModalOpen}
+        title={lang('SignalStorageLockedTitle')}
+        text={lang('SignalStorageLocked')}
+        confirmLabel={lang('SignalStorageErase')}
+        confirmIsDestructive
+        areButtonsInColumn
+        confirmHandler={handleEraseStorage}
+        onClose={closeModal}
+        onCloseAnimationEnd={dismissDialog}
+      />
+    );
+  };
+
   const renderDialog = (dialog: ApiDialog) => {
+    if (dialog.type === 'storageLocked') {
+      return renderStorageLockedDialog();
+    }
+
     if (dialog.type === 'message') {
       return renderFormattedTextDialog(dialog);
     }

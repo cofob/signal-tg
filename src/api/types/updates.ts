@@ -416,6 +416,10 @@ export type ApiUpdateError = {
   error: ApiError;
 };
 
+export type ApiUpdateStorageLocked = {
+  '@type': 'updateStorageLocked';
+};
+
 export type ApiUpdateNotSupportedInFrozenAccountError = {
   '@type': 'notSupportedInFrozenAccount';
   error: ApiError;
@@ -569,7 +573,8 @@ export type ApiUpdate = (
   ApiUpdateMessageSendSucceeded | ApiUpdateMessageSendFailed | ApiUpdateSafetyNumberBlock | ApiDeleteContact |
   ApiUpdateUser | ApiUpdateUserStatus | ApiUpdateUserFullInfo | ApiUpdatePeerSettings | ApiUpdatePeerHistoryTtl |
   ApiUpdateAvatar | ApiUpdateMessageImage | ApiUpdateDraftMessage | ApiUpdateScheduledMessageSendFailed |
-  ApiUpdateError | ApiUpdateResetContacts | ApiUpdateThreadReadState | ApiUpdateStickerSet | ApiUpdateStickerSets |
+  ApiUpdateError | ApiUpdateStorageLocked | ApiUpdateResetContacts | ApiUpdateThreadReadState | ApiUpdateStickerSet |
+  ApiUpdateStickerSets |
   ApiUpdateStickerSetsOrder | ApiUpdateRecentStickers | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
   ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage | ApiUpdateDeleteScheduledMessages |
   ApiUpdateResetMessages | ApiUpdateWebPage | ApiUpdateDefaultNotifySettings | ApiUpdatePeerNotifySettings |

@@ -155,8 +155,9 @@ describe('SignalStore', () => {
     await setAtRestKey(undefined);
 
     await expect(store.getItem('account')).rejects.toBeInstanceOf(StorageLockedError);
-    // Without a passcode there is no key to wait for: the records nothing can read are wiped, which shows the link screen
-    await expect(applyStorageKey(undefined, store, new MessageDb(), ignore)).resolves.toBe('wiped');
+    // Without a key the engine does not start, and nothing is wiped: the key may only be late
+    await expect(applyStorageKey(undefined, store, new MessageDb(), ignore)).rejects.toBeInstanceOf(StorageLockedError);
+    expect((await readAll('ts-signal', 'store')).some(isEncryptedValue)).toBe(true);
   });
 
   test('encrypts records stored in the clear and decrypts them again', async () => {

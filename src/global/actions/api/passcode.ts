@@ -6,6 +6,8 @@ import { SettingsScreens } from '../../../types';
 import {
   IS_SCREEN_LOCKED_CACHE_KEY, LOCK_SCREEN_ANIMATION_DURATION_MS,
 } from '../../../config';
+import { getEngineSlots } from '../../../lib/signal/engineSlots';
+import { hasEncryptedEngineData } from '../../../lib/signal/store/atRestMigration';
 import { getRunningEngineSlots } from '../../../lib/signal/store/engineLock';
 import { updateAppBadge } from '../../../util/appBadge';
 import { purgePasscodeCaches } from '../../../util/cacheApi';
@@ -783,20 +785,30 @@ async function finishPasscodeSetup({
 /** Gives the engine the key of its stores, which it encrypts with it; it also encrypts them again after a failed disable */
 async function encryptEngineStorage() {
   // Anything but `true` is a failure: a call that never reached the engine resolves with `undefined`
-  if (await callApi('enableStorageEncryption', await getEngineKey()) !== true) {
+  const slots = [...await getEngineSlots()];
+  if (await callApi('enableStorageEncryption', await getEngineKey(), slots) !== true) {
     throw new Error('[passcode] The engine\'s stores were not encrypted');
   }
 }
 
 /**
  * Decrypts the stores of every account slot before the key goes. Returns the message to show when that did not
- * happen, which keeps the passcode on: another slot's engine is running, or a record cannot be decrypted.
+ * happen, which keeps the passcode on: another slot's engine may be running, or a record cannot be decrypted.
  */
 async function decryptEngineStorage(): Promise<RegularLangKey | undefined> {
   const ownSlot = ACCOUNT_SLOT || 1;
-  if ((await getRunningEngineSlots()).some((slot) => slot !== ownSlot)) return 'PasscodeCloseOtherAccounts';
+  const slots = [...await getEngineSlots()];
+  const runningSlots = await getRunningEngineSlots();
+  // A browser that cannot tell which engines run is trusted only when no other slot has data
+  const isOtherEngineRunning = runningSlots
+    ? runningSlots.some((slot) => slot !== ownSlot)
+    : slots.some((slot) => slot !== ownSlot);
+  if (isOtherEngineRunning) return 'PasscodeCloseOtherAccounts';
   // Anything but `true` is a failure: a call that never reached the engine resolves with `undefined`
-  return await callApi('disableStorageEncryption') === true ? undefined : 'PasscodeStorageNotDecrypted';
+  if (await callApi('disableStorageEncryption', slots) !== true) return 'PasscodeStorageNotDecrypted';
+  // The key is deleted next, so the page checks the stores itself instead of taking the engine's word for it
+  if (await hasEncryptedEngineData().catch(() => true)) return 'PasscodeStorageNotDecrypted';
+  return undefined;
 }
 
 async function protectPasscodeStorage() {

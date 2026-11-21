@@ -58,6 +58,8 @@ export async function convertCachedBlobs(direction: 'encrypt' | 'decrypt') {
     try {
       return await decryptBlob(blob, keyPath, getSafeMimeType);
     } catch (err) {
+      // Without the key the file may still be readable later, so it stays
+      if (err instanceof StorageLockedError) throw err;
       return false;
     }
   }, true);
