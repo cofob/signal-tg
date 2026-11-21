@@ -247,6 +247,9 @@ export interface LangPair {
   'SignalPhoneLookupConfirm': undefined;
   'SignalLinkInvalid': undefined;
   'SignalLinkSearchOpen': undefined;
+  'SignalUsernameSearch': undefined;
+  'SignalUsernameSearchNotFound': undefined;
+  'SignalUsernameSearchFailed': undefined;
   'SignalProxyLinkTitle': undefined;
   'SignalCallLinkTitle': undefined;
   'SignalCallLinkText': undefined;

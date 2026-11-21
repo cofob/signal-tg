@@ -14,6 +14,10 @@ import type {
 export type ApiPhoneNumberLookup = { chat: ApiChat; user: ApiUser }
   | { error: 'notFound' | 'rateLimited' | 'unavailable' };
 
+/** A Signal user found by username, or why none was */
+export type ApiUsernameLookup = { chat: ApiChat; user: ApiUser }
+  | { error: 'notFound' | 'unavailable' };
+
 export interface ApiUser {
   id: string;
   isMin: boolean;

@@ -285,6 +285,9 @@
 "SignalPhoneLookupConfirm" = "Look up";
 "SignalLinkInvalid" = "This Signal link is not valid or is not supported";
 "SignalLinkSearchOpen" = "Open Signal link";
+"SignalUsernameSearch" = "Find by username";
+"SignalUsernameSearchNotFound" = "No Signal user with this username";
+"SignalUsernameSearchFailed" = "Couldn't look up the username. Try again later.";
 "SignalProxyLinkTitle" = "Signal proxy";
 "SignalProxyLinkText" = "{host} is a Signal proxy. TeleSignal can't use Signal proxies: it reaches Signal through a tunnel server, which you can set in the proxy server settings. Nothing was changed.";
 "SignalCallLinkTitle" = "Call link";
