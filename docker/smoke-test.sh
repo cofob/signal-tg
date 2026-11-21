@@ -112,9 +112,14 @@ request_tunnel() {
 
 check_page() {
   local status policy
-  # The root page opens the default frontend (`plugins/frontends.ts`)
-  expect_equal 'GET / is served' "$(fetch root /)" 200
-  expect_contains 'GET / opens a frontend' "$(cat "$WORK_DIR/root.body")" 'http-equiv="refresh"'
+  # `/` opens the default frontend (`plugins/frontends.ts`) with the query, by a relative redirect
+  expect_equal 'GET / redirects' "$(fetch root '/?account=2')" 302
+  expect_equal 'GET / opens the default frontend with the query' "$(get_header location root)" \
+    "/$(docker exec "$NAME" cat /usr/share/telesignal/default-frontend.txt)?account=2"
+  expect_equal 'GET /a redirects' "$(fetch slash_a '/a?account=2')" 301
+  expect_equal 'GET /a adds the slash' "$(get_header location slash_a)" '/a/?account=2'
+  expect_equal 'GET /k redirects' "$(fetch slash_k /k)" 301
+  expect_equal 'GET /k adds the slash' "$(get_header location slash_k)" '/k/'
   expect_equal 'Web K is served' "$(fetch page_k /k/ -H 'Accept-Encoding: identity')" 200
   expect_contains 'Web K is the app' "$(cat "$WORK_DIR/page_k.body")" '<div id="main-columns"'
   status=$(fetch page /a/ -H 'Accept-Encoding: identity')

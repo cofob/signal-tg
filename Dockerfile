@@ -30,12 +30,14 @@ COPY src ./src
 COPY webk ./webk
 # The page's own policy comes from `buildCsp` in `vite.config.ts`. nginx sends it as a header too (a worker takes its
 # policy from its own response headers, and `frame-ancestors` cannot be in a `<meta>` tag), so the policy is read back
-# from the built page and cannot drift from the source. The image ships no source maps and no references to them.
+# from the built page and cannot drift from the source. So is the frontend that `/` opens (`plugins/frontends.ts`). The image ships no source maps and no references to them.
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build:production \
   && mkdir -p /out \
   && sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/a/index.html > /out/csp.txt \
   && test -s /out/csp.txt \
   && grep -q "connect-src 'self'" /out/csp.txt \
+  && sed -n 's/.*data-frontend="\([^"]*\)".*/\1/p' dist/index.html > /out/default-frontend.txt \
+  && test -s /out/default-frontend.txt \
   && find dist -name '*.map' -delete \
   && find dist -type f \( -name '*.js' -o -name '*.css' \) \
     -exec sed -i -E '/^(\/\/|\/\*)# sourceMappingURL=[^ ]+\.map( \*\/)?$/d' {} +
@@ -89,6 +91,7 @@ COPY docker/templates/ /etc/nginx/templates/
 COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/telesignal-entrypoint
 COPY --from=tunnel --chmod=755 /out/telesignal-tunnel /usr/local/bin/telesignal-tunnel
 COPY --from=web /out/csp.txt /usr/share/telesignal/csp.txt
+COPY --from=web /out/default-frontend.txt /usr/share/telesignal/default-frontend.txt
 COPY --from=web /app/dist /srv/telesignal
 
 # Nothing but `/tmp` is written at run time, so the root file system may be read-only (`docker run --read-only --tmpfs

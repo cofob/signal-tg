@@ -9,10 +9,12 @@ USER_CONF_DIR=/etc/nginx/conf.d
 RUN_DIR=/tmp/telesignal
 CONF_DIR=$RUN_DIR/nginx
 CSP_FILE=/usr/share/telesignal/csp.txt
+# The frontend that `/` opens, `a/` or `k/`, read from the built root page
+DEFAULT_FRONTEND_FILE=/usr/share/telesignal/default-frontend.txt
 HSTS_VALUE='max-age=63072000; includeSubDomains'
 # Names that the templates may use; other `$` expressions in them belong to nginx
 # shellcheck disable=SC2016
-TEMPLATE_VARIABLES='${NGINX_PORT} ${TUNNEL_PORT} ${TELESIGNAL_HEADER_CSP} ${TELESIGNAL_HSTS} ${TELESIGNAL_LISTEN_IPV6} ${TELESIGNAL_ACCESS_LOG} ${TELESIGNAL_REAL_IP} ${TELESIGNAL_PAGE_FILTERS}'
+TEMPLATE_VARIABLES='${NGINX_PORT} ${TUNNEL_PORT} ${TELESIGNAL_HEADER_CSP} ${TELESIGNAL_HSTS} ${TELESIGNAL_LISTEN_IPV6} ${TELESIGNAL_ACCESS_LOG} ${TELESIGNAL_REAL_IP} ${TELESIGNAL_PAGE_FILTERS} ${TELESIGNAL_DEFAULT_FRONTEND}'
 
 log() {
     echo "telesignal: $*" >&2
@@ -192,8 +194,13 @@ build_snippets() {
     if [ "$NGINX_ACCESS_LOG" = on ]; then
         TELESIGNAL_ACCESS_LOG=/dev/stdout
     fi
+    TELESIGNAL_DEFAULT_FRONTEND=$(cat "$DEFAULT_FRONTEND_FILE")
+    case "$TELESIGNAL_DEFAULT_FRONTEND" in
+        a/ | k/) ;;
+        *) fail "$DEFAULT_FRONTEND_FILE names no frontend" ;;
+    esac
     export TELESIGNAL_HEADER_CSP TELESIGNAL_HSTS TELESIGNAL_LISTEN_IPV6 TELESIGNAL_ACCESS_LOG TELESIGNAL_REAL_IP \
-        TELESIGNAL_PAGE_FILTERS
+        TELESIGNAL_PAGE_FILTERS TELESIGNAL_DEFAULT_FRONTEND
 }
 
 # `*.conf.template` becomes an included `*.conf`; `*.inc.template` becomes a file that a config includes by name. A
