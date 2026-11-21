@@ -9,6 +9,13 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # For automation that creates the tag with the workflow token: its tag pushes start no workflows
+  workflow_call:
+    inputs:
+      tag:
+        description: Existing v-prefixed tag to release
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
