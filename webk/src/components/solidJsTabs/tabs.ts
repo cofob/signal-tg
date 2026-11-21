@@ -30,8 +30,6 @@ import type {NotifyException} from '@appManagers/appNotificationsManager';
 import type {AppChatFull} from '@appManagers/appProfileManager';
 
 
-
-
 type AppPrivacyMessagesTabPayload = {
   onSaved: (globalPrivacy: CancellablePromise<GlobalPrivacySettings.globalPrivacySettings>) => void;
 };
