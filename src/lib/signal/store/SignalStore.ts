@@ -5,9 +5,11 @@ import type { Verified_State } from '../proto/generated/SignalService_pb';
 import type { StickerPackManifest, StickerPackRecord } from '../stickers/stickerPacks';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { UsernameLink } from '../usernames/manageUsername';
+import type { ConversionDirection } from './SecureIdbStore';
 
-import { IdbStore } from '../../../util/browser/idb';
 import { getEngineStoreName } from '../engineStoreName';
+
+import SecureIdbStore from './SecureIdbStore';
 
 export type KeyPairBytes = {
   privateKey: Uint8Array;
@@ -317,6 +319,16 @@ export type SentProtoRecord = {
 };
 
 const DB_NAME = 'ts-signal';
+// The record that tells whether the stores are encrypted; it is the only one that is never encrypted
+const ENCRYPTION_STATE_KEY = 'meta:encryption';
+
+/** The state of encryption at rest, which tells a start without a key whether the stores can be read */
+export type EncryptionState = {
+  // `decrypting` while the stores are being decrypted before the passcode goes away
+  state: 'on' | 'decrypting';
+  // Whether every record has been rewritten since encryption turned on
+  isMigrated: boolean;
+};
 
 /**
  * Persistent protocol state of the linked device: account credentials, identity keys,
@@ -324,7 +336,7 @@ const DB_NAME = 'ts-signal';
  * Keys are namespaced inside one IndexedDB object store.
  */
 export default class SignalStore {
-  private db: IdbStore;
+  private db: SecureIdbStore;
 
   private exclusive = Promise.resolve();
 
@@ -333,7 +345,7 @@ export default class SignalStore {
 
   /** Opens the store of an account slot, by default the slot of this page or worker */
   constructor(slot?: number) {
-    this.db = new IdbStore(getEngineStoreName(DB_NAME, slot));
+    this.db = new SecureIdbStore(getEngineStoreName(DB_NAME, slot));
   }
 
   /**
@@ -504,12 +516,10 @@ export default class SignalStore {
   }
 
   async removeSentProtosBefore(time: number) {
-    const entries = await this.db.entries();
+    const entries = await this.db.entries('sentProto:');
     const keys = entries
-      .filter(([key, value]) => (
-        typeof key === 'string' && key.startsWith('sentProto:') && (value as SentProtoRecord).savedAt < time
-      ))
-      .map(([key]) => key as string);
+      .filter(([, value]) => (value as SentProtoRecord).savedAt < time)
+      .map(([key]) => key);
     await this.db.delMany(keys);
   }
 
@@ -522,11 +532,40 @@ export default class SignalStore {
   }
 
   async getAllUnprocessed() {
-    const entries = await this.db.entries();
+    const entries = await this.db.entries('unprocessed:');
     return entries
-      .filter(([key]) => typeof key === 'string' && key.startsWith('unprocessed:'))
       .map(([, value]) => value as UnprocessedEnvelope)
       .sort((a, b) => a.receivedAt - b.receivedAt);
+  }
+
+  getEncryptionState() {
+    return this.db.getPlain<EncryptionState>(ENCRYPTION_STATE_KEY);
+  }
+
+  setEncryptionState(state: EncryptionState) {
+    return this.db.setPlain(ENCRYPTION_STATE_KEY, state);
+  }
+
+  removeEncryptionState() {
+    return this.db.del(ENCRYPTION_STATE_KEY);
+  }
+
+  /**
+   * Rewrites every record encrypted or decrypted; records written meanwhile are already in the current mode. Returns
+   * the number of records that cannot be decrypted.
+   */
+  convertRecords(direction: ConversionDirection) {
+    return this.db.convertAll(direction, [ENCRYPTION_STATE_KEY]);
+  }
+
+  /** How many records are encrypted and how many are not, the marker excepted */
+  countRecords() {
+    return this.db.countRecords([ENCRYPTION_STATE_KEY]);
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  deleteUnreadableRecords() {
+    return this.db.deleteUnreadable([ENCRYPTION_STATE_KEY]);
   }
 
   clear() {

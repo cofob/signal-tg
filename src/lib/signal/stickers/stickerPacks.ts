@@ -3,9 +3,8 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type SignalStore from '../store/SignalStore';
 
 import { SIGNAL_CDN_HOSTS } from '../config';
-import * as cacheApi from '../../../util/cacheApi';
 import { bufferFromBase64, bufferFromHex, bufferToHex } from '../../../util/encoding/buffer';
-import { ATTACHMENT_CACHE_NAME } from '../attachments/attachmentCache';
+import { fetchCachedBlob, saveCachedBlob } from '../attachments/attachmentCache';
 import { decryptAttachment } from '../attachments/attachmentCrypto';
 import { deriveSecrets, encodeUtf8 } from '../crypto';
 import { sendHttpRequest } from '../net/http';
@@ -119,12 +118,12 @@ export async function downloadStickerPackManifest(id: string, key: string): Prom
  */
 export async function fetchStickerImage(id: string, key: string, stickerId: number) {
   const cacheKey = `sticker/${id}/${stickerId}`;
-  const cached: Blob | undefined = await cacheApi.fetch(ATTACHMENT_CACHE_NAME, cacheKey, cacheApi.Type.Blob);
+  const cached = await fetchCachedBlob(cacheKey);
   if (cached) return cached;
 
   const plaintext = await downloadStickerPackFile(id, key, `full/${stickerId}`);
   const blob = new Blob([plaintext], { type: getStickerContentType(plaintext) });
-  await cacheApi.save(ATTACHMENT_CACHE_NAME, cacheKey, blob);
+  await saveCachedBlob(cacheKey, blob);
   return blob;
 }
 

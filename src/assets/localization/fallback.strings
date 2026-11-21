@@ -226,6 +226,10 @@
 "SignalHistorySyncNote" = "This may take a few minutes";
 "SignalHistorySyncFailed" = "Your messages could not be transferred. New messages will appear as usual.";
 "SignalPinnedLimit" = "You have reached the limit of pinned chats. Unpin a chat to pin another one.";
+"SignalStartupFailed" = "TeleSignal could not start. Reload the app to try again.";
+"SignalStorageLockedTitle" = "Local data cannot be opened";
+"SignalStorageLocked" = "Your local data is encrypted, and this app does not have the key that opens it. If the passcode was just changed or turned off in another tab, reload the app. Otherwise the data cannot be recovered, and you can erase it and link this device again.";
+"SignalStorageErase" = "Erase this account's data and link again";
 "SignalDeviceUnlinked" = "This device was unlinked from your Signal account. Its data was removed.";
 "SignalDeviceDeregistered" = "Your number was registered on another device. This device's data was removed.";
 "SignalRegisterLink" = "Register with a phone number";
@@ -285,6 +289,9 @@
 "SignalPhoneLookupConfirm" = "Look up";
 "SignalLinkInvalid" = "This Signal link is not valid or is not supported";
 "SignalLinkSearchOpen" = "Open Signal link";
+"SignalUsernameSearch" = "Find by username";
+"SignalUsernameSearchNotFound" = "No Signal user with this username";
+"SignalUsernameSearchFailed" = "Couldn't look up the username. Try again later.";
 "SignalProxyLinkTitle" = "Signal proxy";
 "SignalProxyLinkText" = "{host} is a Signal proxy. TeleSignal can't use Signal proxies: it reaches Signal through a tunnel server, which you can set in the proxy server settings. Nothing was changed.";
 "SignalCallLinkTitle" = "Call link";
@@ -1217,6 +1224,8 @@
 "PasscodeAutoLock5Min" = "If away for 5 minutes";
 "PasscodeAutoLock30Min" = "If away for 30 minutes";
 "PasscodeAutoLock1Hour" = "If away for 1 hour";
+"PasscodeCloseOtherAccounts" = "Close the other accounts of this app before turning the passcode off, so that their data can be decrypted.";
+"PasscodeStorageNotDecrypted" = "Some local data could not be decrypted, so the passcode stays on.";
 "PasscodeDataCorrupted" = "Your encrypted data could not be restored. To continue using Telegram, log out of all accounts and log in again.";
 "PasscodeLogOutAllAccounts" = "Log Out All Accounts";
 "PasscodeLogOutAllConfirm" = "Remove all accounts and local data from this browser? These sessions will remain active until you terminate them in Settings > Devices.";

@@ -6,11 +6,15 @@ import type { OriginMessageEvent, WorkerPayload } from './types';
 
 import { DEBUG } from '../../config';
 import { setNativeTransportPort } from '../../lib/signal/net/NativeTransport';
+import { isStorageKeyError } from '../../lib/signal/store/atRest';
 import { DEBUG_LEVELS } from '../../util/debugConsole';
 import { throttleWithTickEnd } from '../../util/schedulers';
 import { callApi, cancelApiProgress, initApi } from '../signal/methods/init';
 
 declare const self: WorkerGlobalScope;
+
+// The error code of the dialog, see `READABLE_ERROR_KEYS` in `src/util/getReadableErrorText.ts`
+const STARTUP_FAILED_ERROR = 'SIGNAL_STARTUP_FAILED';
 
 const ORIGINAL_FUNCTIONS = DEBUG_LEVELS.reduce((acc, level) => {
   acc[level] = console[level];
@@ -60,6 +64,20 @@ onmessage = ({ data }: OriginMessageEvent) => {
               type: 'methodResponse',
               messageId,
               response: true,
+            });
+          }
+        }).catch((error: any) => {
+          console.error(error);
+          // The page shows what stopped the start instead of waiting for an engine that never comes up
+          onUpdate(isStorageKeyError(error)
+            ? { '@type': 'updateStorageLocked' }
+            : { '@type': 'error', error: { message: STARTUP_FAILED_ERROR, hasErrorKey: true } });
+
+          if (messageId) {
+            sendToOrigin({
+              type: 'methodResponse',
+              messageId,
+              error: { message: error?.message },
             });
           }
         });

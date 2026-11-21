@@ -8,17 +8,19 @@ import {
   MEDIA_PROGRESSIVE_CACHE_NAME,
 } from '../../../config';
 import clearSignalLocalData, { clearAllSignalLocalData } from '../../../lib/signal/clearLocalData';
+import { hasEncryptedEngineData } from '../../../lib/signal/store/atRestMigration';
 import { updateAppBadge } from '../../../util/appBadge';
 import { IS_TAURI } from '../../../util/browser/globalEnvironment';
 import { MAIN_IDB_STORE } from '../../../util/browser/idb';
 import { PLATFORM_ENV } from '../../../util/browser/windowEnvironment';
 import * as cacheApi from '../../../util/cacheApi';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
+import { getLoggableError } from '../../../util/maskSensitiveText';
 import {
   ACCOUNT_SLOT, getAccountsInfo, getAccountSlotUrl, getFirstLoggedInAccountSlot,
 } from '../../../util/multiaccount';
 import {
-  clearPasscodeStore, removeGlobalsVaultForSlot, requestPasscodeStateLock,
+  clearPasscodeStore, getEngineKey, loadPasscodeMeta, removeGlobalsVaultForSlot, requestPasscodeStateLock,
 } from '../../../util/passcode';
 import { broadcastPasscodeReset } from '../../../util/passcode/channel';
 import { unregisterPushAccount } from '../../../util/pushNotifications';
@@ -60,16 +62,31 @@ addActionHandler('initApi', (global, actions): ActionReturnType => {
     shouldCollectDebugLogs, language, signalProxyUrl, signalSealedSenderProxyUrl,
   } = selectSharedSettings(global);
 
-  void initApi(actions.apiUpdate, {
+  // With a passcode the engine's stores are encrypted, and it starts only with their key
+  void getStorageKey().then((storageKey) => initApi(actions.apiUpdate, {
     userAgent: navigator.userAgent,
     platform: PLATFORM_ENV,
     langCode: language,
     signalProxyUrl,
     signalSealedSenderProxyUrl,
+    storageKey,
+  }), (err) => {
+    // Without the key the engine does not start: the data is encrypted, and the app says so instead of waiting
+    // eslint-disable-next-line no-console
+    console.error('Failed to load the storage key', getLoggableError(err));
+    actions.apiUpdate({ '@type': 'updateStorageLocked' });
+  }).catch((err) => {
+    // The engine reports a failed start by itself
+    // eslint-disable-next-line no-console
+    console.error('Failed to start the API', getLoggableError(err));
   });
 
   void setShouldEnableDebugLog(Boolean(shouldCollectDebugLogs));
 });
+
+async function getStorageKey() {
+  return await loadPasscodeMeta() ? getEngineKey() : undefined;
+}
 
 // Reconnecting moves the live connections, an open link code and new requests to the new tunnel
 addActionHandler('setSignalProxyUrl', (global, actions, payload): ActionReturnType => {
@@ -282,7 +299,8 @@ addActionHandler('reset', async (global, actions): Promise<void> => {
   }
 
   if (!hasAccounts) {
-    await clearPasscodeStore();
+    // The key stays while stores that it opens are left, so that a failed wipe can be tried again
+    if (!await hasEncryptedEngineData().catch(() => true)) await clearPasscodeStore();
     localStorage.removeItem(IS_SCREEN_LOCKED_CACHE_KEY);
     await clearWallpaperBlobs();
     if (IS_TAURI) await forgetSavedFiles().catch(() => undefined);
@@ -355,7 +373,8 @@ addActionHandler('signOutAllAccounts', async (): Promise<void> => {
   await clearAllSignalLocalData().catch(() => undefined);
 
   clearAllStoredSessions();
-  await clearPasscodeStore().catch(() => undefined);
+  // Only after the engine's stores are gone: the key is what opens them, and a failed wipe has to be tried again
+  if (!await hasEncryptedEngineData().catch(() => true)) await clearPasscodeStore().catch(() => undefined);
 
   try {
     localStorage.clear();

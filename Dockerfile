@@ -24,13 +24,15 @@ COPY public ./public
 COPY src ./src
 # The page's own policy comes from `buildCsp` in `vite.config.ts`. nginx sends it as a header too (a worker takes its
 # policy from its own response headers, and `frame-ancestors` cannot be in a `<meta>` tag), so the policy is read back
-# from the built page and cannot drift from the source. The image ships no source maps.
+# from the built page and cannot drift from the source. The image ships no source maps and no references to them.
 RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build:production \
   && mkdir -p /out \
   && sed -n 's/.*http-equiv="Content-Security-Policy" content="\([^"]*\)".*/\1/p' dist/index.html > /out/csp.txt \
   && test -s /out/csp.txt \
   && grep -q "connect-src 'self'" /out/csp.txt \
-  && find dist -name '*.map' -delete
+  && find dist -name '*.map' -delete \
+  && find dist -type f \( -name '*.js' -o -name '*.css' \) \
+    -exec sed -i -E '/^(\/\/|\/\*)# sourceMappingURL=[^ ]+\.map( \*\/)?$/d' {} +
 # Precompressed copies for `gzip_static` and `brotli_static`. `index.html` stays plain because nginx edits it on the fly
 # when `PUBLIC_URL` or `CSP_CONNECT_SRC` is set.
 # hadolint ignore=DL4006,SC2016

@@ -98,6 +98,10 @@ asks, but the compressed length differs from a zlib stream by the markers. A fix
 deflate implementation as a direct dependency (`pako` is installed only through other packages); `CompressionStream`
 cannot flush by hand.
 
+## The Cache API refuses the desktop app's `tauri://` requests on macOS and Linux
+
+`src/util/cacheApi.ts` builds every cache request from `self.location.origin` (`buildCacheRequest`), which is `tauri://localhost` in the bundled desktop app on macOS and Linux. In the WebKitGTK build, `cache.put(new Request('tauri://localhost/attachment/x'), ...)` rejects with "Request url is not HTTP/HTTPS", while the same call with an `http://` URL succeeds (verified under Xvfb with a scratch build of the app that ran the call from the page). `cacheApi.save` catches the error and returns `false`, so nothing is cached there: attachments, stickers and avatars are fetched from the CDN again on every view, and attachments that the CDN has dropped after its retention period cannot be shown again, while the web app and the Windows build (`http://tauri.localhost`) cache them. It also means `signalDev.seedDemo()` shows no pictures in the desktop app. A fixed `http://` base for the cache keys would likely avoid it; WKWebView on macOS was not tested.
+
 ## Five npm dependencies come from GitHub, so every install needs `git` and GitHub access
 
 `package.json` pins `opus-recorder`, `emoji-data-ios`, `eslint-plugin-react-hooks-static-deps`, `eslint-plugin-tt-multitab`

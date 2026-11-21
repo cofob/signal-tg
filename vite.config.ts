@@ -8,6 +8,7 @@ import { defineConfig, loadEnv, normalizePath, type Plugin, type PluginOption, t
 import { type Target, viteStaticCopy } from 'vite-plugin-static-copy';
 import { watchAndRun } from 'vite-plugin-watch-and-run';
 
+import buildCsp from './plugins/csp.ts';
 import buildGitInfoPlugin from './plugins/gitInfo.ts';
 import buildWebManifestPlugin from './plugins/webManifest.ts';
 import packageJson from './package.json' with { type: 'json' };
@@ -280,32 +281,6 @@ function setViteEnv(env: Record<string, string>) {
   Object.entries(env).forEach(([key, value]) => {
     process.env[key] = value;
   });
-}
-
-// The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy settings
-// (`SharedSettings.signalProxyUrl` and `signalSealedSenderProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM
-// client terminates with Signal's certificate authority, so a wrong host cannot read traffic, but the policy no longer
-// stops scripts from reaching other `wss:` servers. A local tunnel stays usable through `ws:` on `localhost` and
-// `127.0.0.1`; CSP has no source expression for `[::1]`, so a tunnel there is blocked. `ipc:` and, on Windows,
-// `http://ipc.localhost` carry the desktop app's in-process IPC, including the native transport's bytes.
-function buildCsp(appEnv: string, tunnelUrl?: string) {
-  const isDevelopment = appEnv === 'development';
-  const tunnelOrigin = tunnelUrl ? new URL(tunnelUrl).origin : '';
-
-  return `
-  default-src 'self';
-  connect-src 'self' ${tunnelOrigin} wss: ws://localhost:* ws://127.0.0.1:* blob: data: ipc: http://ipc.localhost;
-  script-src 'self' 'wasm-unsafe-eval';
-  worker-src 'self'${isDevelopment ? ' blob:' : ''};
-  style-src 'self' 'unsafe-inline';
-  font-src 'self' data:;
-  img-src 'self' data: blob:;
-  media-src 'self' blob: data:;
-  object-src 'none';
-  frame-src 'none';
-  base-uri 'none';
-  form-action 'none';`
-    .replace(/\s+/g, ' ').trim();
 }
 
 function buildProjectPath(projectPath: string) {

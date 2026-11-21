@@ -6,6 +6,7 @@ import { StoryViewerOrigin } from '../../../types';
 
 import { sortUserIds } from '../../../global/helpers';
 import { filterPeersByQuery } from '../../../global/helpers/peers';
+import { parseUsernameSearch } from '../../../util/signalUsername';
 
 import useAppLayout from '../../../hooks/useAppLayout';
 import useHistoryBack from '../../../hooks/useHistoryBack';
@@ -18,6 +19,7 @@ import FloatingActionButton from '../../ui/FloatingActionButton';
 import InfiniteScroll from '../../ui/InfiniteScroll';
 import ListItem from '../../ui/ListItem';
 import Loading from '../../ui/Loading';
+import UsernameSearchResult from '../search/UsernameSearchResult';
 
 export type OwnProps = {
   filter: string;
@@ -80,6 +82,9 @@ const ContactList = ({
   const searchPhoneNumber = listIds && !listIds.length && PHONE_PATTERN.test(phoneQuery)
     ? phoneQuery.replace('+', '') : undefined;
 
+  // A username can belong to a Signal user who is no contact, whom the server finds on request
+  const searchUsername = parseUsernameSearch(filter);
+
   const handlePhoneSearchClick = useLastCallback(() => {
     openChatByPhoneNumber({ phoneNumber: searchPhoneNumber! });
   });
@@ -91,6 +96,7 @@ const ContactList = ({
           {lang('SignalPhoneSearch', { phone: `+${searchPhoneNumber}` })}
         </ListItem>
       )}
+      {searchUsername && <UsernameSearchResult key="username-search" username={searchUsername} />}
       {viewportIds?.length ? (
         viewportIds.map((id) => (
           <ListItem
@@ -109,7 +115,7 @@ const ContactList = ({
           </ListItem>
         ))
       ) : viewportIds && !viewportIds.length ? (
-        !searchPhoneNumber && (
+        !searchPhoneNumber && !searchUsername && (
           <p className="no-results" key="no-results" dir="auto">
             {lang(filter.length ? 'NoContactsFound' : 'ContactListEmpty')}
           </p>

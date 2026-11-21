@@ -12,7 +12,6 @@ import { IS_WAVE_TRANSFORM_SUPPORTED } from '../../../util/browser/windowEnviron
 import { getAllMultitabTokens, getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getAllNotificationsCount } from '../../../util/folderManager';
 import getIsAppUpdateNeeded from '../../../util/getIsAppUpdateNeeded';
-import { shouldShowErrorDialog } from '../../../util/getReadableErrorText';
 import { compact, unique } from '../../../util/iteratees';
 import { getTranslationFn } from '../../../util/localization';
 import updateIcon from '../../../util/updateIcon';
@@ -329,42 +328,6 @@ addActionHandler('showAllowedMessageTypesNotification', (global, actions, payloa
     },
     tabId,
   });
-});
-
-addActionHandler('showDialog', (global, actions, payload): ActionReturnType => {
-  const { data, tabId = getCurrentTabId() } = payload;
-
-  // Filter out errors that we don't want to show to the user
-  if (data.type === 'error' && !shouldShowErrorDialog(data)) {
-    return global;
-  }
-
-  const newDialogs = [...selectTabState(global, tabId).dialogs];
-  if (data.type === 'error') {
-    const existingErrorIndex = newDialogs.findIndex((dialog) => {
-      return dialog.type === 'error' && dialog.message === data.message;
-    });
-    if (existingErrorIndex !== -1) {
-      newDialogs.splice(existingErrorIndex, 1);
-    }
-  }
-
-  newDialogs.push(data);
-
-  return updateTabState(global, {
-    dialogs: newDialogs,
-  }, tabId);
-});
-
-addActionHandler('dismissDialog', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-  const newDialogs = [...selectTabState(global, tabId).dialogs];
-
-  newDialogs.pop();
-
-  return updateTabState(global, {
-    dialogs: newDialogs,
-  }, tabId);
 });
 
 addActionHandler('toggleSafeLinkModal', (global, actions, payload): ActionReturnType => {

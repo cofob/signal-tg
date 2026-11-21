@@ -92,6 +92,12 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       break;
     }
 
+    case 'updateStorageLocked':
+      Object.values(global.byTabId).forEach(({ id: tabId }) => {
+        actions.showDialog({ data: { type: 'storageLocked' }, tabId });
+      });
+      break;
+
     case 'notSupportedInFrozenAccount': {
       actions.showNotification({
         title: {

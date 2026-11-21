@@ -421,6 +421,9 @@ export interface ActionPayloads {
     phoneNumber: string;
     text?: string;
   } & WithTabId;
+  findChatByUsername: {
+    username: string;
+  } & WithTabId;
   openChatByContactToken: {
     token: string;
   } & WithTabId;

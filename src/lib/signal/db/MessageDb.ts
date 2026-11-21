@@ -2,8 +2,19 @@ import type { CallDirection, CallMode, CallStatus, CallType } from '../calls/cal
 import type { ChatStyleRecord } from '../chatStyle/chatStyle';
 import type { GroupState } from '../groups/fetchGroup';
 import type { GroupUpdate } from '../groups/groupUpdates';
+import type { ConversionDirection } from '../store/SecureIdbStore';
+import type { StoreName } from './recordCrypto';
 
 import { getEngineStoreName } from '../engineStoreName';
+import { StorageLockedError } from '../store/atRest';
+import {
+  decodeOptionalRecord, decodeRecord, decodeRecords, encodeRecord, getIsRecordUnreadable, isEncryptedRecord,
+  isSameEncryption,
+} from './recordCrypto';
+
+export type StoreRecordCounts = Record<StoreName, { encrypted: number; plain: number }>;
+
+const STORE_NAMES = ['conversations', 'messages', 'stories', 'calls'] as const;
 
 export type ConversationType = 'private' | 'group';
 
@@ -204,6 +215,9 @@ export type StoryRecord = {
 export type NewStoryRecord = Omit<StoryRecord, 'id'>;
 
 const DB_NAME = 'ts-signal-messages';
+// Records per transaction when the stores are rewritten, and per read when messages are filtered after decryption
+const CONVERT_BATCH_SIZE = 100;
+const FIND_BATCH_SIZE = 100;
 const DB_VERSION = 5;
 const CONVERSATIONS = 'conversations';
 const MESSAGES = 'messages';
@@ -231,13 +245,11 @@ export default class MessageDb {
   }
 
   getConversation(id: string) {
-    return this.request<ConversationRecord | undefined>(CONVERSATIONS, 'readonly', (store) => store.get(id));
+    return this.readRecord<ConversationRecord>(CONVERSATIONS, (store) => store.get(id));
   }
 
   getConversationByLocalId(localId: number) {
-    return this.request<ConversationRecord | undefined>(
-      CONVERSATIONS, 'readonly', (store) => store.index(BY_LOCAL_ID).get(localId),
-    );
+    return this.readRecord<ConversationRecord>(CONVERSATIONS, (store) => store.index(BY_LOCAL_ID).get(localId));
   }
 
   /** The next free `localId` */
@@ -252,21 +264,23 @@ export default class MessageDb {
   }
 
   getConversations() {
-    return this.request<ConversationRecord[]>(CONVERSATIONS, 'readonly', (store) => store.getAll());
+    return this.readRecords<ConversationRecord>(CONVERSATIONS, (store) => store.getAll());
   }
 
   async putConversation(record: ConversationRecord) {
-    await this.request(CONVERSATIONS, 'readwrite', (store) => store.put(record));
+    const stored = await encodeRecord(CONVERSATIONS, record);
+    await this.request(CONVERSATIONS, 'readwrite', (store) => store.put(stored));
     return record;
   }
 
   /** Puts conversations in one transaction */
   async putConversations(records: ConversationRecord[]) {
+    const stored = await Promise.all(records.map((record) => encodeRecord(CONVERSATIONS, record)));
     const db = await this.open();
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(CONVERSATIONS, 'readwrite');
       const store = transaction.objectStore(CONVERSATIONS);
-      for (const record of records) store.put(record);
+      for (const record of stored) store.put(record);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -274,11 +288,12 @@ export default class MessageDb {
   }
 
   getMessage(id: number) {
-    return this.request<MessageRecord | undefined>(MESSAGES, 'readonly', (store) => store.get(id));
+    return this.readRecord<MessageRecord>(MESSAGES, (store) => store.get(id));
   }
 
   async addMessage(record: NewMessageRecord): Promise<MessageRecord> {
-    const id = await this.request<IDBValidKey>(MESSAGES, 'readwrite', (store) => store.add(record));
+    const stored = await encodeRecord(MESSAGES, record);
+    const id = await this.request<IDBValidKey>(MESSAGES, 'readwrite', (store) => store.add(stored));
     return { ...record, id: id as number };
   }
 
@@ -287,6 +302,7 @@ export default class MessageDb {
    * has; notices have no author and are always added. Returns the added records, `undefined` for skipped ones.
    */
   async addMessagesIfAbsent(records: NewMessageRecord[]) {
+    const stored = await Promise.all(records.map((record) => encodeRecord(MESSAGES, record)));
     const db = await this.open();
     return new Promise<(MessageRecord | undefined)[]>((resolve, reject) => {
       const transaction = db.transaction(MESSAGES, 'readwrite');
@@ -298,7 +314,7 @@ export default class MessageDb {
         const record = records[results.length];
         if (!record) return;
         const add = () => {
-          const request = store.add(record);
+          const request = store.add(stored[results.length]);
           request.onsuccess = () => {
             results.push({ ...record, id: request.result as number });
             addNext();
@@ -327,7 +343,8 @@ export default class MessageDb {
   }
 
   async putMessage(record: MessageRecord) {
-    await this.request(MESSAGES, 'readwrite', (store) => store.put(record));
+    const stored = await encodeRecord(MESSAGES, record);
+    await this.request(MESSAGES, 'readwrite', (store) => store.put(stored));
     return record;
   }
 
@@ -340,7 +357,7 @@ export default class MessageDb {
     const range = IDBKeyRange.bound([conversationId, 0], [conversationId, maxId]);
     const ids: number[] = [];
     await this.iterate(MESSAGES, 'readwrite', (store) => store.index(BY_CONVERSATION).openCursor(range), (cursor) => {
-      ids.push((cursor.value as MessageRecord).id);
+      ids.push(cursor.primaryKey as number);
       cursor.delete();
       return true;
     });
@@ -349,33 +366,45 @@ export default class MessageDb {
 
   /** Finds a message by its author and Signal timestamp */
   findMessage(authorAci: string, sentAt: number) {
-    return this.request<MessageRecord | undefined>(
-      MESSAGES, 'readonly', (store) => store.index(BY_AUTHOR_SENT_AT).get([authorAci, sentAt]),
-    );
+    return this.readRecord<MessageRecord>(MESSAGES, (store) => store.index(BY_AUTHOR_SENT_AT).get([authorAci, sentAt]));
   }
 
   /** Messages of a conversation, newest first, older than `beforeId` when it is set */
   async getMessages(conversationId: string, limit: number, beforeId = Number.MAX_SAFE_INTEGER) {
     const range = IDBKeyRange.bound([conversationId, 0], [conversationId, beforeId], false, true);
-    const messages: MessageRecord[] = [];
+    const stored: unknown[] = [];
     const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
     await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
-      messages.push(cursor.value as MessageRecord);
-      return messages.length < limit;
+      stored.push(cursor.value);
+      return stored.length < limit;
     });
-    return messages;
+    return decodeRecords<MessageRecord>(MESSAGES, stored);
   }
 
-  /** The newest messages of a conversation that pass `filter`, newest first */
+  /**
+   * The newest messages of a conversation that pass `filter`, newest first. A transaction cannot wait for the
+   * decryption of a record, so the records come in batches that are decrypted between transactions.
+   */
   async findLatestMessages(conversationId: string, limit: number, filter: (message: MessageRecord) => boolean) {
-    const range = IDBKeyRange.bound([conversationId, 0], [conversationId, Number.MAX_SAFE_INTEGER]);
     const messages: MessageRecord[] = [];
-    const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
-    await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
-      const message = cursor.value as MessageRecord;
-      if (filter(message)) messages.push(message);
-      return messages.length < limit;
-    });
+    let upperBound: IDBValidKey = [conversationId, Number.MAX_SAFE_INTEGER];
+    let isUpperBoundOpen = false;
+    while (messages.length < limit) {
+      const range = IDBKeyRange.bound([conversationId, 0], upperBound, false, isUpperBoundOpen);
+      const batch: { key: IDBValidKey; stored: unknown }[] = [];
+      const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range, 'prev');
+      await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
+        batch.push({ key: cursor.key, stored: cursor.value });
+        return batch.length < FIND_BATCH_SIZE;
+      });
+      for (const message of await decodeRecords<MessageRecord>(MESSAGES, batch.map(({ stored }) => stored))) {
+        if (filter(message)) messages.push(message);
+        if (messages.length >= limit) return messages;
+      }
+      if (batch.length < FIND_BATCH_SIZE) break;
+      upperBound = batch[batch.length - 1].key;
+      isUpperBoundOpen = true;
+    }
     return messages;
   }
 
@@ -389,13 +418,13 @@ export default class MessageDb {
   /** Messages of a conversation, oldest first, starting at `fromId` */
   async getMessagesFrom(conversationId: string, limit: number, fromId: number) {
     const range = IDBKeyRange.bound([conversationId, fromId], [conversationId, Number.MAX_SAFE_INTEGER]);
-    const messages: MessageRecord[] = [];
+    const stored: unknown[] = [];
     const openCursor = (store: IDBObjectStore) => store.index(BY_CONVERSATION).openCursor(range);
     await this.iterate(MESSAGES, 'readonly', openCursor, (cursor) => {
-      messages.push(cursor.value as MessageRecord);
-      return messages.length < limit;
+      stored.push(cursor.value);
+      return stored.length < limit;
     });
-    return messages;
+    return decodeRecords<MessageRecord>(MESSAGES, stored);
   }
 
   countMessages(conversationId: string) {
@@ -406,13 +435,13 @@ export default class MessageDb {
   /** Incoming messages of a conversation not read yet, up to `maxId` */
   async getUnreadMessages(conversationId: string, maxId = Number.MAX_SAFE_INTEGER) {
     const range = IDBKeyRange.bound([conversationId, 0], [conversationId, maxId]);
-    const messages: MessageRecord[] = [];
+    const stored: unknown[] = [];
     await this.iterate(MESSAGES, 'readonly', (store) => store.index(BY_CONVERSATION).openCursor(range), (cursor) => {
-      const message = cursor.value as MessageRecord;
-      if (!message.isOutgoing && !message.readAt && message.kind === 'message') messages.push(message);
+      stored.push(cursor.value);
       return true;
     });
-    return messages;
+    const messages = await decodeRecords<MessageRecord>(MESSAGES, stored);
+    return messages.filter((message) => !message.isOutgoing && !message.readAt && message.kind === 'message');
   }
 
   /** The Signal timestamp of the oldest stored message of `authorAci` */
@@ -426,35 +455,38 @@ export default class MessageDb {
 
   /** Outgoing messages that wait for another send, the earliest retry first */
   getMessagesToRetry() {
-    return this.request<MessageRecord[]>(MESSAGES, 'readonly', (store) => store.index(BY_SEND_RETRY_AT).getAll());
+    return this.readRecords<MessageRecord>(MESSAGES, (store) => store.index(BY_SEND_RETRY_AT).getAll());
   }
 
   /** Messages whose disappearing timer ran out by `time` */
   getExpiredMessages(time: number) {
-    return this.request<MessageRecord[]>(
-      MESSAGES, 'readonly', (store) => store.index(BY_EXPIRES_AT).getAll(IDBKeyRange.upperBound(time)),
+    return this.readRecords<MessageRecord>(
+      MESSAGES, (store) => store.index(BY_EXPIRES_AT).getAll(IDBKeyRange.upperBound(time)),
     );
   }
 
   /** The earliest time a disappearing message expires */
   async getNextExpiresAt() {
-    const message = await this.request<MessageRecord | undefined>(
+    // `expiresAt` is stored in the clear, so the record needs no decryption
+    const message = await this.request<Pick<MessageRecord, 'expiresAt'> | undefined>(
       MESSAGES, 'readonly', (store) => store.index(BY_EXPIRES_AT).get(IDBKeyRange.lowerBound(0)),
     );
     return message?.expiresAt;
   }
 
   getStory(id: number) {
-    return this.request<StoryRecord | undefined>(STORIES, 'readonly', (store) => store.get(id));
+    return this.readRecord<StoryRecord>(STORIES, (store) => store.get(id));
   }
 
   async addStory(record: NewStoryRecord): Promise<StoryRecord> {
-    const id = await this.request<IDBValidKey>(STORIES, 'readwrite', (store) => store.add(record));
+    const stored = await encodeRecord(STORIES, record);
+    const id = await this.request<IDBValidKey>(STORIES, 'readwrite', (store) => store.add(stored));
     return { ...record, id: id as number };
   }
 
   async putStory(record: StoryRecord) {
-    await this.request(STORIES, 'readwrite', (store) => store.put(record));
+    const stored = await encodeRecord(STORIES, record);
+    await this.request(STORIES, 'readwrite', (store) => store.put(stored));
     return record;
   }
 
@@ -464,47 +496,47 @@ export default class MessageDb {
 
   /** Finds a story by its author and Signal timestamp */
   findStory(authorAci: string, sentAt: number) {
-    return this.request<StoryRecord | undefined>(
-      STORIES, 'readonly', (store) => store.index(BY_AUTHOR_SENT_AT).get([authorAci, sentAt]),
-    );
+    return this.readRecord<StoryRecord>(STORIES, (store) => store.index(BY_AUTHOR_SENT_AT).get([authorAci, sentAt]));
   }
 
   /** Every stored story in arrival order; stories last a day, so there are few */
   getStories() {
-    return this.request<StoryRecord[]>(STORIES, 'readonly', (store) => store.getAll());
+    return this.readRecords<StoryRecord>(STORIES, (store) => store.getAll());
   }
 
   /** Stories whose day ran out by `time` */
   getExpiredStories(time: number) {
-    return this.request<StoryRecord[]>(
-      STORIES, 'readonly', (store) => store.index(BY_EXPIRES_AT).getAll(IDBKeyRange.upperBound(time)),
+    return this.readRecords<StoryRecord>(
+      STORIES, (store) => store.index(BY_EXPIRES_AT).getAll(IDBKeyRange.upperBound(time)),
     );
   }
 
   /** The earliest time a story expires */
   async getNextStoryExpiresAt() {
-    const story = await this.request<StoryRecord | undefined>(
+    const story = await this.request<Pick<StoryRecord, 'expiresAt'> | undefined>(
       STORIES, 'readonly', (store) => store.index(BY_EXPIRES_AT).get(IDBKeyRange.lowerBound(0)),
     );
     return story?.expiresAt;
   }
 
   getCall(peerId: string, callId: string) {
-    return this.request<CallRecord | undefined>(CALLS, 'readonly', (store) => store.get([peerId, callId]));
+    return this.readRecord<CallRecord>(CALLS, (store) => store.get([peerId, callId]));
   }
 
   async putCall(record: CallRecord) {
-    await this.request(CALLS, 'readwrite', (store) => store.put(record));
+    const stored = await encodeRecord(CALLS, record);
+    await this.request(CALLS, 'readwrite', (store) => store.put(stored));
     return record;
   }
 
   /** Puts calls in one transaction */
   async putCalls(records: CallRecord[]) {
+    const stored = await Promise.all(records.map((record) => encodeRecord(CALLS, record)));
     const db = await this.open();
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(CALLS, 'readwrite');
       const store = transaction.objectStore(CALLS);
-      for (const record of records) store.put(record);
+      for (const record of stored) store.put(record);
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -513,18 +545,31 @@ export default class MessageDb {
 
   /** Every stored call, deleted ones included, in no particular order */
   getCalls() {
-    return this.request<CallRecord[]>(CALLS, 'readonly', (store) => store.getAll());
+    return this.readRecords<CallRecord>(CALLS, (store) => store.getAll());
   }
 
   /** Calls that were not deleted, newest first */
   async getCallLog(limit: number) {
     const calls: CallRecord[] = [];
-    const openCursor = (store: IDBObjectStore) => store.index(BY_TIMESTAMP).openCursor(undefined, 'prev');
-    await this.iterate(CALLS, 'readonly', openCursor, (cursor) => {
-      const call = cursor.value as CallRecord;
-      if (call.status !== 'deleted') calls.push(call);
-      return calls.length < limit;
-    });
+    let after: { key: IDBValidKey; primaryKey: IDBValidKey } | undefined;
+    // A batch at a time, so a long log is read and decrypted only as far as `limit` needs
+    while (calls.length < limit) {
+      const batch: { key: IDBValidKey; primaryKey: IDBValidKey; stored: unknown }[] = [];
+      const range = after ? IDBKeyRange.upperBound(after.key) : undefined;
+      const openCursor = (store: IDBObjectStore) => store.index(BY_TIMESTAMP).openCursor(range, 'prev');
+      await this.iterate(CALLS, 'readonly', openCursor, (cursor) => {
+        // Records of the timestamp that the last batch ended at, which it already holds
+        const isSeen = after && indexedDB.cmp(cursor.key, after.key) === 0
+          && indexedDB.cmp(cursor.primaryKey, after.primaryKey) >= 0;
+        if (!isSeen) batch.push({ key: cursor.key, primaryKey: cursor.primaryKey, stored: cursor.value });
+        return batch.length < FIND_BATCH_SIZE;
+      });
+      for (const call of await decodeRecords<CallRecord>(CALLS, batch.map(({ stored }) => stored))) {
+        if (call.status !== 'deleted' && calls.length < limit) calls.push(call);
+      }
+      if (batch.length < FIND_BATCH_SIZE) break;
+      after = batch[batch.length - 1];
+    }
     return calls;
   }
 
@@ -533,6 +578,147 @@ export default class MessageDb {
     await this.request(MESSAGES, 'readwrite', (store) => store.clear());
     await this.request(STORIES, 'readwrite', (store) => store.clear());
     await this.request(CALLS, 'readwrite', (store) => store.clear());
+  }
+
+  /**
+   * Rewrites every record encrypted or decrypted, in batches that each commit in one transaction. A record that
+   * changed since it was read stays as the change left it, because writes already use the current mode. Returns the
+   * number of records that cannot be decrypted, which stay as they are.
+   */
+  async convertRecords(direction: ConversionDirection) {
+    let failedCount = 0;
+    for (const storeName of STORE_NAMES) {
+      let lastKey: IDBValidKey | undefined;
+      for (;;) {
+        const batch = await this.readBatch(storeName, lastKey);
+        if (!batch.length) break;
+        lastKey = batch[batch.length - 1].key;
+
+        const converted: { key: IDBValidKey; before: unknown; after: unknown }[] = [];
+        for (const { key, stored } of batch) {
+          if (isEncryptedRecord(stored) === (direction === 'encrypt')) continue;
+
+          try {
+            const record = await decodeRecord<object>(storeName, stored);
+            const after = direction === 'encrypt' ? await encodeRecord(storeName, record, true) : record;
+            converted.push({ key, before: stored, after });
+          } catch (err) {
+            if (err instanceof StorageLockedError) throw err;
+            failedCount++;
+          }
+        }
+        await this.swapRecords(storeName, direction, converted);
+      }
+    }
+    return failedCount;
+  }
+
+  /** How many records of each store are encrypted and how many are not */
+  async countRecords(): Promise<StoreRecordCounts> {
+    const counts = {} as StoreRecordCounts;
+    for (const storeName of STORE_NAMES) {
+      counts[storeName] = { encrypted: 0, plain: 0 };
+      let lastKey: IDBValidKey | undefined;
+      for (;;) {
+        const batch = await this.readBatch(storeName, lastKey);
+        if (!batch.length) break;
+        lastKey = batch[batch.length - 1].key;
+        for (const { stored } of batch) counts[storeName][isEncryptedRecord(stored) ? 'encrypted' : 'plain']++;
+      }
+    }
+    return counts;
+  }
+
+  /**
+   * Whether a record in the clear is among the conversations and the newest records of the other stores: a cheap
+   * check at start for a write that missed the key, which the full count does not need to repeat
+   */
+  async hasRecentPlainRecords(sampleSize: number) {
+    for (const storeName of STORE_NAMES) {
+      const sample: unknown[] = [];
+      // Conversations are few, the others are checked from the newest
+      const limit = storeName === CONVERSATIONS ? Number.MAX_SAFE_INTEGER : sampleSize;
+      await this.iterate(storeName, 'readonly', (store) => store.openCursor(undefined, 'prev'), (cursor) => {
+        sample.push(cursor.value);
+        return sample.length < limit;
+      });
+      if (sample.some((stored) => !isEncryptedRecord(stored))) return true;
+    }
+    return false;
+  }
+
+  /** Deletes the encrypted records that the key does not open, and returns their number */
+  async deleteUnreadableRecords() {
+    let deletedCount = 0;
+    for (const storeName of STORE_NAMES) {
+      let lastKey: IDBValidKey | undefined;
+      const unreadable: IDBValidKey[] = [];
+      for (;;) {
+        const batch = await this.readBatch(storeName, lastKey);
+        if (!batch.length) break;
+        lastKey = batch[batch.length - 1].key;
+        for (const { key, stored } of batch) {
+          if (await getIsRecordUnreadable(storeName, stored)) unreadable.push(key);
+        }
+      }
+      if (!unreadable.length) continue;
+
+      const db = await this.open();
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        for (const key of unreadable) transaction.objectStore(storeName).delete(key);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+      deletedCount += unreadable.length;
+    }
+    return deletedCount;
+  }
+
+  private readBatch(storeName: StoreName, afterKey?: IDBValidKey) {
+    const range = afterKey === undefined ? undefined : IDBKeyRange.lowerBound(afterKey, true);
+    const batch: { key: IDBValidKey; stored: unknown }[] = [];
+    return this.iterate(storeName, 'readonly', (store) => store.openCursor(range), (cursor) => {
+      batch.push({ key: cursor.primaryKey, stored: cursor.value });
+      return batch.length < CONVERT_BATCH_SIZE;
+    }).then(() => batch);
+  }
+
+  private async swapRecords(
+    storeName: StoreName,
+    direction: ConversionDirection,
+    converted: { key: IDBValidKey; before: unknown; after: unknown }[],
+  ) {
+    if (!converted.length) return;
+
+    const db = await this.open();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      for (const { key, before, after } of converted) {
+        store.get(key).onsuccess = (event) => {
+          const current = (event.target as IDBRequest).result;
+          // Only a record that is still as it was read: the engine may have written it again meanwhile
+          const isUnchanged = direction === 'encrypt'
+            ? current !== undefined && !isEncryptedRecord(current)
+            : isSameEncryption(current, before);
+          if (isUnchanged) store.put(after);
+        };
+      }
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
+  private async readRecord<T>(storeName: StoreName, build: (store: IDBObjectStore) => IDBRequest) {
+    const stored = await this.request<unknown>(storeName, 'readonly', build);
+    return stored === undefined ? undefined : decodeOptionalRecord<T>(storeName, stored);
+  }
+
+  private async readRecords<T>(storeName: StoreName, build: (store: IDBObjectStore) => IDBRequest) {
+    return decodeRecords<T>(storeName, await this.request<unknown[]>(storeName, 'readonly', build));
   }
 
   private open() {

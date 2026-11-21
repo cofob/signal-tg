@@ -38,7 +38,9 @@ export {
   setBackupFrequency,
 } from './backups';
 export { clearCallLog, fetchCallLog, markCallLogSeen } from './calls';
-export { destroy, disconnect, reconnectNow } from './client';
+export {
+  destroy, disableStorageEncryption, disconnect, enableStorageEncryption, eraseUnreadableStorageRecords, reconnectNow,
+} from './client';
 export { fetchCountryList, fetchNearestCountry } from './countries';
 export {
   addChatMemberByPhoneNumber,

@@ -13,7 +13,11 @@ import {
 import { closeIdleHttpConnections } from '../../lib/signal/net/http';
 import { WebSocketConnectError } from '../../lib/signal/net/WebSocketClient';
 import { sendInitialSyncRequests } from '../../lib/signal/sender/syncRequests';
+import { isStorageKeyError, requireAtRestKey } from '../../lib/signal/store/atRest';
+import { applyStorageKey, forgetStorageKey, reapplyStorageKey } from '../../lib/signal/store/atRestMigration';
+import { holdEngineLock, releaseEngineLock } from '../../lib/signal/store/engineLock';
 import { initSignalWasm } from '../../lib/signal/wasm';
+import { ACCOUNT_SLOT } from '../../util/multiaccount';
 import { pause } from '../../util/schedulers';
 import { buildApiUser, buildApiUserFullInfo } from './builders/users';
 import { clearAttachmentCache } from './media/attachments';
@@ -63,10 +67,28 @@ export async function startClient(args: ApiInitialArgs) {
   isDestroyed = false;
   initialArgs = args;
   applyProxyUrls(args.signalProxyUrl, args.signalSealedSenderProxyUrl);
+  holdEngineLock(ACCOUNT_SLOT || 1);
+  try {
+    await startEngine(args);
+  } catch (err) {
+    if (!isStorageKeyError(err)) throw err;
+    // The data is encrypted and its key is missing or wrong. Nothing is wiped, since the key may be only late, such as
+    // while another tab changes the passcode: the engine stops, and the page asks the user what to do
+    logError(err);
+    // A key that did not open the data must not encrypt new records either
+    forgetStorageKey();
+    requireAtRestKey();
+    releaseEngineLock();
+    sendApiUpdate({ '@type': 'updateStorageLocked' });
+  }
+}
+
+async function startEngine(args: ApiInitialArgs) {
+  await applyStorageKey(args.storageKey, store, db, logError);
   await initSignalWasm();
   sendApiUpdate({ '@type': 'updateApiReady' });
 
-  const account = await store.getItem('account') ?? await resumeInterruptedRegistration();
+  const account = await readStoredAccount();
   if (account?.isRegistrationPending) {
     sendApiUpdate({ '@type': 'updateConnectionState', connectionState: 'connectionStateReady' });
     resumeRegistration(account);
@@ -83,6 +105,11 @@ export async function startClient(args: ApiInitialArgs) {
     sendApiUpdate({ '@type': 'updateStaleSession' });
   }
   void runDeviceLink(args.platform).catch(logError);
+}
+
+/** The stored account, or one that a registration created; a record that the key does not open throws */
+async function readStoredAccount() {
+  return await store.getItem('account') ?? await resumeInterruptedRegistration();
 }
 
 /** The account that a registration created before the app stopped, when the server has it */
@@ -126,6 +153,7 @@ export async function stopClient(shouldForget: boolean) {
   linkSession?.cancel();
   resetRegistration();
   historyTransferController?.abort();
+  releaseEngineLock();
   processor.stop();
   keyTransparency.stop();
   backups.stop();
@@ -136,6 +164,8 @@ export async function stopClient(shouldForget: boolean) {
     await store.clear();
     await db.clear();
     await clearAttachmentCache();
+    // A link that follows in this session stores its account encrypted too, with the key that the engine has now
+    await reapplyStorageKey(store, db).catch(logError);
   }
 }
 
