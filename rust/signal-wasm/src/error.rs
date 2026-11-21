@@ -31,7 +31,7 @@ pub(crate) fn remember_callback_error(error: JsValue) {
     CALLBACK_ERROR.with(|slot| *slot.borrow_mut() = Some(error));
 }
 
-fn take_callback_error() -> Option<JsValue> {
+pub(crate) fn take_callback_error() -> Option<JsValue> {
     CALLBACK_ERROR.with(|slot| slot.borrow_mut().take())
 }
 
