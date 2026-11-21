@@ -111,7 +111,7 @@ app stops reading from the server while the window is full.
 The commands reuse the policy of the WebSocket tunnel from `proxy/src/lib.rs`:
 
 - Hosts: only the allowlist (`ALLOWED_HOSTS`: `chat`, `storage`, `cdn`, `cdn2`, `cdn3`, `cdsi`,
-  `contentproxy` and `sfu.voip` `.signal.org`) on port 443.
+  `contentproxy`, `sfu.voip` and `svr2` `.signal.org`) on port 443.
 - Addresses: the app resolves the name once, refuses non-public addresses (loopback, private,
   link-local, CGNAT and other special-purpose ranges) and connects to the address it checked. A
   hostile DNS server therefore cannot point the app at the local network.
