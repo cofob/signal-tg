@@ -1600,7 +1600,9 @@ export interface LangPair {
   'ActionJoinedByRequestYou': undefined;
   'ActionGroupDescriptionYou': undefined;
   'ActionGroupDescriptionRemovedYou': undefined;
+  'ActionGroupInviteDeclinedYou': undefined;
   'ActionGroupJoinRequestedYou': undefined;
+  'ActionGroupJoinCanceledYou': undefined;
   'ActionGroupLinkOnYou': undefined;
   'ActionGroupLinkOnWithApprovalYou': undefined;
   'ActionGroupLinkOffYou': undefined;
@@ -3279,7 +3281,20 @@ export interface LangPairWithVariables<V = LangVariable> {
   'ActionGroupAdminRemovedYou': {
     'user': V;
   };
+  'ActionGroupInviteDeclined': {
+    'from': V;
+  };
   'ActionGroupJoinRequested': {
+    'from': V;
+  };
+  'ActionGroupJoinDenied': {
+    'from': V;
+    'user': V;
+  };
+  'ActionGroupJoinDeniedYou': {
+    'user': V;
+  };
+  'ActionGroupJoinCanceled': {
     'from': V;
   };
   'ActionGroupLinkOn': {
@@ -4267,6 +4282,13 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'ActionGroupInvitedYou': {
     'count': V;
   };
+  'ActionGroupInviteRevoked': {
+    'from': V;
+    'count': V;
+  };
+  'ActionGroupInviteRevokedYou': {
+    'count': V;
+  };
   'ActionGameScore': {
     'from': V;
     'count': V;
@@ -4492,6 +4514,7 @@ export interface LangKeyGroups {
       | 'ActionKickUserYou'
       | 'ActionGroupAdminAddedYou'
       | 'ActionGroupAdminRemovedYou'
+      | 'ActionGroupJoinDeniedYou'
       | 'ActionVideoInvitedYou'
       | 'NoForwardsRequestTitle'
       | 'ActionSuggestedPhotoYou'
@@ -4794,7 +4817,9 @@ export interface LangKeyGroups {
       | 'ActionJoinedByRequest'
       | 'ActionGroupDescription'
       | 'ActionGroupDescriptionRemoved'
+      | 'ActionGroupInviteDeclined'
       | 'ActionGroupJoinRequested'
+      | 'ActionGroupJoinCanceled'
       | 'ActionGroupLinkOn'
       | 'ActionGroupLinkOnWithApproval'
       | 'ActionGroupLinkOff'
@@ -5074,6 +5099,7 @@ export interface LangKeyGroups {
       | 'ActionKickUser'
       | 'ActionGroupAdminAdded'
       | 'ActionGroupAdminRemoved'
+      | 'ActionGroupJoinDenied'
       | 'ActionVideoInvited'
       | 'ActionNewCreatorPending'
       | 'ActionChangeCreator';
@@ -5546,6 +5572,7 @@ export interface LangPluralKeyGroups {
       | 'FolderLinkNotificationAddedSubtitle'
       | 'FolderLinkNotificationUpdatedSubtitle'
       | 'ActionGroupInvitedYou'
+      | 'ActionGroupInviteRevokedYou'
       | 'ActionGameScoreNoGameYou'
       | 'CommunityChatsCount'
       | 'CommunityWithChats'
@@ -5620,6 +5647,7 @@ export interface LangPluralKeyGroups {
   'count,from': {
     keys:
       | 'ActionGroupInvited'
+      | 'ActionGroupInviteRevoked'
       | 'ActionGameScoreNoGame';
     variables: 'count' | 'from';
   };

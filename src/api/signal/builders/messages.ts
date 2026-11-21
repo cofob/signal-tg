@@ -202,6 +202,14 @@ async function buildGroupUpdateAction(
       return groupAction({ update: 'joinRequested' });
     case 'invited':
       return groupAction({ update: 'invited', count: update.count });
+    case 'inviteRevoked':
+      return groupAction({ update: 'inviteRevoked', count: update.count });
+    case 'inviteDeclined':
+      return groupAction({ update: 'inviteDeclined' });
+    case 'joinDenied':
+      return groupAction({ update: 'joinDenied', userId: await users.getUserId(update.aci) });
+    case 'joinCanceled':
+      return groupAction({ update: 'joinCanceled' });
     case 'adminChanged':
       return groupAction({
         update: update.isAdmin ? 'adminAdded' : 'adminRemoved', userId: await users.getUserId(update.aci),

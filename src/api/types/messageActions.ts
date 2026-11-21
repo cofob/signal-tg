@@ -272,9 +272,9 @@ export interface ApiMessageActionNoForwardsRequest extends ActionMediaType {
 /** A change of a Signal group without a Telegram counterpart; the sender is who made it */
 export interface ApiMessageActionGroupUpdate extends ActionMediaType {
   type: 'groupUpdate';
-  update: 'description' | 'descriptionRemoved' | 'adminAdded' | 'adminRemoved' | 'invited' | 'joinRequested'
-    | 'linkOn' | 'linkOnWithApproval' | 'linkOff' | 'linkReset' | 'infoAccess' | 'membersAccess'
-    | 'announcementsOn' | 'announcementsOff';
+  update: 'description' | 'descriptionRemoved' | 'adminAdded' | 'adminRemoved' | 'invited' | 'inviteRevoked'
+    | 'inviteDeclined' | 'joinRequested' | 'joinDenied' | 'joinCanceled' | 'linkOn' | 'linkOnWithApproval'
+    | 'linkOff' | 'linkReset' | 'infoAccess' | 'membersAccess' | 'announcementsOn' | 'announcementsOff';
   userId?: string;
   count?: number;
   isAdminOnly?: boolean;
