@@ -100,3 +100,10 @@ addActionHandler('openPhoneNumberLookupModal', (global, actions, payload): Actio
 });
 
 addTabStateResetterAction('closePhoneNumberLookupModal', 'phoneNumberLookupModal');
+
+addActionHandler('openSignalLinkModal', (global, actions, payload): ActionReturnType => {
+  const { tabId = getCurrentTabId(), ...modal } = payload;
+  return updateTabState(global, { signalLinkModal: modal }, tabId);
+});
+
+addTabStateResetterAction('closeSignalLinkModal', 'signalLinkModal');

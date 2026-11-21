@@ -4,6 +4,7 @@ import type {
   ApiChatType, ApiFormattedText, LinkContext,
 } from '../api/types';
 import type { DeepLinkMethod } from './deepLinkParser';
+import type { SignalLink } from './signalLinks';
 import { LeftColumnContent } from '../types';
 
 import {
@@ -11,19 +12,18 @@ import {
 } from '../config';
 import { IS_BAD_URL_PARSER } from './browser/globalEnvironment';
 import { tryParseDeepLink } from './deepLinkParser';
-import { parseSignalMeLink } from './signalLinks';
+import { parseSignalLink } from './signalLinks';
 
+/**
+ * Opens a link inside the app: a Signal link (`signal.me`, `signal.group`, `signal.art`, `signal.link`, `signal.tube`
+ * or `sgnl:`) or one of the app's own `tg:` links. Returns `false` for any other link.
+ */
 export const processDeepLink = (url: string, linkContext?: LinkContext): boolean => {
   const actions = getActions();
 
-  const signalMeLink = parseSignalMeLink(url);
-  if (signalMeLink?.type === 'usernameLink') {
-    actions.openChatByUsernameLink({ url: signalMeLink.url });
-    return true;
-  }
-  if (signalMeLink?.type === 'phoneNumber') {
-    // A link can come from anyone, and looking its number up tells the contact discovery service about it
-    actions.openPhoneNumberLookupModal({ phoneNumber: signalMeLink.phoneNumber });
+  const signalLink = parseSignalLink(url);
+  if (signalLink) {
+    openSignalLink(signalLink);
     return true;
   }
 
@@ -233,6 +233,42 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
   }
   return true;
 };
+
+/**
+ * Opens what a Signal link points to. A username opens its chat. Anything with a consequence waits for the user: a
+ * group and a sticker pack show their preview first, a phone number asks before it goes to the contact discovery
+ * service, and the links to what this app cannot do open a dialog that explains it.
+ */
+export function openSignalLink(link: SignalLink, tabId?: number) {
+  const actions = getActions();
+
+  switch (link.type) {
+    case 'usernameLink':
+      actions.openChatByUsernameLink({ url: link.url, tabId });
+      break;
+    case 'phoneNumber':
+      // A link can come from anyone, and looking its number up tells the contact discovery service about it
+      actions.openPhoneNumberLookupModal({ phoneNumber: link.phoneNumber, tabId });
+      break;
+    case 'groupInvite':
+      actions.checkChatInvite({ hash: link.url, tabId });
+      break;
+    case 'stickerPack':
+      actions.openStickerSet({ stickerSetInfo: { id: link.packId, accessHash: link.packKey }, tabId });
+      break;
+    case 'proxy':
+      actions.openSignalLinkModal({ type: 'proxy', host: link.host, tabId });
+      break;
+    case 'callLink':
+    case 'linkDevice':
+    case 'reRegister':
+      actions.openSignalLinkModal({ type: link.type, tabId });
+      break;
+    case 'invalid':
+      actions.showNotification({ message: { key: 'SignalLinkInvalid' }, tabId });
+      break;
+  }
+}
 
 export function formatShareText(url?: string, text?: string, title?: string): ApiFormattedText {
   return {

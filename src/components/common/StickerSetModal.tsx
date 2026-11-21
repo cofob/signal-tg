@@ -22,6 +22,7 @@ import {
 import { selectThreadInfo } from '../../global/selectors/threads';
 import buildClassName from '../../util/buildClassName';
 import { copyTextToClipboard } from '../../util/clipboard';
+import { buildStickerPackLink } from '../../util/signalLinks';
 import renderText from './helpers/renderText';
 
 import useAppLayout from '../../hooks/useAppLayout';
@@ -60,7 +61,6 @@ type StateProps = {
 };
 
 const INTERSECTION_THROTTLE = 200;
-const STICKER_PACK_LINK_PREFIX = 'https://signal.art/addstickers';
 
 const StickerSetModal = ({
   isOpen,
@@ -149,7 +149,7 @@ const StickerSetModal = ({
     if (!renderingStickerSet) return;
     // Signal packs are shared by id and key (Signal Desktop `addStickersRoute` in `ts/util/signalRoutes.std.ts`)
     const { id, accessHash } = renderingStickerSet;
-    copyTextToClipboard(`${STICKER_PACK_LINK_PREFIX}#pack_id=${id}&pack_key=${accessHash}`);
+    copyTextToClipboard(buildStickerPackLink(id, accessHash));
     showNotification({
       message: lang('LinkCopied'),
     });

@@ -12,13 +12,14 @@ import {
 } from '../../../util/emoji/emoji';
 import splitEmoji from '../../../util/emoji/splitEmoji';
 import { compact } from '../../../util/iteratees';
+import { parseSignalLink } from '../../../util/signalLinks';
 
 import MentionLink from '../../middle/message/MentionLink';
 import SafeLink from '../SafeLink';
 
 export type TextFilter = (
   'escape_html' | 'hq_emoji' | 'emoji' | 'emoji_html' | 'br' | 'br_html' | 'links' |
-  'simple_markdown' | 'simple_markdown_html' | 'tg_links'
+  'simple_markdown' | 'simple_markdown_html' | 'app_links'
 );
 
 const SIMPLE_MARKDOWN_REGEX = /(\*\*|__).+?\1/g;
@@ -58,7 +59,8 @@ export default function renderText(
       case 'links':
         return addLinks(text, undefined, params?.markdownPostProcessor);
 
-      case 'tg_links':
+      // Only the links that the app opens itself: its `tg:` links and Signal's links
+      case 'app_links':
         return addLinks(text, true, params?.markdownPostProcessor);
 
       case 'simple_markdown':
@@ -184,7 +186,7 @@ function addLineBreaks(
 const RE_LINK = new RegExp(`${RE_LINK_TEMPLATE}|${RE_MENTION_TEMPLATE}`, 'ig');
 
 function addLinks(
-  textParts: TextPart[], allowOnlyTgLinks?: boolean, postProcessor?: (part: string) => TeactNode,
+  textParts: TextPart[], allowOnlyAppLinks?: boolean, postProcessor?: (part: string) => TeactNode,
 ): TextPart[] {
   const postProcess = postProcessor || ((part: string) => part);
 
@@ -218,7 +220,7 @@ function addLinks(
           nextLink = nextLink.slice(0, nextLink.length - 1);
         }
 
-        if (!allowOnlyTgLinks || isDeepLink(nextLink)) {
+        if (!allowOnlyAppLinks || isDeepLink(nextLink) || parseSignalLink(nextLink)) {
           content.push(
             <SafeLink text={nextLink} url={nextLink} />,
           );

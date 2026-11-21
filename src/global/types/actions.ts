@@ -287,6 +287,8 @@ export interface ActionPayloads {
     phoneNumber: string;
   } & WithTabId;
   closePhoneNumberLookupModal: WithTabId | undefined;
+  openSignalLinkModal: NonNullable<TabState['signalLinkModal']> & WithTabId;
+  closeSignalLinkModal: WithTabId | undefined;
   startPasskeyRegistration: WithTabId | undefined;
   deletePasskey: {
     id: string;

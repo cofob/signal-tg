@@ -33,7 +33,6 @@ import {
   TOPICS_SLICE_SECOND_LOAD,
 } from '../../../config';
 import { processDeepLink } from '../../../util/deeplink';
-import { isDeepLink } from '../../../util/deepLinkParser';
 import { isUserId } from '../../../util/entities/ids';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
 import { getOrderedIds, getPinnedChatsCount } from '../../../util/folderManager';
@@ -1715,11 +1714,11 @@ addActionHandler('openChatByContactToken', async (global, actions, payload): Pro
   actions.openChat({ id: result.id, tabId });
 });
 
-// Only `tg:` links open inside the app; links to Telegram websites are not followed
+// Opens the app's own links, `tg:` and Signal's; any other link, such as a Telegram website's, is not followed
 addActionHandler('openTelegramLink', (global, actions, payload): ActionReturnType => {
   const { url, linkContext } = payload;
 
-  if (isDeepLink(url)) processDeepLink(url, linkContext);
+  processDeepLink(url, linkContext);
 });
 
 /** Opens the chat behind a `signal.me/#eu/` username link or its QR code */

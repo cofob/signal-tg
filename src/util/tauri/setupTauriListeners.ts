@@ -3,6 +3,7 @@ import { getActions } from '../../global';
 import { DEBUG } from '../../config';
 import { MouseButton } from '../browser/windowEnvironment';
 import { isDeepLink } from '../deepLinkParser';
+import { isSgnlLink } from '../signalLinks';
 
 type DownloadFinishedEvent = {
   success: boolean;
@@ -78,9 +79,10 @@ export default function setupTauriListeners() {
 }
 
 async function openLink(url: string | URL) {
-  // The app registers only `sgnl:` with the system, so `tg:` links would leave for another app
+  // Links that only the app handles stay in it: a `tg:` link would leave for another app, and an `sgnl:` link is
+  // the app's own scheme
   const href = url.toString();
-  if (isDeepLink(href)) {
+  if (isDeepLink(href) || isSgnlLink(href)) {
     getActions().openTelegramLink({ url: href });
     return;
   }
