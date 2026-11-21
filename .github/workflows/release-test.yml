@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  NUMBER: '2'
+  NUMBER: '3'
 
 jobs:
   tag:

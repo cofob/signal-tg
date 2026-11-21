@@ -119,22 +119,24 @@ jobs:
           PRERELEASE: ${{ needs.preflight.outputs.prerelease }}
         run: |
           set -euo pipefail
-          if gh release view "$TAG" --json isDraft --jq .isDraft > is-draft.txt 2> view.err; then
+          found=$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"$TAG\") | \"\(.id) \(.draft)\"")
+          found=${found%%$'\n'*}
+          if [[ -z "$found" ]]; then
+            # The release list lags behind a release created a moment ago, so the ID comes from the creation
+            id=$(gh api "repos/${GITHUB_REPOSITORY}/releases" -f tag_name="$TAG" -f name="TeleSignal $TAG" \
+              -F body=@release-notes.md -F draft=true -F prerelease="$PRERELEASE" --jq .id)
+          else
             # A visible release is immutable; a draft left by a failed run is updated and completed
-            if [[ "$(cat is-draft.txt)" != true ]]; then
+            if [[ "${found#* }" != true ]]; then
               echo "::error::Release $TAG is published already"
               exit 1
             fi
-            gh release edit "$TAG" --title "TeleSignal $TAG" --notes-file release-notes.md --prerelease="$PRERELEASE"
-          elif grep -Eq 'HTTP 404|release not found' view.err; then
-            gh release create "$TAG" --draft --verify-tag --title "TeleSignal $TAG" --notes-file release-notes.md \
-              --prerelease="$PRERELEASE"
-          else
-            cat view.err
-            exit 1
+            id=${found% *}
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/$id" -f name="TeleSignal $TAG" \
+              -F body=@release-notes.md -F prerelease="$PRERELEASE" > /dev/null
           fi
-          ids=$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id")
-          echo "release_id=${ids%%$'\n'*}" >> "$GITHUB_OUTPUT"
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
 
   web:
     name: Build web bundle
@@ -421,6 +423,7 @@ jobs:
       contents: write
     uses: ./.github/workflows/desktop.yml
     with:
+      tag: ${{ needs.preflight.outputs.tag }}
       release_id: ${{ needs.draft.outputs.release_id }}
     secrets: inherit
 
