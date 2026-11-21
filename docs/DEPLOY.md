@@ -161,13 +161,13 @@ holds them):
 
 | Header | Value |
 | --- | --- |
-| `Content-Security-Policy` | The policy of `buildCsp` in `plugins/csp.ts`, plus `frame-ancestors 'none'`. The image build reads the policy back from the built `index.html`, so it cannot drift from the source. A browser applies a policy from a `<meta>` tag to the page only; the header covers the Web Worker that runs the Signal engine, and carries `frame-ancestors` |
+| `Content-Security-Policy` | The policy of `buildCsp` in `plugins/csp.ts`, plus `frame-ancestors 'none'`. The image build reads the policy back from the built `a/index.html`, so it cannot drift from the source. A browser applies a policy from a `<meta>` tag to the page only; the header covers the Web Worker that runs the Signal engine, and carries `frame-ancestors` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Referrer-Policy` | `same-origin`: the app's multi-account back navigation needs the referrer of its own origin, and other sites get none |
 | `X-Frame-Options` | `DENY` |
 | `Permissions-Policy` | Turns off the sensors, USB, serial, HID, MIDI, payment, geolocation and the advertising topics APIs, which the app never uses. Camera, microphone, clipboard, fullscreen and passkeys stay available to the app |
 | `Strict-Transport-Security` | With `ENABLE_HSTS=1` only |
-| `Cache-Control` | `public, max-age=31536000, immutable` for files with a content hash in their name (`/assets/*-<hash>.*` and the hashed workers at the top level), a week for the emoji images, `no-cache` for everything else: `index.html`, the service worker (`service.worker-<hash>.js`), the web manifest and the other fixed names are revalidated on every use with their `ETag` |
+| `Cache-Control` | `public, max-age=31536000, immutable` for files with a content hash in their name (`/a/assets/*-<hash>.*`, the hashed workers at the top of `/a/` and the hashed files at the top of `/k/`), a week for the emoji images, `no-cache` for everything else: the pages, the service workers (`/a/service.worker-<hash>.js`, `/k/sw-<hash>.js`), the web manifest and the other fixed names are revalidated on every use with their `ETag` |
 
 Files are served with their types, including `application/wasm`. The image carries no source maps. The build ships `.gz` and `.br` copies of the large
 files, which nginx sends to clients that ask (`gzip_static`, `brotli_static`); `index.html` and small files are

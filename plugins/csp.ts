@@ -1,7 +1,8 @@
 /**
- * The app's Content-Security-Policy: the `<meta>` tag of `index.html`, the headers of the dev server, and the policy of
- * the desktop app (`app.security.csp` in `tauri/tauri.conf.json`, which a test keeps equal to the production policy
- * without a tunnel). A deployment that sends it as a response header runs `npm run csp:print`.
+ * The app's Content-Security-Policy: the `<meta>` tag of both frontends' pages (Web A's `index.html` and Web K's
+ * `webk/index.html`), the headers of the dev servers, and the policy of the desktop app (`app.security.csp` in
+ * `tauri/tauri.conf.json`, which a test keeps equal to the production policy without a tunnel). A deployment that sends
+ * it as a response header runs `npm run csp:print`.
  */
 // The page talks only to its own origin and the Signal tunnel. Users may pick any tunnel in the proxy settings
 // (`SharedSettings.signalProxyUrl` and `signalSealedSenderProxyUrl`), so `connect-src` allows every `wss:` origin: the tunnel relays TLS that the WASM

@@ -165,7 +165,7 @@ signal.example.com {
 The app's Content-Security-Policy ships as a `<meta>` tag, which browsers do not apply to the Web Worker that runs the
 Signal engine (a worker takes its policy from its own response headers), and which cannot carry `frame-ancestors`. Send
 the same policy as a response header for every file of the app, with the headers that a `<meta>` tag cannot set.
-`npm run csp:print` prints the policy that the build puts in `dist/index.html` (it reads `SIGNAL_TUNNEL_URL` from the
+`npm run csp:print` prints the policy that the build puts in the pages of both frontends (`dist/a/index.html`, `dist/k/index.html`) (it reads `SIGNAL_TUNNEL_URL` from the
 environment, like the build).
 
 nginx, in the `server` block of the app (`<policy>` is that output):

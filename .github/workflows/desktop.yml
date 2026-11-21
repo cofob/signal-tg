@@ -103,6 +103,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Web K dependencies
+        run: npm run install:webk
+
       # Signing secrets reach the build only when they exist, so unsigned builds do not get empty values
       - name: Enable macOS signing
         if: runner.os == 'macOS' && env.HAS_APPLE_CERTIFICATE == 'true'

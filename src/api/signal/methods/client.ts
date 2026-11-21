@@ -1,5 +1,6 @@
 import { unlinkDevice } from '../../../lib/signal/account/linkDevice';
 import { SIGNAL_PRIMARY_DEVICE_ID } from '../../../lib/signal/config';
+import { releaseEngineOwnership } from '../../../lib/signal/engineOwnership';
 import {
   disableEncryptionAtRest, enableEncryptionAtRest, eraseUnreadableRecords, forgetStorageKey,
 } from '../../../lib/signal/store/atRestMigration';
@@ -14,6 +15,7 @@ import { db, logError, store } from '../engine';
 export async function destroy(noLogOut = false) {
   const unlinking = noLogOut ? undefined : unlinkLinkedDevice();
   await stopClient(!noLogOut);
+  releaseEngineOwnership();
   // The engine stops when the screen locks, and every start brings the key again
   forgetStorageKey();
   await unlinking;

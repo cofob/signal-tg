@@ -84,9 +84,14 @@ pub static LAST_URL: Mutex<String> = Mutex::new(String::new());
 /// Set for a launch at login, and taken by the first window, which then opens hidden
 static SHOULD_START_HIDDEN: AtomicBool = AtomicBool::new(false);
 
-/// The app's own page: the dev server in `tauri dev`, the bundled frontend otherwise. Only it gets
-/// IPC.
+/// The app's own page: the dev server in `tauri dev`, the bundled frontend otherwise. Only its
+/// frontends (`FRONTEND_PATHS`) get IPC.
 static APP_URL: OnceLock<Url> = OnceLock::new();
+
+/// The pages of the build (`dev/build.ts`): the root page, which opens the default frontend
+/// (`plugins/frontends.ts`), and the frontends Web A and Web K. Both open the same account, and the
+/// user switches between them.
+const FRONTEND_PATHS: [&str; 3] = ["", "/a", "/k"];
 
 pub const DEFAULT_WINDOW_TITLE: &str = match std::option_env!("APP_TITLE") {
   Some(title) => title,
@@ -584,18 +589,16 @@ fn has_updater(app: &tauri::AppHandle) -> bool {
 }
 
 fn resolve_base_app_url(app: &tauri::AppHandle) -> Url {
-  if tauri::is_dev()
-    && let Some(url) = &app.config().build.dev_url
-  {
-    return url.clone();
+  match &app.config().build.dev_url {
+    Some(url) if tauri::is_dev() => url.clone(),
+    // Tauri serves the bundled frontend on its own scheme, and on Windows on an HTTP host
+    _ => Url::parse(if cfg!(windows) {
+      "http://tauri.localhost/"
+    } else {
+      "tauri://localhost/"
+    })
+    .expect("The bundled frontend URL is valid"),
   }
-  // Tauri serves the bundled frontend on its own scheme, and on Windows on an HTTP host
-  let url = if cfg!(windows) {
-    "http://tauri.localhost/"
-  } else {
-    "tauri://localhost/"
-  };
-  Url::parse(url).expect("The bundled frontend URL is valid")
 }
 
 fn resolve_app_url(url: &str, base_url: &Url) -> Option<Url> {
@@ -605,12 +608,12 @@ fn resolve_app_url(url: &str, base_url: &Url) -> Option<Url> {
 }
 
 fn is_allowed_app_url(url: &Url, base_url: &Url) -> bool {
-  // Exact path, not prefix: other pages under the base path (e.g. `get/`) must not get IPC
+  // Exact paths, not prefixes: other pages under a frontend (e.g. `get/`) must not get IPC
   // `Url::origin` is opaque for the `tauri` scheme, so the parts are compared instead
   url.scheme() == base_url.scheme()
     && url.host() == base_url.host()
     && url.port_or_known_default() == base_url.port_or_known_default()
-    && url.path().trim_end_matches('/') == base_url.path().trim_end_matches('/')
+    && FRONTEND_PATHS.contains(&url.path().trim_end_matches('/'))
 }
 
 #[cfg(test)]

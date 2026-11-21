@@ -1412,6 +1412,7 @@
 "HideCaption" = "Hide Caption";
 "DragToSortAria" = "Drag to sort";
 "MenuInstallApp" = "Install App";
+"MenuSwitchToK" = "Switch to K version";
 "MenuMyProfile" = "My Profile";
 "MenuArchivedChats" = "Archived Chats";
 "MenuContacts" = "Contacts";

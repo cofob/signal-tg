@@ -2,17 +2,22 @@
 # holds a config of your own. Copy this file as a starting point; the `${...}` names are environment variables of the
 # image, and the entrypoint fills the `TELESIGNAL_` ones in (docs/DEPLOY.md).
 
-# Files with a content hash in their name never change, so they are cached for a year: everything in `/assets` and the
-# worker bundles at the top level. The rest, including `index.html`, the service worker, the web manifest and the
-# snapshot stylesheets (`skeleton-snapshot.css`, `wallpaper-snapshot.css`: fixed names that the app regenerates), is
-# revalidated on every use with its `ETag`, so that an update is never missed. The emoji images are the one set of
-# unhashed files that rarely change.
+# The build holds two frontends of the same account, Web A at `/a/` and Web K at `/k/`; `/` opens the default one.
+#
+# Files with a content hash in their name never change, so they are cached for a year: everything in `/a/assets`, the
+# worker bundles at the top of `/a/`, and the hashed chunks at the top of `/k/`. The rest, including the pages, the service
+# workers, the web manifests and Web A's snapshot stylesheets (`skeleton-snapshot.css`, `wallpaper-snapshot.css`: fixed
+# names that the app regenerates), is revalidated on every use with its `ETag`, so that an update is never missed. The
+# emoji images are the one set of unhashed files that rarely change.
 map $uri $telesignal_cache_control {
     default "no-cache";
     "~/service\.worker-" "no-cache";
-    "~^/assets/.+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9.]+$" "public, max-age=31536000, immutable";
-    "~^/([A-Za-z]+\.)?worker-[A-Za-z0-9_-]{8}\.js$" "public, max-age=31536000, immutable";
-    "~^/img-apple-(64|160)/" "public, max-age=604800";
+    "~^/k/sw-" "no-cache";
+    "~^/a/assets/.+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9.]+$" "public, max-age=31536000, immutable";
+    "~^/a/([A-Za-z]+\.)?worker-[A-Za-z0-9_-]{8}\.js$" "public, max-age=31536000, immutable";
+    "~^/k/[^/]+-[A-Za-z0-9_-]{8}\.(js|css|wasm|woff2|png|svg)$" "public, max-age=31536000, immutable";
+    "~^/a/img-apple-(64|160)/" "public, max-age=604800";
+    "~^/k/assets/img/emoji/" "public, max-age=604800";
 }
 
 server {
@@ -50,6 +55,21 @@ ${TELESIGNAL_REAL_IP}
     location = /healthz {
         access_log off;
         proxy_pass http://127.0.0.1:${TUNNEL_PORT}/health;
+    }
+
+    # The default frontend, with the query (the account slot) kept; redirects name a path only, so the browser stays on
+    # the address it used, behind a TLS proxy too
+    absolute_redirect off;
+    location = / {
+        return 302 /${TELESIGNAL_DEFAULT_FRONTEND}$is_args$args;
+    }
+
+    # The frontends' addresses without the slash
+    location = /a {
+        return 301 /a/$is_args$args;
+    }
+    location = /k {
+        return 301 /k/$is_args$args;
     }
 
     location / {

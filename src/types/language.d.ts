@@ -1198,6 +1198,7 @@ export interface LangPair {
   'HideCaption': undefined;
   'DragToSortAria': undefined;
   'MenuInstallApp': undefined;
+  'MenuSwitchToK': undefined;
   'MenuMyProfile': undefined;
   'MenuArchivedChats': undefined;
   'MenuContacts': undefined;
