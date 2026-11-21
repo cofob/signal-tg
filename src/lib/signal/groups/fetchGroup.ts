@@ -71,6 +71,8 @@ type GroupCredentialsResponse = {
 
 const HTTP_OK = 200;
 const HTTP_MULTIPLE_CHOICES = 300;
+const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
 const PROTOBUF_CONTENT_TYPE = 'application/x-protobuf';
 const DAY_SECONDS = 24 * 60 * 60;
 const CREDENTIAL_DAYS = 7;
@@ -85,6 +87,11 @@ let cachedCredentials: { aci: string; day: number; response: GroupCredentialsRes
 export class GroupRequestError extends Error {
   constructor(readonly status: number, path: string) {
     super(`Group request ${path} failed with HTTP ${status}`);
+  }
+
+  /** The server answers 403 when we are not allowed to read or change the group, and 404 when it does not exist */
+  get isAccessDenied() {
+    return this.status === HTTP_FORBIDDEN || this.status === HTTP_NOT_FOUND;
   }
 }
 
