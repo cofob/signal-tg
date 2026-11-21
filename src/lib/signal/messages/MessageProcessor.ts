@@ -3,7 +3,8 @@ import { clone, create, fromBinary, toBinary } from '@bufbuild/protobuf';
 
 import type MessageDb from '../db/MessageDb';
 import type {
-  ConversationRecord, MessageRecord, NewMessageRecord, SendStatus,
+  ConversationRecord, MessageRecord, NewMessageRecord, NewStoryRecord, SendStatus, StoryRecipient, StoryRecord,
+  StoryReply,
 } from '../db/MessageDb';
 import type { GroupState } from '../groups/fetchGroup';
 import type { DecryptedGroupChange } from '../groups/groupChange';
@@ -16,6 +17,7 @@ import type {
   EditMessage,
   GroupContextV2,
   ReceiptMessage,
+  StoryMessage,
   SyncMessage,
   SyncMessage_DeleteForMe,
   SyncMessage_DeleteForMeSchema,
@@ -25,12 +27,12 @@ import type {
 import type { ManifestRecord, StorageRecord } from '../proto/generated/StorageService_pb';
 import type { DecryptedEnvelope } from '../receiver/decryptEnvelope';
 import type { RecipientResult, SenderContext } from '../sender/sendContent';
-import type { OutgoingMessage } from '../sender/sendMessage';
+import type { OutgoingMessage, StoryMessageRecipient } from '../sender/sendMessage';
 import type { GroupTarget } from '../sender/sendToGroup';
 import type SignalClient from '../SignalClient';
 import type { StorageChanges } from '../storage/storageRecords';
 import type { StorageWrite } from '../storage/storageService';
-import type { AccountRecord } from '../store/SignalStore';
+import type { AccountRecord, StoryDistributionList } from '../store/SignalStore';
 
 import { bufferFromBase64, buffersEqual, bufferToBase64 } from '../../../util/encoding/buffer';
 import { downloadAttachment } from '../attachments/downloadAttachment';
@@ -51,6 +53,9 @@ import {
   sendMessageRequestResponseSync,
   sendReadSync,
   sendReceipts,
+  sendStory,
+  sendStoryDelete,
+  sendStorySync,
   sendTyping,
   sendViewedSync,
   sendViewOnceOpenSync,
@@ -61,11 +66,17 @@ import {
   buildStorageWrite,
   getAci,
   getMutedUntil,
+  getOptionalBool,
   getStorageChanges,
+  getStoryListKey,
   mergeStorageChanges,
   omitChangedFields,
+  parseStoryDistributionList,
 } from '../storage/storageRecords';
 import { syncStorageService } from '../storage/syncStorage';
+import {
+  getAreStoryViewReceiptsEnabled, getMyStoryList, getStoryListRecipientAcis, MY_STORY_ID, STORY_LIFETIME_MS,
+} from '../stories/storyLists';
 import { parseContactSync } from '../sync/contactSync';
 import { wasm } from '../wasm';
 import { getIsConversationAccepted } from './messageRequests';
@@ -78,6 +89,7 @@ import {
   DataMessageSchema,
   GroupContextV2Schema,
   ReceiptMessage_Type,
+  StoryMessageSchema,
   SyncMessage_FetchLatest_Type,
   SyncMessage_MessageRequestResponse_Type,
   TypingMessage_Action,
@@ -90,6 +102,18 @@ export type MessageChanges = {
   // Ids of `messages` stored for the first time
   addedMessageIds: number[];
   deletedMessages: { conversationId: string; id: number }[];
+  stories: StoryRecord[];
+  deletedStories: StoryRecord[];
+};
+
+/** What a story from this device shows: a text story or an uploaded photo or video, with its caption ranges */
+export type OutgoingStory = Pick<MessageInitShape<typeof StoryMessageSchema>, 'attachment' | 'bodyRanges'>;
+
+/** A reply to a story: text, or a reaction */
+export type StoryReplyContent = {
+  body?: string;
+  bodyRanges?: MessageInitShape<typeof BodyRangeSchema>[];
+  emoji?: string;
 };
 
 export type MessageEdit = {
@@ -711,6 +735,178 @@ export default class MessageProcessor {
     });
   }
 
+  /** Stories whose day has not run out, oldest first */
+  async getStories() {
+    const now = Date.now();
+    return (await this.db.getStories()).filter(({ expiresAt }) => expiresAt > now);
+  }
+
+  /** Story distribution lists that are not deleted, My Story first, with its defaults until the storage service has it */
+  async getStoryDistributionLists() {
+    const stored = await this.client.store.getItem('storyDistributionLists') ?? [];
+    const lists = stored.filter(({ deletedAt }) => !deletedAt);
+    return [getMyStoryList(lists), ...lists.filter(({ id }) => id !== MY_STORY_ID)];
+  }
+
+  /**
+   * Marks a story viewed and sends a viewed receipt (when story view receipts are on) and a viewed sync
+   * (Signal Desktop `markViewed` with stories in `ts/services/MessageUpdater.preload.ts`)
+   */
+  async markStoryViewed(storyId: number) {
+    const viewed = await this.runSerial(async () => {
+      const story = await this.db.getStory(storyId);
+      if (!story || story.isOutgoing || story.viewedAt) return undefined;
+      return this.putStory({ ...story, viewedAt: Date.now() });
+    });
+    if (!viewed) return;
+
+    await this.sendWhenConnected(async (context) => {
+      if (getAreStoryViewReceiptsEnabled(context.account)) {
+        await sendReceipts(context, viewed.authorAci, ReceiptMessage_Type.VIEWED, [viewed.sentAt]);
+      }
+      await sendViewedSync(context, [{ senderAci: viewed.authorAci, timestamp: viewed.sentAt }]);
+    });
+  }
+
+  /**
+   * Sends a story to distribution lists and groups (Signal Desktop `ts/util/sendStoryMessage.preload.ts` and
+   * `ts/jobs/helpers/sendStory.preload.ts`). The lists share one story with one timestamp: each person gets it once,
+   * and may reply when any of their lists allows replies. Each group gets a story of its own. Our other devices learn
+   * about each story with its recipients. Returns the stored stories.
+   */
+  async sendStory(story: OutgoingStory, { listIds = [], groupIds = [] }: { listIds?: string[]; groupIds?: string[] }) {
+    const account = await this.getAccount();
+    if (account.isStoriesDisabled) throw new Error('Stories are turned off');
+    const lists = (await this.getStoryDistributionLists()).filter(({ id }) => listIds.includes(id));
+    const conversations = await this.db.getConversations();
+    const groups = conversations.filter(({ id, type }) => type === 'group' && groupIds.includes(id));
+    const sent: StoryRecord[] = [];
+
+    if (lists.length) sent.push(await this.sendListStory(account, story, lists, conversations));
+    for (const group of groups) {
+      // Signal Desktop `sendStoryMessage` skips groups where only admins may send
+      if (group.isAnnouncementsOnly && !group.adminAcis?.includes(account.aci)) continue;
+      sent.push(await this.sendGroupStory(account, story, group));
+    }
+    return sent;
+  }
+
+  /**
+   * Deletes our story for everyone: a group story with a delete to the group, a list story with a delete to each
+   * recipient and a recipient update that tells our other devices nobody has it (Signal Desktop
+   * `ts/util/deleteStoryForEveryone.preload.ts`)
+   */
+  async deleteStoryForEveryone(storyId: number) {
+    const story = await this.db.getStory(storyId);
+    if (!story?.isOutgoing) throw new Error('Only our own stories can be deleted for everyone');
+    const conversation = await this.db.getConversation(story.conversationId);
+    await this.runSerial(() => this.removeStory(story));
+
+    if (conversation?.type === 'group') {
+      await this.sendToConversation(conversation, {
+        delete: { targetSentTimestamp: BigInt(story.sentAt) },
+      }, this.allocateTimestamp(), false);
+      return;
+    }
+
+    const recipients = Object.entries(story.recipients ?? {});
+    await this.sendWhenConnected(async (context) => {
+      await sendStoryDelete(context, recipients.map(([aci]) => aci), story.sentAt);
+      await sendStorySync(context, {
+        timestamp: story.sentAt,
+        storyMessageRecipients: recipients.map(([aci, { isAllowedToReply }]) => ({
+          destinationServiceId: aci, distributionListIds: [], isAllowedToReply,
+        })),
+        isRecipientUpdate: true,
+      });
+    });
+  }
+
+  /**
+   * Replies to a story, or reacts to it with `emoji`. Group story replies go to the group and stay with the story;
+   * replies to a contact's story go to the private conversation as messages that name the story, as in Signal.
+   */
+  async sendStoryReply(storyId: number, reply: StoryReplyContent) {
+    const story = await this.db.getStory(storyId);
+    const conversation = story && await this.db.getConversation(story.conversationId);
+    if (!story || !conversation) throw new Error(`Unknown story ${storyId}`);
+    const { allowsReplies } = fromBinary(StoryMessageSchema, story.storyMessage);
+    if (!allowsReplies && conversation.type !== 'group') throw new Error('The story does not allow replies');
+
+    const storyContext = { authorAciBinary: uuidToBytes(story.authorAci), sentTimestamp: BigInt(story.sentAt) };
+    const reaction = reply.emoji ? {
+      emoji: reply.emoji,
+      targetAuthorAciBinary: uuidToBytes(story.authorAci),
+      targetSentTimestamp: BigInt(story.sentAt),
+    } : undefined;
+    const init = {
+      body: reply.body, bodyRanges: reply.bodyRanges, storyContext, reaction,
+    };
+
+    if (conversation.type !== 'group') {
+      await this.sendDataMessage(conversation.id, init);
+      return;
+    }
+
+    const account = await this.getAccount();
+    const sentAt = this.allocateTimestamp();
+    await this.runSerial(() => this.addStoryReply(story, {
+      authorAci: account.aci, sentAt, body: reply.body, emoji: reply.emoji,
+    }));
+    await this.sendToConversation(conversation, init, sentAt, true, true);
+  }
+
+  /** Hides or shows the stories of a contact or a group; other devices learn it through the storage service */
+  setStoryHidden(conversationId: string, isHidden: boolean) {
+    return this.runSerial(async () => {
+      const conversation = await this.db.getConversation(conversationId);
+      return conversation && this.putLocalConversation(conversation, {
+        ...conversation, isStoryHidden: isHidden || undefined,
+      });
+    });
+  }
+
+  /**
+   * Turns stories off or on, or story view receipts, in the account record. Turning stories off removes the stories
+   * stored here, as Signal Desktop no longer shows them.
+   */
+  updateStorySettings(update: Pick<AccountRecord, 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'>) {
+    return this.runSerial(async () => {
+      const fields: StorageChanges[string] = [];
+      if ('isStoriesDisabled' in update) fields.push('storiesDisabled');
+      if ('isStoryViewReceiptsEnabled' in update) fields.push('storyViewReceiptsEnabled');
+      // Without a connection the stored account changes, and the client reads it when it connects
+      const account = this.client.isConnected
+        ? await this.client.updateAccount(update)
+        : { ...await this.getAccount(), ...update };
+      if (!this.client.isConnected) await this.client.store.setItem('account', account);
+      await this.markStorageChanges({ [ACCOUNT_KEY]: fields });
+      if (update.isStoriesDisabled) {
+        for (const story of await this.db.getStories()) await this.removeStory(story);
+      }
+      return account;
+    });
+  }
+
+  /** Creates or changes a story distribution list; the storage service record is written from it */
+  saveStoryDistributionList(list: StoryDistributionList) {
+    return this.runSerial(async () => {
+      const { store } = this.client;
+      const lists = await store.getItem('storyDistributionLists') ?? [];
+      await store.setItem('storyDistributionLists', [...lists.filter(({ id }) => id !== list.id), list]);
+      await this.markStorageChanges({ [getStoryListKey(list.id)]: ['storyDistributionList'] });
+      return list;
+    });
+  }
+
+  /** Deletes a custom list; the record stays deleted for other devices, as Signal Desktop writes it */
+  async deleteStoryDistributionList(id: string) {
+    if (id === MY_STORY_ID) throw new Error('My Story cannot be deleted');
+    const list = (await this.client.store.getItem('storyDistributionLists'))?.find((item) => item.id === id);
+    if (!list) return;
+    await this.saveStoryDistributionList({ ...list, memberAcis: [], deletedAt: Date.now() });
+  }
+
   /**
    * Reads the storage service and writes the local changes of its records, one sync at a time
    * (see `syncStorageService`)
@@ -774,8 +970,8 @@ export default class MessageProcessor {
         changes,
         conversations: await this.db.getConversations(),
         profileKeys,
-        selfAci: account.aci,
-        deviceId: account.deviceId,
+        storyLists: await store.getItem('storyDistributionLists') ?? [],
+        account,
       });
       return write && { write, changeCount: this.storageChangeCount };
     });
@@ -940,6 +1136,8 @@ export default class MessageProcessor {
     const accountChanges = new Set(changes[ACCOUNT_KEY]);
     const blockedE164s = new Set(await store.getItem('blockedE164s'));
     const blockedE164Count = blockedE164s.size;
+    // Lists changed here since the last write keep their local state
+    const remoteStoryLists: StoryDistributionList[] = [];
     // Pins come only from the account record
     let pinIndexById: Map<string, number> | undefined;
 
@@ -967,6 +1165,7 @@ export default class MessageProcessor {
             isBlocked: contact.blocked,
             isAccepted: contact.whitelisted || conversation.isAccepted,
             mutedUntil: getMutedUntil(contact.mutedUntilTimestamp),
+            isStoryHidden: contact.hideStory || undefined,
           }, changes[aci]),
         });
       } else if (record.case === 'groupV2' && record.value.masterKey.length) {
@@ -980,6 +1179,7 @@ export default class MessageProcessor {
             isBlocked: group.blocked,
             isAccepted: group.whitelisted || conversation.isAccepted,
             mutedUntil: getMutedUntil(group.mutedUntilTimestamp),
+            isStoryHidden: group.hideStory || undefined,
           }, changes[conversation.id]),
         });
       } else if (record.case === 'account') {
@@ -1007,8 +1207,25 @@ export default class MessageProcessor {
           isReadReceiptsEnabled: accountRecord.readReceipts,
           isTypingIndicatorsEnabled: accountRecord.typingIndicators,
           isLinkPreviewsEnabled: accountRecord.linkPreviews,
+          isStoriesDisabled: accountChanges.has('storiesDisabled')
+            ? account.isStoriesDisabled
+            : accountRecord.storiesDisabled || undefined,
+          isStoryViewReceiptsEnabled: accountChanges.has('storyViewReceiptsEnabled')
+            ? account.isStoryViewReceiptsEnabled
+            : getOptionalBool(accountRecord.storyViewReceiptsEnabled),
         });
+      } else if (record.case === 'storyDistributionList') {
+        const list = parseStoryDistributionList(record.value);
+        if (list && !changes[getStoryListKey(list.id)]) remoteStoryLists.push(list);
       }
+    }
+
+    if (remoteStoryLists.length) {
+      const remoteIds = new Set(remoteStoryLists.map(({ id }) => id));
+      const local = await store.getItem('storyDistributionLists') ?? [];
+      await store.setItem('storyDistributionLists', [
+        ...local.filter(({ id }) => !remoteIds.has(id)), ...remoteStoryLists,
+      ]);
     }
 
     if (blockedE164s.size !== blockedE164Count) await store.setItem('blockedE164s', [...blockedE164s]);
@@ -1064,12 +1281,13 @@ export default class MessageProcessor {
     init: MessageInitShape<typeof DataMessageSchema>,
     timestamp: number,
     shouldIncludeTimer = true,
+    isStory?: boolean,
   ) {
     const account = await this.getAccount();
     const recipients = getRecipientAcis(conversation, account.aci);
     const dataMessage = createOutgoingDataMessage(account, conversation, init, timestamp, shouldIncludeTimer);
     const results = await this.sendContentTo(conversation, recipients, { case: 'dataMessage', value: dataMessage }, {
-      timestamp,
+      timestamp, isStory,
     });
     return !recipients.length || recipients.some((serviceId) => !getResultError(results, serviceId));
   }
@@ -1079,7 +1297,7 @@ export default class MessageProcessor {
     conversation: ConversationRecord,
     recipients: string[],
     content: OutgoingMessage,
-    options: { timestamp: number; expirationStartTimestamp?: number },
+    options: { timestamp: number; expirationStartTimestamp?: number; isStory?: boolean },
   ): Promise<RecipientResult[]> {
     try {
       return await sendMessage(this.client.getSenderContext(), recipients, content, {
@@ -1154,8 +1372,11 @@ export default class MessageProcessor {
       case 'typingMessage':
         await this.handleTyping(senderServiceId, body.value);
         break;
+      case 'storyMessage':
+        await this.handleStoryMessage(source, body.value);
+        break;
       default:
-        // Stories and calls are not supported yet
+        // Calls are not supported yet
         break;
     }
   }
@@ -1165,6 +1386,10 @@ export default class MessageProcessor {
     if (!conversation) return;
     if (!source.isOutgoing && conversation.isBlocked) return;
 
+    if (message.storyContext) {
+      await this.applyStoryReply(conversation, source, message);
+      return;
+    }
     if (message.reaction) {
       await this.applyReaction(source, message.reaction);
       return;
@@ -1206,11 +1431,14 @@ export default class MessageProcessor {
       || !hasMessageContent(message)) {
       return;
     }
+    await this.addDataMessage(updated, source, message);
+  }
 
+  private async addDataMessage(conversation: ConversationRecord, source: MessageSource, message: DataMessage) {
     const expireTimer = message.expireTimer || undefined;
     const expirationStart = source.isOutgoing ? source.expirationStartTimestamp ?? source.sentAt : undefined;
-    await this.addMessage(updated, {
-      conversationId: updated.id,
+    await this.addMessage(conversation, {
+      conversationId: conversation.id,
       kind: 'message',
       authorAci: source.authorAci,
       authorDeviceId: source.authorDeviceId,
@@ -1254,10 +1482,15 @@ export default class MessageProcessor {
       await this.applyReadSync(read.senderAci || uuidToString(read.senderAciBinary), Number(read.timestamp), source);
     }
     for (const viewed of sync.viewed) {
-      const target = await this.db.findMessage(
-        viewed.senderAci || uuidToString(viewed.senderAciBinary), Number(viewed.timestamp),
-      );
-      if (target) await this.putMessage({ ...target, viewedAt: source.serverTimestamp ?? Date.now() });
+      const senderAci = viewed.senderAci || uuidToString(viewed.senderAciBinary);
+      const viewedAt = source.serverTimestamp ?? Date.now();
+      const target = await this.db.findMessage(senderAci, Number(viewed.timestamp));
+      if (target) {
+        await this.putMessage({ ...target, viewedAt });
+        continue;
+      }
+      const story = await this.db.findStory(senderAci, Number(viewed.timestamp));
+      if (story && !story.viewedAt) await this.putStory({ ...story, viewedAt });
     }
 
     const { content } = sync;
@@ -1300,6 +1533,15 @@ export default class MessageProcessor {
   }
 
   private async handleSentTranscript(source: MessageSource, sent: SyncMessage_Sent) {
+    if (sent.storyMessage) {
+      await this.handleSentStory(source, sent);
+      return;
+    }
+    if (sent.isRecipientUpdate && sent.storyMessageRecipients.length) {
+      await this.applyStoryRecipientUpdate(Number(sent.timestamp), sent.storyMessageRecipients);
+      return;
+    }
+
     const destinationAci = sent.destinationServiceId
       || (sent.destinationServiceIdBinary.length ? uuidToString(sent.destinationServiceIdBinary) : undefined);
     const transcriptSource: MessageSource = {
@@ -1317,12 +1559,284 @@ export default class MessageProcessor {
     if (sent.editMessage) await this.handleEditMessage(transcriptSource, sent.editMessage);
   }
 
+  /**
+   * Stores a story from a contact or a group (Signal Desktop `MessageReceiver.#handleStoryMessage`): nothing while
+   * stories are off, from blocked senders and groups, from contacts whose message request we have not accepted, or
+   * after its day ran out
+   */
+  private async handleStoryMessage(source: MessageSource, story: StoryMessage) {
+    const account = await this.getAccount();
+    const expiresAt = source.sentAt + STORY_LIFETIME_MS;
+    if (account.isStoriesDisabled || expiresAt <= Date.now()) return;
+    if (await this.db.findStory(source.authorAci, source.sentAt)) return;
+
+    const conversation = story.group?.masterKey.length
+      ? await this.db.getConversation(getGroupId(story.group.masterKey))
+      : await this.db.getConversation(source.authorAci);
+    if (!conversation || conversation.isBlocked) return;
+    // Signal Desktop drops stories of contacts we do not share our profile with
+    if (conversation.type === 'private' && !conversation.isAccepted) return;
+
+    await this.addStory({
+      conversationId: conversation.id,
+      authorAci: source.authorAci,
+      authorDeviceId: source.authorDeviceId,
+      sentAt: source.sentAt,
+      receivedAt: Date.now(),
+      serverTimestamp: source.serverTimestamp,
+      expiresAt,
+      isOutgoing: false,
+      storyMessage: toBinary(StoryMessageSchema, story),
+    });
+  }
+
+  /**
+   * Stores a story that our other device sent (Signal Desktop `#handleStoryMessage` with a sent transcript):
+   * a group story in its group, a distribution list story in our own conversation with its recipients
+   */
+  private async handleSentStory(source: MessageSource, sent: SyncMessage_Sent) {
+    const story = sent.storyMessage!;
+    const { aci: selfAci } = await this.getAccount();
+    const sentAt = Number(sent.timestamp) || source.sentAt;
+    const recipients = buildStoryRecipients(sent.storyMessageRecipients, 'sent');
+    const existing = await this.db.findStory(selfAci, sentAt);
+    if (existing) {
+      await this.putStory({ ...existing, recipients: { ...existing.recipients, ...recipients } });
+      return;
+    }
+
+    const groupId = story.group?.masterKey.length ? getGroupId(story.group.masterKey) : undefined;
+    if (groupId && !await this.db.getConversation(groupId)) return;
+    await this.addStory({
+      conversationId: groupId ?? selfAci,
+      authorAci: selfAci,
+      authorDeviceId: source.authorDeviceId,
+      sentAt,
+      receivedAt: Date.now(),
+      serverTimestamp: source.serverTimestamp,
+      expiresAt: sentAt + STORY_LIFETIME_MS,
+      isOutgoing: true,
+      storyMessage: toBinary(StoryMessageSchema, story),
+      viewedAt: sentAt,
+      recipients,
+    });
+  }
+
+  /**
+   * Another device changed who has our distribution list story: recipients left without lists lose it, and a story
+   * nobody has any more is deleted (Signal Desktop `ts/util/onStoryRecipientUpdate.preload.ts`)
+   */
+  private async applyStoryRecipientUpdate(sentAt: number, update: SyncMessage_Sent['storyMessageRecipients']) {
+    const story = await this.db.findStory((await this.getAccount()).aci, sentAt);
+    if (!story || story.conversationId !== story.authorAci) return;
+
+    const next = buildStoryRecipients(update.filter(({ distributionListIds }) => distributionListIds.length), 'sent');
+    for (const [aci, recipient] of Object.entries(next)) {
+      const current = story.recipients?.[aci];
+      if (current) next[aci] = { ...recipient, status: current.status, viewedAt: current.viewedAt };
+    }
+    if (!Object.keys(next).length) {
+      await this.removeStory(story);
+      return;
+    }
+    await this.putStory({ ...story, recipients: next });
+  }
+
+  /**
+   * A reply or reaction to a story (`storyContext`). Group story replies stay with the story; in private
+   * conversations they are messages too, and replies to our stories are also kept with the story for its replies list.
+   */
+  private async applyStoryReply(conversation: ConversationRecord, source: MessageSource, message: DataMessage) {
+    const account = await this.getAccount();
+    // Signal Desktop drops story replies while stories are off
+    if (account.isStoriesDisabled) return;
+    const { storyContext, reaction } = message;
+    if (reaction?.remove) return;
+    const storyAuthorAci = storyContext!.authorAci || (storyContext!.authorAciBinary.length
+      ? uuidToString(storyContext!.authorAciBinary)
+      : undefined);
+    const story = storyAuthorAci
+      ? await this.db.findStory(storyAuthorAci, Number(storyContext!.sentTimestamp))
+      : undefined;
+
+    if (story && (conversation.type === 'group' || story.isOutgoing)) {
+      await this.addStoryReply(story, {
+        authorAci: source.authorAci,
+        sentAt: source.sentAt,
+        body: message.body || undefined,
+        emoji: reaction?.emoji || undefined,
+      });
+    }
+    if (conversation.type === 'group' || await this.db.findMessage(source.authorAci, source.sentAt)) return;
+    if (!message.body && !reaction?.emoji) return;
+    await this.addDataMessage(conversation, source, message);
+  }
+
+  /** Viewed receipts of our stories show who saw them */
+  private async applyStoryReceipt(senderAci: string, sentAt: number, status: SendStatus) {
+    const story = await this.db.findStory((await this.getAccount()).aci, sentAt);
+    const recipient = story?.recipients?.[senderAci];
+    if (!story || !recipient) return;
+    await this.putStory({
+      ...story,
+      recipients: {
+        ...story.recipients,
+        [senderAci]: {
+          ...recipient,
+          status: maxStatus(recipient.status, status),
+          viewedAt: status === 'viewed' ? recipient.viewedAt ?? Date.now() : recipient.viewedAt,
+        },
+      },
+    });
+  }
+
+  /** Sends a story to the members of distribution lists, each once, and tells our other devices */
+  private async sendListStory(
+    account: AccountRecord, story: OutgoingStory, lists: StoryDistributionList[], conversations: ConversationRecord[],
+  ) {
+    const sentAt = this.allocateTimestamp();
+    // Lists that allow replies come first, so people in several lists may reply (Signal Desktop `sendStoryMessage`)
+    const ordered = [...lists].sort((a, b) => Number(b.areRepliesAllowed) - Number(a.areRepliesAllowed));
+    const recipients: Record<string, StoryRecipient> = {};
+    const acisByList = new Map<string, string[]>();
+    for (const list of ordered) {
+      const acis = getStoryListRecipientAcis(list, conversations, account.aci);
+      acisByList.set(list.id, acis.filter((aci) => !recipients[aci]));
+      for (const aci of acis) {
+        const recipient = recipients[aci] ??= {
+          status: 'pending', isAllowedToReply: list.areRepliesAllowed, distributionListIds: [],
+        };
+        recipient.distributionListIds.push(list.id);
+      }
+    }
+
+    // The sync carries the story as it reaches people who may reply (Signal Desktop `sendStory`)
+    const storyMessage = createOutgoingStoryMessage(account, story, true);
+    const stored = await this.runSerial(() => this.addStory({
+      conversationId: account.aci,
+      authorAci: account.aci,
+      authorDeviceId: account.deviceId,
+      sentAt,
+      receivedAt: sentAt,
+      expiresAt: sentAt + STORY_LIFETIME_MS,
+      isOutgoing: true,
+      storyMessage: toBinary(StoryMessageSchema, storyMessage),
+      viewedAt: sentAt,
+      recipients,
+    }));
+
+    const results: RecipientResult[] = [];
+    for (const list of ordered) {
+      const acis = acisByList.get(list.id)!;
+      if (!acis.length) continue;
+      results.push(...await this.sendStoryTo(acis, createOutgoingStoryMessage(account, story, list.areRepliesAllowed), {
+        timestamp: sentAt, target: { type: 'storyList', listId: list.id },
+      }));
+    }
+    return this.finishStorySend(stored, results);
+  }
+
+  /** Sends a story to a group: the members may reply in the group */
+  private async sendGroupStory(account: AccountRecord, story: OutgoingStory, group: ConversationRecord) {
+    const sentAt = this.allocateTimestamp();
+    const storyMessage = createOutgoingStoryMessage(account, story, true, group);
+    const memberAcis = getRecipientAcis(group, account.aci);
+    const stored = await this.runSerial(() => this.addStory({
+      conversationId: group.id,
+      authorAci: account.aci,
+      authorDeviceId: account.deviceId,
+      sentAt,
+      receivedAt: sentAt,
+      expiresAt: sentAt + STORY_LIFETIME_MS,
+      isOutgoing: true,
+      storyMessage: toBinary(StoryMessageSchema, storyMessage),
+      viewedAt: sentAt,
+      recipients: Object.fromEntries(memberAcis.map((aci) => [aci, {
+        status: 'pending' as const, isAllowedToReply: true, distributionListIds: [],
+      }])),
+    }));
+    const results = await this.sendStoryTo(memberAcis, storyMessage, {
+      timestamp: sentAt, target: { type: 'group', group: this.getGroupTarget(group)! },
+    });
+    return this.finishStorySend(stored, results);
+  }
+
+  /** Without a connection, or when the send fails as a whole, every recipient fails */
+  private async sendStoryTo(
+    recipients: string[], storyMessage: StoryMessage, options: Parameters<typeof sendStory>[3],
+  ): Promise<RecipientResult[]> {
+    try {
+      return await sendStory(this.client.getSenderContext(), recipients, storyMessage, options);
+    } catch (err) {
+      this.events.onError(err as Error);
+      return recipients.map((serviceId) => ({ serviceId, error: err as Error }));
+    }
+  }
+
+  /** Records each recipient's status and syncs the story with the recipients that got it */
+  private async finishStorySend(stored: StoryRecord, results: RecipientResult[]) {
+    const updated = await this.runSerial(async () => {
+      const current = await this.db.getStory(stored.id);
+      if (!current) return stored;
+      const recipients = { ...current.recipients };
+      for (const [aci, recipient] of Object.entries(recipients)) {
+        recipients[aci] = {
+          ...recipient, status: getResultError(results, aci) ? 'failed' : maxStatus(recipient.status, 'sent'),
+        };
+      }
+      return this.putStory({ ...current, recipients });
+    });
+
+    const storyMessageRecipients: StoryMessageRecipient[] = Object.entries(updated.recipients ?? {})
+      .filter(([, { status }]) => status !== 'failed')
+      .map(([aci, { distributionListIds, isAllowedToReply }]) => ({
+        destinationServiceId: aci, distributionListIds, isAllowedToReply,
+      }));
+    if (storyMessageRecipients.length) {
+      await this.sendWhenConnected((context) => sendStorySync(context, {
+        timestamp: updated.sentAt,
+        storyMessage: fromBinary(StoryMessageSchema, updated.storyMessage),
+        storyMessageRecipients,
+      }).then(() => undefined)).catch(this.events.onError);
+    }
+    return updated;
+  }
+
+  /** Keeps one reply per author and timestamp */
+  private async addStoryReply(story: StoryRecord, reply: StoryReply) {
+    const replies = story.replies ?? [];
+    if (replies.some(({ authorAci, sentAt }) => authorAci === reply.authorAci && sentAt === reply.sentAt)) return;
+    await this.putStory({ ...story, replies: [...replies, reply] });
+  }
+
+  private async addStory(record: NewStoryRecord) {
+    const story = await this.db.addStory(record);
+    this.changes.stories.push(story);
+    this.scheduleExpiration();
+    return story;
+  }
+
+  private async putStory(record: StoryRecord) {
+    await this.db.putStory(record);
+    this.changes.stories.push(record);
+    return record;
+  }
+
+  private async removeStory(story: StoryRecord) {
+    await this.db.deleteStory(story.id);
+    this.changes.deletedStories.push(story);
+  }
+
   private async handleReceipt(senderAci: string, receipt: ReceiptMessage) {
     const { account } = this.client.getSenderContext();
     const status = STATUS_BY_RECEIPT_TYPE[receipt.type];
     for (const timestamp of receipt.timestamp) {
       const message = await this.db.findMessage(account.aci, Number(timestamp));
-      if (!message?.recipientStatus || !(senderAci in message.recipientStatus)) continue;
+      if (!message) {
+        await this.applyStoryReceipt(senderAci, Number(timestamp), status);
+        continue;
+      }
+      if (!message.recipientStatus || !(senderAci in message.recipientStatus)) continue;
       await this.putMessage({
         ...message,
         recipientStatus: {
@@ -1665,7 +2179,13 @@ export default class MessageProcessor {
   /** Remote deletes are allowed only to the author, or to group admins through `adminDelete` */
   private async applyDelete(authorAci: string, targetSentAt: number, adminAci?: string) {
     const target = await this.db.findMessage(authorAci, targetSentAt);
-    if (!target || target.deletedAt) return;
+    if (!target) {
+      // Stories are deleted by their authors only (Signal Desktop `deleteStoryForEveryone`)
+      const story = adminAci ? undefined : await this.db.findStory(authorAci, targetSentAt);
+      if (story) await this.removeStory(story);
+      return;
+    }
+    if (target.deletedAt) return;
     await this.putMessage({
       ...target,
       deletedByAdminAci: adminAci !== authorAci ? adminAci : undefined,
@@ -2014,10 +2534,13 @@ export default class MessageProcessor {
     }, DELIVERY_RECEIPT_DELAY_MS);
   }
 
+  /** One timer covers disappearing messages and stories */
   private scheduleExpiration() {
     clearTimeout(this.expirationTimer);
-    void this.db.getNextExpiresAt().then((expiresAt) => {
-      if (expiresAt === undefined) return;
+    void Promise.all([this.db.getNextExpiresAt(), this.db.getNextStoryExpiresAt()]).then((times) => {
+      const defined = times.filter((time) => time !== undefined);
+      if (!defined.length) return;
+      const expiresAt = Math.min(...defined);
       this.expirationTimer = setTimeout(() => {
         void this.runSerial(() => this.deleteExpiredMessages()).catch(this.events.onError);
       }, Math.min(Math.max(expiresAt - Date.now(), 0), MAX_TIMEOUT_MS));
@@ -2025,10 +2548,12 @@ export default class MessageProcessor {
   }
 
   private async deleteExpiredMessages() {
-    for (const message of await this.db.getExpiredMessages(Date.now())) {
+    const now = Date.now();
+    for (const message of await this.db.getExpiredMessages(now)) {
       await this.db.deleteMessage(message.id);
       this.changes.deletedMessages.push({ conversationId: message.conversationId, id: message.id });
     }
+    for (const story of await this.db.getExpiredStories(now)) await this.removeStory(story);
     this.flush();
     this.scheduleExpiration();
   }
@@ -2041,20 +2566,26 @@ export default class MessageProcessor {
 
   private flush() {
     const { changes } = this;
-    if (!changes.conversations.length && !changes.messages.length && !changes.deletedMessages.length) return;
+    if (!changes.conversations.length && !changes.messages.length && !changes.deletedMessages.length
+      && !changes.stories.length && !changes.deletedStories.length) {
+      return;
+    }
     this.changes = createChanges();
+    const deletedStoryIds = new Set(changes.deletedStories.map(({ id }) => id));
     this.events.onChanges({
       conversations: dedupeById(changes.conversations),
       messages: dedupeById(changes.messages),
       addedMessageIds: changes.addedMessageIds,
       deletedMessages: changes.deletedMessages,
+      stories: dedupeById(changes.stories).filter(({ id }) => !deletedStoryIds.has(id)),
+      deletedStories: changes.deletedStories,
     });
   }
 }
 
 function createChanges(): MessageChanges {
   return {
-    conversations: [], messages: [], addedMessageIds: [], deletedMessages: [],
+    conversations: [], messages: [], addedMessageIds: [], deletedMessages: [], stories: [], deletedStories: [],
   };
 }
 
@@ -2153,6 +2684,36 @@ function groupTimestampsByAuthor(messages: MessageRecord[]) {
     byAuthor.set(authorAci, [...byAuthor.get(authorAci) ?? [], sentAt]);
   }
   return byAuthor;
+}
+
+/**
+ * The story message from this device: our profile key goes with every story, as recipients may reply; group stories
+ * name their group (Signal Desktop `getStoryMessage` in `ts/textsecure/SendMessage.preload.ts`)
+ */
+function createOutgoingStoryMessage(
+  account: AccountRecord, story: OutgoingStory, allowsReplies: boolean, group?: ConversationRecord,
+) {
+  return create(StoryMessageSchema, {
+    ...story,
+    profileKey: account.profileKey,
+    allowsReplies,
+    group: group?.masterKey ? { masterKey: group.masterKey, revision: group.revision } : undefined,
+  });
+}
+
+/** Recipients of a sent story as its sync names them */
+function buildStoryRecipients(
+  recipients: SyncMessage_Sent['storyMessageRecipients'], status: SendStatus,
+): Record<string, StoryRecipient> {
+  const result: Record<string, StoryRecipient> = {};
+  for (const recipient of recipients) {
+    const aci = getAci(recipient.destinationServiceId, recipient.destinationServiceIdBinary);
+    if (!aci) continue;
+    result[aci] = {
+      status, isAllowedToReply: recipient.isAllowedToReply, distributionListIds: recipient.distributionListIds,
+    };
+  }
+  return result;
 }
 
 /** The conversation id of a group: its base64 group identifier */

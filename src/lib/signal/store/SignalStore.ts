@@ -28,6 +28,9 @@ export type AccountRecord = {
   isReadReceiptsEnabled?: boolean;
   isTypingIndicatorsEnabled?: boolean;
   isLinkPreviewsEnabled?: boolean;
+  // Stories settings of the account record; view receipts follow read receipts until set
+  isStoriesDisabled?: boolean;
+  isStoryViewReceiptsEnabled?: boolean;
   // Registered primary devices only: the account attribute that lets people find us by phone number
   isDiscoverableByPhoneNumber?: boolean;
   // A registered account without its profile and one-time prekeys yet: registration resumes at the profile step
@@ -86,6 +89,20 @@ type Items = {
   // Serialized `ManifestRecord` of the last storage service manifest merged here; it lists only ids with a record
   storageManifest: Uint8Array<ArrayBuffer>;
   storageChanges: StorageChanges;
+  storyDistributionLists: StoryDistributionList[];
+};
+
+/** A story distribution list of the storage service; My Story has `MY_STORY_ID` (`stories/storyLists.ts`) */
+export type StoryDistributionList = {
+  // UUID string, also the distribution id of the list's sender key
+  id: string;
+  name: string;
+  // With `isBlockList`, the people My Story leaves out; otherwise the people the list goes to
+  memberAcis: string[];
+  areRepliesAllowed: boolean;
+  isBlockList: boolean;
+  // Deleted lists stay until the storage service drops them
+  deletedAt?: number;
 };
 
 export type NotificationDefaults = {

@@ -8,7 +8,9 @@ import type {
   GroupV2Record,
   ManifestRecord,
   StorageRecord,
+  StoryDistributionListRecord,
 } from '../proto/generated/StorageService_pb';
+import type { AccountRecord as LocalAccount, StoryDistributionList } from '../store/SignalStore';
 import type { StorageWrite } from './storageService';
 
 import { bufferFromBase64, bufferToBase64 } from '../../../util/encoding/buffer';
@@ -20,14 +22,22 @@ import {
   ManifestRecord_Identifier_Type as ItemType,
   ManifestRecord_IdentifierSchema,
   ManifestRecordSchema,
+  OptionalBool,
   StorageRecordSchema,
 } from '../proto/generated/StorageService_pb';
 
-type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted';
-type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread';
-type StorageField = ConversationStorageField | AccountStorageField;
+type ConversationStorageField = 'archived' | 'markedUnread' | 'mutedUntilTimestamp' | 'blocked' | 'whitelisted'
+  | 'hideStory';
+type AccountStorageField = 'pinnedConversations' | 'noteToSelfArchived' | 'noteToSelfMarkedUnread'
+  | 'storiesDisabled' | 'storyViewReceiptsEnabled';
+// A story distribution list record is written whole from the local list
+type StoryListStorageField = 'storyDistributionList';
+type StorageField = ConversationStorageField | AccountStorageField | StoryListStorageField;
 
-/** Record fields changed on this device and not written yet, by conversation id or `ACCOUNT_KEY` */
+/**
+ * Record fields changed on this device and not written yet, by conversation id, `ACCOUNT_KEY` or a story list key
+ * (`getStoryListKey`)
+ */
 export type StorageChanges = Record<string, StorageField[]>;
 
 /** What a write starts from: the stored manifest, its records and the local state */
@@ -39,12 +49,13 @@ type StorageWriteSource = {
   conversations: ConversationRecord[];
   // Profile keys of private conversations that get their first record
   profileKeys: Map<string, Uint8Array>;
-  selfAci: string;
-  deviceId: number;
+  storyLists: StoryDistributionList[];
+  account: Pick<LocalAccount, 'aci' | 'deviceId' | 'isStoriesDisabled' | 'isStoryViewReceiptsEnabled'>;
 };
 
-// Conversation ids are ACIs and base64 group ids, so they never equal this key
+// Conversation ids are ACIs and base64 group ids, so they never equal this key or the story list keys
 export const ACCOUNT_KEY = 'account';
+const STORY_LIST_KEY_PREFIX = 'storyList:';
 
 const ACI_BINARY_LENGTH = 16;
 // Signal Desktop `generateStorageID` in `ts/services/storage.preload.ts`
@@ -59,6 +70,7 @@ const CONVERSATION_FIELDS: Record<ConversationStorageField, keyof ConversationRe
   mutedUntilTimestamp: 'mutedUntil',
   blocked: 'isBlocked',
   whitelisted: 'isAccepted',
+  hideStory: 'isStoryHidden',
 };
 const CONVERSATION_FIELD_NAMES = Object.keys(CONVERSATION_FIELDS) as ConversationStorageField[];
 
@@ -103,6 +115,34 @@ export function omitChangedFields(patch: Partial<ConversationRecord>, fields?: S
   return result;
 }
 
+/** The key of a story distribution list in `StorageChanges` */
+export function getStoryListKey(listId: string) {
+  return `${STORY_LIST_KEY_PREFIX}${listId}`;
+}
+
+/** The local list of a story distribution list record; records without a valid identifier are skipped */
+export function parseStoryDistributionList(record: StoryDistributionListRecord): StoryDistributionList | undefined {
+  if (record.identifier.length !== ACI_BINARY_LENGTH) return undefined;
+  // Android writes binary service ids only, older clients strings (Signal Desktop `mergeStoryDistributionListRecord`)
+  const memberAcis = record.recipientServiceIdsBinary.length
+    ? record.recipientServiceIdsBinary.filter((id) => id.length === ACI_BINARY_LENGTH).map(uuidToString)
+    : record.recipientServiceIds.filter((id) => !id.startsWith('PNI:'));
+  return {
+    id: uuidToString(record.identifier),
+    name: record.name,
+    memberAcis,
+    areRepliesAllowed: record.allowsReplies,
+    isBlockList: record.isBlockList,
+    deletedAt: record.deletedAtTimestamp ? Number(record.deletedAtTimestamp) : undefined,
+  };
+}
+
+/** `storyViewReceiptsEnabled` of the account record; unset means view receipts follow read receipts */
+export function getOptionalBool(value: OptionalBool) {
+  if (value === OptionalBool.UNSET) return undefined;
+  return value === OptionalBool.ENABLED;
+}
+
 /** The ACI of a record field pair such as `aci` and `aciBinary`; PNIs in binary fields have a prefix byte */
 export function getAci(serviceId: string, serviceIdBinary: Uint8Array) {
   return serviceId || (serviceIdBinary.length === ACI_BINARY_LENGTH ? uuidToString(serviceIdBinary) : undefined);
@@ -121,9 +161,11 @@ export function getMutedUntil(timestamp: bigint) {
  * the primary device until it exists. Returns `undefined` when nothing changed.
  */
 export function buildStorageWrite({
-  manifest, records, changes, conversations, profileKeys, selfAci, deviceId,
+  manifest, records, changes, conversations, profileKeys, storyLists, account,
 }: StorageWriteSource): StorageWrite | undefined {
+  const { deviceId } = account;
   const conversationsById = new Map(conversations.map((conversation) => [conversation.id, conversation]));
+  const storyListsByKey = new Map(storyLists.map((list) => [getStoryListKey(list.id), list]));
   const storedRecords = indexRecords(records);
   const inserts = new Map<string, Uint8Array<ArrayBuffer>>();
   const insertTypes = new Map<string, ItemType>();
@@ -131,14 +173,19 @@ export function buildStorageWrite({
 
   for (const [key, fields] of Object.entries(changes)) {
     const conversation = conversationsById.get(key);
-    const recordKey = key === ACCOUNT_KEY ? key : conversation && getRecordKey(conversation);
+    const storyList = storyListsByKey.get(key);
+    const recordKey = key === ACCOUNT_KEY || storyList ? key : conversation && getRecordKey(conversation);
     if (!recordKey) continue;
     const stored = storedRecords.get(recordKey);
 
     let record: StorageRecord;
     if (stored?.record.record.case === 'account') {
       record = stored.record;
-      setAccountFields(stored.record.record.value, fields, conversations, selfAci);
+      setAccountFields(stored.record.record.value, fields, conversations, account);
+    } else if (storyList) {
+      record = stored?.record
+        ?? create(StorageRecordSchema, { record: { case: 'storyDistributionList', value: {} } });
+      setStoryListFields(record.record.value as StoryDistributionListRecord, storyList);
     } else if (conversation) {
       record = stored?.record ?? createConversationRecord(conversation, profileKeys.get(conversation.id));
       const { value } = record.record as { value: ContactRecord | GroupV2Record };
@@ -184,6 +231,10 @@ function getStoredRecordKey({ record }: StorageRecord) {
       return record.value.masterKey.length ? getGroupKey(record.value.masterKey) : undefined;
     case 'account':
       return ACCOUNT_KEY;
+    case 'storyDistributionList':
+      return record.value.identifier.length === ACI_BINARY_LENGTH
+        ? getStoryListKey(uuidToString(record.value.identifier))
+        : undefined;
     default:
       return undefined;
   }
@@ -204,6 +255,8 @@ function getItemType({ record }: StorageRecord) {
       return ItemType.CONTACT;
     case 'groupV2':
       return ItemType.GROUPV2;
+    case 'storyDistributionList':
+      return ItemType.STORY_DISTRIBUTION_LIST;
     default:
       return ItemType.ACCOUNT;
   }
@@ -251,16 +304,33 @@ function setConversationFields(
       case 'whitelisted':
         record.whitelisted = Boolean(conversation.isAccepted);
         break;
+      case 'hideStory':
+        record.hideStory = Boolean(conversation.isStoryHidden);
+        break;
       default:
         break;
     }
   }
 }
 
+/** Signal Desktop `toStoryDistributionListRecord` in `ts/services/storageRecordOps.preload.ts` */
+function setStoryListFields(record: StoryDistributionListRecord, list: StoryDistributionList) {
+  record.identifier = uuidToBytes(list.id);
+  record.name = list.name;
+  record.allowsReplies = list.areRepliesAllowed;
+  record.isBlockList = list.isBlockList;
+  record.deletedAtTimestamp = list.deletedAt ? BigInt(list.deletedAt) : 0n;
+  record.recipientServiceIdsBinary = list.memberAcis.map(uuidToBytes);
+  record.recipientServiceIds = [];
+}
+
 function setAccountFields(
-  record: AccountRecord, fields: StorageField[], conversations: ConversationRecord[], selfAci: string,
+  record: AccountRecord,
+  fields: StorageField[],
+  conversations: ConversationRecord[],
+  account: StorageWriteSource['account'],
 ) {
-  const self = conversations.find(({ id }) => id === selfAci);
+  const self = conversations.find(({ id }) => id === account.aci);
   for (const field of fields) {
     switch (field) {
       case 'pinnedConversations':
@@ -271,6 +341,14 @@ function setAccountFields(
         break;
       case 'noteToSelfMarkedUnread':
         record.noteToSelfMarkedUnread = Boolean(self?.isMarkedUnread);
+        break;
+      case 'storiesDisabled':
+        record.storiesDisabled = Boolean(account.isStoriesDisabled);
+        break;
+      case 'storyViewReceiptsEnabled':
+        record.storyViewReceiptsEnabled = account.isStoryViewReceiptsEnabled === undefined
+          ? OptionalBool.UNSET
+          : account.isStoryViewReceiptsEnabled ? OptionalBool.ENABLED : OptionalBool.DISABLED;
         break;
       default:
         break;
