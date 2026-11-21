@@ -3,6 +3,7 @@
  * the same Signal account from the engine's stores, so switching keeps the account and its chats.
  */
 
+import appNavigationController from '@components/appNavigationController';
 import {showDeactivatedScreen} from '@/pages/deactivatedScreen';
 
 // * Web A's `IS_SCREEN_LOCKED_CACHE_KEY` (`src/config.ts`): it is there while Web A has a passcode
@@ -15,8 +16,9 @@ export function getWebAUrl() {
   return url.toString();
 }
 
+// * through the navigation controller, which otherwise holds the page's navigations back
 export function switchToWebA() {
-  location.href = getWebAUrl();
+  appNavigationController.navigateToUrl(getWebAUrl());
 }
 
 /**

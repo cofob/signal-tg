@@ -33,9 +33,9 @@ const App = {
   interclientBroadcastChannel: 'tgweb'
 };
 
-// * "Telegram WebK 2.2 (681)" - how the app names itself, in the main menu and under Settings
+// * "TeleSignal K 0.1.0" - how the app names itself, in the main menu and under Settings
 export function getAppVersionText() {
-  return `Telegram Web${App.suffix} ${App.version} (${App.build})`;
+  return `TeleSignal ${App.suffix} ${App.version}`;
 }
 
 if(App.isMainDomain) { // use Webogram credentials then
