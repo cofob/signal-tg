@@ -2056,7 +2056,12 @@ export default class MessageProcessor {
         || (envelope.serverGuidBinary.length ? uuidToString(envelope.serverGuidBinary) : undefined),
     };
 
-    if (senderServiceId !== selfAci) {
+    // A data message that another device of ours sends in an envelope instead of a transcript is our own message,
+    // outgoing and read; outside a group it is a note to ourselves
+    const isFromSelf = senderServiceId === selfAci;
+    const ownDevice: Partial<MessageSource> = isFromSelf ? { isOutgoing: true, destinationAci: selfAci } : {};
+
+    if (!isFromSelf) {
       const sender = await this.db.getConversation(senderServiceId);
       // Signal Desktop `ts/textsecure/MessageReceiver.preload.ts` drops everything from blocked senders
       if (sender?.isBlocked) return;
@@ -2078,14 +2083,14 @@ export default class MessageProcessor {
       case 'dataMessage': {
         const sentAt = Number(body.value.timestamp) || source.sentAt;
         // Dropped messages are not acknowledged with a receipt
-        if (await this.handleDataMessage({ ...source, sentAt }, body.value)) {
-          this.queueDeliveryReceipt(senderServiceId, sentAt);
+        if (await this.handleDataMessage({ ...source, sentAt, ...ownDevice }, body.value)) {
+          if (!isFromSelf) this.queueDeliveryReceipt(senderServiceId, sentAt);
         }
         break;
       }
       case 'editMessage':
-        await this.handleEditMessage(source, body.value);
-        this.queueDeliveryReceipt(senderServiceId, source.sentAt);
+        await this.handleEditMessage({ ...source, ...ownDevice }, body.value);
+        if (!isFromSelf) this.queueDeliveryReceipt(senderServiceId, source.sentAt);
         break;
       case 'syncMessage':
         if (senderServiceId === selfAci) {
