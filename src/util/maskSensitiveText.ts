@@ -21,6 +21,23 @@ export default function maskSensitiveText(text: string) {
 export function getLoggableError(error: unknown) {
   if (DEBUG) return error;
 
-  const text = error instanceof Error ? error.stack || `${error.name}: ${error.message}` : String(error);
-  return maskSensitiveText(text);
+  return maskSensitiveText(describeError(error));
+}
+
+// WebKit and Firefox stacks hold frames only, so the name and message come first unless the stack starts with them
+function describeError(error: unknown) {
+  if (error instanceof Error) {
+    const summary = `${error.name}: ${error.message}`;
+    const stack = error.stack || '';
+    return stack.includes(summary) ? stack : `${summary}\n${stack}`.trimEnd();
+  }
+
+  // Plain objects, such as API errors, show their useful fields instead of `[object Object]`
+  if (error && typeof error === 'object') {
+    const { message, code, status, cause } = error as Record<string, unknown>;
+    return [message, code, status, cause].filter((value) => value !== undefined).map(String).join(' ')
+      || 'Unknown error';
+  }
+
+  return String(error);
 }

@@ -107,7 +107,7 @@ async function listenToNativeEvents() {
     });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('Failed to listen to native events:', err);
+    console.error('Failed to listen to native events:', getLoggableError(err));
   }
 }
 

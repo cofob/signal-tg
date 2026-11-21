@@ -34,6 +34,19 @@ describe('getLoggableError', () => {
     expect(loggable).not.toContain(ACI);
   });
 
+  test('keeps the message when the stack has frames only', () => {
+    const error = new Error(`No session for ${ACI}.1`);
+    const frame = 'getSession@https://app.example/assets/index-AbCdEf12.js:1:2345';
+    error.stack = frame;
+    const loggable = getLoggableError(error) as string;
+
+    expect(loggable).toBe(`Error: No session for [id].1\n${frame}`);
+  });
+
+  test('shows the fields of a plain object error', () => {
+    expect(getLoggableError({ message: `Profile of ${ACI} failed`, status: 404 })).toBe('Profile of [id] failed 404');
+  });
+
   test('masks other thrown values', () => {
     expect(getLoggableError(`lookup of +14155550100 failed`)).toBe('lookup of [number] failed');
   });
