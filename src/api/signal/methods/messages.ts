@@ -15,12 +15,14 @@ import type {
   ApiMessageEntity,
   ApiMessagePoll,
   ApiMessageRecipient,
+  ApiMessageSearchContext,
   ApiOnProgress,
   ApiPeer,
   ApiReaction,
   ApiReplyInfo,
   ApiSendMessageAction,
   ApiSticker,
+  ApiUserStatus,
   ApiWebPage,
   MediaContent,
 } from '../../types';
@@ -40,8 +42,8 @@ import { bufferFromHex } from '../../../util/encoding/buffer';
 import { buildCollectionByKey, omit, omitUndefined } from '../../../util/iteratees';
 import { getServerTime } from '../../../util/serverTime';
 import { buildBodyRanges } from '../builders/bodyRanges';
-import { parseAttachmentMediaId } from '../builders/media';
 import { getIsChatListed } from '../builders/chats';
+import { parseAttachmentMediaId } from '../builders/media';
 import {
   buildApiMessageWithPoll, createUserResolver, getIsMessageHidden,
 } from '../builders/messages';
@@ -137,7 +139,16 @@ export async function fetchMessagesById({ chat, messageIds }: { chat: ApiChat; m
   return (await buildMessages(shown, conversation)).messages;
 }
 
-const EMPTY_SEARCH_RESULT = { messages: [] as ApiMessage[], totalCount: 0 };
+type SearchMessagesResult = {
+  messages: ApiMessage[];
+  totalCount: number;
+  nextOffsetId?: number;
+  nextOffsetRate?: number;
+  nextOffsetPeerId?: string;
+  userStatusesById: Record<string, ApiUserStatus>;
+};
+
+const EMPTY_SEARCH_RESULT: SearchMessagesResult = { messages: [], totalCount: 0, userStatusesById: {} };
 
 /**
  * Messages of a chat whose text contains `query`, newest first, from before `offsetId`. Signal keeps no search index,
@@ -148,10 +159,15 @@ export async function searchMessagesInChat({
 }: {
   peer: ApiPeer;
   type: string;
-  query: string;
+  query?: string;
   limit: number;
   offsetId?: number;
-}) {
+  addOffset?: number;
+  threadId?: ThreadId;
+  fromPeer?: ApiPeer;
+  minDate?: number;
+  maxDate?: number;
+}): Promise<SearchMessagesResult> {
   const conversation = await getConversationByPeerId(peer.id);
   if (!conversation || type !== 'text' || !query) return EMPTY_SEARCH_RESULT;
 
@@ -167,10 +183,16 @@ export async function searchMessagesGlobal({
   type, query, limit, offsetId,
 }: {
   type: string;
-  query: string;
+  query?: string;
   limit: number;
   offsetId?: number;
-}) {
+  addOffset?: number;
+  offsetRate?: number;
+  offsetPeer?: ApiPeer;
+  context?: ApiMessageSearchContext;
+  minDate?: number;
+  maxDate?: number;
+}): Promise<SearchMessagesResult> {
   const selfAci = getCurrentAccount()?.aci;
   if (!selfAci || type !== 'text' || !query) return EMPTY_SEARCH_RESULT;
 
@@ -187,10 +209,10 @@ async function findTextMatches(
 ) {
   const needle = query.toLowerCase();
   const before = offsetId || Number.MAX_SAFE_INTEGER;
-  const matches: { record: MessageRecord, conversation: ConversationRecord }[] = [];
+  const matches: { record: MessageRecord; conversation: ConversationRecord }[] = [];
   for (const conversation of conversations) {
     const records = await db.findLatestMessages(conversation.id, limit, (message) => (
-      message.id < before && !getIsMessageHidden(message) && !!message.body?.toLowerCase().includes(needle)
+      message.id < before && !getIsMessageHidden(message) && Boolean(message.body?.toLowerCase().includes(needle))
     ));
     matches.push(...records.map((record) => ({ record, conversation })));
   }
@@ -198,7 +220,9 @@ async function findTextMatches(
 }
 
 /** The matches as messages, with the offset of the next page when a full page may have more behind it */
-async function buildSearchResult(matches: { record: MessageRecord, conversation: ConversationRecord }[], limit: number) {
+async function buildSearchResult(
+  matches: { record: MessageRecord; conversation: ConversationRecord }[], limit: number,
+): Promise<SearchMessagesResult> {
   const messages: ApiMessage[] = [];
   const byConversation = new Map<ConversationRecord, MessageRecord[]>();
   for (const { record, conversation } of matches) {
@@ -214,6 +238,7 @@ async function buildSearchResult(matches: { record: MessageRecord, conversation:
     messages,
     totalCount: messages.length,
     nextOffsetId: isPageFull ? messages[messages.length - 1].id : undefined,
+    userStatusesById: {},
   };
 }
 
