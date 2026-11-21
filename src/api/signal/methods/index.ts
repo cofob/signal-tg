@@ -89,6 +89,7 @@ export {
   sendPollVote,
   sendReaction,
 } from './messages';
+export { checkKeyTransparency, checkKeyTransparencySelf, fetchKeyTransparencySelfStatus } from './keyTransparency';
 export {
   confirmRecoveryKeySaved,
   confirmUsername,

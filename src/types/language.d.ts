@@ -186,6 +186,16 @@ export interface LangPair {
   'RecoveryKeyCopied': undefined;
   'RecoveryKeySaved': undefined;
   'RecoveryKeyUnavailable': undefined;
+  'KeyTransTitle': undefined;
+  'KeyTransIdle': undefined;
+  'KeyTransRunning': undefined;
+  'KeyTransOk': undefined;
+  'KeyTransFail': undefined;
+  'KeyTransHint': undefined;
+  'KeyTransLearnMore': undefined;
+  'KeyTransOkText': undefined;
+  'KeyTransUnavailableText': undefined;
+  'KeyTransSelfIdle': undefined;
   'MessageRequestAccept': undefined;
   'MessageRequestDelete': undefined;
   'MessageRequestBlock': undefined;
@@ -2248,6 +2258,7 @@ export interface LangPair {
   'SettingsKeywordsSealedSender': undefined;
   'SettingsKeywordsLinkPreviews': undefined;
   'SettingsKeywordsSignalPin': undefined;
+  'SettingsKeywordsKeyTrans': undefined;
   'SettingsKeywordsStickers': undefined;
   'SettingsKeywordsFolders': undefined;
   'SettingsKeywordsLanguage': undefined;
@@ -2345,6 +2356,9 @@ export interface LangPairWithVariables<V = LangVariable> {
     'user': V;
   };
   'SafetyNumberUnavailable': {
+    'user': V;
+  };
+  'KeyTransFailText': {
     'user': V;
   };
   'ActionSafetyChanged': {
@@ -3619,6 +3633,7 @@ export interface LangKeyGroups {
       | 'UserActionUploadRound'
       | 'SafetyNumberHint'
       | 'SafetyNumberUnavailable'
+      | 'KeyTransFailText'
       | 'ActionSafetyChanged'
       | 'ActionSafetyVerified'
       | 'ActionSafetyVerifiedSynced'

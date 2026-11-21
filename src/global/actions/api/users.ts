@@ -550,6 +550,26 @@ addActionHandler('openSafetyNumberModal', async (global, actions, payload): Prom
     safetyNumberModal: result ? { userId, ...result } : { userId, isUnavailable: true },
   }, tabId);
   setGlobal(global);
+
+  if (result?.keyTransparencyStatus === 'idle') actions.checkKeyTransparency({ tabId });
+});
+
+addActionHandler('checkKeyTransparency', async (global, actions, payload): Promise<void> => {
+  const { tabId = getCurrentTabId() } = payload || {};
+  const modal = selectTabState(global, tabId).safetyNumberModal;
+  const user = modal && selectUser(global, modal.userId);
+  if (!modal || !user || modal.keyTransparencyStatus !== 'idle') return;
+
+  global = updateTabState(global, { safetyNumberModal: { ...modal, keyTransparencyStatus: 'running' } }, tabId);
+  setGlobal(global);
+
+  const keyTransparencyStatus = await callApi('checkKeyTransparency', { user }) ?? 'fail';
+
+  global = getGlobal();
+  const current = selectTabState(global, tabId).safetyNumberModal;
+  if (current?.userId !== modal.userId) return;
+  global = updateTabState(global, { safetyNumberModal: { ...current, keyTransparencyStatus } }, tabId);
+  setGlobal(global);
 });
 
 addActionHandler('toggleSafetyNumberVerified', async (global, actions, payload): Promise<void> => {

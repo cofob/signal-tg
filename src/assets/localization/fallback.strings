@@ -209,6 +209,17 @@
 "RecoveryKeySaved" = "I have saved my recovery key";
 "RecoveryKeyUnavailable" = "This device has no recovery key to show. It is shown on the primary device of the account.";
 "SafetyNumberUnavailable" = "A safety number with {user} is available after you exchange messages.";
+"KeyTransTitle" = "Automatic key verification";
+"KeyTransIdle" = "Verify automatically";
+"KeyTransRunning" = "Verifying encryption...";
+"KeyTransOk" = "Encryption verified";
+"KeyTransFail" = "Auto-verification unavailable";
+"KeyTransHint" = "Auto-verification is not available for all chats.";
+"KeyTransLearnMore" = "Learn more";
+"KeyTransOkText" = "Encryption was auto-verified for this chat. For people you're connected to by phone number, Signal can automatically confirm whether the connection is secure using a process called key transparency. For added security, verify end-to-end encryption manually by comparing the numbers above or scanning the code on their device.";
+"KeyTransFailText" = "Signal can not automatically verify the encryption for this chat. This could be because {user} changed their phone number or their phone number privacy settings. Verify end-to-end encryption manually by comparing the numbers above or scanning the code on their device.";
+"KeyTransUnavailableText" = "Signal can only automatically verify the encryption in chats where you're connected to someone via a phone number. If the chat was started with a username or a group in common, verify end-to-end encryption by comparing the numbers above or scanning the code on their device.";
+"KeyTransSelfIdle" = "Not verified yet";
 "ActionSafetyChanged" = "Your safety number with {user} has changed";
 "ActionSafetyVerified" = "You marked your safety number with {user} as verified";
 "ActionSafetyVerifiedSynced" = "You marked your safety number with {user} as verified from another device";
@@ -2773,6 +2784,7 @@
 "SettingsKeywordsSealedSender" = "sealed sender, indicator, status icon, delivery, metadata";
 "SettingsKeywordsLinkPreviews" = "link previews, preview, url, website";
 "SettingsKeywordsSignalPin" = "pin, registration lock, password, security, recovery";
+"SettingsKeywordsKeyTrans" = "key transparency, verification, encryption, safety number, log, keys";
 "SettingsKeywordsStickers" = "stickers, emoji, gifs, masks, reactions";
 "SettingsKeywordsFolders" = "folders, filters, tabs";
 "SettingsKeywordsLanguage" = "language, locale, translation";

@@ -1,5 +1,6 @@
 import MessageDb from '../../lib/signal/db/MessageDb';
 import GroupManager from '../../lib/signal/groups/GroupManager';
+import KeyTransparency from '../../lib/signal/keytrans/KeyTransparency';
 import MessageProcessor from '../../lib/signal/messages/MessageProcessor';
 import { isPniServiceId } from '../../lib/signal/serviceId';
 import SignalClient from '../../lib/signal/SignalClient';
@@ -31,6 +32,8 @@ export const processor = new MessageProcessor(db, client, {
 });
 
 export const groups = new GroupManager(client, db, processor, logError);
+
+export const keyTransparency = new KeyTransparency(client, db);
 
 // Safety number change notices; PNI identities belong to phone numbers, which have no conversation of their own
 store.onIdentityChange = (serviceId) => {

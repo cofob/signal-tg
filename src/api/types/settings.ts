@@ -11,6 +11,12 @@ export type ApiSignalPinSettings = {
   isRegistrationLockEnabled: boolean;
 };
 
+/**
+ * The state of an automatic key verification (key transparency): `idle` before it runs, `unavailable` for a chat
+ * that cannot be checked
+ */
+export type ApiKeyTransparencyStatus = 'idle' | 'running' | 'ok' | 'fail' | 'unavailable';
+
 /** The message settings of the account, which the storage service keeps for all its devices */
 export type ApiSignalMessageSettings = {
   isReadReceiptsEnabled: boolean;
