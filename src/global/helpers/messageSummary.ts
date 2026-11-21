@@ -147,6 +147,7 @@ function getSummaryDescription(
     dice,
     richMessage,
     widget,
+    action,
   } = mediaContent;
   const { poll } = statefulContent || {};
 
@@ -233,6 +234,11 @@ function getSummaryDescription(
 
   if (richMessage) {
     summary = truncatedText as string;
+  }
+
+  // Service messages, such as a view-once placeholder, preview as their rendered text
+  if (action && truncatedText) {
+    summary = truncatedText;
   }
 
   return summary || lang('MessageUnsupported');
