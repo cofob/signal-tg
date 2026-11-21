@@ -41,6 +41,7 @@ import { buildCollectionByKey, omit, omitUndefined } from '../../../util/iterate
 import { getServerTime } from '../../../util/serverTime';
 import { buildBodyRanges } from '../builders/bodyRanges';
 import { parseAttachmentMediaId } from '../builders/media';
+import { getIsChatListed } from '../builders/chats';
 import {
   buildApiMessageWithPoll, createUserResolver, getIsMessageHidden,
 } from '../builders/messages';
@@ -134,6 +135,86 @@ export async function fetchMessagesById({ chat, messageIds }: { chat: ApiChat; m
     record?.conversationId === conversation.id && !getIsMessageHidden(record)
   ));
   return (await buildMessages(shown, conversation)).messages;
+}
+
+const EMPTY_SEARCH_RESULT = { messages: [] as ApiMessage[], totalCount: 0 };
+
+/**
+ * Messages of a chat whose text contains `query`, newest first, from before `offsetId`. Signal keeps no search index,
+ * so the stored text is read; the shared media of a chat has no search yet and comes back empty.
+ */
+export async function searchMessagesInChat({
+  peer, type, query, limit, offsetId,
+}: {
+  peer: ApiPeer;
+  type: string;
+  query: string;
+  limit: number;
+  offsetId?: number;
+}) {
+  const conversation = await getConversationByPeerId(peer.id);
+  if (!conversation || type !== 'text' || !query) return EMPTY_SEARCH_RESULT;
+
+  const matches = await findTextMatches([conversation], query, limit, offsetId);
+  return buildSearchResult(matches, limit);
+}
+
+/**
+ * Messages of every listed chat whose text contains `query`, newest first, from before `offsetId`; the
+ * `nextOffsetId` of a result continues the search with the next page.
+ */
+export async function searchMessagesGlobal({
+  type, query, limit, offsetId,
+}: {
+  type: string;
+  query: string;
+  limit: number;
+  offsetId?: number;
+}) {
+  const selfAci = getCurrentAccount()?.aci;
+  if (!selfAci || type !== 'text' || !query) return EMPTY_SEARCH_RESULT;
+
+  const conversations = (await db.getConversations()).filter((conversation) => (
+    getIsChatListed(conversation, selfAci)
+  ));
+  const matches = await findTextMatches(conversations, query, limit, offsetId);
+  return buildSearchResult(matches, limit);
+}
+
+/** The newest messages of each conversation whose text has `query`, with the newest `limit` of them first */
+async function findTextMatches(
+  conversations: ConversationRecord[], query: string, limit: number, offsetId?: number,
+) {
+  const needle = query.toLowerCase();
+  const before = offsetId || Number.MAX_SAFE_INTEGER;
+  const matches: { record: MessageRecord, conversation: ConversationRecord }[] = [];
+  for (const conversation of conversations) {
+    const records = await db.findLatestMessages(conversation.id, limit, (message) => (
+      message.id < before && !getIsMessageHidden(message) && !!message.body?.toLowerCase().includes(needle)
+    ));
+    matches.push(...records.map((record) => ({ record, conversation })));
+  }
+  return matches.sort((a, b) => b.record.id - a.record.id).slice(0, limit);
+}
+
+/** The matches as messages, with the offset of the next page when a full page may have more behind it */
+async function buildSearchResult(matches: { record: MessageRecord, conversation: ConversationRecord }[], limit: number) {
+  const messages: ApiMessage[] = [];
+  const byConversation = new Map<ConversationRecord, MessageRecord[]>();
+  for (const { record, conversation } of matches) {
+    byConversation.set(conversation, [...byConversation.get(conversation) ?? [], record]);
+  }
+  for (const [conversation, records] of byConversation) {
+    messages.push(...(await buildMessages(records, conversation)).messages);
+  }
+  messages.sort((a, b) => b.id - a.id);
+
+  const isPageFull = matches.length >= limit;
+  return {
+    messages,
+    totalCount: messages.length,
+    nextOffsetId: isPageFull ? messages[messages.length - 1].id : undefined,
+  };
 }
 
 /** Shows the message being sent until the stored message replaces it */

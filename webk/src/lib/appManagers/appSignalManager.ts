@@ -42,6 +42,8 @@ import deferredPromise, {CancellablePromise} from '@helpers/cancellablePromise';
 
 export type SignalLinkCode = {url: string, expires: number};
 
+type SignalSearchResult = {messages: SignalMessage[], totalCount: number, nextOffsetId?: number};
+
 type MethodHandler = (params: any) => Promise<any> | any;
 
 type PendingSend = {
@@ -50,6 +52,7 @@ type PendingSend = {
 };
 
 const UNSUPPORTED_ERROR = 'SIGNAL_METHOD_UNSUPPORTED';
+const emptySearchResult = () => ({_: 'messages.messages', messages: [], chats: [], users: [], topics: []} as MethodDeclMap['messages.search']['res']);
 // * `ApiManager.getBaseDcId`: Web K's code expects the account's data center
 const SIGNAL_DC_ID = 2;
 const DIALOGS_PAGE_LIMIT = 100;
@@ -160,9 +163,9 @@ export default class AppSignalManager extends AppManager {
       'messages.getFullChat': (params) => this.getFullChat(params),
       'messages.getChats': (params) => this.getChats(params),
       'messages.getMessages': emptyMessages,
-      // * search, shared media and pinned messages are not ported yet: they answer with nothing, as for a new chat
-      'messages.search': emptyMessages,
-      'messages.searchGlobal': emptyMessages,
+      'messages.search': (params) => this.searchMessages(params),
+      'messages.searchGlobal': (params) => this.searchGlobal(params),
+      // * shared media and pinned messages are not ported yet: they answer with nothing, as for a new chat
       'messages.getReplies': emptyMessages,
       'messages.getSavedHistory': emptyMessages,
       'messages.getSearchCounters': (params: MethodDeclMap['messages.getSearchCounters']['req']) => {
@@ -192,6 +195,9 @@ export default class AppSignalManager extends AppManager {
       'messages.getSavedDialogs': () => ({_: 'messages.savedDialogs', dialogs: [], messages: [], chats: [], users: []}),
       'messages.getStickerSet': () => Promise.reject(makeError('STICKERSET_INVALID' as ErrorType)),
       'users.getFullUser': (params) => this.getFullUser(params),
+      // * the contacts of the global search are the chats' own (`appUsersManager.getContactsPeerIds`), not a server search
+      'contacts.search': () => ({_: 'contacts.found', my_results: [], results: [], chats: [], users: []}),
+      'contacts.resolveUsername': (params) => this.resolveUsername(params),
       'users.getUsers': (params) => this.getUsers(params),
       'contacts.getContacts': () => this.getContacts(),
       'contacts.getTopPeers': () => ({_: 'contacts.topPeersDisabled'}),
@@ -509,6 +515,50 @@ export default class AppSignalManager extends AppManager {
     } as Updates;
   }
 
+  /** The text search of a chat, which the other filters (media, pinned messages) do not have yet */
+  private async searchMessages(params: MethodDeclMap['messages.search']['req']) {
+    const peerId = this.getInputPeerId(params.peer);
+    if(!peerId || params.filter?._ !== 'inputMessagesFilterEmpty' || !params.q) return emptySearchResult();
+
+    const result: SignalSearchResult = await this.call('searchMessagesInChat', {
+      peer: {id: toSignalPeerId(peerId)},
+      type: 'text',
+      query: params.q,
+      limit: params.limit,
+      offsetId: params.offset_id || undefined
+    });
+    return this.buildSearchResult(result);
+  }
+
+  /** The text search of all listed chats; `next_rate` carries the offset of the next page */
+  private async searchGlobal(params: MethodDeclMap['messages.searchGlobal']['req']) {
+    if(params.filter?._ !== 'inputMessagesFilterEmpty' || !params.q) return emptySearchResult();
+
+    const result: SignalSearchResult = await this.call('searchMessagesGlobal', {
+      type: 'text',
+      query: params.q,
+      limit: params.limit,
+      offsetId: params.offset_rate || params.offset_id || undefined
+    });
+    return this.buildSearchResult(result);
+  }
+
+  private buildSearchResult(result: SignalSearchResult | undefined) {
+    if(!result) return emptySearchResult();
+
+    const chatIds = new Set(result.messages.map(({chatId}) => chatId).filter(isGroupPeerId));
+    return {
+      _: 'messages.messagesSlice',
+      pFlags: {},
+      count: result.totalCount,
+      messages: result.messages.map(this.buildMessage),
+      chats: [...chatIds].map((chatId) => this.appChatsManager.getChat((-toPeerId(chatId)) as ChatId)).filter(Boolean),
+      users: [],
+      topics: [],
+      next_rate: result.nextOffsetId
+    } as MethodDeclMap['messages.search']['res'];
+  }
+
   private async getFullChat(params: MethodDeclMap['messages.getFullChat']['req']) {
     const chat = this.appChatsManager.getChat(params.chat_id);
     const result: {fullInfo: {about?: string, members?: {userId: string}[]}, users: SignalUser[]} = await this.call('fetchFullChat', {id: toSignalPeerId(-params.chat_id)});
@@ -577,6 +627,18 @@ export default class AppSignalManager extends AppManager {
       users: params.id.map((inputUser) => ({id: toSignalPeerId(getInputUserId(inputUser))}))
     });
     return (result?.users || []).map(buildUser);
+  }
+
+  /** Finds the Signal user of a username; Web K asks for it on a click only, as Web A does */
+  private async resolveUsername(params: MethodDeclMap['contacts.resolveUsername']['req']) {
+    const result: {chat: SignalChat, user: SignalUser} | {error: string} | undefined = await this.call('getChatByUsername', params.username);
+    if(!result || 'error' in result) {
+      throw makeError('USERNAME_NOT_OCCUPIED' as ErrorType);
+    }
+
+    const user = buildUser(result.user);
+    this.appUsersManager.saveApiUsers([user]);
+    return {_: 'contacts.resolvedPeer', peer: {_: 'peerUser', user_id: user.id}, chats: [], users: [user]} as MethodDeclMap['contacts.resolveUsername']['res'];
   }
 
   private async getContacts() {
