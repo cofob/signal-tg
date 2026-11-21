@@ -2298,6 +2298,7 @@ export interface LangPair {
   'CallLogClearText': undefined;
   'CallLogClearConfirm': undefined;
   'CallLogCleared': undefined;
+  'ActionPaymentActivatedYou': undefined;
 }
 
 export interface LangPairWithVariables<V = LangVariable> {
@@ -3288,6 +3289,27 @@ export interface LangPairWithVariables<V = LangVariable> {
   'DesktopMenuHide': {
     'app': V;
   };
+  'ActionGiftBadgeReceived': {
+    'user': V;
+  };
+  'ActionGiftBadgeSent': {
+    'user': V;
+  };
+  'ActionPaymentSent': {
+    'user': V;
+  };
+  'ActionPaymentReceived': {
+    'user': V;
+  };
+  'ActionPaymentActivationAsked': {
+    'user': V;
+  };
+  'ActionPaymentActivationAskedYou': {
+    'user': V;
+  };
+  'ActionPaymentActivated': {
+    'user': V;
+  };
 }
 
 export interface LangPairPlural {
@@ -3695,7 +3717,14 @@ export interface LangKeyGroups {
       | 'UserInfoResetToOriginalAlertText'
       | 'UserInfoSetCustomPhoto'
       | 'UserInfoSetCustomPhotoSuccessPhotoText'
-      | 'UserInfoSuggestPhoto';
+      | 'UserInfoSuggestPhoto'
+      | 'ActionGiftBadgeReceived'
+      | 'ActionGiftBadgeSent'
+      | 'ActionPaymentSent'
+      | 'ActionPaymentReceived'
+      | 'ActionPaymentActivationAsked'
+      | 'ActionPaymentActivationAskedYou'
+      | 'ActionPaymentActivated';
     variables: 'user';
   };
   'users': {

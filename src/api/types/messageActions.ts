@@ -261,9 +261,20 @@ export interface ApiMessageActionSignalCall extends ActionMediaType {
   outcome: ApiCallLogOutcome;
 }
 
+// Signal: a donation made for the receiver as a gift badge; it is opened on the primary device, so only its notice shows
+export interface ApiMessageActionGiftBadge extends ActionMediaType {
+  type: 'giftBadge';
+}
+
+// Signal: a payment message; payments are made and shown on the primary device
+export interface ApiMessageActionPayment extends ActionMediaType {
+  type: 'payment';
+  paymentType: 'notification' | 'activationRequest' | 'activated';
+}
+
 export type ApiMessageAction = ApiMessageActionUnsupported | ApiMessageActionDeleted | ApiMessageActionViewOnce
   | ApiMessageActionSafetyNumberChange | ApiMessageActionSafetyNumberVerified
-  | ApiMessageActionSignalCall
+  | ApiMessageActionSignalCall | ApiMessageActionGiftBadge | ApiMessageActionPayment
   | ApiMessageActionChatCreate | ApiMessageActionChatEditTitle | ApiMessageActionGroupUpdate
   | ApiMessageActionChatEditPhoto | ApiMessageActionChatDeletePhoto | ApiMessageActionChatAddUser
   | ApiMessageActionChatDeleteUser | ApiMessageActionChatJoinedByLink | ApiMessageActionChannelCreate

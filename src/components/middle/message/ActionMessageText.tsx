@@ -539,6 +539,34 @@ const ActionMessageText = ({
         return lang(getSignalCallLangKey(action.callType, action.outcome, isOutgoing, startedAgoMs));
       }
 
+      // Signal Desktop `#renderGiftBadge` in `ts/components/conversation/Message.dom.tsx`
+      case 'giftBadge': {
+        if (isOutgoing) {
+          const chatLink = renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview);
+          return lang('ActionGiftBadgeSent', { user: chatLink }, { withNodes: true });
+        }
+        return lang('ActionGiftBadgeReceived', { user: senderLink }, { withNodes: true });
+      }
+
+      // Signal Desktop `PaymentEventNotification` in `ts/components/conversation/PaymentEventNotification.dom.tsx`
+      case 'payment': {
+        const chatLink = renderPeerLink(chat?.id, chatTitle || userFallbackText, asPreview);
+        switch (action.paymentType) {
+          case 'notification':
+            return isOutgoing
+              ? lang('ActionPaymentSent', { user: chatLink }, { withNodes: true })
+              : lang('ActionPaymentReceived', { user: senderLink }, { withNodes: true });
+          case 'activationRequest':
+            return isOutgoing
+              ? lang('ActionPaymentActivationAskedYou', { user: chatLink }, { withNodes: true })
+              : lang('ActionPaymentActivationAsked', { user: senderLink }, { withNodes: true });
+          default:
+            return isOutgoing
+              ? lang('ActionPaymentActivatedYou')
+              : lang('ActionPaymentActivated', { user: senderLink }, { withNodes: true });
+        }
+      }
+
       case 'safetyNumberChange':
         return lang('ActionSafetyChanged', { user: senderLink }, { withNodes: true });
 

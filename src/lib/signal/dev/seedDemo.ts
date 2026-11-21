@@ -24,6 +24,7 @@ import {
   AttachmentPointerSchema,
   BodyRange_Style,
   DataMessage_Contact_Phone_Type,
+  DataMessage_Payment_Activation_Type,
   DataMessageSchema,
   StoryMessageSchema,
   TextAttachment_Style,
@@ -326,6 +327,38 @@ export async function seedDemo(store: SignalStore, db: MessageDb) {
       isOutgoing: false,
       readAt: now - 37 * MINUTE,
       ...sticker,
+    }],
+    // Gift badges and payments, which only show as notices
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 36 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 35 * MINUTE,
+      dataMessage: { giftBadge: { receiptCredentialPresentation: new Uint8Array([1]) } },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 35 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 34 * MINUTE,
+      dataMessage: { payment: { Item: { case: 'notification', value: { note: 'Dinner' } } } },
+    }],
+    [aliceChat, {
+      authorAci: me,
+      sentAt: now - 34 * MINUTE,
+      isOutgoing: true,
+      readAt: now - 34 * MINUTE,
+      recipientStatus: { [alice]: 'delivered' },
+      dataMessage: { giftBadge: { receiptCredentialPresentation: new Uint8Array([2]) } },
+    }],
+    [aliceChat, {
+      authorAci: alice,
+      sentAt: now - 33 * MINUTE,
+      isOutgoing: false,
+      readAt: now - 32 * MINUTE,
+      dataMessage: {
+        payment: { Item: { case: 'activation', value: { type: DataMessage_Payment_Activation_Type.REQUEST } } },
+      },
     }],
     [bobChat, {
       authorAci: me, sentAt: now - 300 * MINUTE, isOutgoing: true, readAt: now, recipientStatus: { [bob]: 'sent' },

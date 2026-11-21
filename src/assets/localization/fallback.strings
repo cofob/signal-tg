@@ -2826,3 +2826,11 @@
 "CallLogClearText" = "This will permanently delete all call history.";
 "CallLogClearConfirm" = "Clear";
 "CallLogCleared" = "Call history cleared";
+"ActionGiftBadgeReceived" = "{user} donated to Signal on your behalf. View this message on mobile to open it";
+"ActionGiftBadgeSent" = "You donated to Signal on behalf of {user}. Tap this message on mobile to view your donation";
+"ActionPaymentSent" = "You started a payment to {user}. Check your primary device for this payment's status";
+"ActionPaymentReceived" = "{user} started a payment to you. Check your primary device for this payment's status";
+"ActionPaymentActivationAsked" = "{user} wants you to activate Payments. Only send payments to people you trust. Payments can be activated on your mobile device by going to Settings -> Payments.";
+"ActionPaymentActivationAskedYou" = "You sent {user} a request to activate Payments.";
+"ActionPaymentActivated" = "{user} can now accept Payments.";
+"ActionPaymentActivatedYou" = "You activated Payments.";

@@ -3,7 +3,7 @@ import { fromBinary } from '@bufbuild/protobuf';
 import type { ConversationRecord, MessageRecord, SendStatus } from '../../../lib/signal/db/MessageDb';
 import type { GroupUpdate } from '../../../lib/signal/groups/groupUpdates';
 import type {
-  BodyRange, DataMessage_Contact, DataMessage_PollCreate, DataMessage_Quote, DataMessage_StoryContext,
+  BodyRange, DataMessage, DataMessage_Contact, DataMessage_PollCreate, DataMessage_Quote, DataMessage_StoryContext,
 } from '../../../lib/signal/proto/generated/SignalService_pb';
 import type {
   ApiMessage,
@@ -21,7 +21,9 @@ import type { ApiMessageAction, ApiMessageActionGroupUpdate } from '../../types/
 import type { MentionedUser } from './bodyRanges';
 
 import { getMessageSendState } from '../../../lib/signal/messages/sendState';
-import { DataMessageSchema } from '../../../lib/signal/proto/generated/SignalService_pb';
+import {
+  DataMessage_Payment_Activation_Type, DataMessageSchema,
+} from '../../../lib/signal/proto/generated/SignalService_pb';
 import { uuidToString } from '../../../lib/signal/serviceId';
 import { getEmojiOnlyCountForMessage } from '../../../global/helpers/getEmojiOnlyCountForMessage';
 import { omitUndefined } from '../../../util/iteratees';
@@ -166,7 +168,7 @@ export async function buildApiMessageWithPoll(
   });
   if (content.text) content.text.emojiOnlyCount = getEmojiOnlyCountForMessage(content);
   // Gift badges, payments and other content without a counterpart in the app
-  if (!Object.keys(content).length) content.action = { mediaType: 'action', type: 'unsupported' };
+  if (!Object.keys(content).length) content.action = buildNoticeAction(dataMessage);
 
   const isMentioned = Boolean(selfAci) && dataMessage.bodyRanges.some((range) => getMentionAci(range) === selfAci);
   const hasViewableMedia = Boolean(content.voice || content.video?.isRound);
@@ -191,6 +193,23 @@ export async function buildApiMessageWithPoll(
     poll,
     webPage,
   };
+}
+
+/**
+ * What the app shows for a message without text, media or poll: the notice of a gift badge or a payment, as Signal
+ * Desktop shows them when it cannot act on them (`#renderGiftBadge` in `ts/components/conversation/Message.dom.tsx`,
+ * `PaymentEventNotification`), else the unsupported message notice
+ */
+function buildNoticeAction({ giftBadge, payment }: DataMessage): ApiMessageAction {
+  if (giftBadge) return { mediaType: 'action', type: 'giftBadge' };
+  if (payment?.Item.case === 'notification') {
+    return { mediaType: 'action', type: 'payment', paymentType: 'notification' };
+  }
+  if (payment?.Item.case === 'activation') {
+    const isActivated = payment.Item.value.type === DataMessage_Payment_Activation_Type.ACTIVATED;
+    return { mediaType: 'action', type: 'payment', paymentType: isActivated ? 'activated' : 'activationRequest' };
+  }
+  return { mediaType: 'action', type: 'unsupported' };
 }
 
 /**
