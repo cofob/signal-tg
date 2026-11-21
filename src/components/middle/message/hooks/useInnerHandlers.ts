@@ -25,7 +25,6 @@ export default function useInnerHandlers({
   senderPeer,
   botSender,
   guestFromSender,
-  isTranslatingChat,
   story,
   isReplyPrivate,
   isRepliesChat,
@@ -45,7 +44,6 @@ export default function useInnerHandlers({
   senderPeer?: ApiPeer;
   botSender?: ApiPeer;
   guestFromSender?: ApiPeer;
-  isTranslatingChat?: boolean;
   story?: ApiStory;
   isReplyPrivate?: boolean;
   isRepliesChat?: boolean;
@@ -55,7 +53,7 @@ export default function useInnerHandlers({
   const {
     openChat, openChatWithDraft, showNotification, focusMessage, openMediaViewer, openAudioPlayer,
     markMessagesRead, cancelUploadMedia, openForwardMenu,
-    openChatLanguageModal, openThread, openStoryViewer, searchChatMediaMessages,
+    openThread, openStoryViewer, searchChatMediaMessages,
   } = getActions();
 
   const {
@@ -282,12 +280,6 @@ export default function useInnerHandlers({
     selectMessage(e, groupedId);
   });
 
-  const handleTranslationClick = useLastCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-
-    openChatLanguageModal({ chatId, messageId: !isTranslatingChat ? messageId : undefined });
-  });
-
   const handleOpenThread = useLastCallback(() => {
     openThread({
       chatId: message.chatId,
@@ -316,7 +308,6 @@ export default function useInnerHandlers({
     handlePhotoMediaClick,
     handleVideoMediaClick,
     handleMetaClick: selectWithGroupedId,
-    handleTranslationClick,
     handleOpenThread,
     handleReadMedia,
     handleCancelUpload,

@@ -390,9 +390,6 @@ export interface ApiAppConfig {
     value: number;
     frameStart: number;
   }>;
-  aiComposeToneExamplesNum?: number;
-  aiComposeToneTitleLengthMax?: number;
-  aiComposeTonePromptLengthMax?: number;
   botAllowedSuffixes?: string[];
 }
 
@@ -505,13 +502,12 @@ export type ApiLimitType =
   | 'savedDialogsPinned'
   | 'maxReactions'
   | 'moreAccounts'
-  | 'aiComposeToneSaved'
   | 'botsCreate';
 
 export type ApiLimitTypeWithModal = Exclude<ApiLimitType, (
   'messageLength' | 'captionLength' | 'aboutLength' | 'stickersFaved' | 'savedGifs'
   | 'moreAccounts'
-  | 'maxReactions' | 'aiComposeToneSaved' | 'botsCreate'
+  | 'maxReactions' | 'botsCreate'
 )>;
 
 export type ApiPeerNotifySettings = {

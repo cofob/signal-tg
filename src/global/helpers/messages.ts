@@ -47,7 +47,7 @@ import {
 } from '../selectors';
 import { selectThreadIdFromMessage } from '../selectors/threads';
 import { areCurrencyAmountsEqual } from './payments';
-import { getRichMessagePreviewText, getRichMessageUsage } from './richMessage';
+import { getRichMessagePreviewText } from './richMessage';
 import { getMainUsername } from './users';
 
 const RE_LINK = new RegExp(RE_LINK_TEMPLATE, 'i');
@@ -353,21 +353,6 @@ export function isGeoLiveExpired(message: ApiMessage) {
   const { location } = message.content;
   if (location?.mediaType !== 'geoLive') return false;
   return getServerTime() - (message.date || 0) >= location.period;
-}
-
-export function isMessageTranslatable(message: ApiMessage, allowOutgoing?: boolean) {
-  const { text, game, richMessage } = message.content;
-
-  const isLocal = isMessageLocal(message);
-  const isServiceNotification = isServiceNotificationMessage(message);
-  const isAction = isActionMessage(message);
-
-  const hasTranslatableContent = Boolean(
-    (richMessage && getRichMessageUsage(richMessage).textLength) || (text?.text.length && !text.emojiOnlyCount),
-  );
-
-  return Boolean(hasTranslatableContent && !game && (allowOutgoing || !message.isOutgoing)
-    && !isLocal && !isServiceNotification && !isAction && !message.isScheduled && !message.isEphemeral);
 }
 
 export function getMessageSingleInlineButton(message: ApiMessage) {

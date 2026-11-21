@@ -1,5 +1,4 @@
 import type {
-  ApiAiComposeTone,
   ApiAttachBot,
   ApiAttachment,
   ApiAudio,
@@ -18,7 +17,6 @@ import type {
   ApiFormattedText,
   ApiGeoPoint,
   ApiGlobalMessageSearchType,
-  ApiInputAiComposeTone,
   ApiInputEphemeralReplyInfo,
   ApiInputMessageReplyInfo,
   ApiInputRichMessage,
@@ -103,7 +101,6 @@ import type {
   StoryViewerOrigin,
   ThemeKey,
   ThreadId,
-  TranslationTone,
   WebPageMediaSize,
 } from '../../types';
 import type { BrowserModalStateType, BrowserTab } from '../../types/browser';
@@ -114,7 +111,7 @@ import type { KeyboardShortcutId } from '../../util/keyboardShortcuts/registry';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { DownloadableMedia } from '../helpers';
 import type { SharedState } from './sharedState';
-import type { AiEditorContent, ReactionDeletionContext, TabState } from './tabState';
+import type { ReactionDeletionContext, TabState } from './tabState';
 
 export type WithTabId = { tabId?: number };
 
@@ -878,11 +875,6 @@ export interface ActionPayloads {
   disableContextMenuHint: undefined;
   focusNextReply: WithTabId | undefined;
 
-  openChatLanguageModal: {
-    chatId: string;
-    messageId?: number;
-  } & WithTabId;
-  closeChatLanguageModal: WithTabId | undefined;
   // poll result
   openPollResults: {
     chatId: string;
@@ -1287,17 +1279,6 @@ export interface ActionPayloads {
     url: string;
   } & WithTabId;
 
-  requestChatTranslation: {
-    chatId: string;
-    toLanguageCode?: string;
-  } & WithTabId;
-
-  setMessageTranslationTone: {
-    chatId: string;
-    messageId: number;
-    tone: TranslationTone;
-  } & WithTabId;
-
   // Messages
   setEditingDraft: {
     draft?: EditingDraft;
@@ -1417,38 +1398,6 @@ export interface ActionPayloads {
   loadExtendedMedia: {
     chatId: string;
     ids: number[];
-  };
-
-  requestMessageTranslation: {
-    chatId: string;
-    id: number;
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  } & WithTabId;
-
-  showOriginalMessage: {
-    chatId: string;
-    id: number;
-  } & WithTabId;
-
-  markMessagesTranslationPending: {
-    chatId: string;
-    messageIds: number[];
-    requestId?: string;
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  };
-  translateMessages: {
-    chatId: string;
-    messageIds: number[];
-    toLanguageCode?: string;
-    tone?: TranslationTone;
-  };
-  summarizeMessage: {
-    chatId: string;
-    id: number;
-    toLanguageCode?: string;
-    onError?: NoneToVoidFunction;
   };
 
   // Reactions
@@ -2499,7 +2448,6 @@ export interface ActionPayloads {
   } & WithTabId;
   loadPeerColors: undefined;
   loadShareThemeBackdrops: undefined;
-  loadAiComposeTones: undefined;
   openLeftColumnContent: {
     contentKey?: LeftColumnContent;
   } & WithTabId;
@@ -2544,76 +2492,6 @@ export interface ActionPayloads {
     shouldArchiveAndMuteNewNonContact?: boolean;
     shouldHideReadMarks?: boolean;
   };
-
-  openAiMessageEditorModal: {
-    chatId: string;
-    threadId: ThreadId;
-    content: AiEditorContent;
-    initialTab?: 'translate' | 'style' | 'fix';
-    isFromAttachment?: boolean;
-    isEditing?: boolean;
-  } & WithTabId;
-  closeAiMessageEditorModal: WithTabId | undefined;
-  setAiMessageEditorTab: {
-    tab: 'translate' | 'style' | 'fix';
-  } & WithTabId;
-  setAiMessageEditorTranslateOptions: {
-    selectedLanguage?: string;
-    selectedTone?: ApiInputAiComposeTone;
-    shouldEmojify?: boolean;
-    clearResult?: boolean;
-  } & WithTabId;
-  setAiMessageEditorStyleOptions: {
-    selectedTone?: ApiInputAiComposeTone;
-    customPrompt?: string;
-    shouldEmojify?: boolean;
-    clearResult?: boolean;
-  } & WithTabId;
-  composeWithAiMessageEditor: {
-    shouldProofread?: boolean;
-    isEmojify?: boolean;
-    translateToLang?: string;
-    tone?: ApiInputAiComposeTone;
-  } & WithTabId;
-  applyAiMessageEditorResult: WithTabId | undefined;
-  sendAiMessageEditorResult: ({
-    isSilent?: boolean;
-    scheduledAt?: number;
-    scheduleRepeatPeriod?: number;
-  } & WithTabId) | undefined;
-  clearAiMessageEditorPendingResult: WithTabId | undefined;
-  openAiToneEditorModal: {
-    toneToEdit?: ApiAiComposeTone;
-  } & WithTabId | undefined;
-  closeAiToneEditorModal: WithTabId | undefined;
-  createAiTone: {
-    title: string;
-    emojiId: string;
-    prompt: string;
-    shouldDisplayAuthor?: boolean;
-  } & WithTabId;
-  updateAiTone: {
-    tone: ApiInputAiComposeTone;
-    title?: string;
-    emojiId?: string;
-    prompt?: string;
-    shouldDisplayAuthor?: boolean;
-  } & WithTabId;
-  deleteAiTone: {
-    tone: ApiInputAiComposeTone;
-  } & WithTabId;
-  openAiTonePreview: {
-    slug: string;
-  } & WithTabId;
-  closeAiTonePreview: WithTabId | undefined;
-  saveAiTone: {
-    tone: ApiInputAiComposeTone;
-    unsave?: boolean;
-  } & WithTabId;
-  loadAiTonePreviewExample: {
-    tone: ApiInputAiComposeTone;
-    num: number;
-  } & WithTabId;
 
   openLeaveGroupModal: {
     chatId: string;
@@ -2850,9 +2728,6 @@ export interface ActionPayloads {
     chatId: string;
     messageId: number;
   };
-
-  openCocoonModal: WithTabId | undefined;
-  closeCocoonModal: WithTabId | undefined;
 
   requestMessageMediaEditor: {
     chatId: string;

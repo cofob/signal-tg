@@ -1095,8 +1095,6 @@ export function updater(update: Update) {
     });
   } else if (update instanceof GramJs.UpdateConfig) {
     sendApiUpdate({ '@type': 'updateConfig' });
-  } else if (update instanceof GramJs.UpdateAiComposeTones) {
-    sendApiUpdate({ '@type': 'updateAiComposeTones' });
   } else if (update instanceof GramJs.UpdatePinnedForumTopic) {
     sendApiUpdate({
       '@type': 'updatePinnedTopic',

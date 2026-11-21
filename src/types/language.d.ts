@@ -1497,7 +1497,6 @@ export interface LangPair {
   'ViewButtonStickerset': undefined;
   'ViewButtonEmojiset': undefined;
   'ViewButtonInstantView': undefined;
-  'ViewButtonAiStyle': undefined;
   'AuthContinueOnThisLanguage': undefined;
   'Share': undefined;
   'PasswordFormPlaceholder': undefined;
@@ -1916,10 +1915,6 @@ export interface LangPair {
   'AttachmentMenuDisableSpoiler': undefined;
   'AttachmentDragAddItems': undefined;
   'AttachmentCaptionPlaceholder': undefined;
-  'MessageSummaryTitle': undefined;
-  'MessageSummaryDescription': undefined;
-  'AriaShowSummary': undefined;
-  'AriaHideSummary': undefined;
   'SettingsDataClearMediaCache': undefined;
   'SettingsDataClearMediaCacheDescription': undefined;
   'SettingsDataClearMediaDone': undefined;
@@ -1935,19 +1930,6 @@ export interface LangPair {
   'EnterPassword': undefined;
   'EnterPasswordDescription': undefined;
   'Transfer': undefined;
-  'TranslationTone': undefined;
-  'TranslationToneNeutral': undefined;
-  'TranslationToneFormal': undefined;
-  'TranslationToneCasual': undefined;
-  'CocoonTitle': undefined;
-  'CocoonDescription': undefined;
-  'CocoonFeature1Title': undefined;
-  'CocoonFeature1Username': undefined;
-  'CocoonFeature2Title': undefined;
-  'CocoonFeature2Text': undefined;
-  'CocoonFeature3Title': undefined;
-  'CocoonFeature3LinkText': undefined;
-  'CocoonFooterLinkText': undefined;
   'BotAuthSuccessTitle': undefined;
   'RankModalEdit': undefined;
   'RankModalEditMy': undefined;
@@ -1967,42 +1949,6 @@ export interface LangPair {
   'ReminderSetToast': undefined;
   'NoForwardsRequestReject': undefined;
   'NoForwardsRequestAccept': undefined;
-  'AiMessageEditor': undefined;
-  'AiEditorPrompt': undefined;
-  'AiEditorRewritePlaceholder': undefined;
-  'AiEditorGeneratePlaceholder': undefined;
-  'AiEditorGenerate': undefined;
-  'AiMessageEditorTranslate': undefined;
-  'AiMessageEditorStyle': undefined;
-  'AiMessageEditorFix': undefined;
-  'AiMessageEditorDailyLimitReachedPremium': undefined;
-  'AiMessageEditorGenericError': undefined;
-  'AiMessageEditorResult': undefined;
-  'AiMessageEditorOriginal': undefined;
-  'AiMessageEditorApply': undefined;
-  'AiMessageEditorEmojify': undefined;
-  'AiToneEditorNewStyle': undefined;
-  'AiToneEditorTitle': undefined;
-  'AiToneEditorNamePlaceholder': undefined;
-  'AiToneEditorPromptPlaceholder': undefined;
-  'AiToneEditorDisplayAuthor': undefined;
-  'AiToneEditorSelectEmoji': undefined;
-  'AiToneCreatedHint': undefined;
-  'AiToneEditStyle': undefined;
-  'AiToneShareStyle': undefined;
-  'AiToneDeleteStyle': undefined;
-  'AiToneDeleteStyleConfirmOwn': undefined;
-  'AiToneDeleteStyleConfirm': undefined;
-  'AiToneEditorEditTitle': undefined;
-  'AiTonePreviewSubtitle': undefined;
-  'AiTonePreviewBefore': undefined;
-  'AiTonePreviewAnotherExample': undefined;
-  'AiTonePreviewAfter': undefined;
-  'AiTonePreviewAddStyle': undefined;
-  'AiTonePreviewRemoveStyle': undefined;
-  'AiTonePreviewStyleAdded': undefined;
-  'AiMessageEditorTo': undefined;
-  'ButtonHelp': undefined;
   'PollModalQuestionTitle': undefined;
   'PollModalOptionsTitle': undefined;
   'PollModalSettingsTitle': undefined;
@@ -2287,8 +2233,6 @@ export interface LangPair {
   'ServerErrorViewers': undefined;
   'SettingsMyStories': undefined;
   'ShareLinkCopied': undefined;
-  'ShowOriginalButton': undefined;
-  'ShowTranslateButton': undefined;
   'SomeReactions': undefined;
   'SortBy': undefined;
   'SortByReactions': undefined;
@@ -2327,7 +2271,6 @@ export interface LangPair {
   'StorySave': undefined;
   'SuggestAnimatedEmoji': undefined;
   'SupportStatus': undefined;
-  'TelegramStars': undefined;
   'TopicClosedByAdmin': undefined;
   'Unlock': undefined;
   'UnlockPremiumEmojiHint': undefined;
@@ -2395,7 +2338,6 @@ export interface LangPair {
   'SettingsTitleChatName': undefined;
   'SettingsWindowSystem': undefined;
   'SubscribeTagLink': undefined;
-  'TranslateSettingsAbout': undefined;
   'UsernameAppNotFound': undefined;
   'UsernamesActive': undefined;
   'UsernamesDescription': undefined;
@@ -3632,15 +3574,6 @@ export interface LangPairWithVariables<V = LangVariable> {
     'nextOwner': V;
     'group': V;
   };
-  'CocoonFeature1Text': {
-    'username': V;
-  };
-  'CocoonFeature3Text': {
-    'link': V;
-  };
-  'CocoonFooterText': {
-    'link': V;
-  };
   'BotAuthSuccessText': {
     'url': V;
   };
@@ -3664,22 +3597,6 @@ export interface LangPairWithVariables<V = LangVariable> {
   };
   'RankEditText': {
     'user': V;
-  };
-  'AiMessageEditorDailyLimitReached': {
-    'link': V;
-  };
-  'AiToneCreated': {
-    'title': V;
-  };
-  'AiToneLimitReachedPremium': {
-    'limit': V;
-  };
-  'AiTonePreviewCreatedBy': {
-    'author': V;
-  };
-  'AiTonePreviewUsedByCreatedBy': {
-    'usedBy': V;
-    'createdBy': V;
   };
   'UnofficialSecurityRisk': {
     'peer': V;
@@ -4195,9 +4112,6 @@ export interface LangPairPluralWithVariables<V = LangVariable> {
   'FwdMessagesToChats': {
     'count': V;
   };
-  'AiTonePreviewUsedBy2': {
-    'count': V;
-  };
   'PollModalAddMoreText': {
     'count': V;
   };
@@ -4385,8 +4299,7 @@ export interface LangKeyGroups {
   };
   'username': {
     keys:
-      | 'UsernameAvailable'
-      | 'CocoonFeature1Text';
+      | 'UsernameAvailable';
     variables: 'username';
   };
   'limit,limit2': {
@@ -4402,7 +4315,6 @@ export interface LangKeyGroups {
       | 'LimitReachedPinDialogsPremium'
       | 'LimitReachedCommunitiesPremium'
       | 'AutodownloadSizeLimitUpTo'
-      | 'AiToneLimitReachedPremium'
       | 'LimitReachedFolderLinksPremium'
       | 'LimitReachedPinnedTopics'
       | 'LimitReachedSharedFoldersPremium';
@@ -4416,8 +4328,7 @@ export interface LangKeyGroups {
       | 'FolderLinkNotificationUpdatedTitle'
       | 'ActionChangedTitleYou'
       | 'ActionChangedTitleChannel'
-      | 'ActionCreatedChatYou'
-      | 'AiToneCreated';
+      | 'ActionCreatedChatYou';
     variables: 'title';
   };
   'percent': {
@@ -4785,9 +4696,6 @@ export interface LangKeyGroups {
       | 'GiftInfoChannelHidden'
       | 'SettingsPasskeysFooter'
       | 'BirthdayPrivacySuggestion'
-      | 'CocoonFeature3Text'
-      | 'CocoonFooterText'
-      | 'AiMessageEditorDailyLimitReached'
       | 'MiniAppsDisclaimerButton'
       | 'SubscribeTagAbout'
       | 'UsernamePurchaseAvailable';
@@ -5195,16 +5103,6 @@ export interface LangKeyGroups {
       | 'RankModalOwnerText';
     variables: 'author' | 'group' | 'tag';
   };
-  'author': {
-    keys:
-      | 'AiTonePreviewCreatedBy';
-    variables: 'author';
-  };
-  'createdBy,usedBy': {
-    keys:
-      | 'AiTonePreviewUsedByCreatedBy';
-    variables: 'createdBy' | 'usedBy';
-  };
   'language': {
     keys:
       | 'SettingsLanguageDesc';
@@ -5360,7 +5258,6 @@ export interface LangPluralKeyGroups {
       | 'AttachmentSendAudio'
       | 'AttachmentSendFile'
       | 'FwdMessagesToChats'
-      | 'AiTonePreviewUsedBy2'
       | 'PollModalAddMoreText'
       | 'RichMediaSkippedFiles'
       | 'Bots'

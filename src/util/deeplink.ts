@@ -192,12 +192,6 @@ export const processDeepLink = (url: string, linkContext?: LinkContext): boolean
       });
       break;
     }
-    case 'addstyle': {
-      const { set } = params;
-      if (!set) return false;
-      actions.openAiTonePreview({ slug: set });
-      break;
-    }
     case 'share':
     case 'msg':
     case 'msg_url': {

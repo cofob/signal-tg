@@ -59,8 +59,6 @@ import {
   selectIsRightColumnShown,
   selectIsViewportNewest,
   selectMessageIdsByGroupId,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedMessageTranslationLanguage,
   selectTabState,
   selectViewportIds,
 } from '../../selectors';
@@ -1017,26 +1015,6 @@ addActionHandler('closePrivacySettingsNoticeModal', (global, actions, payload): 
   }, tabId);
 });
 
-addActionHandler('openChatLanguageModal', (global, actions, payload): ActionReturnType => {
-  const { chatId, messageId, tabId = getCurrentTabId() } = payload;
-
-  const activeLanguage = messageId
-    ? selectRequestedMessageTranslationLanguage(global, chatId, messageId, tabId)
-    : selectRequestedChatTranslationLanguage(global, chatId, tabId);
-
-  return updateTabState(global, {
-    chatLanguageModal: { chatId, messageId, activeLanguage },
-  }, tabId);
-});
-
-addActionHandler('closeChatLanguageModal', (global, actions, payload): ActionReturnType => {
-  const { tabId = getCurrentTabId() } = payload || {};
-
-  return updateTabState(global, {
-    chatLanguageModal: undefined,
-  }, tabId);
-});
-
 addActionHandler('copySelectedMessages', (global, actions, payload): ActionReturnType => {
   const { shouldNotify, tabId = getCurrentTabId() } = payload || {};
   const tabState = selectTabState(global, tabId);
@@ -1170,7 +1148,6 @@ function copyTextForMessages(
   const contentPromise = loadBundle(Bundles.Editor).then((bundle) => bundle.buildMessageCopyContent(
     messageList,
     request,
-    tabId,
   ));
 
   void copyTextToClipboardFromPromise(

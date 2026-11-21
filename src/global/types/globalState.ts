@@ -1,5 +1,4 @@
 import type {
-  ApiAiComposeToneType,
   ApiAppConfig,
   ApiAttachBot,
   ApiAudio,
@@ -58,13 +57,11 @@ import type {
   AttachmentCompression,
   BotAppPermissions,
   ChatListType,
-  ChatTranslatedMessages,
   EmojiKeywords,
   OrderMode,
   RepeatMode,
   ServiceNotification,
   SimilarBotsInfo,
-  TextSummary,
   Thread,
   ThreadId,
   TopicsInfo,
@@ -85,10 +82,6 @@ export type GlobalState = {
   shareThemeBackdrops?: {
     list: ApiShareThemeBackdrop[];
     hash: number;
-  };
-  aiComposeTones?: {
-    tones: ApiAiComposeToneType[];
-    hash: string;
   };
   isCacheApiSupported?: boolean;
   connectionState?: ApiUpdateConnectionStateType;
@@ -274,7 +267,6 @@ export type GlobalState = {
       byId: Record<number, ApiMessage>;
       ephemeralById: Record<number, ApiMessage>;
       anchoredById: Record<number, ApiMessage>;
-      summaryById: Record<number, TextSummary>;
       threadsById: Record<ThreadId, Thread>;
     }>;
     playbackByChatId: Record<string, {
@@ -467,10 +459,6 @@ export type GlobalState = {
   archiveSettings: {
     isMinimized: boolean;
     isHidden: boolean;
-  };
-
-  translations: {
-    byChatId: Record<string, ChatTranslatedMessages>;
   };
 
   savedReactionTags?: {

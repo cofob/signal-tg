@@ -56,7 +56,7 @@ import {
 import { selectSharedSettings } from '../../global/selectors/sharedState';
 import { selectDraft, selectThreadInfo } from '../../global/selectors/threads';
 import {
-  IS_ANDROID, IS_IOS, IS_SAFARI, IS_TRANSLATION_SUPPORTED, MASK_IMAGE_DISABLED,
+  IS_ANDROID, IS_IOS, IS_SAFARI, MASK_IMAGE_DISABLED,
 } from '../../util/browser/windowEnvironment';
 import buildClassName from '../../util/buildClassName';
 import captureEscKeyListener from '../../util/captureEscKeyListener';
@@ -85,7 +85,6 @@ import PrivacySettingsNoticeModal from '../common/PrivacySettingsNoticeModal.asy
 import SeenByModal from '../common/SeenByModal.async';
 import UnpinAllMessagesModal from '../common/UnpinAllMessagesModal.async';
 import Transition from '../ui/Transition';
-import ChatLanguageModal from './ChatLanguageModal.async';
 import { DropAreaState } from './composer/DropArea';
 import EmojiInteractionAnimation from './EmojiInteractionAnimation.async';
 import FloatingActionButtons from './FloatingActionButtons';
@@ -137,7 +136,6 @@ type StateProps = {
   isSeenByModalOpen: boolean;
   isPrivacySettingsNoticeModalOpen: boolean;
   isReactorListModalOpen: boolean;
-  isChatLanguageModalOpen?: boolean;
   animationLevel: AnimationLevel;
   withInterfaceAnimations?: boolean;
   withRightColumnAnimation?: boolean;
@@ -213,7 +211,6 @@ function MiddleColumn({
   isSeenByModalOpen,
   isPrivacySettingsNoticeModalOpen,
   isReactorListModalOpen,
-  isChatLanguageModalOpen,
   animationLevel,
   withInterfaceAnimations,
   withRightColumnAnimation,
@@ -701,7 +698,6 @@ function MiddleColumn({
                 <SeenByModal isOpen={isSeenByModalOpen} />
                 <PrivacySettingsNoticeModal isOpen={isPrivacySettingsNoticeModalOpen} />
                 <ReactorListModal isOpen={isReactorListModalOpen} />
-                {IS_TRANSLATION_SUPPORTED && <ChatLanguageModal isOpen={isChatLanguageModalOpen} />}
               </div>
             </Transition>
           </div>
@@ -740,7 +736,7 @@ export default memo(withGlobal<OwnProps>(
     const {
       messageLists, isLeftColumnShown, activeEmojiInteractions,
       seenByModal, reactorModal, shouldSkipHistoryAnimations,
-      chatLanguageModal, privacySettingsNoticeModal,
+      privacySettingsNoticeModal,
       uiReadyState, isRichInputExpanded, pendingBotStart,
     } = selectTabState(global);
     const currentMessageList = selectCurrentMessageList(global);
@@ -762,7 +758,6 @@ export default memo(withGlobal<OwnProps>(
       isSeenByModalOpen: Boolean(seenByModal),
       isPrivacySettingsNoticeModalOpen: Boolean(privacySettingsNoticeModal),
       isReactorListModalOpen: Boolean(reactorModal),
-      isChatLanguageModalOpen: Boolean(chatLanguageModal),
       animationLevel: selectSharedSettings(global).animationLevel,
       withInterfaceAnimations: selectCanAnimateInterface(global),
       withRightColumnAnimation: selectCanAnimateRightColumn(global),

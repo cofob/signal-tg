@@ -78,10 +78,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       actions.loadConfig();
       break;
 
-    case 'updateAiComposeTones':
-      actions.loadAiComposeTones();
-      break;
-
     case 'updateNewAuthorization': {
       // Load more info about this session
       actions.loadAuthorizations();

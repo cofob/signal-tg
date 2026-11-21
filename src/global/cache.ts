@@ -389,6 +389,7 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   const untypedCached = cached as any;
   // Push registrations are reconciled against the shared subscription registry
   delete untypedCached.push;
+  removeTelegramOnlyFields(untypedCached);
 
   cached.messageWidgetStorage ||= {};
   Object.values(cached.chats.fullInfoById).forEach((fullInfo) => {
@@ -535,6 +536,20 @@ function unsafeMigrateCache(cached: GlobalState, initialState: GlobalState) {
   if (cached.audioPlayer.orderMode === undefined) {
     cached.audioPlayer.orderMode = initialState.audioPlayer.orderMode;
   }
+}
+
+// Caches saved before Telegram-only features were removed still hold their fields
+function removeTelegramOnlyFields(untypedCached: any) {
+  const settings = untypedCached.settings?.byKey;
+  if (settings) {
+    delete settings.canTranslate;
+    delete settings.translationLanguage;
+    delete settings.translationTone;
+  }
+
+  Object.values(untypedCached.messages?.byChatId || {}).forEach((messageStore: any) => {
+    delete messageStore.summaryById;
+  });
 }
 
 function cloneThemeSettings(themes: Partial<Record<ThemeKey, IThemeSettings>>) {
@@ -991,7 +1006,6 @@ function reduceMessages<T extends GlobalState>(global: T): GlobalState['messages
       ephemeralById,
       anchoredById: {},
       threadsById,
-      summaryById: {},
     };
   });
 

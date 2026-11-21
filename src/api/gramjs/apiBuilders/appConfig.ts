@@ -100,9 +100,6 @@ export interface GramJsAppConfig {
   whitelisted_bots?: string[];
   settings_display_passkeys?: boolean;
   passkeys_account_passkeys_max?: number;
-  aicompose_tone_examples_num?: number;
-  aicompose_tone_title_length_max?: number;
-  aicompose_tone_prompt_length_max?: number;
   bot_allowed_suffixes?: string[];
 }
 
@@ -217,9 +214,6 @@ export function buildAppConfig(json: GramJs.TypeJSONValue, hash: number): ApiApp
     passkeysMaxCount: appConfig.passkeys_account_passkeys_max,
     diceEmojies: appConfig.emojies_send_dice,
     diceEmojiesSuccess: buildDiceEmojiesSuccess(appConfig),
-    aiComposeToneExamplesNum: appConfig.aicompose_tone_examples_num,
-    aiComposeToneTitleLengthMax: appConfig.aicompose_tone_title_length_max,
-    aiComposeTonePromptLengthMax: appConfig.aicompose_tone_prompt_length_max,
     botAllowedSuffixes: appConfig.bot_allowed_suffixes,
   };
 

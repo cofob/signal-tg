@@ -23,7 +23,6 @@
   .message-signature,
   .message-views,
   .message-replies,
-  .message-translated,
   .message-pinned {
     font-size: 0.75rem;
     white-space: nowrap;
@@ -40,10 +39,6 @@
 
   .message-views {
     margin-inline-start: 0.125rem;
-  }
-
-  .message-translated {
-    margin-inline-end: 0.25rem;
   }
 
   .message-pinned {

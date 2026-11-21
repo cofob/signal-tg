@@ -11,9 +11,7 @@ import useShowTransition from '../../hooks/useShowTransition';
 
 import BrowserCloseConfirmationModal from '../main/BrowserCloseConfirmationModal.async';
 import SafeLinkModal from '../main/SafeLinkModal.async';
-import AiMessageEditorModal from '../middle/composer/AiMessageEditorModal/AiMessageEditorModal.async';
 import AgeVerificationModal from './ageVerification/AgeVerificationModal.async';
-import AiTonePreviewModal from './aiTonePreview/AiTonePreviewModal.async';
 import AttachBotInstallModal from './attachBotInstall/AttachBotInstallModal.async';
 import AudioPlaylistModal from './audioPlaylist/AudioPlaylistModal.async';
 import AutoDeleteTimerModal from './autoDeleteTimer/AutoDeleteTimerModal.async';
@@ -22,7 +20,6 @@ import BotCreationModal from './botCreation/BotCreationModal.async';
 import BrowserModal from './browser/BrowserModal.async';
 import ChatInviteModal from './chatInvite/ChatInviteModal.async';
 import ChatlistModal from './chatlist/ChatlistModal.async';
-import CocoonModal from './cocoon/CocoonModal.async';
 import DeleteAccountModal from './deleteAccount/DeleteAccountModal.async';
 import DeleteMemberModal from './deleteMember/DeleteMemberModal.async';
 import DisableSharingAboutModal from './disableSharing/DisableSharingAboutModal.async';
@@ -59,7 +56,6 @@ import UrlAuthModal from './urlAuth/UrlAuthModal.async';
 
 // `Pick` used only to provide tab completion
 type ModalKey = keyof Pick<TabState,
-  'aiMessageEditorModal' |
   'chatlistModal' |
   'urlAuth' |
   'safeLinkModalUrl' |
@@ -96,10 +92,8 @@ type ModalKey = keyof Pick<TabState,
   'leaveGroupModal' |
   'isTwoFaCheckModalOpen' |
   'isQuickChatPickerOpen' |
-  'isCocoonModalOpen' |
   'editRankModal' |
   'rankModal' |
-  'aiTonePreviewModal' |
   'languageModal' |
   'autoDeleteTimerModal' |
   'botCreationModal' |
@@ -165,7 +159,6 @@ const WrappedModalBoundary = <T,>({
 };
 
 const LEGACY_MODALS: LegacyModalRegistry = {
-  aiMessageEditorModal: AiMessageEditorModal,
   chatlistModal: ChatlistModal,
   urlAuth: UrlAuthModal,
   oneTimeMediaModal: OneTimeMediaModal,
@@ -198,10 +191,8 @@ const LEGACY_MODALS: LegacyModalRegistry = {
   leaveGroupModal: LeaveGroupModal,
   isTwoFaCheckModalOpen: TwoFaCheckModal,
   isQuickChatPickerOpen: QuickChatPickerModal,
-  isCocoonModalOpen: CocoonModal,
   editRankModal: EditRankModal,
   rankModal: RankModal,
-  aiTonePreviewModal: AiTonePreviewModal,
   languageModal: LanguageModal,
 };
 const WRAPPED_MODALS: WrappedModalRegistry = {

@@ -283,7 +283,6 @@ export function buildApiMessageWithChatId(
     isVideoProcessingPending,
     reportDeliveryUntilDate: mtpMessage.reportDeliveryUntilDate,
     restrictionReasons,
-    summaryLanguageCode: mtpMessage.summaryFromLanguage,
     fromRank: mtpMessage.fromRank,
     guestChatViaId: mtpMessage.guestchatViaFrom && getApiChatIdFromMtpPeer(mtpMessage.guestchatViaFrom),
   };

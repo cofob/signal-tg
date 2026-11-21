@@ -115,7 +115,6 @@ const SETTINGS_LINKS = new Map<string, SettingsLink>([
   ['power-saving/transitions', [SettingsScreens.Performance, 'SettingsPerformanceInterfaceAnimations']],
 
   ['language', [SettingsScreens.Language]],
-  ['language/show-button', [SettingsScreens.Language, 'ShowTranslateButton']],
 ]);
 
 const SETTINGS_LINK_ALIASES = new Map([

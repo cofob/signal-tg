@@ -23,7 +23,6 @@ import type {
 import type {
   ForwardMessagesParams,
   SendMessageParams,
-  TextSummary,
   ThreadId,
 } from '../../../types';
 import type { MessageKey } from '../../../util/keys/messageKey';
@@ -51,7 +50,6 @@ import buildUploadingMedia from '../../../util/buildUploadingMedia';
 import { copyTextToClipboardFromPromise } from '../../../util/clipboard';
 import { isDeepLink } from '../../../util/deepLinkParser';
 import { getCurrentTabId } from '../../../util/establishMultitabRole';
-import generateUniqueId from '../../../util/generateUniqueId';
 import {
   areSortedArraysIntersecting,
   buildCollectionByKey,
@@ -62,7 +60,6 @@ import {
   uniqueByField,
 } from '../../../util/iteratees';
 import { getMessageKey, isLocalMessageId } from '../../../util/keys/messageKey';
-import { parseTranslationCacheKey } from '../../../util/keys/translationKey';
 import { getTranslationFn } from '../../../util/localization';
 import { debounce, onTickEnd, rafPromise } from '../../../util/schedulers';
 import { getServerTime } from '../../../util/serverTime';
@@ -90,12 +87,9 @@ import {
 import { scheduleEphemeralExpiration } from '../../intervals';
 import {
   addChatMessagesById,
-  clearMessageSummary,
   removeOutlyingList,
-  removeRequestedMessageTranslation,
   removeUnreadMentions,
   removeUnreadPollVotes,
-  replaceSettings,
   replaceUserStatuses,
   safeReplacePinnedIds,
   safeReplaceViewportIds,
@@ -104,11 +98,8 @@ import {
   updateChatMessage,
   updateEphemeralMessage,
   updateListedIds,
-  updateMessageSummary,
-  updateMessageTranslation,
   updateOutlyingLists,
   updatePeerFullInfo,
-  updateRequestedMessageTranslation,
   updateScheduledMessage,
   updateScheduledMessages,
   updateTopicWithState,
@@ -147,7 +138,6 @@ import {
   selectIsChatWithSelf,
   selectIsCurrentUserFrozen,
   selectIsCurrentUserPremium,
-  selectLanguageCode,
   selectListedIds,
   selectMessageIdsByGroupId,
   selectMessageReplyInfo,
@@ -162,7 +152,6 @@ import {
   selectSendAs,
   selectStoppableTypingDraftId,
   selectTabState,
-  selectTranslationLanguage,
   selectUser,
   selectUserFullInfo,
   selectUserStatus,
@@ -3402,123 +3391,6 @@ addActionHandler('sendAudioToSavedMessages', (global, actions, payload): ActionR
     message: { key: 'AudioForwardedToNoteToSelf', options: { withNodes: true, withMarkdown: true } },
     tabId,
   });
-});
-
-addActionHandler('requestMessageTranslation', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, id, toLanguageCode = selectTranslationLanguage(global), tone, tabId = getCurrentTabId(),
-  } = payload;
-
-  global = updateRequestedMessageTranslation(global, chatId, id, toLanguageCode, tone, tabId);
-
-  if (!tone) {
-    global = replaceSettings(global, {
-      translationLanguage: toLanguageCode,
-    });
-  }
-
-  return global;
-});
-
-addActionHandler('showOriginalMessage', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, id, tabId = getCurrentTabId(),
-  } = payload;
-
-  global = removeRequestedMessageTranslation(global, chatId, id, tabId);
-
-  return global;
-});
-
-addActionHandler('markMessagesTranslationPending', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageIds, requestId, toLanguageCode = selectLanguageCode(global), tone,
-  } = payload;
-
-  messageIds.forEach((id) => {
-    global = updateMessageTranslation(global, chatId, id, toLanguageCode, {
-      isPending: true,
-      requestId,
-    }, tone);
-  });
-
-  return global;
-});
-
-addActionHandler('translateMessages', (global, actions, payload): ActionReturnType => {
-  const {
-    chatId, messageIds, toLanguageCode = selectLanguageCode(global), tone,
-  } = payload;
-
-  const chat = selectChat(global, chatId);
-  if (!chat) return undefined;
-
-  const requestId = generateUniqueId();
-  actions.markMessagesTranslationPending({ chatId, messageIds, requestId, toLanguageCode, tone });
-
-  const [richMessageIds, textMessageIds] = partition(
-    messageIds, (id) => Boolean(selectChatMessage(global, chatId, id)?.content.richMessage),
-  );
-
-  if (textMessageIds.length) {
-    callApi('translateText', {
-      chat,
-      messageIds: textMessageIds,
-      requestId,
-      toLanguageCode,
-      tone,
-    });
-  }
-  if (richMessageIds.length) {
-    callApi('translateRichMessage', {
-      chat,
-      messageIds: richMessageIds,
-      requestId,
-      toLanguageCode,
-      tone,
-    });
-  }
-
-  return global;
-});
-
-addActionHandler('summarizeMessage', async (global, actions, payload): Promise<void> => {
-  const {
-    chatId, id, toLanguageCode, onError,
-  } = payload;
-  const chat = selectChat(global, chatId);
-  if (!chat) return;
-
-  const { languageCode, tone } = toLanguageCode
-    ? parseTranslationCacheKey(toLanguageCode)
-    : { languageCode: undefined, tone: undefined };
-  const apiTone = tone === 'neutral' ? undefined : tone;
-
-  const placeholderSummary: TextSummary = {
-    isPending: true,
-    text: undefined,
-  };
-
-  global = updateMessageSummary(global, chatId, id, placeholderSummary, toLanguageCode);
-  setGlobal(global);
-
-  const result = await callApi('fetchMessageSummary', { chat, id, toLanguageCode: languageCode, tone: apiTone });
-  if (!result) {
-    global = getGlobal();
-    global = clearMessageSummary(global, chatId, id, toLanguageCode);
-    setGlobal(global);
-    onError?.();
-    return;
-  }
-
-  const summary: TextSummary = {
-    isPending: false,
-    text: result,
-  };
-
-  global = getGlobal();
-  global = updateMessageSummary(global, chatId, id, summary, toLanguageCode);
-  setGlobal(global);
 });
 
 // https://github.com/telegramdesktop/tdesktop/blob/11906297d82b6ff57b277da5251d2e6eb3d8b6d0/Telegram/SourceFiles/api/api_views.cpp#L22

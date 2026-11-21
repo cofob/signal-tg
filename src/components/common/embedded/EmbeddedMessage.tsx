@@ -7,7 +7,6 @@ import type {
 } from '../../../api/types';
 import type { GlobalState } from '../../../global/types';
 import type { ObserveFn } from '../../../hooks/useIntersectionObserver';
-import type { ChatTranslatedMessages, TranslationTone } from '../../../types';
 import type { IconName } from '../../../types/icons';
 
 import { TON_CURRENCY_CODE } from '../../../config';
@@ -16,11 +15,9 @@ import {
   getMessageRoundVideo,
   isChatChannel,
   isChatGroup,
-  isMessageTranslatable,
 } from '../../../global/helpers';
 import { getMediaContentTypeDescription } from '../../../global/helpers/messageSummary';
 import { getPeerTitle } from '../../../global/helpers/peers';
-import { getRichMessagePreviewText } from '../../../global/helpers/richMessage';
 import { selectReplyOptionText } from '../../../global/selectors';
 import buildClassName from '../../../util/buildClassName';
 import { isUserId } from '../../../util/entities/ids';
@@ -33,7 +30,6 @@ import { renderTextWithEntities } from '../helpers/renderTextWithEntities';
 import useSelector from '../../../hooks/data/useSelector';
 import useLang from '../../../hooks/useLang';
 import useUniqueId from '../../../hooks/useUniqueId';
-import useMessageTranslation from '../../middle/message/hooks/useMessageTranslation';
 
 import RichText from '../../iv/RichText';
 import RippleEffect from '../../ui/RippleEffect';
@@ -58,9 +54,6 @@ type OwnProps = {
   noUserColors?: boolean;
   isProtected?: boolean;
   isInComposer?: boolean;
-  chatTranslations?: ChatTranslatedMessages;
-  requestedChatTranslationLanguage?: string;
-  requestedChatTranslationTone?: TranslationTone;
   isOpen?: boolean;
   isMediaNsfw?: boolean;
   noCaptions?: boolean;
@@ -88,9 +81,6 @@ const EmbeddedMessage = ({
   isProtected,
   isInComposer,
   noUserColors,
-  chatTranslations,
-  requestedChatTranslationLanguage,
-  requestedChatTranslationTone,
   isMediaNsfw,
   noCaptions,
   pictogramActionIcon,
@@ -129,15 +119,6 @@ const EmbeddedMessage = ({
   const isSpoiler = Boolean(containedMedia && getMessageIsSpoiler(containedMedia)) || isMediaNsfw;
   const isQuote = Boolean(replyInfo?.type === 'message' && replyInfo.isQuote);
   const replyForwardInfo = replyInfo?.type === 'message' ? replyInfo.replyFrom : undefined;
-
-  const shouldTranslate = message && isMessageTranslatable(message);
-  const { translatedText, translatedRichMessage } = useMessageTranslation(
-    chatTranslations, message?.chatId, shouldTranslate ? message?.id : undefined,
-    requestedChatTranslationLanguage, requestedChatTranslationTone,
-  );
-  const translatedPreview = useMemo(() => translatedRichMessage
-    ? { text: getRichMessagePreviewText(translatedRichMessage) } : translatedText,
-  [translatedRichMessage, translatedText]);
 
   const lang = useLang();
 
@@ -251,7 +232,6 @@ const EmbeddedMessage = ({
       <MessageSummary
         message={message}
         noEmoji={hasPictogram}
-        forcedText={translatedPreview}
         observeIntersectionForLoading={observeIntersectionForLoading}
         observeIntersectionForPlaying={observeIntersectionForPlaying}
         emojiSize={EMOJI_SIZE}

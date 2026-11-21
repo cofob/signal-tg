@@ -28,7 +28,6 @@ import type {
   ApiPeer,
   ApiPhoto,
   ApiReaction,
-  ApiRichMessage,
   ApiSessionData,
   ApiSticker,
   ApiStickerSet,
@@ -179,9 +178,6 @@ export interface AccountSettings {
   shouldArchiveAndMuteNewNonContact?: boolean;
   defaultHistoryTtl?: number;
   shouldHideReadMarks?: boolean;
-  canTranslate: boolean;
-  translationLanguage?: string;
-  translationTone?: TranslationTone;
 }
 
 export type IAnchorPosition = {
@@ -723,35 +719,6 @@ export interface TopicsInfo {
   listedTopicIds?: number[];
   orderedPinnedTopicIds?: number[];
 }
-
-export type TranslatedMessage = {
-  isPending?: boolean;
-  requestId?: string;
-  text?: ApiFormattedText;
-  richMessage?: ApiRichMessage;
-  summary?: TextSummary;
-};
-
-export const TRANSLATION_TONES = ['neutral', 'formal', 'casual'] as const;
-export type TranslationTone = typeof TRANSLATION_TONES[number];
-
-export type TextSummary = {
-  isPending?: false;
-  text: ApiFormattedText;
-} | {
-  isPending: true;
-  text?: undefined;
-};
-
-export type ChatTranslatedMessages = {
-  byLangCode: Record<string, Record<number, TranslatedMessage>>;
-};
-
-export type ChatRequestedTranslations = {
-  toLanguage?: string;
-  manualMessages?: Record<number, string>;
-  tone?: TranslationTone;
-};
 
 export type SimilarBotsInfo = {
   similarBotsIds?: string[];

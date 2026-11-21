@@ -12,7 +12,6 @@ import type {
   ApiEmojiStatusType,
   ApiFormattedText,
   ApiGroupCall,
-  ApiInputAiComposeTone,
   ApiInputPrivacyRules,
   ApiInputReplyInfo,
   ApiInputSuggestedPostInfo,
@@ -737,19 +736,6 @@ export function buildInputEmojiStatus(emojiStatus: ApiEmojiStatusType) {
     documentId: BigInt(emojiStatus.documentId),
     until: emojiStatus.until,
   });
-}
-
-export function buildInputAiComposeTone(tone: ApiInputAiComposeTone): GramJs.TypeInputAiComposeTone {
-  switch (tone.type) {
-    case 'default':
-      return new GramJs.InputAiComposeToneDefault({ tone: tone.tone });
-    case 'id':
-      return new GramJs.InputAiComposeToneID({ id: BigInt(tone.id), accessHash: BigInt(tone.accessHash) });
-    case 'slug':
-      return new GramJs.InputAiComposeToneSlug({ slug: tone.slug });
-    case 'singleUse':
-      return new GramJs.InputAiComposeToneSingleUse({ customPrompt: tone.customPrompt });
-  }
 }
 
 export function buildInputTextWithEntities(formatted: ApiFormattedText) {

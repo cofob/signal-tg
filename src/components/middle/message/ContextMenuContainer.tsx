@@ -21,7 +21,6 @@ import type {
   IAnchorPosition,
   MessageListType,
   ThreadId,
-  TranslationTone,
 } from '../../../types';
 import type { ClipboardTextFormat, MessageCopyRequest } from '../../../types/messageCopy';
 import { MAIN_THREAD_ID } from '../../../api/types';
@@ -54,7 +53,6 @@ import {
   selectCanForwardMessage,
   selectCanPlayAnimatedEmojis,
   selectCanScheduleUntilOnline,
-  selectCanTranslateMessage,
   selectChat,
   selectChatFullInfo,
   selectCustomEmoji,
@@ -63,12 +61,8 @@ import {
   selectIsMessageProtected,
   selectIsMessageUnread,
   selectIsReactionPickerOpen,
-  selectMessageTranslations,
   selectPeerStory,
   selectPollFromMessage,
-  selectRequestedChatTranslationLanguage,
-  selectRequestedChatTranslationTone,
-  selectRequestedMessageTranslationLanguage,
   selectStickerSet,
   selectTopic,
   selectUser,
@@ -81,7 +75,6 @@ import { selectSavedDialogIdFromMessage, selectThreadInfo } from '../../../globa
 import buildClassName from '../../../util/buildClassName';
 import { copyTextToClipboard } from '../../../util/clipboard';
 import { isUserId } from '../../../util/entities/ids';
-import { getTranslationCacheKey, parseTranslationCacheKey } from '../../../util/keys/translationKey';
 import { MEMO_EMPTY_ARRAY } from '../../../util/memo';
 import { getSelectionAsFormattedText } from './helpers/getSelectionAsFormattedText';
 import { getSelectionAsRichQuote } from './helpers/getSelectionAsRichQuote';
@@ -137,12 +130,6 @@ type StateProps = {
   canFaveSticker?: boolean;
   canUnfaveSticker?: boolean;
   canCopy?: boolean;
-  canTranslate?: boolean;
-  canShowOriginal?: boolean;
-  isMessageTranslated?: boolean;
-  canSelectLanguage?: boolean;
-  currentTranslationTone?: TranslationTone;
-  translationRequestLanguage?: string;
   isPrivate?: boolean;
   isCurrentUserPremium?: boolean;
   hasFullInfo?: boolean;
@@ -227,12 +214,6 @@ const ContextMenuContainer = ({
   noReplies,
   canShowSeenBy,
   canScheduleUntilOnline,
-  canTranslate,
-  isMessageTranslated,
-  canShowOriginal,
-  canSelectLanguage,
-  currentTranslationTone,
-  translationRequestLanguage,
   isReactionPickerOpen,
   isInSavedMessages,
   quoteLengthMax,
@@ -273,9 +254,6 @@ const ContextMenuContainer = ({
     cancelPollVote,
     closePoll,
     toggleReaction,
-    requestMessageTranslation,
-    showOriginalMessage,
-    openChatLanguageModal,
     openMessageReactionPicker,
     loadOutboxReadDate,
     copyMessageLink,
@@ -284,7 +262,6 @@ const ContextMenuContainer = ({
     reportMessages,
     openTodoListModal,
     showNotification,
-    setSettingOption,
     loadRichMessage,
     loadSavedMusicIds,
     toggleMusicInProfile,
@@ -433,11 +410,6 @@ const ContextMenuContainer = ({
 
   useEffect(() => {
     setSelectedRichQuote(undefined);
-    if (isMessageTranslated) {
-      setSelectionQuoteOffset(UNQUOTABLE_OFFSET);
-      return;
-    }
-
     if (message.content.richMessage) {
       const richQuote = selectionRange && !message.isEphemeral
         ? getSelectionAsRichQuote(selectionRange, message.content.richMessage, message.id, quoteLengthMax) : undefined;
@@ -470,7 +442,7 @@ const ContextMenuContainer = ({
     setSelectionQuoteOffset(selectionRange.startOffset);
   }, [
     selectionRange, selectionRange?.collapsed, selectionRange?.startOffset, selectionRange?.endOffset,
-    isMessageTranslated, message.content.text, message.content.richMessage, message.id, message.isEphemeral,
+    message.content.text, message.content.richMessage, message.id, message.isEphemeral,
     quoteLengthMax,
   ]);
 
@@ -718,44 +690,6 @@ const ContextMenuContainer = ({
     openMessageReactionPicker({ chatId: message.chatId, messageId: message.id, position });
   });
 
-  const handleTranslate = useLastCallback(() => {
-    requestMessageTranslation({
-      chatId: message.chatId,
-      id: message.id,
-      tone: currentTranslationTone,
-    });
-    closeMenu();
-  });
-
-  const handleTranslateWithTone = useLastCallback((tone: TranslationTone) => {
-    const { languageCode } = parseTranslationCacheKey(translationRequestLanguage!);
-
-    setSettingOption({ translationTone: tone });
-    requestMessageTranslation({
-      chatId: message.chatId,
-      id: message.id,
-      toLanguageCode: languageCode,
-      tone,
-    });
-    closeMenu();
-  });
-
-  const handleShowOriginal = useLastCallback(() => {
-    showOriginalMessage({
-      chatId: message.chatId,
-      id: message.id,
-    });
-    closeMenu();
-  });
-
-  const handleSelectLanguage = useLastCallback(() => {
-    openChatLanguageModal({
-      chatId: message.chatId,
-      messageId: message.id,
-    });
-    closeMenu();
-  });
-
   const reportMessageIds = useMemo(() => (album ? album.messages : [message]).map(({ id }) => id), [album, message]);
 
   const handleReport = useLastCallback(() => {
@@ -819,10 +753,6 @@ const ContextMenuContainer = ({
         canRevote={canRevote}
         canClosePoll={canClosePoll}
         canShowSeenBy={canShowSeenBy}
-        canTranslate={canTranslate}
-        canShowOriginal={canShowOriginal}
-        canSelectLanguage={canSelectLanguage}
-        currentTranslationTone={currentTranslationTone}
         canPlayAnimatedEmojis={canPlayAnimatedEmojis}
         shouldRenderShowWhen={shouldRenderShowWhen}
         canLoadReadDate={canLoadReadDate}
@@ -862,10 +792,6 @@ const ContextMenuContainer = ({
         onToggleReaction={handleToggleReaction}
         onShowReactors={handleOpenReactorListModal}
         onReactionPickerOpen={handleReactionPickerOpen}
-        onTranslate={handleTranslate}
-        onTranslateWithTone={handleTranslateWithTone}
-        onShowOriginal={handleShowOriginal}
-        onSelectLanguage={handleSelectLanguage}
         noForwardsNotice={noForwardsNotice}
       />
       <PinMessageModal
@@ -977,28 +903,6 @@ export default memo(withGlobal<OwnProps>(
     const canCopyNumber = Boolean(message.content.contact);
     const isCurrentUserPremium = selectIsCurrentUserPremium(global);
 
-    const translationRequestLanguage = selectRequestedMessageTranslationLanguage(global, message.chatId, message.id);
-    const chatTranslationLanguage = selectRequestedChatTranslationLanguage(global, message.chatId);
-    const chatTranslationTone = selectRequestedChatTranslationTone(global, message.chatId);
-
-    const isManualMessageTranslation = !chatTranslationLanguage && translationRequestLanguage;
-    const { tone: manualMessageTone } = isManualMessageTranslation
-      ? parseTranslationCacheKey(translationRequestLanguage)
-      : { tone: undefined };
-    const globalTone = global.settings.byKey.translationTone;
-    const currentTranslationTone = manualMessageTone || chatTranslationTone || globalTone;
-
-    const translationCacheKey = chatTranslationLanguage
-      ? getTranslationCacheKey(chatTranslationLanguage, currentTranslationTone)
-      : translationRequestLanguage;
-
-    const messageTranslation = translationCacheKey
-      ? selectMessageTranslations(global, message.chatId, translationCacheKey)[message.id]
-      : undefined;
-    const hasTranslation = Boolean(messageTranslation?.text || messageTranslation?.richMessage);
-    const canTranslate = !hasTranslation && selectCanTranslateMessage(global, message);
-    const isChatTranslated = chatTranslationLanguage;
-
     const isInSavedMessages = selectIsChatWithSelf(global, message.chatId);
 
     const poll = selectPollFromMessage(global, message);
@@ -1052,12 +956,6 @@ export default memo(withGlobal<OwnProps>(
       canShowReactionList: !message.isEphemeral && !isLocal && !isAction && !isScheduled && !hasTtl
         && !(chat && !isPrivate && !isChatAdmin(chat) && isUserRightBanned(chat, 'sendReactions')),
       canScheduleUntilOnline: selectCanScheduleUntilOnline(global, message.chatId),
-      canTranslate: !message.isEphemeral && canTranslate,
-      canShowOriginal: !message.isEphemeral && hasTranslation && !isChatTranslated,
-      canSelectLanguage: !message.isEphemeral && hasTranslation && !isChatTranslated,
-      isMessageTranslated: hasTranslation,
-      currentTranslationTone,
-      translationRequestLanguage,
       canPlayAnimatedEmojis: !message.isEphemeral && selectCanPlayAnimatedEmojis(global),
       isReactionPickerOpen: !message.isEphemeral && selectIsReactionPickerOpen(global),
       isInSavedMessages,

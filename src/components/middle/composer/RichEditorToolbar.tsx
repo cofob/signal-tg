@@ -42,7 +42,6 @@ import RichEditorLinkModal from './RichEditorLinkModal';
 type OwnProps = {
   editor?: Editor;
   isEnabled?: boolean;
-  onOpenAiEditor?: NoneToVoidFunction;
 };
 
 type RichEditorToolbarAvailability = {
@@ -124,7 +123,7 @@ const EMPTY_TOOLBAR_AVAILABILITY: RichEditorToolbarAvailability = {
   canInsertEquation: false,
 };
 
-const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
+const RichEditorToolbar = ({ editor, isEnabled }: OwnProps) => {
   const [availability, setAvailability] = useState(EMPTY_TOOLBAR_AVAILABILITY);
   const [isLinkModalOpen, openLinkModal, closeLinkModal] = useFlag();
   const lang = useLang();
@@ -345,13 +344,6 @@ const RichEditorToolbar = ({ editor, isEnabled, onOpenAiEditor }: OwnProps) => {
   return (
     <div className="rich-editor-toolbar-viewport" aria-hidden={!isEnabled} inert={!isEnabled}>
       <div className="rich-editor-toolbar">
-        <Button
-          color="translucent"
-          iconName="ai"
-          ariaLabel={lang('AiMessageEditor')}
-          disabled={!onOpenAiEditor}
-          onClick={onOpenAiEditor}
-        />
         <DropdownMenu
           className="rich-editor-toolbar-menu"
           positionX="left"

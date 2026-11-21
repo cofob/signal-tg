@@ -46,7 +46,6 @@ export { default as PrivacySettingsNoticeModal } from '../components/common/Priv
 export { default as CountryPickerModal } from '../components/common/CountryPickerModal';
 export { default as ReactorListModal } from '../components/middle/ReactorListModal';
 export { default as EmojiInteractionAnimation } from '../components/middle/EmojiInteractionAnimation';
-export { default as ChatLanguageModal } from '../components/middle/ChatLanguageModal';
 export { default as QrCodeModal } from '../components/modals/qrCode/QrCodeModal';
 
 export { default as LeftSearch } from '../components/left/search/LeftSearch';
@@ -64,12 +63,6 @@ export { default as HeaderMenuContainer } from '../components/middle/HeaderMenuC
 export { default as MiddleSearch } from '../components/middle/search/MiddleSearch';
 export { default as ReactionPicker } from '../components/middle/message/reactions/ReactionPicker';
 
-export { default as AiMessageEditorModal }
-  from '../components/middle/composer/AiMessageEditorModal/AiMessageEditorModal';
-export { default as AiToneEmojiPickerModal }
-  from '../components/middle/composer/AiMessageEditorModal/AiToneEmojiPickerModal';
-export { default as AiTonePreviewModal }
-  from '../components/modals/aiTonePreview/AiTonePreviewModal';
 export { default as LanguageModal } from '../components/modals/language/LanguageModal';
 
 export { default as AttachmentModal } from '../components/middle/composer/AttachmentModal';
@@ -115,4 +108,3 @@ export { default as TwoFaCheckModal } from '../components/modals/twoFaCheck/TwoF
 export { default as QuickChatPickerModal } from '../components/modals/quickChatPicker/QuickChatPickerModal';
 export { default as RequestPeerModal } from '../components/modals/requestPeer/RequestPeerModal';
 export { default as BotCreationModal } from '../components/modals/botCreation/BotCreationModal';
-export { default as CocoonModal } from '../components/modals/cocoon/CocoonModal';

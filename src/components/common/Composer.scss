@@ -444,11 +444,6 @@
       top: 0;
       right: calc(-1 * (var(--composer-main-button-gap) + var(--composer-main-button-width) / 2 + 1.25rem));
     }
-
-    .ai-composer-button {
-      z-index: 2;
-      top: 0;
-    }
   }
 
   #message-input-text .form-control {
@@ -598,8 +593,7 @@
   position: relative;
   display: flex;
 
-  .rich-editor-button,
-  .ai-composer-button {
+  .rich-editor-button {
     position: absolute;
     z-index: 1;
     top: 0.4375rem;
@@ -612,24 +606,14 @@
       background-color var(--message-color-transition-duration, 150ms) ease-out;
   }
 
-  .ai-composer-button {
-    right: auto;
-    left: 0;
-  }
-
   &.is-voice-recording > :not(.voice-record-bar) {
     visibility: hidden;
   }
 
-  .rich-editor-button-hidden,
-  .ai-composer-button-hidden {
+  .rich-editor-button-hidden {
     pointer-events: none;
     opacity: 0;
     transition: opacity 150ms ease-out;
-  }
-
-  .ai-composer-button-hidden {
-    visibility: hidden;
   }
 
   .rich-editor-history {

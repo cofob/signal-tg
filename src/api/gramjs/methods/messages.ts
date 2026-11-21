@@ -6,16 +6,13 @@ import type {
   ForwardMessagesParams,
   SendMessageParams,
   ThreadId,
-  TranslationTone,
 } from '../../../types';
 import type {
   ApiAttachment,
   ApiAudio,
   ApiChat,
-  ApiComposedMessageWithAI,
   ApiFormattedText,
   ApiGlobalMessageSearchType,
-  ApiInputAiComposeTone,
   ApiInputReplyInfo,
   ApiInputRichMessage,
   ApiInputSuggestedPostInfo,
@@ -29,7 +26,6 @@ import type {
   ApiOnProgress,
   ApiPeer,
   ApiReaction,
-  ApiRichMessage,
   ApiSearchPostsFlood,
   ApiSendMessageAction,
   ApiSticker,
@@ -69,16 +65,9 @@ import {
   buildApiSendAsPeerId,
   buildThreadReadState,
 } from '../apiBuilders/chats';
-import {
-  buildApiAiComposeTone,
-  buildApiAiComposeToneExample,
-  buildApiComposedMessageWithAI,
-  buildApiFormattedText,
-} from '../apiBuilders/common';
 import { buildApiTopicWithState } from '../apiBuilders/forums';
 import { buildApiDocument } from '../apiBuilders/media';
 import {
-  buildApiRichMessage,
   buildMessageMediaContent,
   buildMessagePollFromMedia,
   buildMessageTextContent,
@@ -102,7 +91,6 @@ import {
 import { getApiChatIdFromMtpPeer } from '../apiBuilders/peers';
 import { buildApiUser, buildApiUserStatuses } from '../apiBuilders/users';
 import {
-  buildInputAiComposeTone,
   buildInputChannel,
   buildInputDocument,
   buildInputMediaDocument,
@@ -142,17 +130,6 @@ import {
 const FAST_SEND_TIMEOUT = 1000;
 const INPUT_WAVEFORM_LENGTH = 63;
 const VIDEO_COVER_FILENAME = 'cover.jpg';
-
-type TranslateTextParams = ({
-  text: ApiFormattedText[];
-} | {
-  chat: ApiChat;
-  messageIds: number[];
-  requestId: string;
-}) & {
-  toLanguageCode: string;
-  tone?: TranslationTone;
-};
 
 type SearchResults = {
   messages: ApiMessage[];
@@ -2878,123 +2855,6 @@ export async function transcribeAudio({
   return result.transcriptionId.toString();
 }
 
-export async function translateText(params: TranslateTextParams) {
-  let result;
-  const isMessageTranslation = 'chat' in params;
-  const { toLanguageCode, tone } = params;
-  const apiTone = tone === 'neutral' ? undefined : tone;
-
-  if (isMessageTranslation) {
-    const { chat, messageIds } = params;
-
-    result = await invokeRequest(new GramJs.messages.TranslateText({
-      peer: buildInputPeer(chat.id, chat.accessHash),
-      id: messageIds,
-      toLang: toLanguageCode,
-      tone: apiTone,
-    }));
-  } else {
-    const { text } = params;
-    result = await invokeRequest(new GramJs.messages.TranslateText({
-      text: text.map((t) => buildInputTextWithEntities(t)),
-      toLang: toLanguageCode,
-      tone: apiTone,
-    }));
-  }
-
-  if (!result) {
-    if (isMessageTranslation) {
-      sendApiUpdate({
-        '@type': 'failedMessageTranslations',
-        requestId: params.requestId,
-        chatId: params.chat.id,
-        messageIds: params.messageIds,
-        toLanguageCode: params.toLanguageCode,
-        tone,
-      });
-    }
-    return undefined;
-  }
-
-  const formattedText = result.result.map((r) => buildApiFormattedText(r));
-
-  if (isMessageTranslation) {
-    sendApiUpdate({
-      '@type': 'updateMessageTranslations',
-      requestId: params.requestId,
-      chatId: params.chat.id,
-      messageIds: params.messageIds,
-      translations: formattedText.map((text) => ({ text })),
-      toLanguageCode: params.toLanguageCode,
-      tone,
-    });
-  }
-
-  return formattedText;
-}
-
-export async function translateRichMessage({
-  chat, messageIds, requestId, toLanguageCode, tone,
-}: {
-  chat: ApiChat;
-  messageIds: number[];
-  requestId: string;
-  toLanguageCode: string;
-  tone?: TranslationTone;
-}) {
-  const result = await invokeRequest(new GramJs.messages.TranslateRichMessage({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    id: messageIds,
-    toLang: toLanguageCode,
-    tone: tone === 'neutral' ? undefined : tone,
-  }));
-
-  if (!result) {
-    sendApiUpdate({
-      '@type': 'failedMessageTranslations',
-      requestId,
-      chatId: chat.id,
-      messageIds,
-      toLanguageCode,
-      tone,
-    });
-    return undefined;
-  }
-
-  const peerId = buildPeer(chat.id);
-  const translations = result.result.map((richMessage, index) => ({
-    richMessage: buildApiRichMessage(richMessage, { peerId, id: messageIds[index] }),
-  }));
-  sendApiUpdate({
-    '@type': 'updateMessageTranslations',
-    requestId,
-    chatId: chat.id,
-    messageIds,
-    translations,
-    toLanguageCode,
-    tone,
-  });
-
-  return translations;
-}
-
-export async function fetchMessageSummary({
-  chat, id, toLanguageCode, tone,
-}: {
-  chat: ApiChat; id: number; toLanguageCode?: string; tone?: string;
-}) {
-  const result = await invokeRequest(new GramJs.messages.SummarizeText({
-    peer: buildInputPeer(chat.id, chat.accessHash),
-    id,
-    toLang: toLanguageCode,
-    tone,
-  }));
-
-  if (!result) return undefined;
-
-  return buildApiFormattedText(result);
-}
-
 function handleMultipleLocalMessagesUpdate(
   localMessages: Record<string, ApiMessage>, update: GramJs.TypeUpdates,
 ) {
@@ -3168,209 +3028,6 @@ export async function fetchPreparedInlineMessage({
 
 export function incrementLocalMessagesCounter() {
   incrementLocalMessageCounter();
-}
-
-export async function composeMessageWithAI({
-  text,
-  shouldProofread,
-  isEmojify,
-  translateToLang,
-  tone,
-}: {
-  text: ApiFormattedText;
-  shouldProofread?: boolean;
-  isEmojify?: boolean;
-  translateToLang?: string;
-  tone?: ApiInputAiComposeTone;
-}): Promise<{ result?: ApiComposedMessageWithAI; error?: 'floodPremium' | 'aiError' | 'generic' }> {
-  try {
-    const result = await invokeRequest(new GramJs.messages.ComposeMessageWithAI({
-      text: buildInputTextWithEntities(text),
-      proofread: shouldProofread || undefined,
-      emojify: isEmojify || undefined,
-      translateToLang,
-      tone: tone ? buildInputAiComposeTone(tone) : undefined,
-    }), { shouldThrow: true });
-
-    if (!result) return { error: 'generic' };
-
-    return { result: buildApiComposedMessageWithAI(result) };
-  } catch (err) {
-    if (err instanceof RPCError) {
-      if (err.errorMessage === 'AICOMPOSE_FLOOD_PREMIUM') {
-        return { error: 'floodPremium' };
-      }
-      if (err.errorMessage === 'AICOMPOSE_ERROR_OCCURED') {
-        return { error: 'aiError' };
-      }
-    }
-    return { error: 'generic' };
-  }
-}
-
-export async function composeRichMessageWithAI({
-  text,
-  shouldProofread,
-  isEmojify,
-  translateToLang,
-  tone,
-}: {
-  text?: ApiInputRichMessage;
-  shouldProofread?: boolean;
-  isEmojify?: boolean;
-  translateToLang?: string;
-  tone?: ApiInputAiComposeTone;
-}): Promise<{ result?: ApiRichMessage; error?: 'floodPremium' | 'aiError' | 'generic' } | undefined> {
-  const inputText = text && buildInputRichMessage(text);
-  if (text && !inputText) return { error: 'generic' };
-
-  try {
-    const result = await invokeRequest(new GramJs.messages.ComposeRichMessageWithAI({
-      text: inputText,
-      proofread: shouldProofread || undefined,
-      emojify: isEmojify || undefined,
-      translateToLang,
-      tone: tone ? buildInputAiComposeTone(tone) : undefined,
-    }), { shouldThrow: true });
-
-    if (!result) return undefined;
-    const richMessage = buildApiRichMessage(result.result);
-    if (!richMessage) return { error: 'generic' };
-
-    return { result: richMessage };
-  } catch (err) {
-    if (err instanceof RPCError) {
-      if (err.errorMessage === 'AICOMPOSE_FLOOD_PREMIUM') return { error: 'floodPremium' };
-      if (err.errorMessage === 'AICOMPOSE_ERROR_OCCURED') return { error: 'aiError' };
-    }
-    return { error: 'generic' };
-  }
-}
-
-export async function fetchAiComposeTones({
-  hash,
-}: {
-  hash?: string;
-}) {
-  const result = await invokeRequest(new GramJs.aicompose.GetTones({
-    hash: hash ? BigInt(hash) : DEFAULT_PRIMITIVES.BIGINT,
-  }));
-
-  if (!result || result instanceof GramJs.aicompose.TonesNotModified) {
-    return undefined;
-  }
-
-  return {
-    tones: result.tones.map(buildApiAiComposeTone),
-    hash: result.hash.toString(),
-  };
-}
-
-export async function createAiTone({
-  title,
-  emojiId,
-  prompt,
-  shouldDisplayAuthor,
-}: {
-  title: string;
-  emojiId: string;
-  prompt: string;
-  shouldDisplayAuthor?: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.aicompose.CreateTone({
-    title,
-    prompt,
-    emojiId: BigInt(emojiId),
-    displayAuthor: shouldDisplayAuthor || undefined,
-  }));
-
-  if (!result) return undefined;
-
-  return buildApiAiComposeTone(result);
-}
-
-export async function deleteAiTone({
-  tone,
-}: {
-  tone: ApiInputAiComposeTone;
-}) {
-  return invokeRequest(new GramJs.aicompose.DeleteTone({
-    tone: buildInputAiComposeTone(tone),
-  }));
-}
-
-export async function updateAiTone({
-  tone,
-  title,
-  emojiId,
-  prompt,
-  shouldDisplayAuthor,
-}: {
-  tone: ApiInputAiComposeTone;
-  title?: string;
-  emojiId?: string;
-  prompt?: string;
-  shouldDisplayAuthor?: boolean;
-}) {
-  const result = await invokeRequest(new GramJs.aicompose.UpdateTone({
-    tone: buildInputAiComposeTone(tone),
-    title,
-    prompt,
-    emojiId: emojiId ? BigInt(emojiId) : undefined,
-    displayAuthor: shouldDisplayAuthor,
-  }));
-
-  if (!result) return undefined;
-
-  return buildApiAiComposeTone(result);
-}
-
-export async function fetchAiTone({
-  tone,
-}: {
-  tone: ApiInputAiComposeTone;
-}) {
-  const result = await invokeRequest(new GramJs.aicompose.GetTone({
-    tone: buildInputAiComposeTone(tone),
-  }));
-
-  if (!result || !('tones' in result)) {
-    return undefined;
-  }
-
-  return {
-    tones: result.tones.map(buildApiAiComposeTone),
-  };
-}
-
-export async function fetchAiToneExample({
-  tone,
-  num,
-}: {
-  tone: ApiInputAiComposeTone;
-  num: number;
-}) {
-  const result = await invokeRequest(new GramJs.aicompose.GetToneExample({
-    tone: buildInputAiComposeTone(tone),
-    num,
-  }));
-
-  if (!result) return undefined;
-
-  return buildApiAiComposeToneExample(result);
-}
-
-export async function saveAiTone({
-  tone,
-  unsave,
-}: {
-  tone: ApiInputAiComposeTone;
-  unsave?: boolean;
-}) {
-  return invokeRequest(new GramJs.aicompose.SaveTone({
-    tone: buildInputAiComposeTone(tone),
-    unsave: Boolean(unsave),
-  }));
 }
 
 export function reportMusicListen({ audio, listenedDuration, isPageUnload }: {

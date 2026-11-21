@@ -233,7 +233,6 @@ const Main = ({
     loadAuthorizations,
     loadPeerColors,
     loadSavedReactionTags,
-    loadAiComposeTones,
     loadPasswordInfo,
     loadBotFreezeAppeal,
     loadAllChats,
@@ -326,7 +325,6 @@ const Main = ({
       loadGenericEmojiEffects();
       loadBirthdayNumbersStickers();
       loadRestrictedEmojiStickers();
-      loadAiComposeTones();
     }
   }, [isMasterTab, isSynced, isAppConfigLoaded, isAccountFrozen]);
 

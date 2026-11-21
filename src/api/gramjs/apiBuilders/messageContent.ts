@@ -769,10 +769,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
     const builtCachedPage = cachedPage instanceof GramJs.Page
       ? buildApiInstantViewPage(cachedPage, webPage) : undefined;
 
-    const attributeAiTone = attributes?.find((a): a is GramJs.WebPageAttributeAiComposeTone => (
-      a instanceof GramJs.WebPageAttributeAiComposeTone
-    ));
-
     return {
       mediaType: 'webpage',
       webpageType: 'full',
@@ -796,7 +792,6 @@ export function buildWebPage(webPage: GramJs.TypeWebPage): ApiWebPage | undefine
       stickers,
       cachedPage: builtCachedPage,
       cachedPageAudioById: builtCachedPage ? buildPageAudioById(builtCachedPage) : undefined,
-      aiComposeToneEmojiId: attributeAiTone?.emojiId.toString(),
     };
   }
 

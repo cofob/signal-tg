@@ -18,7 +18,7 @@ import type {
   ApiWebPage,
 } from '../../../api/types';
 import type {
-  IAnchorPosition, MessageListType, ThreadId, TranslationTone,
+  IAnchorPosition, MessageListType, ThreadId,
 } from '../../../types';
 import type { ClipboardTextFormat, MessageCopyRequest } from '../../../types/messageCopy';
 
@@ -43,7 +43,6 @@ import useLang from '../../../hooks/useLang';
 import useLastCallback from '../../../hooks/useLastCallback';
 
 import AvatarList from '../../common/AvatarList';
-import Icon from '../../common/icons/Icon';
 import Menu from '../../ui/Menu';
 import MenuItem, { MenuItemSubtitle, MenuItemTitle } from '../../ui/MenuItem';
 import MenuSeparator from '../../ui/MenuSeparator';
@@ -92,10 +91,6 @@ type OwnProps = {
   canCopy?: boolean;
   canCopyLink?: boolean;
   canSelect?: boolean;
-  canTranslate?: boolean;
-  canShowOriginal?: boolean;
-  canSelectLanguage?: boolean;
-  currentTranslationTone?: TranslationTone;
   isPrivate?: boolean;
   isCurrentUserPremium?: boolean;
   canDownload?: boolean;
@@ -142,10 +137,6 @@ type OwnProps = {
   onClosePoll?: NoneToVoidFunction;
   onShowSeenBy?: NoneToVoidFunction;
   onShowReactors?: NoneToVoidFunction;
-  onTranslate?: NoneToVoidFunction;
-  onTranslateWithTone?: (tone: TranslationTone) => void;
-  onShowOriginal?: NoneToVoidFunction;
-  onSelectLanguage?: NoneToVoidFunction;
   onToggleReaction?: (reaction: ApiReaction) => void;
   onReactionPickerOpen?: (position: IAnchorPosition) => void;
   noForwardsNotice?: string;
@@ -199,10 +190,6 @@ const MessageContextMenu = ({
   isMusicSaved,
   canRevote,
   canClosePoll,
-  canTranslate,
-  canShowOriginal,
-  canSelectLanguage,
-  currentTranslationTone,
   isDownloading,
   repliesThreadInfo,
   canShowSeenBy,
@@ -243,10 +230,6 @@ const MessageContextMenu = ({
   onToggleReaction,
   onCopyMessages,
   onReactionPickerOpen,
-  onTranslate,
-  onTranslateWithTone,
-  onShowOriginal,
-  onSelectLanguage,
   noForwardsNotice,
 }: OwnProps) => {
   const {
@@ -452,50 +435,6 @@ const MessageContextMenu = ({
         )}
         {canUnfaveSticker && (
           <MenuItem icon="star-regular" onClick={onUnfaveSticker}>{lang('StickersRemoveFromFavorites')}</MenuItem>
-        )}
-        {canTranslate && (
-          <MenuItem icon="language" onClick={() => onTranslate?.()}>{lang('AiMessageEditorTranslate')}</MenuItem>
-        )}
-        {canShowOriginal && (
-          <MenuItem icon="language" onClick={onShowOriginal}>
-            {lang('ShowOriginalButton')}
-          </MenuItem>
-        )}
-        {canShowOriginal && (
-          <NestedMenuItem
-            icon="tone"
-            submenuClassName="translation-tone-menu"
-            submenu={(
-              <>
-                <MenuItem
-                  icon={currentTranslationTone === 'neutral' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'neutral' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('neutral')}
-                >
-                  {lang('TranslationToneNeutral')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTranslationTone === 'formal' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'formal' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('formal')}
-                >
-                  {lang('TranslationToneFormal')}
-                </MenuItem>
-                <MenuItem
-                  icon={currentTranslationTone === 'casual' ? 'check' : undefined}
-                  customIcon={currentTranslationTone !== 'casual' ? <Icon name="placeholder" /> : undefined}
-                  onClick={() => onTranslateWithTone?.('casual')}
-                >
-                  {lang('TranslationToneCasual')}
-                </MenuItem>
-              </>
-            )}
-          >
-            {lang('TranslationTone')}
-          </NestedMenuItem>
-        )}
-        {canSelectLanguage && (
-          <MenuItem icon="web" onClick={onSelectLanguage}>{lang('Language')}</MenuItem>
         )}
         {copyOptions.map((option) => (
           isExtendedMenu && option.canCopyWithFormat ? (

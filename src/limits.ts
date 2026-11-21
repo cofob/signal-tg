@@ -34,7 +34,6 @@ export const LIMITS = {
   savedDialogsPinned: 5,
   maxReactions: 1,
   moreAccounts: 3,
-  aiComposeToneSaved: 5,
   botsCreate: 20,
 } as const satisfies Record<ApiLimitType, number>;
 

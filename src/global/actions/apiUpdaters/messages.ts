@@ -50,8 +50,6 @@ import {
   addChatListIds,
   addMessages,
   addViewportId,
-  clearMessageSummary,
-  clearMessageTranslation,
   deleteChatMessages,
   deleteChatScheduledMessages,
   deleteEphemeralMessages,
@@ -66,7 +64,6 @@ import {
   updateChatMessage,
   updateEphemeralMessage,
   updateListedIds,
-  updateMessageTranslations,
   updateMessageWidgetData,
   updatePeerFullInfo,
   updatePoll,
@@ -650,20 +647,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
         return;
       }
 
-      const hasRichMessageEdit = (message.content?.richMessage || currentMessage.content.richMessage)
-        && message.editDate !== undefined
-        && message.editDate !== currentMessage.editDate;
-      const hasContentChanged = message.content && (
-        message.content.text?.text !== currentMessage.content.text?.text
-        || !areDeepEqual(message.content.richMessage?.blocks, currentMessage.content.richMessage?.blocks)
-        || message.content.richMessage?.isRtl !== currentMessage.content.richMessage?.isRtl
-      );
-
-      if (hasRichMessageEdit || hasContentChanged) {
-        global = clearMessageTranslation(global, chatId, id);
-        global = clearMessageSummary(global, chatId, id);
-      }
-
       global = updateWithLocalMedia(global, chatId, id, false, message);
 
       setGlobal(global);
@@ -1183,26 +1166,6 @@ addActionHandler('apiUpdate', (global, actions, update): ActionReturnType => {
       }
 
       global = updateScheduledMessage(global, chatId, localId, { sendingState: 'messageSendingStateFailed' });
-      setGlobal(global);
-      break;
-    }
-
-    case 'updateMessageTranslations': {
-      const {
-        chatId, messageIds, toLanguageCode, translations, requestId, tone,
-      } = update;
-
-      global = updateMessageTranslations(global, chatId, messageIds, toLanguageCode, translations, requestId, tone);
-
-      setGlobal(global);
-      break;
-    }
-
-    case 'failedMessageTranslations': {
-      const { chatId, messageIds, toLanguageCode, requestId, tone } = update;
-
-      global = updateMessageTranslations(global, chatId, messageIds, toLanguageCode, [], requestId, tone);
-
       setGlobal(global);
       break;
     }

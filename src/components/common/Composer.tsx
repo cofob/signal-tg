@@ -271,7 +271,6 @@ type StateProps = {
   hasSuggestedPost?: boolean;
   forwardedMessagesCount?: number;
   todoListModal: TabState['todoListModal'];
-  aiMessageEditorPendingResult: TabState['aiMessageEditorPendingResult'];
   botKeyboardMessageId?: number;
   botKeyboardPlaceholder?: string;
   hiddenBotKeyboardId?: number;
@@ -397,7 +396,6 @@ const Composer = ({
   hasSuggestedPost,
   forwardedMessagesCount,
   todoListModal,
-  aiMessageEditorPendingResult,
   botKeyboardMessageId,
   botKeyboardPlaceholder,
   hiddenBotKeyboardId,
@@ -468,7 +466,6 @@ const Composer = ({
     showDialog,
     openTodoListModal,
     closeTodoListModal,
-    clearAiMessageEditorPendingResult,
     loadScheduledHistory,
     openThread,
     addRecentEmoji,
@@ -493,7 +490,6 @@ const Composer = ({
     applyDefaultAttachmentsCompression,
     setIsRichInputExpanded,
     setSettingOption,
-    openAiMessageEditorModal,
     setHiddenBotKeyboardId,
   } = getActions();
 
@@ -1001,26 +997,6 @@ const Composer = ({
     }
     updateInsertingPeerIdMention({ peerId: undefined });
   }, [insertingPeerIdMention, insertMention]);
-
-  const aiMessageToSendRef = useRef<ApiInputRichMessage>();
-  useEffect(() => {
-    if (!isInMessageList || !aiMessageEditorPendingResult) return;
-
-    const {
-      content, shouldSendWithAttachments, shouldSend,
-      chatId: resultChatId, threadId: resultThreadId,
-    } = aiMessageEditorPendingResult;
-
-    if (shouldSendWithAttachments) return;
-    if (resultChatId !== chatId || resultThreadId !== threadId) return;
-
-    aiMessageToSendRef.current = updateRichMessage(
-      content.type === 'rich' ? content.richMessage : buildRichMessageFromFormatted(content.text), true,
-    );
-
-    if (!shouldSend) clearAiMessageEditorPendingResult();
-  }, [isInMessageList, aiMessageEditorPendingResult, chatId,
-    clearAiMessageEditorPendingResult, threadId, updateRichMessage]);
 
   useDraft({
     draft,
@@ -1679,35 +1655,6 @@ const Composer = ({
     handleSend(
       isSilent, scheduledAt, scheduleRepeatPeriod, shouldSkipWebPagePreview,
     );
-  });
-
-  useEffect(() => {
-    if (!isInMessageList || !aiMessageEditorPendingResult?.shouldSend
-      || richMessage !== aiMessageToSendRef.current
-      || aiMessageEditorPendingResult.chatId !== chatId
-      || aiMessageEditorPendingResult.threadId !== threadId) return;
-
-    const { isSilent, scheduledAt, scheduleRepeatPeriod } = aiMessageEditorPendingResult;
-    clearAiMessageEditorPendingResult();
-    if (!editingMessage && !isComposerBlocked) {
-      handleSendWithConfirmation(isSilent, scheduledAt, scheduleRepeatPeriod, true);
-    }
-  }, [isInMessageList, aiMessageEditorPendingResult, richMessage, chatId, threadId, editingMessage, isComposerBlocked,
-    clearAiMessageEditorPendingResult, handleSendWithConfirmation]);
-
-  const handleOpenAiEditor = useLastCallback(() => {
-    if (!isInMessageList || hasRichMediaBlocking) return;
-
-    const value = richEditor.isEmpty() ? { blocks: [] } : richEditor.getValue();
-    const formattedText = getRichInputAsFormatted(value);
-    const shouldUseRichApi = isRichInputExpansionActive || hasRichOnlyContent;
-    openAiMessageEditorModal({
-      chatId,
-      threadId,
-      isEditing: Boolean(editingMessage),
-      content: shouldUseRichApi ? { type: 'rich', richMessage: value }
-        : { type: 'text', text: formattedText! },
-    });
   });
 
   const handleTodoListCreate = useLastCallback(() => {
@@ -2663,8 +2610,6 @@ const Composer = ({
     && !isComposerBlocked && !isEditingMedia;
   const canCloseRichInput = Boolean(isRichInputExpansionActive && !isComposerBlocked);
   const canToggleRichInput = canOpenRichInput || canCloseRichInput;
-  const shouldShowAiButton = (isRichInputExpansionActive || (shouldShowRichInputButton && hasInputContent))
-    && !isInStoryViewer && !hasAttachments && !isComposerBlocked && !activeRecording && !hasRichMediaBlocking;
   const {
     ref: voiceRecordBarRef, shouldRender: shouldRenderVoiceRecordBar,
   } = useShowTransition<HTMLDivElement>({
@@ -2913,20 +2858,6 @@ const Composer = ({
             disabled={isRichInputExpansionActive && hasRichMediaBlocking}
             onClick={isRichInputExpansionActive ? collapseRichInput : handleOpenRichInput}
           />
-          <Button
-            round
-            faded
-            size="smaller"
-            className={buildClassName(
-              'ai-composer-button',
-              (!shouldShowAiButton || isRichInputExpansionActive) && 'ai-composer-button-hidden',
-            )}
-            color="translucent"
-            ariaLabel={lang('AiMessageEditor')}
-            iconName="ai"
-            tabIndex={shouldShowAiButton && !isRichInputExpansionActive ? 0 : -1}
-            onClick={handleOpenAiEditor}
-          />
           <MessageInput
             ref={inputRef}
             id={inputId}
@@ -2945,7 +2876,6 @@ const Composer = ({
             shouldSuppressFocus={isMobile && isSymbolMenuOpen}
             onRichInputCollapse={collapseRichInput}
             onRichInputExpand={handleOpenRichInput}
-            onOpenAiEditor={shouldShowAiButton ? handleOpenAiEditor : undefined}
             onSend={onSend}
             onSuppressedFocus={closeSymbolMenu}
             onMediaEdit={handleRichMediaEdit}
@@ -3342,7 +3272,6 @@ export default memo(withGlobal<OwnProps>(
       hasSuggestedPost,
       forwardedMessagesCount: isForwarding ? forwardMessageIds!.length : undefined,
       todoListModal: tabState.todoListModal,
-      aiMessageEditorPendingResult: tabState.aiMessageEditorPendingResult,
       chatFullInfo,
       topInlineBotIds: global.topPeerCategories.botsInline?.peerIds,
       topGuestBotIds: global.topPeerCategories.botsGuestChat?.peerIds,

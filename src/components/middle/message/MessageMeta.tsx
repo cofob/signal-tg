@@ -32,12 +32,10 @@ type OwnProps = {
   availableReactions?: ApiAvailableReaction[];
   noReplies?: boolean;
   repliesThreadInfo?: ApiThreadInfo;
-  isTranslated?: boolean;
   isPinned?: boolean;
   withFullDate?: boolean;
   isMessagePrimaryEditedDateEnabled: boolean;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onTranslationClick: (e: React.MouseEvent<HTMLDivElement>) => void;
   renderQuickReactionButton?: () => TeactNode | undefined;
   onOpenThread: NoneToVoidFunction;
 };
@@ -50,11 +48,9 @@ const MessageMeta = ({
   repliesThreadInfo,
   renderQuickReactionButton,
   noReplies,
-  isTranslated,
   isPinned,
   withFullDate,
   onClick,
-  onTranslationClick,
   onOpenThread,
   isMessagePrimaryEditedDateEnabled,
 }: OwnProps) => {
@@ -164,9 +160,6 @@ const MessageMeta = ({
       onClick={onClick}
       data-ignore-on-paste
     >
-      {isTranslated && (
-        <Icon name="language" className="message-translated" onClick={onTranslationClick} />
-      )}
       {Boolean(message.viewsCount) && (
         <>
           <span className="message-views" title={viewsTitle}>

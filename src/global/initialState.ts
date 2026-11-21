@@ -318,8 +318,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
       shouldUpdateStickerSetOrder: true,
       shouldArchiveAndMuteNewNonContact: false,
       shouldHideReadMarks: false,
-      canTranslate: false,
-      translationTone: 'neutral',
     },
     privacy: {},
     botVerificationShownPeerIds: [],
@@ -330,9 +328,6 @@ export const INITIAL_GLOBAL_STATE: GlobalState = {
   trustedBotIds: [],
 
   transcriptions: {},
-  translations: {
-    byChatId: {},
-  },
 
   byTabId: {},
   sharedState: INITIAL_SHARED_STATE,
@@ -423,7 +418,4 @@ export const INITIAL_TAB_STATE: TabState = {
 
   activeDownloads: {},
 
-  requestedTranslations: {
-    byChatId: {},
-  },
 };

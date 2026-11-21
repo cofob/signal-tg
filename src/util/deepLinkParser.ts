@@ -8,7 +8,7 @@ import { toChannelId } from './entities/ids';
 import { isUsernameValid } from './entities/username';
 
 export type DeepLinkMethod = 'resolve' | 'login' | 'passport' | 'settings' | 'join' | 'addstickers' | 'addemoji' |
-  'setlanguage' | 'addtheme' | 'addstyle' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
+  'setlanguage' | 'addtheme' | 'confirmphone' | 'socks' | 'proxy' | 'privatepost' | 'bg' | 'share' |
   'msg' | 'msg_url' | 'addlist' | 'oauth' |
   'newbot' | 'contact';
 

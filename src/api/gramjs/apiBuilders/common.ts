@@ -3,10 +3,6 @@ import type { Entity } from '../../../lib/gramjs/types';
 import { strippedPhotoToJpg } from '../../../lib/gramjs/Utils';
 
 import type {
-  ApiAiComposeTone,
-  ApiAiComposeToneDefault,
-  ApiAiComposeToneExample,
-  ApiComposedMessageWithAI,
   ApiFormattedText,
   ApiMessageEntity,
   ApiMessageEntityDefault,
@@ -334,49 +330,5 @@ export function buildApiMessageEntity(entity: GramJs.TypeMessageEntity): ApiMess
     type: type as `${ApiMessageEntityDefault['type']}`,
     offset,
     length,
-  };
-}
-
-export function buildApiAiComposeToneExample(
-  example: GramJs.AiComposeToneExample,
-): ApiAiComposeToneExample {
-  return {
-    from: buildApiFormattedText(example.from),
-    to: buildApiFormattedText(example.to),
-  };
-}
-
-export function buildApiAiComposeTone(
-  tone: GramJs.TypeAiComposeTone,
-): ApiAiComposeTone | ApiAiComposeToneDefault {
-  if (tone instanceof GramJs.AiComposeToneDefault) {
-    return {
-      tone: tone.tone,
-      emojiId: tone.emojiId.toString(),
-      title: tone.title,
-    };
-  }
-
-  return {
-    id: tone.id.toString(),
-    accessHash: tone.accessHash.toString(),
-    slug: tone.slug,
-    title: tone.title,
-    isCreator: tone.creator || undefined,
-    emojiId: tone.emojiId?.toString(),
-    prompt: tone.prompt,
-    installsCount: tone.installsCount,
-    authorId: tone.authorId?.toString(),
-    exampleEnglish: tone.exampleEnglish
-      ? buildApiAiComposeToneExample(tone.exampleEnglish) : undefined,
-  };
-}
-
-export function buildApiComposedMessageWithAI(
-  result: GramJs.messages.ComposedMessageWithAI,
-): ApiComposedMessageWithAI {
-  return {
-    resultText: buildApiFormattedText(result.resultText),
-    diffText: result.diffText ? buildApiFormattedText(result.diffText) : undefined,
   };
 }

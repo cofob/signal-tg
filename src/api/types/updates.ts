@@ -5,7 +5,7 @@ import type {
   VideoRotation,
   VideoState,
 } from '../../lib/vibecalls';
-import type { ThreadId, ThreadReadState, TranslationTone } from '../../types';
+import type { ThreadId, ThreadReadState } from '../../types';
 import type { RegularLangFnParameters } from '../../util/localization';
 import type { ApiBotCommand, ApiBotMenuButton } from './bots';
 import type {
@@ -573,10 +573,6 @@ export type ApiUpdateConfig = {
   '@type': 'updateConfig';
 };
 
-export type ApiUpdateAiComposeTones = {
-  '@type': 'updateAiComposeTones';
-};
-
 export type ApiUpdateResetContacts = {
   '@type': 'updateResetContactList';
 };
@@ -820,28 +816,6 @@ export type ApiUpdateViewForumAsMessages = {
   isEnabled?: true;
 };
 
-export type ApiUpdateMessageTranslations = {
-  '@type': 'updateMessageTranslations';
-  requestId: string;
-  chatId: string;
-  messageIds: number[];
-  translations: {
-    text?: ApiFormattedText;
-    richMessage?: ApiRichMessage;
-  }[];
-  toLanguageCode: string;
-  tone?: TranslationTone;
-};
-
-export type ApiUpdateFailedMessageTranslations = {
-  '@type': 'failedMessageTranslations';
-  requestId: string;
-  chatId: string;
-  messageIds: number[];
-  toLanguageCode: string;
-  tone?: TranslationTone;
-};
-
 export type ApiUpdateFetchingDifference = {
   '@type': 'updateFetchingDifference';
   isFetching: boolean;
@@ -981,8 +955,8 @@ export type ApiUpdate = (
   ApiUpdateFavoriteStickers | ApiUpdateStickerSet | ApiUpdateStickerSets | ApiUpdateStickerSetsOrder |
   ApiUpdateRecentStickers | ApiUpdateSavedGifs | ApiUpdateNewScheduledMessage | ApiUpdateMoveStickerSetToTop |
   ApiUpdateScheduledMessageSendSucceeded | ApiUpdateScheduledMessage |
-  ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateMessageTranslations |
-  ApiUpdateFailedMessageTranslations | ApiUpdateWebPage | ApiUpdateChatTypingDraft | ApiUpdateChatTypingDraftStopped
+  ApiUpdateDeleteScheduledMessages | ApiUpdateResetMessages | ApiUpdateWebPage | ApiUpdateChatTypingDraft
+  | ApiUpdateChatTypingDraftStopped
   | ApiUpdateDiscussion |
   ApiUpdateTwoFaError | ApiUpdateTwoFaStateWaitCode | ApiUpdateWebViewResultSent |
   ApiUpdateJoinChatWebViewDecision |
@@ -1003,7 +977,6 @@ export type ApiUpdate = (
   | ApiUpdateDeleteProfilePhoto | ApiUpdateNewProfilePhoto
   | ApiUpdateEntities | ApiUpdateLangPackTooLong | ApiUpdateLangPack
   | ApiUpdateNotSupportedInFrozenAccountError
-  | ApiUpdateAiComposeTones
 );
 
 export type OnApiUpdate = (update: ApiUpdate) => void;
