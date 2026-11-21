@@ -272,8 +272,8 @@ class BackupImporter {
     this.patchConversation({
       ...conversation,
       isArchived: chat.archived,
-      // Zero is not pinned; pinned chats show in ascending order
-      pinIndex: chat.pinnedOrder || undefined,
+      // Zero is not pinned; pinned chats show in ascending order from one, and the index from zero
+      pinIndex: chat.pinnedOrder ? chat.pinnedOrder - 1 : undefined,
       expireTimer: chat.expirationTimerMs ? Math.round(Number(chat.expirationTimerMs) / MS_PER_SECOND) : undefined,
       expireTimerVersion: chat.expireTimerVersion || undefined,
       mutedUntil: chat.muteUntilMs ? Number(chat.muteUntilMs) : undefined,

@@ -10,6 +10,9 @@ export type MessageBackupKeys = {
 
 type OnProgress = (readLength: number, totalLength: number) => void;
 
+// Signal Android `EncryptedBackupWriter.MAGIC_NUMBER`: backups on the archive CDN start with it, followed by the
+// metadata of forward secrecy that SVR-B needs to give the token for the keys
+const FORWARD_SECRECY_MAGIC = new TextEncoder().encode('SBACKUP\x01');
 const IV_LENGTH = 16;
 const MAC_LENGTH = 32;
 const AES_BLOCK_SIZE = 16;
@@ -24,6 +27,13 @@ const MAX_VARINT_LENGTH = 5;
 const GZIP_SIZE_LENGTH = 4;
 const UINT32_RANGE = 2 ** 32;
 const MAX_BUFFERED_OUTPUT = 4 * 1024 * 1024;
+
+/** The backup starts with forward secrecy metadata, so its keys need a token that only SVR-B gives */
+export class ForwardSecrecyBackupError extends Error {
+  constructor() {
+    super('The backup needs the forward secrecy token of SVR-B');
+  }
+}
 
 /**
  * Derives the keys of a backup from its backup key and our ACI; link and sync uses the ephemeral backup key
@@ -47,6 +57,7 @@ export function deriveMessageBackupKeys(backupKey: Uint8Array, aci: string): Mes
 export async function* readBackupFrames(
   archive: Uint8Array<ArrayBuffer>, keys: MessageBackupKeys, onProgress?: OnProgress,
 ): AsyncGenerator<Uint8Array> {
+  if (hasForwardSecrecyHeader(archive)) throw new ForwardSecrecyBackupError();
   if (archive.length < IV_LENGTH + AES_BLOCK_SIZE + MAC_LENGTH) throw new Error('Backup is too short');
 
   const macOffset = archive.length - MAC_LENGTH;
@@ -56,6 +67,11 @@ export async function* readBackupFrames(
   const ciphertext = archive.subarray(IV_LENGTH, macOffset);
   const decoder = new PaddedGzipDecoder(decryptAesCbcChunks(keys.aesKey, iv, ciphertext, onProgress));
   yield* readDelimitedFrames(decoder.read());
+}
+
+export function hasForwardSecrecyHeader(archive: Uint8Array) {
+  return archive.length >= FORWARD_SECRECY_MAGIC.length
+    && FORWARD_SECRECY_MAGIC.every((byte, index) => archive[index] === byte);
 }
 
 /** Decrypts AES-256-CBC in chunks, so the plaintext never exists in one piece */

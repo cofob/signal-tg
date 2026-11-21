@@ -334,6 +334,13 @@ export default class MessageDb {
     return messages;
   }
 
+  /** Up to `limit` messages of every conversation in arrival order, starting after `afterId` */
+  getMessagesAfter(afterId: number, limit: number) {
+    return this.request<MessageRecord[]>(
+      MESSAGES, 'readonly', (store) => store.getAll(IDBKeyRange.lowerBound(afterId, true), limit),
+    );
+  }
+
   /** Messages of a conversation, oldest first, starting at `fromId` */
   async getMessagesFrom(conversationId: string, limit: number, fromId: number) {
     const range = IDBKeyRange.bound([conversationId, fromId], [conversationId, Number.MAX_SAFE_INTEGER]);
