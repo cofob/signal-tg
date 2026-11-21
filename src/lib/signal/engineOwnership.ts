@@ -12,6 +12,8 @@ let releaseHeldLock: NoneToVoidFunction | undefined;
  */
 export function acquireEngineOwnership(onLost: NoneToVoidFunction) {
   releaseEngineOwnership();
+  // Contexts without Web Locks, such as the tests' DOM, run the engine without the lock
+  if (!navigator.locks) return Promise.resolve();
 
   return new Promise<void>((resolve) => {
     let release: NoneToVoidFunction;
